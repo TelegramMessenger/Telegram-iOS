@@ -1192,7 +1192,7 @@ public final class AvatarNode: ASDisplayNode {
         self.contentNode.setCustomLetters(letters, explicitColor: explicitColor, icon: icon)
     }
     
-    public func setStoryStats(storyStats: StoryStats?, presentationParams: StoryPresentationParams, transition: Transition) {
+    public func setStoryStats(storyStats: StoryStats?, presentationParams: StoryPresentationParams, transition: ComponentTransition) {
         if self.storyStats != storyStats || self.storyPresentationParams != presentationParams {
             self.storyStats = storyStats
             self.storyPresentationParams = presentationParams
@@ -1242,7 +1242,7 @@ public final class AvatarNode: ASDisplayNode {
         }
     }
     
-    private func updateStoryIndicator(transition: Transition) {
+    private func updateStoryIndicator(transition: ComponentTransition) {
         if !self.isNodeLoaded {
             return
         }

@@ -136,11 +136,11 @@ final class BusinessLinkListItemComponent: Component {
                 }
                 self.isExtractedToContextMenu = value
                 
-                let mappedTransition: Transition
+                let mappedTransition: ComponentTransition
                 if value {
-                    mappedTransition = Transition(transition)
+                    mappedTransition = ComponentTransition(transition)
                 } else {
-                    mappedTransition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                    mappedTransition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                 }
                 self.componentState?.updated(transition: mappedTransition)
             }
@@ -162,7 +162,7 @@ final class BusinessLinkListItemComponent: Component {
             self.component?.action()
         }
         
-        func update(component: BusinessLinkListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: BusinessLinkListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let previousComponent = self.component
             let _ = previousComponent
             
@@ -334,7 +334,7 @@ final class BusinessLinkListItemComponent: Component {
         return View(frame: CGRect())
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

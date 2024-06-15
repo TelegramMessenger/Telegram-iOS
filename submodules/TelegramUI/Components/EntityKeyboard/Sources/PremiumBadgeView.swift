@@ -46,7 +46,7 @@ final class PremiumBadgeView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(transition: Transition, badge: EmojiKeyboardItemLayer.Badge, backgroundColor: UIColor, size: CGSize) {
+    func update(transition: ComponentTransition, badge: EmojiKeyboardItemLayer.Badge, backgroundColor: UIColor, size: CGSize) {
         if self.badge != badge {
             self.badge = badge
             

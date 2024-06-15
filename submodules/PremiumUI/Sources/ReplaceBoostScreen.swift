@@ -458,7 +458,7 @@ public class ReplaceBoostScreen: ViewController {
             self.controller?.updateModalStyleOverlayTransitionFactor(0.0, transition: positionTransition)
         }
                 
-        func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ComponentTransition) {
             let hadLayout = self.currentLayout != nil
             self.currentLayout = (layout, navigationHeight)
             
@@ -761,11 +761,11 @@ public class ReplaceBoostScreen: ViewController {
                             let initialVelocity: CGFloat = distance.isZero ? 0.0 : abs(velocity.y / distance)
                             let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
 
-                            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
+                            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(transition))
                         } else {
                             self.isExpanded = true
                             
-                            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
+                            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(.animated(duration: 0.3, curve: .easeInOut)))
                         }
                     } else if (velocity.y < -300.0 || offset < topInset / 2.0) {
                         if velocity.y > -2200.0 && velocity.y < -300.0, let listNode = listNode {
@@ -778,7 +778,7 @@ public class ReplaceBoostScreen: ViewController {
                         let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
                         self.isExpanded = true
                        
-                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
+                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(transition))
                     } else {
                         if let listNode = listNode {
                             listNode.scroller.setContentOffset(CGPoint(), animated: false)
@@ -786,7 +786,7 @@ public class ReplaceBoostScreen: ViewController {
                             scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
                         }
                         
-                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
+                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(.animated(duration: 0.3, curve: .easeInOut)))
                     }
                     
                     if !dismissing {
@@ -801,7 +801,7 @@ public class ReplaceBoostScreen: ViewController {
                 case .cancelled:
                     self.panGestureArguments = nil
                     
-                    self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
+                    self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(.animated(duration: 0.3, curve: .easeInOut)))
                 
                     self.updateFooterAlpha()
                 default:
@@ -818,7 +818,7 @@ public class ReplaceBoostScreen: ViewController {
             guard let (layout, navigationHeight) = self.currentLayout else {
                 return
             }
-            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
+            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(transition))
         }
     }
     
@@ -985,7 +985,7 @@ public class ReplaceBoostScreen: ViewController {
         
         let navigationHeight: CGFloat = 56.0
         
-        self.node.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
+        self.node.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(transition))
     }
 }
 
@@ -1031,7 +1031,7 @@ private final class FooterView: UIView {
         
         let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - totalPanelHeight), size: CGSize(width: size.width, height: panelHeight))
         
-        var buttonTransition: Transition = .easeInOut(duration: 0.2)
+        var buttonTransition: ComponentTransition = .easeInOut(duration: 0.2)
         if !hadLayout {
             buttonTransition = .immediate
         }
@@ -1091,7 +1091,7 @@ private final class FooterView: UIView {
         return panelHeight
     }
     
-    func updateBackgroundAlpha(_ alpha: CGFloat, transition: Transition) {
+    func updateBackgroundAlpha(_ alpha: CGFloat, transition: ComponentTransition) {
         transition.setAlpha(view: self.backgroundNode.view, alpha: alpha)
         transition.setAlpha(view: self.separatorView, alpha: alpha)
     }
@@ -1210,7 +1210,7 @@ private final class ReplaceBoostHeaderComponent: Component {
         }
         
         private var badgeImage: UIImage?
-        func update(component: ReplaceBoostHeaderComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ReplaceBoostHeaderComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -1305,7 +1305,7 @@ private final class ReplaceBoostHeaderComponent: Component {
         return View(frame: CGRect())
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

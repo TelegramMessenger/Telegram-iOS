@@ -206,7 +206,7 @@ final class BoostHeaderItemNode: ItemListControllerHeaderItemNode {
         
         if let hostView = self.hostView {
             let size = hostView.update(
-                transition: Transition(transition),
+                transition: ComponentTransition(transition),
                 component: component,
                 environment: {},
                 containerSize: containerSize

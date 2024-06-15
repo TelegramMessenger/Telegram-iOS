@@ -8,11 +8,11 @@ import MetalImageView
 private final class PropertyAnimation<T: Interpolatable> {
     let from: T
     let to: T
-    let animation: Transition.Animation
+    let animation: ComponentTransition.Animation
     let startTimestamp: Double
     private let interpolator: (Interpolatable, Interpolatable, CGFloat) -> Interpolatable
     
-    init(fromValue: T, toValue: T, animation: Transition.Animation, startTimestamp: Double) {
+    init(fromValue: T, toValue: T, animation: ComponentTransition.Animation, startTimestamp: Double) {
         self.from = fromValue
         self.to = toValue
         self.animation = animation
@@ -41,7 +41,7 @@ private final class AnimatableProperty<T: Interpolatable> {
         self.presentationValue = value
     }
     
-    func update(value: T, transition: Transition = .immediate) {
+    func update(value: T, transition: ComponentTransition = .immediate) {
         let currentTimestamp = CACurrentMediaTime()
         if case .none = transition.animation {
             if let animation = self.animation, case let .curve(duration, curve) = animation.animation {
@@ -295,7 +295,7 @@ final class ShutterBlobView: UIView {
         self.displayLink?.invalidate()
     }
     
-    func updateState(_ state: BlobState, tintColor: UIColor, transition: Transition = .immediate) {
+    func updateState(_ state: BlobState, tintColor: UIColor, transition: ComponentTransition = .immediate) {
         guard self.state != state else {
             return
         }
@@ -310,7 +310,7 @@ final class ShutterBlobView: UIView {
         self.tick()
     }
     
-    func updatePrimaryOffsetX(_ offset: CGFloat, transition: Transition = .immediate) {
+    func updatePrimaryOffsetX(_ offset: CGFloat, transition: ComponentTransition = .immediate) {
         guard self.frame.height > 0.0 else {
             return
         }
@@ -320,7 +320,7 @@ final class ShutterBlobView: UIView {
         self.tick()
     }
     
-    func updatePrimaryOffsetY(_ offset: CGFloat, transition: Transition = .immediate) {
+    func updatePrimaryOffsetY(_ offset: CGFloat, transition: ComponentTransition = .immediate) {
         guard self.frame.height > 0.0 else {
             return
         }
@@ -330,7 +330,7 @@ final class ShutterBlobView: UIView {
         self.tick()
     }
     
-    func updateSecondaryOffsetX(_ offset: CGFloat, transition: Transition = .immediate) {
+    func updateSecondaryOffsetX(_ offset: CGFloat, transition: ComponentTransition = .immediate) {
         guard self.frame.height > 0.0 else {
             return
         }
@@ -340,7 +340,7 @@ final class ShutterBlobView: UIView {
         self.tick()
     }
     
-    func updateSecondaryOffsetY(_ offset: CGFloat, transition: Transition = .immediate) {
+    func updateSecondaryOffsetY(_ offset: CGFloat, transition: ComponentTransition = .immediate) {
         guard self.frame.height > 0.0 else {
             return
         }

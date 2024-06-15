@@ -795,7 +795,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             
             let iconSize = self.titleCredibilityIconView.update(
-                transition: Transition(navigationTransition),
+                transition: ComponentTransition(navigationTransition),
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.animationCache,
@@ -851,7 +851,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 containerSize: CGSize(width: 34.0, height: 34.0)
             )
             let expandedIconSize = self.titleExpandedCredibilityIconView.update(
-                transition: Transition(navigationTransition),
+                transition: ComponentTransition(navigationTransition),
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.animationCache,
@@ -903,7 +903,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             
             let iconSize = self.titleVerifiedIconView.update(
-                transition: Transition(navigationTransition),
+                transition: ComponentTransition(navigationTransition),
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.animationCache,
@@ -918,7 +918,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 containerSize: CGSize(width: 34.0, height: 34.0)
             )
             let expandedIconSize = self.titleExpandedVerifiedIconView.update(
-                transition: Transition(navigationTransition),
+                transition: ComponentTransition(navigationTransition),
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.animationCache,
@@ -2115,7 +2115,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         let backgroundCoverSize = self.backgroundCover.update(
-            transition: Transition(transition),
+            transition: ComponentTransition(transition),
             component: AnyComponent(PeerInfoCoverComponent(
                 context: self.context,
                 peer: peer.flatMap(EnginePeer.init),

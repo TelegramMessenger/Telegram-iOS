@@ -302,7 +302,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         
         private var currentHasInputHeight = false
         private var currentAvailableSize: CGSize?
-        func update(component: SheetComponent<ChildEnvironmentType>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: SheetComponent<ChildEnvironmentType>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             let previousHasInputHeight = self.currentHasInputHeight
             let sheetEnvironment = environment[SheetComponentEnvironment.self].value
             component.animateOut.connect { [weak self] completion in
@@ -424,7 +424,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

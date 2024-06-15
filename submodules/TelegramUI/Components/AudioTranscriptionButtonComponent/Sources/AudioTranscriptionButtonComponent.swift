@@ -99,7 +99,7 @@ public final class AudioTranscriptionButtonComponent: Component {
             self.component?.pressed()
         }
         
-        func update(component: AudioTranscriptionButtonComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: AudioTranscriptionButtonComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let size = CGSize(width: 30.0, height: 30.0)
             
             let foregroundColor: UIColor
@@ -273,7 +273,7 @@ public final class AudioTranscriptionButtonComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

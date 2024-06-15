@@ -1045,7 +1045,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     }
     
     func setBrushSizePreview(_ size: CGFloat?) {
-        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+        let transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
         if let size = size {
             let minLineWidth = max(1.0, max(self.frame.width, self.frame.height) * 0.002)
             let maxLineWidth = max(10.0, max(self.frame.width, self.frame.height) * 0.07)

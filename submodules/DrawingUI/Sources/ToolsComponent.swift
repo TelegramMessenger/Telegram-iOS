@@ -295,7 +295,7 @@ final class ToolsComponent: Component {
         }
         
         func animateOut(completion: @escaping () -> Void) {
-            let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+            let transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
             var delay = 0.0
             for i in 0 ..< self.toolViews.count {
                 let view = self.toolViews[i]
@@ -306,7 +306,7 @@ final class ToolsComponent: Component {
             }
         }
         
-        func update(component: ToolsComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ToolsComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             if self.toolViews.isEmpty {
@@ -467,7 +467,7 @@ final class ToolsComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

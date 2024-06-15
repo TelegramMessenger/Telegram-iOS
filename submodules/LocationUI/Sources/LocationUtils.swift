@@ -24,12 +24,20 @@ extension MKMapRect {
     }
 }
 
-extension CLLocationCoordinate2D: Equatable {
-
+public func locationCoordinatesAreEqual(_ lhs: CLLocationCoordinate2D?, _ rhs: CLLocationCoordinate2D?) -> Bool {
+    if let lhs, let rhs {
+        return lhs.isEqual(to: rhs)
+    } else if (lhs == nil) != (rhs == nil) {
+        return false
+    } else {
+        return true
+    }
 }
 
-public func ==(lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool {
-    return lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude
+extension CLLocationCoordinate2D {
+    func isEqual(to other: CLLocationCoordinate2D) -> Bool {
+        return self.latitude == other.latitude && self.longitude == other.longitude
+    }
 }
 
 public func nearbyVenues(context: AccountContext, story: Bool = false, latitude: Double, longitude: Double, query: String? = nil) -> Signal<ChatContextResultCollection?, NoError> {

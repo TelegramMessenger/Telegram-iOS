@@ -278,7 +278,7 @@ public final class MessageInputActionButtonComponent: Component {
                 
                 let scale: CGFloat = highlighted ? 0.6 : 1.0
                 
-                let transition = Transition(animation: .curve(duration: highlighted ? 0.5 : 0.3, curve: .spring))
+                let transition = ComponentTransition(animation: .curve(duration: highlighted ? 0.5 : 0.3, curve: .spring))
                 transition.setSublayerTransform(view: self, transform: CATransform3DMakeScale(scale, scale, 1.0))
             }
             
@@ -310,7 +310,7 @@ public final class MessageInputActionButtonComponent: Component {
             component.action(component.mode, .up, false)
         }
                         
-        func update(component: MessageInputActionButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: MessageInputActionButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let previousComponent = self.component
             self.component = component
             self.componentState = state
@@ -321,7 +321,7 @@ public final class MessageInputActionButtonComponent: Component {
             
             var transition = transition
             if transition.animation.isImmediate, let previousComponent, case .like = previousComponent.mode, case .like = component.mode, previousComponent.mode != component.mode, !isFirstTimeForStory {
-                transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                transition = ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut))
             }
             
             self.containerNode.isUserInteractionEnabled = component.longPressAction != nil
@@ -661,7 +661,7 @@ public final class MessageInputActionButtonComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

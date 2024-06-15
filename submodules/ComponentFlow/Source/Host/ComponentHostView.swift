@@ -37,13 +37,13 @@ public final class ComponentHostView<EnvironmentType>: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    public func update(transition: Transition, component: AnyComponent<EnvironmentType>, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>, forceUpdate: Bool = false, containerSize: CGSize) -> CGSize {
+    public func update(transition: ComponentTransition, component: AnyComponent<EnvironmentType>, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>, forceUpdate: Bool = false, containerSize: CGSize) -> CGSize {
         let size = self._update(transition: transition, component: component, maybeEnvironment: environment, updateEnvironment: true, forceUpdate: forceUpdate, containerSize: containerSize)
         self.currentSize = size
         return size
     }
 
-    private func _update(transition: Transition, component: AnyComponent<EnvironmentType>, maybeEnvironment: () -> Environment<EnvironmentType>, updateEnvironment: Bool, forceUpdate: Bool, containerSize: CGSize) -> CGSize {
+    private func _update(transition: ComponentTransition, component: AnyComponent<EnvironmentType>, maybeEnvironment: () -> Environment<EnvironmentType>, updateEnvironment: Bool, forceUpdate: Bool, containerSize: CGSize) -> CGSize {
         precondition(!self.isUpdating)
         self.isUpdating = true
 
@@ -150,13 +150,13 @@ public final class ComponentView<EnvironmentType> {
         fatalError("init(coder:) has not been implemented")
     }
     
-    public func update(transition: Transition, component: AnyComponent<EnvironmentType>, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>, forceUpdate: Bool = false, containerSize: CGSize) -> CGSize {
+    public func update(transition: ComponentTransition, component: AnyComponent<EnvironmentType>, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>, forceUpdate: Bool = false, containerSize: CGSize) -> CGSize {
         let size = self._update(transition: transition, component: component, maybeEnvironment: environment, updateEnvironment: true, forceUpdate: forceUpdate, containerSize: containerSize)
         self.currentSize = size
         return size
     }
     
-    public func updateEnvironment(transition: Transition, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>) -> CGSize? {
+    public func updateEnvironment(transition: ComponentTransition, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>) -> CGSize? {
         guard let currentComponent = self.currentComponent, let currentContainerSize = self.currentContainerSize else {
             return nil
         }
@@ -165,7 +165,7 @@ public final class ComponentView<EnvironmentType> {
         return size
     }
 
-    private func _update(transition: Transition, component: AnyComponent<EnvironmentType>, maybeEnvironment: () -> Environment<EnvironmentType>, updateEnvironment: Bool, forceUpdate: Bool, containerSize: CGSize) -> CGSize {
+    private func _update(transition: ComponentTransition, component: AnyComponent<EnvironmentType>, maybeEnvironment: () -> Environment<EnvironmentType>, updateEnvironment: Bool, forceUpdate: Bool, containerSize: CGSize) -> CGSize {
         precondition(!self.isUpdating)
         self.isUpdating = true
 

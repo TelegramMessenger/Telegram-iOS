@@ -44,7 +44,7 @@ public final class Image: Component {
             preconditionFailure()
         }
 
-        func update(component: Image, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: Image, availableSize: CGSize, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.image = component.image
             self.contentMode = component.contentMode
 
@@ -63,7 +63,7 @@ public final class Image: Component {
         return View()
     }
 
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }

@@ -67,21 +67,21 @@ public final class ChatSendContactMessageContextPreview: UIView, ChatSendMessage
     deinit {
     }
     
-    public func animateIn(transition: Transition) {
+    public func animateIn(transition: ComponentTransition) {
         transition.animateAlpha(view: self.messagesContainer, from: 0.0, to: 1.0)
         transition.animateScale(view: self.messagesContainer, from: 0.001, to: 1.0)
     }
 
-    public func animateOut(transition: Transition) {
+    public func animateOut(transition: ComponentTransition) {
         transition.setAlpha(view: self.messagesContainer, alpha: 0.0)
         transition.setScale(view: self.messagesContainer, scale: 0.001)
     }
 
-    public func animateOutOnSend(transition: Transition) {
+    public func animateOutOnSend(transition: ComponentTransition) {
         transition.setAlpha(view: self.messagesContainer, alpha: 0.0)
     }
 
-    public func update(containerSize: CGSize, transition: Transition) -> CGSize {
+    public func update(containerSize: CGSize, transition: ComponentTransition) -> CGSize {
         var contactsMedia: [TelegramMediaContact] = []
         for peer in self.contactPeers {
             switch peer {
@@ -241,21 +241,21 @@ public final class ChatSendAudioMessageContextPreview: UIView, ChatSendMessageCo
     deinit {
     }
     
-    public func animateIn(transition: Transition) {
+    public func animateIn(transition: ComponentTransition) {
         transition.animateAlpha(view: self.messagesContainer, from: 0.0, to: 1.0)
         transition.animateScale(view: self.messagesContainer, from: 0.001, to: 1.0)
     }
 
-    public func animateOut(transition: Transition) {
+    public func animateOut(transition: ComponentTransition) {
         transition.setAlpha(view: self.messagesContainer, alpha: 0.0)
         transition.setScale(view: self.messagesContainer, scale: 0.001)
     }
 
-    public func animateOutOnSend(transition: Transition) {
+    public func animateOutOnSend(transition: ComponentTransition) {
         transition.setAlpha(view: self.messagesContainer, alpha: 0.0)
     }
 
-    public func update(containerSize: CGSize, transition: Transition) -> CGSize {
+    public func update(containerSize: CGSize, transition: ComponentTransition) -> CGSize {
         let voiceAttributes: [TelegramMediaFileAttribute] = [.Audio(isVoice: true, duration: 23, title: nil, performer: nil, waveform: self.waveform.makeBitstream())]
         let voiceMedia = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: 0, attributes: voiceAttributes)
         
@@ -375,21 +375,21 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
     deinit {
     }
     
-    public func animateIn(transition: Transition) {
+    public func animateIn(transition: ComponentTransition) {
         transition.animateAlpha(view: self.messagesContainer, from: 0.0, to: 1.0)
         transition.animateScale(view: self.messagesContainer, from: 0.001, to: 1.0)
     }
 
-    public func animateOut(transition: Transition) {
+    public func animateOut(transition: ComponentTransition) {
         transition.setAlpha(view: self.messagesContainer, alpha: 0.0)
         transition.setScale(view: self.messagesContainer, scale: 0.001)
     }
 
-    public func animateOutOnSend(transition: Transition) {
+    public func animateOutOnSend(transition: ComponentTransition) {
         transition.setAlpha(view: self.messagesContainer, alpha: 0.0)
     }
 
-    public func update(containerSize: CGSize, transition: Transition) -> CGSize {
+    public func update(containerSize: CGSize, transition: ComponentTransition) -> CGSize {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
         let chatPresentationData: ChatPresentationData

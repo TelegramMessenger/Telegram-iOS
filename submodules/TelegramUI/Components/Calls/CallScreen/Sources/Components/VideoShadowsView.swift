@@ -12,6 +12,6 @@ final class VideoShadowsView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func update(size: CGSize, transition: Transition) {
+    func update(size: CGSize, transition: ComponentTransition) {
     }
 }

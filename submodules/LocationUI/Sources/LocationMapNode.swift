@@ -126,7 +126,67 @@ private func generateProximityDim(size: CGSize) -> UIImage {
     })!
 }
 
-public final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
+protocol MKMapViewDelegateTarget: AnyObject {
+    func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool)
+    func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool)
+    func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation)
+    func mapView(_ mapView: MKMapView, didFailToLocateUserWithError error: Error)
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView?
+    func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView])
+    func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView)
+    func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView)
+    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer
+}
+
+private final class MKMapViewDelegateImpl: NSObject, MKMapViewDelegate {
+    private weak var target: MKMapViewDelegateTarget?
+    
+    init(target: MKMapViewDelegateTarget) {
+        self.target = target
+        
+        super.init()
+    }
+    
+    func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
+        self.target?.mapView(mapView, regionWillChangeAnimated: animated)
+    }
+    
+    func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+        self.target?.mapView(mapView, regionDidChangeAnimated: animated)
+    }
+    
+    func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
+        self.target?.mapView(mapView, didUpdate: userLocation)
+    }
+    
+    func mapView(_ mapView: MKMapView, didFailToLocateUserWithError error: Error) {
+        self.target?.mapView(mapView, didFailToLocateUserWithError: error)
+    }
+    
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        return self.target?.mapView(mapView, viewFor: annotation)
+    }
+    
+    func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
+        self.target?.mapView(mapView, didAdd: views)
+    }
+    
+    func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+        self.target?.mapView(mapView, didSelect: view)
+    }
+    
+    func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
+        self.target?.mapView(mapView, didDeselect: view)
+    }
+    
+    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+        return self.target?.mapView(mapView, rendererFor: overlay) ?? MKOverlayRenderer()
+    }
+}
+
+public final class LocationMapNode: ASDisplayNode, MKMapViewDelegateTarget {
+    private var delegateImpl: MKMapViewDelegateImpl?
+    
     public static let defaultMapSpan = MKCoordinateSpan(latitudeDelta: 0.016, longitudeDelta: 0.016)
     public static let viewMapSpan = MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
     
@@ -256,7 +316,10 @@ public final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             return self?.disableHorizontalTransitionGesture == true
         }
         
-        self.mapView?.delegate = self
+        let delegateImpl = MKMapViewDelegateImpl(target: self)
+        self.delegateImpl = delegateImpl
+        
+        self.mapView?.delegate = delegateImpl
         self.mapView?.mapType = self.mapMode.mapType
         self.mapView?.isRotateEnabled = self.isRotateEnabled
         self.mapView?.showsUserLocation = true

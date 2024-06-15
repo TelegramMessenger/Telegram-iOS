@@ -1504,7 +1504,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.updateItems(size: size, transition: transition, stripTransition: transition)
         
         if let storyParams = self.storyParams {
-            var indicatorTransition = Transition(transition)
+            var indicatorTransition = ComponentTransition(transition)
             let expandedStorySetIndicator: ComponentView<Empty>
             if let current = self.expandedStorySetIndicator {
                 expandedStorySetIndicator = current

@@ -55,13 +55,13 @@ final class KeyEmojiView: HighlightTrackingButton {
                 if highlighted {
                     self.layer.removeAnimation(forKey: "opacity")
                     self.layer.removeAnimation(forKey: "transform")
-                    let transition = Transition(animation: .curve(duration: 0.15, curve: .easeInOut))
+                    let transition = ComponentTransition(animation: .curve(duration: 0.15, curve: .easeInOut))
                     transition.setScale(layer: self.layer, scale: topScale)
                 } else {
                     let t = self.layer.presentation()?.transform ?? layer.transform
                     let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
                     
-                    let transition = Transition(animation: .none)
+                    let transition = ComponentTransition(animation: .none)
                     transition.setScale(layer: self.layer, scale: 1.0)
                     
                     self.layer.animateScale(from: currentScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] completed in
@@ -97,7 +97,7 @@ final class KeyEmojiView: HighlightTrackingButton {
         }
     }
     
-    func update(isExpanded: Bool, transition: Transition) -> CGSize {
+    func update(isExpanded: Bool, transition: ComponentTransition) -> CGSize {
         let params = Params(isExpanded: isExpanded)
         if let currentLayout = self.currentLayout, currentLayout.params == params {
             return currentLayout.size
@@ -108,7 +108,7 @@ final class KeyEmojiView: HighlightTrackingButton {
         return size
     }
     
-    private func update(params: Params, transition: Transition) -> CGSize {
+    private func update(params: Params, transition: ComponentTransition) -> CGSize {
         let itemSpacing: CGFloat = 3.0
         
         var height: CGFloat = 0.0
@@ -131,7 +131,7 @@ final class KeyEmojiView: HighlightTrackingButton {
     }
 }
 
-func generateParabollicMotionKeyframes(from sourcePoint: CGPoint, to targetPosition: CGPoint, elevation: CGFloat, duration: Double, curve: Transition.Animation.Curve, reverse: Bool) -> [CGPoint] {
+func generateParabollicMotionKeyframes(from sourcePoint: CGPoint, to targetPosition: CGPoint, elevation: CGFloat, duration: Double, curve: ComponentTransition.Animation.Curve, reverse: Bool) -> [CGPoint] {
     let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0, y: sourcePoint.y - elevation)
     
     let x1 = sourcePoint.x

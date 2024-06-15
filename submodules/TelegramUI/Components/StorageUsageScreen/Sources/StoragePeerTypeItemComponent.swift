@@ -140,7 +140,7 @@ final class StoragePeerTypeItemComponent: Component {
         }
         
         func setHasAssociatedMenu(_ hasAssociatedMenu: Bool) {
-            let transition: Transition
+            let transition: ComponentTransition
             if hasAssociatedMenu {
                 transition = .immediate
             } else {
@@ -152,7 +152,7 @@ final class StoragePeerTypeItemComponent: Component {
             transition.setAlpha(view: self.arrowIconView, alpha: hasAssociatedMenu ? 0.5 : 1.0)
         }
         
-        func update(component: StoragePeerTypeItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: StoragePeerTypeItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let themeUpdated = self.component?.theme !== component.theme
             
             let previousComponent = self.component
@@ -283,7 +283,7 @@ final class StoragePeerTypeItemComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

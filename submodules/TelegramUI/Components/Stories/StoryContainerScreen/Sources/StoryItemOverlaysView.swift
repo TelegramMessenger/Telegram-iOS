@@ -262,10 +262,10 @@ final class StoryItemOverlaysView: UIView {
                 }
                 
                 if highlighted {
-                    let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                    let transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                     transition.setSublayerTransform(view: self, transform: CATransform3DMakeScale(0.9, 0.9, 1.0))
                 } else {
-                    let transition: Transition = .immediate
+                    let transition: ComponentTransition = .immediate
                     transition.setSublayerTransform(view: self, transform: CATransform3DIdentity)
                     var fromScale: Double = 0.9
                     if self.layer.animation(forKey: "sublayerTransform") != nil, let presentation = self.layer.presentation() {
@@ -305,7 +305,7 @@ final class StoryItemOverlaysView: UIView {
             size: CGSize,
             isActive: Bool
         ) {
-            var transition = Transition(animation: .curve(duration: 0.18, curve: .easeInOut))
+            var transition = ComponentTransition(animation: .curve(duration: 0.18, curve: .easeInOut))
             if self.reaction == nil {
                 transition = .immediate
             }
@@ -559,7 +559,7 @@ final class StoryItemOverlaysView: UIView {
         isCaptureProtected: Bool,
         attemptSynchronous: Bool,
         isActive: Bool,
-        transition: Transition
+        transition: ComponentTransition
     ) {
         var nextId = 0
         for mediaArea in story.mediaAreas {

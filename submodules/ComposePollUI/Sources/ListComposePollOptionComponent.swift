@@ -173,12 +173,12 @@ public final class ListComposePollOptionComponent: Component {
                         self.layer.removeAnimation(forKey: "transform.scale")
                         
                         if animateScale {
-                            let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                            let transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                             transition.setScale(layer: self.layer, scale: topScale)
                         }
                     } else {
                         if animateScale {
-                            let transition = Transition(animation: .none)
+                            let transition = ComponentTransition(animation: .none)
                             transition.setScale(layer: self.layer, scale: 1.0)
                             
                             self.layer.animateScale(from: topScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
@@ -202,7 +202,7 @@ public final class ListComposePollOptionComponent: Component {
             self.action?()
         }
         
-        func update(size: CGSize, theme: PresentationTheme, isSelected: Bool, transition: Transition) {
+        func update(size: CGSize, theme: PresentationTheme, isSelected: Bool, transition: ComponentTransition) {
             let checkLayer: CheckLayer
             if let current = self.checkLayer {
                 checkLayer = current
@@ -291,7 +291,7 @@ public final class ListComposePollOptionComponent: Component {
             }
         }
         
-        func update(component: ListComposePollOptionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ListComposePollOptionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -455,12 +455,12 @@ public final class ListComposePollOptionComponent: Component {
                 )
                 let modeSelectorFrame = CGRect(origin: CGPoint(x: size.width - 4.0 - modeSelectorSize.width, y: floor((size.height - modeSelectorSize.height) * 0.5)), size: modeSelectorSize)
                 if let modeSelectorView = modeSelector.view as? PlainButtonComponent.View {
-                    let alphaTransition: Transition = .easeInOut(duration: 0.2)
+                    let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
                     
                     if modeSelectorView.superview == nil {
                         self.addSubview(modeSelectorView)
-                        Transition.immediate.setAlpha(view: modeSelectorView, alpha: 0.0)
-                        Transition.immediate.setScale(view: modeSelectorView, scale: 0.001)
+                        ComponentTransition.immediate.setAlpha(view: modeSelectorView, alpha: 0.0)
+                        ComponentTransition.immediate.setScale(view: modeSelectorView, scale: 0.001)
                     }
                     
                     if playAnimation, let animationView = modeSelectorView.contentView as? LottieComponent.View {
@@ -481,7 +481,7 @@ public final class ListComposePollOptionComponent: Component {
                 self.modeSelector = nil
                 if let modeSelectorView = modeSelector.view {
                     if !transition.animation.isImmediate {
-                        let alphaTransition: Transition = .easeInOut(duration: 0.2)
+                        let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
                         alphaTransition.setAlpha(view: modeSelectorView, alpha: 0.0, completion: { [weak modeSelectorView] _ in
                             modeSelectorView?.removeFromSuperview()
                         })
@@ -497,7 +497,7 @@ public final class ListComposePollOptionComponent: Component {
             return size
         }
         
-        public func updateCustomPlaceholder(value: String, size: CGSize, transition: Transition) {
+        public func updateCustomPlaceholder(value: String, size: CGSize, transition: ComponentTransition) {
             guard let component = self.component else {
                 return
             }
@@ -554,7 +554,7 @@ public final class ListComposePollOptionComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

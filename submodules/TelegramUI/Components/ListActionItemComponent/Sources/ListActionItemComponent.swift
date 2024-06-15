@@ -213,12 +213,12 @@ public final class ListActionItemComponent: Component {
                         self.layer.removeAnimation(forKey: "transform.scale")
                         
                         if animateScale {
-                            let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                            let transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                             transition.setScale(layer: self.layer, scale: topScale)
                         }
                     } else {
                         if animateScale {
-                            let transition = Transition(animation: .none)
+                            let transition = ComponentTransition(animation: .none)
                             transition.setScale(layer: self.layer, scale: 1.0)
                             
                             self.layer.animateScale(from: topScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
@@ -242,7 +242,7 @@ public final class ListActionItemComponent: Component {
             self.action?()
         }
         
-        func update(size: CGSize, theme: PresentationTheme, isSelected: Bool, transition: Transition) {
+        func update(size: CGSize, theme: PresentationTheme, isSelected: Bool, transition: ComponentTransition) {
             let checkLayer: CheckLayer
             if let current = self.checkLayer {
                 checkLayer = current
@@ -328,14 +328,14 @@ public final class ListActionItemComponent: Component {
             return result
         }
         
-        func update(component: ListActionItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ListActionItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let previousComponent = self.component
             self.component = component
             
             let themeUpdated = component.theme !== previousComponent?.theme
             
             var customAccessorySize: CGSize?
-            var customAccessoryTransition: Transition = transition
+            var customAccessoryTransition: ComponentTransition = transition
             
             var contentLeftInset: CGFloat = 16.0
             let contentRightInset: CGFloat
@@ -808,7 +808,7 @@ public final class ListActionItemComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

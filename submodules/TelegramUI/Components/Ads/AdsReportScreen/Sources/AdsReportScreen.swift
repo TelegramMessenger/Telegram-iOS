@@ -256,7 +256,7 @@ private final class SheetContent: CombinedComponent {
     let openMore: () -> Void
     let complete: (ReportResult) -> Void
     let dismiss: () -> Void
-    let update: (Transition) -> Void
+    let update: (ComponentTransition) -> Void
     
     init(
         context: AccountContext,
@@ -268,7 +268,7 @@ private final class SheetContent: CombinedComponent {
         openMore: @escaping () -> Void,
         complete: @escaping (ReportResult) -> Void,
         dismiss: @escaping () -> Void,
-        update: @escaping (Transition) -> Void
+        update: @escaping (ComponentTransition) -> Void
     ) {
         self.context = context
         self.peerId = peerId
@@ -659,7 +659,7 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
 
 
 private final class NavigationContainer: UIView, UIGestureRecognizerDelegate {
-    var requestUpdate: ((Transition) -> Void)?
+    var requestUpdate: ((ComponentTransition) -> Void)?
     var requestPop: (() -> Void)?
     var transitionFraction: CGFloat = 0.0
     
@@ -772,10 +772,10 @@ final class NavigationStackComponent<ChildEnvironment: Equatable>: Component {
         var index: Int
         var itemId: AnyHashable
         var itemView: ItemView
-        var itemTransition: Transition
+        var itemTransition: ComponentTransition
         var itemSize: CGSize
         
-        init(index: Int, itemId: AnyHashable, itemView: ItemView, itemTransition: Transition, itemSize: CGSize) {
+        init(index: Int, itemId: AnyHashable, itemView: ItemView, itemTransition: ComponentTransition, itemSize: CGSize) {
             self.index = index
             self.itemId = itemId
             self.itemView = itemView
@@ -815,7 +815,7 @@ final class NavigationStackComponent<ChildEnvironment: Equatable>: Component {
             preconditionFailure()
         }
                 
-        func update(component: NavigationStackComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: Transition) -> CGSize {
+        func update(component: NavigationStackComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -945,7 +945,7 @@ final class NavigationStackComponent<ChildEnvironment: Equatable>: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

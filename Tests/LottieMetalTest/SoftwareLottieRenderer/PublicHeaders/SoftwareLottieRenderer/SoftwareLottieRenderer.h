@@ -18,8 +18,8 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path);
 
 - (instancetype _Nullable)initWithData:(NSData * _Nonnull)data;
 
-- (void)setFrame:(NSInteger)index;
-- (UIImage * _Nullable)renderForSize:(CGSize)size useReferenceRendering:(bool)useReferenceRendering;
+- (void)setFrame:(CGFloat)index;
+- (UIImage * _Nullable)renderForSize:(CGSize)size useReferenceRendering:(bool)useReferenceRendering canUseMoreMemory:(bool)canUseMoreMemory skipImageGeneration:(bool)skipImageGeneration;
 
 @end
 

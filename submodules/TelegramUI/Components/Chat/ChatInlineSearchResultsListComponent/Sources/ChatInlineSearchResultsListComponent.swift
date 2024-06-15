@@ -303,7 +303,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
             }
         }
         
-        func update(component: ChatInlineSearchResultsListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ChatInlineSearchResultsListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -871,7 +871,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
                 }
             }
             
-            let fadeTransition = Transition.easeInOut(duration: 0.25)
+            let fadeTransition = ComponentTransition.easeInOut(duration: 0.25)
             if component.showEmptyResults, let appliedContentsState = self.appliedContentsState, appliedContentsState.entries.isEmpty, case let .search(query, _) = component.contents, !query.isEmpty {
                 let sideInset: CGFloat = 44.0
                 let emptyAnimationHeight = 148.0
@@ -984,7 +984,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

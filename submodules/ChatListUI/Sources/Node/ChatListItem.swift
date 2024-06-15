@@ -318,7 +318,7 @@ private final class ChatListItemTagListComponent: Component {
             preconditionFailure()
         }
         
-        func update(component: ChatListItemTagListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ChatListItemTagListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             var validIds: [Int32] = []
             let spacing: CGFloat = floorToScreenPixels(5.0 * component.sizeFactor)
             var nextX: CGFloat = 0.0
@@ -387,7 +387,7 @@ private final class ChatListItemTagListComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

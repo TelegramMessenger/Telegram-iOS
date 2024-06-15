@@ -106,7 +106,7 @@ final class StreamSheetComponent: CombinedComponent {
             return false
         }
         
-        func update(component: StreamSheetComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
+        func update(component: StreamSheetComponent, availableSize: CGSize, state: State, transition: ComponentTransition) -> CGSize {
             return availableSize
         }
         
@@ -202,7 +202,7 @@ final class SheetBackgroundComponent: Component {
     class View: UIView {
         private let backgroundView = UIView()
         
-        func update(availableSize: CGSize, color: UIColor, cornerRadius: CGFloat, offset: CGFloat, transition: Transition) {
+        func update(availableSize: CGSize, color: UIColor, cornerRadius: CGFloat, offset: CGFloat, transition: ComponentTransition) {
             if backgroundView.superview == nil {
                 self.addSubview(backgroundView)
             }
@@ -262,7 +262,7 @@ final class SheetBackgroundComponent: Component {
         self.offset = offset
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         view.update(availableSize: availableSize, color: color, cornerRadius: radius, offset: offset, transition: transition)
         return availableSize
     }

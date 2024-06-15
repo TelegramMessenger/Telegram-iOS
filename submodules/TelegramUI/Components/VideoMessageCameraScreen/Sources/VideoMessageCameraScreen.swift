@@ -1080,13 +1080,13 @@ public class VideoMessageCameraScreen: ViewController {
             }, transition: .easeInOut(duration: 0.2))
         }
         
-        func requestUpdateLayout(transition: Transition) {
+        func requestUpdateLayout(transition: ComponentTransition) {
             if let layout = self.validLayout {
                 self.containerLayoutUpdated(layout: layout, forceUpdate: true, transition: transition)
             }
         }
 
-        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, transition: ComponentTransition) {
             guard let controller = self.controller else {
                 return
             }
@@ -1296,13 +1296,13 @@ public class VideoMessageCameraScreen: ViewController {
         return self.node.cameraState
     }
     
-    fileprivate func updateCameraState(_ f: (CameraState) -> CameraState, transition: Transition) {
+    fileprivate func updateCameraState(_ f: (CameraState) -> CameraState, transition: ComponentTransition) {
         self.node.cameraState = f(self.node.cameraState)
         self.node.requestUpdateLayout(transition: transition)
         self.durationValue.set(self.cameraState.duration)
     }
     
-    fileprivate func updatePreviewState(_ f: (PreviewState?) -> PreviewState?, transition: Transition) {
+    fileprivate func updatePreviewState(_ f: (PreviewState?) -> PreviewState?, transition: ComponentTransition) {
         self.node.previewState = f(self.node.previewState)
         self.node.requestUpdateLayout(transition: transition)
     }
@@ -1736,7 +1736,7 @@ public class VideoMessageCameraScreen: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
 
         if !self.isDismissed {
-            (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: Transition(transition))
+            (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
         }
     }
     
@@ -1842,7 +1842,7 @@ private final class VideoMessageSendMessageContextPreview: UIView, ChatSendMessa
         preconditionFailure()
     }
     
-    func animateIn(transition: Transition) {
+    func animateIn(transition: ComponentTransition) {
         self.addSubview(self.previewContainerContentView)
         
         guard let previewContainerContentParentView = self.previewContainerContentParentView else {
@@ -1855,7 +1855,7 @@ private final class VideoMessageSendMessageContextPreview: UIView, ChatSendMessa
         transition.animatePosition(view: self.previewContainerContentView, from: CGPoint(x: fromFrame.midX - toFrame.midX, y: fromFrame.midY - toFrame.midY), to: CGPoint(), additive: true)
     }
     
-    func animateOut(transition: Transition) {
+    func animateOut(transition: ComponentTransition) {
         guard let previewContainerContentParentView = self.previewContainerContentParentView else {
             return
         }
@@ -1873,7 +1873,7 @@ private final class VideoMessageSendMessageContextPreview: UIView, ChatSendMessa
         })
     }
     
-    func animateOutOnSend(transition: Transition) {
+    func animateOutOnSend(transition: ComponentTransition) {
         guard let previewContainerContentParentView = self.previewContainerContentParentView else {
             return
         }
@@ -1887,7 +1887,7 @@ private final class VideoMessageSendMessageContextPreview: UIView, ChatSendMessa
         previewContainerContentParentView.addSubview(self.previewContainerContentView)
     }
     
-    func update(containerSize: CGSize, transition: Transition) -> CGSize {
+    func update(containerSize: CGSize, transition: ComponentTransition) -> CGSize {
         return self.previewContainerContentView.bounds.size
     }
 }

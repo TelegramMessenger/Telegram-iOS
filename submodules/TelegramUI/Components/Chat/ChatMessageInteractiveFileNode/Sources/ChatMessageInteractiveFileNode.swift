@@ -1262,7 +1262,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 }
                                 
                                 let waveformView: ComponentHostView<Empty>
-                                let waveformTransition: Transition
+                                let waveformTransition: ComponentTransition
                                 if let current = strongSelf.waveformView {
                                     waveformView = current
                                     switch animation.transition {

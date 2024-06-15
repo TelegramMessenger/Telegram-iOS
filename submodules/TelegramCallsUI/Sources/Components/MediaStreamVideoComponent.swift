@@ -193,7 +193,7 @@ final class MediaStreamVideoComponent: Component {
             }
         }
         
-        private func updateVideoStalled(isStalled: Bool, transition: Transition?) {
+        private func updateVideoStalled(isStalled: Bool, transition: ComponentTransition?) {
             if isStalled {
                 guard let component = self.component else { return }
                 
@@ -282,7 +282,7 @@ final class MediaStreamVideoComponent: Component {
             }
         }
         
-        func update(component: MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
+        func update(component: MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: ComponentTransition) -> CGSize {
             self.state = state
             self.component = component
             self.onVideoPlaybackChange = component.onVideoPlaybackLiveChange
@@ -459,7 +459,7 @@ final class MediaStreamVideoComponent: Component {
             let videoSize: CGSize
             let videoCornerRadius: CGFloat = component.isFullscreen ? 0 : 10
             
-            let videoFrameUpdateTransition: Transition
+            let videoFrameUpdateTransition: ComponentTransition
             if self.wasFullscreen != component.isFullscreen {
                 videoFrameUpdateTransition = transition
             } else {
@@ -551,7 +551,7 @@ final class MediaStreamVideoComponent: Component {
             if loadingBlurView.frame == .zero {
                 loadingBlurView.frame = loadingBlurViewFrame
             } else {
-                // Using Transition.setFrame on UIVisualEffectView causes instant update of sublayers
+                // Using ComponentTransition.setFrame on UIVisualEffectView causes instant update of sublayers
                 switch videoFrameUpdateTransition.animation {
                 case let .curve(duration, curve):
                     UIView.animate(withDuration: duration, delay: 0, options: curve.containedViewLayoutTransitionCurve.viewAnimationOptions, animations: { [self] in
@@ -741,7 +741,7 @@ final class MediaStreamVideoComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, transition: transition)
     }
 }

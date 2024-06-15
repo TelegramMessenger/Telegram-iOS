@@ -330,9 +330,9 @@ final class StoryContentCaptionComponent: Component {
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
                 if self.isExpanded {
-                    self.collapse(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                    self.collapse(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                 } else {
-                    self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                    self.expand(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                 }
             }
         }
@@ -352,7 +352,7 @@ final class StoryContentCaptionComponent: Component {
             }
         }
         
-        func expand(transition: Transition) {
+        func expand(transition: ComponentTransition) {
             self.ignoreScrolling = true
             if let textNode = self.expandedText.textNode?.textNode {
                 var offset = textNode.frame.minY - 8.0
@@ -371,7 +371,7 @@ final class StoryContentCaptionComponent: Component {
             self.updateScrolling(transition: transition.withUserData(InternalTransitionHint(bounceScrolling: true)))
         }
         
-        func collapse(transition: Transition) {
+        func collapse(transition: ComponentTransition) {
             self.ignoreScrolling = true
             
             if transition.animation.isImmediate {
@@ -391,7 +391,7 @@ final class StoryContentCaptionComponent: Component {
             self.textSelectionNode?.cancelSelection()
         }
         
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             guard let component = self.component, let itemLayout = self.itemLayout else {
                 return
             }
@@ -501,12 +501,12 @@ final class StoryContentCaptionComponent: Component {
                                                 self.expandedContentsBlocks.insert(blockIndex)
                                             }
                                             self.state?.updated(transition: .spring(duration: 0.4))
-                                            self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                            self.expand(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                                         } else {
-                                            self.collapse(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                            self.collapse(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                                         }
                                     } else {
-                                        self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                        self.expand(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                                     }
                                 }
                             }
@@ -515,9 +515,9 @@ final class StoryContentCaptionComponent: Component {
                                 if component.externalState.isSelectingText {
                                     self.cancelTextSelection()
                                 } else if self.isExpanded {
-                                    self.collapse(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                    self.collapse(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                                 } else {
-                                    self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                    self.expand(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                                 }
                             }
                         }
@@ -526,9 +526,9 @@ final class StoryContentCaptionComponent: Component {
                             if component.externalState.isSelectingText {
                                 self.cancelTextSelection()
                             } else if self.isExpanded {
-                                self.collapse(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                self.collapse(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                             } else {
-                                self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                self.expand(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                             }
                         }
                     }
@@ -598,7 +598,7 @@ final class StoryContentCaptionComponent: Component {
             }
         }
         
-        func update(component: StoryContentCaptionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: StoryContentCaptionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -1041,7 +1041,7 @@ final class StoryContentCaptionComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

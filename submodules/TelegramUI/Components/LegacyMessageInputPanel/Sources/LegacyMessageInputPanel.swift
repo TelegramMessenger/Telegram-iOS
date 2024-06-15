@@ -95,7 +95,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     }
     
     public func animate(_ view: UIView, frame: CGRect) {
-        let transition = Transition.spring(duration: 0.4)
+        let transition = ComponentTransition.spring(duration: 0.4)
         transition.setFrame(view: view, frame: frame)
     }
     
@@ -198,7 +198,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         
         self.inputPanel.parentState = self.state
         let inputPanelSize = self.inputPanel.update(
-            transition: Transition(transition),
+            transition: ComponentTransition(transition),
             component: AnyComponent(
                 MessageInputPanelComponent(
                     externalState: self.inputPanelExternalState,

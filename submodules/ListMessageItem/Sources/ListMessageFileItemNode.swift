@@ -369,7 +369,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     private var absoluteLocation: (CGRect, CGSize)?
     
     private var context: AccountContext?
-    private (set) var message: Message?
+    private(set) var message: Message?
     
     private var appliedItem: ListMessageItem?
     private var layoutParams: ListViewItemLayoutParams?

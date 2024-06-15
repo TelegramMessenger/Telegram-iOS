@@ -297,7 +297,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
             let animationRenderer = self.context.animationRenderer
             
             let avatarIcon: ComponentView<Empty>
-            var avatarIconTransition = Transition(transition)
+            var avatarIconTransition = ComponentTransition(transition)
             if let current = self.avatarIcon {
                 avatarIcon = current
             } else {

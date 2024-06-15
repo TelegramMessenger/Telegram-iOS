@@ -6,10 +6,10 @@ import MtProtoKit
 
 public struct StarsRevenueStats: Equatable {
     public struct Balances: Equatable {
-        public let canWithdraw: Bool
         public let currentBalance: Int64
         public let availableBalance: Int64
         public let overallRevenue: Int64
+        public let withdrawEnabled: Bool
     }
     
     public let revenueGraph: StatsGraph
@@ -59,7 +59,7 @@ extension StarsRevenueStats.Balances {
     init(apiStarsRevenueStatus: Api.StarsRevenueStatus) {
         switch apiStarsRevenueStatus {
         case let .starsRevenueStatus(flags, currentBalance, availableBalance, overallRevenue):
-            self.init(canWithdraw: (flags & (1 << 0)) != 0, currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue)
+            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue, withdrawEnabled: ((flags & (1 << 0)) != 0))
         }
     }
 }

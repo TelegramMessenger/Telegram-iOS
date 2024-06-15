@@ -565,7 +565,7 @@ public struct StoryListContextState: Equatable {
     public var isCached: Bool
     public var hasCache: Bool
     public var allEntityFiles: [MediaId: TelegramMediaFile]
-    
+    public var isLoading: Bool
     public init(
         peerReference: PeerReference?,
         items: [Item],
@@ -574,7 +574,8 @@ public struct StoryListContextState: Equatable {
         loadMoreToken: AnyHashable?,
         isCached: Bool,
         hasCache: Bool,
-        allEntityFiles: [MediaId: TelegramMediaFile]
+        allEntityFiles: [MediaId: TelegramMediaFile],
+        isLoading: Bool
     ) {
         self.peerReference = peerReference
         self.items = items
@@ -584,6 +585,7 @@ public struct StoryListContextState: Equatable {
         self.isCached = isCached
         self.hasCache = hasCache
         self.allEntityFiles = allEntityFiles
+        self.isLoading = isLoading
     }
 }
 
@@ -625,7 +627,7 @@ public final class PeerStoryListContext: StoryListContext {
             self.peerId = peerId
             self.isArchived = isArchived
             
-            self.stateValue = State(peerReference: nil, items: [], pinnedIds: Set(), totalCount: 0, loadMoreToken: AnyHashable(0 as Int), isCached: true, hasCache: false, allEntityFiles: [:])
+            self.stateValue = State(peerReference: nil, items: [], pinnedIds: Set(), totalCount: 0, loadMoreToken: AnyHashable(0 as Int), isCached: true, hasCache: false, allEntityFiles: [:], isLoading: false)
             
             let _ = (account.postbox.transaction { transaction -> (PeerReference?, [State.Item], [Int32], Int, [MediaId: TelegramMediaFile], Bool) in
                 let key = ValueBoxKey(length: 8 + 1)
@@ -714,7 +716,7 @@ public final class PeerStoryListContext: StoryListContext {
                     return
                 }
                 
-                var updatedState = State(peerReference: peerReference, items: items, pinnedIds: Set(pinnedIds), totalCount: totalCount, loadMoreToken: AnyHashable(0 as Int), isCached: true, hasCache: hasCache, allEntityFiles: allEntityFiles)
+                var updatedState = State(peerReference: peerReference, items: items, pinnedIds: Set(pinnedIds), totalCount: totalCount, loadMoreToken: AnyHashable(0 as Int), isCached: true, hasCache: hasCache, allEntityFiles: allEntityFiles, isLoading: false)
                 updatedState.items.sort(by: { lhs, rhs in
                     let lhsPinned = updatedState.pinnedIds.contains(lhs.storyItem.id)
                     let rhsPinned = updatedState.pinnedIds.contains(rhs.storyItem.id)
@@ -1280,7 +1282,11 @@ public final class SearchStoryListContext: StoryListContext {
             return self.statePromise.get()
         }
         
-        private var isLoadingMore: Bool = false
+        private var isLoadingMore: Bool = false {
+            didSet {
+                self.stateValue.isLoading = isLoadingMore
+            }
+        }
         private var requestDisposable: Disposable?
         
         private var updatesDisposable: Disposable?
@@ -1292,7 +1298,7 @@ public final class SearchStoryListContext: StoryListContext {
             self.account = account
             self.source = source
             
-            self.stateValue = State(peerReference: nil, items: [], pinnedIds: Set(), totalCount: 0, loadMoreToken: AnyHashable(""), isCached: false, hasCache: false, allEntityFiles: [:])
+            self.stateValue = State(peerReference: nil, items: [], pinnedIds: Set(), totalCount: 0, loadMoreToken: AnyHashable(""), isCached: false, hasCache: false, allEntityFiles: [:], isLoading: false)
             self.statePromise.set(.single(self.stateValue))
                 
             self.loadMore(completion: nil)

@@ -16,7 +16,7 @@ import UIKit
 private let milionsScale = "M"
 private let thousandsScale = "K"
 
-class ScalesNumberFormatter: NumberFormatter {
+class ScalesNumberFormatter: NumberFormatter, @unchecked Sendable {
     override func string(from number: NSNumber) -> String? {
         let value = number.doubleValue
         let pow = log10(value)
@@ -36,7 +36,7 @@ class ScalesNumberFormatter: NumberFormatter {
     }
 }
 
-class TonNumberFormatter: NumberFormatter {
+class TonNumberFormatter: NumberFormatter, @unchecked Sendable {
     override func string(from number: NSNumber) -> String? {
         var balanceText = "\(number.intValue)"
         let decimalSeparator = self.decimalSeparator ?? "."
@@ -60,3 +60,5 @@ class TonNumberFormatter: NumberFormatter {
         return balanceText
     }
 }
+
+

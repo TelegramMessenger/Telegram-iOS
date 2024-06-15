@@ -27,7 +27,7 @@ public final class ActivityIndicatorComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: ActivityIndicatorComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: ActivityIndicatorComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             if component.color != self.color {
                 self.color = component.color
             }
@@ -44,7 +44,7 @@ public final class ActivityIndicatorComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

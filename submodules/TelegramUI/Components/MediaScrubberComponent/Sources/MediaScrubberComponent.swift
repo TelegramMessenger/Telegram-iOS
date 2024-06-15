@@ -313,7 +313,7 @@ public final class MediaScrubberComponent: Component {
             if let offset = self.mainAudioTrackOffset {
                 position += offset
             }
-            let transition: Transition = .immediate
+            let transition: ComponentTransition = .immediate
             switch gestureRecognizer.state {
             case .began, .changed:
                 self.isPanningCursor = true
@@ -379,7 +379,7 @@ public final class MediaScrubberComponent: Component {
             self.cursorView.frame = cursorFrame(size: scrubberSize, height: self.effectiveCursorHeight, position: updatedPosition, duration: self.trimDuration)
         }
                 
-        public func update(component: MediaScrubberComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        public func update(component: MediaScrubberComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             let isFirstTime = self.component == nil
             self.component = component
             self.state = state
@@ -392,7 +392,7 @@ public final class MediaScrubberComponent: Component {
             }
             
             var totalHeight: CGFloat = 0.0
-            var trackLayout: [Int32: (CGRect, Transition, Bool)] = [:]
+            var trackLayout: [Int32: (CGRect, ComponentTransition, Bool)] = [:]
             
             if !component.tracks.contains(where: { $0.id == self.selectedTrackId }) {
                 self.selectedTrackId = component.tracks.first(where: { $0.isMain })?.id ?? 0
@@ -636,7 +636,7 @@ public final class MediaScrubberComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -664,7 +664,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     
     var onSelection: (Int32) -> Void = { _ in }
     var offsetUpdated: (Double, Bool) -> Void = { _, _ in }
-    var updated: (Transition) -> Void = { _ in }
+    var updated: (ComponentTransition) -> Void = { _ in }
     
     private(set) var isDragging = false
     private var ignoreScrollUpdates = false
@@ -797,7 +797,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     func updateOpaqueEdges(
         left: CGFloat,
         right: CGFloat,
-        transition: Transition
+        transition: ComponentTransition
     ) {
         self.leftOpaqueEdge = left
         self.rightOpaqueEdge = right
@@ -814,7 +814,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     private func updateThumbnailContainers(
         scrubberSize: CGSize,
         availableSize: CGSize,
-        transition: Transition
+        transition: ComponentTransition
     ) {
         let containerLeftEdge: CGFloat = self.leftOpaqueEdge ?? 0.0
         let containerRightEdge: CGFloat = self.rightOpaqueEdge ?? availableSize.width
@@ -831,7 +831,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         isSelected: Bool,
         availableSize: CGSize,
         duration: Double,
-        transition: Transition
+        transition: ComponentTransition
     ) -> CGSize {
         let previousParams = self.params
         self.params = (track, isSelected, availableSize, duration)
@@ -1171,7 +1171,7 @@ private class TrimView: UIView {
     var isHollow = false
     
     var trimUpdated: (Double, Double, Bool, Bool) -> Void = { _, _, _, _ in }
-    var updated: (Transition) -> Void = { _ in }
+    var updated: (ComponentTransition) -> Void = { _ in }
     
     override init(frame: CGRect) {
         super.init(frame: .zero)
@@ -1233,7 +1233,7 @@ private class TrimView: UIView {
         let startValue = max(0.0, min(params.duration - duration, params.startPosition + delta * params.duration))
         let endValue = startValue + duration
         
-        var transition: Transition = .immediate
+        var transition: ComponentTransition = .immediate
         switch gestureRecognizer.state {
         case .began, .changed:
             self.isPanningTrimHandle = true
@@ -1273,7 +1273,7 @@ private class TrimView: UIView {
             endValue -= delta
         }
         
-        var transition: Transition = .immediate
+        var transition: ComponentTransition = .immediate
         switch gestureRecognizer.state {
         case .began, .changed:
             self.isPanningTrimHandle = true
@@ -1311,7 +1311,7 @@ private class TrimView: UIView {
             startValue += delta
         }
         
-        var transition: Transition = .immediate
+        var transition: ComponentTransition = .immediate
         switch gestureRecognizer.state {
         case .began, .changed:
             self.isPanningTrimHandle = true
@@ -1350,7 +1350,7 @@ private class TrimView: UIView {
         position: Double,
         minDuration: Double,
         maxDuration: Double,
-        transition: Transition
+        transition: ComponentTransition
     ) -> (leftHandleFrame: CGRect, rightHandleFrame: CGRect) {
         let isFirstTime = self.params == nil
         self.params = (scrubberSize, duration, startPosition, endPosition, position, minDuration, maxDuration)

@@ -34,7 +34,7 @@ public final class Circle: Component {
         var component: Circle?
         var currentSize: CGSize?
         
-        func update(component: Circle, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: Circle, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let size = CGSize(width: min(availableSize.width, component.size.width), height: min(availableSize.height, component.size.height))
             
             if self.currentSize != size || self.component != component {
@@ -63,7 +63,7 @@ public final class Circle: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

@@ -457,7 +457,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
             var topInset: CGFloat = insets.top - 89.0
             if let state = self.globalStorySearchState {
                 let componentView: ComponentView<Empty>
-                var panelTransition = Transition(transition)
+                var panelTransition = ComponentTransition(transition)
                 if let current = self.globalStorySearchComponentView {
                     componentView = current
                 } else {

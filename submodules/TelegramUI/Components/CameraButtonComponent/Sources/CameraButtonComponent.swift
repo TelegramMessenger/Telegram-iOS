@@ -73,7 +73,7 @@ public final class CameraButton: Component {
             }
         }
         
-        private func updateScale(transition: Transition) {
+        private func updateScale(transition: ComponentTransition) {
             guard let component = self.component else {
                 return
             }
@@ -147,7 +147,7 @@ public final class CameraButton: Component {
             super.cancelTracking(with: event)
         }
         
-        func update(component: CameraButton, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: CameraButton, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             if let currentId = self.component?.content.id, currentId != component.content.id {
                 let previousContentView = self.contentView
                 
@@ -200,7 +200,7 @@ public final class CameraButton: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

@@ -307,7 +307,7 @@ public class PremiumLimitDisplayComponent: Component {
             }
             
             if let badgeText = component.badgeText {
-                let transition: Transition = .easeInOut(duration: from != nil ? 0.3 : 0.5)
+                let transition: ComponentTransition = .easeInOut(duration: from != nil ? 0.3 : 0.5)
                 var frameTransition = transition
                 if from == nil {
                     frameTransition = frameTransition.withAnimation(.none)
@@ -318,7 +318,7 @@ public class PremiumLimitDisplayComponent: Component {
         }
         
         var previousAvailableSize: CGSize?
-        func update(component: PremiumLimitDisplayComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: PremiumLimitDisplayComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.inactiveBackground.backgroundColor = component.inactiveColor.cgColor
             self.activeBackground.backgroundColor = component.activeColors.last?.cgColor
@@ -493,7 +493,7 @@ public class PremiumLimitDisplayComponent: Component {
                 }
             }
                         
-            var progressTransition: Transition = .immediate
+            var progressTransition: ComponentTransition = .immediate
             if !transition.animation.isImmediate {
                 progressTransition = .easeInOut(duration: 0.5)
             }
@@ -738,7 +738,7 @@ public class PremiumLimitDisplayComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -1427,7 +1427,7 @@ private final class LimitSheetContent: CombinedComponent {
                     ]
                 }
                 
-                var limitTransition: Transition = .immediate
+                var limitTransition: ComponentTransition = .immediate
                 if boostUpdated {
                     limitTransition = .easeInOut(duration: 0.35)
                 }
@@ -1513,11 +1513,11 @@ private final class LimitSheetContent: CombinedComponent {
                     
                     context.add(textChild
                         .position(CGPoint(x: context.availableSize.width / 2.0, y: textOffset))
-                        .appear(Transition.Appear({ _, view, transition in
+                        .appear(ComponentTransition.Appear({ _, view, transition in
                             transition.animatePosition(view: view, from: CGPoint(x: 0.0, y: 64.0), to: .zero, additive: true)
                             transition.animateAlpha(view: view, from: 0.0, to: 1.0)
                         }))
-                        .disappear(Transition.Disappear({ view, transition, completion in
+                        .disappear(ComponentTransition.Disappear({ view, transition, completion in
                             view.superview?.sendSubviewToBack(view)
                             transition.animatePosition(view: view, from: .zero, to: CGPoint(x: 0.0, y: -64.0), additive: true)
                             transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
@@ -1532,11 +1532,11 @@ private final class LimitSheetContent: CombinedComponent {
                     
                     context.add(alternateTextChild
                         .position(CGPoint(x: context.availableSize.width / 2.0, y: textOffset))
-                        .appear(Transition.Appear({ _, view, transition in
+                        .appear(ComponentTransition.Appear({ _, view, transition in
                             transition.animatePosition(view: view, from: CGPoint(x: 0.0, y: 64.0), to: .zero, additive: true)
                             transition.animateAlpha(view: view, from: 0.0, to: 1.0)
                         }))
-                        .disappear(Transition.Disappear({ view, transition, completion in
+                        .disappear(ComponentTransition.Disappear({ view, transition, completion in
                             transition.animatePosition(view: view, from: .zero, to: CGPoint(x: 0.0, y: -64.0), additive: true)
                             transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
                                 completion()
@@ -1938,7 +1938,7 @@ public final class BoostIconComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: BoostIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: BoostIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
                                     
@@ -1986,7 +1986,7 @@ public final class BoostIconComponent: Component {
         return View(frame: CGRect())
     }
 
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

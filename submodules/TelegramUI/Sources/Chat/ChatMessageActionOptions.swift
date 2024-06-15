@@ -617,78 +617,93 @@ func moveReplyMessageToAnotherChat(selfController: ChatControllerImpl, replySubj
                 selfController.searchResultsController = nil
                 strongController.dismiss()
             } else {
-                if let navigationController = selfController.navigationController as? NavigationController {
-                    for controller in navigationController.viewControllers {
-                        if let maybeChat = controller as? ChatControllerImpl {
-                            if case .peer(peerId) = maybeChat.chatLocation {
-                                var isChatPinnedMessages = false
-                                if case .pinnedMessages = maybeChat.presentationInterfaceState.subject {
-                                    isChatPinnedMessages = true
-                                }
-                                if !isChatPinnedMessages {
-                                    maybeChat.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(replySubject).withoutSelectionState() }) })
-                                    selfController.dismiss()
-                                    strongController.dismiss()
-                                    return
-                                }
-                            }
-                        }
-                    }
-                }
-
-                let _ = (ChatInterfaceState.update(engine: selfController.context.engine, peerId: peerId, threadId: threadId, { currentState in
-                    return currentState.withUpdatedReplyMessageSubject(replySubject)
-                })
-                |> deliverOnMainQueue).startStandalone(completed: { [weak selfController] in
-                    guard let selfController else {
-                        return
-                    }
-                    let proceed: (ChatController) -> Void = { [weak selfController] chatController in
-                        guard let selfController else {
-                            return
-                        }
-                        selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withoutSelectionState() }) })
-                        
-                        let navigationController: NavigationController?
-                        if let parentController = selfController.parentController {
-                            navigationController = (parentController.navigationController as? NavigationController)
-                        } else {
-                            navigationController = selfController.effectiveNavigationController
-                        }
-                        
-                        if let navigationController = navigationController {
-                            var viewControllers = navigationController.viewControllers
-                            if threadId != nil {
-                                viewControllers.insert(chatController, at: viewControllers.count - 2)
-                            } else {
-                                viewControllers.insert(chatController, at: viewControllers.count - 1)
-                            }
-                            navigationController.setViewControllers(viewControllers, animated: false)
-                            
-                            selfController.controllerNavigationDisposable.set((chatController.ready.get()
-                            |> SwiftSignalKit.filter { $0 }
-                            |> take(1)
-                            |> deliverOnMainQueue).startStrict(next: { [weak navigationController] _ in
-                                viewControllers.removeAll(where: { $0 is PeerSelectionController })
-                                navigationController?.setViewControllers(viewControllers, animated: true)
-                            }))
-                        }
-                    }
-                    if let threadId = threadId {
-                        let _ = (selfController.context.sharedContext.chatControllerForForumThread(context: selfController.context, peerId: peerId, threadId: threadId)
-                        |> deliverOnMainQueue).startStandalone(next: { chatController in
-                            proceed(chatController)
-                        })
-                    } else {
-                        let chatController = ChatControllerImpl(context: selfController.context, chatLocation: .peer(id: peerId))
-                        chatController.activateInput(type: .text)
-                        proceed(chatController)
-                    }
+                moveReplyToChat(selfController: selfController, peerId: peerId, threadId: threadId, replySubject: replySubject, completion: { [weak strongController] in
+                    strongController?.dismiss()
                 })
             }
         }
         selfController.chatDisplayNode.dismissInput()
         selfController.effectiveNavigationController?.pushViewController(controller)
+    })
+}
+
+func moveReplyToChat(selfController: ChatControllerImpl, peerId: EnginePeer.Id, threadId: Int64?, replySubject: ChatInterfaceState.ReplyMessageSubject, completion: @escaping () -> Void) {
+    if let navigationController = selfController.effectiveNavigationController {
+        for controller in navigationController.viewControllers {
+            if let maybeChat = controller as? ChatControllerImpl {
+                if case .peer(peerId) = maybeChat.chatLocation {
+                    var isChatPinnedMessages = false
+                    if case .pinnedMessages = maybeChat.presentationInterfaceState.subject {
+                        isChatPinnedMessages = true
+                    }
+                    if !isChatPinnedMessages {
+                        maybeChat.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(replySubject).withoutSelectionState() }) })
+                        
+                        var viewControllers = navigationController.viewControllers
+                        if let index = viewControllers.firstIndex(where: { $0 === maybeChat }), index != viewControllers.count - 1 {
+                            viewControllers.removeSubrange((index + 1) ..< viewControllers.count)
+                            navigationController.setViewControllers(viewControllers, animated: true)
+                        } else {
+                            selfController.dismiss()
+                        }
+                        
+                        completion()
+                        return
+                    }
+                }
+            }
+        }
+    }
+
+    let _ = (ChatInterfaceState.update(engine: selfController.context.engine, peerId: peerId, threadId: threadId, { currentState in
+        return currentState.withUpdatedReplyMessageSubject(replySubject)
+    })
+    |> deliverOnMainQueue).startStandalone(completed: { [weak selfController] in
+        guard let selfController else {
+            return
+        }
+        let proceed: (ChatController) -> Void = { [weak selfController] chatController in
+            guard let selfController else {
+                return
+            }
+            selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withoutSelectionState() }) })
+            
+            let navigationController: NavigationController?
+            if let parentController = selfController.parentController {
+                navigationController = (parentController.navigationController as? NavigationController)
+            } else {
+                navigationController = selfController.effectiveNavigationController
+            }
+            
+            if let navigationController = navigationController {
+                var viewControllers = navigationController.viewControllers
+                if threadId != nil {
+                    viewControllers.insert(chatController, at: viewControllers.count - 2)
+                } else {
+                    viewControllers.insert(chatController, at: viewControllers.count - 1)
+                }
+                navigationController.setViewControllers(viewControllers, animated: false)
+                
+                selfController.controllerNavigationDisposable.set((chatController.ready.get()
+                |> SwiftSignalKit.filter { $0 }
+                |> take(1)
+                |> timeout(0.2, queue: .mainQueue(), alternate: .single(true))
+                |> deliverOnMainQueue).startStrict(next: { [weak navigationController] _ in
+                    viewControllers.removeAll(where: { $0 is PeerSelectionController })
+                    navigationController?.setViewControllers(viewControllers, animated: true)
+                }))
+            }
+        }
+        if let threadId = threadId {
+            let _ = (selfController.context.sharedContext.chatControllerForForumThread(context: selfController.context, peerId: peerId, threadId: threadId)
+            |> deliverOnMainQueue).startStandalone(next: { chatController in
+                proceed(chatController)
+            })
+        } else {
+            let chatController = ChatControllerImpl(context: selfController.context, chatLocation: .peer(id: peerId))
+            chatController.activateInput(type: .text)
+            proceed(chatController)
+        }
     })
 }
 

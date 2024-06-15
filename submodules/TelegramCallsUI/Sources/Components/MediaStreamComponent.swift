@@ -196,7 +196,7 @@ public final class MediaStreamComponent: CombinedComponent {
         
         func toggleDisplayUI() {
             self.displayUI = !self.displayUI
-            self.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .easeInOut)))
+            self.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .easeInOut)))
         }
         
         func cancelScheduledDismissUI() {
@@ -224,7 +224,7 @@ public final class MediaStreamComponent: CombinedComponent {
             if interactive {
                 self.updated(transition: .immediate)
             } else {
-                self.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                self.updated(transition: ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut)))
             }
         }
     }
@@ -1552,7 +1552,7 @@ private final class StreamTitleComponent: Component {
             }
         }
         
-        func update(component: StreamTitleComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: StreamTitleComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let liveIndicatorWidth: CGFloat = self.liveIndicatorView.desiredWidth
             let liveIndicatorHeight: CGFloat = 20.0
             
@@ -1686,7 +1686,7 @@ private final class StreamTitleComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -2024,7 +2024,7 @@ final class RoundGradientButtonComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: RoundGradientButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: RoundGradientButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.iconView.image = component.image ?? component.icon.flatMap { UIImage(bundleImageName: $0) }
             let gradientColors: [CGColor]
             if component.gradientColors.count == 1 {
@@ -2062,7 +2062,7 @@ final class RoundGradientButtonComponent: Component {
         View()
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

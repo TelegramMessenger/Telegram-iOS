@@ -47,7 +47,7 @@ public final class RoundedRectangle: Component {
     public final class View: UIImageView {
         var component: RoundedRectangle?
         
-        func update(component: RoundedRectangle, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: RoundedRectangle, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             if self.component != component {
                 let cornerRadius = component.cornerRadius ?? min(availableSize.width, availableSize.height) * 0.5
                 
@@ -113,7 +113,7 @@ public final class RoundedRectangle: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

@@ -69,19 +69,19 @@ private enum LocationPickerEntry: Comparable, Identifiable {
     static func ==(lhs: LocationPickerEntry, rhs: LocationPickerEntry) -> Bool {
         switch lhs {
             case let .city(lhsTheme, lhsTitle, lhsSubtitle, lhsVenue, lhsQueryId, lhsResultId, lhsCoordinate, lhsName, lhsAddress):
-                if case let .city(rhsTheme, rhsTitle, rhsSubtitle, rhsVenue, rhsQueryId, rhsResultId, rhsCoordinate, rhsName, rhsAddress) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsVenue?.venue?.id == rhsVenue?.venue?.id, lhsQueryId == rhsQueryId && lhsResultId == rhsResultId, lhsCoordinate == rhsCoordinate, lhsName == rhsName, lhsAddress == rhsAddress {
+            if case let .city(rhsTheme, rhsTitle, rhsSubtitle, rhsVenue, rhsQueryId, rhsResultId, rhsCoordinate, rhsName, rhsAddress) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsVenue?.venue?.id == rhsVenue?.venue?.id, lhsQueryId == rhsQueryId && lhsResultId == rhsResultId, locationCoordinatesAreEqual(lhsCoordinate, rhsCoordinate), lhsName == rhsName, lhsAddress == rhsAddress {
                     return true
                 } else {
                     return false
                 }
             case let .location(lhsTheme, lhsTitle, lhsSubtitle, lhsVenue, lhsQueryId, lhsResultId, lhsCoordinate, lhsName, lhsAddress, lhsIsTop):
-                if case let .location(rhsTheme, rhsTitle, rhsSubtitle, rhsVenue, rhsQueryId, rhsResultId, rhsCoordinate, rhsName, rhsAddress, rhsIsTop) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsVenue?.venue?.id == rhsVenue?.venue?.id, lhsQueryId == rhsQueryId && lhsResultId == rhsResultId, lhsCoordinate == rhsCoordinate, lhsName == rhsName, lhsAddress == rhsAddress, lhsIsTop == rhsIsTop {
+                if case let .location(rhsTheme, rhsTitle, rhsSubtitle, rhsVenue, rhsQueryId, rhsResultId, rhsCoordinate, rhsName, rhsAddress, rhsIsTop) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsVenue?.venue?.id == rhsVenue?.venue?.id, lhsQueryId == rhsQueryId && lhsResultId == rhsResultId, locationCoordinatesAreEqual(lhsCoordinate, rhsCoordinate), lhsName == rhsName, lhsAddress == rhsAddress, lhsIsTop == rhsIsTop {
                     return true
                 } else {
                     return false
                 }
             case let .liveLocation(lhsTheme, lhsTitle, lhsSubtitle, lhsCoordinate):
-                if case let .liveLocation(rhsTheme, rhsTitle, rhsSubtitle, rhsCoordinate) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsCoordinate == rhsCoordinate {
+                if case let .liveLocation(rhsTheme, rhsTitle, rhsSubtitle, rhsCoordinate) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, locationCoordinatesAreEqual(lhsCoordinate, rhsCoordinate) {
                     return true
                 } else {
                     return false
@@ -246,7 +246,7 @@ enum LocationPickerLocation: Equatable {
                     return false
                 }
             case let .location(lhsCoordinate, lhsAddress):
-                if case let .location(rhsCoordinate, rhsAddress) = rhs, lhsCoordinate == rhsCoordinate, lhsAddress == rhsAddress {
+                if case let .location(rhsCoordinate, rhsAddress) = rhs, locationCoordinatesAreEqual(lhsCoordinate, rhsCoordinate), lhsAddress == rhsAddress {
                     return true
                 } else {
                     return false
@@ -544,7 +544,9 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         let foundVenues: Signal<([(TelegramMediaMap, String)], Int64, CLLocation)?, NoError> = .single(nil)
         |> then(
             self.searchVenuesPromise.get()
-            |> distinctUntilChanged
+            |> distinctUntilChanged(isEqual: { lhs, rhs in
+                return locationCoordinatesAreEqual(lhs, rhs)
+            })
             |> mapToSignal { coordinate -> Signal<([(TelegramMediaMap, String)], Int64, CLLocation)?, NoError> in
                 if let coordinate = coordinate {
                     return (.single(nil)
@@ -726,7 +728,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             case .none, .venue:
                                 updateMap = true
                             case let .location(previousCoordinate, _):
-                                if previousCoordinate != coordinate {
+                                if !locationCoordinatesAreEqual(previousCoordinate, coordinate) {
                                     updateMap = true
                                 }
                             default:

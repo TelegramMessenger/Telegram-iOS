@@ -1043,8 +1043,8 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
     
     private func contentNodeDidBeginDragging() {
         if let contentInfoView = self.contentInfoView, contentInfoView.alpha != 0.0 {
-            Transition.easeInOut(duration: 0.2).setAlpha(view: contentInfoView, alpha: 0.0)
-            Transition.easeInOut(duration: 0.2).setScale(view: contentInfoView, scale: 0.5)
+            ComponentTransition.easeInOut(duration: 0.2).setAlpha(view: contentInfoView, alpha: 0.0)
+            ComponentTransition.easeInOut(duration: 0.2).setScale(view: contentInfoView, scale: 0.5)
         }
     }
     
@@ -1350,8 +1350,8 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         self.animatingOut = true
         
         if let contentInfoView = self.contentInfoView, contentInfoView.alpha != 0.0 {
-            Transition.easeInOut(duration: 0.2).setAlpha(view: contentInfoView, alpha: 0.0)
-            Transition.easeInOut(duration: 0.2).setScale(view: contentInfoView, scale: 0.5)
+            ComponentTransition.easeInOut(duration: 0.2).setAlpha(view: contentInfoView, alpha: 0.0)
+            ComponentTransition.easeInOut(duration: 0.2).setScale(view: contentInfoView, scale: 0.5)
         }
         
         if self.contentNode != nil {

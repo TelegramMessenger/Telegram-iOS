@@ -41,7 +41,7 @@ final class BlurredRoundedRectangle: Component {
             preconditionFailure()
         }
 
-        func update(component: BlurredRoundedRectangle, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: BlurredRoundedRectangle, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             transition.setFrame(view: self.background.view, frame: CGRect(origin: CGPoint(), size: availableSize))
             self.background.updateColor(color: component.color, transition: .immediate)
             self.background.update(size: availableSize, cornerRadius: min(availableSize.width, availableSize.height) / 2.0, transition: .immediate)
@@ -54,7 +54,7 @@ final class BlurredRoundedRectangle: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -96,7 +96,7 @@ final class RadialProgressComponent: Component {
             preconditionFailure()
         }
 
-        func update(component: RadialProgressComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: RadialProgressComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             func draw(context: CGContext) {
                 let diameter = availableSize.width
 
@@ -168,7 +168,7 @@ final class RadialProgressComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -277,7 +277,7 @@ final class CheckComponent: Component {
             }
         }
 
-        func update(component: CheckComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: CheckComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             if let currentValue = self.currentValue, currentValue != component.value, case .curve = transition.animation {
                 self.animator?.invalidate()
 
@@ -310,7 +310,7 @@ final class CheckComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -513,7 +513,7 @@ final class AvatarComponent: Component {
             preconditionFailure()
         }
 
-        func update(component: AvatarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: AvatarComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.avatarContainer.frame = CGRect(origin: CGPoint(), size: availableSize)
             let theme = component.context.sharedContext.currentPresentationData.with({ $0 }).theme
             
@@ -643,7 +643,7 @@ final class AvatarComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -729,7 +729,7 @@ private final class WallpaperBlurComponent: Component {
             preconditionFailure()
         }
 
-        func update(component: WallpaperBlurComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: WallpaperBlurComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             transition.setFrame(view: self.background.view, frame: CGRect(origin: CGPoint(), size: availableSize))
             self.background.update(rect: component.rect, within: component.withinSize, color: component.color, wallpaperNode: component.wallpaperNode, transition: .immediate)
 
@@ -741,7 +741,7 @@ private final class WallpaperBlurComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -900,7 +900,7 @@ final class OverscrollContentsComponent: Component {
             preconditionFailure()
         }
 
-        func update(component: OverscrollContentsComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: OverscrollContentsComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             if let _ = component.peer {
                 self.avatarView.isHidden = false
                 self.checkView.isHidden = true
@@ -1034,7 +1034,7 @@ final class OverscrollContentsComponent: Component {
             let checkSize: CGFloat = 56.0
             self.checkView.frame = CGRect(origin: CGPoint(x: floor(-checkSize / 2.0), y: floor(-checkSize / 2.0)), size: CGSize(width: checkSize, height: checkSize))
             let _ = self.checkView.update(
-                transition: Transition(animation: transformTransition.isAnimated ? .curve(duration: 0.2, curve: .easeInOut) : .none),
+                transition: ComponentTransition(animation: transformTransition.isAnimated ? .curve(duration: 0.2, curve: .easeInOut) : .none),
                 component: AnyComponent(CheckComponent(
                     color: component.foregroundColor,
                     lineWidth: 3.0,
@@ -1046,7 +1046,7 @@ final class OverscrollContentsComponent: Component {
 
             if let peer = component.peer {
                 let _ = self.avatarView.update(
-                    transition: Transition(animation: transformTransition.isAnimated ? .curve(duration: 0.2, curve: .easeInOut) : .none),
+                    transition: ComponentTransition(animation: transformTransition.isAnimated ? .curve(duration: 0.2, curve: .easeInOut) : .none),
                     component: AnyComponent(AvatarComponent(
                         context: component.context,
                         peer: peer,
@@ -1081,7 +1081,7 @@ final class OverscrollContentsComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

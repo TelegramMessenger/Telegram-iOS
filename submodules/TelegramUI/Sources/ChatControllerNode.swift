@@ -2514,7 +2514,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             let peerId = self.chatPresentationInterfaceState.chatLocation.peerId
             
             let inlineSearchResults: ComponentView<Empty>
-            var inlineSearchResultsTransition = Transition(transition)
+            var inlineSearchResultsTransition = ComponentTransition(transition)
             if let current = self.inlineSearchResults {
                 inlineSearchResults = current
             } else {

@@ -374,7 +374,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                     }
                 }
                 if let customColor {
-                    Transition.immediate.setTintColor(layer: mirrorLayer, color: customColor)
+                    ComponentTransition.immediate.setTintColor(layer: mirrorLayer, color: customColor)
                 } else {
                     self.layerTintColor = nil
                 }
@@ -482,7 +482,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         return nullAction
     }
     
-    public func updateTintColor(contentTintColor: UIColor?, dynamicColor: UIColor?, transition: Transition) {
+    public func updateTintColor(contentTintColor: UIColor?, dynamicColor: UIColor?, transition: ComponentTransition) {
         self._contentTintColor = contentTintColor
         self._dynamicColor = dynamicColor
         

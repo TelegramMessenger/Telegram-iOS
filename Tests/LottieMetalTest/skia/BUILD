@@ -3,12 +3,18 @@ load("@build_bazel_rules_apple//apple:apple.bzl",
     "apple_dynamic_framework_import",
 )
 
+framework_imports = select({
+    "@build_bazel_rules_apple//apple:ios_arm64": glob([
+        "device/libskia.framework/**"
+    ]),
+    "//build-system:ios_sim_arm64": glob([
+        "simulator/libskia.framework/**"
+    ])
+})
 
 apple_dynamic_framework_import(
     name = "libskia",
-    framework_imports = glob([
-        "libskia.framework/**"
-    ]),
+    framework_imports = framework_imports,
     visibility = ["//visibility:public"],
 )
 

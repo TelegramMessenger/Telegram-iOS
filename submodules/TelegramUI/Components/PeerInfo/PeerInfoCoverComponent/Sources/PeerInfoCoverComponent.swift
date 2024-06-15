@@ -235,7 +235,7 @@ public final class PeerInfoCoverComponent: Component {
             }
         }
         
-        func update(component: PeerInfoCoverComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: PeerInfoCoverComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             if self.component?.peer?.profileBackgroundEmojiId != component.peer?.profileBackgroundEmojiId {
                 if let profileBackgroundEmojiId = component.peer?.profileBackgroundEmojiId, profileBackgroundEmojiId != 0 {
                     if self.patternContentsTarget == nil {
@@ -412,7 +412,7 @@ public final class PeerInfoCoverComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
