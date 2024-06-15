@@ -353,9 +353,6 @@ public extension ShareWithPeersScreen {
                                 }
                             }
                             if case let .channel(channel) = peer {
-                                if channel.isForum  {
-                                    return false
-                                }
                                 if case .broadcast = channel.info {
                                     return false
                                 }
@@ -496,9 +493,6 @@ public extension ShareWithPeersScreen {
                                     return true
                                 }
                             } else if case let .channel(channel) = peer {
-                                if channel.isForum {
-                                    return false
-                                }
                                 if case .broadcast = channel.info {
                                     return false
                                 }
