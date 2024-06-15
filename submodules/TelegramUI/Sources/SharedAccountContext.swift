@@ -2632,8 +2632,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsTransferScreen(context: context, starsContext: starsContext, invoice: invoice, source: source, inputData: inputData, completion: completion)
     }
     
-    public func makeStarsTransactionScreen(context: AccountContext, transaction: StarsContext.State.Transaction) -> ViewController {
-        return StarsTransactionScreen(context: context, subject: .transaction(transaction), action: {})
+    public func makeStarsTransactionScreen(context: AccountContext, transaction: StarsContext.State.Transaction, isAccount: Bool) -> ViewController {
+        return StarsTransactionScreen(context: context, subject: .transaction(transaction, isAccount), action: {})
     }
     
     public func makeStarsReceiptScreen(context: AccountContext, receipt: BotPaymentReceipt) -> ViewController {

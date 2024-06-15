@@ -580,6 +580,7 @@ final class StarsTransactionsScreenComponent: Component {
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
                         transactionsContext: allTransactionsContext,
+                        isAccount: true,
                         action: { transaction in
                             component.openTransaction(transaction)
                         }
@@ -592,6 +593,7 @@ final class StarsTransactionsScreenComponent: Component {
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
                         transactionsContext: incomingTransactionsContext,
+                        isAccount: true,
                         action: { transaction in
                             component.openTransaction(transaction)
                         }
@@ -604,6 +606,7 @@ final class StarsTransactionsScreenComponent: Component {
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
                         transactionsContext: outgoingTransactionsContext,
+                        isAccount: true,
                         action: { transaction in
                             component.openTransaction(transaction)
                         }
@@ -719,7 +722,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
             guard let self else {
                 return
             }
-            let controller = context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction)
+            let controller = context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction, isAccount: true)
             self.push(controller)
         }
         

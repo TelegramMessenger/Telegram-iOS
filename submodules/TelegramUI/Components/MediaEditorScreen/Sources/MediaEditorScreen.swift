@@ -4517,19 +4517,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 entity.renderImage = result.image
                 entity.secondaryRenderImage = result.nightImage
                                 
-                let fraction: CGFloat = 1.0
-//                if let image = result.image {
-//                    fraction = max(image.size.width, image.size.height) / 353.0
-//                } else {
-//                    fraction = 1.0
-//                }
-                
                 if let existingEntity {
                     self.entitiesView.remove(uuid: existingEntity.uuid, animated: true)
                 }
                 self.interaction?.insertEntity(
                     entity,
-                    scale: existingEntity?.scale ?? min(6.0, fraction),
+                    scale: existingEntity?.scale ?? 1.0,
                     position: existingEntity?.position
                 )
             })

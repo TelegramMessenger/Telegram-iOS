@@ -258,6 +258,7 @@ final class StarsStatisticsScreenComponent: Component {
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            let strings = environment.strings
             
             if self.stateDisposable == nil {
                 self.stateDisposable = (component.revenueContext.state
@@ -309,7 +310,7 @@ final class StarsStatisticsScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: environment.strings.Stars_BotRevenue_Title, font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                        text: .plain(NSAttributedString(string: strings.Stars_BotRevenue_Title, font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                         horizontalAlignment: .center,
                         truncationType: .end,
                         maximumNumberOfLines: 1
@@ -334,7 +335,7 @@ final class StarsStatisticsScreenComponent: Component {
                         theme: environment.theme,
                         header: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: environment.strings.Stars_BotRevenue_Revenue_Title.uppercased(),
+                                string: strings.Stars_BotRevenue_Revenue_Title.uppercased(),
                                 font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -343,7 +344,7 @@ final class StarsStatisticsScreenComponent: Component {
                         footer: nil,
                         items: [
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
-                                itemGenerator: StatsGraphItem(presentationData: ItemListPresentationData(presentationData), graph: revenueGraph, type: .currency, conversionRate: starsState?.usdRate ?? 0.0, sectionId: 0, style: .blocks),
+                                itemGenerator: StatsGraphItem(presentationData: ItemListPresentationData(presentationData), graph: revenueGraph, type: .stars, conversionRate: starsState?.usdRate ?? 0.0, sectionId: 0, style: .blocks),
                                 params: ListViewItemLayoutParams(width: availableSize.width - sideInsets, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
                             ))),
                         ],
@@ -369,7 +370,7 @@ final class StarsStatisticsScreenComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: environment.strings.Stars_BotRevenue_Proceeds_Title.uppercased(),
+                            string: strings.Stars_BotRevenue_Proceeds_Title.uppercased(),
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -380,14 +381,14 @@ final class StarsStatisticsScreenComponent: Component {
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(StarsOverviewItemComponent(
                             theme: environment.theme,
                             dateTimeFormat: environment.dateTimeFormat,
-                            title: environment.strings.Stars_BotRevenue_Proceeds_Available,
+                            title: strings.Stars_BotRevenue_Proceeds_Available,
                             value: starsState?.balances.availableBalance ?? 0,
                             rate: starsState?.usdRate ?? 0.0
                         ))),
                         AnyComponentWithIdentity(id: 1, component: AnyComponent(StarsOverviewItemComponent(
                             theme: environment.theme,
                             dateTimeFormat: environment.dateTimeFormat,
-                            title: environment.strings.Stars_BotRevenue_Proceeds_Total,
+                            title: strings.Stars_BotRevenue_Proceeds_Total,
                             value: starsState?.balances.overallRevenue ?? 0,
                             rate: starsState?.usdRate ?? 0.0
                         )))
@@ -413,7 +414,7 @@ final class StarsStatisticsScreenComponent: Component {
                 return (TelegramTextAttributes.URL, contents)
             })
             
-            let balanceInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_BotRevenue_Withdraw_Info, attributes: termsMarkdownAttributes, textAlignment: .natural
+            let balanceInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(strings.Stars_BotRevenue_Withdraw_Info, attributes: termsMarkdownAttributes, textAlignment: .natural
             ))
             if self.cachedChevronImage == nil || self.cachedChevronImage?.1 !== environment.theme {
                 self.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: environment.theme.list.itemAccentColor)!, environment.theme)
@@ -428,7 +429,7 @@ final class StarsStatisticsScreenComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: environment.strings.Stars_BotRevenue_Withdraw_Balance.uppercased(),
+                            string: strings.Stars_BotRevenue_Withdraw_Balance.uppercased(),
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -436,16 +437,27 @@ final class StarsStatisticsScreenComponent: Component {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(balanceInfoString),
-                        maximumNumberOfLines: 0
+                        maximumNumberOfLines: 0,
+                        highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.2),
+                        highlightAction: { attributes in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                            } else {
+                                return nil
+                            }
+                        },
+                        tapAction: { attributes, _ in
+                            component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_BotRevenue_Withdraw_Info_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                        }
                     )),
                     items: [AnyComponentWithIdentity(id: 0, component: AnyComponent(
                         StarsBalanceComponent(
                             theme: environment.theme,
-                            strings: environment.strings,
+                            strings: strings,
                             dateTimeFormat: environment.dateTimeFormat,
                             count: self.starsState?.balances.availableBalance ?? 0,
                             rate: 0.2,
-                            actionTitle: environment.strings.Stars_BotRevenue_Withdraw_Withdraw,
+                            actionTitle: strings.Stars_BotRevenue_Withdraw_Withdraw,
                             actionAvailable: true,
                             buy: { [weak self] in
                                 guard let self, let component = self.component else {
@@ -482,7 +494,7 @@ final class StarsStatisticsScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: environment.strings.Stars_BotRevenue_Transactions_Title.uppercased(),
+                        string: strings.Stars_BotRevenue_Transactions_Title.uppercased(),
                         font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                         textColor: environment.theme.list.freeTextColor
                     )),
@@ -512,6 +524,7 @@ final class StarsStatisticsScreenComponent: Component {
                 component: AnyComponent(StarsTransactionsListPanelComponent(
                     context: component.context,
                     transactionsContext: allTransactionsContext,
+                    isAccount: false,
                     action: { transaction in
                         component.openTransaction(transaction)
                     }
@@ -519,15 +532,16 @@ final class StarsStatisticsScreenComponent: Component {
                 environment: {
                     StarsTransactionsPanelEnvironment(
                         theme: environment.theme,
-                        strings: environment.strings,
+                        strings: strings,
                         dateTimeFormat: environment.dateTimeFormat,
-                        containerInsets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right),
+                        containerInsets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: 0.0, right: environment.safeInsets.right),
                         isScrollable: wasLockedAtPanels,
                         isCurrent: true
                     )
                 },
                 containerSize: CGSize(width: availableSize.width - sideInsets, height: availableSize.height)
             )
+            self.transactionsView.parentState = state
             let transactionsFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - transactionsSize.width) / 2.0), y: contentHeight), size: transactionsSize)
             if let panelContainerView = self.transactionsView.view {
                 if panelContainerView.superview == nil {
@@ -609,7 +623,7 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
             guard let self else {
                 return
             }
-            let controller = context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction)
+            let controller = context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction, isAccount: false)
             self.push(controller)
         }
         
