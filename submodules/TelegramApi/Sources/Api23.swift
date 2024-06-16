@@ -604,26 +604,27 @@ public extension Api {
 }
 public extension Api {
     enum StarsRevenueStatus: TypeConstructorDescription {
-        case starsRevenueStatus(flags: Int32, currentBalance: Int64, availableBalance: Int64, overallRevenue: Int64)
+        case starsRevenueStatus(flags: Int32, currentBalance: Int64, availableBalance: Int64, overallRevenue: Int64, nextWithdrawalAt: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .starsRevenueStatus(let flags, let currentBalance, let availableBalance, let overallRevenue):
+                case .starsRevenueStatus(let flags, let currentBalance, let availableBalance, let overallRevenue, let nextWithdrawalAt):
                     if boxed {
-                        buffer.appendInt32(-407138204)
+                        buffer.appendInt32(2033461574)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(currentBalance, buffer: buffer, boxed: false)
                     serializeInt64(availableBalance, buffer: buffer, boxed: false)
                     serializeInt64(overallRevenue, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(nextWithdrawalAt!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .starsRevenueStatus(let flags, let currentBalance, let availableBalance, let overallRevenue):
-                return ("starsRevenueStatus", [("flags", flags as Any), ("currentBalance", currentBalance as Any), ("availableBalance", availableBalance as Any), ("overallRevenue", overallRevenue as Any)])
+                case .starsRevenueStatus(let flags, let currentBalance, let availableBalance, let overallRevenue, let nextWithdrawalAt):
+                return ("starsRevenueStatus", [("flags", flags as Any), ("currentBalance", currentBalance as Any), ("availableBalance", availableBalance as Any), ("overallRevenue", overallRevenue as Any), ("nextWithdrawalAt", nextWithdrawalAt as Any)])
     }
     }
     
@@ -636,12 +637,15 @@ public extension Api {
             _3 = reader.readInt64()
             var _4: Int64?
             _4 = reader.readInt64()
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.StarsRevenueStatus.starsRevenueStatus(flags: _1!, currentBalance: _2!, availableBalance: _3!, overallRevenue: _4!)
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.StarsRevenueStatus.starsRevenueStatus(flags: _1!, currentBalance: _2!, availableBalance: _3!, overallRevenue: _4!, nextWithdrawalAt: _5)
             }
             else {
                 return nil

@@ -3088,6 +3088,7 @@ public final class DrawingToolsInteraction {
             var isVideo = false
             var isAdditional = false
             var isMessage = false
+            var isLink = false
             if let entity = entityView.entity as? DrawingStickerEntity {
                 if case let .dualVideoReference(isAdditionalValue) = entity.content {
                     isVideo = true
@@ -3095,6 +3096,8 @@ public final class DrawingToolsInteraction {
                 } else if case .message = entity.content {
                     isMessage = true
                 }
+            } else if entityView.entity is DrawingLinkEntity {
+                isLink = true
             }
             
             guard (!isVideo || isAdditional) && (!isMessage || !isTopmost) else {
@@ -3140,7 +3143,7 @@ public final class DrawingToolsInteraction {
                     }
                 }))
             }
-            if !isVideo && !isMessage {
+            if !isVideo && !isMessage && !isLink {
                 if let stickerEntity = entityView.entity as? DrawingStickerEntity, case let .file(_, type) = stickerEntity.content, case .reaction = type {
                     
                 } else {

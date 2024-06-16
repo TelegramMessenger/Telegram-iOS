@@ -7,7 +7,6 @@ import AccountContext
 import MultilineTextComponent
 import TelegramPresentationData
 import PresentationDataUtils
-import SolidRoundedButtonComponent
 
 final class StarsOverviewItemComponent: Component {
     let theme: PresentationTheme

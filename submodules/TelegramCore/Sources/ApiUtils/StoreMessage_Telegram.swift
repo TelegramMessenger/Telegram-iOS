@@ -473,8 +473,8 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
 func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
     func coodinatesFromApiMediaAreaCoordinates(_ coordinates: Api.MediaAreaCoordinates) -> MediaArea.Coordinates {
         switch coordinates {
-        case let .mediaAreaCoordinates(x, y, width, height, rotation):
-            return MediaArea.Coordinates(x: x, y: y, width: width, height: height, rotation: rotation)
+        case let .mediaAreaCoordinates(_, x, y, width, height, rotation, radius):
+            return MediaArea.Coordinates(x: x, y: y, width: width, height: height, rotation: rotation, cornerRadius: radius)
         }
     }
     switch mediaArea {
@@ -551,7 +551,11 @@ func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea], transaction: Transac
     var apiMediaAreas: [Api.MediaArea] = []
     for area in mediaAreas {
         let coordinates = area.coordinates
-        let inputCoordinates = Api.MediaAreaCoordinates.mediaAreaCoordinates(x: coordinates.x, y: coordinates.y, w: coordinates.width, h: coordinates.height, rotation: coordinates.rotation)
+        var flags: Int32 = 0
+        if let _ = coordinates.cornerRadius {
+            flags |= (1 << 0)
+        }
+        let inputCoordinates = Api.MediaAreaCoordinates.mediaAreaCoordinates(flags: flags, x: coordinates.x, y: coordinates.y, w: coordinates.width, h: coordinates.height, rotation: coordinates.rotation, radius: coordinates.cornerRadius)
         switch area {
         case let .venue(_, venue):
             if let queryId = venue.queryId, let resultId = venue.resultId {

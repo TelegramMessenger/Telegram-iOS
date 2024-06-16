@@ -524,6 +524,7 @@ final class StarsTransactionsScreenComponent: Component {
                             rate: nil,
                             actionTitle: environment.strings.Stars_Intro_Buy,
                             actionAvailable: !premiumConfiguration.areStarsDisabled,
+                            actionIsEnabled: true,
                             buy: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return

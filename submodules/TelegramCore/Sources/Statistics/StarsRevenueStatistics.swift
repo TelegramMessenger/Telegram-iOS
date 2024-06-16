@@ -10,6 +10,7 @@ public struct StarsRevenueStats: Equatable {
         public let availableBalance: Int64
         public let overallRevenue: Int64
         public let withdrawEnabled: Bool
+        public let nextWithdrawalTimestamp: Int32?
     }
     
     public let revenueGraph: StatsGraph
@@ -58,8 +59,8 @@ extension StarsRevenueStats {
 extension StarsRevenueStats.Balances {
     init(apiStarsRevenueStatus: Api.StarsRevenueStatus) {
         switch apiStarsRevenueStatus {
-        case let .starsRevenueStatus(flags, currentBalance, availableBalance, overallRevenue):
-            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue, withdrawEnabled: ((flags & (1 << 0)) != 0))
+        case let .starsRevenueStatus(flags, currentBalance, availableBalance, overallRevenue, nextWithdrawalAt):
+            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue, withdrawEnabled: ((flags & (1 << 0)) != 0), nextWithdrawalTimestamp: nextWithdrawalAt)
         }
     }
 }

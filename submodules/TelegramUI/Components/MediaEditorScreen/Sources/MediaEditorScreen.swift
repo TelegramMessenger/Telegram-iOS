@@ -4485,6 +4485,20 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 return
             }
             
+            if existingEntity == nil {
+                let maxLinkCount = 3
+                var currentLinkCount = 0
+                self.entitiesView.eachView { entityView in
+                    if entityView.entity is DrawingLinkEntity {
+                        currentLinkCount += 1
+                    }
+                }
+                if currentLinkCount >= maxLinkCount {
+                    controller.presentLinkLimitTooltip()
+                    return
+                }
+            }
+            
             var link: CreateLinkScreen.Link?
             if let existingEntity {
                 link = CreateLinkScreen.Link(
@@ -5975,6 +5989,29 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             return false }
         )
         self.present(controller, in: .current)
+    }
+    
+    fileprivate func presentLinkLimitTooltip() {
+        self.hapticFeedback.impact(.light)
+        
+        self.dismissAllTooltips()
+        
+        let context = self.context
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let limit: Int32 = 3
+        
+        let value = presentationData.strings.Story_Editor_TooltipLinkLimitValue(limit)
+        let content: UndoOverlayContent = .info(
+            title: nil,
+            text: presentationData.strings.Story_Editor_TooltipReachedLinkLimitText(value).string,
+            timeout: nil,
+            customUndoText: nil
+        )
+        
+        let controller = UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: true, position: .top, animateInAsReplacement: false, action: { _ in
+            return true
+        })
+        self.present(controller, in: .window(.root))
     }
     
     func maybePresentDiscardAlert() {

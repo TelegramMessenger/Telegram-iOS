@@ -16,6 +16,7 @@ public enum MediaArea: Codable, Equatable {
             case width
             case height
             case rotation
+            case cornerRadius
         }
         
         public var x: Double
@@ -23,19 +24,22 @@ public enum MediaArea: Codable, Equatable {
         public var width: Double
         public var height: Double
         public var rotation: Double
+        public var cornerRadius: Double?
         
         public init(
             x: Double,
             y: Double,
             width: Double,
             height: Double,
-            rotation: Double
+            rotation: Double,
+            cornerRadius: Double?
         ) {
             self.x = x
             self.y = y
             self.width = width
             self.height = height
             self.rotation = rotation
+            self.cornerRadius = cornerRadius
         }
         
         public init(from decoder: Decoder) throws {
@@ -46,6 +50,7 @@ public enum MediaArea: Codable, Equatable {
             self.width = try container.decode(Double.self, forKey: .width)
             self.height = try container.decode(Double.self, forKey: .height)
             self.rotation = try container.decode(Double.self, forKey: .rotation)
+            self.cornerRadius = try container.decodeIfPresent(Double.self, forKey: .cornerRadius)
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -56,6 +61,7 @@ public enum MediaArea: Codable, Equatable {
             try container.encode(self.width, forKey: .width)
             try container.encode(self.height, forKey: .height)
             try container.encode(self.rotation, forKey: .rotation)
+            try container.encodeIfPresent(self.cornerRadius, forKey: .cornerRadius)
         }
     }
     

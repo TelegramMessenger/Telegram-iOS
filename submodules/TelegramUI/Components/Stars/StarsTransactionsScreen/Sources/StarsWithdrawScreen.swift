@@ -20,6 +20,7 @@ import AccountContext
 import PresentationDataUtils
 import ListSectionComponent
 import TelegramStringFormatting
+import UndoUI
 
 private let amountTag = GenericComponentViewTag()
 
@@ -286,8 +287,12 @@ private final class SheetContent: CombinedComponent {
                     displaysProgress: false,
                     action: { [weak state] in
                         if let controller = controller() as? StarsWithdrawScreen, let amount = state?.amount {
-                            controller.completion(amount)
-                            controller.dismissAnimated()
+                            if let minAmount, amount < minAmount {
+                                controller.presentMinAmountTooltip(minAmount)
+                            } else {
+                                controller.completion(amount)
+                                controller.dismissAnimated()
+                            }
                         }
                     }
                 ),
@@ -300,8 +305,8 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + button.size.height / 2.0))
             )
             contentSize.height += button.size.height
-            contentSize.height += 30.0
-                        
+            contentSize.height += 15.0
+            
             contentSize.height += max(environment.inputHeight, environment.safeInsets.bottom)
 
             return contentSize
@@ -469,6 +474,26 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
             }
         }
     }
+    
+    func presentMinAmountTooltip(_ minAmount: Int64) {
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        let resultController = UndoOverlayController(
+            presentationData: presentationData,
+            content: .image(
+                image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
+                title: nil,
+                text: presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum(presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum_Stars(Int32(minAmount))).string,
+                round: false,
+                undoText: nil
+            ),
+            elevatedLayout: false,
+            action: { _ in return true})
+        self.present(resultController, in: .window(.root))
+        
+        if let view = self.node.hostView.findTaggedView(tag: amountTag) as? AmountFieldComponent.View {
+            view.animateError()
+        }
+    }
         
     public func dismissAnimated() {
         if let view = self.node.hostView.findTaggedView(tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
@@ -593,14 +618,7 @@ private final class AmountFieldComponent: Component {
                 
                 if let amount, let maxAmount = component.maxValue, amount > maxAmount {
                     textField.text = "\(maxAmount)"
-                    
-                    textField.layer.addShakeAnimation()
-                    let hapticFeedback = HapticFeedback()
-                    hapticFeedback.error()
-                    DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: {
-                        let _ = hapticFeedback
-                    })
-                    
+                    self.animateError()
                     return false
                 }
             }
@@ -613,6 +631,15 @@ private final class AmountFieldComponent: Component {
         
         func selectAll() {
             self.textField.selectAll(nil)
+        }
+        
+        func animateError() {
+            self.textField.layer.addShakeAnimation()
+            let hapticFeedback = HapticFeedback()
+            hapticFeedback.error()
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: {
+                let _ = hapticFeedback
+            })
         }
         
         func update(component: AmountFieldComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {

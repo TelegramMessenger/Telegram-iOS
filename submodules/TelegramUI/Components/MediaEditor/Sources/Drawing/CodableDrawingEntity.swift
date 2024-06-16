@@ -110,7 +110,8 @@ public enum CodableDrawingEntity: Equatable {
             y: position.y / 1920.0 * 100.0,
             width: size.width * scale / 1080.0 * 100.0,
             height: size.height * scale / 1920.0 * 100.0,
-            rotation: rotation / .pi * 180.0
+            rotation: rotation / .pi * 180.0,
+            cornerRadius: nil
         )
     }
     

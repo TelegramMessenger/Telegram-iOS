@@ -29,19 +29,22 @@ final class StarsStatisticsScreenComponent: Component {
     let revenueContext: StarsRevenueStatsContext
     let openTransaction: (StarsContext.State.Transaction) -> Void
     let buy: () -> Void
+    let showTimeoutTooltip: (Int32) -> Void
     
     init(
         context: AccountContext,
         peerId: EnginePeer.Id,
         revenueContext: StarsRevenueStatsContext,
         openTransaction: @escaping (StarsContext.State.Transaction) -> Void,
-        buy: @escaping () -> Void
+        buy: @escaping () -> Void,
+        showTimeoutTooltip: @escaping (Int32) -> Void
     ) {
         self.context = context
         self.peerId = peerId
         self.revenueContext = revenueContext
         self.openTransaction = openTransaction
         self.buy = buy
+        self.showTimeoutTooltip = showTimeoutTooltip
     }
     
     static func ==(lhs: StarsStatisticsScreenComponent, rhs: StarsStatisticsScreenComponent) -> Bool {
@@ -459,11 +462,25 @@ final class StarsStatisticsScreenComponent: Component {
                             rate: 0.2,
                             actionTitle: strings.Stars_BotRevenue_Withdraw_Withdraw,
                             actionAvailable: true,
+                            actionIsEnabled: self.starsState?.balances.withdrawEnabled ?? true,
+                            actionCooldownUntilTimestamp: self.starsState?.balances.nextWithdrawalTimestamp,
                             buy: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
                                 }
-                                component.buy()
+                                var remainingCooldownSeconds: Int32 = 0
+                                if let cooldownUntilTimestamp = self.starsState?.balances.nextWithdrawalTimestamp {
+                                    remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+                                    remainingCooldownSeconds = max(0, remainingCooldownSeconds)
+                                    
+                                    if remainingCooldownSeconds > 0 {
+                                        component.showTimeoutTooltip(cooldownUntilTimestamp)
+                                    } else {
+                                        component.buy()
+                                    }
+                                } else {
+                                    component.buy()
+                                }
                             }
                         )
                     ))]
@@ -597,13 +614,17 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     private let peerId: EnginePeer.Id
     private let revenueContext: StarsRevenueStatsContext
-        
+    
+    private weak var tooltipScreen: UndoOverlayController?
+    private var timer: Foundation.Timer?
+    
     public init(context: AccountContext, peerId: EnginePeer.Id, revenueContext: StarsRevenueStatsContext) {
         self.context = context
         self.peerId = peerId
         self.revenueContext = revenueContext
         
         var withdrawImpl: (() -> Void)?
+        var showTimeoutTooltipImpl: ((Int32) -> Void)?
         var openTransactionImpl: ((StarsContext.State.Transaction) -> Void)?
         super.init(context: context, component: StarsStatisticsScreenComponent(
             context: context,
@@ -614,6 +635,9 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
             },
             buy: {
                 withdrawImpl?()
+            },
+            showTimeoutTooltip: { timestamp in
+                showTimeoutTooltipImpl?(timestamp)
             }
         ), navigationBarAppearance: .transparent)
         
@@ -654,6 +678,10 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
                             }, completion: { url in
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                                
+                                Queue.mainQueue().after(2.0) {
+                                    revenueContext.reload()
+                                }
                             })
                             self.present(controller, in: .window(.root))
                         })
@@ -668,6 +696,59 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
                     self.present(controller, in: .window(.root))
                 }
             })
+        }
+        
+        showTimeoutTooltipImpl = { [weak self] cooldownUntilTimestamp in
+            guard let self, self.tooltipScreen == nil else {
+                return
+            }
+            
+            let remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+        
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            let content: UndoOverlayContent = .universal(
+                animation: "anim_clock",
+                scale: 0.058,
+                colors: [:],
+                title: nil,
+                text: presentationData.strings.Stars_Withdraw_Withdraw_ErrorTimeout(stringForRemainingTime(remainingCooldownSeconds)).string,
+                customUndoText: nil,
+                timeout: nil
+            )
+            let controller = UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in
+                return true
+            })
+            self.tooltipScreen = controller
+            self.present(controller, in: .window(.root))
+            
+            if remainingCooldownSeconds < 3600 {
+                if self.timer == nil {
+                    self.timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        
+                        if let tooltipScreen = self.tooltipScreen {
+                            let remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+                            let content: UndoOverlayContent = .universal(
+                                animation: "anim_clock",
+                                scale: 0.058,
+                                colors: [:],
+                                title: nil,
+                                text: presentationData.strings.Stars_Withdraw_Withdraw_ErrorTimeout(stringForRemainingTime(remainingCooldownSeconds)).string,
+                                customUndoText: nil,
+                                timeout: nil
+                            )
+                            tooltipScreen.content = content
+                        } else {
+                            if let timer = self.timer {
+                                self.timer = nil
+                                timer.invalidate()
+                            }
+                        }
+                    })
+                }
+            }
         }
     }
     

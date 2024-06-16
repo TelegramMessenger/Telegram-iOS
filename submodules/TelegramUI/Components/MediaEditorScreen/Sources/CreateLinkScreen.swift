@@ -260,7 +260,7 @@ private final class SheetContent: CombinedComponent {
                                     placeholderColor: theme.list.itemPlaceholderTextColor,
                                     text: state.name,
                                     link: false,
-                                    placeholderText: strings.MediaEditor_Link_LinkTo_Placeholder,
+                                    placeholderText: strings.MediaEditor_Link_LinkName_Placeholder,
                                     textUpdated: { [weak state] text in
                                         state?.name = text
                                     }

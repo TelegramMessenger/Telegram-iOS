@@ -12323,6 +12323,7 @@ Sorry for the inconvenience.";
 
 "Story.ViewLink" = "Open Link";
 
+"PeerInfo.Bot.Username" = "Username";
 "PeerInfo.Bot.Balance" = "Balance";
 "PeerInfo.Bot.Balance.Stars_1" = "%@ Star";
 "PeerInfo.Bot.Balance.Stars_any" = "%@ Stars";
@@ -12349,9 +12350,11 @@ Sorry for the inconvenience.";
 "Stars.Withdraw.AmountPlaceholder" = "Stars Amount";
 "Stars.Withdraw.Withdraw" = "Withdraw";
 
-"Stars.Withdraw.Withdraw.ErrorMinimum" = "You cannot withdraw less than %@";
+"Stars.Withdraw.Withdraw.ErrorMinimum" = "You cannot withdraw less than [%@]().";
 "Stars.Withdraw.Withdraw.ErrorMinimum.Stars_1" = "%@ Star";
 "Stars.Withdraw.Withdraw.ErrorMinimum.Stars_any" = "%@ Stars";
+
+"Stars.Withdraw.Withdraw.ErrorTimeout" = "Next withdrawal will be available in **%@**.";
 
 "Stars.PaidContent.Title" = "Paid Content";
 "Stars.PaidContent.AmountTitle" = "ENTER UNLOCK COST";
@@ -12369,3 +12372,7 @@ Sorry for the inconvenience.";
 "MediaEditor.Link.LinkName.Placeholder" = "Enter a Name";
 
 "Story.Editor.TooltipLinkPremium" = "Subscribe to [Telegram Premium]() to add links.";
+
+"Story.Editor.TooltipLinkLimitValue_1" = "**%@** link";
+"Story.Editor.TooltipLinkLimitValue_any" = "**%@** links";
+"Story.Editor.TooltipReachedLinkLimitText" = "You can't add more than %@ to a story.";
