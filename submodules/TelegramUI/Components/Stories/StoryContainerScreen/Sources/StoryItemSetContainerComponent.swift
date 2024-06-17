@@ -77,7 +77,7 @@ public final class StoryItemSetContainerComponent: Component {
     public enum NavigationDirection {
         case previous
         case next
-        case id(Int32)
+        case id(StoryId)
     }
     
     public struct PinchState: Equatable {
@@ -335,11 +335,11 @@ public final class StoryItemSetContainerComponent: Component {
     }
     
     final class CaptionItem {
-        let itemId: Int32
+        let itemId: StoryId
         let externalState = StoryContentCaptionComponent.ExternalState()
         let view = ComponentView<Empty>()
         
-        init(itemId: Int32) {
+        init(itemId: StoryId) {
             self.itemId = itemId
         }
     }
@@ -442,7 +442,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         var isSearchActive: Bool = false
         
-        var viewLists: [Int32: ViewList] = [:]
+        var viewLists: [StoryId: ViewList] = [:]
         let viewListsContainer: UIView
         
         var isEditingStory: Bool = false
@@ -450,8 +450,8 @@ public final class StoryItemSetContainerComponent: Component {
         var itemLayout: ItemLayout?
         var ignoreScrolling: Bool = false
         
-        var visibleItems: [Int32: VisibleItem] = [:]
-        var trulyValidIds: [Int32] = []
+        var visibleItems: [StoryId: VisibleItem] = [:]
+        var trulyValidIds: [StoryId] = []
         
         var reactionContextNode: ReactionContextNode?
         weak var disappearingReactionContextNode: ReactionContextNode?
@@ -477,8 +477,8 @@ public final class StoryItemSetContainerComponent: Component {
         
         let transitionCloneContainerView: UIView
         
-        private var awaitingSwitchToId: (from: Int32, to: Int32)?
-        private var animateNextNavigationId: Int32?
+        private var awaitingSwitchToId: (from: StoryId, to: StoryId)?
+        private var animateNextNavigationId: StoryId?
         private var initializedOffset: Bool = false
         
         private var viewListPanState: PanState?
@@ -731,7 +731,7 @@ public final class StoryItemSetContainerComponent: Component {
             guard let component = self.component else {
                 return false
             }
-            guard let visibleItem = self.visibleItems[component.slice.item.storyItem.id] else {
+            guard let visibleItem = self.visibleItems[component.slice.item.id] else {
                 return false
             }
             guard let itemView = visibleItem.view.view as? StoryItemContentComponent.View else {
@@ -825,7 +825,7 @@ public final class StoryItemSetContainerComponent: Component {
             guard let component = self.component else {
                 return
             }
-            guard let visibleItem = self.visibleItems[component.slice.item.storyItem.id] else {
+            guard let visibleItem = self.visibleItems[component.slice.item.id] else {
                 return
             }
             if let itemView = visibleItem.view.view as? StoryContentItem.View {
@@ -837,7 +837,7 @@ public final class StoryItemSetContainerComponent: Component {
             guard let component = self.component else {
                 return
             }
-            guard let visibleItem = self.visibleItems[component.slice.item.storyItem.id] else {
+            guard let visibleItem = self.visibleItems[component.slice.item.id] else {
                 return
             }
             if let itemView = visibleItem.view.view as? StoryContentItem.View {
@@ -851,7 +851,7 @@ public final class StoryItemSetContainerComponent: Component {
             guard let component = self.component else {
                 return
             }
-            guard let visibleItem = self.visibleItems[component.slice.item.storyItem.id] else {
+            guard let visibleItem = self.visibleItems[component.slice.item.id] else {
                 return
             }
             if let itemView = visibleItem.view.view as? StoryContentItem.View {
@@ -878,7 +878,7 @@ public final class StoryItemSetContainerComponent: Component {
                     if otherGestureRecognizer.view is UIScrollView {
                         return true
                     }
-                    if let component = self.component, let viewList = self.viewLists[component.slice.item.storyItem.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
+                    if let component = self.component, let viewList = self.viewLists[component.slice.item.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
                         if otherGestureRecognizer.view === viewListView {
                             return true
                         }
@@ -936,7 +936,7 @@ public final class StoryItemSetContainerComponent: Component {
                     
                     for (id, visibleItem) in self.visibleItems {
                         if visibleItem.contentContainerView.convert(visibleItem.contentContainerView.bounds, to: self).contains(point) {
-                            if id == component.slice.item.storyItem.id {
+                            if id == component.slice.item.id {
                                 let transition = ComponentTransition(animation: .curve(duration: 0.4, curve: .spring))
                                 
                                 self.viewListDisplayState = .hidden
@@ -1035,16 +1035,16 @@ public final class StoryItemSetContainerComponent: Component {
                     let velocity = recognizer.velocity(in: self)
                     
                     var consumed = false
-                    if let component = self.component, let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
+                    if let component = self.component, let currentIndex = component.slice.allItems.firstIndex(where: { $0.id == component.slice.item.id }) {
                         if (viewListPanState.fraction <= -0.3 || (viewListPanState.fraction <= -0.05 && velocity.x <= -200.0)), currentIndex != component.slice.allItems.count - 1 {
                             let nextItem = component.slice.allItems[currentIndex + 1]
-                            self.animateNextNavigationId = nextItem.storyItem.id
-                            component.navigate(.id(nextItem.storyItem.id))
+                            self.animateNextNavigationId = nextItem.id
+                            component.navigate(.id(nextItem.id))
                             consumed = true
                         } else if (viewListPanState.fraction >= 0.3 || (viewListPanState.fraction >= 0.05 && velocity.x >= 200.0)), currentIndex != 0 {
                             let previousItem = component.slice.allItems[currentIndex - 1]
-                            self.animateNextNavigationId = previousItem.storyItem.id
-                            component.navigate(.id(previousItem.storyItem.id))
+                            self.animateNextNavigationId = previousItem.id
+                            component.navigate(.id(previousItem.id))
                             consumed = true
                         }
                     }
@@ -1083,7 +1083,7 @@ public final class StoryItemSetContainerComponent: Component {
                     verticalPanState.fraction = fraction
                 } else {
                     var targetScrollView: UIScrollView?
-                    if case .began = recognizer.state, self.viewListDisplayState != .hidden, let viewList = self.viewLists[component.slice.item.storyItem.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
+                    if case .began = recognizer.state, self.viewListDisplayState != .hidden, let viewList = self.viewLists[component.slice.item.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
                         if let hitResult = viewListView.hitTest(self.convert(recognizer.location(in: self), to: viewListView), with: nil) {
                             func findTargetScrollView(target: UIView, minParent: UIView) -> UIScrollView? {
                                 if target === viewListView {
@@ -1148,7 +1148,7 @@ public final class StoryItemSetContainerComponent: Component {
                         if verticalPanState.accumulatedOffset > 0.0 || resetContentOffset {
                             scrollView.contentOffset = CGPoint()
                             
-                            if self.viewListDisplayState != .hidden, let viewList = self.viewLists[component.slice.item.storyItem.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
+                            if self.viewListDisplayState != .hidden, let viewList = self.viewLists[component.slice.item.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
                                 let eventCycleState = StoryItemSetViewListComponent.EventCycleState()
                                 eventCycleState.ignoreScrolling = true
                                 viewListView.setEventCycleState(eventCycleState)
@@ -1223,7 +1223,7 @@ public final class StoryItemSetContainerComponent: Component {
                             self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                         }
                     } else {
-                        if let visibleItemView = self.visibleItems[component.slice.item.storyItem.id]?.view.view as? StoryItemContentComponent.View  {
+                        if let visibleItemView = self.visibleItems[component.slice.item.id]?.view.view as? StoryItemContentComponent.View  {
                             visibleItemView.seekEnded()
                         }
                         if translation.y > 200.0 || (translation.y > 5.0 && velocity.y > 200.0) {
@@ -1311,10 +1311,9 @@ public final class StoryItemSetContainerComponent: Component {
                     var index = Int(round(scrollView.contentOffset.x / itemLayout.fullItemScrollDistance))
                     index = max(0, min(index, component.slice.allItems.count - 1))
                     
-                    if let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
+                    if let currentIndex = component.slice.allItems.firstIndex(where: { $0.id == component.slice.item.id }) {
                         if index != currentIndex {
-                            let nextId = component.slice.allItems[index].storyItem.id
-                            //self.awaitingSwitchToId = (component.slice.allItems[currentIndex].storyItem.id, nextId)
+                            let nextId = component.slice.allItems[index].id
                             component.navigate(.id(nextId))
                         }
                     }
@@ -1429,8 +1428,8 @@ public final class StoryItemSetContainerComponent: Component {
                 hintAllowSynchronousLoads = hint.allowSynchronousLoads
             }
             
-            var validIds: [Int32] = []
-            var trulyValidIds: [Int32] = []
+            var validIds: [StoryId] = []
+            var trulyValidIds: [StoryId] = []
             
             let centralItemX = itemLayout.contentFrame.center.x
             
@@ -1440,7 +1439,7 @@ public final class StoryItemSetContainerComponent: Component {
             let scaledFullItemScrollDistance = scaledCentralVisibleItemWidth * 0.5 + itemLayout.itemSpacing + scaledSideVisibleItemWidth * 0.5
             let scaledHalfItemScrollDistance = scaledSideVisibleItemWidth * 0.5 + itemLayout.itemSpacing + scaledSideVisibleItemWidth * 0.5
             
-            if let centralIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
+            if let centralIndex = component.slice.allItems.firstIndex(where: { $0.id == component.slice.item.id }) {
                 let centralItemOffset: CGFloat = itemLayout.fullItemScrollDistance * CGFloat(centralIndex)
                 let effectiveScrollingOffsetX = self.scroller.contentOffset.x * itemLayout.contentScaleFraction + centralItemOffset * (1.0 - itemLayout.contentScaleFraction)
                 
@@ -1487,7 +1486,7 @@ public final class StoryItemSetContainerComponent: Component {
                         if transition.animation.isImmediate {
                             continue
                         } else {
-                            if self.visibleItems[item.storyItem.id] == nil {
+                            if self.visibleItems[item.id] == nil {
                                 continue
                             } else {
                                 reevaluateVisibilityOnCompletion = true
@@ -1500,19 +1499,19 @@ public final class StoryItemSetContainerComponent: Component {
                     let minItemScale = itemLayout.contentMinScale * (1.0 - scaleFraction) + itemLayout.sideVisibleItemScale * scaleFraction
                     let itemScale: CGFloat = itemLayout.contentScaleFraction * minItemScale + (1.0 - itemLayout.contentScaleFraction) * 1.0
                     
-                    validIds.append(item.storyItem.id)
+                    validIds.append(item.id)
                     if itemVisible {
-                        trulyValidIds.append(item.storyItem.id)
+                        trulyValidIds.append(item.id)
                     }
                     
                     var itemTransition = transition
                     let visibleItem: VisibleItem
-                    if let current = self.visibleItems[item.storyItem.id] {
+                    if let current = self.visibleItems[item.id] {
                         visibleItem = current
                     } else {
                         itemTransition = .immediate
                         visibleItem = VisibleItem()
-                        self.visibleItems[item.storyItem.id] = visibleItem
+                        self.visibleItems[item.id] = visibleItem
                     }
                     
                     let itemEnvironment = StoryContentItem.Environment(
@@ -1595,7 +1594,7 @@ public final class StoryItemSetContainerComponent: Component {
                         itemTransition.setPosition(view: view, position: CGPoint(x: itemLayout.contentFrame.size.width * 0.5, y: itemLayout.contentFrame.size.height * 0.5))
                         itemTransition.setBounds(view: view, bounds: CGRect(origin: CGPoint(), size: itemLayout.contentFrame.size))
                         
-                        let itemId = item.storyItem.id
+                        let itemId = item.id
                         itemTransition.setPosition(view: visibleItem.contentContainerView, position: CGPoint(x: itemPositionX, y: itemLayout.contentFrame.center.y), completion: { [weak self] _ in
                             guard reevaluateVisibilityOnCompletion, let self else {
                                 return
@@ -1758,7 +1757,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         guard let self, let component = self.component else {
                                             return
                                         }
-                                        if self.viewLists[component.slice.item.storyItem.id] == nil {
+                                        if self.viewLists[component.slice.item.id] == nil {
                                             return
                                         }
                                         
@@ -1889,7 +1888,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             self.trulyValidIds = trulyValidIds
             
-            var removeIds: [Int32] = []
+            var removeIds: [StoryId] = []
             for (id, visibleItem) in self.visibleItems {
                 if !validIds.contains(id) {
                     removeIds.append(id)
@@ -1907,9 +1906,9 @@ public final class StoryItemSetContainerComponent: Component {
         
         func updateIsProgressPaused() {
             let progressMode = self.itemProgressMode()
-            var centralId: Int32?
+            var centralId: StoryId?
             if let component = self.component {
-                centralId = component.slice.item.storyItem.id
+                centralId = component.slice.item.id
             }
             
             for (id, visibleItem) in self.visibleItems {
@@ -2040,7 +2039,7 @@ public final class StoryItemSetContainerComponent: Component {
                 captionItemView.layer.animateAlpha(from: 0.0, to: captionItemView.alpha, duration: 0.28)
             }
             
-            if let component = self.component, let sourceView = transitionIn.sourceView, let visibleItem = self.visibleItems[component.slice.item.storyItem.id] {
+            if let component = self.component, let sourceView = transitionIn.sourceView, let visibleItem = self.visibleItems[component.slice.item.id] {
                 let contentContainerView = visibleItem.contentContainerView
                 let unclippedContainerView = visibleItem.unclippedContainerView
                 
@@ -2116,7 +2115,7 @@ public final class StoryItemSetContainerComponent: Component {
                 self.controlsNavigationClippingView.layer.animatePosition(from: sourceLocalFrame.center, to: self.controlsNavigationClippingView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 self.controlsNavigationClippingView.layer.animateBounds(from: CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: sourceLocalFrame.size), to: self.controlsNavigationClippingView.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 
-                if let component = self.component, let visibleItemView = self.visibleItems[component.slice.item.storyItem.id]?.view.view {
+                if let component = self.component, let visibleItemView = self.visibleItems[component.slice.item.id]?.view.view {
                     let innerScale = innerSourceLocalFrame.width / visibleItemView.bounds.width
                     let innerFromFrame = CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: CGSize(width: innerSourceLocalFrame.width, height: visibleItemView.bounds.height * innerScale))
                     
@@ -2224,7 +2223,7 @@ public final class StoryItemSetContainerComponent: Component {
                 })
             }
             
-            if let component = self.component, let sourceView = transitionOut.destinationView, let visibleItem = self.visibleItems[component.slice.item.storyItem.id] {
+            if let component = self.component, let sourceView = transitionOut.destinationView, let visibleItem = self.visibleItems[component.slice.item.id] {
                 if let footerPanelView = visibleItem.footerPanel?.view {
                     footerPanelView.layer.animatePosition(
                         from: CGPoint(),
@@ -2461,7 +2460,7 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                 }
                 
-                if let component = self.component, let visibleItemView = self.visibleItems[component.slice.item.storyItem.id]?.view.view {
+                if let component = self.component, let visibleItemView = self.visibleItems[component.slice.item.id]?.view.view {
                     let innerScale = innerSourceLocalFrame.width / visibleItemView.bounds.width
                     
                     var adjustedInnerSourceLocalFrame = innerSourceLocalFrame
@@ -2558,7 +2557,7 @@ public final class StoryItemSetContainerComponent: Component {
                 let previousInput = inputPanelView.getSendMessageInput()
                 switch previousInput {
                 case let .text(value):
-                    component.storyItemSharedState.replyDrafts[StoryId(peerId: component.slice.effectivePeer.id, id: component.slice.item.storyItem.id)] = value
+                    component.storyItemSharedState.replyDrafts[component.slice.item.id] = value
                 }
             }
         }
@@ -2600,7 +2599,7 @@ public final class StoryItemSetContainerComponent: Component {
             var isFirstItem = false
             var itemChanged = false
             var resetInputContents: MessageInputPanelComponent.SendMessageInput?
-            if self.component?.slice.item.storyItem.id != component.slice.item.storyItem.id {
+            if self.component?.slice.item.id != component.slice.item.id {
                 isFirstItem = self.component == nil
                 itemChanged = self.component != nil
                 self.initializedOffset = false
@@ -2608,10 +2607,10 @@ public final class StoryItemSetContainerComponent: Component {
                 resetInputContents = .text(NSAttributedString())
                 
                 self.saveDraft()
-                if let draft = component.storyItemSharedState.replyDrafts[StoryId(peerId: component.slice.effectivePeer.id, id: component.slice.item.storyItem.id)] {
+                if let draft = component.storyItemSharedState.replyDrafts[component.slice.item.id] {
                     resetInputContents = .text(draft)
                 }
-                component.storyItemSharedState.replyDrafts.removeValue(forKey: StoryId(peerId: component.slice.effectivePeer.id, id: component.slice.item.storyItem.id))
+                component.storyItemSharedState.replyDrafts.removeValue(forKey: component.slice.item.id)
                 
                 if let tooltipScreen = self.sendMessageContext.tooltipScreen {
                     if let tooltipScreen = tooltipScreen as? UndoOverlayController, let tag = tooltipScreen.tag as? String, tag == "no_auto_dismiss" {
@@ -2640,7 +2639,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
             var itemsTransition = transition
             var resetScrollingOffsetWithItemTransition = false
-            if let animateNextNavigationId = self.animateNextNavigationId, animateNextNavigationId == component.slice.item.storyItem.id {
+            if let animateNextNavigationId = self.animateNextNavigationId, animateNextNavigationId == component.slice.item.id {
                 self.animateNextNavigationId = nil
                 self.viewListPanState = nil
                 self.isCompletingViewListPan = true
@@ -2657,7 +2656,7 @@ public final class StoryItemSetContainerComponent: Component {
                 resetScrollingOffsetWithItemTransition = true
             }
             
-            if let awaitingSwitchToId = self.awaitingSwitchToId, awaitingSwitchToId.to == component.slice.item.storyItem.id {
+            if let awaitingSwitchToId = self.awaitingSwitchToId, awaitingSwitchToId.to == component.slice.item.id {
                 self.awaitingSwitchToId = nil
                 self.viewListPanState = nil
                 self.isCompletingViewListPan = true
@@ -3173,7 +3172,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let startTime4 = CFAbsoluteTimeGetCurrent()
             
-            var validViewListIds: [Int32] = []
+            var validViewListIds: [StoryId] = []
             
             var displayViewLists = false
             if component.slice.effectivePeer.id == component.context.account.peerId {
@@ -3183,42 +3182,42 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             var viewListHeightMidFraction: CGFloat = 0.0
-            if displayViewLists, let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
-                var visibleViewListIds: [Int32] = [component.slice.item.storyItem.id]
+            if displayViewLists, let currentIndex = component.slice.allItems.firstIndex(where: { $0.id == component.slice.item.id }) {
+                var visibleViewListIds: [StoryId] = [component.slice.item.id]
                 if self.viewListDisplayState != .hidden, let viewListPanState = self.viewListPanState {
                     if currentIndex != 0 {
                         if viewListPanState.fraction > 0.0 {
-                            visibleViewListIds.append(component.slice.allItems[currentIndex - 1].storyItem.id)
+                            visibleViewListIds.append(component.slice.allItems[currentIndex - 1].id)
                         }
                     }
                     if currentIndex != component.slice.allItems.count - 1 {
                         if viewListPanState.fraction < 0.0 {
-                            visibleViewListIds.append(component.slice.allItems[currentIndex + 1].storyItem.id)
+                            visibleViewListIds.append(component.slice.allItems[currentIndex + 1].id)
                         }
                     }
                 }
                 
-                var preloadViewListIds: [(Int32, EngineStoryItem.Views)] = []
+                var preloadViewListIds: [(StoryId, EngineStoryItem.Views)] = []
                 if let views = component.slice.item.storyItem.views {
-                    preloadViewListIds.append((component.slice.item.storyItem.id, views))
+                    preloadViewListIds.append((component.slice.item.id, views))
                 }
                 if currentIndex != 0, let views = component.slice.allItems[currentIndex - 1].storyItem.views {
-                    preloadViewListIds.append((component.slice.allItems[currentIndex - 1].storyItem.id, views))
+                    preloadViewListIds.append((component.slice.allItems[currentIndex - 1].id, views))
                 }
                 if currentIndex != component.slice.allItems.count - 1, let views = component.slice.allItems[currentIndex + 1].storyItem.views {
-                    preloadViewListIds.append((component.slice.allItems[currentIndex + 1].storyItem.id, views))
+                    preloadViewListIds.append((component.slice.allItems[currentIndex + 1].id, views))
                 }
                 
                 for (id, views) in preloadViewListIds {
-                    if component.sharedViewListsContext.viewLists[StoryId(peerId: component.slice.effectivePeer.id, id: id)] == nil {
+                    if component.sharedViewListsContext.viewLists[id] == nil {
                         let defaultSortMode: EngineStoryViewListContext.SortMode
                         if component.slice.effectivePeer.id.isGroupOrChannel {
                             defaultSortMode = .repostsFirst
                         } else {
                             defaultSortMode = .reactionsFirst
                         }
-                        let viewList = component.context.engine.messages.storyViewList(peerId: component.slice.effectivePeer.id, id: id, views: views, listMode: .everyone, sortMode: defaultSortMode)
-                        component.sharedViewListsContext.viewLists[StoryId(peerId: component.slice.effectivePeer.id, id: id)] = viewList
+                        let viewList = component.context.engine.messages.storyViewList(peerId: component.slice.effectivePeer.id, id: id.id, views: views, listMode: .everyone, sortMode: defaultSortMode)
+                        component.sharedViewListsContext.viewLists[id] = viewList
                     }
                 }
                 
@@ -3236,7 +3235,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 
                 var fixedAnimationOffset: CGFloat = 0.0
-                var applyFixedAnimationOffsetIds: [Int32] = []
+                var applyFixedAnimationOffsetIds: [StoryId] = []
                 
                 let normalCollapsedContentAreaHeight: CGFloat = availableSize.height - minimizedHeight
                 
@@ -3281,7 +3280,7 @@ public final class StoryItemSetContainerComponent: Component {
                 maximizedBottomContentHeight = defaultHeight
                 
                 for id in visibleViewListIds {
-                    guard let itemIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == id }) else {
+                    guard let itemIndex = component.slice.allItems.firstIndex(where: { $0.id == id }) else {
                         continue
                     }
                     let item = component.slice.allItems[itemIndex]
@@ -3626,7 +3625,7 @@ public final class StoryItemSetContainerComponent: Component {
                             viewListView.animateIn(transition: transition)
                         }
                     }
-                    /*if id == component.slice.item.storyItem.id {
+                    /*if id == component.slice.item.id {
                         viewListInset = minimizedHeight * viewList.externalState.minimizationFraction + defaultHeight * (1.0 - viewList.externalState.minimizationFraction)
                         inputPanelBottomInset = viewListInset
                         minimizedBottomContentHeight = minimizedHeight
@@ -3637,7 +3636,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 if fixedAnimationOffset == 0.0 {
                     for (id, viewList) in self.viewLists {
-                        if let viewListView = viewList.view.view, !visibleViewListIds.contains(id), let itemIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == id }) {
+                        if let viewListView = viewList.view.view, !visibleViewListIds.contains(id), let itemIndex = component.slice.allItems.firstIndex(where: { $0.id == id }) {
                             let viewListSize = viewListView.bounds.size
                             var viewListFrame = CGRect(origin: CGPoint(x: viewListBaseOffsetX, y: availableSize.height - viewListSize.height), size: viewListSize)
                             let indexDistance = CGFloat(max(-1, min(1, itemIndex - currentIndex)))
@@ -3658,7 +3657,7 @@ public final class StoryItemSetContainerComponent: Component {
             } else {
                 self.viewListMetrics = nil
             }
-            var removeViewListIds: [Int32] = []
+            var removeViewListIds: [StoryId] = []
             for (id, viewList) in self.viewLists {
                 if !validViewListIds.contains(id) {
                     removeViewListIds.append(id)
@@ -4182,7 +4181,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
-            if let captionItem = self.captionItem, captionItem.itemId != component.slice.item.storyItem.id {
+            if let captionItem = self.captionItem, captionItem.itemId != component.slice.item.id {
                 self.captionItem = nil
                 if let captionItemView = captionItem.view.view {
                     captionItemView.removeFromSuperview()
@@ -4198,7 +4197,7 @@ public final class StoryItemSetContainerComponent: Component {
                     if !transition.animation.isImmediate {
                         captionItemTransition = .immediate
                     }
-                    captionItem = CaptionItem(itemId: component.slice.item.storyItem.id)
+                    captionItem = CaptionItem(itemId: component.slice.item.id)
                     self.captionItem = captionItem
                 }
                 
@@ -4546,7 +4545,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut)))
                                     
                                     self.waitingForReactionAnimateOutToLike = updateReaction.reaction
-                                    let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.effectivePeer.id, id: component.slice.item.storyItem.id, reaction: updateReaction.reaction).startStandalone()
+                                    let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.effectivePeer.id, id: component.slice.item.id.id, reaction: updateReaction.reaction).startStandalone()
                                 }
                             } else {
                                 let _ = (component.context.engine.stickers.availableReactions()
@@ -4630,7 +4629,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         mediaReference: nil,
                                         threadId: nil,
                                         replyToMessageId: nil,
-                                        replyToStoryId: StoryId(peerId: component.slice.effectivePeer.id, id: component.slice.item.storyItem.id),
+                                        replyToStoryId: component.slice.item.id,
                                         localGroupingKey: nil,
                                         correlationId: nil,
                                         bubbleUpEmojiOrStickersets: []
@@ -4853,7 +4852,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.scroller.contentSize = CGSize(width: itemLayout.fullItemScrollDistance * CGFloat(max(0, component.slice.allItems.count - 1)) + availableSize.width, height: availableSize.height)
             self.scroller.isScrollEnabled = itemLayout.contentScaleFraction >= 1.0 - 0.0001
             
-            if let centralIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
+            if let centralIndex = component.slice.allItems.firstIndex(where: { $0.id == component.slice.item.id }) {
                 let centralX = itemLayout.fullItemScrollDistance * CGFloat(centralIndex)
                 if itemLayout.contentScaleFraction <= 0.0001 {
                     if abs(self.scroller.contentOffset.x - centralX) > CGFloat.ulpOfOne {
@@ -4878,7 +4877,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let navigationStripSideInset: CGFloat = 8.0
             let navigationStripTopInset: CGFloat = 8.0
-            if let focusedItem, let visibleItem = self.visibleItems[focusedItem.storyItem.id], let index = focusedItem.position {
+            if let focusedItem, let visibleItem = self.visibleItems[focusedItem.id], let index = focusedItem.position {
                 var index = max(0, min(index, component.slice.totalCount - 1))
                 var count = component.slice.totalCount
                 if let dayCounters = focusedItem.dayCounters {
@@ -5286,12 +5285,14 @@ public final class StoryItemSetContainerComponent: Component {
                 return
             }
             
-            guard let viewList = self.viewLists[component.slice.item.storyItem.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View, let viewListContext = viewListView.currentViewList else {
+            let storyId = StoryId(peerId: peer.id, id: id)
+            
+            guard let viewList = self.viewLists[component.slice.item.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View, let viewListContext = viewListView.currentViewList else {
                 return
             }
             
             let context = component.context
-            let storyContent = RepostStoriesContentContextImpl(context: context, originalPeerId: component.slice.effectivePeer.id, originalStory: component.slice.item.storyItem, focusedStoryId: StoryId(peerId: peer.id, id: id), viewListContext: viewListContext, readGlobally: false)
+            let storyContent = RepostStoriesContentContextImpl(context: context, originalPeerId: component.slice.effectivePeer.id, originalStory: component.slice.item.storyItem, focusedStoryId: storyId, viewListContext: viewListContext, readGlobally: false)
             let _ = (storyContent.state
             |> take(1)
             |> deliverOnMainQueue).startStandalone(next: { [weak controller, weak viewListView, weak sourceView] _ in
@@ -5368,7 +5369,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.state?.updated(transition: .easeInOut(duration: 0.2))
             
             var videoPlaybackPosition: Double?
-            if let visibleItem = self.visibleItems[component.slice.item.storyItem.id], let view = visibleItem.view.view as? StoryItemContentComponent.View {
+            if let visibleItem = self.visibleItems[component.slice.item.id], let view = visibleItem.view.view as? StoryItemContentComponent.View {
                 videoPlaybackPosition = view.videoPlaybackPosition
             }
             
@@ -5665,7 +5666,7 @@ public final class StoryItemSetContainerComponent: Component {
                 var likeButtonView: UIView?
                 var addTracingOffset: ((UIView) -> Void)?
                 
-                if let visibleItem = self.visibleItems[component.slice.item.storyItem.id], let footerPanelView = visibleItem.footerPanel?.view as? StoryFooterPanelComponent.View {
+                if let visibleItem = self.visibleItems[component.slice.item.id], let footerPanelView = visibleItem.footerPanel?.view as? StoryFooterPanelComponent.View {
                     likeButtonView = footerPanelView.likeButtonView
                     addTracingOffset = { [weak footerPanelView] view in
                         footerPanelView?.setLikeButtonTracingOffset(view: view)
@@ -5681,7 +5682,7 @@ public final class StoryItemSetContainerComponent: Component {
                     return
                 }
                 
-                let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.effectivePeer.id, id: component.slice.item.storyItem.id, reaction: component.slice.item.storyItem.myReaction == nil ? .builtin("❤") : nil).startStandalone()
+                let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.effectivePeer.id, id: component.slice.item.id.id, reaction: component.slice.item.storyItem.myReaction == nil ? .builtin("❤") : nil).startStandalone()
                 
                 if component.slice.item.storyItem.myReaction != nil {
                     return
@@ -5815,7 +5816,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 let packsPromise = Promise<[StickerPackReference]>()
                 if hasLinkedStickers {
-                    packsPromise.set(context.engine.stickers.stickerPacksAttachedToMedia(media: .story(peer: peerReference, id: component.slice.item.storyItem.id, media: media)))
+                    packsPromise.set(context.engine.stickers.stickerPacksAttachedToMedia(media: .story(peer: peerReference, id: component.slice.item.id.id, media: media)))
                 } else {
                     packsPromise.set(.single([]))
                 }
@@ -5939,7 +5940,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 
                 let rate = normalizeValue(newValue)
-                if let visibleItem = self.visibleItems[component.slice.item.storyItem.id], let view = visibleItem.view.view as? StoryItemContentComponent.View {
+                if let visibleItem = self.visibleItems[component.slice.item.id], let view = visibleItem.view.view as? StoryItemContentComponent.View {
                     view.setBaseRate(rate)
                 }
                 
@@ -5969,7 +5970,7 @@ public final class StoryItemSetContainerComponent: Component {
                         return
                     }
                     
-                    if let visibleItem = self.visibleItems[component.slice.item.storyItem.id], let view = visibleItem.view.view as? StoryItemContentComponent.View {
+                    if let visibleItem = self.visibleItems[component.slice.item.id], let view = visibleItem.view.view as? StoryItemContentComponent.View {
                         view.setBaseRate(rate)
                     }
                     component.storyItemSharedState.baseRate = rate

@@ -425,7 +425,7 @@ private final class StoryContainerScreenComponent: Component {
         
         var longPressRecognizer: StoryLongPressRecognizer?
         
-        private var pendingNavigationToItemId: (peerId: EnginePeer.Id, id: Int32)?
+        private var pendingNavigationToItemId: StoryId?
                 
         private let interactionGuide = ComponentView<Empty>()
         private var isDisplayingInteractionGuide: Bool = false
@@ -521,7 +521,7 @@ private final class StoryContainerScreenComponent: Component {
                 guard let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
                     return
                 }
-                guard let visibleItemView = itemSetComponentView.visibleItems[slice.item.storyItem.id]?.view.view as? StoryItemContentComponent.View else {
+                guard let visibleItemView = itemSetComponentView.visibleItems[slice.item.id]?.view.view as? StoryItemContentComponent.View else {
                     return
                 }
                 
@@ -563,7 +563,7 @@ private final class StoryContainerScreenComponent: Component {
                 guard let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
                     return
                 }
-                guard let visibleItemView = itemSetComponentView.visibleItems[slice.item.storyItem.id]?.view.view as? StoryItemContentComponent.View else {
+                guard let visibleItemView = itemSetComponentView.visibleItems[slice.item.id]?.view.view as? StoryItemContentComponent.View else {
                     return
                 }
                 visibleItemView.seekEnded()
@@ -1213,7 +1213,7 @@ private final class StoryContainerScreenComponent: Component {
                         self.commitHorizontalPan(velocity: CGPoint(x: 200.0, y: 0.0))
                     }
                 } else {
-                    var mappedId: Int32?
+                    var mappedId: StoryId?
                     switch direction {
                     case .previous:
                         mappedId = slice.previousItemId
@@ -1223,7 +1223,7 @@ private final class StoryContainerScreenComponent: Component {
                         mappedId = id
                     }
                     if let mappedId {
-                        self.pendingNavigationToItemId = (slice.peer.id, mappedId)
+                        self.pendingNavigationToItemId = mappedId
                         component.content.navigate(navigation: .item(.id(mappedId)))
                     }
                 }

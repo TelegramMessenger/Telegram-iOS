@@ -65,7 +65,7 @@ private final class VisualMediaItemInteraction {
 }
 
 private final class VisualMediaHoleAnchor: SparseItemGrid.HoleAnchor {
-    let storyId: Int32
+    let storyId: StoryId
     override var id: AnyHashable {
         return AnyHashable(self.storyId)
     }
@@ -80,7 +80,7 @@ private final class VisualMediaHoleAnchor: SparseItemGrid.HoleAnchor {
         return self.localMonthTimestamp
     }
 
-    init(index: Int, storyId: Int32, localMonthTimestamp: Int32) {
+    init(index: Int, storyId: StoryId, localMonthTimestamp: Int32) {
         self.indexValue = index
         self.storyId = storyId
         self.localMonthTimestamp = localMonthTimestamp
@@ -94,12 +94,13 @@ private final class VisualMediaItem: SparseItemGrid.Item {
     }
     let localMonthTimestamp: Int32
     let peer: PeerReference
+    let storyId: StoryId
     let story: EngineStoryItem
     let authorPeer: EnginePeer?
     let isPinned: Bool
 
     override var id: AnyHashable {
-        return AnyHashable(self.story.id)
+        return AnyHashable(self.storyId)
     }
 
     override var tag: Int32 {
@@ -107,12 +108,13 @@ private final class VisualMediaItem: SparseItemGrid.Item {
     }
 
     override var holeAnchor: SparseItemGrid.HoleAnchor {
-        return VisualMediaHoleAnchor(index: self.index, storyId: self.story.id, localMonthTimestamp: self.localMonthTimestamp)
+        return VisualMediaHoleAnchor(index: self.index, storyId: self.storyId, localMonthTimestamp: self.localMonthTimestamp)
     }
     
-    init(index: Int, peer: PeerReference, story: EngineStoryItem, authorPeer: EnginePeer?, isPinned: Bool, localMonthTimestamp: Int32) {
+    init(index: Int, peer: PeerReference, storyId: StoryId, story: EngineStoryItem, authorPeer: EnginePeer?, isPinned: Bool, localMonthTimestamp: Int32) {
         self.indexValue = index
         self.peer = peer
+        self.storyId = storyId
         self.story = story
         self.authorPeer = authorPeer
         self.isPinned = isPinned
@@ -457,7 +459,7 @@ private final class DurationLayer: SimpleLayer {
         
         if self.authorPeerId != author.id {
             let string = NSAttributedString(string: author.debugDisplayTitle, font: durationFont, textColor: .white)
-            let bounds = string.boundingRect(with: CGSize(width: constrainedWidth - 20.0, height: 20.0), options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], context: nil)
+            let bounds = string.boundingRect(with: CGSize(width: constrainedWidth - 24.0, height: 20.0), options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], context: nil)
             let textSize = CGSize(width: ceil(bounds.width), height: ceil(bounds.height))
             let sideInset: CGFloat = 6.0
             let verticalInset: CGFloat = 2.0
@@ -2586,6 +2588,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         self.listDisposable?.dispose()
         self.listDisposable = nil
 
+        let context = self.context
         self.listDisposable = (state
         |> deliverOn(queue)).startStrict(next: { [weak self] state in
             guard let self else {
@@ -2634,6 +2637,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 mappedItems.append(VisualMediaItem(
                     index: mappedItems.count,
                     peer: peerReference,
+                    storyId: item.id,
                     story: item.storyItem,
                     authorPeer: item.peer,
                     isPinned: state.pinnedIds.contains(item.storyItem.id),
@@ -2641,7 +2645,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 ))
             }
             if mappedItems.count < state.totalCount, let lastItem = state.items.last, let _ = state.loadMoreToken {
-                mappedHoles.append(VisualMediaHoleAnchor(index: mappedItems.count, storyId: Int32.max, localMonthTimestamp: Month(localTimestamp: lastItem.storyItem.timestamp + timezoneOffset).packedValue))
+                mappedHoles.append(VisualMediaHoleAnchor(index: mappedItems.count, storyId: StoryId(peerId: context.account.peerId, id: Int32.max), localMonthTimestamp: Month(localTimestamp: lastItem.storyItem.timestamp + timezoneOffset).packedValue))
             }
             totalCount = state.totalCount
             totalCount = max(mappedItems.count, totalCount)
