@@ -3141,7 +3141,11 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 mapInfoNode.isUserInteractionEnabled = false
                 self.mapInfoNode = mapInfoNode
                 mapNode.supernode?.insertSubnode(mapInfoNode, aboveSubnode: mapNode)
+                mapInfoNode.clipsToBounds = true
+                mapInfoNode.cornerRadius = 10.0
+                mapInfoNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
             }
+            mapInfoNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             
             let addressString: String?
             if let address = mapInfoData.address {
