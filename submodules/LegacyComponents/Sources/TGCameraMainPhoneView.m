@@ -223,7 +223,7 @@
         _topPanelBackgroundView.backgroundColor = [TGCameraInterfaceAssets transparentPanelBackgroundColor];
         [_topPanelView addSubview:_topPanelBackgroundView];
         
-        _zoomModeView = [[TGCameraZoomModeView alloc] initWithFrame:CGRectMake(floor((frame.size.width - 172.0) / 2.0), frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 18 - 43, 172, 43) hasUltrawideCamera:hasUltrawideCamera hasTelephotoCamera:hasTelephotoCamera hasCenterRightZoom:true minZoomLevel:hasUltrawideCamera ? 0.5 : 1.0 maxZoomLevel:camera.maxMarkZoomValue secondMarkZoomValue:camera.secondMarkZoomValue];
+        _zoomModeView = [[TGCameraZoomModeView alloc] initWithFrame:CGRectMake(floor((frame.size.width - 129.0) / 2.0), frame.size.height - _bottomPanelHeight - _bottomPanelOffset - 18 - 43, 129, 43) hasUltrawideCamera:hasUltrawideCamera hasTelephotoCamera:hasTelephotoCamera minZoomLevel:hasUltrawideCamera ? 0.5 : 1.0 maxZoomLevel:8.0];
         _zoomModeView.zoomChanged = ^(CGFloat zoomLevel, bool done, bool animated) {
             __strong TGCameraMainPhoneView *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -642,7 +642,7 @@
         
         [UIView animateWithDuration:0.2 delay:0.0 options:7 << 16 animations:^{
             CGFloat offset = hidden ? 19 : 18 + 43;
-            _zoomModeView.frame = CGRectMake(floor((self.bounds.size.width - 172.0) / 2.0), self.bounds.size.height - _bottomPanelHeight - _bottomPanelOffset - offset, 172, 43);
+            _zoomModeView.frame = CGRectMake(floor((self.bounds.size.width - 129.0) / 2.0), self.bounds.size.height - _bottomPanelHeight - _bottomPanelOffset - offset, 129, 43);
         } completion:nil];
         
         [UIView animateWithDuration:0.25 animations:^
@@ -688,7 +688,7 @@
         _topFlipButton.alpha = alpha;
         
         CGFloat offset = hidden ? 19 : 18 + 43;
-        _zoomModeView.frame = CGRectMake(floor((self.bounds.size.width - 172.0) / 2.0), self.bounds.size.height - _bottomPanelHeight - _bottomPanelOffset - offset, 172, 43);
+        _zoomModeView.frame = CGRectMake(floor((self.bounds.size.width - 129.0) / 2.0), self.bounds.size.height - _bottomPanelHeight - _bottomPanelOffset - offset, 129, 43);
         
         if (hasDoneButton)
         {
