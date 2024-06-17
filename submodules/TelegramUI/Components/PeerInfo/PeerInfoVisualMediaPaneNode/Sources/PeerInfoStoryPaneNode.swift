@@ -506,6 +506,26 @@ private final class DurationLayer: SimpleLayer {
 }
 
 private final class ItemLayer: CALayer, SparseItemGridLayer {
+    struct Params: Equatable {
+        let size: CGSize
+        let viewCount: Int32?
+        let duration: Int32?
+        let topRightIcon: ItemTopRightIcon?
+        let authorId: EnginePeer.Id?
+        let isMin: Bool
+        let minFactor: CGFloat
+        
+        init(size: CGSize, viewCount: Int32?, duration: Int32?, topRightIcon: ItemTopRightIcon?, authorId: EnginePeer.Id?, isMin: Bool, minFactor: CGFloat) {
+            self.size = size
+            self.viewCount = viewCount
+            self.duration = duration
+            self.topRightIcon = topRightIcon
+            self.authorId = authorId
+            self.isMin = isMin
+            self.minFactor = minFactor
+        }
+    }
+    
     var item: VisualMediaItem?
     var viewCountLayer: DurationLayer?
     var durationLayer: DurationLayer?
@@ -519,6 +539,8 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
     var selectionLayer: GridMessageSelectionLayer?
     var dustLayer: MediaDustLayer?
     var disposable: Disposable?
+    
+    var currentParams: Params?
 
     var hasContents: Bool = false
 
@@ -561,6 +583,12 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
     }
 
     func updateDuration(size: CGSize, viewCount: Int32?, duration: Int32?, topRightIcon: ItemTopRightIcon?, author: EnginePeer?, isMin: Bool, minFactor: CGFloat, directMediaImageCache: DirectMediaImageCache, synchronous: SparseItemGrid.Synchronous) {
+        let params = Params(size: size, viewCount: viewCount, duration: duration, topRightIcon: topRightIcon, authorId: author?.id, isMin: isMin, minFactor: minFactor)
+        if self.currentParams == params {
+            return
+        }
+        self.currentParams = params
+        
         self.minFactor = minFactor
         
         if let viewCount {
