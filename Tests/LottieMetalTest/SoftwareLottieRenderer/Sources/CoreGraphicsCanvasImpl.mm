@@ -503,6 +503,29 @@ void CoreGraphicsCanvasImpl::clip(CGRect const &rect) {
     CGContextClipToRect(currentLayer()->context(), CGRectMake(rect.x, rect.y, rect.width, rect.height));
 }
 
+bool CoreGraphicsCanvasImpl::clipPath(CanvasPathEnumerator const &enumeratePath, FillRule fillRule, Transform2D const &transform) {
+    CGContextSaveGState(currentLayer()->context());
+    concatenate(transform);
+    
+    if (!addEnumeratedPath(currentLayer()->context(), enumeratePath)) {
+        CGContextRestoreGState(currentLayer()->context());
+        return false;
+    }
+    CGContextRestoreGState(currentLayer()->context());
+    switch (fillRule) {
+        case lottie::FillRule::EvenOdd: {
+            CGContextEOClip(currentLayer()->context());
+            break;
+        }
+        default: {
+            CGContextClip(currentLayer()->context());
+            break;
+        }
+    }
+    
+    return true;
+}
+
 void CoreGraphicsCanvasImpl::concatenate(lottie::Transform2D const &transform) {
     CGContextConcatCTM(currentLayer()->context(), CATransform3DGetAffineTransform(nativeTransform(transform)));
 }
