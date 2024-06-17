@@ -156,7 +156,7 @@ final class PeerSelectionScreenComponent: Component {
             super.init()
         }
         
-        func update(size: CGSize, insets: UIEdgeInsets, transition: Transition) {
+        func update(size: CGSize, insets: UIEdgeInsets, transition: ComponentTransition) {
             let (listViewDuration, listViewCurve) = listViewAnimationDurationAndCurve(transition: transition.containedViewLayoutTransition)
             self.transaction(
                 deleteIndices: [],
@@ -267,7 +267,7 @@ final class PeerSelectionScreenComponent: Component {
             insets: UIEdgeInsets,
             statusBarHeight: CGFloat,
             isModal: Bool,
-            transition: Transition,
+            transition: ComponentTransition,
             deferScrollApplication: Bool
         ) -> CGFloat {
             let rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = []
@@ -362,7 +362,7 @@ final class PeerSelectionScreenComponent: Component {
             }
         }
         
-        private func updateNavigationScrolling(navigationHeight: CGFloat, transition: Transition) {
+        private func updateNavigationScrolling(navigationHeight: CGFloat, transition: ComponentTransition) {
             var mainOffset: CGFloat
             if let contentListNode = self.contentListNode {
                 switch contentListNode.visibleContentOffset() {
@@ -401,7 +401,7 @@ final class PeerSelectionScreenComponent: Component {
             }
         }
         
-        func update(component: PeerSelectionScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: PeerSelectionScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -435,7 +435,7 @@ final class PeerSelectionScreenComponent: Component {
             self.component = component
             self.state = state
             
-            let alphaTransition: Transition = transition.animation.isImmediate ? transition : transition.withAnimation(.curve(duration: 0.25, curve: .easeInOut))
+            let alphaTransition: ComponentTransition = transition.animation.isImmediate ? transition : transition.withAnimation(.curve(duration: 0.25, curve: .easeInOut))
             let _ = alphaTransition
             
             if themeUpdated {
@@ -650,7 +650,7 @@ final class PeerSelectionScreenComponent: Component {
             } else {
                 if let loadingView = self.loadingView {
                     self.loadingView = nil
-                    let removeTransition: Transition = .easeInOut(duration: 0.2)
+                    let removeTransition: ComponentTransition = .easeInOut(duration: 0.2)
                     removeTransition.setAlpha(view: loadingView, alpha: 0.0, completion: { [weak loadingView] _ in
                         loadingView?.removeFromSuperview()
                     })
@@ -683,7 +683,7 @@ final class PeerSelectionScreenComponent: Component {
         return View()
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

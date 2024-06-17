@@ -57,7 +57,7 @@ public final class ItemListControllerSegmentedTitleView: UIView {
         self.update(transition: .immediate)
     }
     
-    private func update(transition: Transition) {
+    private func update(transition: ComponentTransition) {
         guard let size = self.validLayout else {
             return
         }

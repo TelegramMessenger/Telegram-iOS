@@ -3,14 +3,17 @@ import MetalKit
 import MetalEngine
 import Display
 
-final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
-    var internalData: MetalEngineSubjectInternalData?
+public final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
+    public var internalData: MetalEngineSubjectInternalData?
     
-    struct Blob {
+    private struct Blob {
+        var color: SIMD4<Float>
         var points: [Float]
         var nextPoints: [Float]
         
-        init(count: Int) {
+        init(count: Int, color: SIMD4<Float>) {
+            self.color = color
+            
             self.points = (0 ..< count).map { _ in
                 Float.random(in: 0.0 ... 1.0)
             }
@@ -35,7 +38,7 @@ final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         }
     }
     
-    final class RenderState: RenderToLayerState {
+    private final class RenderState: RenderToLayerState {
         let pipelineState: MTLRenderPipelineState
         
         required init?(device: MTLDevice) {
@@ -71,7 +74,7 @@ final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     
     private var displayLinkSubscription: SharedDisplayLinkDriver.Link?
     
-    override init() {
+    public init(colors: [UIColor] = [UIColor(white: 1.0, alpha: 0.35), UIColor(white: 1.0, alpha: 0.35)]) {
         super.init()
         
         self.didEnterHierarchy = { [weak self] in
@@ -100,20 +103,26 @@ final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         }
         
         self.isOpaque = false
-        self.blobs = (0 ..< 2).map { _ in
-            Blob(count: 8)
+        self.blobs = colors.reversed().map { color in
+            var r: CGFloat = 0.0
+            var g: CGFloat = 0.0
+            var b: CGFloat = 0.0
+            var a: CGFloat = 0.0
+            color.getRed(&r, green: &g, blue: &b, alpha: &a)
+            
+            return Blob(count: 8, color: SIMD4<Float>(Float(r), Float(g), Float(b), Float(a)))
         }
     }
     
-    override init(layer: Any) {
+    override public init(layer: Any) {
         super.init(layer: layer)
     }
     
-    required init?(coder: NSCoder) {
+    required public init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(context: MetalEngineSubjectContext) {
+    public func update(context: MetalEngineSubjectContext) {
         if self.bounds.isEmpty {
             return
         }
@@ -136,6 +145,9 @@ final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
                 encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
                 encoder.setVertexBytes(&points, length: MemoryLayout<Float>.size * points.count, index: 1)
                 encoder.setVertexBytes(&count, length: MemoryLayout<Float>.size, index: 2)
+                
+                var color = blobs[i].color
+                encoder.setFragmentBytes(&color, length: MemoryLayout<Float>.size * 4, index: 0)
                 
                 encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3 * 8 * points.count)
             }

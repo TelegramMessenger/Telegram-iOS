@@ -1747,7 +1747,16 @@ extension ChatControllerImpl {
                 return
             }
             if let messageId = messageId {
-                if canSendMessagesToChat(strongSelf.presentationInterfaceState) {
+                let intrinsicCanSendMessagesHere = canSendMessagesToChat(strongSelf.presentationInterfaceState)
+                var canSendMessagesHere = intrinsicCanSendMessagesHere
+                if case .standard(.embedded) = strongSelf.presentationInterfaceState.mode {
+                    canSendMessagesHere = false
+                }
+                if case .inline = strongSelf.presentationInterfaceState.mode {
+                    canSendMessagesHere = false
+                }
+                
+                if canSendMessagesHere {
                     let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
                         if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({
@@ -1771,15 +1780,22 @@ extension ChatControllerImpl {
                         messageId: messageId,
                         quote: nil
                     )
+                    
                     completion(.immediate, {
                         guard let self else {
                             return
                         }
-                        moveReplyMessageToAnotherChat(selfController: self, replySubject: replySubject)
+                        if intrinsicCanSendMessagesHere {
+                            if let peerId = self.chatLocation.peerId {
+                                moveReplyToChat(selfController: self, peerId: peerId, threadId: self.chatLocation.threadId, replySubject: replySubject, completion: {})
+                            }
+                        } else {
+                            moveReplyMessageToAnotherChat(selfController: self, replySubject: replySubject)
+                        }
                     })
                 }
             } else {
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil) }) }, completion: { t in
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }) }, completion: { t in
                     completion(t, {})
                 })
             }
@@ -2497,7 +2513,7 @@ extension ChatControllerImpl {
                             strongSelf.chatDisplayNode.collapseInput()
                             
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }
+                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }
                             })
                         }
                     }, nil)
@@ -2521,7 +2537,7 @@ extension ChatControllerImpl {
             }
             
             self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }
+                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }
             })
             
             if !self.presentationInterfaceState.isPremium {
@@ -2537,7 +2553,7 @@ extension ChatControllerImpl {
                     return
                 }
                 self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }
+                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }
                 })
             }, nil)
             
@@ -3706,14 +3722,18 @@ extension ChatControllerImpl {
                     }
                 }
                 
-                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: strongSelf.updatedPresentationData, account: strongSelf.context.account, text: text?.string ?? "", link: link, apply: { [weak self] link in
+                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: strongSelf.updatedPresentationData, account: strongSelf.context.account, text: text?.string ?? "", link: link, allowEmpty: true, apply: { [weak self] link in
                     if let strongSelf = self, let inputMode = inputMode, let selectionRange = selectionRange {
-                        if let link = link {
-                            strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-                                return (chatTextInputAddLinkAttribute(current, selectionRange: selectionRange, url: link), inputMode)
+                        if let link {
+                            if !link.isEmpty {
+                                strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                                    return (chatTextInputAddLinkAttribute(current, selectionRange: selectionRange, url: link), inputMode)
+                                }
+                            } else {
+                                strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                                    return (chatTextInputRemoveLinkAttribute(current, selectionRange: selectionRange), inputMode)
+                                }
                             }
-                        } else {
-                            
                         }
                         strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, {
                             return $0.updatedInputMode({ _ in return inputMode }).updatedInterfaceState({
@@ -3892,7 +3912,7 @@ extension ChatControllerImpl {
                 chatLocation = .peer(id: peerId)
             }
             
-            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: chatLocation, subject: .pinnedMessages(id: pinnedMessage.message.id), botStart: nil, mode: .standard(.previewing))
+            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: chatLocation, subject: .pinnedMessages(id: pinnedMessage.message.id), botStart: nil, mode: .standard(.previewing), params: nil)
             chatController.canReadHistory.set(false)
             
             strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()

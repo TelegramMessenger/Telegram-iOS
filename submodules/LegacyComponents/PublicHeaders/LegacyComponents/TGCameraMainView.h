@@ -17,6 +17,7 @@
 @class TGMediaPickerPhotoStripView;
 @class TGMediaPickerGallerySelectedItemsModel;
 @class TGMediaEditingContext;
+@class PGCamera;
 
 @interface TGCameraCornersView : UIImageView
 
@@ -67,7 +68,7 @@
 
 @property (nonatomic, assign) CGRect previewViewFrame;
 
-- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar videoModeByDefault:(bool)videoModeByDefault hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera;
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar videoModeByDefault:(bool)videoModeByDefault hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera camera:(PGCamera *)camera;
 
 - (void)setDocumentFrameHidden:(bool)hidden;
 - (void)setCameraMode:(PGCameraMode)mode;

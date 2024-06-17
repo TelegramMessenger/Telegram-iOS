@@ -686,7 +686,7 @@ final class AvatarEditorScreenComponent: Component {
                         self.endEditing(true)
                         if let state = self.state, state.expanded {
                             state.expanded = false
-                            state.updated(transition: Transition(animation: .curve(duration: 0.45, curve: .spring)))
+                            state.updated(transition: ComponentTransition(animation: .curve(duration: 0.45, curve: .spring)))
                         }
                     }
                 },
@@ -817,7 +817,7 @@ final class AvatarEditorScreenComponent: Component {
                         self.endEditing(true)
                         if let state = self.state, state.expanded {
                             state.expanded = false
-                            state.updated(transition: Transition(animation: .curve(duration: 0.45, curve: .spring)))
+                            state.updated(transition: ComponentTransition(animation: .curve(duration: 0.45, curve: .spring)))
                         }
                     }
                 },
@@ -839,7 +839,7 @@ final class AvatarEditorScreenComponent: Component {
         
         private var isExpanded = false
         
-        func update(component: AvatarEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: AvatarEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
                         
@@ -983,7 +983,7 @@ final class AvatarEditorScreenComponent: Component {
                                     emojiView.ensureSearchUnfocused()
                                 }
                                 state.expanded = !state.expanded
-                                state.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
+                                state.updated(transition: ComponentTransition(animation: .curve(duration: 0.35, curve: .spring)))
                             }
                         }
                     )
@@ -1491,7 +1491,7 @@ final class AvatarEditorScreenComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

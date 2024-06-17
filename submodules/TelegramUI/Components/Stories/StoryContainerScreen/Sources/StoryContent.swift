@@ -99,27 +99,36 @@ public final class StoryContentItem: Equatable {
         }
     }
     
+    public let id: StoryId
     public let position: Int?
     public let dayCounters: DayCounters?
     public let peerId: EnginePeer.Id?
     public let storyItem: EngineStoryItem
     public let entityFiles: [EngineMedia.Id: TelegramMediaFile]
+    public let itemPeer: EnginePeer?
 
     public init(
+        id: StoryId,
         position: Int?,
         dayCounters: DayCounters?,
         peerId: EnginePeer.Id?,
         storyItem: EngineStoryItem,
-        entityFiles: [EngineMedia.Id: TelegramMediaFile]
+        entityFiles: [EngineMedia.Id: TelegramMediaFile],
+        itemPeer: EnginePeer?
     ) {
+        self.id = id
         self.position = position
         self.dayCounters = dayCounters
         self.peerId = peerId
         self.storyItem = storyItem
         self.entityFiles = entityFiles
+        self.itemPeer = itemPeer
     }
     
     public static func ==(lhs: StoryContentItem, rhs: StoryContentItem) -> Bool {
+        if lhs.id != rhs.id {
+            return false
+        }
         if lhs.position != rhs.position {
             return false
         }
@@ -133,6 +142,9 @@ public final class StoryContentItem: Equatable {
             return false
         }
         if lhs.entityFiles != rhs.entityFiles {
+            return false
+        }
+        if lhs.itemPeer != rhs.itemPeer {
             return false
         }
         return true
@@ -204,18 +216,22 @@ public final class StoryContentContextState {
         public let additionalPeerData: AdditionalPeerData
         public let item: StoryContentItem
         public let totalCount: Int
-        public let previousItemId: Int32?
-        public let nextItemId: Int32?
+        public let previousItemId: StoryId?
+        public let nextItemId: StoryId?
         public let allItems: [StoryContentItem]
         public let forwardInfoStories: [StoryId: Promise<EngineStoryItem?>]
+        
+        var effectivePeer: EnginePeer {
+            return self.item.itemPeer ?? self.peer
+        }
         
         public init(
             peer: EnginePeer,
             additionalPeerData: AdditionalPeerData,
             item: StoryContentItem,
             totalCount: Int,
-            previousItemId: Int32?,
-            nextItemId: Int32?,
+            previousItemId: StoryId?,
+            nextItemId: StoryId?,
             allItems: [StoryContentItem],
             forwardInfoStories: [StoryId: Promise<EngineStoryItem?>]
         ) {
@@ -274,7 +290,7 @@ public enum StoryContentContextNavigation {
     public enum ItemDirection {
         case previous
         case next
-        case id(Int32)
+        case id(StoryId)
     }
     
     public enum PeerDirection {

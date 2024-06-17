@@ -1131,7 +1131,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     lineWidth: 1.33,
                                     inactiveLineWidth: 1.33
                                 ),
-                                transition: animated ? Transition(animation: .curve(duration: 0.25, curve: .easeInOut)) : .immediate
+                                transition: animated ? ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut)) : .immediate
                             )
                             
                             if strongSelf.avatarTapRecognizer == nil {

@@ -170,7 +170,7 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(stateIndex: Int, isEnergySavingEnabled: Bool, transition: Transition) {
+    func update(stateIndex: Int, isEnergySavingEnabled: Bool, transition: ComponentTransition) {
         self.isEnergySavingEnabled = isEnergySavingEnabled
         
         if self.stateIndex != stateIndex {

@@ -7,14 +7,20 @@ import AccountContext
 import MultilineTextComponent
 import TelegramPresentationData
 import PresentationDataUtils
-import SolidRoundedButtonComponent
+import ButtonComponent
+import BundleIconComponent
+import TelegramStringFormatting
 
 final class StarsBalanceComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
     let count: Int64
-    let purchaseAvailable: Bool
+    let rate: Double?
+    let actionTitle: String
+    let actionAvailable: Bool
+    let actionIsEnabled: Bool
+    let actionCooldownUntilTimestamp: Int32?
     let buy: () -> Void
     
     init(
@@ -22,14 +28,22 @@ final class StarsBalanceComponent: Component {
         strings: PresentationStrings,
         dateTimeFormat: PresentationDateTimeFormat,
         count: Int64,
-        purchaseAvailable: Bool,
+        rate: Double?,
+        actionTitle: String,
+        actionAvailable: Bool,
+        actionIsEnabled: Bool,
+        actionCooldownUntilTimestamp: Int32? = nil,
         buy: @escaping () -> Void
     ) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.count = count
-        self.purchaseAvailable = purchaseAvailable
+        self.rate = rate
+        self.actionTitle = actionTitle
+        self.actionAvailable = actionAvailable
+        self.actionIsEnabled = actionIsEnabled
+        self.actionCooldownUntilTimestamp = actionCooldownUntilTimestamp
         self.buy = buy
     }
     
@@ -43,10 +57,22 @@ final class StarsBalanceComponent: Component {
         if lhs.dateTimeFormat != rhs.dateTimeFormat {
             return false
         }
-        if lhs.purchaseAvailable != rhs.purchaseAvailable {
+        if lhs.actionTitle != rhs.actionTitle {
+            return false
+        }
+        if lhs.actionAvailable != rhs.actionAvailable {
+            return false
+        }
+        if lhs.actionIsEnabled != rhs.actionIsEnabled {
+            return false
+        }
+        if lhs.actionCooldownUntilTimestamp != rhs.actionCooldownUntilTimestamp {
             return false
         }
         if lhs.count != rhs.count {
+            return false
+        }
+        if lhs.rate != rhs.rate {
             return false
         }
         return true
@@ -59,6 +85,9 @@ final class StarsBalanceComponent: Component {
         private var button = ComponentView<Empty>()
         
         private var component: StarsBalanceComponent?
+        private weak var state: EmptyComponentState?
+        
+        private var timer: Timer?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -72,8 +101,31 @@ final class StarsBalanceComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: StarsBalanceComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: StarsBalanceComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
+            self.state = state
+            
+            var remainingCooldownSeconds: Int32 = 0
+            if let cooldownUntilTimestamp = component.actionCooldownUntilTimestamp {
+                remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+                remainingCooldownSeconds = max(0, remainingCooldownSeconds)
+            }
+            
+            if remainingCooldownSeconds > 0 {
+                if self.timer == nil {
+                    self.timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.state?.updated(transition: .immediate)
+                    })
+                }
+            } else {
+                if let timer = self.timer {
+                    self.timer = nil
+                    timer.invalidate()
+                }
+            }
             
             let sideInset: CGFloat = 16.0
             var contentHeight: CGFloat = sideInset
@@ -105,11 +157,18 @@ final class StarsBalanceComponent: Component {
             }
             contentHeight += titleSize.height
         
+            let subtitleText: String
+            if let rate = component.rate {
+                subtitleText = "≈\(formatUsdValue(component.count, rate: rate))"
+            } else {
+                subtitleText = component.strings.Stars_Intro_YourBalance
+            }
+            
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: component.strings.Stars_Intro_YourBalance, font: Font.regular(17.0), textColor: component.theme.list.itemSecondaryTextColor)),
+                        text: .plain(NSAttributedString(string: subtitleText, font: Font.regular(17.0), textColor: component.theme.list.itemSecondaryTextColor)),
                         horizontalAlignment: .center
                     )
                 ),
@@ -125,22 +184,43 @@ final class StarsBalanceComponent: Component {
             }
             contentHeight += subtitleSize.height
             
-            if component.purchaseAvailable {
+            if component.actionAvailable {
                 contentHeight += 12.0
                 
+                let content: AnyComponentWithIdentity<Empty>
+                if remainingCooldownSeconds > 0 {
+                    content = AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(
+                        VStack([
+                            AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(Text(text: component.actionTitle, font: Font.semibold(17.0), color: component.theme.list.itemCheckColors.foregroundColor))),
+                            AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(HStack([
+                                AnyComponentWithIdentity(id: 1, component: AnyComponent(BundleIconComponent(name: "Chat List/StatusLockIcon", tintColor: component.theme.list.itemCheckColors.fillColor.mixedWith(component.theme.list.itemCheckColors.foregroundColor, alpha: 0.7)))),
+                                AnyComponentWithIdentity(id: 0, component: AnyComponent(Text(text: stringForRemainingTime(remainingCooldownSeconds), font: Font.with(size: 11.0, weight: .medium, traits: [.monospacedNumbers]), color: component.theme.list.itemCheckColors.fillColor.mixedWith(component.theme.list.itemCheckColors.foregroundColor, alpha: 0.7))))
+                            ], spacing: 3.0)))
+                        ], spacing: 1.0)
+                    ))
+                } else {
+                    content = AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: component.actionTitle, font: Font.semibold(17.0), color: component.theme.list.itemCheckColors.foregroundColor)))
+                }
+                                
                 let buttonSize = self.button.update(
-                    transition: .immediate,
-                    component: AnyComponent(
-                        SolidRoundedButtonComponent(
-                            title: component.strings.Stars_Intro_Buy,
-                            theme: SolidRoundedButtonComponent.Theme(theme: component.theme),
-                            height: 50.0,
-                            cornerRadius: 11.0,
-                            action: { [weak self] in
-                                self?.component?.buy()
+                    transition: transition,
+                    component: AnyComponent(ButtonComponent(
+                        background: ButtonComponent.Background(
+                            color: component.theme.list.itemCheckColors.fillColor,
+                            foreground: component.theme.list.itemCheckColors.foregroundColor,
+                            pressedColor: component.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
+                        ),
+                        content: content,
+                        isEnabled: component.actionIsEnabled,
+                        allowActionWhenDisabled: false,
+                        displaysProgress: false,
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
                             }
-                        )
-                    ),
+                            component.buy()
+                        }
+                    )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)
                 )
@@ -163,7 +243,20 @@ final class StarsBalanceComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
+}
+
+func stringForRemainingTime(_ duration: Int32) -> String {
+    let hours = duration / 3600
+    let minutes = duration / 60 % 60
+    let seconds = duration % 60
+    let durationString: String
+    if hours > 0 {
+        durationString = String(format: "%d:%02d", hours, minutes)
+    } else {
+        durationString = String(format: "%02d:%02d", minutes, seconds)
+    }
+    return durationString
 }

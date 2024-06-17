@@ -61,7 +61,7 @@ final class AnimatedCounterItemComponent: Component {
             preconditionFailure()
         }
 
-        func update(component: AnimatedCounterItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: AnimatedCounterItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let previousNumericValue = self.component?.numericValue
             
             self.component = component
@@ -92,7 +92,7 @@ final class AnimatedCounterItemComponent: Component {
                 
                 let offsetY: CGFloat = size.height * 0.6 * (previousNumericValue < component.numericValue ? -1.0 : 1.0)
                 
-                let subTransition = Transition(animation: .curve(duration: 0.16, curve: .easeInOut))
+                let subTransition = ComponentTransition(animation: .curve(duration: 0.16, curve: .easeInOut))
                 
                 subTransition.animatePosition(view: self.contentView, from: CGPoint(x: 0.0, y: offsetY), to: CGPoint(), additive: true)
                 subTransition.animateAlpha(view: self.contentView, from: 0.0, to: 1.0)
@@ -111,7 +111,7 @@ final class AnimatedCounterItemComponent: Component {
         return View(frame: CGRect())
     }
 
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -188,7 +188,7 @@ public final class AnimatedCounterComponent: Component {
             preconditionFailure()
         }
 
-        func update(component: AnimatedCounterComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: AnimatedCounterComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let spaceWidth: CGFloat
             if let measuredSpaceWidth = self.measuredSpaceWidth, let previousComponent = self.component, previousComponent.font.pointSize == component.font.pointSize {
                 spaceWidth = measuredSpaceWidth
@@ -273,7 +273,7 @@ public final class AnimatedCounterComponent: Component {
         return View(frame: CGRect())
     }
 
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

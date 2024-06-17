@@ -127,10 +127,11 @@ private final class ChatListSearchPendingPane {
         location: ChatListControllerLocation,
         searchQuery: Signal<String?, NoError>,
         searchOptions: Signal<ChatListSearchOptions?, NoError>,
+        globalPeerSearchContext: GlobalPeerSearchContext?,
         key: ChatListSearchPaneKey,
         hasBecomeReady: @escaping (ChatListSearchPaneKey) -> Void
     ) {
-        let paneNode = ChatListSearchListPaneNode(context: context, animationCache: animationCache, animationRenderer: animationRenderer, updatedPresentationData: updatedPresentationData, interaction: interaction, key: key, peersFilter: (key == .chats || key == .topics) ? peersFilter : [], requestPeerType: requestPeerType, location: location, searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController)
+        let paneNode = ChatListSearchListPaneNode(context: context, animationCache: animationCache, animationRenderer: animationRenderer, updatedPresentationData: updatedPresentationData, interaction: interaction, key: key, peersFilter: (key == .chats || key == .topics) ? peersFilter : [], requestPeerType: requestPeerType, location: location, searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController, globalPeerSearchContext: globalPeerSearchContext)
         
         self.pane = ChatListSearchPaneWrapper(key: key, node: paneNode)
         self.disposable = (paneNode.isReady
@@ -156,6 +157,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
     private let location: ChatListControllerLocation
     private let searchQuery: Signal<String?, NoError>
     private let searchOptions: Signal<ChatListSearchOptions?, NoError>
+    private let globalPeerSearchContext: GlobalPeerSearchContext
     private let navigationController: NavigationController?
     var interaction: ChatListSearchInteraction?
         
@@ -198,6 +200,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
         self.searchQuery = searchQuery
         self.searchOptions = searchOptions
         self.navigationController = navigationController
+        self.globalPeerSearchContext = GlobalPeerSearchContext()
                 
         super.init()
     }
@@ -432,6 +435,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
                     location: self.location,
                     searchQuery: self.searchQuery,
                     searchOptions: self.searchOptions,
+                    globalPeerSearchContext: self.globalPeerSearchContext,
                     key: key,
                     hasBecomeReady: { [weak self] key in
                         let apply: () -> Void = {

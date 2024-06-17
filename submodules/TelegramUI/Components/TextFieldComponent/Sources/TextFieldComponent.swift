@@ -300,6 +300,59 @@ public final class TextFieldComponent: Component {
                 NSAttributedString.Key.font: Font.regular(17.0),
                 NSAttributedString.Key.foregroundColor: UIColor.white
             ]
+            
+            self.textView.toggleQuoteCollapse = { [weak self] range in
+                guard let self else {
+                    return
+                }
+                
+                self.updateInputState { current in
+                    let result = NSMutableAttributedString(attributedString: current.inputText)
+                    var selectionRange = current.selectionRange
+                    
+                    if let _ = result.attribute(ChatTextInputAttributes.block, at: range.lowerBound, effectiveRange: nil) as? ChatTextInputTextQuoteAttribute {
+                        let blockString = NSMutableAttributedString(attributedString: result.attributedSubstring(from: range))
+                        blockString.removeAttribute(ChatTextInputAttributes.block, range: NSRange(location: 0, length: blockString.length))
+                        
+                        result.replaceCharacters(in: range, with: "")
+                        result.insert(NSAttributedString(string: " ", attributes: [
+                            ChatTextInputAttributes.collapsedBlock: blockString
+                        ]), at: range.lowerBound)
+                        
+                        if selectionRange.lowerBound >= range.lowerBound && selectionRange.upperBound < range.upperBound {
+                            selectionRange = range.lowerBound ..< range.lowerBound
+                        } else if selectionRange.lowerBound >= range.upperBound {
+                            let deltaLength = 1 - range.length
+                            selectionRange = (selectionRange.lowerBound + deltaLength) ..< (selectionRange.lowerBound + deltaLength)
+                        }
+                    } else if let current = result.attribute(ChatTextInputAttributes.collapsedBlock, at: range.lowerBound, effectiveRange: nil) as? NSAttributedString {
+                        result.replaceCharacters(in: range, with: "")
+                        
+                        let updatedBlockString = NSMutableAttributedString(attributedString: current)
+                        updatedBlockString.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: false), range: NSRange(location: 0, length: updatedBlockString.length))
+                        
+                        result.insert(updatedBlockString, at: range.lowerBound)
+                        
+                        if selectionRange.lowerBound >= range.upperBound {
+                            let deltaLength = updatedBlockString.length - 1
+                            selectionRange = (selectionRange.lowerBound + deltaLength) ..< (selectionRange.lowerBound + deltaLength)
+                        }
+                    }
+                    
+                    let stateResult = stateAttributedStringForText(result)
+                    if selectionRange.lowerBound < 0 {
+                        selectionRange = 0 ..< selectionRange.upperBound
+                    }
+                    if selectionRange.upperBound > stateResult.length {
+                        selectionRange = selectionRange.lowerBound ..< stateResult.length
+                    }
+                    
+                    return InputState(
+                        inputText: stateResult,
+                        selectionRange: selectionRange
+                    )
+                }
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -329,7 +382,7 @@ public final class TextFieldComponent: Component {
             self.updateEntities()
             
             if currentAttributedText != updatedAttributedText && !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
+                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -349,7 +402,7 @@ public final class TextFieldComponent: Component {
                 return state.insertText(text)
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
+                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -362,7 +415,7 @@ public final class TextFieldComponent: Component {
                 return TextFieldComponent.InputState(inputText: text, selectionRange: selectionRange)
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
+                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -396,7 +449,7 @@ public final class TextFieldComponent: Component {
                     }
                 }
                 if !self.isUpdating {
-                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
+                    self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
                 }
                 component.paste(.text)
                 return false
@@ -469,7 +522,7 @@ public final class TextFieldComponent: Component {
             
             self.updateEntities()
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
+                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -498,7 +551,7 @@ public final class TextFieldComponent: Component {
                 return
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged(isFocused: true))))
+                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged(isFocused: true))))
             }
             if component.isOneLineWhenUnfocused {
                 Queue.mainQueue().justDispatch {
@@ -509,7 +562,7 @@ public final class TextFieldComponent: Component {
         
         public func chatInputTextNodeDidFinishEditing() {
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged(isFocused: false))))
+                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged(isFocused: false))))
             }
         }
         
@@ -877,11 +930,17 @@ public final class TextFieldComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: component.theme)
             let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
-            let controller = chatTextLinkEditController(sharedContext: component.context.sharedContext, updatedPresentationData: updatedPresentationData, account: component.context.account, text: text.string, link: link, apply: { [weak self] link in
+            let controller = chatTextLinkEditController(sharedContext: component.context.sharedContext, updatedPresentationData: updatedPresentationData, account: component.context.account, text: text.string, link: link, allowEmpty: true, apply: { [weak self] link in
                 if let self {
-                    if let link = link {
-                        self.updateInputState { state in
-                            return state.addLinkAttribute(selectionRange: selectionRange, url: link)
+                    if let link {
+                        if !link.isEmpty {
+                            self.updateInputState { state in
+                                return state.addLinkAttribute(selectionRange: selectionRange, url: link)
+                            }
+                        } else {
+                            self.updateInputState { state in
+                                return state.removeLinkAttribute(selectionRange: selectionRange)
+                            }
                         }
                         self.textView.becomeFirstResponder()
                     }
@@ -900,7 +959,7 @@ public final class TextFieldComponent: Component {
         
         public func getAttributedText() -> NSAttributedString {
             Keyboard.applyAutocorrection(textView: self.textView)
-            return self.inputState.inputText
+            return expandedInputStateAttributedString(self.inputState.inputText)
         }
         
         public func setAttributedText(_ string: NSAttributedString, updateState: Bool) {
@@ -908,7 +967,7 @@ public final class TextFieldComponent: Component {
                 return TextFieldComponent.InputState(inputText: string, selectionRange: string.length ..< string.length)
             }
             if updateState && !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
+                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -991,7 +1050,7 @@ public final class TextFieldComponent: Component {
             
             if let spoilerView = self.spoilerView {
                 if animated {
-                    let transition = Transition.easeInOut(duration: 0.3)
+                    let transition = ComponentTransition.easeInOut(duration: 0.3)
                     if revealed {
                         transition.setAlpha(view: spoilerView, alpha: 0.0)
                     } else {
@@ -1108,7 +1167,7 @@ public final class TextFieldComponent: Component {
             }
         }
         
-        public func updateEmojiSuggestion(transition: Transition) {
+        public func updateEmojiSuggestion(transition: ComponentTransition) {
             guard let component = self.component else {
                 return
             }
@@ -1194,7 +1253,7 @@ public final class TextFieldComponent: Component {
             return CGPoint(x: rightmostX, y: rightmostY)
         }
         
-        func update(component: TextFieldComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: TextFieldComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -1352,7 +1411,7 @@ public final class TextFieldComponent: Component {
                     
                     let hasMoreThanOneLine = ellipsisFrame.maxY < self.textView.contentSize.height - 12.0
                     
-                    let ellipsisTransition: Transition
+                    let ellipsisTransition: ComponentTransition
                     if isEditing {
                         ellipsisTransition = .easeInOut(duration: 0.2)
                     } else {
@@ -1376,7 +1435,7 @@ public final class TextFieldComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -1527,6 +1586,30 @@ extension TextFieldComponent.InputState {
                 result.removeAttribute(attribute, range: range)
             }
             result.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: nsRange)
+            return TextFieldComponent.InputState(inputText: result, selectionRange: selectionRange)
+        } else {
+            return self
+        }
+    }
+    
+    public func removeLinkAttribute(selectionRange: Range<Int>) -> TextFieldComponent.InputState {
+        if !selectionRange.isEmpty {
+            let nsRange = NSRange(location: selectionRange.lowerBound, length: selectionRange.count)
+            var attributesToRemove: [(NSAttributedString.Key, NSRange)] = []
+            self.inputText.enumerateAttributes(in: nsRange, options: .longestEffectiveRangeNotRequired) { attributes, range, stop in
+                for (key, _) in attributes {
+                    if key == ChatTextInputAttributes.textUrl {
+                        attributesToRemove.append((key, range))
+                    } else {
+                        attributesToRemove.append((key, nsRange))
+                    }
+                }
+            }
+
+            let result = NSMutableAttributedString(attributedString: self.inputText)
+            for (attribute, range) in attributesToRemove {
+                result.removeAttribute(attribute, range: range)
+            }
             return TextFieldComponent.InputState(inputText: result, selectionRange: selectionRange)
         } else {
             return self

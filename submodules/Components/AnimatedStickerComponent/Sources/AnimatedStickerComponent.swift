@@ -91,7 +91,7 @@ public final class AnimatedStickerComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: AnimatedStickerComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: AnimatedStickerComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             if self.component?.animation != component.animation {
                 self.animationNode?.view.removeFromSuperview()
                 
@@ -145,7 +145,7 @@ public final class AnimatedStickerComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

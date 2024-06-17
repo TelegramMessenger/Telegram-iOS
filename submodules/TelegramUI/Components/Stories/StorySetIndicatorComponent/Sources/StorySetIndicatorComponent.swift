@@ -8,6 +8,7 @@ import Postbox
 import SwiftSignalKit
 import AccountContext
 import PhotoResources
+import AvatarNode
 
 private final class ShapeImageView: UIView {
     struct Item: Equatable {
@@ -88,10 +89,37 @@ private final class ShapeImageView: UIView {
 }
 
 public final class StorySetIndicatorComponent: Component {
+    public final class Item: Equatable {
+        public let storyItem: EngineStoryItem
+        public let peer: EnginePeer
+        
+        public init(storyItem: EngineStoryItem, peer: EnginePeer) {
+            self.storyItem = storyItem
+            self.peer = peer
+        }
+        
+        public static func ==(lhs: Item, rhs: Item) -> Bool {
+            if lhs === rhs {
+                return true
+            }
+            if lhs.storyItem != rhs.storyItem {
+                return false
+            }
+            if lhs.peer != rhs.peer {
+                return false
+            }
+            return true
+        }
+        
+        var id: String {
+            return "\(self.peer.id.toInt64())_\(self.storyItem.id)"
+        }
+    }
+    
     public let context: AccountContext
     public let strings: PresentationStrings
-    public let peer: EnginePeer
-    public let items: [EngineStoryItem]
+    public let items: [Item]
+    public let displayAvatars: Bool
     public let hasUnseen: Bool
     public let hasUnseenPrivate: Bool
     public let totalCount: Int
@@ -101,8 +129,8 @@ public final class StorySetIndicatorComponent: Component {
     public init(
         context: AccountContext,
         strings: PresentationStrings,
-        peer: EnginePeer,
-        items: [EngineStoryItem],
+        items: [Item],
+        displayAvatars: Bool,
         hasUnseen: Bool,
         hasUnseenPrivate: Bool,
         totalCount: Int,
@@ -111,8 +139,8 @@ public final class StorySetIndicatorComponent: Component {
     ) {
         self.context = context
         self.strings = strings
-        self.peer = peer
         self.items = items
+        self.displayAvatars = displayAvatars
         self.hasUnseen = hasUnseen
         self.hasUnseenPrivate = hasUnseenPrivate
         self.totalCount = totalCount
@@ -125,6 +153,9 @@ public final class StorySetIndicatorComponent: Component {
             return false
         }
         if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.displayAvatars != rhs.displayAvatars {
             return false
         }
         if lhs.hasUnseen != rhs.hasUnseen {
@@ -149,13 +180,13 @@ public final class StorySetIndicatorComponent: Component {
         
         private(set) var image: UIImage?
         
-        init(context: AccountContext, peer: EnginePeer, item: EngineStoryItem, updated: @escaping () -> Void) {
+        init(context: AccountContext, item: StorySetIndicatorComponent.Item, displayAvatars: Bool, updated: @escaping () -> Void) {
             self.updated = updated
             
-            let peerReference = PeerReference(peer._asPeer())
+            let peerReference = PeerReference(item.peer._asPeer())
             
             var messageMedia: EngineMedia?
-            switch item.media {
+            switch item.storyItem.media {
             case let .image(image):
                 messageMedia = .image(image)
             case let .file(file):
@@ -167,60 +198,82 @@ public final class StorySetIndicatorComponent: Component {
             let reloadMedia = true
             
             if reloadMedia, let messageMedia, let peerReference {
+                var imageSignal: Signal<UIImage?, NoError>?
                 var signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
+                
                 var fetchSignal: Signal<Never, NoError>?
-                switch messageMedia {
-                case let .image(image):
-                    signal = chatMessagePhoto(
-                        postbox: context.account.postbox,
-                        userLocation: .peer(peerReference.id),
-                        userContentType: .story,
-                        photoReference: .story(peer: peerReference, id: item.id, media: image),
-                        synchronousLoad: false,
-                        highQuality: true
-                    )
-                    if let representation = image.representations.last {
+                
+                if displayAvatars {
+                    imageSignal = peerAvatarCompleteImage(postbox: context.account.postbox, network: context.account.network, peer: item.peer, forceProvidedRepresentation: false, representation: nil, size: CGSize(width: 26.0, height: 26.0), round: true, font: avatarPlaceholderFont(size: 13.0), drawLetters: true, fullSize: false, blurred: false)
+                } else {
+                    switch messageMedia {
+                    case let .image(image):
+                        signal = chatMessagePhoto(
+                            postbox: context.account.postbox,
+                            userLocation: .peer(peerReference.id),
+                            userContentType: .story,
+                            photoReference: .story(peer: peerReference, id: item.storyItem.id, media: image),
+                            synchronousLoad: false,
+                            highQuality: true
+                        )
+                        if let representation = image.representations.last {
+                            fetchSignal = fetchedMediaResource(
+                                mediaBox: context.account.postbox.mediaBox,
+                                userLocation: .peer(peerReference.id),
+                                userContentType: .story,
+                                reference: ImageMediaReference.story(peer: peerReference, id: item.storyItem.id, media: image).resourceReference(representation.resource)
+                            )
+                            |> ignoreValues
+                            |> `catch` { _ -> Signal<Never, NoError> in
+                                return .complete()
+                            }
+                        }
+                    case let .file(file):
+                        signal = mediaGridMessageVideo(
+                            postbox: context.account.postbox,
+                            userLocation: .peer(peerReference.id),
+                            userContentType: .story,
+                            videoReference: .story(peer: peerReference, id: item.storyItem.id, media: file),
+                            onlyFullSize: false,
+                            useLargeThumbnail: true,
+                            synchronousLoad: false,
+                            autoFetchFullSizeThumbnail: true,
+                            overlayColor: nil,
+                            nilForEmptyResult: false,
+                            useMiniThumbnailIfAvailable: false,
+                            blurred: false
+                        )
                         fetchSignal = fetchedMediaResource(
                             mediaBox: context.account.postbox.mediaBox,
                             userLocation: .peer(peerReference.id),
                             userContentType: .story,
-                            reference: ImageMediaReference.story(peer: peerReference, id: item.id, media: image).resourceReference(representation.resource)
+                            reference: FileMediaReference.story(peer: peerReference, id: item.storyItem.id, media: file).resourceReference(file.resource)
                         )
                         |> ignoreValues
                         |> `catch` { _ -> Signal<Never, NoError> in
                             return .complete()
                         }
+                    default:
+                        break
                     }
-                case let .file(file):
-                    signal = mediaGridMessageVideo(
-                        postbox: context.account.postbox,
-                        userLocation: .peer(peerReference.id),
-                        userContentType: .story,
-                        videoReference: .story(peer: peerReference, id: item.id, media: file),
-                        onlyFullSize: false,
-                        useLargeThumbnail: true,
-                        synchronousLoad: false,
-                        autoFetchFullSizeThumbnail: true,
-                        overlayColor: nil,
-                        nilForEmptyResult: false,
-                        useMiniThumbnailIfAvailable: false,
-                        blurred: false
-                    )
-                    fetchSignal = fetchedMediaResource(
-                        mediaBox: context.account.postbox.mediaBox,
-                        userLocation: .peer(peerReference.id),
-                        userContentType: .story,
-                        reference: FileMediaReference.story(peer: peerReference, id: item.id, media: file).resourceReference(file.resource)
-                    )
-                    |> ignoreValues
-                    |> `catch` { _ -> Signal<Never, NoError> in
-                        return .complete()
-                    }
-                default:
-                    break
                 }
                 
-                if let signal {
+                if let imageSignal {
+                    var wasSynchronous = true
+                    self.imageDisposable = (imageSignal
+                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                        guard let self else {
+                            return
+                        }
+                        if let result {
+                            self.image = result
+                            if !wasSynchronous {
+                                self.updated()
+                            }
+                        }
+                    })
+                    wasSynchronous = false
+                } else if let signal {
                     var wasSynchronous = true
                     self.imageDisposable = (signal
                     |> deliverOnMainQueue).start(next: { [weak self] process in
@@ -261,7 +314,7 @@ public final class StorySetIndicatorComponent: Component {
         private let imageView: ShapeImageView
         private let text = ComponentView<Empty>()
         
-        private var imageContexts: [Int32: ImageContext] = [:]
+        private var imageContexts: [String: ImageContext] = [:]
         
         private var component: StorySetIndicatorComponent?
         private weak var state: EmptyComponentState?
@@ -291,10 +344,10 @@ public final class StorySetIndicatorComponent: Component {
                     return
                 }
                 if highlighted {
-                    let transition = Transition(animation: .curve(duration: 0.16, curve: .easeInOut))
+                    let transition = ComponentTransition(animation: .curve(duration: 0.16, curve: .easeInOut))
                     transition.setSublayerTransform(view: self.button, transform: CATransform3DMakeScale(0.8, 0.8, 1.0))
                 } else {
-                    let transition = Transition(animation: .curve(duration: 0.24, curve: .easeInOut))
+                    let transition = ComponentTransition(animation: .curve(duration: 0.24, curve: .easeInOut))
                     transition.setSublayerTransform(view: self.button, transform: CATransform3DIdentity)
                 }
             }
@@ -308,7 +361,7 @@ public final class StorySetIndicatorComponent: Component {
             self.component?.action()
         }
         
-        func update(component: StorySetIndicatorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: StorySetIndicatorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -318,7 +371,7 @@ public final class StorySetIndicatorComponent: Component {
             let outerDiameter: CGFloat = innerDiameter + innerSpacing * 2.0 + lineWidth * 2.0
             let overflow: CGFloat = 14.0
             
-            var validIds: [Int32] = []
+            var validIds: [String] = []
             var items: [ShapeImageView.Item] = []
             for i in 0 ..< min(3, component.items.count) {
                 validIds.append(component.items[i].id)
@@ -328,7 +381,7 @@ public final class StorySetIndicatorComponent: Component {
                     imageContext = current
                 } else {
                     var update = false
-                    imageContext = ImageContext(context: component.context, peer: component.peer, item: component.items[i], updated: { [weak self] in
+                    imageContext = ImageContext(context: component.context, item: component.items[i], displayAvatars: component.displayAvatars, updated: { [weak self] in
                         guard let self else {
                             return
                         }
@@ -347,7 +400,7 @@ public final class StorySetIndicatorComponent: Component {
                 ))
             }
             
-            var removeIds: [Int32] = []
+            var removeIds: [String] = []
             for (id, _) in self.imageContexts {
                 if !validIds.contains(id) {
                     removeIds.append(id)
@@ -407,7 +460,12 @@ public final class StorySetIndicatorComponent: Component {
                 textView.bounds = CGRect(origin: CGPoint(), size: textFrame.size)
             }
             
-            let size = CGSize(width: effectiveItemsWidth + 6.0 + textSize.width, height: outerDiameter)
+            var width = effectiveItemsWidth
+            if textSize.width > 0.0 {
+                width += textSize.width + 6.0
+            }
+            
+            let size = CGSize(width: width, height: outerDiameter)
             transition.setFrame(view: self.button, frame: CGRect(origin: CGPoint(), size: size))
             
             return size
@@ -418,7 +476,7 @@ public final class StorySetIndicatorComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

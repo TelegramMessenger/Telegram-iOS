@@ -345,7 +345,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
     }
     
     override func updateSelectionView() {
-        guard let selectionView = self.selectionView as? DrawingLocationEntititySelectionView else {
+        guard let selectionView = self.selectionView as? DrawingLocationEntitySelectionView else {
             return
         }
         self.pushIdentityTransformForMeasurement()
@@ -367,7 +367,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         if let selectionView = self.selectionView {
             return selectionView
         }
-        let selectionView = DrawingLocationEntititySelectionView()
+        let selectionView = DrawingLocationEntitySelectionView()
         selectionView.entityView = self
         return selectionView
     }
@@ -386,7 +386,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
     }
 }
 
-final class DrawingLocationEntititySelectionView: DrawingEntitySelectionView {
+final class DrawingLocationEntitySelectionView: DrawingEntitySelectionView {
     private let border = SimpleShapeLayer()
     private let leftHandle = SimpleShapeLayer()
     private let rightHandle = SimpleShapeLayer()

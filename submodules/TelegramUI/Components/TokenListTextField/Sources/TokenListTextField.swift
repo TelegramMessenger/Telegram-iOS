@@ -163,7 +163,7 @@ public final class TokenListTextField: Component {
             }
         }
 
-        func update(component: TokenListTextField, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: TokenListTextField, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.componentState = state
             
@@ -195,7 +195,7 @@ public final class TokenListTextField: Component {
                         return
                     }
                     self.component?.isFocusedUpdated(self.tokenListNode?.isFocused ?? false)
-                    self.componentState?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
+                    self.componentState?.updated(transition: ComponentTransition(animation: .curve(duration: 0.35, curve: .spring)))
                 }
                 
                 tokenListNode.textUpdated = { [weak self] text in
@@ -261,7 +261,7 @@ public final class TokenListTextField: Component {
         return View(frame: CGRect())
     }
 
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

@@ -18,7 +18,7 @@ public enum LocationPickerMode {
 }
 
 class LocationPickerInteraction {
-    let sendLocation: (CLLocationCoordinate2D, String?, String?) -> Void
+    let sendLocation: (CLLocationCoordinate2D, String?, MapGeoAddress?) -> Void
     let sendLiveLocation: (CLLocationCoordinate2D) -> Void
     let sendVenue: (TelegramMediaMap, Int64?, String?) -> Void
     let toggleMapModeSelection: () -> Void
@@ -33,7 +33,7 @@ class LocationPickerInteraction {
     let openHomeWorkInfo: () -> Void
     let showPlacesInThisArea: () -> Void
     
-    init(sendLocation: @escaping (CLLocationCoordinate2D, String?, String?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, sendVenue: @escaping (TelegramMediaMap, Int64?, String?) -> Void, toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, openSearch: @escaping () -> Void, updateSearchQuery: @escaping (String) -> Void, dismissSearch: @escaping () -> Void, dismissInput: @escaping () -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, openHomeWorkInfo: @escaping () -> Void, showPlacesInThisArea: @escaping ()-> Void) {
+    init(sendLocation: @escaping (CLLocationCoordinate2D, String?, MapGeoAddress?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, sendVenue: @escaping (TelegramMediaMap, Int64?, String?) -> Void, toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, openSearch: @escaping () -> Void, updateSearchQuery: @escaping (String) -> Void, dismissSearch: @escaping () -> Void, dismissInput: @escaping () -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, openHomeWorkInfo: @escaping () -> Void, showPlacesInThisArea: @escaping ()-> Void) {
         self.sendLocation = sendLocation
         self.sendLiveLocation = sendLiveLocation
         self.sendVenue = sendVenue
@@ -122,16 +122,27 @@ public final class LocationPickerController: ViewController, AttachmentContainab
                 strongSelf.controllerNode.updatePresentationData(presentationData)
             }
         })
-        
-        let locationWithTimeout: (CLLocationCoordinate2D, Int32?) -> TelegramMediaMap = { coordinate, timeout in
-            return TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: timeout, liveProximityNotificationRadius: nil)
-        }
-                
-        self.interaction = LocationPickerInteraction(sendLocation: { [weak self] coordinate, name, countryCode in
+                        
+        self.interaction = LocationPickerInteraction(sendLocation: { [weak self] coordinate, name, geoAddress in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.completion(locationWithTimeout(coordinate, nil), nil, nil, name, countryCode)
+            strongSelf.completion(
+                TelegramMediaMap(
+                    latitude: coordinate.latitude,
+                    longitude: coordinate.longitude,
+                    heading: nil,
+                    accuracyRadius: nil,
+                    venue: nil,
+                    address: geoAddress,
+                    liveBroadcastingTimeout: nil,
+                    liveProximityNotificationRadius: nil
+                ),
+                nil,
+                nil,
+                name,
+                geoAddress?.country
+            )
             strongSelf.dismiss()
         }, sendLiveLocation: { [weak self] coordinate in
             guard let strongSelf = self else {
@@ -190,7 +201,7 @@ public final class LocationPickerController: ViewController, AttachmentContainab
             }
             let venueType = venue.venue?.type ?? ""
             if ["home", "work"].contains(venueType) {
-                completion(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil), nil, nil, nil, nil)
+                completion(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil), nil, nil, nil, nil)
             } else {
                 completion(venue, queryId, resultId, venue.venue?.address, nil)
             }

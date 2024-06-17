@@ -8,6 +8,7 @@ public enum PostboxViewKey: Hashable {
         public var trackHoles: Bool
         public var orderStatistics: MessageHistoryViewOrderStatistics
         public var ignoreMessagesInTimestampRange: ClosedRange<Int32>?
+        public var ignoreMessageIds: Set<MessageId>
         public var anchor: HistoryViewInputAnchor
         public var combinedReadStates: MessageHistoryViewReadState?
         public var transientReadStates: MessageHistoryViewReadState?
@@ -23,6 +24,7 @@ public enum PostboxViewKey: Hashable {
             trackHoles: Bool,
             orderStatistics: MessageHistoryViewOrderStatistics = [],
             ignoreMessagesInTimestampRange: ClosedRange<Int32>? = nil,
+            ignoreMessageIds: Set<MessageId> = Set(),
             anchor: HistoryViewInputAnchor,
             combinedReadStates: MessageHistoryViewReadState? = nil,
             transientReadStates: MessageHistoryViewReadState? = nil,
@@ -37,6 +39,7 @@ public enum PostboxViewKey: Hashable {
             self.trackHoles = trackHoles
             self.orderStatistics = orderStatistics
             self.ignoreMessagesInTimestampRange = ignoreMessagesInTimestampRange
+            self.ignoreMessageIds = ignoreMessageIds
             self.anchor = anchor
             self.combinedReadStates = combinedReadStates
             self.transientReadStates = transientReadStates
@@ -647,6 +650,7 @@ func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePost
             trackHoles: historyView.trackHoles,
             peerIds: .single(peerId: historyView.peerId, threadId: historyView.threadId),
             ignoreMessagesInTimestampRange: historyView.ignoreMessagesInTimestampRange,
+            ignoreMessageIds: historyView.ignoreMessageIds,
             anchor: historyView.anchor,
             combinedReadStates: historyView.combinedReadStates,
             transientReadStates: historyView.transientReadStates,

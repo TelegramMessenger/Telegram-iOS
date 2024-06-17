@@ -60,7 +60,7 @@ swift_library(
         "//submodules/AnimatedStickerNode",
         "//submodules/GZip",
         "//submodules/MetalEngine",
-        "//submodules/TelegramUI/Components/LottieCpp",
+        "//submodules/LottieCpp",
         "//submodules/Components/HierarchyTrackingLayer",
     ],
     visibility = [

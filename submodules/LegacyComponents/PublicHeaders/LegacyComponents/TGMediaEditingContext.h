@@ -92,6 +92,12 @@
 - (void)setSpoiler:(bool)spoiler forItem:(NSObject<TGMediaEditableItem> *)item;
 - (SSignal *)spoilersUpdatedSignal;
 
+- (NSNumber *)priceForItem:(NSObject<TGMediaEditableItem> *)item;
+- (SSignal *)priceSignalForItem:(NSObject<TGMediaEditableItem> *)item;
+- (SSignal *)priceSignalForIdentifier:(NSString *)identifier;
+- (void)setPrice:(NSNumber *)price forItem:(NSObject<TGMediaEditableItem> *)item;
+- (SSignal *)pricesUpdatedSignal;
+
 - (UIImage *)paintingImageForItem:(NSObject<TGMediaEditableItem> *)item;
 - (UIImage *)stillPaintingImageForItem:(NSObject<TGMediaEditableItem> *)item;
 - (bool)setPaintingData:(NSData *)data entitiesData:(NSData *)entitiesData image:(UIImage *)image stillImage:(UIImage *)stillImage forItem:(NSObject<TGMediaEditableItem> *)item dataUrl:(NSURL **)dataOutUrl entitiesDataUrl:(NSURL **)entitiesDataOutUrl imageUrl:(NSURL **)imageOutUrl forVideo:(bool)video;

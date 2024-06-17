@@ -340,7 +340,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         self.updateQuery(.text(value: text, language: inputLanguage))
     }
     
-    private func update(transition: Transition) {
+    private func update(transition: ComponentTransition) {
         guard let params = self.params else {
             return
         }
@@ -348,7 +348,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         self.update(context: params.context, theme: params.theme, forceNeedsVibrancy: params.forceNeedsVibrancy, strings: params.strings, text: params.text, useOpaqueTheme: params.useOpaqueTheme, isActive: params.isActive, size: params.size, canFocus: params.canFocus, searchCategories: params.searchCategories, searchState: params.searchState, transition: transition)
     }
     
-    public func update(context: AccountContext, theme: PresentationTheme, forceNeedsVibrancy: Bool, strings: PresentationStrings, text: String, useOpaqueTheme: Bool, isActive: Bool, size: CGSize, canFocus: Bool, searchCategories: EmojiSearchCategories?, searchState: EmojiPagerContentComponent.SearchState, transition: Transition) {
+    public func update(context: AccountContext, theme: PresentationTheme, forceNeedsVibrancy: Bool, strings: PresentationStrings, text: String, useOpaqueTheme: Bool, isActive: Bool, size: CGSize, canFocus: Bool, searchCategories: EmojiSearchCategories?, searchState: EmojiPagerContentComponent.SearchState, transition: ComponentTransition) {
         let textInputState: EmojiSearchSearchBarComponent.TextInputState
         if let textField = self.textField {
             textInputState = .active(hasText: !(textField.text ?? "").isEmpty)
@@ -517,7 +517,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
                     
                     if shouldChangeActivation {
                         if let term {
-                            self.update(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            self.update(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                             
                             self.updateQuery(.category(value: term))
                             self.activated(false)

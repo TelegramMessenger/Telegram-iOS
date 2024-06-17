@@ -1,6 +1,7 @@
 import Display
 import UIKit
 import AsyncDisplayKit
+import ComponentFlow
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
@@ -13,6 +14,8 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
     private let context: AccountContext
     private weak var controller: HashtagSearchController?
     private var query: String
+    private var isCashtag = false
+    private var presentationData: PresentationData
     
     private let searchQueryPromise = ValuePromise<String>()
     private var searchQueryDisposable: Disposable?
@@ -35,6 +38,11 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
     let globalController: ChatController?
     let globalChatContents: HashtagSearchGlobalChatContents?
     
+    private var globalStorySearchContext: SearchStoryListContext?
+    private var globalStorySearchDisposable = MetaDisposable()
+    private var globalStorySearchState: StoryListContext.State?
+    private var globalStorySearchComponentView: ComponentView<Empty>?
+    
     private var panRecognizer: InteractiveTransitionGestureRecognizer?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -45,6 +53,8 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         self.controller = controller
         self.query = query
         self.navigationBar = navigationBar
+        self.isCashtag = query.hasPrefix("$")
+        self.presentationData = controller.presentationData
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -53,8 +63,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         
         self.containerNode = ASDisplayNode()
         
-        let cleanHashtag = cleanHashtag(query)
-        self.searchContentNode = HashtagSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, initialQuery: cleanHashtag, hasCurrentChat: peer != nil, cancel: { [weak controller] in
+        self.searchContentNode = HashtagSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, initialQuery: query, hasCurrentChat: peer != nil, cancel: { [weak controller] in
             controller?.dismiss()
         })
         
@@ -67,7 +76,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         
         let navigationController = controller.navigationController as? NavigationController
         if let peer, !controller.all {
-            self.currentController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .inline(navigationController))
+            self.currentController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .inline(navigationController), params: nil)
             self.currentController?.alwaysShowSearchResultsAsList = true
             self.currentController?.showListEmptyResults = true
             self.currentController?.customNavigationController = navigationController
@@ -75,20 +84,20 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
             self.currentController = nil
         }
                 
-        let myChatContents = HashtagSearchGlobalChatContents(context: context, query: cleanHashtag, publicPosts: false)
+        let myChatContents = HashtagSearchGlobalChatContents(context: context, query: query, publicPosts: false)
         self.myChatContents = myChatContents
-        self.myController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: myChatContents), botStart: nil, mode: .standard(.default))
+        self.myController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: myChatContents), botStart: nil, mode: .standard(.default), params: nil)
         self.myController?.alwaysShowSearchResultsAsList = true
         self.myController?.showListEmptyResults = true
         self.myController?.customNavigationController = navigationController
         
-        let globalChatContents = HashtagSearchGlobalChatContents(context: context, query: cleanHashtag, publicPosts: true)
+        let globalChatContents = HashtagSearchGlobalChatContents(context: context, query: query, publicPosts: true)
         self.globalChatContents = globalChatContents
-        self.globalController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: globalChatContents), botStart: nil, mode: .standard(.default))
+        self.globalController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: globalChatContents), botStart: nil, mode: .standard(.default), params: nil)
         self.globalController?.alwaysShowSearchResultsAsList = true
         self.globalController?.showListEmptyResults = true
         self.globalController?.customNavigationController = navigationController
-        
+                
         if controller.publicPosts {
             self.searchContentNode.selectedIndex = 2
         } else if peer == nil {
@@ -140,9 +149,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
             } else if index == 2 {
                 self.isSearching.set(self.globalChatContents?.searching ?? .single(false))
             }
-            if let (layout, navigationHeight) = self.containerLayout {
-                let _ = self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
-            }
+            self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
         }
                
         self.recentListNode.setSearchQuery = { [weak self] query in
@@ -172,9 +179,11 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
             self?.searchQueryPromise.set(query)
         }
         
-        let _ = addRecentHashtagSearchQuery(engine: context.engine, string: cleanHashtag).startStandalone()
-        self.searchContentNode.onReturn = { query in
+        if !self.isCashtag {
             let _ = addRecentHashtagSearchQuery(engine: context.engine, string: query).startStandalone()
+            self.searchContentNode.onReturn = { query in
+                let _ = addRecentHashtagSearchQuery(engine: context.engine, string: "#" + query).startStandalone()
+            }
         }
         
         let throttledSearchQuery = self.searchQueryPromise.get()
@@ -190,7 +199,13 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         self.searchQueryDisposable = (throttledSearchQuery
         |> deliverOnMainQueue).start(next: { [weak self] query in
             if let self {
-                self.updateSearchQuery(query)
+                let prefix: String
+                if self.isCashtag {
+                    prefix = "$"
+                } else {
+                    prefix = "#"
+                }
+                self.updateSearchQuery(prefix + query)
             }
         })
         
@@ -202,11 +217,14 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
                 transition.updateAlpha(node: self.shimmerNode, alpha: isSearching ? 1.0 : 0.0)
             }
         })
+        
+        self.updateStorySearch()
     }
     
     deinit {
         self.searchQueryDisposable?.dispose()
         self.isSearchingDisposable?.dispose()
+        self.globalStorySearchDisposable.dispose()
     }
     
     private var panAllowedDirections: InteractiveTransitionGestureRecognizerDirections {
@@ -278,9 +296,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         
             self.searchContentNode.transitionFraction = self.panTransitionFraction
             
-            if let (layout, navigationHeight) = self.containerLayout {
-                let _ = self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
-            }
+            self.requestUpdate(transition: .immediate)
         case .ended, .cancelled:
             var directionIsToRight: Bool?
             if abs(velocity) > 10.0 {
@@ -320,30 +336,53 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
             self.panTransitionFraction = 0.0
             self.searchContentNode.transitionFraction = nil
             
-            if let (layout, navigationHeight) = self.containerLayout {
-                let _ = self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
-            }
+            self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
         default:
             break
         }
     }
     
-    func updateSearchQuery(_ query: String) {
+    private func updateSearchQuery(_ query: String) {
+        let queryUpdated = self.query != query
         self.query = query
         
-        let cleanQuery = cleanHashtag(query)
-        if !cleanQuery.isEmpty {
-            self.currentController?.beginMessageSearch("#" + cleanQuery)
+        if !query.isEmpty {
+            self.currentController?.beginMessageSearch(query)
             
-            self.myChatContents?.hashtagSearchUpdate(query: cleanQuery)
-            self.myController?.beginMessageSearch("#" + cleanQuery)
+            self.myChatContents?.hashtagSearchUpdate(query: query)
+            self.myController?.beginMessageSearch(query)
             
-            self.globalChatContents?.hashtagSearchUpdate(query: cleanQuery)
-            self.globalController?.beginMessageSearch("#" + cleanQuery)
+            self.globalChatContents?.hashtagSearchUpdate(query: query)
+            self.globalController?.beginMessageSearch(query)
         }
         
-        if let (layout, navigationHeight) = self.containerLayout {
-            let _ = self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+        if queryUpdated {
+            self.updateStorySearch()
+        }
+        
+        self.requestUpdate(transition: .immediate)
+    }
+    
+    private func updateStorySearch() {
+        self.globalStorySearchState = nil
+        self.globalStorySearchDisposable.set(nil)
+        self.globalStorySearchContext = nil
+        
+        if !self.query.isEmpty {
+            let globalStorySearchContext = SearchStoryListContext(account: self.context.account, source: .hashtag(self.query))
+            self.globalStorySearchDisposable.set((globalStorySearchContext.state
+            |> deliverOnMainQueue).startStrict(next: { [weak self] state in
+                guard let self else {
+                    return
+                }
+                if state.totalCount > 0 {
+                    self.globalStorySearchState = state
+                } else {
+                    self.globalStorySearchState = nil
+                }
+                self.requestUpdate(transition: .animated(duration: 0.25, curve: .easeInOut))
+            }))
+            self.globalStorySearchContext = globalStorySearchContext
         }
     }
     
@@ -351,9 +390,11 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         self.currentController?.cancelSelectingMessages()
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        self.backgroundColor = theme.chatList.backgroundColor
-        self.searchContentNode.updateTheme(theme)
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
+        self.backgroundColor = presentationData.theme.chatList.backgroundColor
+        self.searchContentNode.updateTheme(presentationData.theme)
     }
     
     func scrollToTop() {
@@ -363,6 +404,12 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
             self.globalController?.scrollToTop?()
         } else {
             self.myController?.scrollToTop?()
+        }
+    }
+    
+    func requestUpdate(transition: ContainedViewLayoutTransition) {
+        if let (layout, navigationHeight) = self.containerLayout {
+            let _ = self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: transition)
         }
     }
     
@@ -407,8 +454,53 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         }
         
         if let controller = self.globalController {
+            var topInset: CGFloat = insets.top - 89.0
+            if let state = self.globalStorySearchState {
+                let componentView: ComponentView<Empty>
+                var panelTransition = ComponentTransition(transition)
+                if let current = self.globalStorySearchComponentView {
+                    componentView = current
+                } else {
+                    panelTransition = .immediate
+                    componentView = ComponentView()
+                    self.globalStorySearchComponentView = componentView
+                }
+                let panelSize = componentView.update(
+                    transition: .immediate,
+                    component: AnyComponent(StoryResultsPanelComponent(
+                        context: self.context,
+                        theme: self.presentationData.theme,
+                        strings: self.presentationData.strings,
+                        query: self.query,
+                        state: state,
+                        sideInset: layout.safeInsets.left,
+                        action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            let searchController = self.context.sharedContext.makeStorySearchController(context: self.context, scope: .query(self.query), listContext: self.globalStorySearchContext)
+                            self.controller?.push(searchController)
+                        }
+                    )),
+                    environment: {},
+                    containerSize: layout.size
+                )
+                let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top - 36.0), size: panelSize)
+                if let view = componentView.view {
+                    if view.superview == nil {
+                        controller.view.addSubview(view)
+                        view.layer.animatePosition(from: CGPoint(x: 0.0, y: -panelSize.height), to: .zero, duration: 0.25, additive: true)
+                    }
+                    panelTransition.setFrame(view: view, frame: panelFrame)
+                }
+                topInset += panelSize.height
+            } else if let globalStorySearchComponentView = self.globalStorySearchComponentView {
+                globalStorySearchComponentView.view?.removeFromSuperview()
+                self.globalStorySearchComponentView = nil
+            }
+            
             transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(x: layout.size.width * 2.0, y: 0.0), size: layout.size))
-            controller.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: insets.top - 89.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
+            controller.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
             
             if controller.displayNode.supernode == nil {
                 controller.viewWillAppear(false)
@@ -457,15 +549,4 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
             return 0.0
         }
     }
-}
-
-private func cleanHashtag(_ string: String) -> String {
-    var string = string
-    if string.hasPrefix("#") {
-        string.removeFirst()
-    }
-    if string.hasPrefix("$") {
-        string.removeFirst()
-    }
-    return string
 }

@@ -177,7 +177,7 @@ open class ListItemSwipeOptionContainer: UIView, UIGestureRecognizerDelegate {
             isExpanded: Bool,
             extendedWidth: CGFloat,
             sideInset: CGFloat,
-            transition: Transition,
+            transition: ComponentTransition,
             additive: Bool,
             revealFactor: CGFloat,
             animateIconMovement: Bool
@@ -342,13 +342,13 @@ open class ListItemSwipeOptionContainer: UIView, UIGestureRecognizerDelegate {
             return CGSize(width: maxWidth * CGFloat(self.optionViews.count), height: constrainedSize.height)
         }
         
-        public func updateRevealOffset(offset: CGFloat, sideInset: CGFloat, transition: Transition) {
+        public func updateRevealOffset(offset: CGFloat, sideInset: CGFloat, transition: ComponentTransition) {
             self.revealOffset = offset
             self.sideInset = sideInset
             self.updateNodesLayout(transition: transition)
         }
         
-        private func updateNodesLayout(transition: Transition) {
+        private func updateNodesLayout(transition: ComponentTransition) {
             let size = self.bounds.size
             if size.width.isLessThanOrEqualTo(0.0) || self.optionViews.isEmpty {
                 return
@@ -480,7 +480,7 @@ open class ListItemSwipeOptionContainer: UIView, UIGestureRecognizerDelegate {
     
     private var allowAnyDirection: Bool = false
     
-    public var updateRevealOffset: ((CGFloat, Transition) -> Void)?
+    public var updateRevealOffset: ((CGFloat, ComponentTransition) -> Void)?
     public var revealOptionsInteractivelyOpened: (() -> Void)?
     public var revealOptionsInteractivelyClosed: (() -> Void)?
     public var revealOptionSelected: ((Option, Bool) -> Void)?
@@ -779,7 +779,7 @@ open class ListItemSwipeOptionContainer: UIView, UIGestureRecognizerDelegate {
         }
     }
     
-    open func updateRevealOffsetInternal(offset: CGFloat, transition: Transition, completion: (() -> Void)? = nil) {
+    open func updateRevealOffsetInternal(offset: CGFloat, transition: ComponentTransition, completion: (() -> Void)? = nil) {
         self.revealOffset = offset
         guard let (size, leftInset, rightInset) = self.validLayout else {
             return
@@ -856,7 +856,7 @@ open class ListItemSwipeOptionContainer: UIView, UIGestureRecognizerDelegate {
             if !self.revealOffset.isZero {
                 self.recognizer?.becomeCancelled()
             }
-            let transition: Transition
+            let transition: ComponentTransition
             if animated {
                 transition = .spring(duration: 0.3)
             } else {

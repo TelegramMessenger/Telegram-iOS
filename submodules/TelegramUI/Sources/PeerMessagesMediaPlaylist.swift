@@ -566,7 +566,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 return .single(nil)
                             }
                             
-                            return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: .index(message.index), ignoreMessagesInTimestampRange: nil, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: .tag(tagMask), appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [])
+                            return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: .index(message.index), ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: .tag(tagMask), appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [])
                             |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                 if let (message, aroundMessages, _) = navigatedMessageFromView(view.0, anchorIndex: message.index, position: .exact, reversed: reversed) {
                                     return .single((message, aroundMessages))
@@ -678,7 +678,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                             guard let inputIndex = inputIndex else {
                                 return .single(nil)
                             }
-                            return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: .index(inputIndex), ignoreMessagesInTimestampRange: nil, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: .tag(tagMask), appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [])
+                            return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: .index(inputIndex), ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: .tag(tagMask), appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [])
                             |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                 let position: NavigatedMessageFromViewPosition
                                 switch navigation {
@@ -708,7 +708,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                     } else {
                                         viewIndex = .lowerBound
                                     }
-                                    return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: viewIndex, ignoreMessagesInTimestampRange: nil, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: .tag(tagMask), appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [])
+                                    return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: viewIndex, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: .tag(tagMask), appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [])
                                     |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                         let position: NavigatedMessageFromViewPosition
                                         switch navigation {

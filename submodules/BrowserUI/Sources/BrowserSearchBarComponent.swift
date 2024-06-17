@@ -240,7 +240,7 @@ final class SearchBarContentComponent: Component {
             }
         }
         
-        func update(component: SearchBarContentComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: SearchBarContentComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             self.update(theme: component.theme, strings: component.strings, size: availableSize, transition: transition)
@@ -249,7 +249,7 @@ final class SearchBarContentComponent: Component {
             return availableSize
         }
         
-        public func update(theme: PresentationTheme, strings: PresentationStrings, size: CGSize, transition: Transition) {
+        public func update(theme: PresentationTheme, strings: PresentationStrings, size: CGSize, transition: ComponentTransition) {
             let params = Params(
                 theme: theme,
                 strings: strings,
@@ -351,7 +351,7 @@ final class SearchBarContentComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

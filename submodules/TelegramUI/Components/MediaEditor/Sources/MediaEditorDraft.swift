@@ -59,6 +59,10 @@ public struct MediaEditorResultPrivacy: Codable, Equatable {
 }
 
 public final class MediaEditorDraft: Codable, Equatable {
+    enum ReadError: Error {
+        case generic
+    }
+    
     public static func == (lhs: MediaEditorDraft, rhs: MediaEditorDraft) -> Bool {
         return lhs.path == rhs.path
     }
@@ -117,7 +121,7 @@ public final class MediaEditorDraft: Codable, Equatable {
         if let thumbnail = UIImage(data: thumbnailData) {
             self.thumbnail = thumbnail
         } else {
-            fatalError()
+            throw ReadError.generic
         }
         self.dimensions = PixelDimensions(
             width: try container.decode(Int32.self, forKey: .dimensionsWidth),
@@ -128,7 +132,7 @@ public final class MediaEditorDraft: Codable, Equatable {
         if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: valuesData) {
             self.values = values
         } else {
-            fatalError()
+            throw ReadError.generic
         }
         self.caption = ((try? container.decode(ChatTextInputStateText.self, forKey: .caption)) ?? ChatTextInputStateText()).attributedText()
         

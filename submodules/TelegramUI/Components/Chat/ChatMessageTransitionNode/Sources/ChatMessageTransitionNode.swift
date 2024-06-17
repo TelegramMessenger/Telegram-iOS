@@ -10,6 +10,6 @@ public protocol ChatMessageTransitionNodeDecorationItemNode: ASDisplayNode {
 public protocol ChatMessageTransitionNode: AnyObject {
     typealias DecorationItemNode = ChatMessageTransitionNodeDecorationItemNode
     
-    func add(decorationView: UIView, itemNode: ChatMessageItemNodeProtocol) -> DecorationItemNode
+    func add(decorationView: UIView, itemNode: ChatMessageItemNodeProtocol, aboveEverything: Bool) -> DecorationItemNode
     func remove(decorationNode: DecorationItemNode)
 }

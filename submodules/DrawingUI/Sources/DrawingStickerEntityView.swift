@@ -681,7 +681,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
     func onDeselection() {
         
     }
-    
+        
     func innerLayoutSubview(boundingSize: CGSize) -> CGSize {
         return boundingSize
     }
@@ -753,7 +753,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
     }
     
     override func updateSelectionView() {
-        guard let selectionView = self.selectionView as? DrawingStickerEntititySelectionView else {
+        guard let selectionView = self.selectionView as? DrawingStickerEntitySelectionView else {
             return
         }
         self.pushIdentityTransformForMeasurement()
@@ -776,7 +776,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
         if let selectionView = self.selectionView {
             return selectionView
         }
-        let selectionView = DrawingStickerEntititySelectionView()
+        let selectionView = DrawingStickerEntitySelectionView()
         selectionView.entityView = self
         return selectionView
     }
@@ -822,7 +822,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
     }
 }
 
-final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
+final class DrawingStickerEntitySelectionView: DrawingEntitySelectionView {
     private let border = SimpleShapeLayer()
     private let leftHandle = SimpleShapeLayer()
     private let rightHandle = SimpleShapeLayer()
@@ -1085,7 +1085,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
             let aspectRatio = entity.baseSize.width / entity.baseSize.height
             
             let width: CGFloat
-            let height: CGFloat
+            var height: CGFloat
             
             if entity.baseSize.width > entity.baseSize.height {
                 width = self.bounds.width - inset * 2.0

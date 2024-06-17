@@ -1611,8 +1611,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return peersNearbyController(context: context)
     }
     
-    public func makeChatController(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, botStart: ChatControllerInitialBotStart?, mode: ChatControllerPresentationMode) -> ChatController {
-        return ChatControllerImpl(context: context, chatLocation: chatLocation, subject: subject, botStart: botStart, mode: mode)
+    public func makeChatController(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, botStart: ChatControllerInitialBotStart?, mode: ChatControllerPresentationMode, params: ChatControllerParams?) -> ChatController {
+        return ChatControllerImpl(context: context, chatLocation: chatLocation, subject: subject, botStart: botStart, mode: mode, params: params)
     }
     
     public func makeChatHistoryListNode(
@@ -1775,7 +1775,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, openRecommendedChannelContextMenu: { _, _, _ in
         }, openGroupBoostInfo: { _, _ in
         }, openStickerEditor: {
-        }, openPhoneContextMenu: { _ in
         }, openAgeRestrictedMessageMedia: { _, _ in
         }, playMessageEffect: { _ in
         }, editMessageFactCheck: { _ in
@@ -1908,8 +1907,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return HashtagSearchController(context: context, peer: peer, query: query, all: all)
     }
     
-    public func makeStorySearchController(context: AccountContext, query: String) -> ViewController {
-        return StorySearchGridScreen(context: context, searchQuery: query)
+    public func makeStorySearchController(context: AccountContext, scope: StorySearchControllerScope, listContext: SearchStoryListContext?) -> ViewController {
+        return StorySearchGridScreen(context: context, scope: scope, listContext: listContext)
     }
     
     public func makeMyStoriesController(context: AccountContext, isArchive: Bool) -> ViewController {
@@ -2055,6 +2054,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .storiesSuggestedReactions
         case .storiesHigherQuality:
             mappedSource = .storiesHigherQuality
+        case .storiesLinks:
+            mappedSource = .storiesLinks
         case let .channelBoost(peerId):
             mappedSource = .channelBoost(peerId)
         case .nameColor:
@@ -2631,12 +2632,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsTransferScreen(context: context, starsContext: starsContext, invoice: invoice, source: source, inputData: inputData, completion: completion)
     }
     
-    public func makeStarsTransactionScreen(context: AccountContext, transaction: StarsContext.State.Transaction) -> ViewController {
-        return StarsTransactionScreen(context: context, subject: .transaction(transaction), action: {})
+    public func makeStarsTransactionScreen(context: AccountContext, transaction: StarsContext.State.Transaction, isAccount: Bool) -> ViewController {
+        return StarsTransactionScreen(context: context, subject: .transaction(transaction, isAccount), action: {})
     }
     
     public func makeStarsReceiptScreen(context: AccountContext, receipt: BotPaymentReceipt) -> ViewController {
         return StarsTransactionScreen(context: context, subject: .receipt(receipt), action: {})
+    }
+    
+    public func makeStarsStatisticsScreen(context: AccountContext, peerId: EnginePeer.Id, revenueContext: StarsRevenueStatsContext) -> ViewController {
+        return StarsStatisticsScreen(context: context, peerId: peerId, revenueContext: revenueContext)
+    }
+    
+    public func makeStarsAmountScreen(context: AccountContext, completion: @escaping (Int64) -> Void) -> ViewController {
+        return StarsWithdrawScreen(context: context, mode: .paidMedia, completion: completion)
     }
 }
 

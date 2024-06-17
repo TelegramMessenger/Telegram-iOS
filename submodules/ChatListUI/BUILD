@@ -104,6 +104,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Settings/BirthdayPickerScreen",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/TelegramUI/Components/Stories/StoryStealthModeSheetScreen",
+        "//submodules/TelegramUI/Components/PeerManagement/OldChannelsController",
     ],
     visibility = [
         "//visibility:public",

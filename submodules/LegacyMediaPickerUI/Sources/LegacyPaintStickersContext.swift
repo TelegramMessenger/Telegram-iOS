@@ -147,13 +147,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
         case let .image(image, _):
             self.file = nil
             self.imagePromise.set(.single(image))
-        case .animatedImage:
-            self.file = nil
-        case .video:
-            self.file = nil
-        case .dualVideoReference:
-            self.file = nil
-        case .message:
+        case .animatedImage, .video, .dualVideoReference, .message:
             self.file = nil
         }
     }
@@ -616,8 +610,16 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
     }
 }
 
+#if swift(>=6.0)
+extension SolidRoundedButtonView: @retroactive TGPhotoSolidRoundedButtonView {
+    public func updateWidth(_ width: CGFloat) {
+        let _ = self.updateLayout(width: width, transition: .immediate)
+    }
+}
+#else
 extension SolidRoundedButtonView: TGPhotoSolidRoundedButtonView {
     public func updateWidth(_ width: CGFloat) {
         let _ = self.updateLayout(width: width, transition: .immediate)
     }
 }
+#endif

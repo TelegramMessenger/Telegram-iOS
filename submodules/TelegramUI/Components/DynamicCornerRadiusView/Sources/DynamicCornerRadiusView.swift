@@ -67,7 +67,7 @@ open class DynamicCornerRadiusView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    public func update(size: CGSize, corners: Corners, transition: Transition) {
+    public func update(size: CGSize, corners: Corners, transition: ComponentTransition) {
         let params = Params(size: size, corners: corners)
         if self.params == params {
             return
@@ -76,13 +76,13 @@ open class DynamicCornerRadiusView: UIView {
         self.update(params: params, transition: transition)
     }
     
-    public func updateColor(color: UIColor, transition: Transition) {
+    public func updateColor(color: UIColor, transition: ComponentTransition) {
         if let shapeLayer = self.layer as? CAShapeLayer {
             transition.setShapeLayerFillColor(layer: shapeLayer, color: color)
         }
     }
 
-    private func update(params: Params, transition: Transition) {
+    private func update(params: Params, transition: ComponentTransition) {
         if let shapeLayer = self.layer as? CAShapeLayer {
             transition.setShapeLayerPath(layer: shapeLayer, path: generatePath(size: params.size, corners: params.corners))
         }

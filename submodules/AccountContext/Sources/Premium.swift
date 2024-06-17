@@ -31,6 +31,7 @@ public enum PremiumIntroSource {
     case storiesExpirationDurations
     case storiesSuggestedReactions
     case storiesHigherQuality
+    case storiesLinks
     case channelBoost(EnginePeer.Id)
     case nameColor
     case similarChannels

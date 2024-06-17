@@ -547,7 +547,7 @@ final class StoryItemContentComponent: Component {
             return nil
         }
         
-        private func updateOverlays(component: StoryItemContentComponent, size: CGSize, synchronousLoad: Bool, transition: Transition) {
+        private func updateOverlays(component: StoryItemContentComponent, size: CGSize, synchronousLoad: Bool, transition: ComponentTransition) {
             self.overlaysView.update(
                 context: component.context,
                 strings: component.strings,
@@ -579,7 +579,7 @@ final class StoryItemContentComponent: Component {
             self.isSeeking = false
         }
 
-        func update(component: StoryItemContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {
+        func update(component: StoryItemContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: ComponentTransition) -> CGSize {
             let previousItem = self.component?.item
             
             self.component = component
@@ -980,7 +980,7 @@ final class StoryItemContentComponent: Component {
 		return View(frame: CGRect())
 	}
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

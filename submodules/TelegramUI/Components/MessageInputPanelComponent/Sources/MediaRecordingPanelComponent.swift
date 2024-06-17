@@ -185,7 +185,7 @@ public final class MediaRecordingPanelComponent: Component {
             self.vibrancyCancelContainerView.layer.animatePosition(from: CGPoint(x: self.bounds.width, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         }
         
-        public func animateOut(transition: Transition, dismissRecording: Bool, completion: @escaping () -> Void) {
+        public func animateOut(transition: ComponentTransition, dismissRecording: Bool, completion: @escaping () -> Void) {
             guard let component = self.component else {
                 completion()
                 return
@@ -201,7 +201,7 @@ public final class MediaRecordingPanelComponent: Component {
                 if let indicatorView = self.indicator.view as? LottieComponent.View {
                     indicatorView.playOnce(completion: { [weak indicatorView] in
                         if let indicatorView {
-                            let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                            let transition = ComponentTransition(animation: .curve(duration: 0.3, curve: .spring))
                             transition.setScale(view: indicatorView, scale: 0.001)
                         }
                         
@@ -238,7 +238,7 @@ public final class MediaRecordingPanelComponent: Component {
             component.cancelAction()
         }
         
-        func update(component: MediaRecordingPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: MediaRecordingPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let previousComponent = self.component
             self.component = component
             self.state = state
@@ -488,7 +488,7 @@ public final class MediaRecordingPanelComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

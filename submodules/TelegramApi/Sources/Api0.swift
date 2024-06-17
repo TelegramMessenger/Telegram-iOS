@@ -244,7 +244,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1815593308] = { return Api.DocumentAttribute.parse_documentAttributeImageSize($0) }
     dict[1662637586] = { return Api.DocumentAttribute.parse_documentAttributeSticker($0) }
     dict[-745541182] = { return Api.DocumentAttribute.parse_documentAttributeVideo($0) }
-    dict[1070397423] = { return Api.DraftMessage.parse_draftMessage($0) }
+    dict[761606687] = { return Api.DraftMessage.parse_draftMessage($0) }
     dict[453805082] = { return Api.DraftMessage.parse_draftMessageEmpty($0) }
     dict[-1764723459] = { return Api.EmailVerification.parse_emailVerificationApple($0) }
     dict[-1842457175] = { return Api.EmailVerification.parse_emailVerificationCode($0) }
@@ -286,9 +286,11 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
     dict[1903173033] = { return Api.ForumTopic.parse_forumTopic($0) }
     dict[37687451] = { return Api.ForumTopic.parse_forumTopicDeleted($0) }
+    dict[-394605632] = { return Api.FoundStory.parse_foundStory($0) }
     dict[-1107729093] = { return Api.Game.parse_game($0) }
     dict[-1297942941] = { return Api.GeoPoint.parse_geoPoint($0) }
     dict[286776671] = { return Api.GeoPoint.parse_geoPointEmpty($0) }
+    dict[-565420653] = { return Api.GeoPointAddress.parse_geoPointAddress($0) }
     dict[1934380235] = { return Api.GlobalPrivacySettings.parse_globalPrivacySettings($0) }
     dict[-711498484] = { return Api.GroupCall.parse_groupCall($0) }
     dict[2004925620] = { return Api.GroupCall.parse_groupCallDiscarded($0) }
@@ -512,10 +514,11 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[577893055] = { return Api.MediaArea.parse_inputMediaAreaChannelPost($0) }
     dict[-1300094593] = { return Api.MediaArea.parse_inputMediaAreaVenue($0) }
     dict[1996756655] = { return Api.MediaArea.parse_mediaAreaChannelPost($0) }
-    dict[-544523486] = { return Api.MediaArea.parse_mediaAreaGeoPoint($0) }
+    dict[-891992787] = { return Api.MediaArea.parse_mediaAreaGeoPoint($0) }
     dict[340088945] = { return Api.MediaArea.parse_mediaAreaSuggestedReaction($0) }
+    dict[926421125] = { return Api.MediaArea.parse_mediaAreaUrl($0) }
     dict[-1098720356] = { return Api.MediaArea.parse_mediaAreaVenue($0) }
-    dict[64088654] = { return Api.MediaAreaCoordinates.parse_mediaAreaCoordinates($0) }
+    dict[-808853502] = { return Api.MediaAreaCoordinates.parse_mediaAreaCoordinates($0) }
     dict[-1808510398] = { return Api.Message.parse_message($0) }
     dict[-1868117372] = { return Api.Message.parse_messageEmpty($0) }
     dict[721967202] = { return Api.Message.parse_messageService($0) }
@@ -869,8 +872,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-425595208] = { return Api.SmsJob.parse_smsJob($0) }
     dict[-1108478618] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
     dict[1124938064] = { return Api.SponsoredMessageReportOption.parse_sponsoredMessageReportOption($0) }
+    dict[2033461574] = { return Api.StarsRevenueStatus.parse_starsRevenueStatus($0) }
     dict[198776256] = { return Api.StarsTopupOption.parse_starsTopupOption($0) }
-    dict[-865044046] = { return Api.StarsTransaction.parse_starsTransaction($0) }
+    dict[-1442789224] = { return Api.StarsTransaction.parse_starsTransaction($0) }
     dict[-670195363] = { return Api.StarsTransactionPeer.parse_starsTransactionPeer($0) }
     dict[-1269320843] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerAppStore($0) }
     dict[-382740222] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerFragment($0) }
@@ -941,6 +945,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2095595325] = { return Api.Update.parse_updateBotWebhookJSON($0) }
     dict[-1684914010] = { return Api.Update.parse_updateBotWebhookJSONQuery($0) }
     dict[-539401739] = { return Api.Update.parse_updateBroadcastRevenueTransactions($0) }
+    dict[513998247] = { return Api.Update.parse_updateBusinessBotCallbackQuery($0) }
     dict[1666927625] = { return Api.Update.parse_updateChannel($0) }
     dict[-1304443240] = { return Api.Update.parse_updateChannelAvailableMessages($0) }
     dict[-761649164] = { return Api.Update.parse_updateChannelMessageForwards($0) }
@@ -1042,6 +1047,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-337352679] = { return Api.Update.parse_updateServiceNotification($0) }
     dict[-245208620] = { return Api.Update.parse_updateSmsJob($0) }
     dict[263737752] = { return Api.Update.parse_updateStarsBalance($0) }
+    dict[-1518030823] = { return Api.Update.parse_updateStarsRevenueStatus($0) }
     dict[834816008] = { return Api.Update.parse_updateStickerSets($0) }
     dict[196268545] = { return Api.Update.parse_updateStickerSetsOrder($0) }
     dict[738741697] = { return Api.Update.parse_updateStoriesStealthMode($0) }
@@ -1306,6 +1312,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1314881805] = { return Api.payments.PaymentResult.parse_paymentResult($0) }
     dict[-666824391] = { return Api.payments.PaymentResult.parse_paymentVerificationNeeded($0) }
     dict[-74456004] = { return Api.payments.SavedInfo.parse_savedInfo($0) }
+    dict[-919881925] = { return Api.payments.StarsRevenueStats.parse_starsRevenueStats($0) }
+    dict[497778871] = { return Api.payments.StarsRevenueWithdrawalUrl.parse_starsRevenueWithdrawalUrl($0) }
     dict[-1930105248] = { return Api.payments.StarsStatus.parse_starsStatus($0) }
     dict[-784000893] = { return Api.payments.ValidatedRequestedInfo.parse_validatedRequestedInfo($0) }
     dict[541839704] = { return Api.phone.ExportedGroupCallInvite.parse_exportedGroupCallInvite($0) }
@@ -1344,6 +1352,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[276907596] = { return Api.storage.FileType.parse_fileWebp($0) }
     dict[1862033025] = { return Api.stories.AllStories.parse_allStories($0) }
     dict[291044926] = { return Api.stories.AllStories.parse_allStoriesNotModified($0) }
+    dict[-488736969] = { return Api.stories.FoundStories.parse_foundStories($0) }
     dict[-890861720] = { return Api.stories.PeerStories.parse_peerStories($0) }
     dict[1673780490] = { return Api.stories.Stories.parse_stories($0) }
     dict[-1436583780] = { return Api.stories.StoryReactionsList.parse_storyReactionsList($0) }
@@ -1618,9 +1627,13 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ForumTopic:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.FoundStory:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Game:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.GeoPoint:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.GeoPointAddress:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.GlobalPrivacySettings:
                 _1.serialize(buffer, boxed)
@@ -1969,6 +1982,8 @@ public extension Api {
             case let _1 as Api.SponsoredMessage:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SponsoredMessageReportOption:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.StarsRevenueStatus:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StarsTopupOption:
                 _1.serialize(buffer, boxed)
@@ -2326,6 +2341,10 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.payments.SavedInfo:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.payments.StarsRevenueStats:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.payments.StarsRevenueWithdrawalUrl:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.payments.StarsStatus:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.payments.ValidatedRequestedInfo:
@@ -2379,6 +2398,8 @@ public extension Api {
             case let _1 as Api.storage.FileType:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.AllStories:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.stories.FoundStories:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.PeerStories:
                 _1.serialize(buffer, boxed)

@@ -257,7 +257,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         
         self.updateEditingPosition(animated: true)
         
-        if let selectionView = self.selectionView as? DrawingTextEntititySelectionView {
+        if let selectionView = self.selectionView as? DrawingTextEntitySelectionView {
             selectionView.alpha = 0.0
             if !self.textEntity.text.string.isEmpty {
                 selectionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
@@ -353,7 +353,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         }
         self.update(animated: false)
         
-        if let selectionView = self.selectionView as? DrawingTextEntititySelectionView {
+        if let selectionView = self.selectionView as? DrawingTextEntitySelectionView {
             selectionView.alpha = 1.0
             selectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
@@ -587,7 +587,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     }
     
     override func updateSelectionView() {
-        guard let selectionView = self.selectionView as? DrawingTextEntititySelectionView else {
+        guard let selectionView = self.selectionView as? DrawingTextEntitySelectionView else {
             return
         }
         self.pushIdentityTransformForMeasurement()
@@ -609,7 +609,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         if let selectionView = self.selectionView {
             return selectionView
         }
-        let selectionView = DrawingTextEntititySelectionView()
+        let selectionView = DrawingTextEntitySelectionView()
         selectionView.entityView = self
         return selectionView
     }
@@ -655,7 +655,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     }
 }
 
-final class DrawingTextEntititySelectionView: DrawingEntitySelectionView {
+final class DrawingTextEntitySelectionView: DrawingEntitySelectionView {
     private let border = SimpleShapeLayer()
     private let leftHandle = SimpleShapeLayer()
     private let rightHandle = SimpleShapeLayer()

@@ -1,4 +1,120 @@
 public extension Api {
+    enum InputAppEvent: TypeConstructorDescription {
+        case inputAppEvent(time: Double, type: String, peer: Int64, data: Api.JSONValue)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputAppEvent(let time, let type, let peer, let data):
+                    if boxed {
+                        buffer.appendInt32(488313413)
+                    }
+                    serializeDouble(time, buffer: buffer, boxed: false)
+                    serializeString(type, buffer: buffer, boxed: false)
+                    serializeInt64(peer, buffer: buffer, boxed: false)
+                    data.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputAppEvent(let time, let type, let peer, let data):
+                return ("inputAppEvent", [("time", time as Any), ("type", type as Any), ("peer", peer as Any), ("data", data as Any)])
+    }
+    }
+    
+        public static func parse_inputAppEvent(_ reader: BufferReader) -> InputAppEvent? {
+            var _1: Double?
+            _1 = reader.readDouble()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Api.JSONValue?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.JSONValue
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.InputAppEvent.inputAppEvent(time: _1!, type: _2!, peer: _3!, data: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    indirect enum InputBotApp: TypeConstructorDescription {
+        case inputBotAppID(id: Int64, accessHash: Int64)
+        case inputBotAppShortName(botId: Api.InputUser, shortName: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputBotAppID(let id, let accessHash):
+                    if boxed {
+                        buffer.appendInt32(-1457472134)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    break
+                case .inputBotAppShortName(let botId, let shortName):
+                    if boxed {
+                        buffer.appendInt32(-1869872121)
+                    }
+                    botId.serialize(buffer, true)
+                    serializeString(shortName, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputBotAppID(let id, let accessHash):
+                return ("inputBotAppID", [("id", id as Any), ("accessHash", accessHash as Any)])
+                case .inputBotAppShortName(let botId, let shortName):
+                return ("inputBotAppShortName", [("botId", botId as Any), ("shortName", shortName as Any)])
+    }
+    }
+    
+        public static func parse_inputBotAppID(_ reader: BufferReader) -> InputBotApp? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputBotApp.inputBotAppID(id: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputBotAppShortName(_ reader: BufferReader) -> InputBotApp? {
+            var _1: Api.InputUser?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputUser
+            }
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputBotApp.inputBotAppShortName(botId: _1!, shortName: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InputBotInlineMessage: TypeConstructorDescription {
         case inputBotInlineMessageGame(flags: Int32, replyMarkup: Api.ReplyMarkup?)
         case inputBotInlineMessageMediaAuto(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
@@ -1188,102 +1304,6 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.InputCheckPasswordSRP.inputCheckPasswordSRP(srpId: _1!, A: _2!, M1: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputClientProxy: TypeConstructorDescription {
-        case inputClientProxy(address: String, port: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputClientProxy(let address, let port):
-                    if boxed {
-                        buffer.appendInt32(1968737087)
-                    }
-                    serializeString(address, buffer: buffer, boxed: false)
-                    serializeInt32(port, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputClientProxy(let address, let port):
-                return ("inputClientProxy", [("address", address as Any), ("port", port as Any)])
-    }
-    }
-    
-        public static func parse_inputClientProxy(_ reader: BufferReader) -> InputClientProxy? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputClientProxy.inputClientProxy(address: _1!, port: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputCollectible: TypeConstructorDescription {
-        case inputCollectiblePhone(phone: String)
-        case inputCollectibleUsername(username: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputCollectiblePhone(let phone):
-                    if boxed {
-                        buffer.appendInt32(-1562241884)
-                    }
-                    serializeString(phone, buffer: buffer, boxed: false)
-                    break
-                case .inputCollectibleUsername(let username):
-                    if boxed {
-                        buffer.appendInt32(-476815191)
-                    }
-                    serializeString(username, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputCollectiblePhone(let phone):
-                return ("inputCollectiblePhone", [("phone", phone as Any)])
-                case .inputCollectibleUsername(let username):
-                return ("inputCollectibleUsername", [("username", username as Any)])
-    }
-    }
-    
-        public static func parse_inputCollectiblePhone(_ reader: BufferReader) -> InputCollectible? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputCollectible.inputCollectiblePhone(phone: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputCollectibleUsername(_ reader: BufferReader) -> InputCollectible? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputCollectible.inputCollectibleUsername(username: _1!)
             }
             else {
                 return nil

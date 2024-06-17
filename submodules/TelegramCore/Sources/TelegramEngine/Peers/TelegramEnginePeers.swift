@@ -823,6 +823,14 @@ public extension TelegramEngine {
             return _internal_requestChannelRevenueWithdrawalUrl(account: self.account, peerId: peerId, password: password)
         }
         
+        public func checkStarsRevenueWithdrawalAvailability() -> Signal<Never, RequestStarsRevenueWithdrawalError> {
+            return _internal_checkStarsRevenueWithdrawalAvailability(account: self.account)
+        }
+        
+        public func requestStarsRevenueWithdrawalUrl(peerId: EnginePeer.Id, amount: Int64, password: String) -> Signal<String, RequestStarsRevenueWithdrawalError> {
+            return _internal_requestStarsRevenueWithdrawalUrl(account: self.account, peerId: peerId, amount: amount, password: password)
+        }
+        
         public func getChatListPeers(filterPredicate: ChatListFilterPredicate) -> Signal<[EnginePeer], NoError> {
             return self.account.postbox.transaction { transaction -> [EnginePeer] in
                 return transaction.getChatListPeers(groupId: .root, filterPredicate: filterPredicate, additionalFilter: nil).map(EnginePeer.init)
@@ -1475,7 +1483,7 @@ public extension TelegramEngine {
                     return .single(false)
                 }
                 
-                return self.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: id, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 44, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: [])
+                return self.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: id, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), count: 44, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: [])
                 |> map { view -> Bool in
                     for entry in view.0.entries {
                         if entry.message.flags.contains(.Incoming) {

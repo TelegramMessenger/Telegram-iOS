@@ -14,38 +14,45 @@ import AvatarNode
 import UndoUI
 import MessageUI
 import PeerInfoUI
+import ChatControllerInteraction
 
 extension ChatControllerImpl: MFMessageComposeViewControllerDelegate {
-    func openPhoneContextMenu(number: String, peer: EnginePeer?, message: Message, contentNode: ContextExtractedContentContainingNode, messageNode: ASDisplayNode, frame: CGRect, anyRecognizer: UIGestureRecognizer?, location: CGPoint?) -> Void {
-        if self.presentationInterfaceState.interfaceState.selectionState != nil {
+    func openPhoneContextMenu(number: String, params: ChatControllerInteraction.LongTapParams) -> Void {
+        guard let message = params.message, let contentNode = params.contentNode else {
             return
         }
-                
-        self.dismissAllTooltips()
         
-        let recognizer: TapLongTapOrDoubleTapGestureRecognizer? = anyRecognizer as? TapLongTapOrDoubleTapGestureRecognizer
-        let gesture: ContextGesture? = anyRecognizer as? ContextGesture
+        guard let messages = self.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(message.id) else {
+            return
+        }
         
-        if let messages = self.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(message.id) {
-            (self.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
-            self.chatDisplayNode.cancelInteractiveKeyboardGestures()
-            var updatedMessages = messages
-            for i in 0 ..< updatedMessages.count {
-                if updatedMessages[i].id == message.id {
-                    let message = updatedMessages.remove(at: i)
-                    updatedMessages.insert(message, at: 0)
-                    break
-                }
+        var updatedMessages = messages
+        for i in 0 ..< updatedMessages.count {
+            if updatedMessages[i].id == message.id {
+                let message = updatedMessages.remove(at: i)
+                updatedMessages.insert(message, at: 0)
+                break
             }
-            
-            self.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
-                                            
-            let source: ContextContentSource
-            if let location = location {
-                source = .location(ChatMessageContextLocationContentSource(controller: self, location: messageNode.view.convert(messageNode.bounds, to: nil).origin.offsetBy(dx: location.x, dy: location.y)))
-            } else {
-                source = .extracted(ChatMessagePhoneContextExtractedContentSource(chatNode: self.chatDisplayNode, contentNode: contentNode))
+        }
+        
+        let recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil// anyRecognizer as? TapLongTapOrDoubleTapGestureRecognizer
+        let gesture: ContextGesture? = nil // anyRecognizer as? ContextGesture
+        
+        let source: ContextContentSource
+//                if let location = location {
+//                    source = .location(ChatMessageContextLocationContentSource(controller: self, location: messageNode.view.convert(messageNode.bounds, to: nil).origin.offsetBy(dx: location.x, dy: location.y)))
+//                } else {
+            source = .extracted(ChatMessageLinkContextExtractedContentSource(chatNode: self.chatDisplayNode, contentNode: contentNode))
+//                }
+        
+        params.progress?.set(.single(true))
+        
+        let _ = (self.context.engine.peers.resolvePeerByPhone(phone: number)
+        |> deliverOnMainQueue).start(next: { [weak self] peer in
+            guard let self else {
+                return
             }
+            params.progress?.set(.single(false))
             
             let phoneNumber: String
             if let peer, case let .user(user) = peer, let phone = user.phone {
@@ -182,7 +189,7 @@ extension ChatControllerImpl: MFMessageComposeViewControllerDelegate {
             }
             
             self.window?.presentInGlobalOverlay(controller)
-        }
+        })
     }
     
     private func inviteToTelegram(numbers: [String]) {
@@ -207,7 +214,7 @@ extension ChatControllerImpl: MFMessageComposeViewControllerDelegate {
     }
 }
 
-private final class ChatMessagePhoneContextExtractedContentSource: ContextExtractedContentSource {
+final class ChatMessageLinkContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false
     let ignoreContentTouches: Bool = true
     let blurBackground: Bool = true

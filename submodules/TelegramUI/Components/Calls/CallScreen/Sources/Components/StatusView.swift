@@ -257,7 +257,7 @@ final class StatusView: UIView {
         self.activeDurationTimer?.invalidate()
     }
     
-    func update(strings: PresentationStrings, state: State, transition: Transition) -> CGSize {
+    func update(strings: PresentationStrings, state: State, transition: ComponentTransition) -> CGSize {
         if let layoutState = self.layoutState, layoutState.strings === strings, layoutState.state == state {
             return layoutState.size
         }
@@ -302,7 +302,7 @@ final class StatusView: UIView {
         }
     }
      
-    private func updateInternal(strings: PresentationStrings, state: State, transition: Transition) -> CGSize {
+    private func updateInternal(strings: PresentationStrings, state: State, transition: ComponentTransition) -> CGSize {
         let textString: String
         var needsDots = false
         var monospacedDigits = false

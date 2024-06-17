@@ -295,7 +295,7 @@ public final class AccountContextImpl: AccountContext {
             self.themeUpdateManager = ThemeUpdateManagerImpl(sharedContext: sharedContext, account: account)
             
             self.inAppPurchaseManager = InAppPurchaseManager(engine: self.engine)
-            self.starsContext = self.engine.payments.peerStarsContext(peerId: account.peerId)
+            self.starsContext = self.engine.payments.peerStarsContext()
         } else {
             self.prefetchManager = nil
             self.wallpaperUploadManager = nil

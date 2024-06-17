@@ -222,7 +222,7 @@ private final class SendInviteLinkScreenComponent: Component {
             }
         }
         
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             guard let environment = self.environment, let controller = environment.controller(), let itemLayout = self.itemLayout else {
                 return
             }
@@ -266,7 +266,7 @@ private final class SendInviteLinkScreenComponent: Component {
             }
         }
         
-        func update(component: SendInviteLinkScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: SendInviteLinkScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             let themeUpdated = self.environment?.theme !== environment.theme
             
@@ -785,7 +785,7 @@ private final class SendInviteLinkScreenComponent: Component {
                                     } else {
                                         self.selectedItems.insert(peer.id)
                                     }
-                                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .easeInOut)))
+                                    self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .easeInOut)))
                                 }
                             )),
                             environment: {},
@@ -942,7 +942,7 @@ private final class SendInviteLinkScreenComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

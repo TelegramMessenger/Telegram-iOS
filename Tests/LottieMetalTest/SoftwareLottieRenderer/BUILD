@@ -23,8 +23,10 @@ objc_library(
         "PublicHeaders",
     ],
     deps = [
-        "//submodules/TelegramUI/Components/LottieCpp",
+        "//submodules/LottieCpp",
         "//Tests/LottieMetalTest/thorvg",
+        "//Tests/LottieMetalTest/skia",
+        "//Tests/LottieMetalTest/skia:libskia"
     ],
     sdk_frameworks = [
         "Foundation",

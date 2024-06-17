@@ -5,11 +5,11 @@ import AccountContext
 import Postbox
 import TelegramCore
 
-private func entitiesPath() -> String {
+func entitiesPath() -> String {
     return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/mediaEntities"
 }
 
-private func fullEntityMediaPath(_ path: String) -> String {
+func fullEntityMediaPath(_ path: String) -> String {
     return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/mediaEntities/" + path
 }
 
@@ -32,6 +32,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             case sticker
             case reaction(MessageReaction.Reaction, ReactionStyle)
         }
+        
         case file(FileMediaReference, FileType)
         case image(UIImage, ImageType)
         case animatedImage(Data, UIImage)
@@ -134,6 +135,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     
     public var secondaryRenderImage: UIImage?
     public var overlayRenderImage: UIImage?
+    
+    public var tertiaryRenderImage: UIImage?
+    public var quaternaryRenderImage: UIImage?
     
     public var center: CGPoint {
         return self.position
@@ -418,7 +422,7 @@ public extension UIImage {
         var images = [UIImage]()
         var duration = 0.0
 
-        for i in 0..<count {
+        for i in 0 ..< count {
             if let cgImage = CGImageSourceCreateImageAtIndex(source, i, nil) {
                 let image = UIImage(cgImage: cgImage)
                 images.append(image)

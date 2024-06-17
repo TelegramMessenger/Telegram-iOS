@@ -50,7 +50,7 @@ private final class VideoContainerLayer: SimpleLayer {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(size: CGSize, transition: Transition) {
+    func update(size: CGSize, transition: ComponentTransition) {
         transition.setFrame(layer: self.contentsLayer, frame: CGRect(origin: CGPoint(), size: size))
     }
 }
@@ -268,13 +268,13 @@ final class VideoContainerView: HighlightTrackingButton {
             
             if highlightedState {
                 self.videoContainerLayer.removeAnimation(forKey: "sublayerTransform")
-                let transition = Transition(animation: .curve(duration: 0.15, curve: .easeInOut))
+                let transition = ComponentTransition(animation: .curve(duration: 0.15, curve: .easeInOut))
                 transition.setSublayerTransform(layer: self.videoContainerLayer, transform: CATransform3DMakeScale(topScale, topScale, 1.0))
             } else {
                 let t = self.videoContainerLayer.presentation()?.sublayerTransform ?? self.videoContainerLayer.sublayerTransform
                 let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
                 
-                let transition = Transition(animation: .none)
+                let transition = ComponentTransition(animation: .none)
                 transition.setSublayerTransform(layer: self.videoContainerLayer, transform: CATransform3DIdentity)
                 
                 self.videoContainerLayer.animateSublayerScale(from: currentScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] completed in
@@ -462,14 +462,14 @@ final class VideoContainerView: HighlightTrackingButton {
         self.dragPositionAnimatorLink = nil
     }
     
-    private func update(transition: Transition) {
+    private func update(transition: ComponentTransition) {
         guard let params = self.params else {
             return
         }
         self.update(previousParams: params, params: params, transition: transition)
     }
     
-    func update(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, cornerRadius: CGFloat, controlsHidden: Bool, isMinimized: Bool, isAnimatedOut: Bool, transition: Transition) {
+    func update(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, cornerRadius: CGFloat, controlsHidden: Bool, isMinimized: Bool, isAnimatedOut: Bool, transition: ComponentTransition) {
         let params = Params(size: size, insets: insets, interfaceOrientation: interfaceOrientation, cornerRadius: cornerRadius, controlsHidden: controlsHidden, isMinimized: isMinimized, isAnimatedOut: isAnimatedOut)
         if self.params == params {
             return
@@ -548,7 +548,7 @@ final class VideoContainerView: HighlightTrackingButton {
         )
     }
     
-    private func update(previousParams: Params?, params: Params, transition: Transition) {
+    private func update(previousParams: Params?, params: Params, transition: ComponentTransition) {
         guard let videoMetrics = self.videoMetrics else {
             return
         }
@@ -613,7 +613,7 @@ final class VideoContainerView: HighlightTrackingButton {
                         animateFlipDisappearingVideo = disappearingVideoLayer
                         disappearingVideoLayer.videoLayer.blurredLayer.removeFromSuperlayer()
                     } else {
-                        let alphaTransition: Transition = .easeInOut(duration: 0.2)
+                        let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
                         let disappearingVideoLayerValue = disappearingVideoLayer.videoLayer
                         alphaTransition.setAlpha(layer: disappearingVideoLayerValue, alpha: 0.0, completion: { [weak self, weak disappearingVideoLayerValue] _ in
                             guard let self, let disappearingVideoLayerValue else {
@@ -758,7 +758,7 @@ final class VideoContainerView: HighlightTrackingButton {
                     transition.setPosition(layer: disappearingVideoLayer.videoLayer, position: videoFrame.center)
                     transition.setPosition(layer: disappearingVideoLayer.videoLayer.blurredLayer, position: videoFrame.center)
                     
-                    let alphaTransition: Transition = .easeInOut(duration: 0.2)
+                    let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
                     let disappearingVideoLayerValue = disappearingVideoLayer.videoLayer
                     alphaTransition.setAlpha(layer: disappearingVideoLayerValue, alpha: 0.0, completion: { [weak disappearingVideoLayerValue] _ in
                         disappearingVideoLayerValue?.removeFromSuperlayer()

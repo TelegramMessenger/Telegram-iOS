@@ -8,6 +8,53 @@
 import Foundation
 import QuartzCore
 
+private func fma(_ a: CGFloat, _ b: CGFloat, _ c: CGFloat) -> CGFloat {
+    return a * b + c
+}
+
+private func eval_poly(_ t: CGFloat, _ b: CGFloat) -> CGFloat {
+    return b;
+}
+
+private func eval_poly(_ t: CGFloat, _ m: CGFloat, _ b: CGFloat) -> CGFloat {
+    return eval_poly(t, fma(m, t, b))
+}
+
+private func eval_poly(_ t: CGFloat, _ m: CGFloat, _ b: CGFloat, _ c: CGFloat) -> CGFloat {
+    return eval_poly(t, fma(m, t, b), c)
+}
+
+private func eval_poly(_ t: CGFloat, _ m: CGFloat, _ b: CGFloat, _ c: CGFloat, _ d: CGFloat) -> CGFloat {
+    return eval_poly(t, fma(m, t, b), c, d)
+}
+
+private func cubic_solver(_ A: CGFloat, _ B: CGFloat, _ C: CGFloat, _ D: CGFloat) -> CGFloat {
+    var t = -D
+
+    for _ in 0 ..< 8 {
+        let f = eval_poly(t, A, B, C, D)        // f   = At^3 + Bt^2 + Ct + D
+        if (abs(f) <= 0.00005) {
+            break;
+        }
+        let fp = eval_poly(t, 3.0 * A, 2.0 * B, C)      // f'  = 3At^2 + 2Bt + C
+        let fpp = eval_poly(t, 3.0 * A + 3.0 * A, 2.0 * B)  // f'' = 6At + 2B
+
+        let numer = 2.0 * fp * f
+        let denom = fma(2 * fp, fp, -(f * fpp))
+
+        t -= numer / denom
+    }
+    
+    if t < 0.0 {
+        t = 0.0
+    }
+    if t > 1.0 {
+        t = 1.0
+    }
+
+    return t
+}
+
 extension CGFloat {
 
   // MARK: Internal
@@ -90,7 +137,9 @@ extension CGFloat {
   }
 
   fileprivate static func SolveCubic(_ a: CGFloat, _ b: CGFloat, _ c: CGFloat, _ d: CGFloat) -> CGFloat {
-    if a == 0 {
+    return cubic_solver(a, b, c, d)
+      
+    /*if a == 0 {
       return SolveQuadratic(b, c, d)
     }
     if d == 0 {
@@ -151,6 +200,6 @@ extension CGFloat {
       }
     }
 
-    return -1;
+    return -1;*/
   }
 }

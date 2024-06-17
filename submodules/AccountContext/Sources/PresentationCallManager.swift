@@ -419,6 +419,8 @@ public protocol PresentationGroupCall: AnyObject {
     var memberEvents: Signal<PresentationGroupCallMemberEvent, NoError> { get }
     var reconnectedAsEvents: Signal<EnginePeer, NoError> { get }
     
+    var onMutedSpeechActivityDetected: ((Bool) -> Void)? { get set }
+    
     func toggleScheduledSubscription(_ subscribe: Bool)
     func schedule(timestamp: Int32)
     func startScheduled()

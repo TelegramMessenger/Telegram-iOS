@@ -175,7 +175,6 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         }, openRecommendedChannelContextMenu: { _, _, _ in
         }, openGroupBoostInfo: { _, _ in
         }, openStickerEditor: {
-        }, openPhoneContextMenu: { _ in
         }, openAgeRestrictedMessageMedia: { _, _ in
         }, playMessageEffect: { _ in
         }, editMessageFactCheck: { _ in

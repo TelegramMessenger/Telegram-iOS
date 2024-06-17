@@ -47,7 +47,9 @@ swift_library(
         "//submodules/Components/MultilineTextWithEntitiesComponent",
         "//submodules/TelegramNotices",
         "//submodules/UIKitRuntimeUtils",
-        "//submodules/PeerInfoUI",
+        "//submodules/PasswordSetupUI",
+        "//submodules/TelegramUI/Components/PeerManagement/OwnershipTransferController",
+        "//submodules/TelegramUI/Components/ListItemComponentAdaptor",
     ],
     visibility = [
         "//visibility:public",

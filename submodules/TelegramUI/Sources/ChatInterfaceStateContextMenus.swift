@@ -282,7 +282,7 @@ private func canViewReadStats(message: Message, participantCount: Int?, isMessag
 
 func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, accountPeerId: PeerId) -> Bool {
     if case let .customChatContents(contents) = chatPresentationInterfaceState.subject, case .hashTagSearch = contents.kind {
-        return false
+        return true
     }
     if case .customChatContents = chatPresentationInterfaceState.chatLocation {
         return true
@@ -303,7 +303,7 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
     }
     switch chatPresentationInterfaceState.mode {
     case .inline:
-        return false
+        return true
     case .standard(.embedded):
         return false
     default:
@@ -905,15 +905,17 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             messageActions.editTags = Set()
         }
         
-        return (MessageContextMenuData(
+        let data = MessageContextMenuData(
             starStatus: stickerSaveStatus,
-            canReply: canReply && !isEmbeddedMode,
+            canReply: canReply,
             canPin: canPin && !isEmbeddedMode,
             canEdit: canEdit && !isEmbeddedMode,
             canSelect: canSelect && !isEmbeddedMode,
             resourceStatus: resourceStatus,
             messageActions: messageActions
-        ), updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer)
+        )
+        
+        return (data, updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer)
     }
     
     return dataSignal

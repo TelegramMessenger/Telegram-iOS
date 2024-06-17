@@ -34,13 +34,13 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     private(set) var dismissProgress: CGFloat = 0.0
     var isReadyUpdated: (() -> Void)?
     var updateDismissProgress: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
-    var interactivelyDismissed: (() -> Void)?
+    var interactivelyDismissed: (() -> Bool)?
     var controllerRemoved: ((ViewController) -> Void)?
     
     var shouldCancelPanGesture: (() -> Bool)?
     var requestDismiss: (() -> Void)?
     
-    var updateModalProgress: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
+    var updateModalProgress: ((CGFloat, CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     private var isUpdatingState = false
     private var isDismissed = false
@@ -308,8 +308,9 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             
                 var dismissing = false
                 if (bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 1800.0)) && !ignoreDismiss {
-                    self.interactivelyDismissed?()
-                    dismissing = true
+                    if self.interactivelyDismissed?() == true {
+                        dismissing = true
+                    }
                 } else if self.isExpanded {
                     if velocity.y > 300.0 || offset > topInset / 2.0 {
                         self.isExpanded = false
@@ -436,7 +437,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         })
         
         let modalProgress = isLandscape ? 0.0 : (1.0 - topInset / defaultTopInset)
-        self.updateModalProgress?(modalProgress, transition)
+        self.updateModalProgress?(modalProgress, topInset, transition)
                 
         let containerLayout: ContainerViewLayout
         let containerFrame: CGRect

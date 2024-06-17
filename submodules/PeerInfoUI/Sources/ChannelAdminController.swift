@@ -14,6 +14,8 @@ import Emoji
 import LocalizedPeerData
 import Markdown
 import SendInviteLinkScreen
+import OwnershipTransferController
+import OldChannelsController
 
 private let rankMaxLength: Int32 = 16
 

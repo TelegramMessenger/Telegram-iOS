@@ -592,12 +592,14 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
         }
         
-        var isPlaying = self.visibilityStatus == true && !self.forceStopAnimations
+        let isPlaying = self.visibilityStatus == true && !self.forceStopAnimations
+        
+        var canPlayEffects = isPlaying
         if !item.controllerInteraction.canReadHistory {
-            isPlaying = false
+            canPlayEffects = false
         }
         
-        if !isPlaying {
+        if !canPlayEffects {
             self.removeAdditionalAnimations()
             self.removeEffectAnimations()
         }
@@ -630,7 +632,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
         }
         
-        if isPlaying, let animationNode = self.animationNode as? AnimatedStickerNode {
+        if canPlayEffects, let animationNode = self.animationNode as? AnimatedStickerNode {
             var effectAlreadySeen = true
             if item.message.flags.contains(.Incoming) {
                 if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
@@ -2032,7 +2034,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
             }
 
-            let decorationNode = transitionNode.add(decorationView: additionalAnimationNode.view, itemNode: self)
+            let decorationNode = transitionNode.add(decorationView: additionalAnimationNode.view, itemNode: self, aboveEverything: true)
             additionalAnimationNode.completed = { [weak self, weak decorationNode, weak transitionNode] _ in
                 guard let decorationNode = decorationNode else {
                     return

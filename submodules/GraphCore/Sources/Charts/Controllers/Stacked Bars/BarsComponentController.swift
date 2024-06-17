@@ -25,7 +25,7 @@ class BarsComponentController: GeneralChartComponentController {
     let previewBarsChartRenderer: BarChartRenderer
     private(set) var barsWidth: CGFloat = 1
     
-    private (set) var chartBars: BarChartRenderer.BarsData = .blank
+    private(set) var chartBars: BarChartRenderer.BarsData = .blank
     
     private var step: Bool
     

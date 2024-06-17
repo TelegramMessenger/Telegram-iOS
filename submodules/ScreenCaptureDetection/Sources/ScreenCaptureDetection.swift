@@ -98,7 +98,7 @@ public final class ScreenCaptureDetectionManager {
                 }
                 var value = value
 #if DEBUG
-                value = false
+                value = !"".isEmpty
 #endif          
                 strongSelf.isRecordingActive = value
                 if value {

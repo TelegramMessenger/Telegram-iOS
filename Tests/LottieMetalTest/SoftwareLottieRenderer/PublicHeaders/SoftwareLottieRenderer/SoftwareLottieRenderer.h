@@ -4,8 +4,6 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
-#import <LottieCpp/LottieCpp.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -14,9 +12,14 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path);
 
 @interface SoftwareLottieRenderer : NSObject
 
-- (instancetype _Nonnull)initWithAnimationContainer:(LottieAnimationContainer * _Nonnull)animationContainer;
+@property (nonatomic, readonly) NSInteger frameCount;
+@property (nonatomic, readonly) NSInteger framesPerSecond;
+@property (nonatomic, readonly) CGSize size;
 
-- (UIImage * _Nullable)renderForSize:(CGSize)size useReferenceRendering:(bool)useReferenceRendering;
+- (instancetype _Nullable)initWithData:(NSData * _Nonnull)data;
+
+- (void)setFrame:(CGFloat)index;
+- (UIImage * _Nullable)renderForSize:(CGSize)size useReferenceRendering:(bool)useReferenceRendering canUseMoreMemory:(bool)canUseMoreMemory skipImageGeneration:(bool)skipImageGeneration;
 
 @end
 

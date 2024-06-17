@@ -66,8 +66,18 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
         self.hasCurrentChat = hasCurrentChat
         
         self.cancel = cancel
+
+        let icon: SearchBarNode.Icon
+        if initialQuery.hasPrefix("$") {
+            icon = .cashtag
+        } else {
+            icon = .hashtag
+        }
         
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern, icon: .hashtag, displayBackground: false)
+        var initialQuery = initialQuery
+        initialQuery.removeFirst()
+        
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern, icon: icon, displayBackground: false)
         self.searchBar.text = initialQuery
         self.searchBar.placeholderString = NSAttributedString(string: strings.HashtagSearch_SearchPlaceholder, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         
@@ -133,7 +143,7 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
         items.append(TabSelectorComponent.Item(id: AnyHashable(2), title: self.strings.HashtagSearch_PublicPosts))
         
         let tabSelectorSize = self.tabSelector.update(
-            transition: Transition(transition),
+            transition: ComponentTransition(transition),
             component: AnyComponent(TabSelectorComponent(
                 colors: TabSelectorComponent.Colors(
                     foreground: self.theme.list.itemSecondaryTextColor,

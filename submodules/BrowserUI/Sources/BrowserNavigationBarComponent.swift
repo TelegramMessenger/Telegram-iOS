@@ -289,7 +289,7 @@ private final class LoadingProgressComponent: Component {
             preconditionFailure()
         }
 
-        func update(component: LoadingProgressComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: LoadingProgressComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.lineView.backgroundColor = component.color
         
             let value = component.value
@@ -306,14 +306,14 @@ private final class LoadingProgressComponent: Component {
             
             self.currentValue = value
                 
-            let transition: Transition
+            let transition: ComponentTransition
             if animated && value > 0.0 {
                 transition = .spring(duration: 0.7)
             } else {
                 transition = .immediate
             }
             
-            let alphaTransition: Transition
+            let alphaTransition: ComponentTransition
             if animated {
                 alphaTransition = .easeInOut(duration: 0.3)
             } else {
@@ -333,7 +333,7 @@ private final class LoadingProgressComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -414,7 +414,7 @@ final class ReferenceButtonComponent: Component {
             self.component?.action()
         }
 
-        func update(component: ReferenceButtonComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: ReferenceButtonComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             let componentSize = self.componentView.update(
@@ -441,7 +441,7 @@ final class ReferenceButtonComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

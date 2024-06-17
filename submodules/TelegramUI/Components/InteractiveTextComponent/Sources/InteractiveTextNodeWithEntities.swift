@@ -11,7 +11,6 @@ import AnimationCache
 import MultiAnimationRenderer
 import TelegramCore
 import EmojiTextAttachmentView
-import InvisibleInkDustNode
 
 private final class InlineStickerItem: Hashable {
     let emoji: ChatTextInputTextCustomEmojiAttribute
@@ -64,7 +63,7 @@ public final class InteractiveTextNodeWithEntities {
         public let attemptSynchronous: Bool
         public let textColor: UIColor
         public let spoilerEffectColor: UIColor
-        public let animation: ListViewItemUpdateAnimation
+        public let applyArguments: InteractiveTextNode.ApplyArguments
         
         public init(
             context: AccountContext,
@@ -74,7 +73,7 @@ public final class InteractiveTextNodeWithEntities {
             attemptSynchronous: Bool,
             textColor: UIColor,
             spoilerEffectColor: UIColor,
-            animation: ListViewItemUpdateAnimation
+            applyArguments: InteractiveTextNode.ApplyArguments
         ) {
             self.context = context
             self.cache = cache
@@ -83,7 +82,7 @@ public final class InteractiveTextNodeWithEntities {
             self.attemptSynchronous = attemptSynchronous
             self.textColor = textColor
             self.spoilerEffectColor = spoilerEffectColor
-            self.animation = animation
+            self.applyArguments = applyArguments
         }
         
         public func withUpdatedPlaceholderColor(_ color: UIColor) -> Arguments {
@@ -95,7 +94,7 @@ public final class InteractiveTextNodeWithEntities {
                 attemptSynchronous: self.attemptSynchronous,
                 textColor: self.textColor,
                 spoilerEffectColor: self.spoilerEffectColor,
-                animation: self.animation
+                applyArguments: self.applyArguments
             )
         }
     }
@@ -112,7 +111,7 @@ public final class InteractiveTextNodeWithEntities {
     public let textNode: InteractiveTextNode
     
     private var inlineStickerItemLayers: [InlineStickerItemLayer.Key: InlineStickerItemLayerData] = [:]
-    private var dustEffectNodes: [Int: InvisibleInkDustNode] = [:]
+    private var displayContentsUnderSpoilers: Bool?
     
     private var enableLooping: Bool = true
     
@@ -144,7 +143,7 @@ public final class InteractiveTextNodeWithEntities {
         self.textNode = textNode
     }
     
-    public static func asyncLayout(_ maybeNode: InteractiveTextNodeWithEntities?) -> (InteractiveTextNodeLayoutArguments) -> (InteractiveTextNodeLayout, (InteractiveTextNodeWithEntities.Arguments?) -> InteractiveTextNodeWithEntities) {
+    public static func asyncLayout(_ maybeNode: InteractiveTextNodeWithEntities?) -> (InteractiveTextNodeLayoutArguments) -> (InteractiveTextNodeLayout, (InteractiveTextNodeWithEntities.Arguments) -> InteractiveTextNodeWithEntities) {
         let makeLayout = InteractiveTextNode.asyncLayout(maybeNode?.textNode)
         return { [weak maybeNode] arguments in
             var updatedString: NSAttributedString?
@@ -213,22 +212,40 @@ public final class InteractiveTextNodeWithEntities {
             
             let (layout, apply) = makeLayout(arguments.withAttributedString(updatedString))
             return (layout, { applyArguments in
-                let animation: ListViewItemUpdateAnimation = applyArguments?.animation ?? .None
+                let animation: ListViewItemUpdateAnimation = applyArguments.applyArguments.animation
                 
-                let result = apply(animation)
+                let result = apply(applyArguments.applyArguments)
                 
                 if let maybeNode = maybeNode {
-                    if let applyArguments = applyArguments {
-                        maybeNode.updateInteractiveContents(context: applyArguments.context, cache: applyArguments.cache, renderer: applyArguments.renderer, textLayout: layout, placeholderColor: applyArguments.placeholderColor, attemptSynchronousLoad: false, textColor: applyArguments.textColor, spoilerEffectColor: applyArguments.spoilerEffectColor, animation: animation)
-                    }
+                    maybeNode.updateInteractiveContents(
+                        context: applyArguments.context,
+                        cache: applyArguments.cache,
+                        renderer: applyArguments.renderer,
+                        textLayout: layout,
+                        placeholderColor: applyArguments.placeholderColor,
+                        attemptSynchronousLoad: false,
+                        textColor: applyArguments.textColor,
+                        spoilerEffectColor: applyArguments.spoilerEffectColor,
+                        animation: animation,
+                        applyArguments: applyArguments.applyArguments
+                    )
                     
                     return maybeNode
                 } else {
                     let resultNode = InteractiveTextNodeWithEntities(textNode: result)
                     
-                    if let applyArguments = applyArguments {
-                        resultNode.updateInteractiveContents(context: applyArguments.context, cache: applyArguments.cache, renderer: applyArguments.renderer, textLayout: layout, placeholderColor: applyArguments.placeholderColor, attemptSynchronousLoad: false, textColor: applyArguments.textColor, spoilerEffectColor: applyArguments.spoilerEffectColor, animation: .None)
-                    }
+                    resultNode.updateInteractiveContents(
+                        context: applyArguments.context,
+                        cache: applyArguments.cache,
+                        renderer: applyArguments.renderer,
+                        textLayout: layout,
+                        placeholderColor: applyArguments.placeholderColor,
+                        attemptSynchronousLoad: false,
+                        textColor: applyArguments.textColor,
+                        spoilerEffectColor: applyArguments.spoilerEffectColor,
+                        animation: .None,
+                        applyArguments: applyArguments.applyArguments
+                    )
                     
                     return resultNode
                 }
@@ -253,7 +270,8 @@ public final class InteractiveTextNodeWithEntities {
         attemptSynchronousLoad: Bool,
         textColor: UIColor,
         spoilerEffectColor: UIColor,
-        animation: ListViewItemUpdateAnimation
+        animation: ListViewItemUpdateAnimation,
+        applyArguments: InteractiveTextNode.ApplyArguments
     ) {
         self.enableLooping = context.sharedContext.energyUsageSettings.loopEmoji
         
@@ -262,15 +280,15 @@ public final class InteractiveTextNodeWithEntities {
             displayContentsUnderSpoilers = textLayout.displayContentsUnderSpoilers
         }
         
+        self.displayContentsUnderSpoilers = displayContentsUnderSpoilers
+        
         var nextIndexById: [Int64: Int] = [:]
         var validIds: [InlineStickerItemLayer.Key] = []
-        
-        var validDustEffectIds: [Int] = []
         
         if let textLayout {
             for i in 0 ..< textLayout.segments.count {
                 let segment = textLayout.segments[i]
-                guard let segmentLayer = self.textNode.segmentLayer(index: i), let segmentItem = segmentLayer.item else {
+                guard let segmentLayer = self.textNode.segmentLayer(index: i), let segmentParams = segmentLayer.params else {
                     continue
                 }
                 
@@ -292,8 +310,8 @@ public final class InteractiveTextNodeWithEntities {
                         itemFrame.origin.x = floorToScreenPixels(itemFrame.origin.x)
                         itemFrame.origin.y = floorToScreenPixels(itemFrame.origin.y)
                         
-                        itemFrame.origin.x += segmentItem.contentOffset.x
-                        itemFrame.origin.y += segmentItem.contentOffset.y
+                        itemFrame.origin.x += segmentParams.item.contentOffset.x
+                        itemFrame.origin.y += segmentParams.item.contentOffset.y
                         
                         let itemLayerData: InlineStickerItemLayerData
                         var itemLayerTransition = animation.transition
@@ -311,41 +329,14 @@ public final class InteractiveTextNodeWithEntities {
                             self.inlineStickerItemLayers[id] = itemLayerData
                             segmentLayer.renderNode.layer.addSublayer(itemLayerData.itemLayer)
                             
-                            itemLayerData.itemLayer.isVisibleForAnimations = self.enableLooping && self.isItemVisible(itemRect: itemFrame.offsetBy(dx: -segmentItem.contentOffset.x, dy: -segmentItem.contentOffset.x))
+                            itemLayerData.itemLayer.isVisibleForAnimations = self.enableLooping && self.isItemVisible(itemRect: itemFrame.offsetBy(dx: -segmentParams.item.contentOffset.x, dy: -segmentParams.item.contentOffset.x))
                         }
                         
                         itemLayerTransition.updateAlpha(layer: itemLayerData.itemLayer, alpha: item.isHiddenBySpoiler ? 0.0 : 1.0)
                         
                         itemLayerData.itemLayer.frame = itemFrame
-                        itemLayerData.rect = itemFrame.offsetBy(dx: -segmentItem.contentOffset.x, dy: -segmentItem.contentOffset.y)
+                        itemLayerData.rect = itemFrame.offsetBy(dx: -segmentParams.item.contentOffset.x, dy: -segmentParams.item.contentOffset.y)
                     }
-                }
-                
-                if !segment.spoilers.isEmpty {
-                    validDustEffectIds.append(i)
-                    
-                    let dustEffectNode: InvisibleInkDustNode
-                    if let current = self.dustEffectNodes[i] {
-                        dustEffectNode = current
-                        if dustEffectNode.layer.superlayer !== segmentLayer.renderNode.layer {
-                            segmentLayer.renderNode.layer.addSublayer(dustEffectNode.layer)
-                        }
-                    } else {
-                        dustEffectNode = InvisibleInkDustNode(textNode: nil, enableAnimations: context.sharedContext.energyUsageSettings.fullTranslucency)
-                        self.dustEffectNodes[i] = dustEffectNode
-                        segmentLayer.renderNode.layer.addSublayer(dustEffectNode.layer)
-                    }
-                    let dustNodeFrame = CGRect(origin: CGPoint(), size: segmentItem.size).insetBy(dx: -3.0, dy: -3.0)
-                    dustEffectNode.frame = dustNodeFrame
-                    dustEffectNode.update(
-                        size: dustNodeFrame.size,
-                        color: spoilerEffectColor,
-                        textColor: textColor,
-                        rects: segment.spoilers.map { $0.1.offsetBy(dx: 3.0 + segmentItem.contentOffset.x, dy: segmentItem.contentOffset.y + 3.0).insetBy(dx: 1.0, dy: 1.0) },
-                        wordRects: segment.spoilerWords.map { $0.1.offsetBy(dx: segmentItem.contentOffset.x + 3.0, dy: segmentItem.contentOffset.y + 3.0).insetBy(dx: 1.0, dy: 1.0) }
-                    )
-                    
-                    animation.transition.updateAlpha(node: dustEffectNode, alpha: displayContentsUnderSpoilers ? 0.0 : 1.0)
                 }
             }
         }
@@ -359,17 +350,6 @@ public final class InteractiveTextNodeWithEntities {
         }
         for key in removeKeys {
             self.inlineStickerItemLayers.removeValue(forKey: key)
-        }
-        
-        var removeDustEffectIds: [Int] = []
-        for (id, dustEffectNode) in self.dustEffectNodes {
-            if !validDustEffectIds.contains(id) {
-                removeDustEffectIds.append(id)
-                dustEffectNode.removeFromSupernode()
-            }
-        }
-        for id in removeDustEffectIds {
-            self.dustEffectNodes.removeValue(forKey: id)
         }
     }
 }

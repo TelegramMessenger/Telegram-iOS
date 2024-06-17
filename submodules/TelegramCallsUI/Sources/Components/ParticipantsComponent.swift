@@ -43,7 +43,7 @@ final class ParticipantsComponent: Component {
         View(frame: .zero)
     }
     
-    func update(view: View, availableSize: CGSize, state: ComponentFlow.EmptyComponentState, environment: ComponentFlow.Environment<ComponentFlow.Empty>, transition: ComponentFlow.Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: ComponentFlow.EmptyComponentState, environment: ComponentFlow.Environment<ComponentFlow.Empty>, transition: ComponentFlow.ComponentTransition) -> CGSize {
         view.counter.update(
             countString: self.count > 0 ? presentationStringsFormattedNumber(Int32(count), ",") : "",
             subtitle: self.showsSubtitle ? (self.count > 0 ? self.strings.LiveStream_Watching.lowercased() : self.strings.LiveStream_NoViewers.lowercased()) : "",

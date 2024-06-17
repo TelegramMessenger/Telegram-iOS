@@ -1,4 +1,100 @@
 public extension Api {
+    enum InputClientProxy: TypeConstructorDescription {
+        case inputClientProxy(address: String, port: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputClientProxy(let address, let port):
+                    if boxed {
+                        buffer.appendInt32(1968737087)
+                    }
+                    serializeString(address, buffer: buffer, boxed: false)
+                    serializeInt32(port, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputClientProxy(let address, let port):
+                return ("inputClientProxy", [("address", address as Any), ("port", port as Any)])
+    }
+    }
+    
+        public static func parse_inputClientProxy(_ reader: BufferReader) -> InputClientProxy? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputClientProxy.inputClientProxy(address: _1!, port: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum InputCollectible: TypeConstructorDescription {
+        case inputCollectiblePhone(phone: String)
+        case inputCollectibleUsername(username: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputCollectiblePhone(let phone):
+                    if boxed {
+                        buffer.appendInt32(-1562241884)
+                    }
+                    serializeString(phone, buffer: buffer, boxed: false)
+                    break
+                case .inputCollectibleUsername(let username):
+                    if boxed {
+                        buffer.appendInt32(-476815191)
+                    }
+                    serializeString(username, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputCollectiblePhone(let phone):
+                return ("inputCollectiblePhone", [("phone", phone as Any)])
+                case .inputCollectibleUsername(let username):
+                return ("inputCollectibleUsername", [("username", username as Any)])
+    }
+    }
+    
+        public static func parse_inputCollectiblePhone(_ reader: BufferReader) -> InputCollectible? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputCollectible.inputCollectiblePhone(phone: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputCollectibleUsername(_ reader: BufferReader) -> InputCollectible? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputCollectible.inputCollectibleUsername(username: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InputContact: TypeConstructorDescription {
         case inputPhoneContact(clientId: Int64, phone: String, firstName: String, lastName: String)
     

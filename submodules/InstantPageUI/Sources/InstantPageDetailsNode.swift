@@ -212,7 +212,7 @@ final class InstantPageDetailsArrowNode : ASDisplayNode {
             self.setNeedsDisplay()
         }
     }
-    private (set) var open: Bool
+    private(set) var open: Bool
     
     private var progress: CGFloat = 0.0
     private var targetProgress: CGFloat?

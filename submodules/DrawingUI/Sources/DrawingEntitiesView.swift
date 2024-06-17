@@ -28,6 +28,8 @@ private func makeEntityView(context: AccountContext, entity: DrawingEntity) -> D
         return DrawingMediaEntityView(context: context, entity: entity)
     } else if let entity = entity as? DrawingLocationEntity {
         return DrawingLocationEntityView(context: context, entity: entity)
+    } else if let entity = entity as? DrawingLinkEntity {
+        return DrawingLinkEntityView(context: context, entity: entity)
     } else {
         return nil
     }
@@ -52,6 +54,9 @@ private func prepareForRendering(entityView: DrawingEntityView) {
         entityView.entity.renderImage = entityView.getRenderImage()
     }
     if let entityView = entityView as? DrawingLocationEntityView {
+        entityView.entity.renderImage = entityView.getRenderImage()
+    }
+    if let entityView = entityView as? DrawingLinkEntityView {
         entityView.entity.renderImage = entityView.getRenderImage()
     }
 }
@@ -377,6 +382,14 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 text.scale = zoomScale
             }
         } else if let location = entity as? DrawingLocationEntity {
+            location.position = center
+            if setup {
+                location.rotation = rotation
+                location.referenceDrawingSize = self.size
+                location.width = floor(self.size.width * 0.85)
+                location.scale = zoomScale
+            }
+        } else if let location = entity as? DrawingLinkEntity {
             location.position = center
             if setup {
                 location.rotation = rotation
@@ -811,7 +824,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                     break
                 }
                 
-                let transition = Transition.easeInOut(duration: 0.2)
+                let transition = ComponentTransition.easeInOut(duration: 0.2)
                 if isTrappedInBin, let binView = self.bin.view {
                     if !selectedEntityView.isTrappedInBin {
                         let refs = [
@@ -908,7 +921,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 self.bringSubviewToFront(binView)
             }
             binView.frame = binFrame
-            Transition.easeInOut(duration: 0.2).setAlpha(view: binView, alpha: location != nil ? 1.0 : 0.0, delay: location == nil && wasOpened ? 0.4 : 0.0)
+            ComponentTransition.easeInOut(duration: 0.2).setAlpha(view: binView, alpha: location != nil ? 1.0 : 0.0, delay: location == nil && wasOpened ? 0.4 : 0.0)
         }
         return isOpened
     }
@@ -1176,7 +1189,7 @@ private final class EntityBinComponent: Component {
         }
         
         private var wasOpened = false
-        func update(component: EntityBinComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: EntityBinComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -1221,7 +1234,7 @@ private final class EntityBinComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

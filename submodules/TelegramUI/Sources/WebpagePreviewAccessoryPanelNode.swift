@@ -12,8 +12,6 @@ import AccessoryPanelNode
 import AppBundle
 
 final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
-    private let webpageDisposable = MetaDisposable()
-    
     private(set) var webpage: TelegramMediaWebpage
     private(set) var url: String
     
@@ -69,11 +67,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         
         self.updateWebpage()
     }
-    
-    deinit {
-        self.webpageDisposable.dispose()
-    }
-    
+        
     override func animateIn() {
         self.iconView.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
     }

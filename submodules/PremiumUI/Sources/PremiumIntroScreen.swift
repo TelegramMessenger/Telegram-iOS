@@ -242,6 +242,12 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .storiesLinks:
+            if case .storiesLinks = rhs {
+                return true
+            } else {
+                return false
+            }
         case let .channelBoost(peerId):
             if case .channelBoost(peerId) = rhs {
                 return true
@@ -326,6 +332,7 @@ public enum PremiumSource: Equatable {
     case storiesFormatting
     case storiesExpirationDurations
     case storiesSuggestedReactions
+    case storiesLinks
     case storiesHigherQuality
     case channelBoost(EnginePeer.Id)
     case nameColor
@@ -406,6 +413,8 @@ public enum PremiumSource: Equatable {
             return "stories__expiration_durations"
         case .storiesSuggestedReactions:
             return "stories__suggested_reactions"
+        case .storiesLinks:
+            return "stories__links"
         case .storiesHigherQuality:
             return "stories__quality"
         case let .channelBoost(peerId):
@@ -1046,7 +1055,7 @@ final class SectionGroupComponent: Component {
             }
         }
         
-        func update(component: SectionGroupComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: SectionGroupComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let sideInset: CGFloat = 16.0
             
             self.backgroundColor = component.backgroundColor
@@ -1153,7 +1162,7 @@ final class SectionGroupComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -3594,7 +3603,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 context.add(bottomPanel
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height / 2.0))
                     .opacity(bottomPanelAlpha)
-                    .disappear(Transition.Disappear { view, transition, completion in
+                    .disappear(ComponentTransition.Disappear { view, transition, completion in
                         if case .none = transition.animation {
                             completion()
                             return
@@ -3607,7 +3616,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 context.add(bottomSeparator
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height))
                     .opacity(bottomPanelAlpha)
-                    .disappear(Transition.Disappear { view, transition, completion in
+                    .disappear(ComponentTransition.Disappear { view, transition, completion in
                         if case .none = transition.animation {
                             completion()
                             return
@@ -3619,7 +3628,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 )
                 context.add(button
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height + bottomPanelPadding + button.size.height / 2.0))
-                    .disappear(Transition.Disappear { view, transition, completion in
+                    .disappear(ComponentTransition.Disappear { view, transition, completion in
                         if case .none = transition.animation {
                             completion()
                             return

@@ -145,7 +145,7 @@ public final class MultilineTextWithEntitiesComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        public func update(component: MultilineTextWithEntitiesComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        public func update(component: MultilineTextWithEntitiesComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let attributedString: NSAttributedString
             switch component.text {
             case let .plain(string):
@@ -205,7 +205,7 @@ public final class MultilineTextWithEntitiesComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

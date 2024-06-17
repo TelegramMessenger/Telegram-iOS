@@ -78,10 +78,7 @@ final class StarsTransactionsScreenComponent: Component {
         private let navigationBackgroundView: BlurredBackgroundView
         private let navigationSeparatorLayer: SimpleLayer
         private let navigationSeparatorLayerContainer: SimpleLayer
-        
-        private let headerView = ComponentView<Empty>()
-        private let headerOffsetContainer: UIView
-        
+                
         private let scrollContainerView: UIView
         
         private let overscroll = ComponentView<Empty>()
@@ -119,9 +116,6 @@ final class StarsTransactionsScreenComponent: Component {
         private var outgoingTransactionsContext: StarsTransactionsContext?
         
         override init(frame: CGRect) {
-            self.headerOffsetContainer = UIView()
-            self.headerOffsetContainer.isUserInteractionEnabled = false
-            
             self.navigationBackgroundView = BlurredBackgroundView(color: nil, enableBlur: true)
             self.navigationBackgroundView.alpha = 0.0
             
@@ -158,8 +152,6 @@ final class StarsTransactionsScreenComponent: Component {
             
             self.navigationSeparatorLayerContainer.addSublayer(self.navigationSeparatorLayer)
             self.layer.addSublayer(self.navigationSeparatorLayerContainer)
-            
-            self.addSubview(self.headerOffsetContainer)
         }
         
         required init?(coder: NSCoder) {
@@ -202,7 +194,7 @@ final class StarsTransactionsScreenComponent: Component {
             }
         }
                 
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             let scrollBounds = self.scrollView.bounds
             
             let isLockedAtPanels = scrollBounds.maxY == self.scrollView.contentSize.height
@@ -222,7 +214,7 @@ final class StarsTransactionsScreenComponent: Component {
                 let fraction = max(0.0, min(1.0, titleOffset / titleOffsetDelta))
                 titleScale = 1.0 - fraction * 0.36
                 
-                let headerTransition: Transition = .immediate
+                let headerTransition: ComponentTransition = .immediate
                 
                 if let starView = self.starView.view {
                     let starPosition = CGPoint(x: self.scrollView.frame.width / 2.0, y: topInset + starView.bounds.height / 2.0 - 30.0 - titleOffset * titleScale)
@@ -238,7 +230,7 @@ final class StarsTransactionsScreenComponent: Component {
                     headerTransition.setScale(view: titleView, scale: titleScale)
                 }
                 
-                let animatedTransition = Transition(animation: .curve(duration: 0.18, curve: .easeInOut))
+                let animatedTransition = ComponentTransition(animation: .curve(duration: 0.18, curve: .easeInOut))
                 animatedTransition.setAlpha(view: self.navigationBackgroundView, alpha: navigationBackgroundAlpha)
                 animatedTransition.setAlpha(layer: self.navigationSeparatorLayerContainer, alpha: navigationBackgroundAlpha)
                 
@@ -272,7 +264,7 @@ final class StarsTransactionsScreenComponent: Component {
         }
                 
         private var isUpdating = false
-        func update(component: StarsTransactionsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: StarsTransactionsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -283,7 +275,7 @@ final class StarsTransactionsScreenComponent: Component {
             
             var balanceUpdated = false
             if let starsState = self.starsState {
-                if let previousBalance, starsState.balance != previousBalance {
+                if let previousBalance = self.previousBalance, starsState.balance != previousBalance {
                     balanceUpdated = true
                 }
                 self.previousBalance = starsState.balance
@@ -337,7 +329,7 @@ final class StarsTransactionsScreenComponent: Component {
              
             contentHeight += environment.statusBarHeight
             
-            let starTransition: Transition = .immediate
+            let starTransition: ComponentTransition = .immediate
             
             var topBackgroundColor = environment.theme.list.plainBackgroundColor
             let bottomBackgroundColor = environment.theme.list.blocksBackgroundColor
@@ -529,7 +521,10 @@ final class StarsTransactionsScreenComponent: Component {
                             strings: environment.strings,
                             dateTimeFormat: environment.dateTimeFormat,
                             count: self.starsState?.balance ?? 0,
-                            purchaseAvailable: !premiumConfiguration.areStarsDisabled,
+                            rate: nil,
+                            actionTitle: environment.strings.Stars_Intro_Buy,
+                            actionAvailable: !premiumConfiguration.areStarsDisabled,
+                            actionIsEnabled: true,
                             buy: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
@@ -560,21 +555,24 @@ final class StarsTransactionsScreenComponent: Component {
                 if let current = self.allTransactionsContext {
                     allTransactionsContext = current
                 } else {
-                    allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(starsContext: component.starsContext, subject: .all)
+                    allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsContext(component.starsContext), mode: .all)
+                    self.allTransactionsContext = allTransactionsContext
                 }
                 
                 let incomingTransactionsContext: StarsTransactionsContext
                 if let current = self.incomingTransactionsContext {
                     incomingTransactionsContext = current
                 } else {
-                    incomingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(starsContext: component.starsContext, subject: .incoming)
+                    incomingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsContext(component.starsContext), mode: .incoming)
+                    self.incomingTransactionsContext = incomingTransactionsContext
                 }
                 
                 let outgoingTransactionsContext: StarsTransactionsContext
                 if let current = self.outgoingTransactionsContext {
                     outgoingTransactionsContext = current
                 } else {
-                    outgoingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(starsContext: component.starsContext, subject: .outgoing)
+                    outgoingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsContext(component.starsContext), mode: .outgoing)
+                    self.outgoingTransactionsContext = outgoingTransactionsContext
                 }
                 
                 panelItems.append(StarsTransactionsPanelContainerComponent.Item(
@@ -583,6 +581,7 @@ final class StarsTransactionsScreenComponent: Component {
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
                         transactionsContext: allTransactionsContext,
+                        isAccount: true,
                         action: { transaction in
                             component.openTransaction(transaction)
                         }
@@ -595,6 +594,7 @@ final class StarsTransactionsScreenComponent: Component {
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
                         transactionsContext: incomingTransactionsContext,
+                        isAccount: true,
                         action: { transaction in
                             component.openTransaction(transaction)
                         }
@@ -607,6 +607,7 @@ final class StarsTransactionsScreenComponent: Component {
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
                         transactionsContext: outgoingTransactionsContext,
+                        isAccount: true,
                         action: { transaction in
                             component.openTransaction(transaction)
                         }
@@ -686,7 +687,7 @@ final class StarsTransactionsScreenComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -714,13 +715,15 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
             }
         ), navigationBarAppearance: .transparent)
         
+        self.navigationPresentation = .modalInLargeLayout
+        
         self.options.set(.single([]) |> then(context.engine.payments.starsTopUpOptions()))
         
         openTransactionImpl = { [weak self] transaction in
             guard let self else {
                 return
             }
-            let controller = context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction)
+            let controller = context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction, isAccount: true)
             self.push(controller)
         }
         

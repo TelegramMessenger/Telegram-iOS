@@ -19,6 +19,7 @@ public enum ChartType {
     case twoAxisHourlyStep
     case twoAxis5MinStep
     case currency
+    case stars
 }
 
 public extension ChartTheme {    
@@ -87,7 +88,42 @@ public func createChartController(_ data: String, type: ChartType, rate: Double 
                     controller = StackedBarsChartController(chartsCollection: collection)
                     controller.isZoomable = false
                 case .currency:
-                    controller = StackedBarsChartController(chartsCollection: collection, isCrypto: true, rate: rate)
+                    var iconCache: [UInt32: UIImage] = [:]
+                    controller = StackedBarsChartController(chartsCollection: collection, currency: .ton, drawCurrency: { context, color, point in
+                        let icon: UIImage?
+                        if let current = iconCache[color.rgb] {
+                            icon = current
+                        } else if let image = generateTintedImage(image: UIImage(bundleImageName: "Ads/Ton"), color: color) {
+                            icon = generateImage(image.size, rotatedContext: { size, context in
+                                context.clear(CGRect(origin: .zero, size: size))
+                                if let cgImage = image.cgImage {
+                                    context.draw(cgImage, in: CGRect(origin: .zero, size: size), byTiling: false)
+                                }
+                            })
+                            iconCache[color.rgb] = icon
+                        } else {
+                            icon = nil
+                        }
+                        if let icon, let cgImage = icon.cgImage {
+                            context.draw(cgImage, in: CGRect(origin: point.offsetBy(dx: 0.0, dy: -2.0), size: icon.size), byTiling: false)
+                        }
+                    }, rate: rate)
+                    controller.isZoomable = false
+                case .stars:
+                    var icon: UIImage?
+                    if let image = UIImage(bundleImageName: "Premium/Stars/StarSmall") {
+                        icon = generateImage(CGSize(width: floor(image.size.width * 0.82), height: floor(image.size.width * 0.82)), rotatedContext: { size, context in
+                            context.clear(CGRect(origin: .zero, size: size))
+                            if let cgImage = image.cgImage {
+                                context.draw(cgImage, in: CGRect(origin: .zero, size: size), byTiling: false)
+                            }
+                        })
+                    }
+                    controller = StackedBarsChartController(chartsCollection: collection, currency: .xtr, drawCurrency: { context, color, point in
+                        if let icon, let cgImage = icon.cgImage {
+                            context.draw(cgImage, in: CGRect(origin: point.offsetBy(dx: -3.0, dy: -4.0), size: icon.size), byTiling: false)
+                        }
+                    }, rate: rate)
                     controller.isZoomable = false
                 case .step:
                     controller = StepBarsChartController(chartsCollection: collection)

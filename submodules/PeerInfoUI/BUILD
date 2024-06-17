@@ -77,6 +77,8 @@ swift_library(
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
         "//submodules/TelegramUI/Components/SendInviteLinkScreen",
         "//submodules/TelegramUI/Components/GroupStickerPackSetupController",
+        "//submodules/TelegramUI/Components/PeerManagement/OwnershipTransferController",
+        "//submodules/TelegramUI/Components/PeerManagement/OldChannelsController",
     ],
     visibility = [
         "//visibility:public",

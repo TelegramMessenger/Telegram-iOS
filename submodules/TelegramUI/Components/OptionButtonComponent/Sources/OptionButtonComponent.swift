@@ -64,7 +64,7 @@ public final class OptionButtonComponent: Component {
                 guard let self else {
                     return
                 }
-                let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                let transition = ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut))
                 let scale: CGFloat = highlighed ? 0.8 : 1.0
                 transition.setSublayerTransform(view: self, transform: CATransform3DMakeScale(scale, scale, 1.0))
             }
@@ -85,7 +85,7 @@ public final class OptionButtonComponent: Component {
             component.action()
         }
         
-        func update(component: OptionButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: OptionButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let previousComponent = self.component
             
             self.component = component
@@ -135,7 +135,7 @@ public final class OptionButtonComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

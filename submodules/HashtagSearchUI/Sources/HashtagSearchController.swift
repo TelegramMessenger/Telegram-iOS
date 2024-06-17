@@ -23,7 +23,7 @@ public final class HashtagSearchController: TelegramBaseController {
     private var transitionDisposable: Disposable?
     private let openMessageFromSearchDisposable = MetaDisposable()
     
-    private var presentationData: PresentationData
+    private(set) var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
     private let animationCache: AnimationCache
@@ -54,14 +54,17 @@ public final class HashtagSearchController: TelegramBaseController {
                         
         self.presentationDataDisposable = (self.context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-            if let strongSelf = self {
-                let previousTheme = strongSelf.presentationData.theme
-                let previousStrings = strongSelf.presentationData.strings
+            if let self {
+                let previousTheme = self.presentationData.theme
+                let previousStrings = self.presentationData.strings
                 
-                strongSelf.presentationData = presentationData
+                self.presentationData = presentationData
                 
                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
-                    strongSelf.updateThemeAndStrings()
+                    self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+                    
+                    self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+                    self.controllerNode.updatePresentationData(self.presentationData)
                 }
             }
         })
@@ -88,15 +91,7 @@ public final class HashtagSearchController: TelegramBaseController {
         
         self.displayNodeDidLoad()
     }
-    
-    private func updateThemeAndStrings() {
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
-        
-        self.controllerNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
-    }
-    
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         

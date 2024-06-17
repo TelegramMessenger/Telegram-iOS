@@ -431,7 +431,7 @@ final class StoryItemSetViewListComponent: Component {
             self.dismissInput?()
         }
         
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             guard let component = self.component, let itemLayout = self.itemLayout else {
                 return
             }
@@ -860,7 +860,7 @@ final class StoryItemSetViewListComponent: Component {
                         
                         if applyState {
                             //TODO:determine sync
-                            self.state?.updated(transition: Transition.immediate.withUserData(PeerListItemComponent.TransitionHint(synchronousLoad: true)))
+                            self.state?.updated(transition: ComponentTransition.immediate.withUserData(PeerListItemComponent.TransitionHint(synchronousLoad: true)))
                         }
                         
                         var hasContent = false
@@ -903,7 +903,7 @@ final class StoryItemSetViewListComponent: Component {
             }
         }
         
-        func update(component: StoryItemSetViewListComponent, availableSize: CGSize, visualHeight: CGFloat, sideInset: CGFloat, navigationHeight: CGFloat, navigationSearchPartHeight: CGFloat, isSearchActive: Bool, transition: Transition) {
+        func update(component: StoryItemSetViewListComponent, availableSize: CGSize, visualHeight: CGFloat, sideInset: CGFloat, navigationHeight: CGFloat, navigationSearchPartHeight: CGFloat, isSearchActive: Bool, transition: ComponentTransition) {
             let themeUpdated = self.component?.theme !== component.theme
             self.component = component
             
@@ -1351,13 +1351,13 @@ final class StoryItemSetViewListComponent: Component {
             self.currentContentView?.sourceView(storyId: storyId)
         }
         
-        func animateIn(transition: Transition) {
+        func animateIn(transition: ComponentTransition) {
             let offset = self.bounds.height - self.navigationBarBackground.frame.minY
-            Transition.immediate.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: -offset))
+            ComponentTransition.immediate.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: -offset))
             transition.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: 0.0))
         }
         
-        func animateOut(transition: Transition, completion: @escaping () -> Void) {
+        func animateOut(transition: ComponentTransition, completion: @escaping () -> Void) {
             let offset = self.bounds.height - self.navigationBarBackground.frame.minY
             transition.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: -offset), completion: { _ in
                 completion()
@@ -1459,14 +1459,14 @@ final class StoryItemSetViewListComponent: Component {
                 let _ = self
                 
                 if let sourceView {
-                    let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                    let transition = ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut))
                     transition.setAlpha(view: sourceView, alpha: 1.0)
                 }
             }
             controller.present(contextController, in: .window(.root))
         }
         
-        func update(component: StoryItemSetViewListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: StoryItemSetViewListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let themeUpdated = self.component?.theme !== component.theme
             
             self.component = component
@@ -1586,7 +1586,7 @@ final class StoryItemSetViewListComponent: Component {
             
             var tabSelectorTransition = transition
             if transition.animation.isImmediate, self.tabSelector.view != nil {
-                tabSelectorTransition = Transition(animation: .curve(duration: 0.35, curve: .spring))
+                tabSelectorTransition = ComponentTransition(animation: .curve(duration: 0.35, curve: .spring))
             }
             let tabSelectorSize = self.tabSelector.update(
                 transition: tabSelectorTransition,
@@ -1901,7 +1901,7 @@ final class StoryItemSetViewListComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

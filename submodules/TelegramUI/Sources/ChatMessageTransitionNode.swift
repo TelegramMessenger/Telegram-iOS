@@ -243,6 +243,8 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
     final class DecorationItemNodeImpl: ASDisplayNode, ChatMessageTransitionNode.DecorationItemNode {
         let itemNode: ChatMessageItemNodeProtocol
         let contentView: UIView
+        var globalPortalSourceView: PortalSourceView?
+        let aboveEverything: Bool
         private let getContentAreaInScreenSpace: () -> CGRect
         
         private let scrollingContainer: ASDisplayNode
@@ -251,9 +253,10 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         
         fileprivate weak var overlayController: OverlayTransitionContainerController?
         
-        init(itemNode: ChatMessageItemNodeProtocol, contentView: UIView, getContentAreaInScreenSpace: @escaping () -> CGRect) {
+        init(itemNode: ChatMessageItemNodeProtocol, contentView: UIView, aboveEverything: Bool, getContentAreaInScreenSpace: @escaping () -> CGRect) {
             self.itemNode = itemNode
             self.contentView = contentView
+            self.aboveEverything = aboveEverything
             self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
             
             self.clippingNode = ASDisplayNode()
@@ -267,7 +270,16 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
             self.addSubnode(self.clippingNode)
             self.clippingNode.addSubnode(self.scrollingContainer)
             self.scrollingContainer.addSubnode(self.containerNode)
-            self.containerNode.view.addSubview(self.contentView)
+            
+            if aboveEverything {
+                let globalPortalSourceView = PortalSourceView()
+                globalPortalSourceView.needsGlobalPortal = true
+                self.globalPortalSourceView = globalPortalSourceView
+                globalPortalSourceView.addSubview(self.contentView)
+                self.containerNode.view.addSubview(globalPortalSourceView)
+            } else {
+                self.containerNode.view.addSubview(self.contentView)
+            }
         }
         
         func updateLayout(size: CGSize) {
@@ -275,6 +287,9 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
             
             let absoluteRect = self.itemNode.view.convert(self.itemNode.view.bounds, to: self.itemNode.supernode?.supernode?.view)
             self.containerNode.frame = absoluteRect
+            if let globalPortalSourceView = self.globalPortalSourceView {
+                globalPortalSourceView.frame = CGRect(origin: CGPoint(), size: size)
+            }
         }
         
         func addExternalOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -962,8 +977,8 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         self.listNode.setCurrentSendAnimationCorrelationIds(correlationIds)
     }
     
-    public func add(decorationView: UIView, itemNode: ChatMessageItemNodeProtocol) -> DecorationItemNode {
-        let decorationItemNode = DecorationItemNodeImpl(itemNode: itemNode, contentView: decorationView, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
+    public func add(decorationView: UIView, itemNode: ChatMessageItemNodeProtocol, aboveEverything: Bool) -> DecorationItemNode {
+        let decorationItemNode = DecorationItemNodeImpl(itemNode: itemNode, contentView: decorationView, aboveEverything: aboveEverything, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
         decorationItemNode.updateLayout(size: self.bounds.size)
        
         self.decorationItemNodes.append(decorationItemNode)

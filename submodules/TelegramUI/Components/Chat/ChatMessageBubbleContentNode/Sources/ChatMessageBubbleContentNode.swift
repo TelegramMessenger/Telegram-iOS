@@ -163,11 +163,13 @@ public struct ChatMessageBubbleContentTapAction {
     }
     
     public var content: Content
+    public var rects: [CGRect]?
     public var hasLongTapAction: Bool
     public var activate: (() -> Promise<Bool>?)?
     
-    public init(content: Content, hasLongTapAction: Bool = true, activate: (() -> Promise<Bool>?)? = nil) {
+    public init(content: Content, rects: [CGRect]? = nil, hasLongTapAction: Bool = true, activate: (() -> Promise<Bool>?)? = nil) {
         self.content = content
+        self.rects = rects
         self.hasLongTapAction = hasLongTapAction
         self.activate = activate
     }

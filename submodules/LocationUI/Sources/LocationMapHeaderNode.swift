@@ -34,7 +34,7 @@ private func generateShadowImage(theme: PresentationTheme, highlighted: Bool) ->
     })?.stretchableImage(withLeftCapWidth: 13, topCapHeight: 0)
 }
 
-final class LocationMapHeaderNode: ASDisplayNode {
+public final class LocationMapHeaderNode: ASDisplayNode {
     private var presentationData: PresentationData
     private let toggleMapModeSelection: () -> Void
     private let goToUserLocation: () -> Void
@@ -44,8 +44,8 @@ final class LocationMapHeaderNode: ASDisplayNode {
     private var displayingPlacesButton = false
     private var proximityNotification: Bool?
     
-    let mapNode: LocationMapNode
-    var trackingMode: LocationTrackingMode = .none
+    public let mapNode: LocationMapNode
+    public var trackingMode: LocationTrackingMode = .none
     
     private let optionsBackgroundNode: ASImageNode
     private let optionsSeparatorNode: ASDisplayNode
@@ -57,9 +57,9 @@ final class LocationMapHeaderNode: ASDisplayNode {
     private let placesButtonNode: HighlightableButtonNode
     private let shadowNode: ASImageNode
     
-    private var validLayout: (ContainerViewLayout, CGFloat, CGFloat, CGFloat, CGSize)?
+    private var validLayout: (ContainerViewLayout, CGFloat, CGFloat, CGFloat, CGFloat, CGSize)?
     
-    init(presentationData: PresentationData, toggleMapModeSelection: @escaping () -> Void, goToUserLocation: @escaping () -> Void, setupProximityNotification: @escaping (Bool) -> Void = { _ in }, showPlacesInThisArea: @escaping () -> Void = {}) {
+    public init(presentationData: PresentationData, toggleMapModeSelection: @escaping () -> Void, goToUserLocation: @escaping () -> Void, setupProximityNotification: @escaping (Bool) -> Void = { _ in }, showPlacesInThisArea: @escaping () -> Void = {}) {
         self.presentationData = presentationData
         self.toggleMapModeSelection = toggleMapModeSelection
         self.goToUserLocation = goToUserLocation
@@ -131,7 +131,7 @@ final class LocationMapHeaderNode: ASDisplayNode {
         self.placesButtonNode.addTarget(self, action: #selector(self.placesPressed), forControlEvents: .touchUpInside)
     }
     
-    func updateState(mapMode: LocationMapMode, trackingMode: LocationTrackingMode, displayingMapModeOptions: Bool, displayingPlacesButton: Bool, proximityNotification: Bool?, animated: Bool) {
+    public func updateState(mapMode: LocationMapMode, trackingMode: LocationTrackingMode, displayingMapModeOptions: Bool, displayingPlacesButton: Bool, proximityNotification: Bool?, animated: Bool) {
         self.mapNode.mapMode = mapMode
         self.trackingMode = trackingMode
         self.infoButtonNode.isSelected = displayingMapModeOptions
@@ -143,13 +143,13 @@ final class LocationMapHeaderNode: ASDisplayNode {
         self.displayingPlacesButton = displayingPlacesButton
         self.proximityNotification = proximityNotification
         
-        if updateLayout, let (layout, navigationBarHeight, topPadding, offset, size) = self.validLayout {
+        if updateLayout, let (layout, navigationBarHeight, topPadding, controlsTopPadding, offset, size) = self.validLayout {
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .spring) : .immediate
-            self.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, topPadding: topPadding, offset: offset, size: size, transition: transition)
+            self.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, topPadding: topPadding, controlsTopPadding: controlsTopPadding, offset: offset, size: size, transition: transition)
         }
     }
     
-    func updatePresentationData(_ presentationData: PresentationData) {
+    public func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         
         self.optionsBackgroundNode.image = generateBackgroundImage(theme: presentationData.theme)
@@ -177,13 +177,13 @@ final class LocationMapHeaderNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, topPadding: CGFloat, offset: CGFloat, size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (layout, navigationBarHeight, topPadding, offset, size)
+    public func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, topPadding: CGFloat, controlsTopPadding: CGFloat, offset: CGFloat, size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (layout, navigationBarHeight, topPadding, controlsTopPadding, offset, size)
         
-        let mapHeight: CGFloat = floor(layout.size.height * 1.3)
-        let mapFrame = CGRect(x: 0.0, y: floorToScreenPixels((size.height - mapHeight + navigationBarHeight) / 2.0) + offset, width: size.width, height: mapHeight)
+        let mapHeight: CGFloat = floor(layout.size.height * 1.3) + layout.intrinsicInsets.top * 2.0
+        let mapFrame = CGRect(x: 0.0, y: floorToScreenPixels((size.height - mapHeight + navigationBarHeight) / 2.0) + offset + floor(layout.intrinsicInsets.top * 0.5), width: size.width, height: mapHeight)
         transition.updateFrame(node: self.mapNode, frame: mapFrame)
-        self.mapNode.updateLayout(size: mapFrame.size)
+        self.mapNode.updateLayout(size: mapFrame.size, topPadding: 0.0)
         
         let inset: CGFloat = 6.0
         
@@ -191,6 +191,8 @@ final class LocationMapHeaderNode: ASDisplayNode {
         let placesButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - placesButtonSize.width) / 2.0), y: self.displayingPlacesButton ? navigationBarHeight + topPadding + inset : 0.0), size: placesButtonSize)
         transition.updateFrame(node: self.placesBackgroundNode, frame: placesButtonFrame)
         transition.updateFrame(node: self.placesButtonNode, frame: CGRect(origin: CGPoint(), size: placesButtonSize))
+        transition.updateAlpha(node: self.placesBackgroundNode, alpha: self.displayingPlacesButton ? 1.0 : 0.0)
+        transition.updateAlpha(node: self.placesButtonNode, alpha: self.displayingPlacesButton ? 1.0 : 0.0)
         
         transition.updateFrame(node: self.shadowNode, frame: CGRect(x: 0.0, y: size.height - 14.0, width: size.width, height: 14.0))
         
@@ -207,26 +209,26 @@ final class LocationMapHeaderNode: ASDisplayNode {
         transition.updateAlpha(node: self.notificationButtonNode, alpha: self.proximityNotification != nil ? 1.0 : 0.0)
         transition.updateAlpha(node: self.optionsSecondSeparatorNode, alpha: self.proximityNotification != nil ? 1.0 : 0.0)
         
-        transition.updateFrame(node: self.optionsBackgroundNode, frame: CGRect(x: size.width - inset - panelButtonSize.width - panelInset * 2.0 - layout.safeInsets.right, y: navigationBarHeight + topPadding + inset, width: panelButtonSize.width + panelInset * 2.0, height: panelHeight + panelInset * 2.0))
+        transition.updateFrame(node: self.optionsBackgroundNode, frame: CGRect(x: size.width - inset - panelButtonSize.width - panelInset * 2.0 - layout.safeInsets.right, y: navigationBarHeight + controlsTopPadding + inset, width: panelButtonSize.width + panelInset * 2.0, height: panelHeight + panelInset * 2.0))
         
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
         let optionsAlpha: CGFloat = size.height > 160.0 + navigationBarHeight && !self.forceIsHidden ? 1.0 : 0.0
         alphaTransition.updateAlpha(node: self.optionsBackgroundNode, alpha: optionsAlpha)
     }
     
-    var forceIsHidden: Bool = false {
+    public var forceIsHidden: Bool = false {
         didSet {
-            if let (layout, navigationBarHeight, topPadding, offset, size) = self.validLayout {
-                self.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, topPadding: topPadding, offset: offset, size: size, transition: .immediate)
+            if let (layout, navigationBarHeight, topPadding, controlsTopPadding, offset, size) = self.validLayout {
+                self.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, topPadding: topPadding, controlsTopPadding: controlsTopPadding, offset: offset, size: size, transition: .immediate)
             }
         }
     }
     
-    func updateHighlight(_ highlighted: Bool) {
+    public func updateHighlight(_ highlighted: Bool) {
         self.shadowNode.image = generateShadowImage(theme: self.presentationData.theme, highlighted: highlighted)
     }
     
-    func proximityButtonFrame() -> CGRect? {
+    public func proximityButtonFrame() -> CGRect? {
         if self.notificationButtonNode.alpha > 0.0 {
             return self.optionsBackgroundNode.view.convert(self.notificationButtonNode.frame, to: self.view)
         } else {

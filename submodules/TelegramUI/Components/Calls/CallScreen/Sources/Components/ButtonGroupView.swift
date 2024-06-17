@@ -86,7 +86,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
         return result
     }
     
-    func update(size: CGSize, insets: UIEdgeInsets, minWidth: CGFloat, controlsHidden: Bool, displayClose: Bool, strings: PresentationStrings, buttons: [Button], notices: [Notice], transition: Transition) -> CGFloat {
+    func update(size: CGSize, insets: UIEdgeInsets, minWidth: CGFloat, controlsHidden: Bool, displayClose: Bool, strings: PresentationStrings, buttons: [Button], notices: [Notice], transition: ComponentTransition) -> CGFloat {
         self.buttons = buttons
         
         let buttonSize: CGFloat = 56.0
@@ -284,7 +284,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
                     button.action()
                 }
                 
-                Transition.immediate.setScale(view: buttonView, scale: 0.001)
+                ComponentTransition.immediate.setScale(view: buttonView, scale: 0.001)
                 buttonView.alpha = 0.0
                 transition.setScale(view: buttonView, scale: 1.0)
             }

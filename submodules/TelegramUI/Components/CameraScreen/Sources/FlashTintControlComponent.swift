@@ -80,7 +80,7 @@ private final class FlashColorComponent: Component {
             super.cancelTracking(with: event)
         }
                 
-        func update(component: FlashColorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: FlashColorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             let contentSize = CGSize(width: 30.0, height: 30.0)
             self.contentView.frame = CGRect(origin: .zero, size: contentSize)
@@ -131,7 +131,7 @@ private final class FlashColorComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -208,7 +208,7 @@ final class FlashTintControlComponent: Component {
             self.component?.dismiss()
         }
                                 
-        func update(component: FlashTintControlComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: FlashTintControlComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let isFirstTime = self.component == nil
             self.component = component
             
@@ -319,7 +319,7 @@ final class FlashTintControlComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -374,7 +374,7 @@ private final class SliderView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    private func updateValue(transition: Transition = .immediate) {
+    private func updateValue(transition: ComponentTransition = .immediate) {
         let width = self.frame.width
         
         let range = self.maxValue - self.minValue

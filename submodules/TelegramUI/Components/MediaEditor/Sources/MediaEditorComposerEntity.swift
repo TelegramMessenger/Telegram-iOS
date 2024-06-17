@@ -28,6 +28,10 @@ private func prerenderTextTransformations(entity: DrawingEntity, image: UIImage,
         angle = -entity.rotation
         scale = entity.scale
         position = entity.position
+    } else if let entity = entity as? DrawingLinkEntity {
+        angle = -entity.rotation
+        scale = entity.scale
+        position = entity.position
     } else {
         fatalError()
     }
@@ -117,6 +121,8 @@ func composerEntitiesForDrawingEntity(postbox: Postbox, textScale: CGFloat, enti
             }
             return entities
         } else if let entity = entity as? DrawingLocationEntity {
+            return [prerenderTextTransformations(entity: entity, image: renderImage, textScale: textScale, colorSpace: colorSpace)]
+        } else if let entity = entity as? DrawingLinkEntity {
             return [prerenderTextTransformations(entity: entity, image: renderImage, textScale: textScale, colorSpace: colorSpace)]
         }
     }

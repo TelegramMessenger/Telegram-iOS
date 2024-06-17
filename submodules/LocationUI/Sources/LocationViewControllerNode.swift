@@ -41,159 +41,159 @@ private struct LocationViewTransaction {
     let animated: Bool
 }
 
-private enum LocationViewEntryId: Hashable {
+public enum LocationViewEntryId: Hashable {
     case info
     case toggleLiveLocation(Bool)
     case liveLocation(UInt32)
 }
 
-private enum LocationViewEntry: Comparable, Identifiable {
+public enum LocationViewEntry: Comparable, Identifiable {
     case info(PresentationTheme, TelegramMediaMap, String?, Double?, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime, Bool)
     case toggleLiveLocation(PresentationTheme, String, String, Double?, Double?, Bool, EngineMessage.Id?)
     case liveLocation(PresentationTheme, PresentationDateTimeFormat, PresentationPersonNameOrder, EngineMessage, Double?, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime, Int)
     
-    var stableId: LocationViewEntryId {
+    public var stableId: LocationViewEntryId {
         switch self {
-            case .info:
-                return .info
-            case let .toggleLiveLocation(_, _, _, _, _, additional, _):
-                return .toggleLiveLocation(additional)
-            case let .liveLocation(_, _, _, message, _, _, _, _, _):
-                return .liveLocation(message.stableId)
+        case .info:
+            return .info
+        case let .toggleLiveLocation(_, _, _, _, _, additional, _):
+            return .toggleLiveLocation(additional)
+        case let .liveLocation(_, _, _, message, _, _, _, _, _):
+            return .liveLocation(message.stableId)
         }
     }
     
-    static func ==(lhs: LocationViewEntry, rhs: LocationViewEntry) -> Bool {
+    public static func ==(lhs: LocationViewEntry, rhs: LocationViewEntry) -> Bool {
         switch lhs {
-            case let .info(lhsTheme, lhsLocation, lhsAddress, lhsDistance, lhsDrivingTime, lhsTransitTime, lhsWalkingTime, lhsHasEta):
-                if case let .info(rhsTheme, rhsLocation, rhsAddress, rhsDistance, rhsDrivingTime, rhsTransitTime, rhsWalkingTime, rhsHasEta) = rhs, lhsTheme === rhsTheme, lhsLocation.venue?.id == rhsLocation.venue?.id, lhsAddress == rhsAddress, lhsDistance == rhsDistance, lhsDrivingTime == rhsDrivingTime, lhsTransitTime == rhsTransitTime, lhsWalkingTime == rhsWalkingTime, lhsHasEta == rhsHasEta {
-                    return true
-                } else {
-                    return false
-                }
-            case let .toggleLiveLocation(lhsTheme, lhsTitle, lhsSubtitle, lhsBeginTimestamp, lhsTimeout, lhsAdditional, lhsMessageId):
-                if case let .toggleLiveLocation(rhsTheme, rhsTitle, rhsSubtitle, rhsBeginTimestamp, rhsTimeout, rhsAdditional, rhsMessageId) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsBeginTimestamp == rhsBeginTimestamp, lhsTimeout == rhsTimeout, lhsAdditional == rhsAdditional, lhsMessageId == rhsMessageId {
-                    return true
-                } else {
-                    return false
-                }
-            case let .liveLocation(lhsTheme, lhsDateTimeFormat, lhsNameDisplayOrder, lhsMessage, lhsDistance, lhsDrivingTime, lhsTransitTime, lhsWalkingTime, lhsIndex):
-                if case let .liveLocation(rhsTheme, rhsDateTimeFormat, rhsNameDisplayOrder, rhsMessage, rhsDistance, rhsDrivingTime, rhsTransitTime, rhsWalkingTime, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsNameDisplayOrder == rhsNameDisplayOrder, areMessagesEqual(lhsMessage, rhsMessage), lhsDistance == rhsDistance, lhsDrivingTime == rhsDrivingTime, lhsTransitTime == rhsTransitTime, lhsWalkingTime == rhsWalkingTime, lhsIndex == rhsIndex {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    static func <(lhs: LocationViewEntry, rhs: LocationViewEntry) -> Bool {
-        switch lhs {
-            case .info:
-                switch rhs {
-                    case .info:
-                        return false
-                    case .toggleLiveLocation, .liveLocation:
-                        return true
-                }
-            case let .toggleLiveLocation(_, _, _, _, _, lhsAdditional, _):
-                switch rhs {
-                    case .info:
-                        return false
-                    case let .toggleLiveLocation(_, _, _, _, _, rhsAdditional, _):
-                        return !lhsAdditional && rhsAdditional
-                    case .liveLocation:
-                        return true
+        case let .info(lhsTheme, lhsLocation, lhsAddress, lhsDistance, lhsDrivingTime, lhsTransitTime, lhsWalkingTime, lhsHasEta):
+            if case let .info(rhsTheme, rhsLocation, rhsAddress, rhsDistance, rhsDrivingTime, rhsTransitTime, rhsWalkingTime, rhsHasEta) = rhs, lhsTheme === rhsTheme, lhsLocation.venue?.id == rhsLocation.venue?.id, lhsAddress == rhsAddress, lhsDistance == rhsDistance, lhsDrivingTime == rhsDrivingTime, lhsTransitTime == rhsTransitTime, lhsWalkingTime == rhsWalkingTime, lhsHasEta == rhsHasEta {
+                return true
+            } else {
+                return false
             }
-            case let .liveLocation(_, _, _, _, _, _, _, _, lhsIndex):
-                switch rhs {
-                    case .info, .toggleLiveLocation:
-                        return false
-                    case let .liveLocation(_, _, _, _, _, _, _, _, rhsIndex):
-                        return lhsIndex < rhsIndex
-                }
+        case let .toggleLiveLocation(lhsTheme, lhsTitle, lhsSubtitle, lhsBeginTimestamp, lhsTimeout, lhsAdditional, lhsMessageId):
+            if case let .toggleLiveLocation(rhsTheme, rhsTitle, rhsSubtitle, rhsBeginTimestamp, rhsTimeout, rhsAdditional, rhsMessageId) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsBeginTimestamp == rhsBeginTimestamp, lhsTimeout == rhsTimeout, lhsAdditional == rhsAdditional, lhsMessageId == rhsMessageId {
+                return true
+            } else {
+                return false
+            }
+        case let .liveLocation(lhsTheme, lhsDateTimeFormat, lhsNameDisplayOrder, lhsMessage, lhsDistance, lhsDrivingTime, lhsTransitTime, lhsWalkingTime, lhsIndex):
+            if case let .liveLocation(rhsTheme, rhsDateTimeFormat, rhsNameDisplayOrder, rhsMessage, rhsDistance, rhsDrivingTime, rhsTransitTime, rhsWalkingTime, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsNameDisplayOrder == rhsNameDisplayOrder, areMessagesEqual(lhsMessage, rhsMessage), lhsDistance == rhsDistance, lhsDrivingTime == rhsDrivingTime, lhsTransitTime == rhsTransitTime, lhsWalkingTime == rhsWalkingTime, lhsIndex == rhsIndex {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    public static func <(lhs: LocationViewEntry, rhs: LocationViewEntry) -> Bool {
+        switch lhs {
+        case .info:
+            switch rhs {
+            case .info:
+                return false
+            case .toggleLiveLocation, .liveLocation:
+                return true
+            }
+        case let .toggleLiveLocation(_, _, _, _, _, lhsAdditional, _):
+            switch rhs {
+            case .info:
+                return false
+            case let .toggleLiveLocation(_, _, _, _, _, rhsAdditional, _):
+                return !lhsAdditional && rhsAdditional
+            case .liveLocation:
+                return true
+            }
+        case let .liveLocation(_, _, _, _, _, _, _, _, lhsIndex):
+            switch rhs {
+            case .info, .toggleLiveLocation:
+                return false
+            case let .liveLocation(_, _, _, _, _, _, _, _, rhsIndex):
+                return lhsIndex < rhsIndex
+            }
         }
     }
     
     func item(context: AccountContext, presentationData: PresentationData, interaction: LocationViewInteraction?) -> ListViewItem {
         switch self {
-            case let .info(_, location, address, distance, drivingTime, transitTime, walkingTime, hasEta):
-                let addressString: String?
-                if let address = address {
-                    addressString = address
-                } else {
-                    addressString = presentationData.strings.Map_Locating
-                }
-                let distanceString: String?
-                if let distance = distance {
-                    distanceString = distance < 10 ? presentationData.strings.Map_YouAreHere : presentationData.strings.Map_DistanceAway(stringForDistance(strings: presentationData.strings, distance: distance)).string
-                } else {
-                    distanceString = nil
-                }
-                return LocationInfoListItem(presentationData: ItemListPresentationData(presentationData), engine: context.engine, location: location, address: addressString, distance: distanceString, drivingTime: drivingTime, transitTime: transitTime, walkingTime: walkingTime, hasEta: hasEta, action: {
-                    interaction?.goToCoordinate(location.coordinate)
-                }, drivingAction: {
-                    interaction?.requestDirections(location, nil, .driving)
-                }, transitAction: {
-                    interaction?.requestDirections(location, nil, .transit)
-                }, walkingAction: {
-                    interaction?.requestDirections(location, nil, .walking)
-                })
-            case let .toggleLiveLocation(_, title, subtitle, beginTimstamp, timeout, additional, messageId):
-                var beginTimeAndTimeout: (Double, Double)?
-                if let beginTimstamp = beginTimstamp, let timeout = timeout {
-                    beginTimeAndTimeout = (beginTimstamp, timeout)
-                } else {
-                    beginTimeAndTimeout = nil
-                }
+        case let .info(_, location, address, distance, drivingTime, transitTime, walkingTime, hasEta):
+            let addressString: String?
+            if let address = address {
+                addressString = address
+            } else {
+                addressString = presentationData.strings.Map_Locating
+            }
+            let distanceString: String?
+            if let distance = distance {
+                distanceString = distance < 10 ? presentationData.strings.Map_YouAreHere : presentationData.strings.Map_DistanceAway(stringForDistance(strings: presentationData.strings, distance: distance)).string
+            } else {
+                distanceString = nil
+            }
+            return LocationInfoListItem(presentationData: ItemListPresentationData(presentationData), engine: context.engine, location: location, address: addressString, distance: distanceString, drivingTime: drivingTime, transitTime: transitTime, walkingTime: walkingTime, hasEta: hasEta, action: {
+                interaction?.goToCoordinate(location.coordinate)
+            }, drivingAction: {
+                interaction?.requestDirections(location, nil, .driving)
+            }, transitAction: {
+                interaction?.requestDirections(location, nil, .transit)
+            }, walkingAction: {
+                interaction?.requestDirections(location, nil, .walking)
+            })
+        case let .toggleLiveLocation(_, title, subtitle, beginTimstamp, timeout, additional, messageId):
+            var beginTimeAndTimeout: (Double, Double)?
+            if let beginTimstamp = beginTimstamp, let timeout = timeout {
+                beginTimeAndTimeout = (beginTimstamp, timeout)
+            } else {
+                beginTimeAndTimeout = nil
+            }
             
-                let icon: LocationActionListItemIcon
-                if let timeout, Int32(timeout) != liveLocationIndefinitePeriod, !additional {
-                    icon = .extendLiveLocation
-                } else if beginTimeAndTimeout != nil {
-                    icon = .stopLiveLocation
-                } else {
-                    icon = .liveLocation
-                }
+            let icon: LocationActionListItemIcon
+            if let timeout, Int32(timeout) != liveLocationIndefinitePeriod, !additional {
+                icon = .extendLiveLocation
+            } else if beginTimeAndTimeout != nil {
+                icon = .stopLiveLocation
+            } else {
+                icon = .liveLocation
+            }
             
-                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), engine: context.engine, title: title, subtitle: subtitle, icon: icon, beginTimeAndTimeout: !additional ? beginTimeAndTimeout : nil, action: {
-                    if beginTimeAndTimeout != nil {
-                        if let timeout, Int32(timeout) != liveLocationIndefinitePeriod {
-                            if additional {
-                                interaction?.stopLiveLocation()
-                            } else {
-                                interaction?.sendLiveLocation(nil, true, messageId)
-                            }
-                        } else {
+            return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), engine: context.engine, title: title, subtitle: subtitle, icon: icon, beginTimeAndTimeout: !additional ? beginTimeAndTimeout : nil, action: {
+                if beginTimeAndTimeout != nil {
+                    if let timeout, Int32(timeout) != liveLocationIndefinitePeriod {
+                        if additional {
                             interaction?.stopLiveLocation()
+                        } else {
+                            interaction?.sendLiveLocation(nil, true, messageId)
                         }
                     } else {
-                        interaction?.sendLiveLocation(nil, false, nil)
+                        interaction?.stopLiveLocation()
                     }
-                }, highlighted: { highlight in
-                    interaction?.updateSendActionHighlight(highlight)
-                })
-            case let .liveLocation(_, dateTimeFormat, nameDisplayOrder, message, distance, drivingTime, transitTime, walkingTime, _):
-                var title: String?
-                if let author = message.author {
-                    title = author.displayTitle(strings: presentationData.strings, displayOrder: nameDisplayOrder)
+                } else {
+                    interaction?.sendLiveLocation(nil, false, nil)
                 }
-                return LocationLiveListItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: context, message: message, distance: distance, drivingTime: drivingTime, transitTime: transitTime, walkingTime: walkingTime, action: {
-                    if let location = getLocation(from: message) {
-                        interaction?.goToCoordinate(location.coordinate)
-                    }
-                }, longTapAction: {}, drivingAction: {
-                    if let location = getLocation(from: message) {
-                        interaction?.requestDirections(location, title, .driving)
-                    }
-                }, transitAction: {
-                    if let location = getLocation(from: message) {
-                        interaction?.requestDirections(location, title, .transit)
-                    }
-                }, walkingAction: {
-                    if let location = getLocation(from: message) {
-                        interaction?.requestDirections(location, title, .walking)
-                    }
-                })
+            }, highlighted: { highlight in
+                interaction?.updateSendActionHighlight(highlight)
+            })
+        case let .liveLocation(_, dateTimeFormat, nameDisplayOrder, message, distance, drivingTime, transitTime, walkingTime, _):
+            var title: String?
+            if let author = message.author {
+                title = author.displayTitle(strings: presentationData.strings, displayOrder: nameDisplayOrder)
+            }
+            return LocationLiveListItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: context, message: message, distance: distance, drivingTime: drivingTime, transitTime: transitTime, walkingTime: walkingTime, action: {
+                if let location = getLocation(from: message) {
+                    interaction?.goToCoordinate(location.coordinate)
+                }
+            }, longTapAction: {}, drivingAction: {
+                if let location = getLocation(from: message) {
+                    interaction?.requestDirections(location, title, .driving)
+                }
+            }, transitAction: {
+                if let location = getLocation(from: message) {
+                    interaction?.requestDirections(location, title, .transit)
+                }
+            }, walkingAction: {
+                if let location = getLocation(from: message) {
+                    interaction?.requestDirections(location, title, .walking)
+                }
+            })
         }
     }
 }
@@ -208,22 +208,51 @@ private func preparedTransition(from fromEntries: [LocationViewEntry], to toEntr
     return LocationViewTransaction(deletions: deletions, insertions: insertions, updates: updates, gotTravelTimes: gotTravelTimes, count: toEntries.count, animated: animated)
 }
 
-enum LocationViewLocation: Equatable {
+public enum LocationViewLocation: Equatable {
     case initial
     case user
     case coordinate(CLLocationCoordinate2D, Bool)
     case custom
+    
+    public static func ==(lhs: LocationViewLocation, rhs: LocationViewLocation) -> Bool {
+        switch lhs {
+        case .initial:
+            if case .initial = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .user:
+            if case .user = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .coordinate(lhsCoordinate, lhsValue):
+            if case let .coordinate(rhsCoordinate, rhsValue) = rhs, locationCoordinatesAreEqual(lhsCoordinate, rhsCoordinate), lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
+        case .custom:
+            if case .custom = rhs {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
 }
 
-struct LocationViewState {
-    var mapMode: LocationMapMode
-    var displayingMapModeOptions: Bool
-    var selectedLocation: LocationViewLocation
-    var trackingMode: LocationTrackingMode
-    var updatingProximityRadius: Int32?
-    var cancellingProximityRadius: Bool
+public struct LocationViewState {
+    public var mapMode: LocationMapMode
+    public var displayingMapModeOptions: Bool
+    public var selectedLocation: LocationViewLocation
+    public var trackingMode: LocationTrackingMode
+    public var updatingProximityRadius: Int32?
+    public var cancellingProximityRadius: Bool
     
-    init() {
+    public init() {
         self.mapMode = .map
         self.displayingMapModeOptions = false
         self.selectedLocation = .initial
@@ -614,12 +643,12 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 switch state.selectedLocation {
                     case .initial:
                         if previousState?.selectedLocation != .initial {
-                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: location.coordinate, span: viewMapSpan, animated: previousState != nil)
+                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: location.coordinate, span: LocationMapNode.viewMapSpan, animated: previousState != nil)
                         }
                     case let .coordinate(coordinate, defaultSpan):
-                        if let previousState = previousState, case let .coordinate(previousCoordinate, _) = previousState.selectedLocation, previousCoordinate == coordinate {
+                        if let previousState = previousState, case let .coordinate(previousCoordinate, _) = previousState.selectedLocation, locationCoordinatesAreEqual(previousCoordinate, coordinate) {
                         } else {
-                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: coordinate, span: defaultSpan ? defaultMapSpan : viewMapSpan, animated: true)
+                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: coordinate, span: defaultSpan ? LocationMapNode.defaultMapSpan : LocationMapNode.viewMapSpan, animated: true)
                         }
                     case .user:
                         if previousState?.selectedLocation != .user, let userLocation = userLocation {
@@ -685,7 +714,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             strongSelf.listOffset = max(0.0, offset)
             let headerFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(0.0, offset + overlap)))
             listTransition.updateFrame(node: strongSelf.headerNode, frame: headerFrame)
-            strongSelf.headerNode.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, topPadding: strongSelf.state.displayingMapModeOptions ? 38.0 : 0.0, offset: 0.0, size: headerFrame.size, transition: listTransition)
+            strongSelf.headerNode.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, topPadding: strongSelf.state.displayingMapModeOptions ? 38.0 : 0.0, controlsTopPadding: strongSelf.state.displayingMapModeOptions ? 38.0 : 0.0, offset: 0.0, size: headerFrame.size, transition: listTransition)
         }
         
         self.listNode.beganInteractiveDragging = { [weak self] _ in
@@ -923,7 +952,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         let headerFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: headerHeight))
         transition.updateFrame(node: self.headerNode, frame: headerFrame)
         
-        self.headerNode.updateLayout(layout: layout, navigationBarHeight: navigationHeight, topPadding: self.state.displayingMapModeOptions ? optionsHeight : 0.0, offset: 0.0, size: headerFrame.size, transition: transition)
+        self.headerNode.updateLayout(layout: layout, navigationBarHeight: navigationHeight, topPadding: self.state.displayingMapModeOptions ? optionsHeight : 0.0, controlsTopPadding: self.state.displayingMapModeOptions ? optionsHeight : 0.0, offset: 0.0, size: headerFrame.size, transition: transition)
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         

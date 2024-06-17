@@ -441,7 +441,7 @@ typedef enum
     [self.view addGestureRecognizer:_pinchGestureRecognizer];
     
     void (^voidBlock)(void) = ^{};
-    _buttonHandler = [[PGCameraVolumeButtonHandler alloc] initWithUpButtonPressedBlock:voidBlock upButtonReleasedBlock:voidBlock downButtonPressedBlock:voidBlock downButtonReleasedBlock:voidBlock];
+    _buttonHandler = [[PGCameraVolumeButtonHandler alloc] initWithIsCameraSpecific:true eventView:self.view upButtonPressedBlock:voidBlock upButtonReleasedBlock:voidBlock downButtonPressedBlock:voidBlock downButtonReleasedBlock:voidBlock];
     
     [self configureCamera];
 }

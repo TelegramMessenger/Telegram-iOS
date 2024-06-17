@@ -2235,7 +2235,7 @@ public class CameraScreen: ViewController {
             self.cameraIsActive = false
             self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .immediate)
             
-            let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+            let transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
             if let view = self.componentHost.findTaggedView(tag: cancelButtonTag) {
                 view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
                 transition.setAlpha(view: view, alpha: 0.0)
@@ -2313,7 +2313,7 @@ public class CameraScreen: ViewController {
                 self.cameraIsActive = true
                 self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .immediate)
                 
-                let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                let transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                 if let view = self.componentHost.findTaggedView(tag: cancelButtonTag) {
                     view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                     transition.setAlpha(view: view, alpha: 1.0)
@@ -2466,14 +2466,14 @@ public class CameraScreen: ViewController {
             return result
         }
         
-        func requestUpdateLayout(hasAppeared: Bool, transition: Transition) {
+        func requestUpdateLayout(hasAppeared: Bool, transition: ComponentTransition) {
             if let layout = self.validLayout {
                 self.containerLayoutUpdated(layout: layout, forceUpdate: true, hasAppeared: hasAppeared, transition: transition)
             }
         }
 
         fileprivate var hasAppeared = false
-        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, hasAppeared: Bool = false, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, hasAppeared: Bool = false, transition: ComponentTransition) {
             guard let controller = self.controller else {
                 return
             }
@@ -2808,7 +2808,7 @@ public class CameraScreen: ViewController {
     
     public var isEmbedded = false
     
-    fileprivate func updateCameraState(_ f: (CameraState) -> CameraState, transition: Transition) {
+    fileprivate func updateCameraState(_ f: (CameraState) -> CameraState, transition: ComponentTransition) {
         self.node.cameraState = f(self.node.cameraState)
         self.node.requestUpdateLayout(hasAppeared: self.node.hasAppeared, transition: transition)
     }
@@ -3211,7 +3211,7 @@ public class CameraScreen: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
 
         if !self.isDismissed {
-            (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: Transition(transition))
+            (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
         }
     }
 }
@@ -3284,7 +3284,7 @@ private final class DualIconComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
                 
-        func update(component: DualIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: DualIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
                         
@@ -3302,7 +3302,7 @@ private final class DualIconComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

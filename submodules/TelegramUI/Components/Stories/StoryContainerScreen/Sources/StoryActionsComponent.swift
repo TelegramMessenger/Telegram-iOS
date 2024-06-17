@@ -63,7 +63,7 @@ public final class StoryActionsComponent: Component {
                 
                 let scale: CGFloat = highlighted ? 0.6 : 1.0
                 
-                let transition = Transition(animation: .curve(duration: highlighted ? 0.5 : 0.3, curve: .spring))
+                let transition = ComponentTransition(animation: .curve(duration: highlighted ? 0.5 : 0.3, curve: .spring))
                 transition.setSublayerTransform(view: self, transform: CATransform3DMakeScale(scale, scale, 1.0))
                 transition.setScale(view: self.maskBackgroundView, scale: scale)
             }
@@ -81,7 +81,7 @@ public final class StoryActionsComponent: Component {
             self.action(item)
         }
         
-        func update(item: Item, size: CGSize, transition: Transition) {
+        func update(item: Item, size: CGSize, transition: ComponentTransition) {
             if self.item == item {
                 return
             }
@@ -125,7 +125,7 @@ public final class StoryActionsComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: StoryActionsComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: StoryActionsComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.componentState = state
             
@@ -175,7 +175,7 @@ public final class StoryActionsComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

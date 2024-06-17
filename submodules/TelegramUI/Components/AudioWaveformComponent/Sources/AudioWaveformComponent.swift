@@ -364,7 +364,7 @@ public final class AudioWaveformComponent: Component {
             }
         }
         
-        func update(component: AudioWaveformComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: AudioWaveformComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let size = CGSize(width: availableSize.width, height: availableSize.height)
             
             if self.validSize != size || self.component != component {
@@ -650,7 +650,7 @@ public final class AudioWaveformComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

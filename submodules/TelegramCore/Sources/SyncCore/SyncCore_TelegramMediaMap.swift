@@ -2,33 +2,28 @@ import Postbox
 
 public let liveLocationIndefinitePeriod: Int32 = 0x7fffffff
 
-public final class NamedGeoPlace: PostboxCoding, Equatable {
-    public let country: String?
+public final class MapGeoAddress: PostboxCoding, Equatable {
+    public let country: String
     public let state: String?
     public let city: String?
-    public let district: String?
     public let street: String?
     
-    public init(country: String?, state: String?, city: String?, district: String?, street: String?) {
+    public init(country: String, state: String?, city: String?, street: String?) {
         self.country = country
         self.state = state
         self.city = city
-        self.district = district
         self.street = street
     }
     
     public init(decoder: PostboxDecoder) {
-        self.country = decoder.decodeOptionalStringForKey("gp_co")
+        self.country = decoder.decodeStringForKey("gp_co", orElse: "")
         self.state = decoder.decodeOptionalStringForKey("gp_sta")
         self.city = decoder.decodeOptionalStringForKey("gp_ci")
-        self.district = decoder.decodeOptionalStringForKey("gp_dis")
         self.street = decoder.decodeOptionalStringForKey("gp_str")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        if let country = self.country {
-            encoder.encodeString(country, forKey: "gp_co")
-        }
+        encoder.encodeString(country, forKey: "gp_co")
         
         if let state = self.state {
             encoder.encodeString(state, forKey: "gp_sta")
@@ -38,16 +33,12 @@ public final class NamedGeoPlace: PostboxCoding, Equatable {
             encoder.encodeString(city, forKey: "gp_ci")
         }
         
-        if let district = self.district {
-            encoder.encodeString(district, forKey: "gp_dis")
-        }
-        
         if let street = self.street {
             encoder.encodeString(street, forKey: "gp_str")
         }
     }
     
-    public static func ==(lhs: NamedGeoPlace, rhs: NamedGeoPlace) -> Bool {
+    public static func ==(lhs: MapGeoAddress, rhs: MapGeoAddress) -> Bool {
         if lhs.country != rhs.country {
             return false
         }
@@ -55,9 +46,6 @@ public final class NamedGeoPlace: PostboxCoding, Equatable {
             return false
         }
         if lhs.city != rhs.city {
-            return false
-        }
-        if lhs.district != rhs.district {
             return false
         }
         if lhs.street != rhs.street {
@@ -137,21 +125,21 @@ public final class TelegramMediaMap: Media, Equatable {
     public let longitude: Double
     public let heading: Int32?
     public let accuracyRadius: Double?
-    public let geoPlace: NamedGeoPlace?
     public let venue: MapVenue?
+    public let address: MapGeoAddress?
     public let liveBroadcastingTimeout: Int32?
     public let liveProximityNotificationRadius: Int32?
     
     public let id: MediaId? = nil
     public let peerIds: [PeerId] = []
     
-    public init(latitude: Double, longitude: Double, heading: Int32?, accuracyRadius: Double?, geoPlace: NamedGeoPlace?, venue: MapVenue?, liveBroadcastingTimeout: Int32?, liveProximityNotificationRadius: Int32?) {
+    public init(latitude: Double, longitude: Double, heading: Int32?, accuracyRadius: Double?, venue: MapVenue?, address: MapGeoAddress? = nil, liveBroadcastingTimeout: Int32? = nil, liveProximityNotificationRadius: Int32? = nil) {
         self.latitude = latitude
         self.longitude = longitude
         self.heading = heading
         self.accuracyRadius = accuracyRadius
-        self.geoPlace = geoPlace
         self.venue = venue
+        self.address = address
         self.liveBroadcastingTimeout = liveBroadcastingTimeout
         self.liveProximityNotificationRadius = liveProximityNotificationRadius
     }
@@ -161,8 +149,8 @@ public final class TelegramMediaMap: Media, Equatable {
         self.longitude = decoder.decodeDoubleForKey("lo", orElse: 0.0)
         self.heading = decoder.decodeOptionalInt32ForKey("hdg")
         self.accuracyRadius = decoder.decodeOptionalDoubleForKey("acc")
-        self.geoPlace = decoder.decodeObjectForKey("gp", decoder: { NamedGeoPlace(decoder: $0) }) as? NamedGeoPlace
         self.venue = decoder.decodeObjectForKey("ve", decoder: { MapVenue(decoder: $0) }) as? MapVenue
+        self.address = decoder.decodeObjectForKey("adr", decoder: { MapGeoAddress(decoder: $0) }) as? MapGeoAddress
         self.liveBroadcastingTimeout = decoder.decodeOptionalInt32ForKey("bt")
         self.liveProximityNotificationRadius = decoder.decodeOptionalInt32ForKey("pnr")
     }
@@ -180,15 +168,15 @@ public final class TelegramMediaMap: Media, Equatable {
         } else {
             encoder.encodeNil(forKey: "acc")
         }
-        if let geoPlace = self.geoPlace {
-            encoder.encodeObject(geoPlace, forKey: "gp")
-        } else {
-            encoder.encodeNil(forKey: "gp")
-        }
         if let venue = self.venue {
             encoder.encodeObject(venue, forKey: "ve")
         } else {
             encoder.encodeNil(forKey: "ve")
+        }
+        if let address = self.address {
+            encoder.encodeObject(address, forKey: "adr")
+        } else {
+            encoder.encodeNil(forKey: "adr")
         }
         if let liveBroadcastingTimeout = self.liveBroadcastingTimeout {
             encoder.encodeInt32(liveBroadcastingTimeout, forKey: "bt")
@@ -215,9 +203,6 @@ public final class TelegramMediaMap: Media, Equatable {
                 return false
             }
             if self.accuracyRadius != other.accuracyRadius {
-                return false
-            }
-            if self.geoPlace != other.geoPlace {
                 return false
             }
             if self.venue != other.venue {

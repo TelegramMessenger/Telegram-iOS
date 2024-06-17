@@ -154,7 +154,7 @@ public final class Button: Component {
             }
         }
         
-        private func updateAlpha(transition: Transition) {
+        private func updateAlpha(transition: ComponentTransition) {
             guard let component = self.component else {
                 return
             }
@@ -271,7 +271,7 @@ public final class Button: Component {
             super.cancelTracking(with: event)
         }
         
-        func update(component: Button, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: Button, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let contentSize = self.contentView.update(
                 transition: transition,
                 component: component.content,
@@ -301,7 +301,7 @@ public final class Button: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

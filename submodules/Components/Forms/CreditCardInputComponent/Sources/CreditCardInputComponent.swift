@@ -133,7 +133,7 @@ public final class CreditCardInputComponent: Component {
             }
         }
         
-        func update(component: CreditCardInputComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: CreditCardInputComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             switch component.dataType {
             case .cardNumber:
                 self.textField.autoFormattingBehavior = .cardNumbers
@@ -166,7 +166,7 @@ public final class CreditCardInputComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

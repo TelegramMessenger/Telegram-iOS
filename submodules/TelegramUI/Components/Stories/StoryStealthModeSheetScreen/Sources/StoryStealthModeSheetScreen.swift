@@ -78,7 +78,7 @@ private final class StoryStealthModeSheetContentComponent: Component {
         private func displayCooldown() {
             if !self.showCooldownToast {
                 self.showCooldownToast = true
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut)))
             }
             
             self.hideCooldownTimer?.invalidate()
@@ -91,11 +91,11 @@ private final class StoryStealthModeSheetContentComponent: Component {
                 
                 self.showCooldownToast = false
                 
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut)))
             })
         }
         
-        func update(component: StoryStealthModeSheetContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: StoryStealthModeSheetContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -326,7 +326,7 @@ private final class StoryStealthModeSheetContentComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -385,7 +385,7 @@ private final class StoryStealthModeSheetScreenComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: StoryStealthModeSheetScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: StoryStealthModeSheetScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
@@ -461,7 +461,7 @@ private final class StoryStealthModeSheetScreenComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

@@ -82,7 +82,7 @@ public final class ContextReferenceButtonComponent: Component {
             self.component?.action(self, nil)
         }
 
-        public func update(component: ContextReferenceButtonComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        public func update(component: ContextReferenceButtonComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             let componentSize = self.componentView.update(
@@ -118,7 +118,7 @@ public final class ContextReferenceButtonComponent: Component {
         return View()
     }
 
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

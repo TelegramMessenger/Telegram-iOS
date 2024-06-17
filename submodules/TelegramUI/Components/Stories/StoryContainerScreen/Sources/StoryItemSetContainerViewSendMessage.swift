@@ -199,7 +199,7 @@ final class StoryItemSetContainerSendMessage {
             },
             requestLayout: { [weak self] transition in
                 if let self {
-                    self.view?.state?.updated(transition: Transition(transition))
+                    self.view?.state?.updated(transition: ComponentTransition(transition))
                 }
             }
         )
@@ -220,7 +220,7 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
-    func updateInputMediaNode(view: StoryItemSetContainerComponent.View, availableSize: CGSize, bottomInset: CGFloat, bottomContainerInset: CGFloat, inputHeight: CGFloat, effectiveInputHeight: CGFloat, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: Transition) -> CGFloat {
+    func updateInputMediaNode(view: StoryItemSetContainerComponent.View, availableSize: CGSize, bottomInset: CGFloat, bottomContainerInset: CGFloat, inputHeight: CGFloat, effectiveInputHeight: CGFloat, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: ComponentTransition) -> CGFloat {
         guard let context = self.context, let inputPanelView = view.inputPanel.view as? MessageInputPanelComponent.View else {
             return 0.0
         }
@@ -284,8 +284,8 @@ final class StoryItemSetContainerSendMessage {
             
             if self.needsInputActivation {
                 let inputNodeFrame = inputNodeFrame.offsetBy(dx: 0.0, dy: inputNodeHeight)
-                Transition.immediate.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
-                Transition.immediate.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeFrame)
+                ComponentTransition.immediate.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+                ComponentTransition.immediate.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeFrame)
             }
             transition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
             transition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeFrame)
@@ -571,7 +571,7 @@ final class StoryItemSetContainerSendMessage {
             guard let inputPanelView = view.inputPanel.view as? MessageInputPanelComponent.View else {
                 return
             }
-            let peer = component.slice.peer
+            let peer = component.slice.effectivePeer
             
             let controller = component.controller() as? StoryContainerScreen
             
@@ -584,12 +584,12 @@ final class StoryItemSetContainerSendMessage {
                 
                 let _ = enqueueMessages(account: component.context.account, peerId: peerId, messages: messages).start()
                 
-                view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                view.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
             } else if self.hasRecordedVideoPreview, let videoRecorderValue = self.videoRecorderValue {
                 videoRecorderValue.send()
                 self.hasRecordedVideoPreview = false
                 self.videoRecorder.set(.single(nil))
-                view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                view.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
             } else {
                 switch inputPanelView.getSendMessageInput() {
                 case let .text(text):
@@ -638,7 +638,7 @@ final class StoryItemSetContainerSendMessage {
                 return
             }
             let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
-            let peer = component.slice.peer
+            let peer = component.slice.effectivePeer
             
             let controller = component.controller() as? StoryContainerScreen
             
@@ -692,7 +692,7 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
-        let peer = component.slice.peer
+        let peer = component.slice.effectivePeer
         
         let controller = component.controller() as? StoryContainerScreen
         
@@ -740,7 +740,7 @@ final class StoryItemSetContainerSendMessage {
         guard let component = view.component else {
             return
         }
-        let peer = component.slice.peer
+        let peer = component.slice.effectivePeer
         let _ = (legacyEnqueueGifMessage(account: component.context.account, data: data) |> deliverOnMainQueue).start(next: { [weak self, weak view] message in
             if let self, let view {
                 self.sendMessages(view: view, peer: peer, messages: [message])
@@ -752,7 +752,7 @@ final class StoryItemSetContainerSendMessage {
         guard let component = view.component else {
             return
         }
-        let peer = component.slice.peer
+        let peer = component.slice.effectivePeer
         
         let size = image.size.aspectFitted(CGSize(width: 512.0, height: 512.0))
         
@@ -912,7 +912,7 @@ final class StoryItemSetContainerSendMessage {
                     }
                     self.hasRecordedVideoPreview = false
                     
-                    view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                    view.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
                 }
             }
         })
@@ -940,13 +940,13 @@ final class StoryItemSetContainerSendMessage {
                     
                     component.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data.compressedData)
                     self.recordedAudioPreview = .audio(ChatRecordedMediaPreview.Audio(resource: resource, fileSize: Int32(data.compressedData.count), duration: Int32(data.duration), waveform: AudioWaveform(bitstream: waveform, bitsPerSample: 5)))
-                    view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                    view.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
                 }
             })
         } else if let videoRecorderValue = self.videoRecorderValue {
             if videoRecorderValue.stopVideo() {
                 self.hasRecordedVideoPreview = true
-                view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                view.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
             } else {
                 self.videoRecorder.set(.single(nil))
             }
@@ -957,12 +957,12 @@ final class StoryItemSetContainerSendMessage {
         if self.recordedAudioPreview != nil {
             self.recordedAudioPreview = nil
             self.wasRecordingDismissed = true
-            view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+            view.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
         } else if self.hasRecordedVideoPreview {
             self.videoRecorder.set(.single(nil))
             self.hasRecordedVideoPreview = false
             self.wasRecordingDismissed = true
-            view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+            view.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
         }
     }
     
@@ -1013,7 +1013,7 @@ final class StoryItemSetContainerSendMessage {
             component.presentController(actionSheet, nil)
         } else {
             var preferredAction: ShareControllerPreferredAction?
-            if focusedItem.storyItem.isPublic && !component.slice.peer.isService {
+            if focusedItem.storyItem.isPublic && !component.slice.effectivePeer.isService {
                 preferredAction = .custom(action: ShareControllerAction(title: component.strings.Story_Context_CopyLink, action: {
                     let _ = ((component.context.engine.messages.exportStoryLink(peerId: peerId, id: focusedItem.storyItem.id))
                              |> deliverOnMainQueue).start(next: { link in
@@ -1170,7 +1170,7 @@ final class StoryItemSetContainerSendMessage {
             guard let self, let view else {
                 return
             }
-            let peer = component.slice.peer
+            let peer = component.slice.effectivePeer
             
             let _ = self
             
@@ -1260,7 +1260,7 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         
-        let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)
+        let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.effectivePeer.id, id: component.slice.item.storyItem.id)
         |> deliverOnMainQueue).start(next: { [weak view] link in
             guard let view, let component = view.component else {
                 return
@@ -2214,7 +2214,7 @@ final class StoryItemSetContainerSendMessage {
             inputText = text
         }
         
-        let peer = component.slice.peer
+        let peer = component.slice.effectivePeer
         let theme = defaultDarkPresentationTheme
         let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
         let controller = mediaPasteboardScreen(
@@ -2283,7 +2283,7 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         let context = component.context
-        let peer = component.slice.peer
+        let peer = component.slice.effectivePeer
         let storyId = component.slice.item.storyItem.id
         
         let theme = component.theme
@@ -2669,7 +2669,7 @@ final class StoryItemSetContainerSendMessage {
         
         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
         let updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
-        let peerId = component.slice.peer.id
+        let peerId = component.slice.effectivePeer.id
         component.context.sharedContext.openResolvedUrl(
             result,
             context: component.context,
@@ -2851,7 +2851,7 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         
-        let peerId = component.slice.peer.id
+        let peerId = component.slice.effectivePeer.id
         
         var resolveSignal: Signal<Peer?, NoError>
         if let peerName = peerName {
@@ -2918,13 +2918,13 @@ final class StoryItemSetContainerSendMessage {
                 return
             }
             if !hashtag.isEmpty {
-                /*if !"".isEmpty {
-                    let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, query: hashtag)
+                if peerName == nil {
+                    let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, scope: .query(hashtag), listContext: nil)
                     navigationController.pushViewController(searchController)
-                } else {*/
+                } else {
                     let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, all: true)
                     navigationController.pushViewController(searchController)
-                //}
+                }
             }
         }))
     }
@@ -3346,9 +3346,10 @@ final class StoryItemSetContainerSendMessage {
         
         var actions: [ContextMenuAction] = []
         switch mediaArea {
-        case let .venue(_, venue):
+        case let .venue(coordinates, venue):
             let action = { [weak controller, weak view] in
-                let subject = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: PeerId(0), namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [.geo(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: venue.venue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                let _ = view
+                /*let subject = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: PeerId(0), namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [.geo(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: venue.venue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                 let locationController = LocationViewController(
                     context: context,
                     updatedPresentationData: updatedPresentationData,
@@ -3370,7 +3371,10 @@ final class StoryItemSetContainerSendMessage {
                         view?.updateIsProgressPaused()
                     })
                 }
-                controller?.push(locationController)
+                controller?.push(locationController)*/
+                
+                let searchController = context.sharedContext.makeStorySearchController(context: context, scope: .location(coordinates: coordinates, venue: venue), listContext: nil)
+                controller?.push(searchController)
             }
             if immediate {
                 action()
@@ -3431,6 +3435,30 @@ final class StoryItemSetContainerSendMessage {
             }))
         case .reaction:
             return
+        case let .link(_, url):
+            let action = {
+                let _ = openUserGeneratedUrl(context: component.context, peerId: component.slice.effectivePeer.id, url: url, concealed: false, skipUrlAuth: false, skipConcealedAlert: false, forceDark: true, present: { [weak controller] c in
+                    controller?.present(c, in: .window(.root))
+                }, openResolved: { [weak self, weak view] resolved in
+                    guard let self, let view else {
+                        return
+                    }
+                    self.openResolved(view: view, result: resolved, forceExternal: false, concealed: false)
+                }, alertDisplayUpdated: { [weak self, weak view] alertController in
+                    guard let self, let view else {
+                        return
+                    }
+                    self.statusController = alertController
+                    view.updateIsProgressPaused()
+                })
+            }
+            if immediate {
+                action()
+                return
+            }
+            actions.append(ContextMenuAction(content: .textWithSubtitleAndIcon(title: updatedPresentationData.initial.strings.Story_ViewLink, subtitle: url, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: {
+                action()
+            }))
         }
         
         self.selectedMediaArea =  mediaArea
@@ -3485,8 +3513,8 @@ final class StoryItemSetContainerSendMessage {
                 guard let view, let component = view.component else {
                     return
                 }
-                if component.slice.peer.id != component.context.account.peerId {
-                    let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: reaction).start()
+                if component.slice.effectivePeer.id != component.context.account.peerId {
+                    let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.effectivePeer.id, id: component.slice.item.storyItem.id, reaction: reaction).start()
                 }
                 
                 let targetFrame = reactionView.convert(reactionView.bounds, to: view)

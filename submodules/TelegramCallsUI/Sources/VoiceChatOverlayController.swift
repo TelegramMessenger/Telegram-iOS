@@ -13,6 +13,7 @@ import AppBundle
 import ContextUI
 import PresentationDataUtils
 import TooltipUI
+import VoiceChatActionButton
 
 private let slideOffset: CGFloat = 80.0 + 44.0
 

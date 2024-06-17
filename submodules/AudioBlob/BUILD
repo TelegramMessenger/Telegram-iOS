@@ -10,9 +10,11 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
-        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
-        "//submodules/Display:Display",
-        "//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/AsyncDisplayKit",
+        "//submodules/Display",
+        "//submodules/LegacyComponents",
+        "//submodules/MetalEngine",
+        "//submodules/TelegramUI/Components/Calls/CallScreen",
     ],
     visibility = [
         "//visibility:public",

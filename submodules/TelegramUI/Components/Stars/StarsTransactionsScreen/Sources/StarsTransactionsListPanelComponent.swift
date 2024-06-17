@@ -31,20 +31,26 @@ final class StarsTransactionsListPanelComponent: Component {
         
     let context: AccountContext
     let transactionsContext: StarsTransactionsContext
+    let isAccount: Bool
     let action: (StarsContext.State.Transaction) -> Void
 
     init(
         context: AccountContext,
         transactionsContext: StarsTransactionsContext,
+        isAccount: Bool,
         action: @escaping (StarsContext.State.Transaction) -> Void
     ) {
         self.context = context
         self.transactionsContext = transactionsContext
+        self.isAccount = isAccount
         self.action = action
     }
     
     static func ==(lhs: StarsTransactionsListPanelComponent, rhs: StarsTransactionsListPanelComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.isAccount != rhs.isAccount {
             return false
         }
         return true
@@ -157,7 +163,7 @@ final class StarsTransactionsListPanelComponent: Component {
             cancelContextGestures(view: scrollView)
         }
         
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             guard let component = self.component, let environment = self.environment, let itemLayout = self.itemLayout else {
                 return
             }
@@ -191,6 +197,7 @@ final class StarsTransactionsListPanelComponent: Component {
                     }
                     
                     separatorView.backgroundColor = environment.theme.list.itemBlocksSeparatorColor
+                    separatorView.isHidden = index == self.items.count - 1
                                   
                     let fontBaseDisplaySize = 17.0
                     
@@ -213,8 +220,13 @@ final class StarsTransactionsListPanelComponent: Component {
                         itemTitle = environment.strings.Stars_Intro_Transaction_GoogleTopUp_Title
                         itemSubtitle = environment.strings.Stars_Intro_Transaction_GoogleTopUp_Subtitle
                     case .fragment:
-                        itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
-                        itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
+                        if component.isAccount {
+                            itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
+                            itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
+                        } else {
+                            itemTitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Title
+                            itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Subtitle
+                        }
                     case .premiumBot:
                         itemTitle = environment.strings.Stars_Intro_Transaction_PremiumBotTopUp_Title
                         itemSubtitle = environment.strings.Stars_Intro_Transaction_PremiumBotTopUp_Subtitle
@@ -342,7 +354,7 @@ final class StarsTransactionsListPanelComponent: Component {
         }
         
         private var isUpdating = false
-        func update(component: StarsTransactionsListPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StarsTransactionsPanelEnvironment>, transition: Transition) -> CGSize {
+        func update(component: StarsTransactionsListPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StarsTransactionsPanelEnvironment>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -444,7 +456,11 @@ final class StarsTransactionsListPanelComponent: Component {
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
             
-            return availableSize
+            if component.isAccount {
+                return availableSize
+            } else {
+                return CGSize(width: availableSize.width, height: min(availableSize.height, contentSize.height))
+            }
         }
     }
     
@@ -452,7 +468,7 @@ final class StarsTransactionsListPanelComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StarsTransactionsPanelEnvironment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StarsTransactionsPanelEnvironment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -530,7 +546,7 @@ private final class AvatarComponent: Component {
             self.fetchDisposable.dispose()
         }
         
-        func update(component: AvatarComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: AvatarComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -649,7 +665,7 @@ private final class AvatarComponent: Component {
         return View(frame: CGRect())
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

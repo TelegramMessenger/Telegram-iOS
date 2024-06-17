@@ -470,7 +470,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         }
     }
     
-    public func update(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, screenCornerRadius: CGFloat, state: State, transition: Transition) {
+    public func update(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, screenCornerRadius: CGFloat, state: State, transition: ComponentTransition) {
         let params = Params(size: size, insets: insets, interfaceOrientation: interfaceOrientation, screenCornerRadius: screenCornerRadius, state: state)
         if self.params == params {
             return
@@ -576,20 +576,20 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         self.updateInternal(params: params, transition: transition)
     }
     
-    private func update(transition: Transition) {
+    private func update(transition: ComponentTransition) {
         guard let params = self.params else {
             return
         }
         self.updateInternal(params: params, transition: transition)
     }
     
-    private func updateInternal(params: Params, transition: Transition) {
+    private func updateInternal(params: Params, transition: ComponentTransition) {
         self.isUpdating = true
         defer {
             self.isUpdating = false
         }
         
-        let genericAlphaTransition: Transition
+        let genericAlphaTransition: ComponentTransition
         switch transition.animation {
         case .none:
             genericAlphaTransition = .immediate
@@ -780,7 +780,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         if self.isEmojiKeyExpanded {
             let emojiExpandedInfoView: EmojiExpandedInfoView
             var emojiExpandedInfoTransition = transition
-            let alphaTransition: Transition
+            let alphaTransition: ComponentTransition
             if let current = self.emojiExpandedInfoView {
                 emojiExpandedInfoView = current
                 alphaTransition = genericAlphaTransition
@@ -795,7 +795,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 emojiExpandedInfoView = EmojiExpandedInfoView(title: params.state.strings.Call_EncryptedAlertTitle, text: params.state.strings.Call_EncryptedAlertText(params.state.shortName).string)
                 self.emojiExpandedInfoView = emojiExpandedInfoView
                 emojiExpandedInfoView.alpha = 0.0
-                Transition.immediate.setScale(view: emojiExpandedInfoView, scale: 0.5)
+                ComponentTransition.immediate.setScale(view: emojiExpandedInfoView, scale: 0.5)
                 emojiExpandedInfoView.layer.anchorPoint = CGPoint(x: 0.5, y: 0.1)
                 if let emojiView = self.emojiView {
                     self.insertSubview(emojiExpandedInfoView, belowSubview: emojiView)
@@ -825,7 +825,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             if let emojiExpandedInfoView = self.emojiExpandedInfoView {
                 self.emojiExpandedInfoView = nil
                 
-                let alphaTransition: Transition
+                let alphaTransition: ComponentTransition
                 if !genericAlphaTransition.animation.isImmediate {
                     alphaTransition = genericAlphaTransition.withAnimation(.curve(duration: 0.1, curve: .easeInOut))
                 } else {
@@ -1038,8 +1038,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                     videoContainerView.blurredContainerLayer.bounds = self.avatarTransformLayer.bounds
                     videoContainerView.blurredContainerLayer.opacity = 0.0
                     videoContainerView.update(size: self.avatarTransformLayer.bounds.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, cornerRadius: self.avatarLayer.params?.cornerRadius ?? 0.0, controlsHidden: currentAreControlsHidden, isMinimized: false, isAnimatedOut: true, transition: .immediate)
-                    Transition.immediate.setScale(view: videoContainerView, scale: self.currentAvatarAudioScale)
-                    Transition.immediate.setScale(view: self.videoContainerBackgroundView, scale: self.currentAvatarAudioScale)
+                    ComponentTransition.immediate.setScale(view: videoContainerView, scale: self.currentAvatarAudioScale)
+                    ComponentTransition.immediate.setScale(view: self.videoContainerBackgroundView, scale: self.currentAvatarAudioScale)
                 } else {
                     videoContainerView.layer.position = expandedVideoFrame.center
                     videoContainerView.layer.bounds = CGRect(origin: CGPoint(), size: expandedVideoFrame.size)
@@ -1059,7 +1059,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             videoContainerTransition.setScale(layer: videoContainerView.blurredContainerLayer, scale: 1.0)
             videoContainerView.update(size: expandedVideoFrame.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: i != 0, isAnimatedOut: false, transition: videoContainerTransition)
             
-            let alphaTransition: Transition
+            let alphaTransition: ComponentTransition
             switch transition.animation {
             case .none:
                 alphaTransition = .immediate
@@ -1091,7 +1091,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 removedVideoContainerIndices.append(i)
                 
                 if self.videoContainerViews.count == 1 || (i == 0 && !havePrimaryVideo) {
-                    let alphaTransition: Transition = genericAlphaTransition
+                    let alphaTransition: ComponentTransition = genericAlphaTransition
                     
                     videoContainerView.update(size: avatarFrame.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, cornerRadius: avatarCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: false, isAnimatedOut: true, transition: transition)
                     transition.setPosition(layer: videoContainerView.blurredContainerLayer, position: avatarFrame.center)
@@ -1284,7 +1284,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             if !transition.animation.isImmediate {
                 transition.setPosition(view: previousStatusView, position: CGPoint(x: previousStatusView.center.x, y: previousStatusView.center.y - 5.0))
                 transition.setScale(view: previousStatusView, scale: 0.5)
-                Transition.easeInOut(duration: 0.1).setAlpha(view: previousStatusView, alpha: 0.0, completion: { [weak previousStatusView] _ in
+                ComponentTransition.easeInOut(duration: 0.1).setAlpha(view: previousStatusView, alpha: 0.0, completion: { [weak previousStatusView] _ in
                     previousStatusView?.removeFromSuperview()
                 })
             } else {
@@ -1331,7 +1331,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             if !transition.animation.isImmediate {
                 transition.animatePosition(view: self.statusView, from: CGPoint(x: 0.0, y: 5.0), to: CGPoint(), additive: true)
                 transition.animateScale(view: self.statusView, from: 0.5, to: 1.0)
-                Transition.easeInOut(duration: 0.15).animateAlpha(view: self.statusView, from: 0.0, to: 1.0)
+                ComponentTransition.easeInOut(duration: 0.15).animateAlpha(view: self.statusView, from: 0.0, to: 1.0)
             }
         } else {
             transition.setFrame(view: self.statusView, frame: statusFrame)
@@ -1358,7 +1358,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             if weakSignalView.bounds.isEmpty {
                 weakSignalView.frame = weakSignalFrame
                 if !transition.animation.isImmediate {
-                    Transition.immediate.setScale(view: weakSignalView, scale: 0.001)
+                    ComponentTransition.immediate.setScale(view: weakSignalView, scale: 0.001)
                     weakSignalView.alpha = 0.0
                     transition.setScaleWithSpring(view: weakSignalView, scale: 1.0)
                     transition.setAlpha(view: weakSignalView, alpha: 1.0)

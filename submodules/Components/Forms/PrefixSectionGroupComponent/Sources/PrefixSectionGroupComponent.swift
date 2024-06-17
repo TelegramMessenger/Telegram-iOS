@@ -71,7 +71,7 @@ public final class PrefixSectionGroupComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: PrefixSectionGroupComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: PrefixSectionGroupComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let spacing: CGFloat = 16.0
             let sideInset: CGFloat = 16.0
             
@@ -188,7 +188,7 @@ public final class PrefixSectionGroupComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

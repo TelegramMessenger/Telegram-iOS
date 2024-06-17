@@ -32,7 +32,7 @@ final class SendButton: HighlightTrackingButton {
     private let iconView: UIImageView
     private var activityIndicator: RadialStatusNode?
     
-    private var didProcessSourceCustomContent: Bool = false
+    private var previousIsAnimatedIn: Bool?
     private var sourceCustomContentView: UIView?
     
     init(kind: Kind) {
@@ -67,10 +67,11 @@ final class SendButton: HighlightTrackingButton {
         isAnimatedIn: Bool,
         isLoadingEffectAnimation: Bool,
         size: CGSize,
-        transition: Transition
+        transition: ComponentTransition
     ) {
         let innerSize = CGSize(width: size.width - 5.5 * 2.0, height: 33.0)
-        transition.setFrame(view: self.containerView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - innerSize.width) * 0.5), y: floorToScreenPixels((size.height - innerSize.height) * 0.5)), size: innerSize))
+        let containerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - innerSize.width) * 0.5), y: floorToScreenPixels((size.height - innerSize.height) * 0.5)), size: innerSize)
+        transition.setFrame(view: self.containerView, frame: containerFrame)
         transition.setCornerRadius(layer: self.containerView.layer, cornerRadius: innerSize.height * 0.5)
         
         if self.window != nil {
@@ -97,13 +98,21 @@ final class SendButton: HighlightTrackingButton {
         self.backgroundLayer.backgroundColor = presentationData.theme.chat.inputPanel.actionControlFillColor.cgColor
         transition.setFrame(layer: self.backgroundLayer, frame: CGRect(origin: CGPoint(), size: innerSize))
         
-        if !self.didProcessSourceCustomContent {
-            self.didProcessSourceCustomContent = true
+        if self.previousIsAnimatedIn != isAnimatedIn {
+            self.previousIsAnimatedIn = isAnimatedIn
+            
+            var sourceCustomContentViewAlpha: CGFloat = 1.0
+            if let sourceCustomContentView = self.sourceCustomContentView {
+                sourceCustomContentViewAlpha = sourceCustomContentView.alpha
+                sourceCustomContentView.removeFromSuperview()
+                self.sourceCustomContentView = nil
+            }
             
             if let sourceSendButton = sourceSendButton as? ChatSendMessageActionSheetControllerSourceSendButtonNode {
                 if let sourceCustomContentView = sourceSendButton.makeCustomContents() {
                     self.sourceCustomContentView = sourceCustomContentView
-                    self.iconView.superview?.insertSubview(sourceCustomContentView, belowSubview: self.iconView)
+                    sourceCustomContentView.alpha = sourceCustomContentViewAlpha
+                    self.addSubview(sourceCustomContentView)
                 }
             }
         }
@@ -118,11 +127,16 @@ final class SendButton: HighlightTrackingButton {
         }
         
         if let sourceCustomContentView = self.sourceCustomContentView {
+            var sourceCustomContentTransition = transition
+            if sourceCustomContentView.bounds.isEmpty {
+                sourceCustomContentTransition = .immediate
+            }
+            
             let sourceCustomContentSize = sourceCustomContentView.bounds.size
-            let sourceCustomContentFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((innerSize.width - sourceCustomContentSize.width) * 0.5) + UIScreenPixel, y: floorToScreenPixels((innerSize.height - sourceCustomContentSize.height) * 0.5)), size: sourceCustomContentSize)
-            transition.setPosition(view: sourceCustomContentView, position: sourceCustomContentFrame.center)
-            transition.setBounds(view: sourceCustomContentView, bounds: CGRect(origin: CGPoint(), size: sourceCustomContentFrame.size))
-            transition.setAlpha(view: sourceCustomContentView, alpha: isAnimatedIn ? 0.0 : 1.0)
+            let sourceCustomContentFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((innerSize.width - sourceCustomContentSize.width) * 0.5) + UIScreenPixel, y: floorToScreenPixels((innerSize.height - sourceCustomContentSize.height) * 0.5)), size: sourceCustomContentSize).offsetBy(dx: containerFrame.minX, dy: containerFrame.minY)
+            sourceCustomContentTransition.setPosition(view: sourceCustomContentView, position: sourceCustomContentFrame.center)
+            sourceCustomContentTransition.setBounds(view: sourceCustomContentView, bounds: CGRect(origin: CGPoint(), size: sourceCustomContentFrame.size))
+            sourceCustomContentTransition.setAlpha(view: sourceCustomContentView, alpha: isAnimatedIn ? 0.0 : 1.0)
         }
         
         if let icon = self.iconView.image {
@@ -183,7 +197,7 @@ final class SendButton: HighlightTrackingButton {
         }
     }
     
-    func updateGlobalRect(rect: CGRect, within containerSize: CGSize, transition: Transition) {
+    func updateGlobalRect(rect: CGRect, within containerSize: CGSize, transition: ComponentTransition) {
         if let backgroundContent = self.backgroundContent {
             backgroundContent.update(rect: CGRect(origin: CGPoint(x: rect.minX + self.containerView.frame.minX, y: rect.minY + self.containerView.frame.minY), size: backgroundContent.bounds.size), within: containerSize, transition: transition.containedViewLayoutTransition)
         }

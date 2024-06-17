@@ -871,7 +871,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         if let item = self.item {
             switch button.action {
                 case let .url(url):
-                    item.controllerInteraction.longTap(.url(url), item.message)
+                    item.controllerInteraction.longTap(.url(url), ChatControllerInteraction.LongTapParams(message: item.message))
                 default:
                     break
             }
@@ -986,12 +986,14 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
             additionalAnimationNode = DirectAnimatedStickerNode()
             effectiveScale = 1.4
             #else
-            if "".isEmpty {
+            additionalAnimationNode = DirectAnimatedStickerNode()
+            effectiveScale = 1.4
+            /*if "".isEmpty {
                 additionalAnimationNode = DirectAnimatedStickerNode()
                 effectiveScale = 1.4
             } else {
                 additionalAnimationNode = LottieMetalAnimatedStickerNode()
-            }
+            }*/
             #endif
             additionalAnimationNode.updateLayout(size: animationSize)
             additionalAnimationNode.setup(source: source, width: Int(animationSize.width * effectiveScale), height: Int(animationSize.height * effectiveScale), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
@@ -1005,7 +1007,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                 additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
             }
 
-            let decorationNode = transitionNode.add(decorationView: additionalAnimationNode.view, itemNode: self)
+            let decorationNode = transitionNode.add(decorationView: additionalAnimationNode.view, itemNode: self, aboveEverything: true)
             additionalAnimationNode.completed = { [weak self, weak decorationNode, weak transitionNode] _ in
                 guard let decorationNode = decorationNode else {
                     return

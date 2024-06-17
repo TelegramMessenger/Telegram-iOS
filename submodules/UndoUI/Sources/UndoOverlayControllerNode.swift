@@ -1108,7 +1108,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
-                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let link = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: undoTextColor)
                 let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
                     return ("URL", contents)
                 }), textAlignment: .natural)
@@ -1417,32 +1417,41 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     func updateContent(_ content: UndoOverlayContent) {
         self.content = content
         
+        var undoTextColor = self.presentationData.theme.list.itemAccentColor.withMultiplied(hue: 0.933, saturation: 0.61, brightness: 1.0)
+        
         switch content {
-            case let .image(image, title, text, _, _):
-                self.iconNode?.image = image
-                if let title = title {
-                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
-                } else {
-                    self.titleNode.attributedText = nil
-                }
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
-                self.renewWithCurrentContent()
-            case let .actionSucceeded(title, text, _, destructive):
-                var undoTextColor = self.presentationData.theme.list.itemAccentColor.withMultiplied(hue: 0.933, saturation: 0.61, brightness: 1.0)
-                if destructive {
-                    undoTextColor = UIColor(rgb: 0xff7b74)
-                }
-            
-                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
-                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
-                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
-                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
-                if let title {
-                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
-                }
-                self.textNode.attributedText = attributedText
-            default:
-                break
+        case let .info(title, text, _, _), let .universal(_, _, _, title, text, _, _):
+            let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+            let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+            let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+            let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
+            if let title {
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+            }
+            self.textNode.attributedText = attributedText
+        case let .image(image, title, text, _, _):
+            self.iconNode?.image = image
+            if let title = title {
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+            } else {
+                self.titleNode.attributedText = nil
+            }
+            self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+            self.renewWithCurrentContent()
+        case let .actionSucceeded(title, text, _, destructive):
+            if destructive {
+                undoTextColor = UIColor(rgb: 0xff7b74)
+            }
+            let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+            let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+            let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+            let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
+            if let title {
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+            }
+            self.textNode.attributedText = attributedText
+        default:
+            break
         }
         
         if let validLayout = self.validLayout {

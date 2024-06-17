@@ -553,18 +553,18 @@ public extension ContainedViewLayoutTransition {
         }
     }
 
-    func animateFrame(layer: CALayer, from frame: CGRect, to toFrame: CGRect? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func animateFrame(layer: CALayer, from frame: CGRect, to toFrame: CGRect? = nil, delay: Double = 0.0, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self {
-            case .immediate:
+        case .immediate:
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            layer.animateFrame(from: frame, to: toFrame ?? layer.frame, duration: duration, delay: delay, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: { result in
                 if let completion = completion {
-                    completion(true)
+                    completion(result)
                 }
-            case let .animated(duration, curve):
-                layer.animateFrame(from: frame, to: toFrame ?? layer.frame, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: { result in
-                    if let completion = completion {
-                        completion(result)
-                    }
-                })
+            })
         }
     }
     
@@ -1990,12 +1990,6 @@ extension CGRect: AnyValueProviding {
     }
 }
 
-extension CATransform3D: Equatable {
-    public static func ==(lhs: CATransform3D, rhs: CATransform3D) -> Bool {
-        return CATransform3DEqualToTransform(lhs, rhs)
-    }
-}
-
 extension CATransform3D: AnyValueProviding {
     func interpolate(with other: CATransform3D, fraction: CGFloat) -> CATransform3D {
         return CATransform3D(
@@ -2025,7 +2019,7 @@ extension CATransform3D: AnyValueProviding {
             stringValue: { "\(self)" },
             isEqual: { other in
                 if let otherValue = other.value as? CATransform3D {
-                    return self == otherValue
+                    return CATransform3DEqualToTransform(self, otherValue)
                 } else {
                     return false
                 }
@@ -2112,7 +2106,7 @@ final class ControlledTransitionProperty {
         return "MyCustomAnimation_\(Unmanaged.passUnretained(self).toOpaque())"
     }()
     
-    init<T: Equatable>(layer: CALayer, path: String, fromValue: T, toValue: T, completion: ((Bool) -> Void)?) where T: AnyValueProviding {
+    init<T>(layer: CALayer, path: String, fromValue: T, toValue: T, completion: ((Bool) -> Void)?) where T: AnyValueProviding {
         self.layer = layer
         self.path = path
         self.fromValue = fromValue.anyValue
@@ -2333,7 +2327,7 @@ public final class ControlledTransition {
         }
         
         public func updateTransform(layer: CALayer, transform: CATransform3D, completion: ((Bool) -> Void)?) {
-            if layer.transform == transform {
+            if CATransform3DEqualToTransform(layer.transform, transform) {
                 return
             }
             let fromValue: CATransform3D

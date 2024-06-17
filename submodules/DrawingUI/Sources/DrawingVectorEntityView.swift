@@ -59,7 +59,7 @@ final class DrawingVectorEntityView: DrawingEntityView {
     }
     
     override func updateSelectionView() {
-        guard let selectionView = self.selectionView as? DrawingVectorEntititySelectionView else {
+        guard let selectionView = self.selectionView as? DrawingVectorEntitySelectionView else {
             return
         }
         
@@ -96,7 +96,7 @@ final class DrawingVectorEntityView: DrawingEntityView {
         if let selectionView = self.selectionView {
             return selectionView
         }
-        let selectionView = DrawingVectorEntititySelectionView()
+        let selectionView = DrawingVectorEntitySelectionView()
         selectionView.entityView = self
         return selectionView
     }
@@ -131,7 +131,7 @@ private func midPointPositionFor(start: CGPoint, end: CGPoint, length: CGFloat, 
     return p2
 }
 
-final class DrawingVectorEntititySelectionView: DrawingEntitySelectionView {
+final class DrawingVectorEntitySelectionView: DrawingEntitySelectionView {
     private let startHandle = SimpleShapeLayer()
     private let midHandle = SimpleShapeLayer()
     private let endHandle = SimpleShapeLayer()

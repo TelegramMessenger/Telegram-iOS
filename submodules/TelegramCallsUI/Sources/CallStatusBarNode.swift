@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import AnimatedCountLabelNode
+import VoiceChatActionButton
 
 private let blue = UIColor(rgb: 0x007fff)
 private let lightBlue = UIColor(rgb: 0x00affe)

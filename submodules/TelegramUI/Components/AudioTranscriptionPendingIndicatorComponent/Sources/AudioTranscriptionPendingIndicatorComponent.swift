@@ -63,7 +63,7 @@ public final class AudioTranscriptionPendingIndicatorComponent: Component {
             }
         }
         
-        func update(component: AudioTranscriptionPendingIndicatorComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: AudioTranscriptionPendingIndicatorComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let dotSize: CGFloat = 2.0
             let spacing: CGFloat = 3.0
             
@@ -95,7 +95,7 @@ public final class AudioTranscriptionPendingIndicatorComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -134,7 +134,7 @@ public final class AudioTranscriptionPendingLottieIndicatorComponent: Component 
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: AudioTranscriptionPendingLottieIndicatorComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: AudioTranscriptionPendingLottieIndicatorComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let originalSize = CGSize(width: 48.0, height: 66.0)
             let animationSize = originalSize.aspectFitted(CGSize(width: 15.0, height: 100.0))
             let _ = self.animationView.update(
@@ -171,7 +171,7 @@ public final class AudioTranscriptionPendingLottieIndicatorComponent: Component 
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

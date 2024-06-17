@@ -52,7 +52,7 @@ private final class BlurModeComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
                 
-        func update(component: BlurModeComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: BlurModeComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
                         
@@ -108,7 +108,7 @@ private final class BlurModeComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -186,7 +186,7 @@ final class BlurComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
                 
-        func update(component: BlurComponent, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: BlurComponent, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             state.value = component.value
@@ -302,7 +302,7 @@ final class BlurComponent: Component {
                 component.isTrackingUpdated(isTracking)
                 
                 if let self {
-                    let transition: Transition
+                    let transition: ComponentTransition
                     if isTracking {
                         transition = .immediate
                     } else {
@@ -391,7 +391,7 @@ final class BlurComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -751,7 +751,7 @@ final class BlurScreenComponent: Component {
             return true
         }
         
-        func update(component: BlurScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: BlurScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -852,7 +852,7 @@ final class BlurScreenComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

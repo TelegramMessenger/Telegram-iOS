@@ -103,7 +103,7 @@ final class CreateGiveawayFooterItemNode: ItemListControllerFooterItemNode {
         
         let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - totalPanelHeight), size: CGSize(width: layout.size.width, height: panelHeight))
         
-        var buttonTransition: Transition = .easeInOut(duration: 0.2)
+        var buttonTransition: ComponentTransition = .easeInOut(duration: 0.2)
         if !hadLayout {
             buttonTransition = .immediate
         }

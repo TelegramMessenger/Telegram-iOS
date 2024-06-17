@@ -230,10 +230,10 @@ vertex BlobVertexOut callBlobVertex(
 }
 
 fragment half4 callBlobFragment(
-    BlobVertexOut in [[stage_in]]
+    BlobVertexOut in [[stage_in]],
+    const device float4 &color [[ buffer(0) ]]
 ) {
-    half alpha = 0.35;
-    return half4(1.0 * alpha, 1.0 * alpha, 1.0 * alpha, alpha);
+    return half4(color.r * color.a, color.g * color.a, color.b * color.a, color.a);
 }
 
 kernel void videoBiPlanarToRGBA(

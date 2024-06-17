@@ -39,7 +39,7 @@ public final class BundleIconComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: BundleIconComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: BundleIconComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             if self.component?.name != component.name || self.component?.tintColor != component.tintColor {
                 if let tintColor = component.tintColor {
                     self.image = generateTintedImage(image: UIImage(bundleImageName: component.name), color: tintColor, backgroundColor: nil)
@@ -62,7 +62,7 @@ public final class BundleIconComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

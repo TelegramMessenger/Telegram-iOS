@@ -10,17 +10,26 @@ import SoftwareLottieRenderer
 import LottieSwift
 
 @available(iOS 13.0, *)
-func areImagesEqual(_ lhs: UIImage, _ rhs: UIImage) -> UIImage? {
+func areImagesEqual(_ lhs: UIImage, _ rhs: UIImage, allowedDifference: Double) -> (UIImage?, UIImage) {
     let lhsBuffer = try! vImage_Buffer(cgImage: lhs.cgImage!)
     let rhsBuffer = try! vImage_Buffer(cgImage: rhs.cgImage!)
+    let deltaBuffer = try! vImage_Buffer(cgImage: lhs.cgImage!)
+    defer {
+        lhsBuffer.free()
+        rhsBuffer.free()
+        deltaBuffer.free()
+    }
     
-    let maxDifferenceCount = Int((Double(Int(lhs.size.width) * Int(lhs.size.height)) * 0.01))
+    memset(deltaBuffer.data, 0, Int(deltaBuffer.height) * deltaBuffer.rowBytes)
+    
+    let maxDifferenceCount = Int((Double(Int(lhs.size.width) * Int(lhs.size.height)) * allowedDifference))
     
     var foundDifferenceCount = 0
     
     outer: for y in 0 ..< Int(lhs.size.height) {
         let lhsRowPixels = lhsBuffer.data.assumingMemoryBound(to: UInt8.self).advanced(by: y * lhsBuffer.rowBytes)
         let rhsRowPixels = rhsBuffer.data.assumingMemoryBound(to: UInt8.self).advanced(by: y * lhsBuffer.rowBytes)
+        let deltaRowPixels = deltaBuffer.data.assumingMemoryBound(to: UInt8.self).advanced(by: y * lhsBuffer.rowBytes)
         
         for x in 0 ..< Int(lhs.size.width) {
             let lhs0 = lhsRowPixels.advanced(by: x * 4 + 0).pointee
@@ -36,69 +45,65 @@ func areImagesEqual(_ lhs: UIImage, _ rhs: UIImage) -> UIImage? {
             let maxDiff = 25
             if abs(Int(lhs0) - Int(rhs0)) > maxDiff || abs(Int(lhs1) - Int(rhs1)) > maxDiff || abs(Int(lhs2) - Int(rhs2)) > maxDiff || abs(Int(lhs3) - Int(rhs3)) > maxDiff {
                 
-                /*if false {
-                    lhsRowPixels.advanced(by: x * 4 + 0).pointee = 255
-                    lhsRowPixels.advanced(by: x * 4 + 1).pointee = 0
-                    lhsRowPixels.advanced(by: x * 4 + 2).pointee = 0
-                    lhsRowPixels.advanced(by: x * 4 + 3).pointee = 255
-                }*/
+                deltaRowPixels.advanced(by: x * 4 + 0).pointee = 255
+                deltaRowPixels.advanced(by: x * 4 + 1).pointee = 0
+                deltaRowPixels.advanced(by: x * 4 + 2).pointee = 0
+                deltaRowPixels.advanced(by: x * 4 + 3).pointee = 255
                 
                 foundDifferenceCount += 1
             }
         }
     }
     
-    lhsBuffer.free()
-    rhsBuffer.free()
+    let colorSpace = Unmanaged<CGColorSpace>.passRetained(lhs.cgImage!.colorSpace!)
+    let deltaImage = try! deltaBuffer.createCGImage(format: vImage_CGImageFormat(bitsPerComponent: 8, bitsPerPixel: 32, colorSpace: colorSpace, bitmapInfo: lhs.cgImage!.bitmapInfo, version: 0, decode: nil, renderingIntent: .defaultIntent), flags: .doNotTile)
     
     if foundDifferenceCount > maxDifferenceCount {
-        let colorSpace = Unmanaged<CGColorSpace>.passRetained(lhs.cgImage!.colorSpace!)
         let diffImage = try! lhsBuffer.createCGImage(format: vImage_CGImageFormat(bitsPerComponent: 8, bitsPerPixel: 32, colorSpace: colorSpace, bitmapInfo: lhs.cgImage!.bitmapInfo, version: 0, decode: nil, renderingIntent: .defaultIntent), flags: .doNotTile)
-        return UIImage(cgImage: diffImage)
+        
+        return (UIImage(cgImage: diffImage), UIImage(cgImage: deltaImage))
     } else {
-        return nil
+        return (nil, UIImage(cgImage: deltaImage))
     }
 }
 
 @available(iOS 13.0, *)
-func processDrawAnimation(baseCachePath: String, path: String, name: String, size: CGSize, alwaysDraw: Bool, updateImage: @escaping (UIImage?, UIImage?) -> Void) async -> Bool {
+func processDrawAnimation(baseCachePath: String, path: String, name: String, size: CGSize, allowedDifference: Double, alwaysDraw: Bool, useNonReferenceRendering: Bool, updateImage: @escaping (UIImage?, UIImage?, UIImage?) -> Void) async -> Bool {
     guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
         print("Could not load \(path)")
         return false
     }
-    
-    guard let animation = LottieAnimation(data: data) else {
-        print("Could not parse animation at \(path)")
-        return false
-    }
-    
-    let layer = LottieAnimationContainer(animation: animation)
     
     let cacheFolderPath = cacheReferenceFolderPath(baseCachePath: baseCachePath, width: Int(size.width), name: name)
     if !FileManager.default.fileExists(atPath: cacheFolderPath) {
         let _ = await cacheReferenceAnimation(baseCachePath: baseCachePath, width: Int(size.width), path: path, name: name)
     }
     
-    let renderer = SoftwareLottieRenderer(animationContainer: layer)
+    guard let renderer = SoftwareLottieRenderer(data: data) else {
+        print("Could not parse animation at \(path)")
+        return false
+    }
     
-    for i in 0 ..< min(100000, animation.frameCount) {
+    for i in 0 ..< min(100000, renderer.frameCount) {
         let frameResult = autoreleasepool {
-            let frameIndex = i % animation.frameCount
+            let frameIndex = i % renderer.frameCount
             
             let referenceImageData = try! Data(contentsOf: URL(fileURLWithPath: cacheFolderPath + "/frame\(frameIndex)"))
             let referenceImage = decompressImageFrame(data: referenceImageData)
             
-            layer.update(frameIndex)
-            let image = renderer.render(for: size, useReferenceRendering: true)!
+            renderer.setFrame(CGFloat(frameIndex))
+            let image = renderer.render(for: size, useReferenceRendering: !useNonReferenceRendering, canUseMoreMemory: false, skipImageGeneration: false)!
             
-            if let diffImage = areImagesEqual(image, referenceImage) {
-                updateImage(diffImage, referenceImage)
+            let (diffImage, deltaImage) = areImagesEqual(image, referenceImage, allowedDifference: allowedDifference)
+            
+            if !useNonReferenceRendering, let diffImage {
+                updateImage(diffImage, referenceImage, deltaImage)
                 
                 print("Mismatch in frame \(frameIndex)")
                 return false
             } else {
                 if alwaysDraw {
-                    updateImage(image, referenceImage)
+                    updateImage(image, referenceImage, diffImage)
                 }
                 return true
             }
@@ -283,6 +288,43 @@ func decompressImageFrame(data: Data) -> UIImage {
     return decodeImageQOI(data)!
 }
 
+final class ReferenceLottieAnimationItem {
+    private let referenceAnimation: Animation
+    private let referenceLayer: MainThreadAnimationLayer
+    let frameCount: Int
+    
+    init?(path: String) {
+        guard let referenceAnimation = Animation.filepath(path) else {
+            return nil
+        }
+        self.referenceAnimation = referenceAnimation
+        
+        self.referenceLayer = MainThreadAnimationLayer(animation: referenceAnimation, imageProvider: BlankImageProvider(), textProvider: DefaultTextProvider(), fontProvider: DefaultFontProvider())
+        self.referenceLayer.position = referenceAnimation.bounds.center
+        self.referenceLayer.isOpaque = false
+        self.referenceLayer.backgroundColor = nil
+        
+        self.frameCount = Int(referenceAnimation.endFrame - referenceAnimation.startFrame)
+    }
+    
+    func setFrame(index: Int) {
+        self.referenceLayer.currentFrame = self.referenceAnimation.startFrame + CGFloat(index)
+        self.referenceLayer.displayUpdate()
+    }
+    
+    func makeImage(width: Int, height: Int) -> UIImage? {
+        let size = CGSize(width: CGFloat(width), height: CGFloat(width))
+        
+        let referenceContext = ImageContext(width: width, height: height)
+        referenceContext.context.clear(CGRect(origin: CGPoint(), size: size))
+        referenceContext.context.scaleBy(x: size.width / CGFloat(self.referenceAnimation.width), y: size.height / CGFloat(self.referenceAnimation.height))
+        
+        referenceLayer.render(in: referenceContext.context)
+        
+        return referenceContext.makeImage()
+    }
+}
+
 @MainActor
 func cacheReferenceAnimation(baseCachePath: String, width: Int, path: String, name: String) -> String {
     let targetFolderPath = cacheReferenceFolderPath(baseCachePath: baseCachePath, width: width, name: name)
@@ -290,34 +332,19 @@ func cacheReferenceAnimation(baseCachePath: String, width: Int, path: String, na
         return targetFolderPath
     }
     
-    guard let referenceAnimation = Animation.filepath(path) else {
-        preconditionFailure("Could not parse reference animation at \(path)")
+    guard let referenceItem = ReferenceLottieAnimationItem(path: path) else {
+        preconditionFailure("Could not load reference animation at \(path)")
     }
-    let referenceLayer = MainThreadAnimationLayer(animation: referenceAnimation, imageProvider: BlankImageProvider(), textProvider: DefaultTextProvider(), fontProvider: DefaultFontProvider())
     
     let cacheFolderPath = NSTemporaryDirectory() + "\(UInt64.random(in: 0 ... UInt64.max))"
     let _ = try? FileManager.default.createDirectory(atPath: cacheFolderPath, withIntermediateDirectories: true)
     
-    let frameCount = Int(referenceAnimation.endFrame - referenceAnimation.startFrame)
-    
-    let size = CGSize(width: CGFloat(width), height: CGFloat(width))
-    
-    for i in 0 ..< min(100000, frameCount) {
-        let frameIndex = i % frameCount
+    for i in 0 ..< min(100000, referenceItem.frameCount) {
+        let frameIndex = i % referenceItem.frameCount
         
-        referenceLayer.currentFrame = CGFloat(frameIndex)
-        referenceLayer.displayUpdate()
-        referenceLayer.position = referenceAnimation.bounds.center
+        referenceItem.setFrame(index: frameIndex)
         
-        referenceLayer.isOpaque = false
-        referenceLayer.backgroundColor = nil
-        let referenceContext = ImageContext(width: width, height: width)
-        referenceContext.context.clear(CGRect(origin: CGPoint(), size: size))
-        referenceContext.context.scaleBy(x: size.width / CGFloat(referenceAnimation.width), y: size.height / CGFloat(referenceAnimation.height))
-        
-        referenceLayer.render(in: referenceContext.context)
-        
-        let referenceImage = referenceContext.makeImage()
+        let referenceImage = referenceItem.makeImage(width: width, height: width)!
         try! compressImageFrame(image: referenceImage).write(to: URL(fileURLWithPath: cacheFolderPath + "/frame\(i)"))
     }
     

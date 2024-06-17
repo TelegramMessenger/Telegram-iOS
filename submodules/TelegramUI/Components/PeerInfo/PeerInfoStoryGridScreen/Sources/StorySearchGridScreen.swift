@@ -16,29 +16,27 @@ import UndoUI
 import MoreHeaderButton
 import MediaEditorScreen
 import SaveToCameraRoll
+import ShareController
+import OpenInExternalAppUI
 
 final class StorySearchGridScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let searchQuery: String
+    let scope: StorySearchControllerScope
+    let listContext: SearchStoryListContext?
 
     init(
         context: AccountContext,
-        searchQuery: String
+        scope: StorySearchControllerScope,
+        listContext: SearchStoryListContext?
     ) {
         self.context = context
-        self.searchQuery = searchQuery
+        self.scope = scope
+        self.listContext = listContext
     }
 
     static func ==(lhs: StorySearchGridScreenComponent, rhs: StorySearchGridScreenComponent) -> Bool {
-        if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.searchQuery != rhs.searchQuery {
-            return false
-        }
-
         return true
     }
     
@@ -71,7 +69,7 @@ final class StorySearchGridScreenComponent: Component {
         }
         
         private var isUpdating = false
-        func update(component: StorySearchGridScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: StorySearchGridScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -99,14 +97,18 @@ final class StorySearchGridScreenComponent: Component {
             if let current = self.paneNode {
                 paneNode = current
             } else {
+                let paneNodeScope: PeerInfoStoryPaneNode.Scope
+                switch component.scope {
+                case let .query(query):
+                    paneNodeScope = .search(query: query)
+                case let .location(coordinates, venue):
+                    paneNodeScope = .location(coordinates: coordinates, venue: venue)
+                }
+                
                 paneNode = PeerInfoStoryPaneNode(
                     context: component.context,
-                    peerId: nil,
-                    searchQuery: component.searchQuery,
-                    contentType: .photoOrVideo,
+                    scope: paneNodeScope,
                     captureProtected: false,
-                    isSaved: false,
-                    isArchive: false,
                     isProfileEmbedded: false,
                     canManageStories: false,
                     navigationController: { [weak self] in
@@ -115,8 +117,9 @@ final class StorySearchGridScreenComponent: Component {
                         }
                         return self.environment?.controller()?.navigationController as? NavigationController
                     },
-                    listContext: nil
+                    listContext: component.listContext
                 )
+                paneNode.parentController = environment.controller()
                 paneNode.isEmptyUpdated = { [weak self] _ in
                     guard let self else {
                         return
@@ -164,28 +167,38 @@ final class StorySearchGridScreenComponent: Component {
         return View()
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
 
-public class StorySearchGridScreen: ViewControllerComponentContainer {
+public final class StorySearchGridScreen: ViewControllerComponentContainer {
     private let context: AccountContext
-    private let searchQuery: String
+    private let scope: StorySearchControllerScope
     private var isDismissed: Bool = false
     
     private var titleView: ChatTitleView?
     
+    override public var additionalNavigationBarHeight: CGFloat {
+        if let componentView = self.node.hostView.componentView as? StorySearchGridScreenComponent.View, let paneNode = componentView.paneNode {
+            return paneNode.additionalNavigationHeight
+        } else {
+            return 0.0
+        }
+    }
+    
     public init(
         context: AccountContext,
-        searchQuery: String
+        scope: StorySearchControllerScope,
+        listContext: SearchStoryListContext? = nil
     ) {
         self.context = context
-        self.searchQuery = searchQuery
+        self.scope = scope
         
         super.init(context: context, component: StorySearchGridScreenComponent(
             context: context,
-            searchQuery: searchQuery
+            scope: scope,
+            listContext: listContext
         ), navigationBarAppearance: .default, theme: .default)
         
         let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
@@ -202,6 +215,10 @@ public class StorySearchGridScreen: ViewControllerComponentContainer {
         self.titleView?.disableAnimations = true
         
         self.navigationItem.titleView = self.titleView
+        
+        if case .location = scope {
+            self.navigationItem.setRightBarButton(UIBarButtonItem(image: PresentationResourcesRootController.navigationShareIcon(presentationData.theme), style: .plain, target: self, action: #selector(self.sharePressed)), animated: true)
+        }
         
         self.updateTitle()
         
@@ -220,9 +237,30 @@ public class StorySearchGridScreen: ViewControllerComponentContainer {
     deinit {
     }
     
+    @objc private func sharePressed() {
+        guard case let .location(_, venue) = self.scope else {
+            return
+        }
+        let locationMap = TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, venue: nil, address: venue.address, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
+        
+        let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
+        
+        let shareAction = OpenInControllerAction(title: presentationData.strings.Conversation_ContextMenuShare, action: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.present(ShareController(context: self.context, subject: .mapMedia(locationMap), externalShare: true), in: .window(.root), with: nil)
+        })
+        self.present(OpenInActionSheetController(context: self.context, updatedPresentationData: nil, item: .location(location: locationMap, directions: nil), additionalAction: shareAction, openUrl: { [weak self] url in
+            guard let self else {
+                return
+            }
+            self.context.sharedContext.applicationBindings.openUrl(url)
+        }), in: .window(.root), with: nil)
+    }
+    
     func updateTitle() {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        let _ = presentationData
         
         guard let componentView = self.node.hostView.componentView as? StorySearchGridScreenComponent.View, let paneNode = componentView.paneNode else {
             return
@@ -235,8 +273,12 @@ public class StorySearchGridScreen: ViewControllerComponentContainer {
         } else {
             title = nil
         }
-        //TODO:localize
-        self.titleView?.titleContent = .custom("\(self.searchQuery)", title, false)
+        switch self.scope {
+        case let .query(query):
+            self.titleView?.titleContent = .custom("\(query)", title, false)
+        case .location:
+            self.titleView?.titleContent = .custom(presentationData.strings.StoryGridScreen_TitleLocationSearch, nil, false)
+        }
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

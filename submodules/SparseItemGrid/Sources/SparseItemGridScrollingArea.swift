@@ -51,7 +51,7 @@ public final class MultilineText: Component {
             preconditionFailure()
         }
 
-        func update(component: MultilineText, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: MultilineText, availableSize: CGSize, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.text.attributedText = NSAttributedString(string: component.text, font: component.font, textColor: component.color, paragraphAlignment: nil)
             let textSize = self.text.updateLayout(availableSize)
             transition.setFrame(view: self.text.view, frame: CGRect(origin: CGPoint(), size: textSize))
@@ -64,7 +64,7 @@ public final class MultilineText: Component {
         return View()
     }
 
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
@@ -97,7 +97,7 @@ public final class LottieAnimationComponent: Component {
             preconditionFailure()
         }
 
-        func update(component: LottieAnimationComponent, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: LottieAnimationComponent, availableSize: CGSize, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             if self.currentName != component.name {
                 self.currentName = component.name
 
@@ -126,7 +126,7 @@ public final class LottieAnimationComponent: Component {
         return View()
     }
 
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
@@ -184,7 +184,7 @@ private final class ScrollingTooltipAnimationComponent: Component {
             self.animator = animator
         }
 
-        func update(component: ScrollingTooltipAnimationComponent, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ScrollingTooltipAnimationComponent, availableSize: CGSize, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             return CGSize(width: 32.0, height: 32.0)
         }
 
@@ -249,7 +249,7 @@ private final class ScrollingTooltipAnimationComponent: Component {
         return View()
     }
 
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
@@ -324,7 +324,7 @@ public final class TooltipComponent: Component {
             preconditionFailure()
         }
 
-        func update(component: TooltipComponent, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: TooltipComponent, availableSize: CGSize, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let insets = UIEdgeInsets(top: 8.0, left: 8.0, bottom: 8.0, right: 8.0)
             let spacing: CGFloat = 8.0
 
@@ -400,7 +400,7 @@ public final class TooltipComponent: Component {
         return View()
     }
 
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
@@ -437,7 +437,7 @@ private final class RoundedRectangle: Component {
             preconditionFailure()
         }
 
-        func update(component: RoundedRectangle, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: RoundedRectangle, availableSize: CGSize, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let shadowInset: CGFloat = 0.0
             let diameter = min(availableSize.width, availableSize.height)
 
@@ -476,7 +476,7 @@ private final class RoundedRectangle: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
@@ -514,7 +514,7 @@ private final class ShadowRoundedRectangle: Component {
             preconditionFailure()
         }
 
-        func update(component: ShadowRoundedRectangle, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ShadowRoundedRectangle, availableSize: CGSize, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let diameter = min(availableSize.width, availableSize.height)
 
             var updated = false
@@ -551,7 +551,7 @@ private final class ShadowRoundedRectangle: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
@@ -702,7 +702,7 @@ public final class RollingText: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize)
     }
 }
@@ -1218,12 +1218,12 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         }
 
         let lineIndicatorSize = CGSize(width: (self.isDragging || self.lineTooltip != nil) ? 6.0 : 3.0, height: scrollIndicatorHeight)
-        let mappedTransition: Transition
+        let mappedTransition: ComponentTransition
         switch transition {
         case .immediate:
             mappedTransition = .immediate
         case let .animated(duration, _):
-            mappedTransition = Transition(animation: .curve(duration: duration, curve: .easeInOut))
+            mappedTransition = ComponentTransition(animation: .curve(duration: duration, curve: .easeInOut))
         }
         let _ = self.lineIndicator.update(
             transition: mappedTransition,

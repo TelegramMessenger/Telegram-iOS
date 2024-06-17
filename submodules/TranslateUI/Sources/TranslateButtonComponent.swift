@@ -151,7 +151,7 @@ final class TranslateButtonComponent: Component {
             }
         }
         
-        public func update(component: TranslateButtonComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        public func update(component: TranslateButtonComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             self.backgroundView.backgroundColor = component.theme.list.itemBlocksBackgroundColor
@@ -177,7 +177,7 @@ final class TranslateButtonComponent: Component {
         return View()
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

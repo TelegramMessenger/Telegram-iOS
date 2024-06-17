@@ -46,9 +46,9 @@ public final class ListItemComponentAdaptor: Component {
     }
     
     public final class View: UIView {
-        private var itemNode: ListViewItemNode?
+        public var itemNode: ListViewItemNode?
         
-        func update(component: ListItemComponentAdaptor, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ListItemComponentAdaptor, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let item = component.itemImpl()
             
             if let itemNode = self.itemNode {
@@ -125,7 +125,7 @@ public final class ListItemComponentAdaptor: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

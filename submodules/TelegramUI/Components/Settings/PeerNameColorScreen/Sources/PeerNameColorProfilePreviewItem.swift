@@ -378,7 +378,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                 }
                 let iconSize = CGSize(width: 34.0, height: 34.0)
                 let _ = icon.update(
-                    transition: Transition(animation.transition),
+                    transition: ComponentTransition(animation.transition),
                     component: AnyComponent(EmojiStatusComponent(
                         context: item.context,
                         animationCache: item.context.animationCache,

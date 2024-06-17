@@ -209,7 +209,7 @@ extension ChatControllerImpl {
                                 self.chatDisplayNode.collapseInput()
                                 
                                 self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedMediaDraftState(nil) }
+                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedMediaDraftState(nil) }
                                 })
                             }
                         }, usedCorrelationId ? correlationId : nil)
@@ -336,7 +336,7 @@ extension ChatControllerImpl {
                                     strongSelf.chatDisplayNode.collapseInput()
                                     
                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil) }
+                                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
                                     })
                                 }
                             }, usedCorrelationId ? correlationId : nil)
@@ -506,7 +506,7 @@ extension ChatControllerImpl {
                     strongSelf.chatDisplayNode.collapseInput()
                     
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedMediaDraftState(nil) }
+                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedMediaDraftState(nil).withUpdatedSendMessageEffect(nil) }
                     })
 
                     strongSelf.updateDownButtonVisibility()

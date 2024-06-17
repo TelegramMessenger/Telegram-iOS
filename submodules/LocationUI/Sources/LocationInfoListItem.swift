@@ -11,7 +11,7 @@ import AppBundle
 import SolidRoundedButtonNode
 import ShimmerEffect
 
-final class LocationInfoListItem: ListViewItem {
+public final class LocationInfoListItem: ListViewItem {
     let presentationData: ItemListPresentationData
     let engine: TelegramEngine
     let location: TelegramMediaMap
@@ -75,7 +75,7 @@ final class LocationInfoListItem: ListViewItem {
     }
 }
 
-final class LocationInfoListItemNode: ListViewItemNode {
+public final class LocationInfoListItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private var titleNode: TextNode?
     private var subtitleNode: TextNode?
@@ -91,7 +91,7 @@ final class LocationInfoListItemNode: ListViewItemNode {
     private var layoutParams: ListViewItemLayoutParams?
     private var absoluteLocation: (CGRect, CGSize)?
     
-    required init() {
+    required public init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         self.buttonNode = HighlightableButtonNode()
@@ -127,7 +127,7 @@ final class LocationInfoListItemNode: ListViewItemNode {
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
     
-    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let item = self.item {
             let makeLayout = self.asyncLayout()
             let (nodeLayout, nodeApply) = makeLayout(item, params)
@@ -137,7 +137,7 @@ final class LocationInfoListItemNode: ListViewItemNode {
         }
     }
         
-    func asyncLayout() -> (_ item: LocationInfoListItem, _ params: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) {
+    public func asyncLayout() -> (_ item: LocationInfoListItem, _ params: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) {
         let currentItem = self.item
         
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
@@ -204,6 +204,8 @@ final class LocationInfoListItemNode: ListViewItemNode {
                         if let _ = updatedTheme {
                             strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.plainBackgroundColor
                         }
+                        
+                        strongSelf.backgroundNode.isHidden = params.isStandalone
                         
                         let arguments = VenueIconArguments(defaultBackgroundColor: item.presentationData.theme.chat.inputPanel.actionControlFillColor, defaultForegroundColor: item.presentationData.theme.chat.inputPanel.actionControlForegroundColor)
                         if let updatedLocation = updatedLocation {
@@ -384,11 +386,11 @@ final class LocationInfoListItemNode: ListViewItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.5)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
     
