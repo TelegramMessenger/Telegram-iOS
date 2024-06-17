@@ -4,7 +4,6 @@
 #import <LottieCpp/NullCanvasImpl.h>
 
 #import "CoreGraphicsCanvasImpl.h"
-#import "ThorVGCanvasImpl.h"
 #import "SkiaCanvasImpl.h"
 
 #include <LottieCpp/RenderTreeNode.h>
@@ -113,32 +112,6 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
                 
                 return image;
             }
-        } else if ((int64_t)"" < 0) {
-            static dispatch_once_t onceToken;
-            dispatch_once(&onceToken, ^{
-                lottie::ThorVGCanvasImpl::initializeOnce();
-            });
-            
-            int bytesPerRow = ((int)size.width) * 4;
-            auto context = std::make_shared<lottie::ThorVGCanvasImpl>((int)size.width, (int)size.height, bytesPerRow);
-            
-            _canvasRenderer->render(_renderer, context, lottie::Vector2D(size.width, size.height), configuration);
-            
-            context->flush();
-            
-            CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-            CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
-            
-            CGContextRef targetContext = CGBitmapContextCreate((void *)context->backingData(), (int)size.width, (int)size.height, 8, bytesPerRow, colorSpace, bitmapInfo);
-            CGColorSpaceRelease(colorSpace);
-            
-            CGImageRef bitmapImage = CGBitmapContextCreateImage(targetContext);
-            UIImage *image = [[UIImage alloc] initWithCGImage:bitmapImage scale:1.0f orientation:UIImageOrientationDownMirrored];
-            CGImageRelease(bitmapImage);
-            
-            CGContextRelease(targetContext);
-            
-            return image;
         } else {
             auto context = std::make_shared<lottie::NullCanvasImpl>((int)size.width, (int)size.height);
             _canvasRenderer->render(_renderer, context, lottie::Vector2D(size.width, size.height), configuration);

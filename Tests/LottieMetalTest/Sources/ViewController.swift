@@ -88,7 +88,7 @@ private final class ReferenceCompareTest {
             }
             
             var continueFromName: String?
-            //continueFromName = "1258816259754165.json"
+            //continueFromName = "562563904580878375.json"
             
             let _ = await processAnimationFolderAsync(basePath: bundlePath, path: "", stopOnFailure: !testNonReference, process: { path, name, alwaysDraw in
                 if let continueFromNameValue = continueFromName {
@@ -151,6 +151,10 @@ private final class ManualReferenceCompareTest {
         
         let bundlePath = Bundle.main.path(forResource: "TestDataBundle", ofType: "bundle")!
         self.fileList = buildAnimationFolderItems(basePath: bundlePath, path: "")
+        
+        if let index = self.fileList.firstIndex(where: { $0.fileName == "shit.json" }) {
+            self.currentFileIndex = index
+        }
         
         self.renderSize = CGSize(width: 256.0, height: 256.0)
         
