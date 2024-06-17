@@ -2467,31 +2467,43 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         })))
                     }
                     if selectionCount > 1 {
-                        if !items.isEmpty {
-                            items.append(.separator)
-                        }
-                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_Grouped, icon: { theme in
-                            if !grouped {
-                                return nil
-                            }
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                        items.append(.action(ContextMenuActionItem(text: "Send Without Grouping", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Media Grid/GroupingOff"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.default)
                             
-                            self?.groupedValue = true
-                        })))
-                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_Ungrouped, icon: { theme in
-                            if grouped {
-                                return nil
-                            }
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                        }, action: {  [weak self] _, f in
-                            f(.default)
-                            
                             self?.groupedValue = false
+                            self?.controllerNode.send(asFile: false, silently: false, scheduleTime: nil, animated: true, parameters: nil, completion: {})
                         })))
+                        
+//                        if !items.isEmpty {
+//                            items.append(.separator)
+//                        }
+//                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_Grouped, icon: { theme in
+//                            if !grouped {
+//                                return nil
+//                            }
+//                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+//                        }, action: { [weak self] _, f in
+//                            f(.default)
+//                            
+//                            self?.groupedValue = true
+//                        })))
+//                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_Ungrouped, icon: { theme in
+//                            if grouped {
+//                                return nil
+//                            }
+//                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+//                        }, action: {  [weak self] _, f in
+//                            f(.default)
+//                            
+//                            self?.groupedValue = false
+//                        })))
                     }
-                    if isSpoilerAvailable || (selectionCount > 0 && isCaptionAboveMediaAvailable) {
+                    
+                    let isPaidAvailable = true
+                    
+                    if isSpoilerAvailable || isPaidAvailable || (selectionCount > 0 && isCaptionAboveMediaAvailable) {
                         if !items.isEmpty {
                             items.append(.separator)
                         }
@@ -2530,6 +2542,28 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                                         editingContext.setSpoiler(hasGeneric, for: item)
                                     }
                                 }
+                            })))
+                        }
+                        if isPaidAvailable {
+                            items.append(.action(ContextMenuActionItem(text: "Make This Content Paid", icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Paid"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self]  _, f in
+                                f(.default)
+                                guard let  self else {
+                                    return
+                                }
+                                
+                                let controller = self.context.sharedContext.makeStarsAmountScreen(context: self.context, completion: { [weak self] amount in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    if let selectionContext = strongSelf.interaction?.selectionState, let editingContext = strongSelf.interaction?.editingState {
+                                        for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
+                                            editingContext.setPrice(NSNumber(value: amount), for: item)
+                                        }
+                                    }
+                                })
+                                self.parentController()?.push(controller)
                             })))
                         }
                     }

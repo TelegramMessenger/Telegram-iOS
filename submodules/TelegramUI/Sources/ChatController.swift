@@ -126,6 +126,8 @@ import ChatMediaInputStickerGridItem
 import AdsInfoScreen
 import MessageUI
 import PhoneNumberFormat
+import OwnershipTransferController
+import OldChannelsController
 
 public enum ChatControllerPeekActions {
     case standard
@@ -410,6 +412,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return (self.presentationData, self.presentationDataPromise.get())
     }
     var presentationDataDisposable: Disposable?
+    var forcedTheme: PresentationTheme?
+    var forcedNavigationBarTheme: PresentationTheme?
+    var forcedWallpaper: TelegramWallpaper?
     
     var automaticMediaDownloadSettings: MediaAutoDownloadSettings
     var automaticMediaDownloadSettingsDisposable: Disposable?
@@ -620,7 +625,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, botAppStart: ChatControllerInitialBotAppStart? = nil, mode: ChatControllerPresentationMode = .standard(.default), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = [], customChatNavigationStack: [EnginePeer.Id]? = nil) {
+    public init(
+        context: AccountContext,
+        chatLocation: ChatLocation,
+        chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil),
+        subject: ChatControllerSubject? = nil,
+        botStart: ChatControllerInitialBotStart? = nil,
+        attachBotStart: ChatControllerInitialAttachBotStart? = nil,
+        botAppStart: ChatControllerInitialBotAppStart? = nil,
+        mode: ChatControllerPresentationMode = .standard(.default),
+        peekData: ChatPeekTimeout? = nil,
+        peerNearbyData: ChatPeerNearbyData? = nil,
+        chatListFilter: Int32? = nil,
+        chatNavigationStack: [ChatNavigationStackItem] = [],
+        customChatNavigationStack: [EnginePeer.Id]? = nil,
+        params: ChatControllerParams? = nil
+    ) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
         }
@@ -636,6 +656,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.currentChatListFilter = chatListFilter
         self.chatNavigationStack = chatNavigationStack
         self.customChatNavigationStack = customChatNavigationStack
+        
+        self.forcedTheme = params?.forcedTheme
+        self.forcedNavigationBarTheme = params?.forcedNavigationBarTheme
+        self.forcedWallpaper = params?.forcedWallpaper
 
         var useSharedAnimationPhase = false
         switch mode {
@@ -682,7 +706,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.chatLocationInfoData = .customChatContents
         }
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        if let forcedTheme = self.forcedTheme {
+            presentationData = presentationData.withUpdated(theme: forcedTheme)
+        }
+        if let forcedWallpaper = self.forcedWallpaper {
+            presentationData = presentationData.withUpdated(chatWallpaper: forcedWallpaper)
+        }
+        self.presentationData = presentationData
         self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings
         
         self.stickerSettings = ChatInterfaceStickerSettings()
@@ -870,6 +901,42 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 }
+                
+                #if DEBUG
+                if message.text == "#", let telegramImage = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage {
+                    let invoice = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: 100, startParam: "", extendedMedia: .preview(dimensions: telegramImage.representations.first?.dimensions ?? PixelDimensions(width: 1, height: 1), immediateThumbnailData: telegramImage.immediateThumbnailData, videoDuration: nil), flags: [], version: 0)
+                    
+                    let inputData = Promise<BotCheckoutController.InputData?>()
+                    inputData.set(.single(
+                        BotCheckoutController.InputData(
+                            form: BotPaymentForm(id: 123, canSaveCredentials: false, passwordMissing: false, invoice: BotPaymentInvoice(isTest: false, requestedFields: [], currency: "XTR", prices: [BotPaymentPrice(label: "", amount: 100)], tip: nil, termsInfo: nil), paymentBotId: message.id.peerId, providerId: nil, url: nil, nativeProvider: nil, savedInfo: nil, savedCredentials: [], additionalPaymentMethods: []),
+                            validatedFormInfo: nil,
+                            botPeer: nil
+                    )))
+                    if invoice.currency == "XTR", let starsContext = strongSelf.context.starsContext {
+                        let starsInputData = combineLatest(
+                            inputData.get(),
+                            starsContext.state
+                        )
+                        |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
+                            if let data, let state {
+                                return (state, data.form, data.botPeer)
+                            } else {
+                                return nil
+                            }
+                        }
+                        let _ = (starsInputData |> filter { $0 != nil } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .message(message.id), inputData: starsInputData, completion: { _ in })
+                            strongSelf.push(controller)
+                        })
+                    }
+                    return true
+                }
+                #endif
+                
                 if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia {
                     switch extendedMedia {
                         case .preview:
@@ -4272,7 +4339,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.previewing))
+            let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.previewing), params: nil)
             chatController.canReadHistory.set(false)
             
             var items: [ContextMenuItem] = [
@@ -4953,102 +5020,100 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             isScheduledMessages = true
                         }
                         
-                        if let peer = peerViewMainPeer(peerView) {
-                            if case let .messageOptions(_, _, info) = presentationInterfaceState.subject {
-                                if case .reply = info {
-                                    let titleContent: ChatTitleContent
-                                    if case let .reply(hasQuote) = messageOptionsTitleInfo, hasQuote {
-                                        titleContent = .custom(presentationInterfaceState.strings.Chat_TitleQuoteSelection, subtitleText, false)
-                                    } else {
-                                        titleContent = .custom(presentationInterfaceState.strings.Chat_TitleReply, subtitleText, false)
-                                    }
-                                    if strongSelf.chatTitleView?.titleContent != titleContent {
-                                        if strongSelf.chatTitleView?.titleContent != nil {
-                                            strongSelf.chatTitleView?.animateLayoutTransition()
-                                        }
-                                        strongSelf.chatTitleView?.titleContent = titleContent
-                                    }
-                                } else if case .link = info {
-                                    strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Chat_TitleLinkOptions, subtitleText, false)
-                                } else if displayedCount == 1 {
-                                    strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_ForwardOptions_ForwardTitleSingle, subtitleText, false)
+                        if case let .messageOptions(_, _, info) = presentationInterfaceState.subject {
+                            if case .reply = info {
+                                let titleContent: ChatTitleContent
+                                if case let .reply(hasQuote) = messageOptionsTitleInfo, hasQuote {
+                                    titleContent = .custom(presentationInterfaceState.strings.Chat_TitleQuoteSelection, subtitleText, false)
                                 } else {
-                                    strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_ForwardOptions_ForwardTitle(Int32(displayedCount ?? 1)), subtitleText, false)
+                                    titleContent = .custom(presentationInterfaceState.strings.Chat_TitleReply, subtitleText, false)
                                 }
-                            } else if let selectionState = presentationInterfaceState.interfaceState.selectionState {
-                                if selectionState.selectedIds.count > 0 {
-                                    strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_SelectedMessages(Int32(selectionState.selectedIds.count)), nil, false)
-                                } else {
-                                    if let reportReason = presentationInterfaceState.reportReason {
-                                        let title: String
-                                        switch reportReason {
-                                            case .spam:
-                                                title = presentationInterfaceState.strings.ReportPeer_ReasonSpam
-                                            case .fake:
-                                                title = presentationInterfaceState.strings.ReportPeer_ReasonFake
-                                            case .violence:
-                                                title = presentationInterfaceState.strings.ReportPeer_ReasonViolence
-                                            case .porno:
-                                                title = presentationInterfaceState.strings.ReportPeer_ReasonPornography
-                                            case .childAbuse:
-                                                title = presentationInterfaceState.strings.ReportPeer_ReasonChildAbuse
-                                            case .copyright:
-                                                title = presentationInterfaceState.strings.ReportPeer_ReasonCopyright
-                                            case .illegalDrugs:
-                                                title = presentationInterfaceState.strings.ReportPeer_ReasonIllegalDrugs
-                                            case .personalDetails:
-                                                title = presentationInterfaceState.strings.ReportPeer_ReasonPersonalDetails
-                                            case .custom:
-                                                title = presentationInterfaceState.strings.ReportPeer_ReasonOther
-                                            case .irrelevantLocation:
-                                                title = ""
-                                        }
-                                        strongSelf.chatTitleView?.titleContent = .custom(title, presentationInterfaceState.strings.Conversation_SelectMessages, false)
-                                    } else {
-                                        strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_SelectMessages, nil, false)
+                                if strongSelf.chatTitleView?.titleContent != titleContent {
+                                    if strongSelf.chatTitleView?.titleContent != nil {
+                                        strongSelf.chatTitleView?.animateLayoutTransition()
                                     }
+                                    strongSelf.chatTitleView?.titleContent = titleContent
                                 }
+                            } else if case .link = info {
+                                strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Chat_TitleLinkOptions, subtitleText, false)
+                            } else if displayedCount == 1 {
+                                strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_ForwardOptions_ForwardTitleSingle, subtitleText, false)
                             } else {
-                                if case .pinnedMessages = presentationInterfaceState.subject {
-                                    strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Chat_TitlePinnedMessages(Int32(displayedCount ?? 1)), nil, false)
+                                strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_ForwardOptions_ForwardTitle(Int32(displayedCount ?? 1)), subtitleText, false)
+                            }
+                        } else if let selectionState = presentationInterfaceState.interfaceState.selectionState {
+                            if selectionState.selectedIds.count > 0 {
+                                strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_SelectedMessages(Int32(selectionState.selectedIds.count)), nil, false)
+                            } else {
+                                if let reportReason = presentationInterfaceState.reportReason {
+                                    let title: String
+                                    switch reportReason {
+                                        case .spam:
+                                            title = presentationInterfaceState.strings.ReportPeer_ReasonSpam
+                                        case .fake:
+                                            title = presentationInterfaceState.strings.ReportPeer_ReasonFake
+                                        case .violence:
+                                            title = presentationInterfaceState.strings.ReportPeer_ReasonViolence
+                                        case .porno:
+                                            title = presentationInterfaceState.strings.ReportPeer_ReasonPornography
+                                        case .childAbuse:
+                                            title = presentationInterfaceState.strings.ReportPeer_ReasonChildAbuse
+                                        case .copyright:
+                                            title = presentationInterfaceState.strings.ReportPeer_ReasonCopyright
+                                        case .illegalDrugs:
+                                            title = presentationInterfaceState.strings.ReportPeer_ReasonIllegalDrugs
+                                        case .personalDetails:
+                                            title = presentationInterfaceState.strings.ReportPeer_ReasonPersonalDetails
+                                        case .custom:
+                                            title = presentationInterfaceState.strings.ReportPeer_ReasonOther
+                                        case .irrelevantLocation:
+                                            title = ""
+                                    }
+                                    strongSelf.chatTitleView?.titleContent = .custom(title, presentationInterfaceState.strings.Conversation_SelectMessages, false)
                                 } else {
-                                    strongSelf.chatTitleView?.titleContent = .peer(peerView: ChatTitleContent.PeerData(peerView: peerView), customTitle: nil, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages, isMuted: nil, customMessageCount: nil, isEnabled: hasPeerInfo)
-                                    let imageOverride: AvatarNodeImageOverride?
-                                    if strongSelf.context.account.peerId == peer.id {
-                                        imageOverride = .savedMessagesIcon
-                                    } else if peer.id.isReplies {
-                                        imageOverride = .repliesIcon
-                                    } else if peer.id.isAnonymousSavedMessages {
-                                        imageOverride = .anonymousSavedMessagesIcon
-                                    } else if peer.isDeleted {
-                                        imageOverride = .deletedIcon
-                                    } else {
-                                        imageOverride = nil
-                                    }
-                                    (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: EnginePeer(peer), overrideImage: imageOverride)
-                                    (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled = strongSelf.chatLocation.threadId == nil && peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil
-                                    strongSelf.chatInfoNavigationButton?.buttonItem.accessibilityLabel = presentationInterfaceState.strings.Conversation_ContextMenuOpenProfile
-                                    
-                                    strongSelf.storyStats = peerView.storyStats
-                                    if let avatarNode = strongSelf.avatarNode {
-                                        avatarNode.avatarNode.setStoryStats(storyStats: peerView.storyStats.flatMap { storyStats -> AvatarNode.StoryStats? in
-                                            if storyStats.totalCount == 0 {
-                                                return nil
-                                            }
-                                            if storyStats.unseenCount == 0 {
-                                                return nil
-                                            }
-                                            return AvatarNode.StoryStats(
-                                                totalCount: storyStats.totalCount,
-                                                unseenCount: storyStats.unseenCount,
-                                                hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends
-                                            )
-                                        }, presentationParams: AvatarNode.StoryPresentationParams(
-                                            colors: AvatarNode.Colors(theme: strongSelf.presentationData.theme),
-                                            lineWidth: 1.5,
-                                            inactiveLineWidth: 1.5
-                                        ), transition: .immediate)
-                                    }
+                                    strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_SelectMessages, nil, false)
+                                }
+                            }
+                        } else if let peer = peerViewMainPeer(peerView) {
+                            if case .pinnedMessages = presentationInterfaceState.subject {
+                                strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Chat_TitlePinnedMessages(Int32(displayedCount ?? 1)), nil, false)
+                            } else {
+                                strongSelf.chatTitleView?.titleContent = .peer(peerView: ChatTitleContent.PeerData(peerView: peerView), customTitle: nil, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages, isMuted: nil, customMessageCount: nil, isEnabled: hasPeerInfo)
+                                let imageOverride: AvatarNodeImageOverride?
+                                if strongSelf.context.account.peerId == peer.id {
+                                    imageOverride = .savedMessagesIcon
+                                } else if peer.id.isReplies {
+                                    imageOverride = .repliesIcon
+                                } else if peer.id.isAnonymousSavedMessages {
+                                    imageOverride = .anonymousSavedMessagesIcon
+                                } else if peer.isDeleted {
+                                    imageOverride = .deletedIcon
+                                } else {
+                                    imageOverride = nil
+                                }
+                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: EnginePeer(peer), overrideImage: imageOverride)
+                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled = strongSelf.chatLocation.threadId == nil && peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil
+                                strongSelf.chatInfoNavigationButton?.buttonItem.accessibilityLabel = presentationInterfaceState.strings.Conversation_ContextMenuOpenProfile
+                                
+                                strongSelf.storyStats = peerView.storyStats
+                                if let avatarNode = strongSelf.avatarNode {
+                                    avatarNode.avatarNode.setStoryStats(storyStats: peerView.storyStats.flatMap { storyStats -> AvatarNode.StoryStats? in
+                                        if storyStats.totalCount == 0 {
+                                            return nil
+                                        }
+                                        if storyStats.unseenCount == 0 {
+                                            return nil
+                                        }
+                                        return AvatarNode.StoryStats(
+                                            totalCount: storyStats.totalCount,
+                                            unseenCount: storyStats.unseenCount,
+                                            hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends
+                                        )
+                                    }, presentationParams: AvatarNode.StoryPresentationParams(
+                                        colors: AvatarNode.Colors(theme: strongSelf.presentationData.theme),
+                                        lineWidth: 1.5,
+                                        inactiveLineWidth: 1.5
+                                    ), transition: .immediate)
                                 }
                             }
                         }
@@ -6405,82 +6470,85 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var presentationData = presentationData
                 var useDarkAppearance = presentationData.theme.overallDarkAppearance
 
-                if let wallpaper = chatWallpaper, case let .emoticon(wallpaperEmoticon) = wallpaper, let theme = chatThemes.first(where: { $0.emoticon?.strippedEmoji == wallpaperEmoticon.strippedEmoji }) {
-                    let themeSettings: TelegramThemeSettings?
-                    if let matching = theme.settings?.first(where: { $0.baseTheme == presentationData.theme.referenceTheme.baseTheme }) {
-                        themeSettings = matching
-                    } else {
-                        themeSettings = theme.settings?.first
+                if let forcedTheme = strongSelf.forcedTheme {
+                    presentationData = presentationData.withUpdated(theme: forcedTheme)
+                } else {
+                    if let wallpaper = chatWallpaper, case let .emoticon(wallpaperEmoticon) = wallpaper, let theme = chatThemes.first(where: { $0.emoticon?.strippedEmoji == wallpaperEmoticon.strippedEmoji }) {
+                        let themeSettings: TelegramThemeSettings?
+                        if let matching = theme.settings?.first(where: { $0.baseTheme == presentationData.theme.referenceTheme.baseTheme }) {
+                            themeSettings = matching
+                        } else {
+                            themeSettings = theme.settings?.first
+                        }
+                        if let themeWallpaper = themeSettings?.wallpaper {
+                            chatWallpaper = themeWallpaper
+                        }
                     }
-                    if let themeWallpaper = themeSettings?.wallpaper {
-                        chatWallpaper = themeWallpaper
-                    }
-                }
-                if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoticon?.strippedEmoji == themeEmoticon.strippedEmoji }) {
-                    if let darkAppearancePreview = darkAppearancePreview {
+                    if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoticon?.strippedEmoji == themeEmoticon.strippedEmoji }) {
+                        if let darkAppearancePreview = darkAppearancePreview {
+                            useDarkAppearance = darkAppearancePreview
+                        }
+                        if let theme = makePresentationTheme(cloudTheme: theme, dark: useDarkAppearance) {
+                            theme.forceSync = true
+                            presentationData = presentationData.withUpdated(theme: theme).withUpdated(chatWallpaper: theme.chat.defaultWallpaper)
+                            
+                            Queue.mainQueue().after(1.0, {
+                                theme.forceSync = false
+                            })
+                        }
+                    } else if let darkAppearancePreview = darkAppearancePreview {
                         useDarkAppearance = darkAppearancePreview
-                    }
-                    if let theme = makePresentationTheme(cloudTheme: theme, dark: useDarkAppearance) {
-                        theme.forceSync = true
-                        presentationData = presentationData.withUpdated(theme: theme).withUpdated(chatWallpaper: theme.chat.defaultWallpaper)
+                        let lightTheme: PresentationTheme
+                        let lightWallpaper: TelegramWallpaper
                         
-                        Queue.mainQueue().after(1.0, {
-                            theme.forceSync = false
-                        })
-                    }
-                } else if let darkAppearancePreview = darkAppearancePreview {
-                    useDarkAppearance = darkAppearancePreview
-                    let lightTheme: PresentationTheme
-                    let lightWallpaper: TelegramWallpaper
-                    
-                    let darkTheme: PresentationTheme
-                    let darkWallpaper: TelegramWallpaper
-                    
-                    if presentationData.autoNightModeTriggered {
-                        darkTheme = presentationData.theme
-                        darkWallpaper = presentationData.chatWallpaper
+                        let darkTheme: PresentationTheme
+                        let darkWallpaper: TelegramWallpaper
                         
-                        var currentColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]
-                        if let colors = currentColors, colors.baseColor == .theme {
-                            currentColors = nil
-                        }
-                        
-                        let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeSettings.theme, accentColor: currentColors)] ?? themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index])
-                        
-                        if let themeSpecificWallpaper = themeSpecificWallpaper {
-                            lightWallpaper = themeSpecificWallpaper
+                        if presentationData.autoNightModeTriggered {
+                            darkTheme = presentationData.theme
+                            darkWallpaper = presentationData.chatWallpaper
+                            
+                            var currentColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]
+                            if let colors = currentColors, colors.baseColor == .theme {
+                                currentColors = nil
+                            }
+                            
+                            let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeSettings.theme, accentColor: currentColors)] ?? themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index])
+                            
+                            if let themeSpecificWallpaper = themeSpecificWallpaper {
+                                lightWallpaper = themeSpecificWallpaper
+                            } else {
+                                let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor, preview: true) ?? defaultPresentationTheme
+                                lightWallpaper = theme.chat.defaultWallpaper
+                            }
+                            
+                            var preferredBaseTheme: TelegramBaseTheme?
+                            if let baseTheme = themeSettings.themePreferredBaseTheme[themeSettings.theme.index], [.classic, .day].contains(baseTheme) {
+                                preferredBaseTheme = baseTheme
+                            }
+                            
+                            lightTheme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, baseTheme: preferredBaseTheme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
                         } else {
-                            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor, preview: true) ?? defaultPresentationTheme
-                            lightWallpaper = theme.chat.defaultWallpaper
-                        }
-                        
-                        var preferredBaseTheme: TelegramBaseTheme?
-                        if let baseTheme = themeSettings.themePreferredBaseTheme[themeSettings.theme.index], [.classic, .day].contains(baseTheme) {
-                            preferredBaseTheme = baseTheme
-                        }
-                        
-                        lightTheme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, baseTheme: preferredBaseTheme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
-                    } else {
-                        lightTheme = presentationData.theme
-                        lightWallpaper = presentationData.chatWallpaper
-                        
-                        let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
-                        let effectiveColors = themeSettings.themeSpecificAccentColors[automaticTheme.index]
-                        let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: automaticTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[automaticTheme.index])
-                        
-                        var preferredBaseTheme: TelegramBaseTheme?
-                        if let baseTheme = themeSettings.themePreferredBaseTheme[automaticTheme.index], [.night, .tinted].contains(baseTheme) {
-                            preferredBaseTheme = baseTheme
-                        } else {
-                            preferredBaseTheme = .night
-                        }
-                        
-                        darkTheme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: automaticTheme, baseTheme: preferredBaseTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors ?? [], wallpaper: effectiveColors?.wallpaper, baseColor: effectiveColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
-                        
-                        if let themeSpecificWallpaper = themeSpecificWallpaper {
-                            darkWallpaper = themeSpecificWallpaper
-                        } else {
-                            switch lightWallpaper {
+                            lightTheme = presentationData.theme
+                            lightWallpaper = presentationData.chatWallpaper
+                            
+                            let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
+                            let effectiveColors = themeSettings.themeSpecificAccentColors[automaticTheme.index]
+                            let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: automaticTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[automaticTheme.index])
+                            
+                            var preferredBaseTheme: TelegramBaseTheme?
+                            if let baseTheme = themeSettings.themePreferredBaseTheme[automaticTheme.index], [.night, .tinted].contains(baseTheme) {
+                                preferredBaseTheme = baseTheme
+                            } else {
+                                preferredBaseTheme = .night
+                            }
+                            
+                            darkTheme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: automaticTheme, baseTheme: preferredBaseTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors ?? [], wallpaper: effectiveColors?.wallpaper, baseColor: effectiveColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
+                            
+                            if let themeSpecificWallpaper = themeSpecificWallpaper {
+                                darkWallpaper = themeSpecificWallpaper
+                            } else {
+                                switch lightWallpaper {
                                 case .builtin, .color, .gradient:
                                     darkWallpaper = darkTheme.chat.defaultWallpaper
                                 case .file:
@@ -6491,26 +6559,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 default:
                                     darkWallpaper = lightWallpaper
+                                }
                             }
                         }
-                    }
-                    
-                    if darkAppearancePreview {
-                        darkTheme.forceSync = true
-                        Queue.mainQueue().after(1.0, {
-                            darkTheme.forceSync = false
-                        })
-                        presentationData = presentationData.withUpdated(theme: darkTheme).withUpdated(chatWallpaper: darkWallpaper)
-                    } else {
-                        lightTheme.forceSync = true
-                        Queue.mainQueue().after(1.0, {
-                            lightTheme.forceSync = false
-                        })
-                        presentationData = presentationData.withUpdated(theme: lightTheme).withUpdated(chatWallpaper: lightWallpaper)
+                        
+                        if darkAppearancePreview {
+                            darkTheme.forceSync = true
+                            Queue.mainQueue().after(1.0, {
+                                darkTheme.forceSync = false
+                            })
+                            presentationData = presentationData.withUpdated(theme: darkTheme).withUpdated(chatWallpaper: darkWallpaper)
+                        } else {
+                            lightTheme.forceSync = true
+                            Queue.mainQueue().after(1.0, {
+                                lightTheme.forceSync = false
+                            })
+                            presentationData = presentationData.withUpdated(theme: lightTheme).withUpdated(chatWallpaper: lightWallpaper)
+                        }
                     }
                 }
                 
-                if let chatWallpaper {
+                if let forcedWallpaper = strongSelf.forcedWallpaper {
+                    presentationData = presentationData.withUpdated(chatWallpaper: forcedWallpaper)
+                } else if let chatWallpaper {
                     presentationData = presentationData.withUpdated(chatWallpaper: chatWallpaper)
                 }
                 
@@ -6767,16 +6838,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     func updateNavigationBarPresentation() {
         let navigationBarTheme: NavigationBarTheme
-            
-        if self.hasEmbeddedTitleContent {
+        
+        let presentationTheme: PresentationTheme
+        if let forcedNavigationBarTheme = self.forcedNavigationBarTheme {
+            presentationTheme = forcedNavigationBarTheme
+            navigationBarTheme = NavigationBarTheme(rootControllerTheme: forcedNavigationBarTheme, hideBackground: false, hideBadge: true)
+        } else if self.hasEmbeddedTitleContent {
+            presentationTheme = self.presentationData.theme
             navigationBarTheme = NavigationBarTheme(rootControllerTheme: defaultDarkPresentationTheme, hideBackground: self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding ? true : false, hideBadge: true)
         } else {
+            presentationTheme = self.presentationData.theme
             navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBackground: self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding ? true : false, hideBadge: false)
         }
         
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
-        self.chatTitleView?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, hasEmbeddedTitleContent: self.hasEmbeddedTitleContent)
+        self.chatTitleView?.updateThemeAndStrings(theme: presentationTheme, strings: self.presentationData.strings, hasEmbeddedTitleContent: self.hasEmbeddedTitleContent)
     }
     
     func topPinnedMessageSignal(latest: Bool) -> Signal<ChatPinnedMessage?, NoError> {

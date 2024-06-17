@@ -4,10 +4,10 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import PresentationDataUtils
-import PeerInfoUI
 import AccountContext
 import PasswordSetupUI
 import Markdown
+import OwnershipTransferController
 
 func confirmRevenueWithdrawalController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (String) -> Void) -> ViewController {
     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }

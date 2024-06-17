@@ -731,9 +731,11 @@ public enum ChatControllerSubject: Equatable {
         
         public struct Link: Equatable {
             public var options: Signal<LinkOptions, NoError>
+            public var isCentered: Bool
             
-            public init(options: Signal<LinkOptions, NoError>) {
+            public init(options: Signal<LinkOptions, NoError>, isCentered: Bool) {
                 self.options = options
+                self.isCentered = isCentered
             }
             
             public static func ==(lhs: Link, rhs: Link) -> Bool {

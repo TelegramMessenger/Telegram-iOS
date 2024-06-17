@@ -50,6 +50,7 @@ import FullScreenEffectView
 import PeerInfoStoryGridScreen
 import ArchiveInfoScreen
 import BirthdayPickerScreen
+import OldChannelsController
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
@@ -1368,7 +1369,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             let source: ContextContentSource
                             let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .replyThread(message: ChatReplyThreadMessage(
                                 peerId: peer.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
-                            )), subject: nil, botStart: nil, mode: .standard(.previewing))
+                            )), subject: nil, botStart: nil, mode: .standard(.previewing), params: nil)
                             chatController.canReadHistory.set(false)
                             source = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
                             
@@ -1397,7 +1398,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         if let location = location {
                             source = .location(ChatListContextLocationContentSource(controller: strongSelf, location: location))
                         } else {
-                            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.peerId), subject: nil, botStart: nil, mode: .standard(.previewing))
+                            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.peerId), subject: nil, botStart: nil, mode: .standard(.previewing), params: nil)
                             chatController.canReadHistory.set(false)
                             source = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
                         }
@@ -1416,7 +1417,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let source: ContextContentSource
                     let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .replyThread(message: ChatReplyThreadMessage(
                         peerId: peer.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
-                    )), subject: nil, botStart: nil, mode: .standard(.previewing))
+                    )), subject: nil, botStart: nil, mode: .standard(.previewing), params: nil)
                     chatController.canReadHistory.set(false)
                     source = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
                     
@@ -1466,7 +1467,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     if case let .search(messageId) = source, let id = messageId {
                         subject = .message(id: .id(id), highlight: nil, timecode: nil)
                     }
-                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.id), subject: subject, botStart: nil, mode: .standard(.previewing))
+                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.id), subject: subject, botStart: nil, mode: .standard(.previewing), params: nil)
                     chatController.canReadHistory.set(false)
                     contextContentSource = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
                 }
@@ -3499,7 +3500,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return
                 }
                 
-                let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(.default))
+                let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
                 
                 if let sourceController = sourceController as? ChatListControllerImpl, case .forum(peerId) = sourceController.location {
                     navigationController.replaceController(sourceController, with: chatController, animated: false)
@@ -6698,7 +6699,7 @@ private final class ChatListLocationContext {
         
         if let channel = peerView.peers[peerView.peerId] as? TelegramChannel, !channel.flags.contains(.isForum) {
             if let parentController = self.parentController, let navigationController = parentController.navigationController as? NavigationController {
-                let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(.default))
+                let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
                 navigationController.replaceController(parentController, with: chatController, animated: true)
             }
         } else {

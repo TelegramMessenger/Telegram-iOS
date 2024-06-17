@@ -374,7 +374,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
                         transition.setFrame(view: effectView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - contentSize.width) / 2.0), y: -y), size: contentSize), completion: nil)
                     }
                 } else {
-                    transition.setFrame(view: contentView, frame: CGRect(origin: .zero, size: contentSize), completion: nil)
+                    transition.setFrame(view: contentView, frame: CGRect(origin: .zero, size: CGSize(width: contentSize.width, height: contentSize.height + 100.0)), completion: nil)
                     transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: CGSize(width: contentSize.width, height: contentSize.height + 1000.0)), completion: nil)
                     if let effectView = self.effectView {
                         transition.setFrame(view: effectView, frame: CGRect(origin: .zero, size: CGSize(width: contentSize.width, height: contentSize.height + 1000.0)), completion: nil)

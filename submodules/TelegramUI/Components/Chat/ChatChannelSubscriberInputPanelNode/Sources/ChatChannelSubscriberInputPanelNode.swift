@@ -8,11 +8,11 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AlertUI
 import PresentationDataUtils
-import PeerInfoUI
 import UndoUI
 import ChatPresentationInterfaceState
 import ChatInputPanelNode
 import AccountContext
+import OldChannelsController
 
 private enum SubscriberAction: Equatable {
     case join

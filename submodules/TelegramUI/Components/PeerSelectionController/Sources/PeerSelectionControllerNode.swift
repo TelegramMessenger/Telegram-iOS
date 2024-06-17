@@ -375,7 +375,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 chatLocation: .peer(id: strongSelf.context.account.peerId),
                 subject: .messageOptions(peerIds: peerIds, ids: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], info: .forward(ChatControllerSubject.MessageOptionsInfo.Forward(options: forwardOptions))),
                 botStart: nil,
-                mode: .standard(.previewing)
+                mode: .standard(.previewing),
+                params: nil
             )
             chatController.canReadHistory.set(false)
             

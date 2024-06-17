@@ -300,33 +300,35 @@ public extension Api {
 }
 public extension Api {
     enum MediaAreaCoordinates: TypeConstructorDescription {
-        case mediaAreaCoordinates(x: Double, y: Double, w: Double, h: Double, rotation: Double)
+        case mediaAreaCoordinates(flags: Int32, x: Double, y: Double, w: Double, h: Double, rotation: Double, radius: Double?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .mediaAreaCoordinates(let x, let y, let w, let h, let rotation):
+                case .mediaAreaCoordinates(let flags, let x, let y, let w, let h, let rotation, let radius):
                     if boxed {
-                        buffer.appendInt32(64088654)
+                        buffer.appendInt32(-808853502)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeDouble(x, buffer: buffer, boxed: false)
                     serializeDouble(y, buffer: buffer, boxed: false)
                     serializeDouble(w, buffer: buffer, boxed: false)
                     serializeDouble(h, buffer: buffer, boxed: false)
                     serializeDouble(rotation, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeDouble(radius!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .mediaAreaCoordinates(let x, let y, let w, let h, let rotation):
-                return ("mediaAreaCoordinates", [("x", x as Any), ("y", y as Any), ("w", w as Any), ("h", h as Any), ("rotation", rotation as Any)])
+                case .mediaAreaCoordinates(let flags, let x, let y, let w, let h, let rotation, let radius):
+                return ("mediaAreaCoordinates", [("flags", flags as Any), ("x", x as Any), ("y", y as Any), ("w", w as Any), ("h", h as Any), ("rotation", rotation as Any), ("radius", radius as Any)])
     }
     }
     
         public static func parse_mediaAreaCoordinates(_ reader: BufferReader) -> MediaAreaCoordinates? {
-            var _1: Double?
-            _1 = reader.readDouble()
+            var _1: Int32?
+            _1 = reader.readInt32()
             var _2: Double?
             _2 = reader.readDouble()
             var _3: Double?
@@ -335,13 +337,19 @@ public extension Api {
             _4 = reader.readDouble()
             var _5: Double?
             _5 = reader.readDouble()
+            var _6: Double?
+            _6 = reader.readDouble()
+            var _7: Double?
+            if Int(_1!) & Int(1 << 0) != 0 {_7 = reader.readDouble() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.MediaAreaCoordinates.mediaAreaCoordinates(x: _1!, y: _2!, w: _3!, h: _4!, rotation: _5!)
+            let _c6 = _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 0) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.MediaAreaCoordinates.mediaAreaCoordinates(flags: _1!, x: _2!, y: _3!, w: _4!, h: _5!, rotation: _6!, radius: _7)
             }
             else {
                 return nil

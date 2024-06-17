@@ -10,11 +10,13 @@ public struct StarsRevenueStats: Equatable {
         public let availableBalance: Int64
         public let overallRevenue: Int64
         public let withdrawEnabled: Bool
+        public let nextWithdrawalTimestamp: Int32?
     }
     
     public let revenueGraph: StatsGraph
     public let balances: Balances
     public let usdRate: Double
+    
     init(revenueGraph: StatsGraph, balances: Balances, usdRate: Double) {
         self.revenueGraph = revenueGraph
         self.balances = balances
@@ -57,8 +59,8 @@ extension StarsRevenueStats {
 extension StarsRevenueStats.Balances {
     init(apiStarsRevenueStatus: Api.StarsRevenueStatus) {
         switch apiStarsRevenueStatus {
-        case let .starsRevenueStatus(flags, currentBalance, availableBalance, overallRevenue):
-            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue, withdrawEnabled: ((flags & (1 << 0)) != 0))
+        case let .starsRevenueStatus(flags, currentBalance, availableBalance, overallRevenue, nextWithdrawalAt):
+            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue, withdrawEnabled: ((flags & (1 << 0)) != 0), nextWithdrawalTimestamp: nextWithdrawalAt)
         }
     }
 }
@@ -108,6 +110,7 @@ private final class StarsRevenueStatsContextImpl {
     }
     
     private let disposable = MetaDisposable()
+    private let updateDisposable = MetaDisposable()
     
     init(account: Account, peerId: PeerId) {
         assert(Queue.mainQueue().isCurrent())
@@ -123,6 +126,17 @@ private final class StarsRevenueStatsContextImpl {
     deinit {
         assert(Queue.mainQueue().isCurrent())
         self.disposable.dispose()
+        self.updateDisposable.dispose()
+    }
+    
+    public func setUpdated(_ f: @escaping () -> Void) {
+        let peerId = self.peerId
+        self.updateDisposable.set((account.stateManager.updatedStarsRevenueStatus()
+        |> deliverOnMainQueue).startStrict(next: { updates in
+            if let _ = updates[peerId] {
+                f()
+            }
+        }))
     }
     
     fileprivate func load() {
@@ -184,6 +198,12 @@ public final class StarsRevenueStatsContext {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
             return StarsRevenueStatsContextImpl(account: account, peerId: peerId)
         })
+    }
+    
+    public func setUpdated(_ f: @escaping () -> Void) {
+        self.impl.with { impl in
+            impl.setUpdated(f)
+        }
     }
     
     public func reload() {

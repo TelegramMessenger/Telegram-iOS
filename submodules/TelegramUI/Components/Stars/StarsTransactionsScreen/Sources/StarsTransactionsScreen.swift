@@ -275,7 +275,7 @@ final class StarsTransactionsScreenComponent: Component {
             
             var balanceUpdated = false
             if let starsState = self.starsState {
-                if let previousBalance, starsState.balance != previousBalance {
+                if let previousBalance = self.previousBalance, starsState.balance != previousBalance {
                     balanceUpdated = true
                 }
                 self.previousBalance = starsState.balance
@@ -524,6 +524,7 @@ final class StarsTransactionsScreenComponent: Component {
                             rate: nil,
                             actionTitle: environment.strings.Stars_Intro_Buy,
                             actionAvailable: !premiumConfiguration.areStarsDisabled,
+                            actionIsEnabled: true,
                             buy: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
@@ -555,6 +556,7 @@ final class StarsTransactionsScreenComponent: Component {
                     allTransactionsContext = current
                 } else {
                     allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsContext(component.starsContext), mode: .all)
+                    self.allTransactionsContext = allTransactionsContext
                 }
                 
                 let incomingTransactionsContext: StarsTransactionsContext
@@ -562,6 +564,7 @@ final class StarsTransactionsScreenComponent: Component {
                     incomingTransactionsContext = current
                 } else {
                     incomingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsContext(component.starsContext), mode: .incoming)
+                    self.incomingTransactionsContext = incomingTransactionsContext
                 }
                 
                 let outgoingTransactionsContext: StarsTransactionsContext
@@ -569,6 +572,7 @@ final class StarsTransactionsScreenComponent: Component {
                     outgoingTransactionsContext = current
                 } else {
                     outgoingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsContext(component.starsContext), mode: .outgoing)
+                    self.outgoingTransactionsContext = outgoingTransactionsContext
                 }
                 
                 panelItems.append(StarsTransactionsPanelContainerComponent.Item(
@@ -577,6 +581,7 @@ final class StarsTransactionsScreenComponent: Component {
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
                         transactionsContext: allTransactionsContext,
+                        isAccount: true,
                         action: { transaction in
                             component.openTransaction(transaction)
                         }
@@ -589,6 +594,7 @@ final class StarsTransactionsScreenComponent: Component {
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
                         transactionsContext: incomingTransactionsContext,
+                        isAccount: true,
                         action: { transaction in
                             component.openTransaction(transaction)
                         }
@@ -601,6 +607,7 @@ final class StarsTransactionsScreenComponent: Component {
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
                         transactionsContext: outgoingTransactionsContext,
+                        isAccount: true,
                         action: { transaction in
                             component.openTransaction(transaction)
                         }
@@ -716,7 +723,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
             guard let self else {
                 return
             }
-            let controller = context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction)
+            let controller = context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction, isAccount: true)
             self.push(controller)
         }
         

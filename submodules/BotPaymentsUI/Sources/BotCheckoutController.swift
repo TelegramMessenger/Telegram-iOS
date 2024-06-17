@@ -17,7 +17,7 @@ public final class BotCheckoutController: ViewController {
         public let validatedFormInfo: BotPaymentValidatedFormInfo?
         public let botPeer: EnginePeer?
 
-        private init(
+        public init(
             form: BotPaymentForm,
             validatedFormInfo: BotPaymentValidatedFormInfo?,
             botPeer: EnginePeer?

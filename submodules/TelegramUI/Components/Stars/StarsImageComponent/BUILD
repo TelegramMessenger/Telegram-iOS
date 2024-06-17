@@ -21,6 +21,7 @@ swift_library(
         "//submodules/PhotoResources",
         "//submodules/AvatarNode",
         "//submodules/AccountContext",
+        "//submodules/InvisibleInkDustNode",
     ],
     visibility = [
         "//visibility:public",

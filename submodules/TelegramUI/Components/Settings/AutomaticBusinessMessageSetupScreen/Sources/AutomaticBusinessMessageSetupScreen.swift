@@ -483,7 +483,8 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 chatLocation: .customChatContents,
                 subject: .customChatContents(contents: contents),
                 botStart: nil,
-                mode: .standard(.default)
+                mode: .standard(.default),
+                params: nil
             )
             chatController.navigationPresentation = .modal
             self.environment?.controller()?.push(chatController)

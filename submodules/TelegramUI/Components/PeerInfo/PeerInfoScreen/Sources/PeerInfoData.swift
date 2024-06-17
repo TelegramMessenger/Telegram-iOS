@@ -349,6 +349,8 @@ final class PeerInfoScreenData {
     let isPremiumRequiredForStoryPosting: Bool
     let personalChannel: PeerInfoPersonalChannelData?
     let starsState: StarsContext.State?
+    let starsRevenueStatsState: StarsRevenueStats?
+    let starsRevenueStatsContext: StarsRevenueStatsContext?
     
     let _isContact: Bool
     var forceIsContact: Bool = false
@@ -389,7 +391,9 @@ final class PeerInfoScreenData {
         hasSavedMessageTags: Bool,
         isPremiumRequiredForStoryPosting: Bool,
         personalChannel: PeerInfoPersonalChannelData?,
-        starsState: StarsContext.State?
+        starsState: StarsContext.State?,
+        starsRevenueStatsState: StarsRevenueStats?,
+        starsRevenueStatsContext: StarsRevenueStatsContext?
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -419,6 +423,8 @@ final class PeerInfoScreenData {
         self.isPremiumRequiredForStoryPosting = isPremiumRequiredForStoryPosting
         self.personalChannel = personalChannel
         self.starsState = starsState
+        self.starsRevenueStatsState = starsRevenueStatsState
+        self.starsRevenueStatsContext = starsRevenueStatsContext
     }
 }
 
@@ -912,7 +918,9 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             hasSavedMessageTags: false,
             isPremiumRequiredForStoryPosting: true,
             personalChannel: personalChannel,
-            starsState: starsState
+            starsState: starsState,
+            starsRevenueStatsState: nil,
+            starsRevenueStatsContext: nil
         )
     }
 }
@@ -952,7 +960,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 hasSavedMessageTags: false,
                 isPremiumRequiredForStoryPosting: true,
                 personalChannel: nil,
-                starsState: nil
+                starsState: nil,
+                starsRevenueStatsState: nil,
+                starsRevenueStatsContext: nil
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -1169,6 +1179,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 hasSavedMessageTags = .single(false)
             }
             
+            let starsRevenueStatsContextPromise = Promise<StarsRevenueStatsContext?>(nil)
+            let starsRevenueStatsStatePromise = Promise<StarsRevenueStats?>(nil)
+            
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: chatLocation, isMyProfile: isMyProfile, chatLocationContextHolder: chatLocationContextHolder),
@@ -1183,11 +1196,12 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 hasSavedMessages,
                 hasSavedMessageTags,
                 peerInfoPersonalChannel(context: context, peerId: peerId, isSettings: false),
-                privacySettings
+                privacySettings,
+                starsRevenueStatsContextPromise.get(),
+                starsRevenueStatsStatePromise.get()
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, personalChannel, privacySettings -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, personalChannel, privacySettings, currentStarsRevenueStatsContext, starsRevenueStatsState -> PeerInfoScreenData in
                 var availablePanes = availablePanes
-                
                 if isMyProfile {
                     availablePanes?.insert(.stories, at: 0)
                     if let hasStoryArchive, hasStoryArchive {
@@ -1252,6 +1266,14 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         enableQRLogin: false)
                 }
                 
+                if case .bot = kind, let user = peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
+                    if currentStarsRevenueStatsContext == nil {
+                        let starsRevenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: peerId)
+                        starsRevenueStatsContextPromise.set(.single(starsRevenueStatsContext))
+                        starsRevenueStatsStatePromise.set(starsRevenueStatsContext.state |> map { $0.stats })
+                    }
+                }
+                
                 return PeerInfoScreenData(
                     peer: peer,
                     chatPeer: peerView.peers[peerId],
@@ -1280,7 +1302,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     hasSavedMessageTags: hasSavedMessageTags,
                     isPremiumRequiredForStoryPosting: false,
                     personalChannel: personalChannel,
-                    starsState: nil
+                    starsState: nil,
+                    starsRevenueStatsState: starsRevenueStatsState,
+                    starsRevenueStatsContext: currentStarsRevenueStatsContext
                 )
             }
         case .channel:
@@ -1452,7 +1476,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     hasSavedMessageTags: hasSavedMessageTags,
                     isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting,
                     personalChannel: nil,
-                    starsState: nil
+                    starsState: nil,
+                    starsRevenueStatsState: nil,
+                    starsRevenueStatsContext: nil
                 )
             }
         case let .group(groupId):
@@ -1747,7 +1773,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     hasSavedMessageTags: hasSavedMessageTags,
                     isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting,
                     personalChannel: nil,
-                    starsState: nil
+                    starsState: nil,
+                    starsRevenueStatsState: nil,
+                    starsRevenueStatsContext: nil
                 ))
             }
         }

@@ -3095,9 +3095,9 @@ public final class DrawingToolsInteraction {
                     isAdditional = isAdditionalValue
                 } else if case .message = entity.content {
                     isMessage = true
-                } else if case .link = entity.content {
-                    isLink = true
                 }
+            } else if entityView.entity is DrawingLinkEntity {
+                isLink = true
             }
             
             guard (!isVideo || isAdditional) && (!isMessage || !isTopmost) else {
@@ -3115,7 +3115,7 @@ public final class DrawingToolsInteraction {
                     }
                 }))
             }
-            if entityView is DrawingLocationEntityView || isLink {
+            if entityView is DrawingLocationEntityView || entityView is DrawingLinkEntityView {
                 actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Edit, accessibilityLabel: presentationData.strings.Paint_Edit), action: { [weak self, weak entityView] in
                     if let self, let entityView {
                         self.editEntity(entityView.entity)
@@ -3129,7 +3129,7 @@ public final class DrawingToolsInteraction {
                         self.entitiesView.selectEntity(entityView.entity)
                     }
                 }))
-            } else if (entityView is DrawingStickerEntityView || entityView is DrawingBubbleEntityView) && !isVideo && !isMessage && !isLink {
+            } else if (entityView is DrawingStickerEntityView || entityView is DrawingBubbleEntityView) && !isVideo && !isMessage {
                 actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Flip, accessibilityLabel: presentationData.strings.Paint_Flip), action: { [weak self] in
                     if let self {
                         self.flipSelectedEntity()
@@ -3143,7 +3143,7 @@ public final class DrawingToolsInteraction {
                     }
                 }))
             }
-            if !isVideo && !isMessage {
+            if !isVideo && !isMessage && !isLink {
                 if let stickerEntity = entityView.entity as? DrawingStickerEntity, case let .file(_, type) = stickerEntity.content, case .reaction = type {
                     
                 } else {

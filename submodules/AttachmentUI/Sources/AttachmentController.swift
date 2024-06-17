@@ -232,7 +232,7 @@ public class AttachmentController: ViewController {
         
     private final class Node: ASDisplayNode {
         private weak var controller: AttachmentController?
-        private let dim: ASDisplayNode
+        fileprivate let dim: ASDisplayNode
         private let shadowNode: ASImageNode
         fileprivate let container: AttachmentContainer
         private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
@@ -305,6 +305,8 @@ public class AttachmentController: ViewController {
                  
         private let wrapperNode: ASDisplayNode
         
+        private var isMinimizing = false
+        
         init(controller: AttachmentController, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
             self.controller = controller
             self.makeEntityInputView = makeEntityInputView
@@ -327,6 +329,8 @@ public class AttachmentController: ViewController {
             
             super.init()
             
+            self.clipsToBounds = false
+            
             self.addSubnode(self.dim)
             self.addSubnode(self.shadowNode)
             self.addSubnode(self.wrapperNode)
@@ -338,16 +342,20 @@ public class AttachmentController: ViewController {
                 }
             }
             
-            self.container.updateModalProgress = { [weak self] progress, transition in
+            self.container.updateModalProgress = { [weak self] progress, topInset, transition in
                 if let strongSelf = self, let layout = strongSelf.validLayout, !strongSelf.isDismissing {
                     var transition = transition
                     if strongSelf.container.supernode == nil {
                         transition = .animated(duration: 0.4, curve: .spring)
                     }
-                    strongSelf.controller?.updateModalStyleOverlayTransitionFactor(progress, transition: transition)
                     
                     strongSelf.modalProgress = progress
-                    strongSelf.containerLayoutUpdated(layout, transition: transition)
+                    strongSelf.controller?.modalTopEdgeOffset = topInset
+                    
+                    if !strongSelf.isMinimizing {
+                        strongSelf.controller?.updateModalStyleOverlayTransitionFactor(progress, transition: transition)
+                        strongSelf.containerLayoutUpdated(layout, transition: transition)
+                    }
                 }
             }
             self.container.isReadyUpdated = { [weak self] in
@@ -358,8 +366,20 @@ public class AttachmentController: ViewController {
             
             self.container.interactivelyDismissed = { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.controller?.dismiss(animated: true)
+                    if let controller = strongSelf.controller, controller.shouldMinimizeOnSwipe?() == true, let navigationController = controller.navigationController as? NavigationController {
+                        navigationController.minimizeViewController(controller, animated: true)
+                        
+                        Queue.mainQueue().after(0.5) {
+                            strongSelf.isMinimizing = true
+                            strongSelf.container.update(isExpanded: true, transition: .immediate)
+                            strongSelf.isMinimizing = false
+                        }
+                        return false
+                    } else {
+                        strongSelf.controller?.dismiss(animated: true)
+                    }
                 }
+                return true
             }
             
             self.container.isPanningUpdated = { [weak self] value in
@@ -798,7 +818,7 @@ public class AttachmentController: ViewController {
                 return
             }
             
-            transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(), size: layout.size))
+            transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(x: 0.0, y: -layout.size.height), size: CGSize(width: layout.size.width, height: layout.size.height * 2.0)))
                      
             let fromMenu = controller.fromMenu
             
@@ -871,7 +891,7 @@ public class AttachmentController: ViewController {
                 
                 self.wrapperNode.view.mask = nil
             }
-            
+                        
             var containerInsets = containerLayout.intrinsicInsets
             var hasPanel = false
             let previousHasButton = self.hasButton
@@ -982,6 +1002,8 @@ public class AttachmentController: ViewController {
     
     public var getSourceRect: (() -> CGRect?)?
     
+    public var shouldMinimizeOnSwipe: (() -> Bool)?
+    
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation?, isScheduledMessages: Bool = false, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
@@ -1014,6 +1036,13 @@ public class AttachmentController: ViewController {
     
     fileprivate var isStandalone: Bool {
         return self.buttons.contains(.standalone)
+    }
+    
+    public override var isMinimized: Bool {
+        didSet {
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+            transition.updateAlpha(node: self.node.dim, alpha: self.isMinimized ? 0.0 : 1.0)
+        }
     }
     
     public func updateSelectionCount(_ count: Int) {

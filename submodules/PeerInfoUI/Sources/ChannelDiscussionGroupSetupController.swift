@@ -15,6 +15,7 @@ import ItemListPeerItem
 import ItemListPeerActionItem
 import ChatListFilterSettingsHeaderItem
 import UndoUI
+import OldChannelsController
 
 private final class ChannelDiscussionGroupSetupControllerArguments {
     let context: AccountContext

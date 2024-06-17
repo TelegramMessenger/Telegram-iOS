@@ -31,20 +31,26 @@ final class StarsTransactionsListPanelComponent: Component {
         
     let context: AccountContext
     let transactionsContext: StarsTransactionsContext
+    let isAccount: Bool
     let action: (StarsContext.State.Transaction) -> Void
 
     init(
         context: AccountContext,
         transactionsContext: StarsTransactionsContext,
+        isAccount: Bool,
         action: @escaping (StarsContext.State.Transaction) -> Void
     ) {
         self.context = context
         self.transactionsContext = transactionsContext
+        self.isAccount = isAccount
         self.action = action
     }
     
     static func ==(lhs: StarsTransactionsListPanelComponent, rhs: StarsTransactionsListPanelComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.isAccount != rhs.isAccount {
             return false
         }
         return true
@@ -191,6 +197,7 @@ final class StarsTransactionsListPanelComponent: Component {
                     }
                     
                     separatorView.backgroundColor = environment.theme.list.itemBlocksSeparatorColor
+                    separatorView.isHidden = index == self.items.count - 1
                                   
                     let fontBaseDisplaySize = 17.0
                     
@@ -213,8 +220,13 @@ final class StarsTransactionsListPanelComponent: Component {
                         itemTitle = environment.strings.Stars_Intro_Transaction_GoogleTopUp_Title
                         itemSubtitle = environment.strings.Stars_Intro_Transaction_GoogleTopUp_Subtitle
                     case .fragment:
-                        itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
-                        itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
+                        if component.isAccount {
+                            itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
+                            itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
+                        } else {
+                            itemTitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Title
+                            itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Subtitle
+                        }
                     case .premiumBot:
                         itemTitle = environment.strings.Stars_Intro_Transaction_PremiumBotTopUp_Title
                         itemSubtitle = environment.strings.Stars_Intro_Transaction_PremiumBotTopUp_Subtitle
@@ -444,7 +456,11 @@ final class StarsTransactionsListPanelComponent: Component {
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
             
-            return availableSize
+            if component.isAccount {
+                return availableSize
+            } else {
+                return CGSize(width: availableSize.width, height: min(availableSize.height, contentSize.height))
+            }
         }
     }
     

@@ -3300,8 +3300,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let self {
                         if let location = entity as? DrawingLocationEntity {
                             self.presentLocationPicker(location)
-                        } else if let sticker = entity as? DrawingStickerEntity, case .link = sticker.content {
-                            self.addOrEditLink(sticker)
+                        } else if let link = entity as? DrawingLinkEntity {
+                            self.addOrEditLink(link)
                         }
                     }
                 },
@@ -4480,65 +4480,63 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.controller?.present(contextController, in: .window(.root))
         }
         
-        func addOrEditLink(_ existingEntity: DrawingStickerEntity? = nil) {
+        func addOrEditLink(_ existingEntity: DrawingLinkEntity? = nil) {
             guard let controller = self.controller else {
                 return
             }
             
+            if existingEntity == nil {
+                let maxLinkCount = 3
+                var currentLinkCount = 0
+                self.entitiesView.eachView { entityView in
+                    if entityView.entity is DrawingLinkEntity {
+                        currentLinkCount += 1
+                    }
+                }
+                if currentLinkCount >= maxLinkCount {
+                    controller.presentLinkLimitTooltip()
+                    return
+                }
+            }
+            
             var link: CreateLinkScreen.Link?
-            if let existingEntity, case let .link(url, name, positionBelowText, largeMedia, _, _, _) = existingEntity.content {
+            if let existingEntity {
                 link = CreateLinkScreen.Link(
-                    url: url,
-                    name: name,
-                    positionBelowText: positionBelowText,
-                    largeMedia: largeMedia
+                    url: existingEntity.url,
+                    name: existingEntity.name,
+                    webpage: existingEntity.webpage,
+                    positionBelowText: existingEntity.positionBelowText,
+                    largeMedia: existingEntity.largeMedia,
+                    isDark: existingEntity.style == .black
                 )
             }
                         
-            let linkController = CreateLinkScreen(context: controller.context, link: link, completion: { [weak self] result in
+            let linkController = CreateLinkScreen(context: controller.context, link: link, snapshotImage: self.mediaEditor?.resultImage, completion: { [weak self] result in
                 guard let self else {
                     return
                 }
                 
-                var linkStyle: DrawingStickerEntity.Content.LinkStyle
-                if let existingEntity, case let .link(_, _, _, _, _, _, existingStyle) = existingEntity.content {
-                    if [.white, .black].contains(existingStyle), result.image == nil {
-                        switch existingStyle {
-                        case .white:
-                            linkStyle = .whiteCompact
-                        case .black:
-                            linkStyle = .blackCompact
-                        default:
-                            linkStyle = existingStyle
-                        }
+                let style: DrawingLinkEntity.Style
+                if let existingEntity {
+                    if ![.white, .black].contains(existingEntity.style), result.webpage != nil {
+                        style = .white
                     } else {
-                        linkStyle = existingStyle
+                        style = existingEntity.style
                     }
                 } else {
-                    linkStyle = result.image != nil ? .white : .whiteCompact
+                    style = .white
                 }
-                
-                let entity = DrawingStickerEntity(
-                    content: .link(result.url, result.name, result.positionBelowText, result.largeMedia, result.image?.size, result.compactLightImage.size, linkStyle)
-                )
+
+                let entity = DrawingLinkEntity(url: result.url, name: result.name, webpage: result.webpage, positionBelowText: result.positionBelowText, largeMedia: result.largeMedia, style: style)
                 entity.renderImage = result.image
                 entity.secondaryRenderImage = result.nightImage
-                entity.tertiaryRenderImage = result.compactLightImage
-                entity.quaternaryRenderImage = result.compactDarkImage
                                 
-                let fraction: CGFloat
-                if let image = result.image {
-                    fraction = max(image.size.width, image.size.height) / 353.0
-                } else {
-                    fraction = max(result.compactLightImage.size.width, result.compactLightImage.size.height) / 353.0
-                }
-                
                 if let existingEntity {
                     self.entitiesView.remove(uuid: existingEntity.uuid, animated: true)
                 }
                 self.interaction?.insertEntity(
                     entity,
-                    scale: existingEntity?.scale ?? min(6.0, 3.3 * fraction) * 0.5,
+                    scale: existingEntity?.scale ?? 1.0,
                     position: existingEntity?.position
                 )
             })
@@ -5991,6 +5989,29 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             return false }
         )
         self.present(controller, in: .current)
+    }
+    
+    fileprivate func presentLinkLimitTooltip() {
+        self.hapticFeedback.impact(.light)
+        
+        self.dismissAllTooltips()
+        
+        let context = self.context
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let limit: Int32 = 3
+        
+        let value = presentationData.strings.Story_Editor_TooltipLinkLimitValue(limit)
+        let content: UndoOverlayContent = .info(
+            title: nil,
+            text: presentationData.strings.Story_Editor_TooltipReachedLinkLimitText(value).string,
+            timeout: nil,
+            customUndoText: nil
+        )
+        
+        let controller = UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: true, position: .top, animateInAsReplacement: false, action: { _ in
+            return true
+        })
+        self.present(controller, in: .window(.root))
     }
     
     func maybePresentDiscardAlert() {

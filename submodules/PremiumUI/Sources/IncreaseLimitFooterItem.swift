@@ -8,20 +8,20 @@ import PresentationDataUtils
 import SolidRoundedButtonNode
 import AppBundle
 
-final class IncreaseLimitFooterItem: ItemListControllerFooterItem {
+public final class IncreaseLimitFooterItem: ItemListControllerFooterItem {
     let theme: PresentationTheme
     let title: String
     let colorful: Bool
     let action: () -> Void
     
-    init(theme: PresentationTheme, title: String, colorful: Bool, action: @escaping () -> Void) {
+    public init(theme: PresentationTheme, title: String, colorful: Bool, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.colorful = colorful
         self.action = action
     }
     
-    func isEqual(to: ItemListControllerFooterItem) -> Bool {
+    public func isEqual(to: ItemListControllerFooterItem) -> Bool {
         if let item = to as? IncreaseLimitFooterItem {
             return self.theme === item.theme && self.title == item.title && self.colorful == item.colorful
         } else {
@@ -29,7 +29,7 @@ final class IncreaseLimitFooterItem: ItemListControllerFooterItem {
         }
     }
     
-    func node(current: ItemListControllerFooterItemNode?) -> ItemListControllerFooterItemNode {
+    public func node(current: ItemListControllerFooterItemNode?) -> ItemListControllerFooterItemNode {
         if let current = current as? IncreaseLimitFooterItemNode {
             current.item = self
             return current

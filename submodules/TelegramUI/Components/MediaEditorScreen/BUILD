@@ -62,6 +62,7 @@ swift_library(
         "//submodules/Components/HierarchyTrackingLayer",
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/WebsiteType",
+        "//submodules/UrlEscaping",
     ],
     visibility = [
         "//visibility:public",

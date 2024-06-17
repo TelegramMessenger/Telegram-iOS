@@ -2,12 +2,14 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
+import Postbox
 import TelegramCore
 import ComponentFlow
 import TelegramPresentationData
 import PhotoResources
 import AvatarNode
 import AccountContext
+import InvisibleInkDustNode
 
 final class StarsParticlesView: UIView {
     private struct Particle {
@@ -245,6 +247,7 @@ public final class StarsImageComponent: Component {
     public enum Subject: Equatable {
         case none
         case photo(TelegramMediaWebFile)
+        case extendedMedia(TelegramExtendedMedia)
         case transactionPeer(StarsContext.State.Transaction.Peer)
     }
     
@@ -288,6 +291,7 @@ public final class StarsImageComponent: Component {
         private var avatarNode: ImageNode?
         private var iconBackgroundView: UIImageView?
         private var iconView: UIImageView?
+        private var dustNode: MediaDustNode?
         
         private let fetchDisposable = MetaDisposable()
         
@@ -351,6 +355,39 @@ public final class StarsImageComponent: Component {
 
                 imageNode.frame = imageFrame
                 imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: imageSize.width / 2.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
+            case let .extendedMedia(extendedMedia):
+                let imageNode: TransformImageNode
+                let dustNode: MediaDustNode
+                if let current = self.imageNode, let currentDust = self.dustNode {
+                    imageNode = current
+                    dustNode = currentDust
+                } else {
+                    imageNode = TransformImageNode()
+                    imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
+                    self.addSubview(imageNode.view)
+                    self.imageNode = imageNode
+                    
+                    let media: TelegramMediaImage
+                    switch extendedMedia {
+                    case let .preview(_, immediateThumbnailData, _):
+                        let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                        media = thumbnailMedia
+                    case let .full(fullMedia):
+                        media = fullMedia as! TelegramMediaImage
+                    }
+                                        
+                    imageNode.setSignal(chatSecretPhoto(account: component.context.account, userLocation: .other, photoReference: .standalone(media: media), ignoreFullSize: true, synchronousLoad: true))
+                    
+                    dustNode = MediaDustNode(enableAnimations: true)
+                    self.addSubview(dustNode.view)
+                    self.dustNode = dustNode
+                }
+
+                imageNode.frame = imageFrame
+                imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 12.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
+                
+                dustNode.frame = imageFrame
+                dustNode.update(size: imageFrame.size, color: .white, transition: .immediate)
             case let .transactionPeer(peer):
                 if case let .peer(peer) = peer {
                     let avatarNode: ImageNode

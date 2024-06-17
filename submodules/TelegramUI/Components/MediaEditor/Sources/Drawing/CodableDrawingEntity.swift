@@ -23,6 +23,7 @@ public enum CodableDrawingEntity: Equatable {
     case bubble(DrawingBubbleEntity)
     case vector(DrawingVectorEntity)
     case location(DrawingLocationEntity)
+    case link(DrawingLinkEntity)
     
     public init?(entity: DrawingEntity) {
         if let entity = entity as? DrawingStickerEntity {
@@ -37,6 +38,8 @@ public enum CodableDrawingEntity: Equatable {
             self = .vector(entity)
         } else if let entity = entity as? DrawingLocationEntity {
             self = .location(entity)
+        } else if let entity = entity as? DrawingLinkEntity {
+            self = .link(entity)
         } else {
             return nil
         }
@@ -55,6 +58,8 @@ public enum CodableDrawingEntity: Equatable {
         case let .vector(entity):
             return entity
         case let .location(entity):
+            return entity
+        case let .link(entity):
             return entity
         }
     }
@@ -87,6 +92,11 @@ public enum CodableDrawingEntity: Equatable {
             size = entitySize
             rotation = entityRotation
             scale = entityScale
+        case let .link(entity):
+            position = entity.position
+            size = entity.renderImage?.size
+            rotation = entity.rotation
+            scale = entity.scale
         default:
             return nil
         }
@@ -100,7 +110,8 @@ public enum CodableDrawingEntity: Equatable {
             y: position.y / 1920.0 * 100.0,
             width: size.width * scale / 1080.0 * 100.0,
             height: size.height * scale / 1920.0 * 100.0,
-            rotation: rotation / .pi * 180.0
+            rotation: rotation / .pi * 180.0,
+            cornerRadius: nil
         )
     }
     
@@ -122,16 +133,7 @@ public enum CodableDrawingEntity: Equatable {
                 )
             )
         case let .sticker(entity):
-            if case let .link(url, _, _, _, _, _, _) = entity.content {
-                var url = url
-                if !url.hasPrefix("http://") && !url.hasPrefix("https://") {
-                    url = "https://\(url)"
-                }
-                return .link(
-                    coordinates: coordinates,
-                    url: url
-                )
-            } else if case let .file(_, type) = entity.content, case let .reaction(reaction, style) = type {
+            if case let .file(_, type) = entity.content, case let .reaction(reaction, style) = type {
                 var flags: MediaArea.ReactionFlags = []
                 if case .black = style {
                     flags.insert(.isDark)
@@ -152,6 +154,15 @@ public enum CodableDrawingEntity: Equatable {
             } else {
                 return nil
             }
+        case let .link(entity):
+            var url = entity.url
+            if !url.hasPrefix("http://") && !url.hasPrefix("https://") {
+                url = "https://\(url)"
+            }
+            return .link(
+                coordinates: coordinates,
+                url: url
+            )
         default:
             return nil
         }
@@ -171,6 +182,7 @@ extension CodableDrawingEntity: Codable {
         case bubble
         case vector
         case location
+        case link
     }
 
     public init(from decoder: Decoder) throws {
@@ -189,6 +201,8 @@ extension CodableDrawingEntity: Codable {
             self = .vector(try container.decode(DrawingVectorEntity.self, forKey: .entity))
         case .location:
             self = .location(try container.decode(DrawingLocationEntity.self, forKey: .entity))
+        case .link:
+            self = .link(try container.decode(DrawingLinkEntity.self, forKey: .entity))
         }
     }
 
@@ -212,6 +226,9 @@ extension CodableDrawingEntity: Codable {
             try container.encode(payload, forKey: .entity)
         case let .location(payload):
             try container.encode(EntityType.location, forKey: .type)
+            try container.encode(payload, forKey: .entity)
+        case let .link(payload):
+            try container.encode(EntityType.link, forKey: .type)
             try container.encode(payload, forKey: .entity)
         }
     }

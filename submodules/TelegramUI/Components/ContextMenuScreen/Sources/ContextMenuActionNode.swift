@@ -143,6 +143,7 @@ final class ContextMenuActionNode: ASDisplayNode {
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         if let textNode = self.textNode {
+            let constrainedSize = CGSize(width: constrainedSize.width - 36.0 - 24.0, height: constrainedSize.height)
             let textSize = textNode.updateLayout(constrainedSize)
             self.textSize = textSize
             
@@ -151,7 +152,7 @@ final class ContextMenuActionNode: ASDisplayNode {
             totalWidth += textSize.width
             
             if let subtitleNode = self.subtitleNode {
-                let subtitleSize = subtitleNode.updateLayout(constrainedSize)
+                let subtitleSize = subtitleNode.updateLayout(CGSize(width: constrainedSize.width * 0.75, height: constrainedSize.height))
                 self.subtitleSize = subtitleSize
                 totalWidth = max(totalWidth, subtitleSize.width)
                 totalHeight += 14.0

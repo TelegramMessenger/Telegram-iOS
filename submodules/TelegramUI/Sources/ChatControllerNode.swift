@@ -538,6 +538,13 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     var peers = SimpleDictionary<PeerId, Peer>()
                     peers[accountPeer.id] = accountPeer
                     
+                    let author: Peer
+                    if link.isCentered {
+                        author = TelegramUser(id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: .blue, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+                    } else {
+                        author = accountPeer
+                    }
+                    
                     var associatedMessages = SimpleDictionary<MessageId, Message>()
                     
                     var media: [Media] = []
@@ -578,7 +585,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         localTags: [],
                         customTags: [],
                         forwardInfo: nil,
-                        author: accountPeer,
+                        author: author,
                         text: options.messageText,
                         attributes: attributes,
                         media: media,

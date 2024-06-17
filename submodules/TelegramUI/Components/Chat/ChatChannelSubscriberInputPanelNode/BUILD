@@ -18,11 +18,11 @@ swift_library(
         "//submodules/TelegramPresentationData",
         "//submodules/AlertUI",
         "//submodules/PresentationDataUtils",
-        "//submodules/PeerInfoUI",
         "//submodules/UndoUI",
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/TelegramUI/Components/Chat/ChatInputPanelNode",
         "//submodules/AccountContext",
+        "//submodules/TelegramUI/Components/PeerManagement/OldChannelsController",
     ],
     visibility = [
         "//visibility:public",

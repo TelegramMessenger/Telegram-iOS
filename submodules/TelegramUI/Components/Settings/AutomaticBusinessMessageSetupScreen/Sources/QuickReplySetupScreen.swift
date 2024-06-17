@@ -578,7 +578,8 @@ final class QuickReplySetupScreenComponent: Component {
                     chatLocation: .customChatContents,
                     subject: .customChatContents(contents: contents),
                     botStart: nil,
-                    mode: .standard(.default)
+                    mode: .standard(.default),
+                    params: nil
                 )
                 chatController.navigationPresentation = .modal
                 

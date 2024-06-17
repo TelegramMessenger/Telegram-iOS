@@ -296,6 +296,7 @@ final class ShareWithPeersScreenComponent: Component {
         private var visibleItems: [AnyHashable: ComponentView<Empty>] = [:]
         private var visibleSectionBackgrounds: [Int: UIView] = [:]
         private var visibleSectionFooters: [Int: ComponentView<Empty>] = [:]
+        private var itemSizes: [AnyHashable: CGSize] = [:]
         
         private var ignoreScrolling: Bool = false
         private var isDismissed: Bool = false
@@ -672,6 +673,9 @@ final class ShareWithPeersScreenComponent: Component {
                     }
                     var groupPeerIds: [EnginePeer.Id] = []
                     for peer in peers {
+                        guard !peer.isDeleted else {
+                            continue
+                        }
                         if !existingPeerIds.contains(peer.id) {
                             self.selectedPeers.append(peer.id)
                             existingPeerIds.insert(peer.id)
@@ -1022,13 +1026,13 @@ final class ShareWithPeersScreenComponent: Component {
                         }
                     }
                     for i in 0 ..< peers.count {
+                        let peer = peers[i]
+                        let itemId = AnyHashable(peer.id)
+                                                
                         let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: sectionOffset + section.insets.top + CGFloat(i) * section.itemHeight), size: CGSize(width: itemLayout.containerSize.width, height: section.itemHeight))
                         if !visibleBounds.intersects(itemFrame) {
                             continue
                         }
-                        
-                        let peer = peers[i]
-                        let itemId = AnyHashable(peer.id)
                         validIds.append(itemId)
                         
                         var itemTransition = transition
@@ -1050,13 +1054,13 @@ final class ShareWithPeersScreenComponent: Component {
                             if case let .channel(channel) = peer {
                                 if case .broadcast = channel.info {
                                     if let count = component.stateContext.stateValue?.participants[peer.id] {
-                                        subtitle = environment.strings.Conversation_StatusSubscribers(Int32(count))
+                                        subtitle = environment.strings.Conversation_StatusSubscribers(Int32(max(1, count)))
                                     } else {
                                         subtitle = environment.strings.Channel_Status
                                     }
                                 } else {
                                     if let count = component.stateContext.stateValue?.participants[peer.id] {
-                                        subtitle = environment.strings.Conversation_StatusMembers(Int32(count))
+                                        subtitle = environment.strings.Conversation_StatusMembers(Int32(max(1, count)))
                                     } else {
                                         subtitle = environment.strings.Group_Status
                                     }
@@ -1079,7 +1083,7 @@ final class ShareWithPeersScreenComponent: Component {
                             }
                         }
                         
-                        let _ = visibleItem.update(
+                        let itemSize = visibleItem.update(
                             transition: itemTransition,
                             component: AnyComponent(PeerListItemComponent(
                                 context: component.context,
@@ -1150,6 +1154,8 @@ final class ShareWithPeersScreenComponent: Component {
                             environment: {},
                             containerSize: itemFrame.size
                         )
+                        self.itemSizes[itemId] = itemSize
+                        
                         if let itemView = visibleItem.view {
                             if itemView.superview == nil {
                                 self.itemContainerView.addSubview(itemView)
@@ -1389,13 +1395,13 @@ final class ShareWithPeersScreenComponent: Component {
                         
                         let subtitle: String?
                         if case let .legacyGroup(group) = peer {
-                            subtitle = environment.strings.Conversation_StatusMembers(Int32(group.participantCount))
+                            subtitle = environment.strings.Conversation_StatusMembers(Int32(max(1, group.participantCount)))
                         } else if case let .channel(channel) = peer {
                             if let count = stateValue.participants[peer.id] {
                                 if case .broadcast = channel.info {
-                                    subtitle = environment.strings.Conversation_StatusSubscribers(Int32(count))
+                                    subtitle = environment.strings.Conversation_StatusSubscribers(Int32(max(1, count)))
                                 } else {
-                                    subtitle = environment.strings.Conversation_StatusMembers(Int32(count))
+                                    subtitle = environment.strings.Conversation_StatusMembers(Int32(max(1, count)))
                                 }
                             } else {
                                 subtitle = nil

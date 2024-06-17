@@ -64,6 +64,16 @@
 
 @end
 
+@interface TGMediaPriceUpdate : NSObject
+
+@property (nonatomic, readonly, strong) id<TGMediaEditableItem> item;
+@property (nonatomic, readonly, strong) NSNumber *price;
+
++ (instancetype)priceUpdateWithItem:(id<TGMediaEditableItem>)item price:(NSNumber *)price;
++ (instancetype)priceUpdate:(NSNumber *)timer;
+
+@end
+
 
 @interface TGModernCache (Private)
 
@@ -81,7 +91,8 @@
     NSNumber *_timer;
     
     NSMutableDictionary *_spoilers;
- 
+    NSMutableDictionary *_prices;
+    
     SQueue *_queue;
     
     NSMutableDictionary *_temporaryRepCache;
@@ -112,6 +123,7 @@
     SPipe *_captionPipe;
     SPipe *_timerPipe;
     SPipe *_spoilerPipe;
+    SPipe *_pricePipe;
     SPipe *_fullSizePipe;
     SPipe *_cropPipe;
     
@@ -133,6 +145,7 @@
         _adjustments = [[NSMutableDictionary alloc] init];
         _timers = [[NSMutableDictionary alloc] init];
         _spoilers = [[NSMutableDictionary alloc] init];
+        _prices = [[NSMutableDictionary alloc] init];
         
         _imageCache = [[TGMemoryImageCache alloc] initWithSoftMemoryLimit:[[self class] imageSoftMemoryLimit]
                                                           hardMemoryLimit:[[self class] imageHardMemoryLimit]];
@@ -180,6 +193,7 @@
         _captionPipe = [[SPipe alloc] init];
         _timerPipe = [[SPipe alloc] init];
         _spoilerPipe = [[SPipe alloc] init];
+        _pricePipe = [[SPipe alloc] init];
         _fullSizePipe = [[SPipe alloc] init];
         _cropPipe = [[SPipe alloc] init];
     }
@@ -675,6 +689,74 @@
         return @true;
     }];
 }
+
+#pragma mark -
+
+- (NSNumber *)priceForItem:(NSObject<TGMediaEditableItem> *)item
+{
+    NSString *itemId = [self _contextualIdForItemId:item.uniqueIdentifier];
+    if (itemId == nil)
+        return nil;
+    
+    return [self _priceForItemId:itemId];
+}
+
+- (NSNumber *)_priceForItemId:(NSString *)itemId
+{
+    if (itemId == nil)
+        return nil;
+    
+    return _prices[itemId];
+}
+
+- (void)setPrice:(NSNumber *)price forItem:(NSObject<TGMediaEditableItem> *)item
+{
+    NSString *itemId = [self _contextualIdForItemId:item.uniqueIdentifier];
+    if (itemId == nil)
+        return;
+    
+    if (price.integerValue != 0)
+        _prices[itemId] = price;
+    else
+        [_prices removeObjectForKey:itemId];
+
+    _pricePipe.sink([TGMediaPriceUpdate priceUpdateWithItem:item price:price]);
+}
+
+- (SSignal *)priceSignalForItem:(NSObject<TGMediaEditableItem> *)item
+{
+    SSignal *updateSignal = [[_pricePipe.signalProducer() filter:^bool(TGMediaPriceUpdate *update)
+    {
+        return [update.item.uniqueIdentifier isEqualToString:item.uniqueIdentifier];
+    }] map:^NSNumber *(TGMediaPriceUpdate *update)
+    {
+        return update.price;
+    }];
+    
+    return [[SSignal single:[self priceForItem:item]] then:updateSignal];
+}
+
+- (SSignal *)priceSignalForIdentifier:(NSString *)identifier
+{
+    SSignal *updateSignal = [[_pricePipe.signalProducer() filter:^bool(TGMediaPriceUpdate *update)
+    {
+        return [update.item.uniqueIdentifier isEqualToString:identifier];
+    }] map:^NSNumber *(TGMediaPriceUpdate *update)
+    {
+        return update.price;
+    }];
+    
+    return [[SSignal single:[self _priceForItemId:identifier]] then:updateSignal];
+}
+
+- (SSignal *)pricesUpdatedSignal
+{
+    return [_pricePipe.signalProducer() map:^id(__unused id value)
+    {
+        return @true;
+    }];
+}
+
 
 #pragma mark -
 
@@ -1185,6 +1267,26 @@
 {
     TGMediaSpoilerUpdate *update = [[TGMediaSpoilerUpdate alloc] init];
     update->_spoiler = spoiler;
+    return update;
+}
+
+@end
+
+
+@implementation TGMediaPriceUpdate
+
++ (instancetype)priceUpdateWithItem:(id<TGMediaEditableItem>)item price:(NSNumber *)price
+{
+    TGMediaPriceUpdate *update = [[TGMediaPriceUpdate alloc] init];
+    update->_item = item;
+    update->_price = price;
+    return update;
+}
+
++ (instancetype)priceUpdate:(NSNumber *)price
+{
+    TGMediaPriceUpdate *update = [[TGMediaPriceUpdate alloc] init];
+    update->_price = price;
     return update;
 }
 

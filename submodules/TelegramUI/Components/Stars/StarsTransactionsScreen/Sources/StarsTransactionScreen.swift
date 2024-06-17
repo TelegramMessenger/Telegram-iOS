@@ -75,7 +75,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             
             var peerIds: [EnginePeer.Id] = []
             switch subject {
-            case let .transaction(transaction):
+            case let .transaction(transaction, _):
                 if case let .peer(peer) = transaction.peer {
                     peerIds.append(peer.id)
                 }
@@ -179,7 +179,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             
             var delayedCloseOnOpenPeer = true
             switch subject {
-            case let .transaction(transaction):
+            case let .transaction(transaction, isAccount):
                 switch transaction.peer {
                 case let .peer(peer):
                     titleText = transaction.title ?? peer.compactDisplayTitle
@@ -194,8 +194,13 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     titleText = strings.Stars_Transaction_PremiumBotTopUp_Title
                     via = strings.Stars_Transaction_PremiumBotTopUp_Subtitle
                 case .fragment:
-                    titleText = strings.Stars_Transaction_FragmentTopUp_Title
-                    via = strings.Stars_Transaction_FragmentTopUp_Subtitle
+                    if isAccount {
+                        titleText = strings.Stars_Transaction_FragmentTopUp_Title
+                        via = strings.Stars_Transaction_FragmentTopUp_Subtitle
+                    } else {
+                        titleText = strings.Stars_Transaction_FragmentWithdrawal_Title
+                        via = strings.Stars_Transaction_FragmentWithdrawal_Subtitle
+                    }
                 case .unsupported:
                     titleText = strings.Stars_Transaction_Unsupported_Title
                     via = nil
@@ -662,7 +667,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
 
 public class StarsTransactionScreen: ViewControllerComponentContainer {
     public enum Subject: Equatable {
-        case transaction(StarsContext.State.Transaction)
+        case transaction(StarsContext.State.Transaction, Bool)
         case receipt(BotPaymentReceipt)
     }
     
@@ -1204,25 +1209,4 @@ private final class TransactionCellComponent: Component {
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
-}
-
-private func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        
-        context.setFillColor(backgroundColor.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-        
-        context.setLineWidth(2.0)
-        context.setLineCap(.round)
-        context.setStrokeColor(foregroundColor.cgColor)
-        
-        context.move(to: CGPoint(x: 10.0, y: 10.0))
-        context.addLine(to: CGPoint(x: 20.0, y: 20.0))
-        context.strokePath()
-        
-        context.move(to: CGPoint(x: 20.0, y: 10.0))
-        context.addLine(to: CGPoint(x: 10.0, y: 20.0))
-        context.strokePath()
-    })
 }

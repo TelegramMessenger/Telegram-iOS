@@ -19,6 +19,7 @@ import MapResourceToAvatarSizes
 import LegacyMediaPickerUI
 import TextFormat
 import AvatarEditorScreen
+import OldChannelsController
 
 private struct CreateChannelArguments {
     let context: AccountContext

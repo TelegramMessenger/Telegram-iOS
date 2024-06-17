@@ -227,28 +227,31 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: background.size.height / 2.0))
             )
             
-            if let peer = state.peer {
-                let subject: StarsImageComponent.Subject
+            let subject: StarsImageComponent.Subject
+            if let extendedMedia = component.invoice.extendedMedia {
+                subject = .extendedMedia(extendedMedia)
+            } else if let peer = state.peer {
                 if let photo = component.invoice.photo {
                     subject = .photo(photo)
                 } else {
                     subject = .transactionPeer(.peer(peer))
                 }
-                let star = star.update(
-                    component: StarsImageComponent(
-                        context: component.context,
-                        subject: subject,
-                        theme: theme,
-                        diameter: 90.0
-                    ),
-                    availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
-                    transition: context.transition
-                )
-                
-                context.add(star
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: star.size.height / 2.0 - 27.0))
-                )
+            } else {
+                subject = .none
             }
+            let star = star.update(
+                component: StarsImageComponent(
+                    context: component.context,
+                    subject: subject,
+                    theme: theme,
+                    diameter: 90.0
+                ),
+                availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
+                transition: context.transition
+            )
+            context.add(star
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: star.size.height / 2.0 - 27.0))
+            )
             
             let closeImage: UIImage
             if let (image, cacheTheme) = state.cachedCloseImage, theme === cacheTheme {
@@ -295,14 +298,23 @@ private final class SheetContent: CombinedComponent {
             })
             
             let amount = component.invoice.totalAmount
+            let infoText: String
+            if let _ = component.invoice.extendedMedia {
+                infoText = strings.Stars_Transfer_UnlockInfo(
+                    strings.Stars_Transfer_Info_Stars(Int32(amount))
+                ).string
+            } else {
+                infoText = strings.Stars_Transfer_Info(
+                    component.invoice.title,
+                    state.peer?.compactDisplayTitle ?? "",
+                    strings.Stars_Transfer_Info_Stars(Int32(amount))
+                ).string
+            }
+            
             let text = text.update(
                 component: BalancedTextComponent(
                     text: .markdown(
-                        text: strings.Stars_Transfer_Info(
-                            component.invoice.title,
-                            state.peer?.compactDisplayTitle ?? "",
-                            strings.Stars_Transfer_Info_Stars(Int32(amount))
-                        ).string,
+                        text: infoText,
                         attributes: markdownAttributes
                     ),
                     horizontalAlignment: .center,

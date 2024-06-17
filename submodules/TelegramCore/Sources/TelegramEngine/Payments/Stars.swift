@@ -140,11 +140,11 @@ private final class StarsContextImpl {
     private let disposable = MetaDisposable()
     private var updateDisposable: Disposable?
     
-    init(account: Account, peerId: EnginePeer.Id) {
+    init(account: Account) {
         assert(Queue.mainQueue().isCurrent())
         
         self.account = account
-        self.peerId = peerId
+        self.peerId = account.peerId
         
         self._state = nil
         self._statePromise.set(.single(nil))
@@ -426,9 +426,9 @@ public final class StarsContext {
         }
     }
     
-    init(account: Account, peerId: EnginePeer.Id) {
+    init(account: Account) {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
-            return StarsContextImpl(account: account, peerId: peerId)
+            return StarsContextImpl(account: account)
         })
     }
 }

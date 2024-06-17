@@ -3912,7 +3912,7 @@ extension ChatControllerImpl {
                 chatLocation = .peer(id: peerId)
             }
             
-            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: chatLocation, subject: .pinnedMessages(id: pinnedMessage.message.id), botStart: nil, mode: .standard(.previewing))
+            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: chatLocation, subject: .pinnedMessages(id: pinnedMessage.message.id), botStart: nil, mode: .standard(.previewing), params: nil)
             chatController.canReadHistory.set(false)
             
             strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()

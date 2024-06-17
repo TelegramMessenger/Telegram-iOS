@@ -108,6 +108,7 @@ import GroupStickerPackSetupController
 import PeerNameColorItem
 import PeerSelectionScreen
 import UIKitRuntimeUtils
+import OldChannelsController
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -1728,14 +1729,12 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             let ItemBotInfo = 10
             
             if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
-                //TODO:localize
-                items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text("@\(user.addressName ?? "")"), text: "Username", icon: PresentationResourcesSettings.bot, action: {
+                items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text("@\(user.addressName ?? "")"), text: presentationData.strings.PeerInfo_Bot_Username, icon: PresentationResourcesSettings.bot, action: {
                     interaction.editingOpenPublicLinkSetup()
                 }))
                 
-                if "".isEmpty {
-                    let balance: Int64 = 2275
-                    items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStars, label: .text(presentationData.strings.PeerInfo_Bot_Balance_Stars(Int32(balance))), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.stars, action: {
+                if let starsRevenueStats = data.starsRevenueStatsState, starsRevenueStats.balances.overallRevenue > 0 {
+                    items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStars, label: .text(presentationData.strings.PeerInfo_Bot_Balance_Stars(Int32(starsRevenueStats.balances.currentBalance))), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.stars, action: {
                         interaction.editingOpenStars()
                     }))
                 }
@@ -3399,7 +3398,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 return
             }
             let presentationData = strongSelf.presentationData
-            let chatController = strongSelf.context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.previewing))
+            let chatController = strongSelf.context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.previewing), params: nil)
             chatController.canReadHistory.set(false)
             let items: [ContextMenuItem]
             if recommended {
@@ -8344,10 +8343,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func editingOpenStars() {
-        guard let starsContext = self.context.starsContext else {
+        guard let revenueContext = self.data?.starsRevenueStatsContext else {
             return
         }
-        self.controller?.push(self.context.sharedContext.makeStarsStatisticsScreen(context: self.context, starsContext: starsContext))
+        self.controller?.push(self.context.sharedContext.makeStarsStatisticsScreen(context: self.context, peerId: self.peerId, revenueContext: revenueContext))
     }
     
     private func editingOpenReactionsSetup() {
@@ -9654,7 +9653,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                 }
                 if !foundController {
-                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: strongSelf.peerId), subject: nil, botStart: nil, mode: .standard(.default))
+                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: strongSelf.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
                     chatController.hintPlayNextOutgoingGift()
                     controllers.append(chatController)
                 }
@@ -9941,7 +9940,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                     self.supportPeerDisposable.set((supportPeer.get() |> take(1) |> deliverOnMainQueue).startStrict(next: { [weak self] peerId in
                         if let strongSelf = self, let peerId = peerId {
-                            push(strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(.default)))
+                            push(strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil))
                         }
                     }))
                 })]), in: .window(.root))
@@ -10447,7 +10446,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                         proceed(chatController)
                                     })
                                 } else {
-                                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: .none, botStart: nil, mode: .standard(.default))
+                                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: .none, botStart: nil, mode: .standard(.default), params: nil)
                                     proceed(chatController)
                                 }
                             }
@@ -10913,7 +10912,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     ))
                 })))
 
-                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: strongSelf.peerId), subject: .message(id: .id(index.id), highlight: nil, timecode: nil), botStart: nil, mode: .standard(.previewing))
+                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: strongSelf.peerId), subject: .message(id: .id(index.id), highlight: nil, timecode: nil), botStart: nil, mode: .standard(.previewing), params: nil)
                 chatController.canReadHistory.set(false)
                 let contextController = ContextController(presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, sourceRect: sourceRect, passthroughTouches: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
@@ -12650,7 +12649,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 }) {
                     let _ = navigationController.popToViewController(chatController, animated: false)
                 } else {
-                    let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: context.account.peerId), subject: nil, botStart: nil, mode: .standard(.default))
+                    let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: context.account.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
                     
                     navigationController.replaceController(sourceController, with: chatController, animated: false)
                 }

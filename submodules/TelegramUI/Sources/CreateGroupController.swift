@@ -32,6 +32,7 @@ import AsyncDisplayKit
 import TextFormat
 import AvatarEditorScreen
 import SendInviteLinkScreen
+import OldChannelsController
 
 private struct CreateGroupArguments {
     let context: AccountContext
