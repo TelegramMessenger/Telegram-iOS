@@ -12337,6 +12337,7 @@ Sorry for the inconvenience.";
 "Stars.BotRevenue.Proceeds.Title" = "Proceeds Overview";
 "Stars.BotRevenue.Proceeds.Available" = "Available Balance";
 "Stars.BotRevenue.Proceeds.Total" = "Total Lifetime Proceeds";
+"Stars.BotRevenue.Proceeds.Info" = "Stars from your total balance become available for spending on ads and rewards 21 days after they are earned.";
 
 "Stars.BotRevenue.Withdraw.Balance" = "Available Balance";
 "Stars.BotRevenue.Withdraw.Withdraw" = "Withdraw via Fragment";

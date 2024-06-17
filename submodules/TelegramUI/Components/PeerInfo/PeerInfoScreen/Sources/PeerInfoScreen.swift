@@ -1733,7 +1733,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     interaction.editingOpenPublicLinkSetup()
                 }))
                 
-                if let starsRevenueStats = data.starsRevenueStatsState {
+                if let starsRevenueStats = data.starsRevenueStatsState, starsRevenueStats.balances.overallRevenue > 0 {
                     items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStars, label: .text(presentationData.strings.PeerInfo_Bot_Balance_Stars(Int32(starsRevenueStats.balances.currentBalance))), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.stars, action: {
                         interaction.editingOpenStars()
                     }))

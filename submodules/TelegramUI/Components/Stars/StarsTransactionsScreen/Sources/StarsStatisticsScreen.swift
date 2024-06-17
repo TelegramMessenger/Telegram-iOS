@@ -27,6 +27,7 @@ final class StarsStatisticsScreenComponent: Component {
     let context: AccountContext
     let peerId: EnginePeer.Id
     let revenueContext: StarsRevenueStatsContext
+    let transactionsContext: StarsTransactionsContext
     let openTransaction: (StarsContext.State.Transaction) -> Void
     let buy: () -> Void
     let showTimeoutTooltip: (Int32) -> Void
@@ -35,6 +36,7 @@ final class StarsStatisticsScreenComponent: Component {
         context: AccountContext,
         peerId: EnginePeer.Id,
         revenueContext: StarsRevenueStatsContext,
+        transactionsContext: StarsTransactionsContext,
         openTransaction: @escaping (StarsContext.State.Transaction) -> Void,
         buy: @escaping () -> Void,
         showTimeoutTooltip: @escaping (Int32) -> Void
@@ -42,6 +44,7 @@ final class StarsStatisticsScreenComponent: Component {
         self.context = context
         self.peerId = peerId
         self.revenueContext = revenueContext
+        self.transactionsContext = transactionsContext
         self.openTransaction = openTransaction
         self.buy = buy
         self.showTimeoutTooltip = showTimeoutTooltip
@@ -121,9 +124,7 @@ final class StarsStatisticsScreenComponent: Component {
         private var starsState: StarsRevenueStats?
         
         private var previousBalance: Int64?
-        
-        private var allTransactionsContext: StarsTransactionsContext?
-        
+                
         private var cachedChevronImage: (UIImage, PresentationTheme)?
         
         override init(frame: CGRect) {
@@ -379,7 +380,14 @@ final class StarsStatisticsScreenComponent: Component {
                         )),
                         maximumNumberOfLines: 0
                     )),
-                    footer: nil,
+                    footer: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: strings.Stars_BotRevenue_Proceeds_Info,
+                            font: Font.regular(13.0),
+                            textColor: environment.theme.list.freeTextColor
+                        )),
+                        maximumNumberOfLines: 0
+                    )),
                     items: [
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(StarsOverviewItemComponent(
                             theme: environment.theme,
@@ -498,15 +506,7 @@ final class StarsStatisticsScreenComponent: Component {
             
             contentHeight += balanceSize.height
             contentHeight += 27.0
-            
-            let allTransactionsContext: StarsTransactionsContext
-            if let current = self.allTransactionsContext {
-                allTransactionsContext = current
-            } else {
-                allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext( subject: .peer(component.peerId), mode: .all)
-                self.allTransactionsContext = allTransactionsContext
-            }
-            
+                        
             let transactionsHeaderSize = self.transactionsHeader.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
@@ -540,7 +540,7 @@ final class StarsStatisticsScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(StarsTransactionsListPanelComponent(
                     context: component.context,
-                    transactionsContext: allTransactionsContext,
+                    transactionsContext: component.transactionsContext,
                     isAccount: false,
                     action: { transaction in
                         component.openTransaction(transaction)
@@ -614,6 +614,7 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     private let peerId: EnginePeer.Id
     private let revenueContext: StarsRevenueStatsContext
+    private let transactionsContext: StarsTransactionsContext
     
     private weak var tooltipScreen: UndoOverlayController?
     private var timer: Foundation.Timer?
@@ -622,6 +623,7 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
         self.context = context
         self.peerId = peerId
         self.revenueContext = revenueContext
+        self.transactionsContext = context.engine.payments.peerStarsTransactionsContext(subject: .peer(peerId), mode: .all)
         
         var withdrawImpl: (() -> Void)?
         var showTimeoutTooltipImpl: ((Int32) -> Void)?
@@ -630,6 +632,7 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
             context: context,
             peerId: peerId,
             revenueContext: revenueContext,
+            transactionsContext: self.transactionsContext,
             openTransaction: { transaction in
                 openTransactionImpl?(transaction)
             },
@@ -675,12 +678,13 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
                             }
                             let controller = confirmStarsRevenueWithdrawalController(context: context, peerId: peerId, amount: amount, present: { [weak self] c, a in
                                 self?.present(c, in: .window(.root))
-                            }, completion: { url in
+                            }, completion: { [weak self] url in
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
                                 
                                 Queue.mainQueue().after(2.0) {
                                     revenueContext.reload()
+                                    self?.transactionsContext.reload()
                                 }
                             })
                             self.present(controller, in: .window(.root))

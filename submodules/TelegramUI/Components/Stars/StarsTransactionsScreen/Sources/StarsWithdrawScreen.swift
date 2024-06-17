@@ -487,6 +487,7 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
                 undoText: nil
             ),
             elevatedLayout: false,
+            position: .top,
             action: { _ in return true})
         self.present(resultController, in: .window(.root))
         
