@@ -2715,16 +2715,20 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     }
     
     private func updateHistory(items: SparseItemGrid.Items, pinnedIds: Set<Int32>, synchronous: Bool, reloadAtTop: Bool) {
+        var transition: ContainedViewLayoutTransition = .immediate
+        if case .location = self.scope, let previousItems = self.items, previousItems.items.count == 0, previousItems.count != 0, items.items.count == 0, items.count == 0 {
+            transition = .animated(duration: 0.3, curve: .spring)
+        }
+        
         self.items = items
         self.pinnedIds = pinnedIds
-        self.isEmptyUpdated(self.isEmpty)
 
         if let (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, navigationHeight, presentationData) = self.currentParams {
             var gridSnapshot: UIView?
             if reloadAtTop {
                 gridSnapshot = self.itemGrid.view.snapshotView(afterScreenUpdates: false)
             }
-            self.update(size: size, topInset: topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: false, transition: .immediate)
+            self.update(size: size, topInset: topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: false, transition: transition)
             self.updateSelectedItems(animated: false)
             if let gridSnapshot = gridSnapshot {
                 self.view.addSubview(gridSnapshot)
@@ -2733,6 +2737,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 })
             }
         }
+        
+        self.isEmptyUpdated(self.isEmpty)
 
         if !self.didSetReady {
             self.didSetReady = true
@@ -3074,26 +3080,38 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     
     private func gridScrollingOffsetUpdated(transition: ContainedViewLayoutTransition) {
         if let _ = self.mapNode, let currentParams = self.currentParams {
-            self.updateMapLayout(size: currentParams.size, topInset: currentParams.topInset, deviceMetrics: currentParams.deviceMetrics, transition: transition)
+            self.updateMapLayout(size: currentParams.size, topInset: currentParams.topInset, bottomInset: currentParams.bottomInset, deviceMetrics: currentParams.deviceMetrics, transition: transition)
         }
     }
     
     private var effectiveMapHeight: CGFloat = 0.0
-    private func updateMapLayout(size: CGSize, topInset: CGFloat, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition) {
+    private func updateMapLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition) {
         guard let mapNode = self.mapNode else {
             return
         }
         
-        let mapOverscrollInset: CGFloat = 300.0
-        
         var mapHeight = min(size.width, size.height)
         mapHeight = min(mapHeight, floor(size.height * 0.389))
+        
+        let mapOverscrollInset: CGFloat = size.height - mapHeight
         
         self.effectiveMapHeight = mapHeight - self.additionalNavigationHeight
         let mapSize = CGSize(width: size.width, height: mapHeight + mapOverscrollInset)
         
-        let mapFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset - mapOverscrollInset - self.itemGrid.scrollingOffset - self.additionalNavigationHeight), size: mapSize)
+        var controlsTopPadding = mapOverscrollInset + self.additionalNavigationHeight
+        
+        let effectiveScrollingOffset: CGFloat
+        if let items = self.items, items.items.isEmpty, items.count == 0 {
+            effectiveScrollingOffset = -size.height * 0.5 + 60.0 + bottomInset
+        } else {
+            effectiveScrollingOffset = self.itemGrid.scrollingOffset
+        }
+        controlsTopPadding += min(0.0, effectiveScrollingOffset)
+        
+        let mapFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset - mapOverscrollInset - effectiveScrollingOffset - self.additionalNavigationHeight), size: mapSize)
         transition.updateFrame(node: mapNode, frame: mapFrame)
+        
+        let mapOffset = min(floorToScreenPixels(effectiveScrollingOffset * 0.5), mapSize.height)
         
         mapNode.updateLayout(
             layout: ContainerViewLayout(
@@ -3110,7 +3128,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             ),
             navigationBarHeight: 0.0,
             topPadding: mapOverscrollInset + self.additionalNavigationHeight,
-            offset: min(floorToScreenPixels(self.itemGrid.scrollingOffset * 0.5), mapSize.height),
+            controlsTopPadding: controlsTopPadding,
+            offset: mapOffset,
             size: mapSize,
             transition: transition
         )
@@ -3162,7 +3181,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             let mapInfoTopInset: CGFloat = -6.0
             
             let mapInfoFrame = CGRect(origin: CGPoint(x: 0.0, y: mapFrame.maxY + mapInfoTopInset), size: mapInfoLayout.contentSize)
-            mapInfoNode.frame = mapInfoFrame
+            transition.updateFrame(node: mapInfoNode, frame: mapInfoFrame)
             mapInfoReadyAndApply().1(ListViewItemApply(isOnScreen: true))
             
             self.effectiveMapHeight += mapInfoLayout.contentSize.height + mapInfoTopInset
@@ -3217,7 +3236,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         var gridTopInset = topInset
         
         if self.mapNode != nil {
-            self.updateMapLayout(size: size, topInset: topInset, deviceMetrics: deviceMetrics, transition: transition)
+            self.updateMapLayout(size: size, topInset: topInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, transition: transition)
             gridTopInset += self.effectiveMapHeight
             
             let mapOptionsNode: LocationOptionsNode
