@@ -1203,7 +1203,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                 if let result = directMediaImageCache.getImage(peer: item.peer, story: story, media: selectedMedia, width: imageWidthSpec, aspectRatio: 0.81, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, includeBlurred: hasSpoiler || displayItem.blurLayer != nil, synchronous: synchronous == .full) {
                     if let image = result.image {
                         layer.setContents(image)
-                        switch synchronous {
+                        
+                        /*switch synchronous {
                         case .none:
                             layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak self, weak layer, weak displayItem] _ in
                                 layer?.hasContents = true
@@ -1213,7 +1214,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                             })
                         default:
                             layer.hasContents = true
-                        }
+                        }*/
+                        layer.hasContents = true
                     }
                     if let image = result.blurredImage {
                         layer.setSpoilerContents(image)
@@ -1232,12 +1234,15 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                                 return
                             }
                             let deltaTime = CFAbsoluteTimeGetCurrent() - startTimestamp
-                            let synchronousValue: Bool
+                            var synchronousValue: Bool
                             switch synchronous {
                             case .none, .full:
                                 synchronousValue = false
                             case .semi:
                                 synchronousValue = deltaTime < 0.1
+                            }
+                            if "".isEmpty {
+                                synchronousValue = true
                             }
                             
                             if let contents = layer.getContents(), !synchronousValue {
