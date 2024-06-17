@@ -4486,7 +4486,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
             
             if existingEntity == nil {
-                let maxLinkCount = 3
+                let maxLinkCount = self.context.userLimits.maxStoriesLinksCount
                 var currentLinkCount = 0
                 self.entitiesView.eachView { entityView in
                     if entityView.entity is DrawingLinkEntity {
@@ -4528,8 +4528,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
 
                 let entity = DrawingLinkEntity(url: result.url, name: result.name, webpage: result.webpage, positionBelowText: result.positionBelowText, largeMedia: result.largeMedia, style: style)
-                entity.renderImage = result.image
-                entity.secondaryRenderImage = result.nightImage
+                entity.whiteImage = result.image
+                entity.blackImage = result.nightImage
                                 
                 if let existingEntity {
                     self.entitiesView.remove(uuid: existingEntity.uuid, animated: true)

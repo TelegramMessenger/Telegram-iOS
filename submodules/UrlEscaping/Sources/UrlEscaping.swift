@@ -26,7 +26,7 @@ public func isValidUrl(_ url: String, validSchemes: [String: Bool] = ["http": tr
     if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let url = URL(string: escapedUrl), let scheme = url.scheme?.lowercased(), let requiresTopLevelDomain = validSchemes[scheme], let host = url.host, (!requiresTopLevelDomain || host.contains(".")) && url.user == nil {
         if requiresTopLevelDomain {
             let components = host.components(separatedBy: ".")
-            let domain = (components.first ?? "")
+            let domain = (components.last ?? "")
             if domain.isEmpty {
                 return false
             }

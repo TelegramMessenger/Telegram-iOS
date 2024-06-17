@@ -24,6 +24,8 @@ public final class DrawingLinkEntity: DrawingEntity, Codable {
         case scale
         case rotation
         case renderImage
+        case whiteImage
+        case blackImage
     }
     
     public enum Style: Codable, Equatable {
@@ -75,9 +77,10 @@ public final class DrawingLinkEntity: DrawingEntity, Codable {
         return self.position
     }
     
-    public var renderImage: UIImage?
-    public var secondaryRenderImage: UIImage?
+    public var whiteImage: UIImage?
+    public var blackImage: UIImage?
     
+    public var renderImage: UIImage?
     public var renderSubEntities: [DrawingEntity]?
     
     public var isMedia: Bool {
@@ -131,6 +134,15 @@ public final class DrawingLinkEntity: DrawingEntity, Codable {
         self.width = try container.decode(CGFloat.self, forKey: .width)
         self.scale = try container.decode(CGFloat.self, forKey: .scale)
         self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
+        
+        if let imagePath = try container.decodeIfPresent(String.self, forKey: .whiteImage), let image = UIImage(contentsOfFile: fullEntityMediaPath(imagePath)) {
+            self.whiteImage = image
+        }
+        
+        if let imagePath = try container.decodeIfPresent(String.self, forKey: .blackImage), let image = UIImage(contentsOfFile: fullEntityMediaPath(imagePath)) {
+            self.blackImage = image
+        }
+                
         if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
             self.renderImage = UIImage(data: renderImageData)
         }
@@ -161,8 +173,29 @@ public final class DrawingLinkEntity: DrawingEntity, Codable {
         try container.encode(self.position, forKey: .position)
         try container.encode(self.width, forKey: .width)
         try container.encode(self.scale, forKey: .scale)
-        try container.encode(self.rotation, forKey: .rotation)
-        if let renderImage, let data = renderImage.pngData() {
+        try container.encode(self.rotation, forKey: .rotation)    
+        
+        if let image = self.whiteImage {
+            let imagePath = "\(self.uuid)_white.png"
+            let fullImagePath = fullEntityMediaPath(imagePath)
+            if let imageData = image.pngData() {
+                try? FileManager.default.createDirectory(atPath: entitiesPath(), withIntermediateDirectories: true)
+                try? imageData.write(to: URL(fileURLWithPath: fullImagePath))
+                try container.encodeIfPresent(imagePath, forKey: .whiteImage)
+            }
+        }
+        
+        if let image = self.blackImage {
+            let imagePath = "\(self.uuid)black.png"
+            let fullImagePath = fullEntityMediaPath(imagePath)
+            if let imageData = image.pngData() {
+                try? FileManager.default.createDirectory(atPath: entitiesPath(), withIntermediateDirectories: true)
+                try? imageData.write(to: URL(fileURLWithPath: fullImagePath))
+                try container.encodeIfPresent(imagePath, forKey: .blackImage)
+            }
+        }
+        
+        if let renderImage = self.renderImage, let data = renderImage.pngData() {
             try container.encode(data, forKey: .renderImage)
         }
     }
@@ -177,6 +210,8 @@ public final class DrawingLinkEntity: DrawingEntity, Codable {
         newEntity.width = self.width
         newEntity.scale = self.scale
         newEntity.rotation = self.rotation
+        newEntity.whiteImage = self.whiteImage
+        newEntity.blackImage = self.blackImage
         return newEntity
     }
     

@@ -44,7 +44,7 @@ extension ChatControllerImpl {
         var items: [ContextMenuItem] = []
 
         items.append(
-            .action(ContextMenuActionItem(text: "Search", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Search"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+            .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Hashtag_Search, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Search"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                 guard let self else {
                     return
                 }
@@ -54,7 +54,7 @@ extension ChatControllerImpl {
         )
         
         items.append(
-            .action(ContextMenuActionItem(text: "Copy Hashtag", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
+            .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Hashtag_Copy, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
                 f(.default)
 
                 guard let self else {

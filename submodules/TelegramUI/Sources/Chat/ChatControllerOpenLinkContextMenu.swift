@@ -80,7 +80,7 @@ extension ChatControllerImpl {
         
         if canAddToReadingList {
             items.append(
-                .action(ContextMenuActionItem(text: "Add to Reading List", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                .action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_AddToReadingList, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                     f(.default)
                     
                     if let link = URL(string: url) {
@@ -88,16 +88,10 @@ extension ChatControllerImpl {
                     }
                 }))
             )
-//                /                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
-//                //                    actionSheet?.dismissAnimated()
-//                //                    if let link = URL(string: url) {
-//                //                        let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
-//                //                    }
-//                //                }))
         }
         
         items.append(
-            .action(ContextMenuActionItem(text: "Copy Link", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
+            .action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuCopyLink, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
                 f(.default)
 
                 guard let self else {

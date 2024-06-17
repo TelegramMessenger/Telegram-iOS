@@ -110,7 +110,7 @@ public final class DrawingLinkEntityView: DrawingEntityView, UITextViewDelegate 
     
     private var textSize: CGSize = .zero
     public override func sizeThatFits(_ size: CGSize) -> CGSize {
-        if self.linkEntity.webpage != nil, let image = self.linkEntity.renderImage {
+        if self.linkEntity.webpage != nil, let image = self.linkEntity.whiteImage {
             self.imageView.frame = CGRect(origin: .zero, size: image.size)
             return image.size
         } else {
@@ -118,7 +118,7 @@ public final class DrawingLinkEntityView: DrawingEntityView, UITextViewDelegate 
             self.textSize = result
             
             let widthExtension = result.height * 0.65
-            result.width = floorToScreenPixels(max(224.0, ceil(result.width) + 20.0) + widthExtension)
+            result.width = floorToScreenPixels(max(104.0, ceil(result.width) + 20.0) + widthExtension)
             result.height = ceil(result.height * 1.2);
             return result;
         }
@@ -260,7 +260,11 @@ public final class DrawingLinkEntityView: DrawingEntityView, UITextViewDelegate 
             self.blurredBackgroundView.isHidden = true
             self.iconView.isHidden = true
             
-            self.imageView.image = self.linkEntity.style == .white ? self.linkEntity.renderImage : self.linkEntity.secondaryRenderImage
+            if self.linkEntity.style == .white && self.imageView.image !== self.linkEntity.whiteImage {
+                self.imageView.image = self.linkEntity.whiteImage
+            } else if self.linkEntity.style == .black && self.imageView.image !== self.linkEntity.blackImage {
+                self.imageView.image = self.linkEntity.blackImage
+            }
         } else {
             self.textView.isHidden = false
             self.textView.frameInsets = UIEdgeInsets(top: 0.15, left: 0.0, bottom: 0.15, right: 0.0)

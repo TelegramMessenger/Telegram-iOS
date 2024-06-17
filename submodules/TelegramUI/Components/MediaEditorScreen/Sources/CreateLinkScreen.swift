@@ -23,6 +23,7 @@ import MediaEditor
 import UrlEscaping
 
 private let linkTag = GenericComponentViewTag()
+private let nameTag = GenericComponentViewTag()
 
 private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -130,15 +131,16 @@ private final class SheetContent: CombinedComponent {
                         Text(
                             text: strings.Common_Done,
                             font: Font.bold(17.0),
-                            color: state.link.isEmpty ? theme.actionSheet.secondaryTextColor : theme.actionSheet.controlAccentColor
+                            color: isValidLink ? theme.actionSheet.controlAccentColor : theme.actionSheet.secondaryTextColor
                         )
                     ),
                     isEnabled: isValidLink,
                     action: { [weak state] in
-                        if let controller = controller() as? CreateLinkScreen {
-                            state?.complete(controller: controller)
+                        if let controller = controller() as? CreateLinkScreen, let state {
+                            if state.complete(controller: controller) {
+                                component.dismiss()
+                            }
                         }
-                        component.dismiss()
                     }
                 ),
                 availableSize: context.availableSize,
@@ -197,6 +199,11 @@ private final class SheetContent: CombinedComponent {
                             textUpdated: { [weak state] text in
                                 state?.link = text
                                 state?.updated()
+                            },
+                            textReturned: { [weak state] in
+                                if let controller = controller() as? CreateLinkScreen {
+                                    state?.switchToNextField(controller: controller)
+                                }
                             },
                             tag: linkTag
                         )
@@ -263,7 +270,15 @@ private final class SheetContent: CombinedComponent {
                                     placeholderText: strings.MediaEditor_Link_LinkName_Placeholder,
                                     textUpdated: { [weak state] text in
                                         state?.name = text
-                                    }
+                                    },
+                                    textReturned: { [weak state] in
+                                        if let controller = controller() as? CreateLinkScreen, let state {
+                                            if state.complete(controller: controller) {
+                                                component.dismiss()
+                                            }
+                                        }
+                                    },
+                                    tag: nameTag
                                 )
                             )
                         )
@@ -433,7 +448,21 @@ private final class CreateLinkSheetComponent: CombinedComponent {
             })
         }
         
-        func complete(controller: CreateLinkScreen) {
+        func switchToNextField(controller: CreateLinkScreen) {
+            if let view = controller.node.hostView.findTaggedView(tag: nameTag) as? LinkFieldComponent.View {
+                view.activateInput()
+            }
+        }
+        
+        func complete(controller: CreateLinkScreen) -> Bool {
+            let explicitLink = explicitUrl(self.link)
+            if !isValidUrl(explicitLink) {
+                if let view = controller.node.hostView.findTaggedView(tag: linkTag) as? LinkFieldComponent.View {
+                    view.animateError()
+                }
+                return false
+            }
+            
             let text = !self.name.isEmpty ? self.name : self.link
             
             var effectiveMedia: TelegramMediaWebpage?
@@ -466,6 +495,7 @@ private final class CreateLinkSheetComponent: CombinedComponent {
                     )
                 )
             })
+            return true
         }
     }
     
@@ -638,6 +668,7 @@ private final class LinkFieldComponent: Component {
     let link: Bool
     let placeholderText: String
     let textUpdated: (String) -> Void
+    let textReturned: () -> Void
     let tag: AnyObject?
     
     init(
@@ -647,6 +678,7 @@ private final class LinkFieldComponent: Component {
         link: Bool,
         placeholderText: String,
         textUpdated: @escaping (String) -> Void,
+        textReturned: @escaping () -> Void,
         tag: AnyObject? = nil
     ) {
         self.textColor = textColor
@@ -655,6 +687,7 @@ private final class LinkFieldComponent: Component {
         self.link = link
         self.placeholderText = placeholderText
         self.textUpdated = textUpdated
+        self.textReturned = textReturned
         self.tag = tag
     }
     
@@ -714,14 +747,14 @@ private final class LinkFieldComponent: Component {
         }
         
         func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+            if string == "\n" {
+                self.component?.textReturned()
+                return false
+            }
+            
             let newText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
             if let component = self.component, !component.link && newText.count > 48 {
-                textField.layer.addShakeAnimation()
-                let hapticFeedback = HapticFeedback()
-                hapticFeedback.error()
-                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: {
-                    let _ = hapticFeedback
-                })
+                self.animateError()
                 return false
             }
             return true
@@ -733,6 +766,15 @@ private final class LinkFieldComponent: Component {
         
         func selectAll() {
             self.textField.selectAll(nil)
+        }
+        
+        func animateError() {
+            self.textField.layer.addShakeAnimation()
+            let hapticFeedback = HapticFeedback()
+            hapticFeedback.error()
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: {
+                let _ = hapticFeedback
+            })
         }
         
         func update(component: LinkFieldComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
@@ -747,6 +789,8 @@ private final class LinkFieldComponent: Component {
                 self.textField.autocorrectionType = .no
                 self.textField.autocapitalizationType = .none
                 self.textField.textContentType = .URL
+            } else {
+                self.textField.returnKeyType = .done
             }
             
             self.component = component
