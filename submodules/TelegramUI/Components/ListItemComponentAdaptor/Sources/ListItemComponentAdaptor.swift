@@ -46,7 +46,7 @@ public final class ListItemComponentAdaptor: Component {
     }
     
     public final class View: UIView {
-        private var itemNode: ListViewItemNode?
+        public var itemNode: ListViewItemNode?
         
         func update(component: ListItemComponentAdaptor, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let item = component.itemImpl()

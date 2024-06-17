@@ -82,6 +82,35 @@ final class StarsStatisticsScreenComponent: Component {
                 return super.contentOffset
             }
         }
+        
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
+                return true
+            }
+            return false
+        }
+        
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            return false
+        }
+        
+        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            if gestureRecognizer is UIPanGestureRecognizer, let gestureRecognizers = gestureRecognizer.view?.gestureRecognizers {
+                for otherGestureRecognizer in gestureRecognizers {
+                    if otherGestureRecognizer !== gestureRecognizer, let panGestureRecognizer = otherGestureRecognizer as? UIPanGestureRecognizer, panGestureRecognizer.minimumNumberOfTouches == 2 {
+                        return gestureRecognizer.numberOfTouches < 2
+                    }
+                }
+                
+                if let view = gestureRecognizer.view?.hitTest(gestureRecognizer.location(in: gestureRecognizer.view), with: nil) as? UIControl {
+                    return !view.isTracking
+                }
+                
+                return true
+            } else {
+                return true
+            }
+        }
     }
     
     class View: UIView, UIScrollViewDelegate {
@@ -179,7 +208,7 @@ final class StarsStatisticsScreenComponent: Component {
         deinit {
             self.stateDisposable?.dispose()
         }
-        
+                
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             self.enableVelocityTracking = true
         }
@@ -194,6 +223,10 @@ final class StarsStatisticsScreenComponent: Component {
                 }
                 
                 self.updateScrolling(transition: .immediate)
+                
+                if let view = self.chartView.view as? ListItemComponentAdaptor.View, let node = view.itemNode as? StatsGraphItemNode {
+                    node.resetInteraction()
+                }
             }
         }
         
@@ -332,7 +365,7 @@ final class StarsStatisticsScreenComponent: Component {
                 transition.setBounds(view: titleView, bounds: CGRect(origin: .zero, size: titleSize))
             }
             
-            if let revenueGraph = starsState?.revenueGraph {
+            if let revenueGraph = self.starsState?.revenueGraph {
                 let chartSize = self.chartView.update(
                     transition: .immediate,
                     component: AnyComponent(ListSectionComponent(
@@ -348,7 +381,7 @@ final class StarsStatisticsScreenComponent: Component {
                         footer: nil,
                         items: [
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
-                                itemGenerator: StatsGraphItem(presentationData: ItemListPresentationData(presentationData), graph: revenueGraph, type: .stars, conversionRate: starsState?.usdRate ?? 0.0, sectionId: 0, style: .blocks),
+                                itemGenerator: StatsGraphItem(presentationData: ItemListPresentationData(presentationData), graph: revenueGraph, type: .stars, noInitialZoom: true, conversionRate: starsState?.usdRate ?? 0.0, sectionId: 0, style: .blocks),
                                 params: ListViewItemLayoutParams(width: availableSize.width - sideInsets, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
                             ))),
                         ],
