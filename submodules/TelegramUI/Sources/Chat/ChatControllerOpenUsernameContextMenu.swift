@@ -68,19 +68,46 @@ extension ChatControllerImpl {
                          
             var items: [ContextMenuItem] = []
             if let peer {
-                items.append(
-                    .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Phone_SendMessage, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MessageBubble"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
-                        f(.default)
-                        guard let self else {
-                            return
-                        }
-                        self.openPeer(peer: peer, navigation: .chat(textInputState: nil, subject: nil, peekData: nil), fromMessage: nil)
-                    }))
-                )
+                if case .user = peer {
+                    items.append(
+                        .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Username_SendMessage, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MessageBubble"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                            f(.default)
+                            guard let self else {
+                                return
+                            }
+                            self.openPeer(peer: peer, navigation: .chat(textInputState: nil, subject: nil, peekData: nil), fromMessage: nil)
+                        }))
+                    )
+                } else {
+                    var isGroup = true
+                    if case let .channel(channel) = peer, case .broadcast = channel.info {
+                        isGroup = false
+                    }
+                    
+                    let openTitle: String
+                    let openIcon: UIImage?
+                    
+                    if isGroup {
+                        openTitle = self.presentationData.strings.Chat_Context_Username_OpenGroup
+                        openIcon = UIImage(bundleImageName: "Chat/Context Menu/Groups")
+                    } else {
+                        openTitle = self.presentationData.strings.Chat_Context_Username_OpenChannel
+                        openIcon = UIImage(bundleImageName: "Chat/Context Menu/Channels")
+                    }
+                    items.append(
+                        .action(ContextMenuActionItem(text: openTitle, icon: { theme in return generateTintedImage(image: openIcon, color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                            f(.default)
+                            guard let self else {
+                                return
+                            }
+                            self.openPeer(peer: peer, navigation: .chat(textInputState: nil, subject: nil, peekData: nil), fromMessage: nil)
+                        }))
+                    )
+                }
             }
             
             items.append(
-                .action(ContextMenuActionItem(text: "Copy Username", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
+                .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Username_Copy, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
                     f(.default)
 
                     guard let self else {
@@ -117,7 +144,7 @@ extension ChatControllerImpl {
             } else {
                 let emptyAction: ((ContextMenuActionItem.Action) -> Void)? = nil
                 items.append(
-                    .action(ContextMenuActionItem(text: "This user doesn't exist on Telegram.", textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: emptyAction))
+                    .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Username_NotOnTelegram, textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: emptyAction))
                 )
             }
             

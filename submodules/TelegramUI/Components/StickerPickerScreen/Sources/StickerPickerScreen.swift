@@ -2565,7 +2565,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
                                             InteractiveStickerButtonContent(
                                                 theme: theme,
                                                 title: strings.MediaEditor_AddLink,
-                                                iconName: "Premium/Link",
+                                                iconName: self.isPremium ? "Media Editor/Link" : "Media Editor/LinkLocked",
                                                 useOpaqueTheme: useOpaqueTheme,
                                                 tintContainerView: self.tintContainerView
                                             )

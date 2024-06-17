@@ -5,11 +5,11 @@ import AccountContext
 import Postbox
 import TelegramCore
 
-private func entitiesPath() -> String {
+func entitiesPath() -> String {
     return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/mediaEntities"
 }
 
-private func fullEntityMediaPath(_ path: String) -> String {
+func fullEntityMediaPath(_ path: String) -> String {
     return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/mediaEntities/" + path
 }
 

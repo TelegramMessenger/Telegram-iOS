@@ -12217,6 +12217,17 @@ Sorry for the inconvenience.";
 "Chat.Context.Phone.NotOnTelegram" = "This number is not on Telegram.";
 "Chat.Context.Phone.ViewProfile" = "View Profile";
 
+"Chat.Context.Username.SendMessage" = "Send Message";
+"Chat.Context.Username.OpenGroup" = "Open Group";
+"Chat.Context.Username.OpenChannel" = "Open Channel";
+"Chat.Context.Username.Copy" = "Copy Username";
+"Chat.Context.Username.NotOnTelegram" = "This user doesn't exist on Telegram.";
+
+"Chat.Context.Hashtag.Search" = "View Profile";
+"Chat.Context.Hashtag.Copy" = "Copy Hashtag";
+
+"Chat.Context.Card.Copy" = "Copy Card Number";
+
 "Message.FactCheck" = "Fact Check";
 "Message.FactCheck.WhatIsThis" = "what's this?";
 
