@@ -225,7 +225,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
             let titleColor = bubbleVariableColor(variableColor: messageTheme.actionButtonsTextColor, wallpaper: theme.wallpaper)
             let attributedTitle: NSAttributedString
             if isStarsPayment {
-                let updatedTitle = title.replacingOccurrences(of: "⭐️", with: " #  ")
+                let updatedTitle = title.replacingOccurrences(of: "⭐️", with: " # ")
                 let buttonAttributedString = NSMutableAttributedString(string: updatedTitle, font: titleFont, textColor: titleColor, paragraphAlignment: .center)
                 if let range = buttonAttributedString.string.range(of: "#"), let starImage = UIImage(bundleImageName: "Item List/PremiumIcon") {
                     buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))

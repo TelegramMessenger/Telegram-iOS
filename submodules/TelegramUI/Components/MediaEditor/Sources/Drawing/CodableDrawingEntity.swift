@@ -69,6 +69,7 @@ public enum CodableDrawingEntity: Equatable {
         var size: CGSize?
         var rotation: CGFloat?
         var scale: CGFloat?
+        var cornerRadius: Double?
         
         switch self {
         case let .location(entity):
@@ -76,6 +77,9 @@ public enum CodableDrawingEntity: Equatable {
             size = entity.renderImage?.size
             rotation = entity.rotation
             scale = entity.scale
+            if let size {
+                cornerRadius = 10.0 / (size.width * entity.scale)
+            }
         case let .sticker(entity):
             var entityPosition = entity.position
             var entitySize = entity.baseSize
@@ -83,7 +87,7 @@ public enum CodableDrawingEntity: Equatable {
             let entityScale = entity.scale
             
             if case .message = entity.content {
-                let offset: CGFloat = 16.18 * entityScale //54.0 * entityScale / 3.337
+                let offset: CGFloat = 16.18 * entityScale
                 entitySize = CGSize(width: entitySize.width - 38.0, height: entitySize.height - 4.0)
                 entityPosition = CGPoint(x: entityPosition.x + offset * cos(entityRotation), y: entityPosition.y + offset * sin(entityRotation))
             }
@@ -94,9 +98,17 @@ public enum CodableDrawingEntity: Equatable {
             scale = entityScale
         case let .link(entity):
             position = entity.position
-            size = entity.renderImage?.size
             rotation = entity.rotation
             scale = entity.scale
+            if let entitySize = entity.renderImage?.size {
+                if entity.whiteImage != nil {
+                    cornerRadius = 38.0 / (entitySize.width * entity.scale)
+                    size = CGSize(width: entitySize.width - 28.0, height: entitySize.height - 26.0)
+                } else {
+                    cornerRadius = 10.0 / (entitySize.width * entity.scale)
+                    size = entitySize
+                }
+            }
         default:
             return nil
         }
@@ -105,13 +117,16 @@ public enum CodableDrawingEntity: Equatable {
             return nil
         }
         
+        let width = size.width * scale / 1080.0 * 100.0
+        let height = size.height * scale / 1920.0 * 100.0
+        
         return MediaArea.Coordinates(
             x: position.x / 1080.0 * 100.0,
             y: position.y / 1920.0 * 100.0,
-            width: size.width * scale / 1080.0 * 100.0,
-            height: size.height * scale / 1920.0 * 100.0,
+            width: width,
+            height: height,
             rotation: rotation / .pi * 180.0,
-            cornerRadius: nil
+            cornerRadius: cornerRadius.flatMap { $0 * 100.0 }
         )
     }
     
