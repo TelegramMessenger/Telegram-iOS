@@ -1436,13 +1436,7 @@ private final class StorySearchHeaderComponent: Component {
             
             let insets = UIEdgeInsets(top: 7.0, left: 16.0, bottom: 7.0, right: 16.0)
             
-            //TODO:localize
-            let titleString: String
-            if component.count == 1 {
-                titleString = "1 STORY FROM THIS LOCATION"
-            } else {
-                titleString = "\(component.count) STORIES FROM THIS LOCATION"
-            }
+            let titleString = component.strings.StoryList_GridHeaderLocationSearch(Int32(component.count))
             
             let titleSize = self.title.update(
                 transition: .immediate,
@@ -1753,7 +1747,6 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 return
             }
             
-            //TODO:localize
             var splitIndexIntoDays = true
             switch self.scope {
             case .peer:

@@ -1931,7 +1931,6 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                                 resultGroups[groupIndex].items.append(resultItem)
                                             } else {
                                                 resultGroupIndexById[groupId] = resultGroups.count
-                                                //TODO:localize
                                                 resultGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: i == 0 ? nil : strings.Chat_MessageEffectMenu_SectionMessageEffects, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, hasEdit: false, headerItem: nil, items: [resultItem]))
                                             }
                                         }
@@ -2283,7 +2282,6 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                             resultGroups[groupIndex].items.append(resultItem)
                                         } else {
                                             resultGroupIndexById[groupId] = resultGroups.count
-                                            //TODO:localize
                                             resultGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: i == 0 ? nil : strings.Chat_MessageEffectMenu_SectionMessageEffects, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, hasEdit: false, headerItem: nil, items: [resultItem]))
                                         }
                                     }

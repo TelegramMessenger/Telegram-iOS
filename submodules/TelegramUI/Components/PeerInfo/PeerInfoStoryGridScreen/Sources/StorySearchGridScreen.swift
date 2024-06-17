@@ -261,7 +261,6 @@ public final class StorySearchGridScreen: ViewControllerComponentContainer {
     
     func updateTitle() {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        let _ = presentationData
         
         guard let componentView = self.node.hostView.componentView as? StorySearchGridScreenComponent.View, let paneNode = componentView.paneNode else {
             return
@@ -274,12 +273,11 @@ public final class StorySearchGridScreen: ViewControllerComponentContainer {
         } else {
             title = nil
         }
-        //TODO:localize
         switch self.scope {
         case let .query(query):
             self.titleView?.titleContent = .custom("\(query)", title, false)
         case .location:
-            self.titleView?.titleContent = .custom("Location", nil, false)
+            self.titleView?.titleContent = .custom(presentationData.strings.StoryGridScreen_TitleLocationSearch, nil, false)
         }
     }
     

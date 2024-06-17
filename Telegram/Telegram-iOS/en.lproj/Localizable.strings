@@ -12377,3 +12377,12 @@ Sorry for the inconvenience.";
 "Story.Editor.TooltipLinkLimitValue_1" = "**%@** link";
 "Story.Editor.TooltipLinkLimitValue_any" = "**%@** links";
 "Story.Editor.TooltipReachedLinkLimitText" = "You can't add more than %@ to a story.";
+
+"VoiceChat.ToastMicrophoneIsMuted" = "Your microphone is muted.";
+
+"StoryGridScreen.TitleLocationSearch" = "Location";
+"StoryList.GridHeaderLocationSearch_1" = "1 STORY FROM THIS LOCATION";
+"StoryList.GridHeaderLocationSearch_any" = "%d STORIES FROM THIS LOCATION";
+
+"Chat.MessagesDeletedToast.Text_1" = "Message Deleted";
+"Chat.MessagesDeletedToast.Text_any" = "%d Messages Deleted";
