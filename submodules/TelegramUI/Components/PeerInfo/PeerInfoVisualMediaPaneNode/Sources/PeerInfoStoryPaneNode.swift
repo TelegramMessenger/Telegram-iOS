@@ -1726,18 +1726,18 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             }
             
             //TODO:localize
-            let listPeerId: EnginePeer.Id
+            var splitIndexIntoDays = true
             switch self.scope {
-            case let .peer(id, _, _):
-                listPeerId = id
+            case .peer:
+                break
             default:
-                listPeerId = self.context.account.peerId
+                splitIndexIntoDays = false
             }
             let listContext = PeerStoryListContentContextImpl(
                 context: self.context,
-                peerId: listPeerId,
                 listContext: self.listSource,
-                initialId: item.story.id
+                initialId: item.story.id,
+                splitIndexIntoDays: splitIndexIntoDays
             )
             self.pendingOpenListContext = listContext
             self.itemGrid.isUserInteractionEnabled = false

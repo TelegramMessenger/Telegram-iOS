@@ -1409,6 +1409,36 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
 }
 
 public final class PeerStoryListContentContextImpl: StoryContentContext {
+    private struct DayIndex: Hashable {
+        var year: Int32
+        var day: Int32
+        
+        init(timestamp: Int32) {
+            var time: time_t = time_t(timestamp)
+            var timeinfo: tm = tm()
+            localtime_r(&time, &timeinfo)
+
+            self.year = timeinfo.tm_year
+            self.day = timeinfo.tm_yday
+        }
+    }
+    
+    private struct PeerData {
+        let data: (TelegramEngine.EngineData.Item.Peer.Peer.Result,
+            TelegramEngine.EngineData.Item.Peer.Presence.Result,
+            TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable.Result,
+            TelegramEngine.EngineData.Item.Peer.CanViewStats.Result,
+            TelegramEngine.EngineData.Item.Peer.NotificationSettings.Result,
+            TelegramEngine.EngineData.Item.NotificationSettings.Global.Result,
+            TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging.Result,
+            TelegramEngine.EngineData.Item.Peer.BoostsToUnrestrict.Result,
+            TelegramEngine.EngineData.Item.Peer.AppliedBoosts.Result)
+        
+        init(data: (TelegramEngine.EngineData.Item.Peer.Peer.Result, TelegramEngine.EngineData.Item.Peer.Presence.Result, TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable.Result, TelegramEngine.EngineData.Item.Peer.CanViewStats.Result, TelegramEngine.EngineData.Item.Peer.NotificationSettings.Result, TelegramEngine.EngineData.Item.NotificationSettings.Global.Result, TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging.Result, TelegramEngine.EngineData.Item.Peer.BoostsToUnrestrict.Result, TelegramEngine.EngineData.Item.Peer.AppliedBoosts.Result)) {
+            self.data = data
+        }
+    }
+    
     private let context: AccountContext
     
     public private(set) var stateValue: StoryContentContextState?
@@ -1423,6 +1453,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
     }
     
     private var storyDisposable: Disposable?
+    private var storyDataDisposable = MetaDisposable()
     
     private var requestedStoryKeys = Set<StoryKey>()
     private var requestStoryDisposables = DisposableSet()
@@ -1435,10 +1466,10 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
     private var preloadStoryResourceDisposables: [EngineMedia.Id: Disposable] = [:]
     private var pollStoryMetadataDisposables = DisposableSet()
     
-    public init(context: AccountContext, peerId: EnginePeer.Id, listContext: StoryListContext, initialId: Int32?) {
+    private var currentPeerData: (EnginePeer.Id, Promise<PeerData>)?
+    
+    public init(context: AccountContext, listContext: StoryListContext, initialId: Int32?, splitIndexIntoDays: Bool) {
         self.context = context
-        
-        context.engine.account.viewTracker.refreshCanSendMessagesForPeerIds(peerIds: [peerId])
         
         let preferHighQualityStories: Signal<Bool, NoError> = combineLatest(
             context.sharedContext.automaticMediaDownloadSettings
@@ -1457,46 +1488,14 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
         |> distinctUntilChanged
         
         self.storyDisposable = (combineLatest(queue: .mainQueue(),
-            context.engine.data.subscribe(
-                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
-                TelegramEngine.EngineData.Item.Peer.Presence(id: peerId),
-                TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable(id: peerId),
-                TelegramEngine.EngineData.Item.Peer.CanViewStats(id: peerId),
-                TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId),
-                TelegramEngine.EngineData.Item.NotificationSettings.Global(),
-                TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging(id: peerId),
-                TelegramEngine.EngineData.Item.Peer.BoostsToUnrestrict(id: peerId),
-                TelegramEngine.EngineData.Item.Peer.AppliedBoosts(id: peerId)
-            ),
             listContext.state,
             self.focusedIdUpdated.get(),
             preferHighQualityStories
         )
-        |> deliverOnMainQueue).startStrict(next: { [weak self] data, state, _, preferHighQualityStories in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] state, _, preferHighQualityStories in
             guard let self else {
                 return
             }
-            
-            let (peer, presence, areVoiceMessagesAvailable, canViewStats, notificationSettings, globalNotificationSettings, isPremiumRequiredForMessaging, boostsToUnrestrict, appliedBoosts) = data
-            
-            guard let peer else {
-                return
-            }
-            
-            let isMuted = resolvedAreStoriesMuted(globalSettings: globalNotificationSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings(), topSearchPeers: [])
-            
-            let additionalPeerData = StoryContentContextState.AdditionalPeerData(
-                isMuted: isMuted,
-                areVoiceMessagesAvailable: areVoiceMessagesAvailable,
-                presence: presence,
-                canViewStats: canViewStats,
-                isPremiumRequiredForMessaging: isPremiumRequiredForMessaging,
-                preferHighQualityStories: preferHighQualityStories,
-                boostsToUnrestrict: boostsToUnrestrict,
-                appliedBoosts: appliedBoosts
-            )
-            
-            self.listState = state
             
             let focusedIndex: Int?
             if let current = self.focusedId {
@@ -1523,189 +1522,230 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                 }
             }
             
-            struct DayIndex: Hashable {
-                var year: Int32
-                var day: Int32
-                
-                init(timestamp: Int32) {
-                    var time: time_t = time_t(timestamp)
-                    var timeinfo: tm = tm()
-                    localtime_r(&time, &timeinfo)
-
-                    self.year = timeinfo.tm_year
-                    self.day = timeinfo.tm_yday
+            let peerData: Signal<PeerData?, NoError>
+            if let focusedIndex {
+                let peerId = state.items[focusedIndex].id.peerId
+                if let currentPeerData = self.currentPeerData, currentPeerData.0 == peerId {
+                    peerData = currentPeerData.1.get() |> map(Optional.init)
+                } else {
+                    context.engine.account.viewTracker.refreshCanSendMessagesForPeerIds(peerIds: [peerId])
+                    
+                    let currentPeerData: (EnginePeer.Id, Promise<PeerData>) = (peerId, Promise())
+                    currentPeerData.1.set(context.engine.data.subscribe(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                        TelegramEngine.EngineData.Item.Peer.Presence(id: peerId),
+                        TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable(id: peerId),
+                        TelegramEngine.EngineData.Item.Peer.CanViewStats(id: peerId),
+                        TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId),
+                        TelegramEngine.EngineData.Item.NotificationSettings.Global(),
+                        TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging(id: peerId),
+                        TelegramEngine.EngineData.Item.Peer.BoostsToUnrestrict(id: peerId),
+                        TelegramEngine.EngineData.Item.Peer.AppliedBoosts(id: peerId)
+                    ) |> map { PeerData(data: $0) })
+                    self.currentPeerData = currentPeerData
+                    
+                    peerData = currentPeerData.1.get() |> map(Optional.init)
                 }
+            } else {
+                peerData = .single(nil)
             }
             
-            let stateValue: StoryContentContextState
-            if let focusedIndex = focusedIndex {
-                let item = state.items[focusedIndex]
-                self.focusedId = item.id
-                
-                var allItems: [StoryContentItem] = []
-                
-                var dayCounts: [DayIndex: Int] = [:]
-                var itemDayIndices: [Int32: (Int, DayIndex)] = [:]
-                
-                for i in 0 ..< state.items.count {
-                    let stateItem = state.items[i]
-                    allItems.append(StoryContentItem(
-                        id: stateItem.id,
-                        position: i,
-                        dayCounters: nil,
-                        peerId: peer.id,
-                        storyItem: stateItem.storyItem,
-                        entityFiles: extractItemEntityFiles(item: stateItem.storyItem, allEntityFiles: state.allEntityFiles),
-                        itemPeer: stateItem.peer
-                    ))
-                    
-                    let day = DayIndex(timestamp: stateItem.storyItem.timestamp)
-                    let dayCount: Int
-                    if let current = dayCounts[day] {
-                        dayCount = current + 1
-                        dayCounts[day] = dayCount
-                    } else {
-                        dayCount = 1
-                        dayCounts[day] = dayCount
-                    }
-                    itemDayIndices[stateItem.storyItem.id] = (dayCount - 1, day)
+            self.storyDataDisposable.set((peerData
+            |> deliverOnMainQueue).start(next: { [weak self] data in
+                guard let self else {
+                    return
                 }
                 
-                var dayCounters: StoryContentItem.DayCounters?
-                if let (offset, day) = itemDayIndices[item.storyItem.id], let dayCount = dayCounts[day] {
-                    dayCounters = StoryContentItem.DayCounters(
-                        position: offset,
-                        totalCount: dayCount
+                self.listState = state
+                
+                let stateValue: StoryContentContextState
+                if let focusedIndex, let (peer, presence, areVoiceMessagesAvailable, canViewStats, notificationSettings, globalNotificationSettings, isPremiumRequiredForMessaging, boostsToUnrestrict, appliedBoosts) = data?.data, let peer {
+                    let isMuted = resolvedAreStoriesMuted(globalSettings: globalNotificationSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings(), topSearchPeers: [])
+                    let additionalPeerData = StoryContentContextState.AdditionalPeerData(
+                        isMuted: isMuted,
+                        areVoiceMessagesAvailable: areVoiceMessagesAvailable,
+                        presence: presence,
+                        canViewStats: canViewStats,
+                        isPremiumRequiredForMessaging: isPremiumRequiredForMessaging,
+                        preferHighQualityStories: preferHighQualityStories,
+                        boostsToUnrestrict: boostsToUnrestrict,
+                        appliedBoosts: appliedBoosts
+                    )
+                    
+                    let item = state.items[focusedIndex]
+                    self.focusedId = item.id
+                    
+                    var allItems: [StoryContentItem] = []
+                    
+                    var dayCounts: [DayIndex: Int] = [:]
+                    var itemDayIndices: [StoryId: (Int, DayIndex)] = [:]
+                    
+                    for i in 0 ..< state.items.count {
+                        let stateItem = state.items[i]
+                        allItems.append(StoryContentItem(
+                            id: stateItem.id,
+                            position: i,
+                            dayCounters: nil,
+                            peerId: stateItem.id.peerId,
+                            storyItem: stateItem.storyItem,
+                            entityFiles: extractItemEntityFiles(item: stateItem.storyItem, allEntityFiles: state.allEntityFiles),
+                            itemPeer: stateItem.peer
+                        ))
+                        
+                        let day: DayIndex
+                        if splitIndexIntoDays {
+                            day = DayIndex(timestamp: stateItem.storyItem.timestamp)
+                        } else {
+                            day = DayIndex(timestamp: 0)
+                        }
+                        let dayCount: Int
+                        if let current = dayCounts[day] {
+                            dayCount = current + 1
+                            dayCounts[day] = dayCount
+                        } else {
+                            dayCount = 1
+                            dayCounts[day] = dayCount
+                        }
+                        itemDayIndices[stateItem.id] = (dayCount - 1, day)
+                    }
+                    
+                    var dayCounters: StoryContentItem.DayCounters?
+                    if let (offset, day) = itemDayIndices[item.id], let dayCount = dayCounts[day] {
+                        dayCounters = StoryContentItem.DayCounters(
+                            position: offset,
+                            totalCount: dayCount
+                        )
+                    }
+                    
+                    stateValue = StoryContentContextState(
+                        slice: StoryContentContextState.FocusedSlice(
+                            peer: peer,
+                            additionalPeerData: additionalPeerData,
+                            item: StoryContentItem(
+                                id: item.id,
+                                position: focusedIndex,
+                                dayCounters: dayCounters,
+                                peerId: item.id.peerId,
+                                storyItem: item.storyItem,
+                                entityFiles: extractItemEntityFiles(item: item.storyItem, allEntityFiles: state.allEntityFiles),
+                                itemPeer: item.peer
+                            ),
+                            totalCount: state.totalCount,
+                            previousItemId: focusedIndex == 0 ? nil : state.items[focusedIndex - 1].id,
+                            nextItemId: (focusedIndex == state.items.count - 1) ? nil : state.items[focusedIndex + 1].id,
+                            allItems: allItems,
+                            forwardInfoStories: [:]
+                        ),
+                        previousSlice: nil,
+                        nextSlice: nil
+                    )
+                } else {
+                    self.focusedId = nil
+                    
+                    stateValue = StoryContentContextState(
+                        slice: nil,
+                        previousSlice: nil,
+                        nextSlice: nil
                     )
                 }
                 
-                stateValue = StoryContentContextState(
-                    slice: StoryContentContextState.FocusedSlice(
-                        peer: peer,
-                        additionalPeerData: additionalPeerData,
-                        item: StoryContentItem(
-                            id: item.id,
-                            position: focusedIndex,
-                            dayCounters: dayCounters,
-                            peerId: peer.id,
-                            storyItem: item.storyItem,
-                            entityFiles: extractItemEntityFiles(item: item.storyItem, allEntityFiles: state.allEntityFiles),
-                            itemPeer: item.peer
-                        ),
-                        totalCount: state.totalCount,
-                        previousItemId: focusedIndex == 0 ? nil : state.items[focusedIndex - 1].id,
-                        nextItemId: (focusedIndex == state.items.count - 1) ? nil : state.items[focusedIndex + 1].id,
-                        allItems: allItems,
-                        forwardInfoStories: [:]
-                    ),
-                    previousSlice: nil,
-                    nextSlice: nil
-                )
-            } else {
-                self.focusedId = nil
-                
-                stateValue = StoryContentContextState(
-                    slice: nil,
-                    previousSlice: nil,
-                    nextSlice: nil
-                )
-            }
-            
-            if self.stateValue == nil || self.stateValue?.slice != stateValue.slice {
-                self.stateValue = stateValue
-                self.statePromise.set(.single(stateValue))
-                self.updatedPromise.set(.single(Void()))
-                
-                var resultResources: [EngineMedia.Id: StoryPreloadInfo] = [:]
-                var pollItems: [StoryKey] = []
-                
-                if let focusedIndex, let slice = stateValue.slice {
-                    var possibleItems: [(EnginePeer, StoryListContext.State.Item)] = []
-                    if peer.id == self.context.account.peerId {
-                        pollItems.append(StoryKey(peerId: peer.id, id: slice.item.storyItem.id))
-                    }
+                if self.stateValue == nil || self.stateValue?.slice != stateValue.slice {
+                    self.stateValue = stateValue
+                    self.statePromise.set(.single(stateValue))
+                    self.updatedPromise.set(.single(Void()))
                     
-                    for i in focusedIndex ..< min(focusedIndex + 4, state.items.count) {
-                        if i != focusedIndex {
-                            possibleItems.append((slice.peer, state.items[i]))
+                    var resultResources: [EngineMedia.Id: StoryPreloadInfo] = [:]
+                    var pollItems: [StoryKey] = []
+                    
+                    if let focusedIndex, let slice = stateValue.slice {
+                        var possibleItems: [(EnginePeer, StoryListContext.State.Item)] = []
+                        if slice.item.id.peerId == self.context.account.peerId {
+                            pollItems.append(StoryKey(peerId: slice.item.id.peerId, id: slice.item.id.id))
                         }
                         
-                        if slice.peer.id == self.context.account.peerId {
-                            pollItems.append(StoryKey(peerId: slice.peer.id, id: state.items[i].storyItem.id))
+                        for i in focusedIndex ..< min(focusedIndex + 4, state.items.count) {
+                            if i != focusedIndex {
+                                possibleItems.append((slice.peer, state.items[i]))
+                            }
+                            
+                            if slice.peer.id == self.context.account.peerId {
+                                pollItems.append(StoryKey(peerId: slice.peer.id, id: state.items[i].storyItem.id))
+                            }
+                        }
+                        
+                        var nextPriority = 0
+                        for i in 0 ..< min(possibleItems.count, 3) {
+                            let peer = possibleItems[i].0
+                            let item = possibleItems[i].1
+                            if let peerReference = PeerReference(peer._asPeer()), let mediaId = item.storyItem.media.id {
+                                var reactions: [MessageReaction.Reaction] = []
+                                for mediaArea in item.storyItem.mediaAreas {
+                                    if case let .reaction(_, reaction, _) = mediaArea {
+                                        if !reactions.contains(reaction) {
+                                            reactions.append(reaction)
+                                        }
+                                    }
+                                }
+                                
+                                var selectedMedia: EngineMedia
+                                if let alternativeMedia = item.storyItem.alternativeMedia, (!preferHighQualityStories && !item.storyItem.isMy) {
+                                    selectedMedia = alternativeMedia
+                                } else {
+                                    selectedMedia = item.storyItem.media
+                                }
+                                
+                                resultResources[mediaId] = StoryPreloadInfo(
+                                    peer: peerReference,
+                                    storyId: item.storyItem.id,
+                                    media: selectedMedia,
+                                    reactions: reactions,
+                                    priority: .top(position: nextPriority)
+                                )
+                                nextPriority += 1
+                            }
                         }
                     }
                     
-                    var nextPriority = 0
-                    for i in 0 ..< min(possibleItems.count, 3) {
-                        let peer = possibleItems[i].0
-                        let item = possibleItems[i].1
-                        if let peerReference = PeerReference(peer._asPeer()), let mediaId = item.storyItem.media.id {
-                            var reactions: [MessageReaction.Reaction] = []
-                            for mediaArea in item.storyItem.mediaAreas {
-                                if case let .reaction(_, reaction, _) = mediaArea {
-                                    if !reactions.contains(reaction) {
-                                        reactions.append(reaction)
-                                    }
-                                }
+                    var validIds: [EngineMedia.Id] = []
+                    for (_, info) in resultResources.sorted(by: { $0.value.priority < $1.value.priority }) {
+                        if let mediaId = info.media.id {
+                            validIds.append(mediaId)
+                            if self.preloadStoryResourceDisposables[mediaId] == nil {
+                                self.preloadStoryResourceDisposables[mediaId] = preloadStoryMedia(context: context, info: info).startStrict()
                             }
-                            
-                            var selectedMedia: EngineMedia
-                            if let alternativeMedia = item.storyItem.alternativeMedia, (!preferHighQualityStories && !item.storyItem.isMy) {
-                                selectedMedia = alternativeMedia
-                            } else {
-                                selectedMedia = item.storyItem.media
-                            }
-                            
-                            resultResources[mediaId] = StoryPreloadInfo(
-                                peer: peerReference,
-                                storyId: item.storyItem.id,
-                                media: selectedMedia,
-                                reactions: reactions,
-                                priority: .top(position: nextPriority)
-                            )
-                            nextPriority += 1
                         }
                     }
-                }
-                
-                var validIds: [EngineMedia.Id] = []
-                for (_, info) in resultResources.sorted(by: { $0.value.priority < $1.value.priority }) {
-                    if let mediaId = info.media.id {
-                        validIds.append(mediaId)
-                        if self.preloadStoryResourceDisposables[mediaId] == nil {
-                            self.preloadStoryResourceDisposables[mediaId] = preloadStoryMedia(context: context, info: info).startStrict()
+                    
+                    var removeIds: [EngineMedia.Id] = []
+                    for (id, disposable) in self.preloadStoryResourceDisposables {
+                        if !validIds.contains(id) {
+                            removeIds.append(id)
+                            disposable.dispose()
                         }
                     }
-                }
-                
-                var removeIds: [EngineMedia.Id] = []
-                for (id, disposable) in self.preloadStoryResourceDisposables {
-                    if !validIds.contains(id) {
-                        removeIds.append(id)
-                        disposable.dispose()
+                    for id in removeIds {
+                        self.preloadStoryResourceDisposables.removeValue(forKey: id)
+                    }
+                    
+                    var pollIdByPeerId: [EnginePeer.Id: [Int32]] = [:]
+                    for storyKey in pollItems.prefix(3) {
+                        if pollIdByPeerId[storyKey.peerId] == nil {
+                            pollIdByPeerId[storyKey.peerId] = [storyKey.id]
+                        } else {
+                            pollIdByPeerId[storyKey.peerId]?.append(storyKey.id)
+                        }
+                    }
+                    for (peerId, ids) in pollIdByPeerId {
+                        self.pollStoryMetadataDisposables.add(self.context.engine.messages.refreshStoryViews(peerId: peerId, ids: ids).startStrict())
                     }
                 }
-                for id in removeIds {
-                    self.preloadStoryResourceDisposables.removeValue(forKey: id)
-                }
-                
-                var pollIdByPeerId: [EnginePeer.Id: [Int32]] = [:]
-                for storyKey in pollItems.prefix(3) {
-                    if pollIdByPeerId[storyKey.peerId] == nil {
-                        pollIdByPeerId[storyKey.peerId] = [storyKey.id]
-                    } else {
-                        pollIdByPeerId[storyKey.peerId]?.append(storyKey.id)
-                    }
-                }
-                for (peerId, ids) in pollIdByPeerId {
-                    self.pollStoryMetadataDisposables.add(self.context.engine.messages.refreshStoryViews(peerId: peerId, ids: ids).startStrict())
-                }
-            }
+            }))
         })
     }
     
     deinit {
         self.storyDisposable?.dispose()
+        self.storyDataDisposable.dispose()
         self.requestStoryDisposables.dispose()
         
         for (_, disposable) in self.preloadStoryResourceDisposables {
