@@ -118,7 +118,7 @@ public enum ChatMessageBubbleContentPosition {
 
 public enum ChatMessageBubblePreparePosition {
     case linear(top: ChatMessageBubbleRelativePosition, bottom: ChatMessageBubbleRelativePosition)
-    case mosaic(top: ChatMessageBubbleRelativePosition, bottom: ChatMessageBubbleRelativePosition)
+    case mosaic(top: ChatMessageBubbleRelativePosition, bottom: ChatMessageBubbleRelativePosition, index: Int?)
 }
 
 public struct ChatMessageBubbleContentTapAction {
@@ -207,6 +207,8 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
     open var supportsMosaic: Bool {
         return false
     }
+    
+    open var index: Int?
     
     public weak var itemNode: ChatMessageItemNodeProtocol?
     public weak var bubbleBackgroundNode: ChatMessageBackground?

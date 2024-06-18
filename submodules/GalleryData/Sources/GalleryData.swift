@@ -111,7 +111,10 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
         }
     }
     for media in message.media {
-        if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
+        if let paidContent = media as? TelegramMediaPaidContent, let extendedMedia = paidContent.extendedMedia.first, case let .full(fullMedia) = extendedMedia {
+            standalone = true
+            galleryMedia = fullMedia
+        } else if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
             standalone = true
             galleryMedia = fullMedia
         } else if let action = media as? TelegramMediaAction {

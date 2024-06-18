@@ -1838,6 +1838,21 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
             }
             
+            if let selectionContext = self.interaction?.selectionState, let editingContext = self.interaction?.editingState {
+                var price: Int64?
+                for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
+                    if price == nil, let itemPrice = editingContext.price(for: item) as? Int64 {
+                        price = itemPrice
+                        break
+                    }
+                }
+                
+                if let price, let item = item as? TGMediaEditableItem {
+                    editingContext.setPrice(NSNumber(value: price), for: item)
+                }
+            }
+            
+            
             return true
         }
         
@@ -2013,7 +2028,6 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         
         self.updateSelectionState(count: Int32(selectionContext.count()))
         
-
         if case let .assets(_, mode) = self.subject, case .createSticker = mode {
             let _ = cutoutAvailability(context: context).startStandalone()
         }
@@ -2434,9 +2448,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
             
                 var hasSpoilers = false
+                var price: Int64?
                 var hasGeneric = false
                 if let selectionContext = self.interaction?.selectionState, let editingContext = self.interaction?.editingState {
                     for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
+                        if price == nil, let itemPrice = editingContext.price(for: item) as? Int64 {
+                            price = itemPrice
+                        }
                         if editingContext.spoiler(for: item) {
                             hasSpoilers = true
                         } else {
@@ -2456,8 +2474,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 )
                 |> deliverOnMainQueue
                 |> map { [weak self] grouped, isCaptionAboveMediaAvailable -> ContextController.Items in
+                    guard let self else {
+                        return ContextController.Items(content: .list([]))
+                    }
                     var items: [ContextMenuItem] = []
-                    if !hasSpoilers {
+                    if !hasSpoilers && price == nil {
                         items.append(.action(ContextMenuActionItem(text: selectionCount > 1 ? strings.Attachment_SendAsFiles : strings.Attachment_SendAsFile, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/File"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
@@ -2466,42 +2487,45 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                             self?.controllerNode.send(asFile: true, silently: false, scheduleTime: nil, animated: true, parameters: nil, completion: {})
                         })))
                     }
-                    if selectionCount > 1 {
-//                        items.append(.action(ContextMenuActionItem(text: "Send Without Grouping", icon: { theme in
-//                            return generateTintedImage(image: UIImage(bundleImageName: "Media Grid/GroupingOff"), color: theme.contextMenu.primaryColor)
-//                        }, action: { [weak self] _, f in
-//                            f(.default)
-//                            
-//                            self?.groupedValue = false
-//                            self?.controllerNode.send(asFile: false, silently: false, scheduleTime: nil, animated: true, parameters: nil, completion: {})
-//                        })))
-                        
-                        if !items.isEmpty {
-                            items.append(.separator)
-                        }
-                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_Grouped, icon: { theme in
-                            if !grouped {
-                                return nil
-                            }
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                    if selectionCount > 1, price == nil {
+                        items.append(.action(ContextMenuActionItem(text: "Send Without Grouping", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Media Grid/GroupingOff"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.default)
                             
-                            self?.groupedValue = true
-                        })))
-                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_Ungrouped, icon: { theme in
-                            if grouped {
-                                return nil
-                            }
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                        }, action: {  [weak self] _, f in
-                            f(.default)
-                            
                             self?.groupedValue = false
+                            self?.controllerNode.send(asFile: false, silently: false, scheduleTime: nil, animated: true, parameters: nil, completion: {})
                         })))
+                        
+//                        if !items.isEmpty {
+//                            items.append(.separator)
+//                        }
+//                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_Grouped, icon: { theme in
+//                            if !grouped {
+//                                return nil
+//                            }
+//                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+//                        }, action: { [weak self] _, f in
+//                            f(.default)
+//                            
+//                            self?.groupedValue = true
+//                        })))
+//                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_Ungrouped, icon: { theme in
+//                            if grouped {
+//                                return nil
+//                            }
+//                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+//                        }, action: {  [weak self] _, f in
+//                            f(.default)
+//                            
+//                            self?.groupedValue = false
+//                        })))
                     }
                     
-                    let isPaidAvailable = !"".isEmpty
+                    var isPaidAvailable = false
+                    if let peer = self.peer, case let .channel(channel) = peer, case .broadcast = channel.info {
+                        isPaidAvailable = true
+                    }
                     if isSpoilerAvailable || isPaidAvailable || (selectionCount > 0 && isCaptionAboveMediaAvailable) {
                         if !items.isEmpty {
                             items.append(.separator)
@@ -2509,7 +2533,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         
                         if isCaptionAboveMediaAvailable {
                             var mediaCaptionIsAbove = false
-                            if let interaction = self?.interaction {
+                            if let interaction = self.interaction {
                                 mediaCaptionIsAbove = interaction.captionIsAboveMedia
                             }
                             
@@ -2526,7 +2550,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                                 }
                             })))
                         }
-                        if isSpoilerAvailable {
+                        if isSpoilerAvailable && price == nil {
                             items.append(.action(ContextMenuActionItem(text: hasGeneric ? strings.Attachment_EnableSpoiler : strings.Attachment_DisableSpoiler, icon: { _ in return nil }, iconAnimation: ContextMenuActionItem.IconAnimation(
                                 name: "anim_spoiler",
                                 loop: true
@@ -2544,7 +2568,16 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                             })))
                         }
                         if isPaidAvailable {
-                            items.append(.action(ContextMenuActionItem(text: "Make This Content Paid", icon: { theme in
+                            let title: String
+                            let titleLayout: ContextMenuActionItemTextLayout
+                            if let price {
+                                title = "Edit Price"
+                                titleLayout = .secondLineWithValue("\(price) Stars")
+                            } else {
+                                title = "Make This Content Paid"
+                                titleLayout = .singleLine
+                            }
+                            items.append(.action(ContextMenuActionItem(text: title, textLayout: titleLayout, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Paid"), color: theme.contextMenu.primaryColor)
                             }, action: { [weak self]  _, f in
                                 f(.default)

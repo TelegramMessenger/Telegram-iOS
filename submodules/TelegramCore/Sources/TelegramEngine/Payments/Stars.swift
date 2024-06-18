@@ -199,7 +199,7 @@ private final class StarsContextImpl {
             return
         }
         var transactions = state.transactions
-        transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil), at: 0)
+        transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil), at: 0)
         
         self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: state.balance + balance, transactions: transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
     }
@@ -238,8 +238,9 @@ private final class StarsContextImpl {
 private extension StarsContext.State.Transaction {
     init?(apiTransaction: Api.StarsTransaction, transaction: Transaction) {
         switch apiTransaction {
-        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl):
+        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId):
             let parsedPeer: StarsContext.State.Transaction.Peer
+            var paidMessageId: MessageId?
             switch transactionPeer {
             case .starsTransactionPeerAppStore:
                 parsedPeer = .appStore
@@ -256,13 +257,19 @@ private extension StarsContext.State.Transaction {
                     return nil
                 }
                 parsedPeer = .peer(EnginePeer(peer))
+                if let messageId {
+                    paidMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: messageId)
+                }
             }
             
             var flags: Flags = []
             if (apiFlags & (1 << 3)) != 0 {
                 flags.insert(.isRefund)
             }
-            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl)
+            if (apiFlags & (1 << 6)) != 0 {
+                flags.insert(.isFailed)
+            }
+            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId)
         }
     }
 }
@@ -280,6 +287,7 @@ public final class StarsContext {
                 public static let isRefund = Flags(rawValue: 1 << 0)
                 public static let isLocal = Flags(rawValue: 1 << 1)
                 public static let isPending = Flags(rawValue: 1 << 2)
+                public static let isFailed = Flags(rawValue: 1 << 3)
             }
             
             public enum Peer: Equatable {
@@ -301,6 +309,7 @@ public final class StarsContext {
             public let photo: TelegramMediaWebFile?
             public let transactionDate: Int32?
             public let transactionUrl: String?
+            public let paidMessageId: MessageId?
             
             public init(
                 flags: Flags,
@@ -312,7 +321,8 @@ public final class StarsContext {
                 description: String?,
                 photo: TelegramMediaWebFile?,
                 transactionDate: Int32?,
-                transactionUrl: String?
+                transactionUrl: String?,
+                paidMessageId: MessageId?
             ) {
                 self.flags = flags
                 self.id = id
@@ -324,6 +334,7 @@ public final class StarsContext {
                 self.photo = photo
                 self.transactionDate = transactionDate
                 self.transactionUrl = transactionUrl
+                self.paidMessageId = paidMessageId
             }
         }
         

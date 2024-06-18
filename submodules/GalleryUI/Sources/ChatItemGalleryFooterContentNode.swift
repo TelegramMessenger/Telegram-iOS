@@ -1622,7 +1622,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                         
                         var hasExternalShare = true
                         for media in currentMessage.media {
-                            if let invoice = media as? TelegramMediaInvoice, let _ = invoice.extendedMedia {
+                            if let _ = media as? TelegramMediaPaidContent {
+                                hasExternalShare = false
+                                break
+                            } else if let invoice = media as? TelegramMediaInvoice, let _ = invoice.extendedMedia {
                                 hasExternalShare = false
                                 break
                             }

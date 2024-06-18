@@ -426,6 +426,14 @@ private final class SheetContent: CombinedComponent {
                             }
                         }, completion: { [weak controller] in
                             let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
+                            
+                            let text: String
+                            if let _ = component.invoice.extendedMedia {
+                                text = presentationData.strings.Stars_Transfer_UnlockedText( presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string
+                            } else {
+                                text = presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string
+                            }
+                            
                             if let navigationController = controller?.navigationController {
                                 Queue.mainQueue().after(0.5) {
                                     if let lastController = navigationController.viewControllers.last as? ViewController {
@@ -434,7 +442,7 @@ private final class SheetContent: CombinedComponent {
                                             content: .image(
                                                 image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
                                                 title: presentationData.strings.Stars_Transfer_PurchasedTitle,
-                                                text: presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string,
+                                                text: text,
                                                 round: false,
                                                 undoText: nil
                                             ),

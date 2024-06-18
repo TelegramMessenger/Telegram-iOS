@@ -78,18 +78,6 @@ extension ChatControllerImpl {
             }))
         )
         
-        if canAddToReadingList {
-            items.append(
-                .action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_AddToReadingList, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                    f(.default)
-                    
-                    if let link = URL(string: url) {
-                        let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
-                    }
-                }))
-            )
-        }
-        
         items.append(
             .action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuCopyLink, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
                 f(.default)
@@ -103,7 +91,19 @@ extension ChatControllerImpl {
                 self.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
             }))
         )
-         
+        
+        if canAddToReadingList {
+            items.append(
+                .action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_AddToReadingList, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                    f(.default)
+                    
+                    if let link = URL(string: url) {
+                        let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
+                    }
+                }))
+            )
+        }
+        
         self.canReadHistory.set(false)
         
         let controller = ContextController(presentationData: self.presentationData, source: source, items: .single(ContextController.Items(content: .list(items))), recognizer: recognizer, gesture: gesture, disableScreenshots: false)

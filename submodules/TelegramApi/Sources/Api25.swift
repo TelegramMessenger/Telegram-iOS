@@ -321,7 +321,7 @@ public extension Api {
         case updateLangPack(difference: Api.LangPackDifference)
         case updateLangPackTooLong(langCode: String)
         case updateLoginToken
-        case updateMessageExtendedMedia(peer: Api.Peer, msgId: Int32, extendedMedia: Api.MessageExtendedMedia)
+        case updateMessageExtendedMedia(peer: Api.Peer, msgId: Int32, extendedMedia: [Api.MessageExtendedMedia])
         case updateMessageID(id: Int32, randomId: Int64)
         case updateMessagePoll(flags: Int32, pollId: Int64, poll: Api.Poll?, results: Api.PollResults)
         case updateMessagePollVote(pollId: Int64, peer: Api.Peer, options: [Buffer], qts: Int32)
@@ -1039,11 +1039,15 @@ public extension Api {
                     break
                 case .updateMessageExtendedMedia(let peer, let msgId, let extendedMedia):
                     if boxed {
-                        buffer.appendInt32(1517529484)
+                        buffer.appendInt32(-710666460)
                     }
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
-                    extendedMedia.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(extendedMedia.count))
+                    for item in extendedMedia {
+                        item.serialize(buffer, true)
+                    }
                     break
                 case .updateMessageID(let id, let randomId):
                     if boxed {
@@ -3241,9 +3245,9 @@ public extension Api {
             }
             var _2: Int32?
             _2 = reader.readInt32()
-            var _3: Api.MessageExtendedMedia?
-            if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.MessageExtendedMedia
+            var _3: [Api.MessageExtendedMedia]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageExtendedMedia.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil

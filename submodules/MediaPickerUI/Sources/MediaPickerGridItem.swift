@@ -552,9 +552,7 @@ final class MediaPickerGridItemNode: GridItemNode {
             let priceSignal = Signal<Int64?, NoError> { subscriber in
                 if let signal = editingContext.priceSignal(forIdentifier: asset.localIdentifier) {
                     let disposable = signal.start(next: { next in
-                        if let next = next as? Int64 {
-                            subscriber.putNext(next)
-                        }
+                        subscriber.putNext(next as? Int64)
                     }, error: { _ in
                     }, completed: nil)!
                     
@@ -681,6 +679,10 @@ final class MediaPickerGridItemNode: GridItemNode {
                     }
                     backgroundNode.addSubnode(labelNode)
                     backgroundNode.addSubnode(iconNode)
+                    
+                    self.priceBackgroundNode = backgroundNode
+                    self.priceLabelNode = labelNode
+                    self.priceIconNode = iconNode
                 }
                 labelNode.attributedText = NSAttributedString(string: "\(price)", font: Font.semibold(15.0), textColor: .white)
                 

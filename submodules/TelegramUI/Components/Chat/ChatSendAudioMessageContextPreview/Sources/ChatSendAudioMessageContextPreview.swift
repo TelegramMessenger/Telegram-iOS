@@ -619,7 +619,7 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
                 
                 let prepareLayout = messageNode.asyncLayoutContent()
                 
-                let prepareContentPosition: ChatMessageBubblePreparePosition = .mosaic(top: .None(.None(.Incoming)), bottom: i == (items.count - 1 - 1) ? bottomPosition : .None(.None(.Incoming)))
+                let prepareContentPosition: ChatMessageBubblePreparePosition = .mosaic(top: .None(.None(.Incoming)), bottom: i == (items.count - 1 - 1) ? bottomPosition : .None(.None(.Incoming)), index: i)
                 
                 let (properties, unboundSize, maxNodeWidth, nodeLayout) = prepareLayout(items[i], layoutConstants, prepareContentPosition, nil, CGSize(width: maximumContentWidth, height: CGFloat.greatestFiniteMagnitude), 0.0)
                 maximumNodeWidth = min(maximumNodeWidth, maxNodeWidth)
