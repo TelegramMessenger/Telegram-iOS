@@ -120,7 +120,7 @@ enum AccountStateMutationOperation {
     case UpdateAttachMenuBots
     case UpdateAudioTranscription(messageId: MessageId, id: Int64, isPending: Bool, text: String)
     case UpdateConfig
-    case UpdateExtendedMedia(MessageId, Api.MessageExtendedMedia)
+    case UpdateExtendedMedia(MessageId, [Api.MessageExtendedMedia])
     case ResetForumTopic(topicId: MessageId, data: StoreMessageHistoryThreadData, pts: Int32)
     case UpdateStory(peerId: PeerId, story: Api.StoryItem)
     case UpdateReadStories(peerId: PeerId, maxId: Int32)
@@ -652,7 +652,7 @@ struct AccountMutableState {
         self.addOperation(.UpdateConfig)
     }
     
-    mutating func updateExtendedMedia(_ messageId: MessageId, extendedMedia: Api.MessageExtendedMedia) {
+    mutating func updateExtendedMedia(_ messageId: MessageId, extendedMedia: [Api.MessageExtendedMedia]) {
         self.addOperation(.UpdateExtendedMedia(messageId, extendedMedia))
     }
     

@@ -9,6 +9,7 @@ public extension Api {
         case inputMediaGeoLive(flags: Int32, geoPoint: Api.InputGeoPoint, heading: Int32?, period: Int32?, proximityNotificationRadius: Int32?)
         case inputMediaGeoPoint(geoPoint: Api.InputGeoPoint)
         case inputMediaInvoice(flags: Int32, title: String, description: String, photo: Api.InputWebDocument?, invoice: Api.Invoice, payload: Buffer, provider: String?, providerData: Api.DataJSON, startParam: String?, extendedMedia: Api.InputMedia?)
+        case inputMediaPaidMedia(starsAmount: Int64, extendedMedia: [Api.InputMedia])
         case inputMediaPhoto(flags: Int32, id: Api.InputPhoto, ttlSeconds: Int32?)
         case inputMediaPhotoExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaPoll(flags: Int32, poll: Api.Poll, correctAnswers: [Buffer]?, solution: String?, solutionEntities: [Api.MessageEntity]?)
@@ -94,6 +95,17 @@ public extension Api {
                     providerData.serialize(buffer, true)
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(startParam!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {extendedMedia!.serialize(buffer, true)}
+                    break
+                case .inputMediaPaidMedia(let starsAmount, let extendedMedia):
+                    if boxed {
+                        buffer.appendInt32(-1436147773)
+                    }
+                    serializeInt64(starsAmount, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(extendedMedia.count))
+                    for item in extendedMedia {
+                        item.serialize(buffer, true)
+                    }
                     break
                 case .inputMediaPhoto(let flags, let id, let ttlSeconds):
                     if boxed {
@@ -210,6 +222,8 @@ public extension Api {
                 return ("inputMediaGeoPoint", [("geoPoint", geoPoint as Any)])
                 case .inputMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let providerData, let startParam, let extendedMedia):
                 return ("inputMediaInvoice", [("flags", flags as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("invoice", invoice as Any), ("payload", payload as Any), ("provider", provider as Any), ("providerData", providerData as Any), ("startParam", startParam as Any), ("extendedMedia", extendedMedia as Any)])
+                case .inputMediaPaidMedia(let starsAmount, let extendedMedia):
+                return ("inputMediaPaidMedia", [("starsAmount", starsAmount as Any), ("extendedMedia", extendedMedia as Any)])
                 case .inputMediaPhoto(let flags, let id, let ttlSeconds):
                 return ("inputMediaPhoto", [("flags", flags as Any), ("id", id as Any), ("ttlSeconds", ttlSeconds as Any)])
                 case .inputMediaPhotoExternal(let flags, let url, let ttlSeconds):
@@ -394,6 +408,22 @@ public extension Api {
             let _c10 = (Int(_1!) & Int(1 << 2) == 0) || _10 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
                 return Api.InputMedia.inputMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, invoice: _5!, payload: _6!, provider: _7, providerData: _8!, startParam: _9, extendedMedia: _10)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputMediaPaidMedia(_ reader: BufferReader) -> InputMedia? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [Api.InputMedia]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputMedia.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputMedia.inputMediaPaidMedia(starsAmount: _1!, extendedMedia: _2!)
             }
             else {
                 return nil

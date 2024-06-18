@@ -337,6 +337,12 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         if messageText.isEmpty, case let .Loaded(content) = webpage.content {
                             messageText = content.displayUrl
                         }
+                    case _ as TelegramMediaPaidContent:
+                        if message.text.isEmpty {
+                            messageText = "Paid Media"
+                        } else {
+                            messageText = "🖼 \(messageText)"
+                        }
                     default:
                         break
                 }

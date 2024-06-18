@@ -718,6 +718,7 @@ public extension Api {
         case messageMediaGiveaway(flags: Int32, channels: [Int64], countriesIso2: [String]?, prizeDescription: String?, quantity: Int32, months: Int32, untilDate: Int32)
         case messageMediaGiveawayResults(flags: Int32, channelId: Int64, additionalPeersCount: Int32?, launchMsgId: Int32, winnersCount: Int32, unclaimedCount: Int32, winners: [Int64], months: Int32, prizeDescription: String?, untilDate: Int32)
         case messageMediaInvoice(flags: Int32, title: String, description: String, photo: Api.WebDocument?, receiptMsgId: Int32?, currency: String, totalAmount: Int64, startParam: String, extendedMedia: Api.MessageExtendedMedia?)
+        case messageMediaPaidMedia(starsAmount: Int64, extendedMedia: [Api.MessageExtendedMedia])
         case messageMediaPhoto(flags: Int32, photo: Api.Photo?, ttlSeconds: Int32?)
         case messageMediaPoll(poll: Api.Poll, results: Api.PollResults)
         case messageMediaStory(flags: Int32, peer: Api.Peer, id: Int32, story: Api.StoryItem?)
@@ -834,6 +835,17 @@ public extension Api {
                     serializeString(startParam, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 4) != 0 {extendedMedia!.serialize(buffer, true)}
                     break
+                case .messageMediaPaidMedia(let starsAmount, let extendedMedia):
+                    if boxed {
+                        buffer.appendInt32(-1467669359)
+                    }
+                    serializeInt64(starsAmount, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(extendedMedia.count))
+                    for item in extendedMedia {
+                        item.serialize(buffer, true)
+                    }
+                    break
                 case .messageMediaPhoto(let flags, let photo, let ttlSeconds):
                     if boxed {
                         buffer.appendInt32(1766936791)
@@ -907,6 +919,8 @@ public extension Api {
                 return ("messageMediaGiveawayResults", [("flags", flags as Any), ("channelId", channelId as Any), ("additionalPeersCount", additionalPeersCount as Any), ("launchMsgId", launchMsgId as Any), ("winnersCount", winnersCount as Any), ("unclaimedCount", unclaimedCount as Any), ("winners", winners as Any), ("months", months as Any), ("prizeDescription", prizeDescription as Any), ("untilDate", untilDate as Any)])
                 case .messageMediaInvoice(let flags, let title, let description, let photo, let receiptMsgId, let currency, let totalAmount, let startParam, let extendedMedia):
                 return ("messageMediaInvoice", [("flags", flags as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("receiptMsgId", receiptMsgId as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("startParam", startParam as Any), ("extendedMedia", extendedMedia as Any)])
+                case .messageMediaPaidMedia(let starsAmount, let extendedMedia):
+                return ("messageMediaPaidMedia", [("starsAmount", starsAmount as Any), ("extendedMedia", extendedMedia as Any)])
                 case .messageMediaPhoto(let flags, let photo, let ttlSeconds):
                 return ("messageMediaPhoto", [("flags", flags as Any), ("photo", photo as Any), ("ttlSeconds", ttlSeconds as Any)])
                 case .messageMediaPoll(let poll, let results):
@@ -1144,6 +1158,22 @@ public extension Api {
             let _c9 = (Int(_1!) & Int(1 << 4) == 0) || _9 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
                 return Api.MessageMedia.messageMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, receiptMsgId: _5, currency: _6!, totalAmount: _7!, startParam: _8!, extendedMedia: _9)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageMediaPaidMedia(_ reader: BufferReader) -> MessageMedia? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [Api.MessageExtendedMedia]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageExtendedMedia.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageMedia.messageMediaPaidMedia(starsAmount: _1!, extendedMedia: _2!)
             }
             else {
                 return nil

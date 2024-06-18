@@ -78,9 +78,17 @@ import TelegramAnimatedStickerNode
 import LottieMetal
 
 private struct BubbleItemAttributes {
+    var index: Int?
     var isAttachment: Bool
     var neighborType: ChatMessageBubbleRelativePosition.NeighbourType
     var neighborSpacing: ChatMessageBubbleRelativePosition.NeighbourSpacing
+    
+    init(index: Int? = nil, isAttachment: Bool, neighborType: ChatMessageBubbleRelativePosition.NeighbourType, neighborSpacing: ChatMessageBubbleRelativePosition.NeighbourSpacing) {
+        self.index = index
+        self.isAttachment = isAttachment
+        self.neighborType = neighborType
+        self.neighborSpacing = neighborSpacing
+    }
 }
 
 private final class ChatMessageBubbleClippingNode: ASDisplayNode {
@@ -123,7 +131,13 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         
         var isFile = false
         inner: for media in message.media {
-            if let _ = media as? TelegramMediaImage {
+            if let media = media as? TelegramMediaPaidContent {
+                var index = 0
+                for _ in media.extendedMedia {
+                    result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(index: index, isAttachment: true, neighborType: .media, neighborSpacing: .default)))
+                    index += 1
+                }
+            } else if let _ = media as? TelegramMediaImage {
                 if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), message.text.isEmpty {
                     messageWithCaptionToAdd = (message, itemAttributes)
                 }
@@ -1334,10 +1348,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     }
     
     override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
-        var currentContentClassesPropertiesAndLayouts: [(Message, AnyClass, Bool, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))] = []
+        var currentContentClassesPropertiesAndLayouts: [(Message, AnyClass, Bool, Int?, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))] = []
         for contentNode in self.contentNodes {
             if let message = contentNode.item?.message {
-                currentContentClassesPropertiesAndLayouts.append((message, type(of: contentNode) as AnyClass, contentNode.supportsMosaic, contentNode.asyncLayoutContent()))
+                currentContentClassesPropertiesAndLayouts.append((message, type(of: contentNode) as AnyClass, contentNode.supportsMosaic, contentNode.index, contentNode.asyncLayoutContent()))
             } else {
                 assertionFailure()
             }
@@ -1388,7 +1402,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     
     private static func beginLayout(
         selfReference: Weak<ChatMessageBubbleItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool,
-        currentContentClassesPropertiesAndLayouts: [(Message, AnyClass, Bool, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))],
+        currentContentClassesPropertiesAndLayouts: [(Message, AnyClass, Bool, Int?, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))],
         authorNameLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         viaMeasureLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         adminBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
@@ -1699,15 +1713,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         maximumContentWidth = max(0.0, maximumContentWidth)
         
         var contentPropertiesAndPrepareLayouts: [(Message, Bool, ChatMessageEntryAttributes, BubbleItemAttributes, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))] = []
-        var addedContentNodes: [(Message, Bool, ChatMessageBubbleContentNode)]?
+        var addedContentNodes: [(Message, Bool, ChatMessageBubbleContentNode, Int?)]?
         for contentNodeItemValue in contentNodeMessagesAndClasses {
             let contentNodeItem = contentNodeItemValue as (message: Message, type: AnyClass, attributes: ChatMessageEntryAttributes, bubbleAttributes: BubbleItemAttributes)
 
             var found = false
             for currentNodeItemValue in currentContentClassesPropertiesAndLayouts {
-                let currentNodeItem = currentNodeItemValue as (message: Message, type: AnyClass, supportsMosaic: Bool, currentLayout: (ChatMessageBubbleContentItem, ChatMessageItemLayoutConstants, ChatMessageBubblePreparePosition, Bool?, CGSize, CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))
+                let currentNodeItem = currentNodeItemValue as (message: Message, type: AnyClass, supportsMosaic: Bool, index: Int?, currentLayout: (ChatMessageBubbleContentItem, ChatMessageItemLayoutConstants, ChatMessageBubblePreparePosition, Bool?, CGSize, CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))
 
-                if currentNodeItem.type == contentNodeItem.type && currentNodeItem.message.stableId == contentNodeItem.message.stableId {
+                if currentNodeItem.type == contentNodeItem.type && currentNodeItem.index == contentNodeItem.bubbleAttributes.index && currentNodeItem.message.stableId == contentNodeItem.message.stableId {
                     contentPropertiesAndPrepareLayouts.append((contentNodeItem.message, currentNodeItem.supportsMosaic, contentNodeItem.attributes, contentNodeItem.bubbleAttributes, currentNodeItem.currentLayout))
                     found = true
                     break
@@ -1715,11 +1729,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             if !found {
                 let contentNode = (contentNodeItem.type as! ChatMessageBubbleContentNode.Type).init()
+                contentNode.index = contentNodeItem.bubbleAttributes.index
                 contentPropertiesAndPrepareLayouts.append((contentNodeItem.message, contentNode.supportsMosaic, contentNodeItem.attributes, contentNodeItem.bubbleAttributes, contentNode.asyncLayoutContent()))
                 if addedContentNodes == nil {
                     addedContentNodes = []
                 }
-                addedContentNodes!.append((contentNodeItem.message, contentNodeItem.bubbleAttributes.isAttachment, contentNode))
+                addedContentNodes!.append((contentNodeItem.message, contentNodeItem.bubbleAttributes.isAttachment, contentNode, contentNodeItem.bubbleAttributes.index))
             }
         }
         
@@ -1924,7 +1939,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             
             let prepareContentPosition: ChatMessageBubblePreparePosition
             if let mosaicRange = mosaicRange, mosaicRange.contains(index) {
-                prepareContentPosition = .mosaic(top: .None(.None(.Incoming)), bottom: index == (mosaicRange.upperBound - 1) ? bottomPosition : .None(.None(.Incoming)))
+                let mosaicIndex = index - mosaicRange.lowerBound
+                prepareContentPosition = .mosaic(top: .None(.None(.Incoming)), bottom: index == (mosaicRange.upperBound - 1) ? bottomPosition : .None(.None(.Incoming)), index: mosaicIndex)
             } else {
                 let refinedBottomPosition: ChatMessageBubbleRelativePosition
                 if index == contentPropertiesAndPrepareLayouts.count - 1 {
@@ -3071,7 +3087,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         replyInfoOriginY: CGFloat,
         removedContentNodeIndices: [Int]?,
         updatedContentNodeOrder: Bool,
-        addedContentNodes: [(Message, Bool, ChatMessageBubbleContentNode)]?,
+        addedContentNodes: [(Message, Bool, ChatMessageBubbleContentNode, Int?)]?,
         contentNodeMessagesAndClasses: [(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)],
         contentNodeFramesPropertiesAndApply: [(CGRect, ChatMessageBubbleContentProperties, Bool, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void)],
         contentContainerNodeFrames: [(UInt32, CGRect, Bool?, CGFloat)],
@@ -3876,7 +3892,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             
             if let addedContentNodes = addedContentNodes {
-                for (contentNodeMessage, isAttachment, contentNode) in addedContentNodes {
+                for (contentNodeMessage, isAttachment, contentNode, _ ) in addedContentNodes {
                     updatedContentNodes.append(contentNode)
                     
                     let contextSourceNode: ContextExtractedContentContainingNode
@@ -3908,18 +3924,17 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             
             var sortedContentNodes: [ChatMessageBubbleContentNode] = []
             outer: for contentItemValue in contentNodeMessagesAndClasses {
-                let contentItem = contentItemValue as (message: Message, type: AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)
-
+                let contentItem = contentItemValue as (message: Message, type: AnyClass, ChatMessageEntryAttributes, attributes: BubbleItemAttributes)
                 if let addedContentNodes = addedContentNodes {
-                    for (contentNodeMessage, _, contentNode) in addedContentNodes {
-                        if type(of: contentNode) == contentItem.type && contentNodeMessage.stableId == contentItem.message.stableId {
+                    for (contentNodeMessage, _, contentNode, index) in addedContentNodes {
+                        if type(of: contentNode) == contentItem.type && index == contentItem.attributes.index && contentNodeMessage.stableId == contentItem.message.stableId {
                             sortedContentNodes.append(contentNode)
                             continue outer
                         }
                     }
                 }
                 for contentNode in updatedContentNodes {
-                    if type(of: contentNode) == contentItem.type && contentNode.item?.message.stableId == contentItem.message.stableId {
+                    if type(of: contentNode) == contentItem.type && contentNode.index == contentItem.attributes.index && contentNode.item?.message.stableId == contentItem.message.stableId {
                         sortedContentNodes.append(contentNode)
                         continue outer
                     }

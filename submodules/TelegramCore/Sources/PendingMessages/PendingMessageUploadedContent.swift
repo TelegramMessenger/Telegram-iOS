@@ -119,6 +119,44 @@ func messageContentToUpload(accountPeerId: PeerId, network: Network, postbox: Po
 }
 
 func mediaContentToUpload(accountPeerId: PeerId, network: Network, postbox: Postbox, auxiliaryMethods: AccountAuxiliaryMethods, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext, forceReupload: Bool, isGrouped: Bool, passFetchProgress: Bool, forceNoBigParts: Bool, peerId: PeerId, media: Media, text: String, autoremoveMessageAttribute: AutoremoveTimeoutMessageAttribute?, autoclearMessageAttribute: AutoclearTimeoutMessageAttribute?, messageId: MessageId?, attributes: [MessageAttribute], mediaReference: AnyMediaReference?) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>? {
+    if let paidContent = media as? TelegramMediaPaidContent {
+        var signals: [Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>] = []
+        for case let .full(media) in paidContent.extendedMedia {
+            if let image = media as? TelegramMediaImage {
+                signals.append(uploadedMediaImageContent(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, forceReupload: forceReupload, isGrouped: false, peerId: peerId, image: image, messageId: messageId, text: "", attributes: [], autoremoveMessageAttribute: nil, autoclearMessageAttribute: nil, auxiliaryMethods: auxiliaryMethods))
+            } else if let file = media as? TelegramMediaFile {
+                signals.append(uploadedMediaFileContent(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, forceReupload: forceReupload, isGrouped: false, passFetchProgress: false, forceNoBigParts: false, peerId: peerId, messageId: messageId, text: "", attributes: [], autoremoveMessageAttribute: nil, autoclearMessageAttribute: nil, file: file))
+            }
+        }
+        return combineLatest(signals)
+        |> map { results -> PendingMessageUploadedContentResult in
+            var currentProgress: Float = 0.0
+            var media: [Api.InputMedia] = []
+            for result in results {
+                switch result {
+                case let .progress(progress):
+                    currentProgress += progress
+                case let .content(content):
+                    if case let .media(resultMedia, _) = content.content {
+                        media.append(resultMedia)
+                    }
+                }
+            }
+            let normalizedProgress = currentProgress / Float(results.count)
+            if media.count == results.count {
+                return .content(PendingMessageUploadedContentAndReuploadInfo(
+                    content: .media(.inputMediaPaidMedia(
+                        starsAmount: paidContent.amount,
+                        extendedMedia: media
+                    ), text),
+                    reuploadInfo: nil,
+                    cacheReferenceKey: nil
+                ))
+            } else {
+                return .progress(normalizedProgress)
+            }
+        }
+    }
     if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
         if peerId.namespace == Namespaces.Peer.SecretChat, let resource = largest.resource as? SecretFileMediaResource {
             return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .secretMedia(.inputEncryptedFile(id: resource.fileId, accessHash: resource.accessHash), resource.decryptedSize, resource.key), reuploadInfo: nil, cacheReferenceKey: nil)))

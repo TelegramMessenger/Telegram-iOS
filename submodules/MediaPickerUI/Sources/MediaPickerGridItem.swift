@@ -679,6 +679,10 @@ final class MediaPickerGridItemNode: GridItemNode {
                     }
                     backgroundNode.addSubnode(labelNode)
                     backgroundNode.addSubnode(iconNode)
+                    
+                    self.priceBackgroundNode = backgroundNode
+                    self.priceLabelNode = labelNode
+                    self.priceIconNode = iconNode
                 }
                 labelNode.attributedText = NSAttributedString(string: "\(price)", font: Font.semibold(15.0), textColor: .white)
                 

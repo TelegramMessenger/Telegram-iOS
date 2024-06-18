@@ -130,12 +130,27 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
                 }
             }
             
-            self.spoilerDisposable.set((spoilerSignal
-            |> deliverOnMainQueue).start(next: { [weak self] hasSpoiler in
+            let priceSignal = Signal<Int64?, NoError> { subscriber in
+                if let signal = editingState.priceSignal(forIdentifier: asset.uniqueIdentifier) {
+                    let disposable = signal.start(next: { next in
+                        subscriber.putNext(next as? Int64)
+                    }, error: { _ in
+                    }, completed: nil)!
+                    
+                    return ActionDisposable {
+                        disposable.dispose()
+                    }
+                } else {
+                    return EmptyDisposable
+                }
+            }
+            
+            self.spoilerDisposable.set((combineLatest(spoilerSignal, priceSignal)
+            |> deliverOnMainQueue).start(next: { [weak self] hasSpoiler, price in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.updateHasSpoiler(hasSpoiler)
+                strongSelf.updateHasSpoiler(hasSpoiler, price: price)
             }))
         }
         
@@ -163,14 +178,14 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
     }
     
     private var didSetupSpoiler = false
-    private func updateHasSpoiler(_ hasSpoiler: Bool) {
+    private func updateHasSpoiler(_ hasSpoiler: Bool, price: Int64?) {
         var animated = true
         if !self.didSetupSpoiler {
             animated = false
             self.didSetupSpoiler = true
         }
     
-        if hasSpoiler {
+        if hasSpoiler || price != nil {
             if self.spoilerNode == nil {
                 let spoilerNode = SpoilerOverlayNode(enableAnimations: self.enableAnimations)
                 self.insertSubnode(spoilerNode, aboveSubnode: self.imageNode)

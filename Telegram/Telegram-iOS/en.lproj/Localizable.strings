@@ -12318,6 +12318,7 @@ Sorry for the inconvenience.";
 "Stars.Transfer.PurchasedText" = "You acquired **%1$@** in **%2$@** for **%3$@**.";
 "Stars.Transfer.Purchased.Stars_1" = "%@ Star";
 "Stars.Transfer.Purchased.Stars_any" = "%@ Stars";
+"Stars.Transfer.UnlockedText" = "You unlocked media for **%1$@**.";
 "Stars.Transfer.UnlockInfo" = "Do you want to unlock media for **%1$@**?";
 
 "Stars.Transfer.Balance" = "Balance";
@@ -12351,6 +12352,7 @@ Sorry for the inconvenience.";
 "Stars.BotRevenue.Revenue.Title" = "Revenue";
 "Stars.BotRevenue.Proceeds.Title" = "Proceeds Overview";
 "Stars.BotRevenue.Proceeds.Available" = "Available Balance";
+"Stars.BotRevenue.Proceeds.Current" = "Total Balance";
 "Stars.BotRevenue.Proceeds.Total" = "Total Lifetime Proceeds";
 "Stars.BotRevenue.Proceeds.Info" = "Stars from your total balance become available for spending on ads and rewards 21 days after they are earned.";
 

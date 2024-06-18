@@ -140,7 +140,9 @@ class ChatImageGalleryItem: GalleryItem {
         
         node.setMessage(self.message, displayInfo: !self.displayInfoOnTop, translateToLanguage: self.translateToLanguage, peerIsCopyProtected: self.peerIsCopyProtected, isSecret: self.isSecret)
         for media in self.message.media {
-            if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia, let image = fullMedia as? TelegramMediaImage {
+            if let paidContent = media as? TelegramMediaPaidContent, let extendedMedia = paidContent.extendedMedia.first, case let .full(fullMedia) = extendedMedia, let image = fullMedia as? TelegramMediaImage {
+                node.setImage(userLocation: .peer(self.message.id.peerId), imageReference: .message(message: MessageReference(self.message), media: image))
+            } else if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia, let image = fullMedia as? TelegramMediaImage {
                 node.setImage(userLocation: .peer(self.message.id.peerId), imageReference: .message(message: MessageReference(self.message), media: image))
             } else if let image = media as? TelegramMediaImage {
                 node.setImage(userLocation: .peer(self.message.id.peerId), imageReference: .message(message: MessageReference(self.message), media: image))

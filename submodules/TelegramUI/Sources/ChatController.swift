@@ -937,7 +937,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 //                }
 //                #endif
                 
-                if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia {
+                if let paidContent = media as? TelegramMediaPaidContent, let extendedMedia = paidContent.extendedMedia.first {
+                    switch extendedMedia {
+                        case .preview:
+                            if displayVoiceMessageDiscardAlert() {
+                                strongSelf.controllerInteraction?.openCheckoutOrReceipt(message.id)
+                                return true
+                            } else {
+                                return false
+                            }
+                        case .full:
+                            break
+                    }
+                } else if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia {
                     switch extendedMedia {
                         case .preview:
                             if displayVoiceMessageDiscardAlert() {
@@ -2633,7 +2645,36 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 for media in message.media {
-                    if let invoice = media as? TelegramMediaInvoice {
+                    if let paidContent = media as? TelegramMediaPaidContent {
+                        strongSelf.chatDisplayNode.dismissInput()
+                        let inputData = Promise<BotCheckoutController.InputData?>()
+                        inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, source: .message(message.id))
+                        |> map(Optional.init)
+                        |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
+                            return .single(nil)
+                        })
+                        if let starsContext = strongSelf.context.starsContext {
+                            let starsInputData = combineLatest(
+                                inputData.get(),
+                                starsContext.state
+                            )
+                            |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
+                                if let data, let state {
+                                    return (state, data.form, data.botPeer)
+                                } else {
+                                    return nil
+                                }
+                            }
+                            let _ = (starsInputData |> filter { $0 != nil } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+                                guard let strongSelf = self, let extendedMedia = paidContent.extendedMedia.first, case let .preview(dimensions, immediateThumbnailData, _) = extendedMedia else {
+                                    return
+                                }
+                                let invoice = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: paidContent.amount, startParam: "", extendedMedia: .preview(dimensions:dimensions, immediateThumbnailData: immediateThumbnailData, videoDuration: nil), flags: [], version: 0)
+                                let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .message(messageId), inputData: starsInputData, completion: { _ in })
+                                strongSelf.push(controller)
+                            })
+                        }
+                    } else if let invoice = media as? TelegramMediaInvoice {
                         strongSelf.chatDisplayNode.dismissInput()
                         if let receiptMessageId = invoice.receiptMessageId {
                             if invoice.currency == "XTR" {
