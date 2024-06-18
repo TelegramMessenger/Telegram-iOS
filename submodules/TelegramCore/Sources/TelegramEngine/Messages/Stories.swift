@@ -2474,11 +2474,14 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
         return (updatedItemValue, inputPeer)
     }
     |> mapToSignal { storyItem, inputPeer -> Signal<Never, NoError> in
-        guard let storyItem = storyItem, let inputPeer = inputPeer else {
+        guard let inputPeer = inputPeer else {
             return .complete()
         }
         
-        account.stateManager.injectStoryUpdates(updates: [InternalStoryUpdate.added(peerId: peerId, item: storyItem)])
+        if let storyItem {
+            account.stateManager.injectStoryUpdates(updates: [InternalStoryUpdate.added(peerId: peerId, item: storyItem)])
+        }
+        account.stateManager.injectStoryUpdates(updates: [InternalStoryUpdate.updateMyReaction(peerId: peerId, id: id, reaction: reaction)])
         
         return account.network.request(Api.functions.stories.sendReaction(flags: 0, peer: inputPeer, storyId: id, reaction: reaction?.apiReaction ?? .reactionEmpty))
         |> map(Optional.init)

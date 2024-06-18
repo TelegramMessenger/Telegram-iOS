@@ -13,7 +13,7 @@ import ChatMessageItemCommon
 import ChatControllerInteraction
 
 extension ChatControllerImpl {
-    func openHashtagContextMenu(hashtag: String, params: ChatControllerInteraction.LongTapParams) -> Void {
+    func openCommandContextMenu(command: String, params: ChatControllerInteraction.LongTapParams) -> Void {
         guard let message = params.message, let contentNode = params.contentNode else {
             return
         }
@@ -44,26 +44,16 @@ extension ChatControllerImpl {
         var items: [ContextMenuItem] = []
 
         items.append(
-            .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Hashtag_Search, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Search"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
-                guard let self else {
-                    return
-                }
-                f(.default)
-                self.controllerInteraction?.openHashtag(nil, hashtag)
-            }))
-        )
-        
-        items.append(
-            .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Hashtag_Copy, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
+            .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Command_Copy, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
                 f(.default)
 
                 guard let self else {
                     return
                 }
                 
-                UIPasteboard.general.string = hashtag
+                UIPasteboard.general.string = command
 
-                self.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: presentationData.strings.Conversation_HashtagCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                self.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
             }))
         )
          

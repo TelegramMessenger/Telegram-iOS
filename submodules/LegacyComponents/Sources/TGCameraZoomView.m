@@ -233,19 +233,16 @@
 {
     CGFloat _minZoomLevel;
     CGFloat _maxZoomLevel;
-    CGFloat _secondMarkZoomValue;
     
     UIView *_backgroundView;
     
     bool _hasUltrawideCamera;
     bool _hasTelephotoCamera;
-    bool _hasCenterRightZoom;
     
     bool _beganFromPress;
 
     TGCameraZoomModeItemView *_leftItem;
     TGCameraZoomModeItemView *_centerItem;
-    TGCameraZoomModeItemView *_centerRightItem;
     TGCameraZoomModeItemView *_rightItem;
     
     bool _lockedOn;
@@ -254,17 +251,15 @@
 
 @implementation TGCameraZoomModeView
 
-- (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera hasCenterRightZoom:(bool)hasCenterRightZoom minZoomLevel:(CGFloat)minZoomLevel maxZoomLevel:(CGFloat)maxZoomLevel secondMarkZoomValue:(CGFloat)secondMarkZoomValue
+- (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera minZoomLevel:(CGFloat)minZoomLevel maxZoomLevel:(CGFloat)maxZoomLevel
 {
     self = [super initWithFrame:frame];
     if (self != nil)
     {
         _hasUltrawideCamera = hasUltrawideCamera;
         _hasTelephotoCamera = hasTelephotoCamera;
-        _hasCenterRightZoom = hasCenterRightZoom;
         _minZoomLevel = minZoomLevel;
         _maxZoomLevel = maxZoomLevel;
-        _secondMarkZoomValue = secondMarkZoomValue;
         
         _backgroundView = [[UIView alloc] initWithFrame:self.bounds];
         _backgroundView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.15];
@@ -276,10 +271,7 @@
         _centerItem = [[TGCameraZoomModeItemView alloc] initWithFrame:CGRectMake(43, 0, 43, 43)];
         [_centerItem addTarget:self action:@selector(centerPressed) forControlEvents:UIControlEventTouchUpInside];
         
-        _centerRightItem = [[TGCameraZoomModeItemView alloc] initWithFrame:CGRectMake(86, 0, 43, 43)];
-        [_centerRightItem addTarget:self action:@selector(centerRightPressed) forControlEvents:UIControlEventTouchUpInside];
-        
-        _rightItem = [[TGCameraZoomModeItemView alloc] initWithFrame:CGRectMake(129, 0, 43, 43)];
+        _rightItem = [[TGCameraZoomModeItemView alloc] initWithFrame:CGRectMake(86, 0, 43, 43)];
         [_rightItem addTarget:self action:@selector(rightPressed) forControlEvents:UIControlEventTouchUpInside];
         
         [self addSubview:_backgroundView];
@@ -287,10 +279,6 @@
         if (hasTelephotoCamera && hasUltrawideCamera) {
             [self addSubview:_leftItem];
             [self addSubview:_rightItem];
-            
-            if (hasCenterRightZoom) {
-                [self addSubview:_centerRightItem];
-            }
         }
         
         UIPanGestureRecognizer *panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panGesture:)];
@@ -314,18 +302,18 @@
 
 - (void)pressGesture:(UILongPressGestureRecognizer *)gestureRecognizer {
     switch (gestureRecognizer.state) {
-        case UIGestureRecognizerStateBegan:
-            _beganFromPress = true;
-            self.zoomChanged(_zoomLevel, false, false);
-            break;
-        case UIGestureRecognizerStateEnded:
-            self.zoomChanged(_zoomLevel, true, false);
-            break;
-        case UIGestureRecognizerStateCancelled:
-            self.zoomChanged(_zoomLevel, true, false);
-            break;
-        default:
-            break;
+    case UIGestureRecognizerStateBegan:
+        _beganFromPress = true;
+        self.zoomChanged(_zoomLevel, false, false);
+        break;
+    case UIGestureRecognizerStateEnded:
+        self.zoomChanged(_zoomLevel, true, false);
+        break;
+    case UIGestureRecognizerStateCancelled:
+        self.zoomChanged(_zoomLevel, true, false);
+        break;
+    default:
+        break;
     }
 }
 
@@ -333,54 +321,54 @@
     CGPoint translation = [gestureRecognizer translationInView:self];
     
     switch (gestureRecognizer.state) {
-        case UIGestureRecognizerStateChanged:
-        {
-            if (_lockedOn) {
-                if (ABS(translation.x) > 8.0) {
-                    _lockedOn = false;
-                    [gestureRecognizer setTranslation:CGPointZero inView:self];
-                    
-                    CGFloat delta = translation.x > 0 ? -0.06 : 0.06;
-                    CGFloat newLevel = MAX(_minZoomLevel, MIN(_maxZoomLevel, _zoomLevel + delta));
-                    _zoomLevel = newLevel;
-                    self.zoomChanged(newLevel, false, false);
-                    return;
-                } else {
-                    return;
-                }
-            }
-            
-            CGFloat previousLevel = _zoomLevel;
-            
-            CGFloat delta = -translation.x / 60.0;
-            if (_zoomLevel > _secondMarkZoomValue) {
-                delta *= 3.5;
-            }
-            CGFloat newLevel = MAX(_minZoomLevel, MIN(_maxZoomLevel, _zoomLevel + delta));
-            
-            CGFloat near = floor(newLevel);
-            if (near <= _secondMarkZoomValue && ABS(newLevel - near) < 0.05 && previousLevel != near && translation.x < 15.0) {
-                newLevel = near;
-                _lockedOn = true;
-                
+    case UIGestureRecognizerStateChanged:
+    {
+        if (_lockedOn) {
+            if (ABS(translation.x) > 8.0) {
+                _lockedOn = false;
                 [gestureRecognizer setTranslation:CGPointZero inView:self];
+                
+                CGFloat delta = translation.x > 0 ? -0.06 : 0.06;
+                CGFloat newLevel = MAX(_minZoomLevel, MIN(_maxZoomLevel, _zoomLevel + delta));
+                _zoomLevel = newLevel;
+                self.zoomChanged(newLevel, false, false);
+                return;
+            } else {
+                return;
             }
+        }
+        
+        CGFloat previousLevel = _zoomLevel;
+        
+        CGFloat delta = -translation.x / 60.0;
+        if (_zoomLevel > 2.0) {
+            delta *= 3.5;
+        }
+        CGFloat newLevel = MAX(_minZoomLevel, MIN(_maxZoomLevel, _zoomLevel + delta));
+        
+        CGFloat near = floor(newLevel);
+        if (near <= 2.0 && ABS(newLevel - near) < 0.05 && previousLevel != near && translation.x < 15.0) {
+            newLevel = near;
+            _lockedOn = true;
             
-            _zoomLevel = newLevel;
-            self.zoomChanged(newLevel, false, false);
+            [gestureRecognizer setTranslation:CGPointZero inView:self];
         }
-            break;
-        case UIGestureRecognizerStateEnded:
-        case UIGestureRecognizerStateCancelled:
-        {
-            if (gestureRecognizer.view != self || !_beganFromPress) {
-                self.zoomChanged(_zoomLevel, true, false);
-            }
-            _beganFromPress = false;
+        
+        _zoomLevel = newLevel;
+        self.zoomChanged(newLevel, false, false);
+    }
+        break;
+    case UIGestureRecognizerStateEnded:
+    case UIGestureRecognizerStateCancelled:
+    {
+        if (gestureRecognizer.view != self || !_beganFromPress) {
+            self.zoomChanged(_zoomLevel, true, false);
         }
-            break;
-        default:
-            break;
+        _beganFromPress = false;
+    }
+        break;
+    default:
+        break;
     }
     
     if (!_lockedOn) {
@@ -417,17 +405,10 @@
     }
 }
 
-- (void)centerRightPressed {
+- (void)rightPressed {
     if (_zoomLevel != 2.0) {
         [self setZoomLevel:2.0 animated:true];
         self.zoomChanged(2.0, true, true);
-    }
-}
-
-- (void)rightPressed {
-    if (_zoomLevel != _secondMarkZoomValue) {
-        [self setZoomLevel:_secondMarkZoomValue animated:true];
-        self.zoomChanged(_secondMarkZoomValue, true, true);
     }
 }
 
@@ -451,44 +432,21 @@
             [_centerItem setValue:value selected:false animated:animated];
         }
         [_rightItem setValue:@"2" selected:false animated:animated];
-    } else if (zoomLevel < _secondMarkZoomValue) {
+    } else if (zoomLevel < 2.0) {
         [_leftItem setValue:@"0,5" selected:false animated:animated];
         bool selected = _hasTelephotoCamera && _hasUltrawideCamera;
         if ((zoomLevel - 1.0) < 0.025) {
             [_centerItem setValue:@"1×" selected:true animated:animated];
-            [_centerRightItem setValue:@"2" selected:false animated:animated];
         } else {
-            if (_centerRightItem != nil) {
-                if (zoomLevel >= 2.0) {
-                    [_centerItem setValue:@"1" selected:false animated:animated];
-                    
-                    NSString *value = [NSString stringWithFormat:@"%.1f×", zoomLevel];
-                    value = [value stringByReplacingOccurrencesOfString:@"." withString:@","];
-                    value = [value stringByReplacingOccurrencesOfString:@",0×" withString:@"×"];
-                    
-                    NSString *markValue = [NSString stringWithFormat:@"%d×", (int)_secondMarkZoomValue];
-                    NSString *lowerMarkValue = [NSString stringWithFormat:@"%d.9×", (int)_secondMarkZoomValue - 1];
-                    if ([value isEqual:markValue]) {
-                        value = lowerMarkValue;
-                    }
-                    [_centerRightItem setValue:value selected:selected animated:animated];
-                } else {
-                    NSString *value = [NSString stringWithFormat:@"%.1f×", zoomLevel];
-                    value = [value stringByReplacingOccurrencesOfString:@"." withString:@","];
-                    value = [value stringByReplacingOccurrencesOfString:@",0×" withString:@"×"];
-                    
-                    NSString *markValue = [NSString stringWithFormat:@"%d×", 2];
-                    NSString *lowerMarkValue = [NSString stringWithFormat:@"%d.9×", 2 - 1];
-                    if ([value isEqual:markValue]) {
-                        value = lowerMarkValue;
-                    }
-                    [_centerItem setValue:value selected:selected animated:animated];
-                }
-            } else {
-                
+            NSString *value = [NSString stringWithFormat:@"%.1f×", zoomLevel];
+            value = [value stringByReplacingOccurrencesOfString:@"." withString:@","];
+            value = [value stringByReplacingOccurrencesOfString:@",0×" withString:@"×"];
+            if ([value isEqual:@"2×"]) {
+                value = @"1,9×";
             }
+            [_centerItem setValue:value selected:selected animated:animated];
         }
-        [_rightItem setValue:[NSString stringWithFormat:@"%d", (int)_secondMarkZoomValue] selected:false animated:animated];
+        [_rightItem setValue:@"2" selected:false animated:animated];
     } else {
         [_leftItem setValue:@"0,5" selected:false animated:animated];
           
@@ -497,9 +455,6 @@
         
         if (_rightItem.superview != nil) {
             [_centerItem setValue:@"1" selected:false animated:animated];
-            if (_centerRightItem != nil) {
-                [_centerRightItem setValue:@"2" selected:false animated:animated];
-            }
             [_rightItem setValue:value selected:true animated:animated];
         } else {
             [_centerItem setValue:value selected:true animated:animated];
@@ -543,24 +498,17 @@
     if (_leftItem.superview == nil && _rightItem.superview == nil) {
         _backgroundView.frame = CGRectMake(43, 0, 43, 43);
     } else if (_leftItem.superview != nil && _rightItem.superview == nil) {
-        _backgroundView.frame = CGRectMake(42 + TGScreenPixel, 0, 86, 43);
-        _leftItem.frame = CGRectMake(42 + TGScreenPixel, 0, 43, 43);
-        _centerItem.frame = CGRectMake(42 + TGScreenPixel + 43, 0, 43, 43);
+        _backgroundView.frame = CGRectMake(21 + TGScreenPixel, 0, 86, 43);
+        _leftItem.frame = CGRectMake(21 + TGScreenPixel, 0, 43, 43);
+        _centerItem.frame = CGRectMake(21 + TGScreenPixel + 43, 0, 43, 43);
     } else if (_leftItem.superview == nil && _rightItem.superview != nil) {
-        _backgroundView.frame = CGRectMake(42 + TGScreenPixel, 0, 86, 43);
-        _centerItem.frame = CGRectMake(42 + TGScreenPixel, 0, 43, 43);
-        _rightItem.frame = CGRectMake(42 + TGScreenPixel + 43, 0, 43, 43);
-    } else if (_leftItem.superview != nil && _rightItem.superview != nil && _centerRightItem.superview == nil) {
-        _backgroundView.frame = CGRectMake(21 + TGScreenPixel, 0, 129, 43);
-        _leftItem.frame = CGRectMake(21 + TGScreenPixel, 0, 43, 43.0);
-        _centerItem.frame = CGRectMake(21 + TGScreenPixel + 43, 0, 43, 43.0);
-        _rightItem.frame = CGRectMake(21 + TGScreenPixel + 86, 0, 43, 43.0);
+        _backgroundView.frame = CGRectMake(21 + TGScreenPixel, 0, 86, 43);
+        _centerItem.frame = CGRectMake(21 + TGScreenPixel, 0, 43, 43);
+        _rightItem.frame = CGRectMake(21 + TGScreenPixel + 43, 0, 43, 43);
     } else {
-        _backgroundView.frame = CGRectMake(0, 0, 172, 43);
         _leftItem.frame = CGRectMake(0, 0, 43, 43.0);
         _centerItem.frame = CGRectMake(43, 0, 43, 43.0);
-        _centerRightItem.frame = CGRectMake(86, 0, 43, 43.0);
-        _rightItem.frame = CGRectMake(129, 0, 43, 43.0);
+        _rightItem.frame = CGRectMake(86, 0, 43, 43.0);
     }
 }
 
@@ -569,7 +517,6 @@
     _interfaceOrientation = interfaceOrientation;
     _leftItem.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(interfaceOrientation));
     _centerItem.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(interfaceOrientation));
-    _centerRightItem.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(interfaceOrientation));
     _rightItem.transform = CGAffineTransformMakeRotation(TGRotationForInterfaceOrientation(interfaceOrientation));
 }
 

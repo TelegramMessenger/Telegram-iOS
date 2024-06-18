@@ -2463,8 +2463,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     if lastTimestamp + 1000.0 < timestamp {
                         lastTimestamp = timestamp
                         
-                        //TODO:localize
-                        self.presentUndoOverlay(content: .info(title: nil, text: "Your microphone is muted.", timeout: nil, customUndoText: nil), action: { _ in
+                        self.presentUndoOverlay(content: .info(title: nil, text: self.presentationData.strings.VoiceChat_ToastMicrophoneIsMuted, timeout: nil, customUndoText: nil), action: { _ in
                             return false
                         })
                     }

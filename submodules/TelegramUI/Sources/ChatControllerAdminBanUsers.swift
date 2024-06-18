@@ -324,13 +324,7 @@ extension ChatControllerImpl {
     func beginDeleteMessagesWithUndo(messageIds: Set<MessageId>, type: InteractiveMessagesDeletionType) {
         self.chatDisplayNode.historyNode.ignoreMessageIds = Set(messageIds)
         
-        //TODO:localize
-        let undoTitle: String
-        if messageIds.count == 1 {
-            undoTitle = "Message Deleted"
-        } else {
-            undoTitle = "\(messageIds.count) Messages Deleted"
-        }
+        let undoTitle = self.presentationData.strings.Chat_MessagesDeletedToast_Text(Int32(messageIds.count))
         self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: undoTitle, text: nil), elevatedLayout: false, position: .top, action: { [weak self] value in
             guard let self else {
                 return false

@@ -1044,29 +1044,67 @@ public final class PendingMessageManager {
                 |> `catch` { error -> Signal<Void, NoError> in
                     return deferred {
                         if let strongSelf = self {
-                            if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_") {
-                                var allFoundAndValid = true
-                                for (message, _) in messages {
-                                    if let context = strongSelf.messageContexts[message.id] {
-                                        if context.forcedReuploadOnce {
-                                            allFoundAndValid = false
-                                            break
-                                        }
-                                    } else {
-                                        allFoundAndValid = false
-                                        break
+                            let errorText: String = error.errorDescription
+                            
+                            if errorText.hasPrefix("FILEREF_INVALID") || errorText.hasPrefix("FILE_REFERENCE_") {
+                                var selectiveIndices: [Int]?
+                                if errorText.hasPrefix("FILE_REFERENCE_") && errorText.hasSuffix("_EXPIRED") {
+                                    if let value = Int(errorText[errorText.index(errorText.startIndex, offsetBy: "FILE_REFERENCE_".count)..<errorText.index(errorText.endIndex, offsetBy: -"_EXPIRED".count)]) {
+                                        selectiveIndices = [value]
                                     }
                                 }
                                 
-                                if allFoundAndValid {
-                                    for (message, _) in messages {
+                                if let selectiveIndices {
+                                    var allFoundAndValid = true
+                                    for i in 0 ..< messages.count {
+                                        let message = messages[i].0
                                         if let context = strongSelf.messageContexts[message.id] {
-                                            context.forcedReuploadOnce = true
+                                            if selectiveIndices.contains(i) {
+                                                if context.forcedReuploadOnce {
+                                                    allFoundAndValid = false
+                                                    break
+                                                }
+                                            }
                                         }
                                     }
                                     
-                                    strongSelf.beginSendingMessages(messages.map({ $0.0.id }))
-                                    return .complete()
+                                    if allFoundAndValid {
+                                        for i in 0 ..< messages.count {
+                                            let message = messages[i].0
+                                            if selectiveIndices.contains(i) {
+                                                if let context = strongSelf.messageContexts[message.id] {
+                                                    context.forcedReuploadOnce = true
+                                                }
+                                            }
+                                        }
+                                        
+                                        strongSelf.beginSendingMessages(messages.map({ $0.0.id }))
+                                        return .complete()
+                                    }
+                                } else {
+                                    var allFoundAndValid = true
+                                    for (message, _) in messages {
+                                        if let context = strongSelf.messageContexts[message.id] {
+                                            if context.forcedReuploadOnce {
+                                                allFoundAndValid = false
+                                                break
+                                            }
+                                        } else {
+                                            allFoundAndValid = false
+                                            break
+                                        }
+                                    }
+                                    
+                                    if allFoundAndValid {
+                                        for (message, _) in messages {
+                                            if let context = strongSelf.messageContexts[message.id] {
+                                                context.forcedReuploadOnce = true
+                                            }
+                                        }
+                                        
+                                        strongSelf.beginSendingMessages(messages.map({ $0.0.id }))
+                                        return .complete()
+                                    }
                                 }
                             } else if let failureReason = sendMessageReasonForError(error.errorDescription), let message = messages.first?.0 {
                                 for (message, _) in messages {

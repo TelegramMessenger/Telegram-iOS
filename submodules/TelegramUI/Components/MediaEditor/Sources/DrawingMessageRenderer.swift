@@ -343,7 +343,7 @@ public final class DrawingMessageRenderer {
     }
     
     public func render(completion: @escaping (Result) -> Void) {
-        Queue.mainQueue().after(0.066) {
+        Queue.mainQueue().after(0.12) {
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             let defaultPresentationData = defaultPresentationData()
                         

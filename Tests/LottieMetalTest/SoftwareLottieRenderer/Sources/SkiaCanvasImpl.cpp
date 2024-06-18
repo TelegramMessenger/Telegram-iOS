@@ -50,6 +50,17 @@ void skPath(CanvasPathEnumerator const &enumeratePath, SkPath &nativePath) {
     });
 }
 
+SkMatrix skMatrix(Transform2D const &transform) {
+    SkScalar m9[9] = {
+        transform.rows().columns[0][0], transform.rows().columns[1][0], transform.rows().columns[2][0],
+        transform.rows().columns[0][1], transform.rows().columns[1][1], transform.rows().columns[2][1],
+        transform.rows().columns[0][2], transform.rows().columns[1][2], transform.rows().columns[2][2]
+    };
+    SkMatrix matrix;
+    matrix.set9(m9);
+    return matrix;
+}
+
 }
 
 SkiaCanvasImpl::SkiaCanvasImpl(int width, int height) {
@@ -243,15 +254,20 @@ void SkiaCanvasImpl::clip(CGRect const &rect) {
     _canvas->clipRect(SkRect::MakeXYWH(rect.x, rect.y, rect.width, rect.height), true);
 }
 
+bool SkiaCanvasImpl::clipPath(CanvasPathEnumerator const &enumeratePath, FillRule fillRule, Transform2D const &transform) {
+    SkPath nativePath;
+    skPath(enumeratePath, nativePath);
+    nativePath.setFillType(fillRule == FillRule::EvenOdd ? SkPathFillType::kEvenOdd : SkPathFillType::kWinding);
+    if (!transform.isIdentity()) {
+        nativePath.transform(skMatrix(transform));
+    }
+    _canvas->clipPath(nativePath, true);
+    
+    return true;
+}
+
 void SkiaCanvasImpl::concatenate(lottie::Transform2D const &transform) {
-    SkScalar m9[9] = {
-        transform.rows().columns[0][0], transform.rows().columns[1][0], transform.rows().columns[2][0],
-        transform.rows().columns[0][1], transform.rows().columns[1][1], transform.rows().columns[2][1],
-        transform.rows().columns[0][2], transform.rows().columns[1][2], transform.rows().columns[2][2]
-    };
-    SkMatrix matrix;
-    matrix.set9(m9);
-    _canvas->concat(matrix);
+    _canvas->concat(skMatrix(transform));
 }
 
 bool SkiaCanvasImpl::pushLayer(CGRect const &rect, float alpha, std::optional<MaskMode> maskMode) {

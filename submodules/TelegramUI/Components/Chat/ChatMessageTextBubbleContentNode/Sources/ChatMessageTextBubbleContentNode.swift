@@ -929,6 +929,24 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         let textNodeFrame = self.textNode.textNode.frame
         let textLocalPoint = CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)
         if let (index, attributes) = self.textNode.textNode.attributesAtPoint(textLocalPoint) {
+            var rects: [CGRect]?
+            let possibleNames: [String] = [
+                TelegramTextAttributes.URL,
+                TelegramTextAttributes.PeerMention,
+                TelegramTextAttributes.PeerTextMention,
+                TelegramTextAttributes.BotCommand,
+                TelegramTextAttributes.Hashtag,
+                TelegramTextAttributes.Timecode,
+                TelegramTextAttributes.BankCard
+            ]
+            for name in possibleNames {
+                if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
+                    rects = self.textNode.textNode.attributeRects(name: name, at: index)
+                    break
+                }
+            }
+            
+            
             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !self.displayContentsUnderSpoilers.value {
                 return ChatMessageBubbleContentTapAction(content: .none)
             } else if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
@@ -946,28 +964,28 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     content = .url(ChatMessageBubbleContentTapAction.Url(url: url, concealed: concealed))
                 }
                 
-                return ChatMessageBubbleContentTapAction(content: content, activate: makeActivate(urlRange))
+                return ChatMessageBubbleContentTapAction(content: content, rects: rects, activate: makeActivate(urlRange))
             } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                return ChatMessageBubbleContentTapAction(content: .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false))
+                return ChatMessageBubbleContentTapAction(content: .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false), rects: rects)
             } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
                 var urlRange: NSRange?
                 if let (_, _, urlRangeValue) = self.textNode.textNode.attributeSubstringWithRange(name: TelegramTextAttributes.PeerTextMention, index: index) {
                     urlRange = urlRangeValue
                 }
                 
-                return ChatMessageBubbleContentTapAction(content: .textMention(peerName), activate: makeActivate(urlRange))
+                return ChatMessageBubbleContentTapAction(content: .textMention(peerName), rects: rects, activate: makeActivate(urlRange))
             } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
-                return ChatMessageBubbleContentTapAction(content: .botCommand(botCommand))
+                return ChatMessageBubbleContentTapAction(content: .botCommand(botCommand), rects: rects)
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-                return ChatMessageBubbleContentTapAction(content: .hashtag(hashtag.peerName, hashtag.hashtag))
+                return ChatMessageBubbleContentTapAction(content: .hashtag(hashtag.peerName, hashtag.hashtag), rects: rects)
             } else if let timecode = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Timecode)] as? TelegramTimecode {
-                return ChatMessageBubbleContentTapAction(content: .timecode(timecode.time, timecode.text))
+                return ChatMessageBubbleContentTapAction(content: .timecode(timecode.time, timecode.text), rects: rects)
             } else if let bankCard = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard)] as? String {
                 var urlRange: NSRange?
                 if let (_, _, urlRangeValue) = self.textNode.textNode.attributeSubstringWithRange(name: TelegramTextAttributes.BankCard, index: index) {
                     urlRange = urlRangeValue
                 }
-                return ChatMessageBubbleContentTapAction(content: .bankCard(bankCard), activate: makeActivate(urlRange))
+                return ChatMessageBubbleContentTapAction(content: .bankCard(bankCard), rects: rects, activate: makeActivate(urlRange))
             } else if let pre = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre)] as? String {
                 return ChatMessageBubbleContentTapAction(content: .copy(pre))
             } else if let code = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Code)] as? String {

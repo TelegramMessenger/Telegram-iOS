@@ -2467,42 +2467,41 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         })))
                     }
                     if selectionCount > 1 {
-                        items.append(.action(ContextMenuActionItem(text: "Send Without Grouping", icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Media Grid/GroupingOff"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, f in
-                            f(.default)
-                            
-                            self?.groupedValue = false
-                            self?.controllerNode.send(asFile: false, silently: false, scheduleTime: nil, animated: true, parameters: nil, completion: {})
-                        })))
-                        
-//                        if !items.isEmpty {
-//                            items.append(.separator)
-//                        }
-//                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_Grouped, icon: { theme in
-//                            if !grouped {
-//                                return nil
-//                            }
-//                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+//                        items.append(.action(ContextMenuActionItem(text: "Send Without Grouping", icon: { theme in
+//                            return generateTintedImage(image: UIImage(bundleImageName: "Media Grid/GroupingOff"), color: theme.contextMenu.primaryColor)
 //                        }, action: { [weak self] _, f in
 //                            f(.default)
 //                            
-//                            self?.groupedValue = true
-//                        })))
-//                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_Ungrouped, icon: { theme in
-//                            if grouped {
-//                                return nil
-//                            }
-//                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-//                        }, action: {  [weak self] _, f in
-//                            f(.default)
-//                            
 //                            self?.groupedValue = false
+//                            self?.controllerNode.send(asFile: false, silently: false, scheduleTime: nil, animated: true, parameters: nil, completion: {})
 //                        })))
+                        
+                        if !items.isEmpty {
+                            items.append(.separator)
+                        }
+                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_Grouped, icon: { theme in
+                            if !grouped {
+                                return nil
+                            }
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.default)
+                            
+                            self?.groupedValue = true
+                        })))
+                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_Ungrouped, icon: { theme in
+                            if grouped {
+                                return nil
+                            }
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                        }, action: {  [weak self] _, f in
+                            f(.default)
+                            
+                            self?.groupedValue = false
+                        })))
                     }
                     
-                    let isPaidAvailable = true
-                    
+                    let isPaidAvailable = !"".isEmpty
                     if isSpoilerAvailable || isPaidAvailable || (selectionCount > 0 && isCaptionAboveMediaAvailable) {
                         if !items.isEmpty {
                             items.append(.separator)

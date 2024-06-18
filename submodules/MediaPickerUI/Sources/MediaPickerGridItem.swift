@@ -552,9 +552,7 @@ final class MediaPickerGridItemNode: GridItemNode {
             let priceSignal = Signal<Int64?, NoError> { subscriber in
                 if let signal = editingContext.priceSignal(forIdentifier: asset.localIdentifier) {
                     let disposable = signal.start(next: { next in
-                        if let next = next as? Int64 {
-                            subscriber.putNext(next)
-                        }
+                        subscriber.putNext(next as? Int64)
                     }, error: { _ in
                     }, completed: nil)!
                     

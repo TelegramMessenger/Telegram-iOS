@@ -98,7 +98,7 @@ public final class StatsGraphItem: ListViewItem, ItemListItem, ListItemComponent
     public var selectable: Bool = false
 }
 
-class StatsGraphItemNode: ListViewItemNode {
+public final class StatsGraphItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -139,7 +139,7 @@ class StatsGraphItemNode: ListViewItemNode {
         self.chartContainerNode.addSubnode(self.activityIndicator)
     }
     
-    override func didLoad() {
+    public override func didLoad() {
         super.didLoad()
     
         self.view.interactiveTransitionGestureRecognizerTest = { point -> Bool in
@@ -147,7 +147,7 @@ class StatsGraphItemNode: ListViewItemNode {
         }
     }
     
-    func resetInteraction() {
+    public func resetInteraction() {
         self.chartNode.resetInteraction()
     }
     
@@ -313,15 +313,15 @@ class StatsGraphItemNode: ListViewItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
+    public override func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    public override func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    public override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
 }

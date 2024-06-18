@@ -57,7 +57,7 @@ public final class LocationMapHeaderNode: ASDisplayNode {
     private let placesButtonNode: HighlightableButtonNode
     private let shadowNode: ASImageNode
     
-    private var validLayout: (ContainerViewLayout, CGFloat, CGFloat, CGFloat, CGSize)?
+    private var validLayout: (ContainerViewLayout, CGFloat, CGFloat, CGFloat, CGFloat, CGSize)?
     
     public init(presentationData: PresentationData, toggleMapModeSelection: @escaping () -> Void, goToUserLocation: @escaping () -> Void, setupProximityNotification: @escaping (Bool) -> Void = { _ in }, showPlacesInThisArea: @escaping () -> Void = {}) {
         self.presentationData = presentationData
@@ -143,9 +143,9 @@ public final class LocationMapHeaderNode: ASDisplayNode {
         self.displayingPlacesButton = displayingPlacesButton
         self.proximityNotification = proximityNotification
         
-        if updateLayout, let (layout, navigationBarHeight, topPadding, offset, size) = self.validLayout {
+        if updateLayout, let (layout, navigationBarHeight, topPadding, controlsTopPadding, offset, size) = self.validLayout {
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .spring) : .immediate
-            self.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, topPadding: topPadding, offset: offset, size: size, transition: transition)
+            self.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, topPadding: topPadding, controlsTopPadding: controlsTopPadding, offset: offset, size: size, transition: transition)
         }
     }
     
@@ -177,8 +177,8 @@ public final class LocationMapHeaderNode: ASDisplayNode {
         }
     }
     
-    public func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, topPadding: CGFloat, offset: CGFloat, size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (layout, navigationBarHeight, topPadding, offset, size)
+    public func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, topPadding: CGFloat, controlsTopPadding: CGFloat, offset: CGFloat, size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (layout, navigationBarHeight, topPadding, controlsTopPadding, offset, size)
         
         let mapHeight: CGFloat = floor(layout.size.height * 1.3) + layout.intrinsicInsets.top * 2.0
         let mapFrame = CGRect(x: 0.0, y: floorToScreenPixels((size.height - mapHeight + navigationBarHeight) / 2.0) + offset + floor(layout.intrinsicInsets.top * 0.5), width: size.width, height: mapHeight)
@@ -209,7 +209,7 @@ public final class LocationMapHeaderNode: ASDisplayNode {
         transition.updateAlpha(node: self.notificationButtonNode, alpha: self.proximityNotification != nil ? 1.0 : 0.0)
         transition.updateAlpha(node: self.optionsSecondSeparatorNode, alpha: self.proximityNotification != nil ? 1.0 : 0.0)
         
-        transition.updateFrame(node: self.optionsBackgroundNode, frame: CGRect(x: size.width - inset - panelButtonSize.width - panelInset * 2.0 - layout.safeInsets.right, y: navigationBarHeight + topPadding + inset, width: panelButtonSize.width + panelInset * 2.0, height: panelHeight + panelInset * 2.0))
+        transition.updateFrame(node: self.optionsBackgroundNode, frame: CGRect(x: size.width - inset - panelButtonSize.width - panelInset * 2.0 - layout.safeInsets.right, y: navigationBarHeight + controlsTopPadding + inset, width: panelButtonSize.width + panelInset * 2.0, height: panelHeight + panelInset * 2.0))
         
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
         let optionsAlpha: CGFloat = size.height > 160.0 + navigationBarHeight && !self.forceIsHidden ? 1.0 : 0.0
@@ -218,8 +218,8 @@ public final class LocationMapHeaderNode: ASDisplayNode {
     
     public var forceIsHidden: Bool = false {
         didSet {
-            if let (layout, navigationBarHeight, topPadding, offset, size) = self.validLayout {
-                self.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, topPadding: topPadding, offset: offset, size: size, transition: .immediate)
+            if let (layout, navigationBarHeight, topPadding, controlsTopPadding, offset, size) = self.validLayout {
+                self.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, topPadding: topPadding, controlsTopPadding: controlsTopPadding, offset: offset, size: size, transition: .immediate)
             }
         }
     }

@@ -780,14 +780,22 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             var maxHeight = layoutConstants.image.maxDimensions.height
             var isStory = false
             
+            let _ = isStory
+            
             var additionalWidthConstrainment = false
             var unboundSize: CGSize
-            if let _ = media as? TelegramMediaStory {
+            if let story = media as? TelegramMediaStory {
                 if message.media.contains(where: { $0 is TelegramMediaWebpage }) {
                     additionalWidthConstrainment = true
                     unboundSize = CGSize(width: 174.0, height: 239.0)
                 } else {
                     unboundSize = CGSize(width: 1080, height: 1920)
+                }
+                
+                if let storyItem = message.associatedStories[story.storyId]?.get(Stories.StoredItem.self), case let .item(item) = storyItem, let media = item.media {
+                    if let file = media as? TelegramMediaFile {
+                        isInlinePlayableVideo = file.isVideo && !isSecretMedia
+                    }
                 }
             } else if let image = media as? TelegramMediaImage, let dimensions = largestImageRepresentation(image.representations)?.dimensions {
                 unboundSize = CGSize(width: max(10.0, floor(dimensions.cgSize.width * 0.5)), height: max(10.0, floor(dimensions.cgSize.height * 0.5)))
@@ -1174,7 +1182,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                         uploading = true
                                     }
                                     
-                                    if file.isVideo && !file.isVideoSticker && !isSecretMedia && automaticPlayback && !isStory && !uploading {
+                                    if file.isVideo && !file.isVideoSticker && !isSecretMedia && automaticPlayback && !uploading {
                                         updateVideoFile = file
                                         if hasCurrentVideoNode {
                                             if let currentFile = currentMedia as? TelegramMediaFile {
@@ -1310,7 +1318,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 uploading = true
                             }
                             
-                            if file.isVideo && !file.isVideoSticker && !isSecretMedia && automaticPlayback && !isStory && !uploading {
+                            if file.isVideo && !file.isVideoSticker && !isSecretMedia && automaticPlayback && !uploading {
                                 updateVideoFile = file
                                 if hasCurrentVideoNode {
                                     if let currentFile = currentMedia as? TelegramMediaFile {
@@ -2111,7 +2119,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                         state = .staticTimeout
                     } else if let file = media as? TelegramMediaFile, !file.isVideoSticker {
                         let isInlinePlayableVideo = file.isVideo && !isSecretMedia && (self.automaticPlayback ?? false)
-                        if (!isInlinePlayableVideo || isStory) && file.isVideo {
+                        if (!isInlinePlayableVideo) && file.isVideo {
                             state = .play(messageTheme.mediaOverlayControlColors.foregroundColor)
                         } else {
                             state = .none

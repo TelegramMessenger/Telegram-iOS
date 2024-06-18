@@ -26,16 +26,11 @@ extension ChatControllerImpl {
         case let .peerMention(peerId, mention):
             self.openMentionContextMenu(username: mention, peerId: peerId, params: params)
         case let .command(command):
-            let _ = command
-            break
-//            self.openBotCommandContextMenu(command: command, params: params)
+            self.openCommandContextMenu(command: command, params: params)
         case let .hashtag(hashtag):
             self.openHashtagContextMenu(hashtag: hashtag, params: params)
         case let .timecode(value, timecode):
-            let _ = value
-            let _ = timecode
-            break
-//            self.openTimecodeContextMenu(timecode: timecode, params: params)
+            self.openTimecodeContextMenu(timecode: timecode, value: value, params: params)
         case let .bankCard(number):
             self.openBankCardContextMenu(number: number, params: params)
         case let .phone(number):

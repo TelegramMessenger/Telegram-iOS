@@ -52,26 +52,8 @@ extension ChatControllerImpl {
             
             var items: [ContextMenuItem] = []
             
-            if let info {
-                for url in info.urls {
-                    items.append(
-                        .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Phone_AddToContacts, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
-                            guard let self else {
-                                return
-                            }
-                            f(.default)
-                            self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: url.url, concealed: false, external: false, message: message))
-                        }))
-                    )
-                }
-                
-                if !items.isEmpty {
-                    items.append(.separator)
-                }
-            }
-            
             items.append(
-                .action(ContextMenuActionItem(text: "Copy Card Number", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
+                .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Card_Copy, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
                     f(.default)
 
                     guard let self else {
