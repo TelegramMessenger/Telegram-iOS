@@ -672,8 +672,7 @@ public final class OngoingGroupCallContext {
                 enableNoiseSuppression: enableNoiseSuppression,
                 disableAudioInput: disableAudioInput,
                 preferX264: preferX264,
-                logPath: logPath,
-                onMutedSpeechActivityDetected: { _ in }
+                logPath: logPath
             )
 #endif
             
