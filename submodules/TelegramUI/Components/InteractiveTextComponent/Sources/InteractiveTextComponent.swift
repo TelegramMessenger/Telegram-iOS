@@ -1618,7 +1618,11 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                 size.width = max(size.width, titleLine.frame.origin.x + titleLine.frame.width + segment.additionalWidth)
             }
             for line in segment.lines {
-                size.width = max(size.width, line.frame.origin.x + line.frame.width + segment.additionalWidth)
+                var additionalTrailingWidth: CGFloat = 0.0
+                if let additionalTrailingLine = line.additionalTrailingLine {
+                    additionalTrailingWidth += CTLineGetTypographicBounds(additionalTrailingLine.0, nil, nil, nil)
+                }
+                size.width = max(size.width, line.frame.origin.x + line.frame.width + segment.additionalWidth + additionalTrailingWidth)
             }
         }
         
@@ -1685,7 +1689,11 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                     effectiveSegmentHeight += line.frame.height
                     visibleLineCount = i + 1
                 }
-                blockWidth = max(blockWidth, line.frame.origin.x + line.frame.width)
+                var additionalTrailingWidth: CGFloat = 0.0
+                if let additionalTrailingLine = line.additionalTrailingLine {
+                    additionalTrailingWidth += CTLineGetTypographicBounds(additionalTrailingLine.0, nil, nil, nil)
+                }
+                blockWidth = max(blockWidth, line.frame.origin.x + line.frame.width + additionalTrailingWidth)
                 
                 if let range = line.range {
                     attributedString.enumerateAttributes(in: range, options: []) { attributes, range, _ in
@@ -1875,6 +1883,11 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                 var lineRect = line.frame
                 lineRect.origin.y = topLeftOffset.y + line.frame.minY
                 lineRect.origin.x = topLeftOffset.x + line.frame.minX
+                
+                if let additionalTrailingLine = line.additionalTrailingLine {
+                    lineRect.size.width += CTLineGetTypographicBounds(additionalTrailingLine.0, nil, nil, nil)
+                }
+                
                 if segmentRect.isEmpty {
                     segmentRect = lineRect
                 } else {
@@ -2304,7 +2317,7 @@ final class TextContentItemLayer: SimpleLayer {
                         }
                     }
                     
-                    if !line.strikethroughs.isEmpty {
+                    /*if !line.strikethroughs.isEmpty {
                         for strikethrough in line.strikethroughs {
                             guard let lineRange = line.range else {
                                 continue
@@ -2321,7 +2334,7 @@ final class TextContentItemLayer: SimpleLayer {
                             let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
                             context.fill(CGRect(x: frame.minX, y: frame.minY - 5.0, width: frame.width, height: 1.0))
                         }
-                    }
+                    }*/
                     
                     if let (additionalTrailingLine, _) = line.additionalTrailingLine {
                         context.textPosition = CGPoint(x: lineFrame.minX + line.intrinsicWidth, y: lineFrame.maxY - line.descent)
