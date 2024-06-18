@@ -1066,6 +1066,9 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 if case let .extracted(extracted) = self.source {
                     if extracted.adjustContentHorizontally {
                         contentFrame.origin.x = combinedActionsFrame.minX
+                        if contentFrame.maxX > layout.size.width {
+                            contentFrame.origin.x = layout.size.width - contentFrame.width - actionsEdgeInset
+                        }
                     }
                     if extracted.centerVertically {
                         if combinedActionsFrame.height.isZero {
