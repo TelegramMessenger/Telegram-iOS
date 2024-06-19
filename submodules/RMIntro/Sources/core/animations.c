@@ -967,15 +967,13 @@ static void draw_ic(int type)
         t_y -= value*bounce;
     }
 
-    float pink = 0;
     if (time_local > anim_pin_start_time) {
-        pink = t_local(0, 1, anim_pin_start_time, anim_pin_duration, Sin);
         if (time_local > anim_pin_start_time + anim_pin_duration) {
             anim_pin_start_time = time_local + duration_const * frand(10, 20)*2;
             anim_pin_duration = duration_const * frand(10, 20)*2;
         }
     }
-    float pinasin = 0;//sin(time_local*.1) * pink;
+    float pinasin = 0;
     ic_pin_layer.position = xyzMake(ic_pos.x + cos(time_local*5)*3*pinasin + cloud_scroll_offset, ic_pos.y + sin(time_local*5)*1.5*pinasin + t_y , 0);
     mat4x4_layer(ic_matrix, ic_pin_layer, ic_layer_scale, rotation);
     draw_textured_shape(&ic_pin, ic_matrix, COLOR);
@@ -1285,7 +1283,6 @@ static void draw_ic(int type)
 
 
     // pencil
-    float begin_k;
     if (type == 0) {
         ic_pos = CPointMake(-88/2-15, -100/2+13);
 
@@ -1295,7 +1292,6 @@ static void draw_ic(int type)
         }
         else
         {
-            begin_k=.1;
             t_y = t(beginY, 0, commonDelay + duration_const*.1*beginTimeK, duration_const, EaseOut);
 
             float value = 0;
@@ -1312,7 +1308,6 @@ static void draw_ic(int type)
     {
         ic_pos = CPointMake(+152/2-17, +66/2+14);
 
-        begin_k = .4;
         t_y = t(beginY, 0, commonDelay + duration_const*.35*beginTimeK, duration_const, EaseOut);
 
         float value = 0;
@@ -1387,29 +1382,25 @@ void draw_safe(int type, float alpha, float screw_alpha)
     float screw_distance = 53;
 
     float dk = .1;
-    float k = dk * 0;
 
     private_screw.params.alpha = alpha * screw_alpha;
 
-    scale = 1;//t(.0, 1., common_delay+duration_const*k, duration_const*durk, EaseOut);
+    scale = 1;
     private_screw.params.scale = xyzMake(scale,scale,1);
     private_screw.params.position = xyzMake(-screw_distance, -screw_distance, 0);
     draw_textured_shape(&private_screw, private_matrix, NORMAL_ONE);
 
-    k = dk * 1;
-    scale = 1;//t(.0, 1., common_delay+duration_const*k, duration_const*durk, EaseOut);
+    scale = 1;
     private_screw.params.scale = xyzMake(scale,scale,1);
     private_screw.params.position = xyzMake(screw_distance, -screw_distance, 0);
     draw_textured_shape(&private_screw, private_matrix, NORMAL_ONE);
 
-    k = dk * 2;
-    scale = 1;//t(.0, 1., common_delay+duration_const*k, duration_const*durk, EaseOut);
+    scale = 1;
     private_screw.params.scale = xyzMake(scale,scale,1);
     private_screw.params.position = xyzMake(-screw_distance, screw_distance, 0);
     draw_textured_shape(&private_screw, private_matrix, NORMAL_ONE);
 
-    k = dk * 3;
-    scale = 1;//t(.0, 1., common_delay+duration_const*k, duration_const*durk, EaseOut);
+    scale = 1;
     private_screw.params.scale = xyzMake(scale,scale,1);
     private_screw.params.position = xyzMake(screw_distance, screw_distance, 0);
     draw_textured_shape(&private_screw, private_matrix, NORMAL_ONE);
