@@ -168,8 +168,9 @@ final class StarsTransactionsListPanelComponent: Component {
                 return
             }
             
-            let visibleBounds = self.scrollView.bounds.insetBy(dx: 0.0, dy: -100.0)
-                        
+            var visibleBounds = environment.externalScrollBounds ?? self.scrollView.bounds
+            visibleBounds = visibleBounds.insetBy(dx: 0.0, dy: -100.0)
+            
             var validIds = Set<String>()
             if let visibleItems = itemLayout.visibleItems(for: visibleBounds) {
                 for index in visibleItems.lowerBound ..< visibleItems.upperBound {
@@ -342,7 +343,7 @@ final class StarsTransactionsListPanelComponent: Component {
                 self.visibleItems.removeValue(forKey: id)
             }
             
-            let bottomOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.contentOffset.y - self.scrollView.frame.height)
+            let bottomOffset = self.environment?.externalBottomOffset ?? max(0.0, self.scrollView.contentSize.height - self.scrollView.contentOffset.y - self.scrollView.frame.height)
             let loadMore = bottomOffset < 100.0
             if environment.isCurrent, loadMore {
                 let lastId = self.items.last?.extendedId
@@ -436,11 +437,18 @@ final class StarsTransactionsListPanelComponent: Component {
             
             self.ignoreScrolling = true
             let contentOffset = self.scrollView.bounds.minY
-            transition.setPosition(view: self.scrollView, position: CGRect(origin: CGPoint(), size: availableSize).center)
+            
             var scrollBounds = self.scrollView.bounds
-            scrollBounds.size = availableSize
-            if !environment.isScrollable {
+            if let _ = environment.externalScrollBounds {
                 scrollBounds.origin = CGPoint()
+                scrollBounds.size = CGSize(width: availableSize.width, height: itemLayout.contentHeight)
+                transition.setPosition(view: self.scrollView, position: scrollBounds.center)
+            } else {
+                transition.setPosition(view: self.scrollView, position: CGRect(origin: CGPoint(), size: availableSize).center)
+                scrollBounds.size = availableSize
+                if !environment.isScrollable {
+                    scrollBounds.origin = CGPoint()
+                }
             }
             transition.setBounds(view: self.scrollView, bounds: scrollBounds)
             self.scrollView.isScrollEnabled = environment.isScrollable
@@ -456,10 +464,10 @@ final class StarsTransactionsListPanelComponent: Component {
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
             
-            if component.isAccount {
-                return availableSize
+            if let _ = environment.externalScrollBounds {
+                return CGSize(width: availableSize.width, height: contentSize.height)
             } else {
-                return CGSize(width: availableSize.width, height: min(availableSize.height, contentSize.height))
+                return availableSize
             }
         }
     }
