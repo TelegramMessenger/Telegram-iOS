@@ -199,7 +199,7 @@ private final class StarsContextImpl {
             return
         }
         var transactions = state.transactions
-        transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil), at: 0)
+        transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, media: []), at: 0)
         
         self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: state.balance + balance, transactions: transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
     }
@@ -238,7 +238,7 @@ private final class StarsContextImpl {
 private extension StarsContext.State.Transaction {
     init?(apiTransaction: Api.StarsTransaction, transaction: Transaction) {
         switch apiTransaction {
-        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId):
+        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId, extendedMedia):
             let parsedPeer: StarsContext.State.Transaction.Peer
             var paidMessageId: MessageId?
             switch transactionPeer {
@@ -269,7 +269,9 @@ private extension StarsContext.State.Transaction {
             if (apiFlags & (1 << 6)) != 0 {
                 flags.insert(.isFailed)
             }
-            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId)
+            
+            let media = extendedMedia.flatMap({ $0.compactMap { textMediaAndExpirationTimerFromApiMedia($0, PeerId(0)).media } }) ?? []
+            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId, media: media)
         }
     }
 }
@@ -310,6 +312,7 @@ public final class StarsContext {
             public let transactionDate: Int32?
             public let transactionUrl: String?
             public let paidMessageId: MessageId?
+            public let media: [Media]
             
             public init(
                 flags: Flags,
@@ -322,7 +325,8 @@ public final class StarsContext {
                 photo: TelegramMediaWebFile?,
                 transactionDate: Int32?,
                 transactionUrl: String?,
-                paidMessageId: MessageId?
+                paidMessageId: MessageId?,
+                media: [Media]
             ) {
                 self.flags = flags
                 self.id = id
@@ -335,6 +339,47 @@ public final class StarsContext {
                 self.transactionDate = transactionDate
                 self.transactionUrl = transactionUrl
                 self.paidMessageId = paidMessageId
+                self.media = media
+            }
+            
+            public static func == (lhs: Transaction, rhs: Transaction) -> Bool {
+                if lhs.flags != rhs.flags {
+                    return false
+                }
+                if lhs.id != rhs.id {
+                    return false
+                }
+                if lhs.count != rhs.count {
+                    return false
+                }
+                if lhs.date != rhs.date {
+                    return false
+                }
+                if lhs.peer != rhs.peer {
+                    return false
+                }
+                if lhs.title != rhs.title {
+                    return false
+                }
+                if lhs.description != rhs.description {
+                    return false
+                }
+                if lhs.photo != rhs.photo {
+                    return false
+                }
+                if lhs.transactionDate != rhs.transactionDate {
+                    return false
+                }
+                if lhs.transactionUrl != rhs.transactionUrl {
+                    return false
+                }
+                if lhs.paidMessageId != rhs.paidMessageId {
+                    return false
+                }
+                if !areMediaArraysEqual(lhs.media, rhs.media) {
+                    return false
+                }
+                return true
             }
         }
         
