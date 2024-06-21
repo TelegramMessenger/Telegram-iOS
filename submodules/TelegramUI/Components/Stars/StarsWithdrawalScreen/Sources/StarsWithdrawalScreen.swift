@@ -623,6 +623,7 @@ private final class AmountFieldComponent: Component {
                 
                 if let amount, let maxAmount = component.maxValue, amount > maxAmount {
                     textField.text = "\(maxAmount)"
+                    self.textChanged(self.textField)
                     self.animateError()
                     return false
                 }

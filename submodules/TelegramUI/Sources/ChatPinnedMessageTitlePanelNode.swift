@@ -654,9 +654,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                                 }
                                 break
                             } else if let file = fullMedia as? TelegramMediaFile {
-                                if !file.isInstantVideo && !file.isSticker, let representation = largestImageRepresentation(file.previewRepresentations) {
-                                    imageDimensions = representation.dimensions.cgSize
-                                } else if file.isAnimated, let dimensions = file.dimensions {
+                                if let dimensions = file.dimensions {
                                     imageDimensions = dimensions.cgSize
                                 }
                                 break

@@ -12418,5 +12418,10 @@ Sorry for the inconvenience.";
 "Monetization.Balance.StarsInfo" = "You can withdraw Stars using Fragment, or use Stars to advertise your channel. [Learn More >]()";
 "Monetization.Balance.StarsInfo_URL" = "https://telegram.org";
 
+"Monetization.StarsProceeds.Title" = "Rewards Overview";
+"Monetization.StarsProceeds.Available" = "Available Balance";
+"Monetization.StarsProceeds.Current" = "Total Balance";
+"Monetization.StarsProceeds.Total" = "Lifetime Proceeds";
+
 "Premium.MessageEffects" = "Message Effects";
 "Premium.MessageEffectsInfo" = "Add over 500 animated effects to private messages.";

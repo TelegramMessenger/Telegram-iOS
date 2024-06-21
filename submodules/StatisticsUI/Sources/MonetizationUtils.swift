@@ -38,6 +38,11 @@ func formatBalanceText(_ value: Int64, decimalSeparator: String, showPlus: Bool 
     } else if showPlus {
         balanceText.insert("+", at: balanceText.startIndex)
     }
+    
+    if let dec = balanceText.range(of: decimalSeparator) {
+        balanceText = String(balanceText[balanceText.startIndex ..< min(balanceText.endIndex, balanceText.index(dec.upperBound, offsetBy: 2))])
+    }
+    
     return balanceText
 }
 

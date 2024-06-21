@@ -382,7 +382,13 @@ public final class StarsImageComponent: Component {
             largeParticlesView.update(size: availableSize)
             largeParticlesView.frame = CGRect(origin: .zero, size: availableSize)
             
-            let imageSize = CGSize(width: component.diameter, height: component.diameter)
+            var imageSize = CGSize(width: component.diameter, height: component.diameter)
+            if case let .media(media) = component.subject, media.count > 1 {
+                imageSize = CGSize(width: component.diameter - 6.0, height: component.diameter - 6.0)
+            } else if case let .extendedMedia(media) = component.subject, media.count > 1 {
+                imageSize = CGSize(width: component.diameter - 6.0, height: component.diameter - 6.0)
+            }
+            
             let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - imageSize.width) / 2.0), y: floorToScreenPixels((availableSize.height - imageSize.height) / 2.0)), size: imageSize)
             
             switch component.subject {

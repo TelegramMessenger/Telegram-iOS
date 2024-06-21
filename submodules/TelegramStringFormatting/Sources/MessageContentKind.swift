@@ -55,7 +55,6 @@ public enum MessageContentKind: Equatable {
     case invoice(String)
     case story
     case giveaway
-    case paidContent
     
     public func isSemanticallyEqual(to other: MessageContentKind) -> Bool {
         switch self {
@@ -191,12 +190,6 @@ public enum MessageContentKind: Equatable {
             } else {
                 return false
             }
-        case .paidContent:
-            if case .paidContent = other {
-                return true
-            } else {
-                return false
-            }
         }
     }
     
@@ -246,8 +239,6 @@ public enum MessageContentKind: Equatable {
             return .story
         case .giveaway:
             return .giveaway
-        case .paidContent:
-            return .paidContent
         }
     }
 }
@@ -396,6 +387,25 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         } else {
             return nil
         }
+    case let .paidContent(paidContent):
+        switch paidContent.extendedMedia.first {
+        case let .preview(_, _, videoDuration):
+            if let _ = videoDuration {
+                return .video
+            } else {
+                return .image
+            }
+        case let .full(media):
+            if media is TelegramMediaImage {
+                return .image
+            } else if media is TelegramMediaFile {
+                return .video
+            } else {
+                return nil
+            }
+        default:
+            return nil
+        }
     default:
         return nil
     }
@@ -455,8 +465,6 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
         return (NSAttributedString(string: strings.Message_Story), true)
     case .giveaway:
         return (NSAttributedString(string: strings.Message_Giveaway), true)
-    case .paidContent:
-        return (NSAttributedString(string: "Paid Media"), true)
     }
 }
 

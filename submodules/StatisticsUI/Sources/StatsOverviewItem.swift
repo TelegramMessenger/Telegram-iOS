@@ -211,8 +211,26 @@ private final class ValueItemNode: ASDisplayNode {
             
             let (deltaLayout, deltaApply) = makeDeltaLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: delta?.0 ?? "", font: deltaFont, textColor: deltaColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
+            var valueOffset: CGFloat = 0.0
+            let iconName: String?
+            var iconTinted = false
+            switch mode {
+            case .ton:
+                iconName = "Ads/TonMedium"
+                iconTinted = true
+                valueOffset = 17.0
+            case .stars:
+                iconName = "Premium/Stars/StarMedium"
+                valueOffset = 19.0
+            default:
+                iconName = nil
+            }
+            
             let horizontalSpacing: CGFloat = 4.0
-            let size = CGSize(width: valueLayout.size.width + horizontalSpacing + deltaLayout.size.width, height: valueLayout.size.height + titleLayout.size.height)
+            let size = CGSize(
+                width: max(valueOffset + valueLayout.size.width + horizontalSpacing + deltaLayout.size.width, titleLayout.size.width),
+                height: valueLayout.size.height + titleLayout.size.height
+            )
             return (size, {
                 var themeUpdated = false
                 if targetNode.currentTheme !== presentationData.theme {
@@ -223,22 +241,7 @@ private final class ValueItemNode: ASDisplayNode {
                 let _ = valueApply()
                 let _ = titleApply()
                 let _ = deltaApply()
-                
-                var valueOffset: CGFloat = 0.0
-                let iconName: String?
-                var iconTinted = false
-                switch mode {
-                case .ton:
-                    iconName = "Ads/TonMedium"
-                    iconTinted = true
-                    valueOffset = 17.0
-                case .stars:
-                    iconName = "Premium/Stars/StarMedium"
-                    valueOffset = 19.0
-                default:
-                    iconName = nil
-                }
-                
+                  
                 var iconNameUpdated = false
                 if targetNode.currentIconName != iconName {
                     targetNode.currentIconName = iconName
@@ -385,6 +388,7 @@ class StatsOverviewItemNode: ListViewItemNode {
             }
             
             var twoColumnLayout = true
+            var useMinLeftColumnWidth = true
             
             var topLeftItemLayoutAndApply: (CGSize, () -> ValueItemNode)?
             var topRightItemLayoutAndApply: (CGSize, () -> ValueItemNode)?
@@ -761,13 +765,14 @@ class StatsOverviewItemNode: ListViewItemNode {
             } else if let stats = item.stats as? RevenueStats {
                 if let additionalStats = item.additionalStats as? StarsRevenueStats, additionalStats.balances.overallRevenue > 0 {
                     twoColumnLayout = true
+                    useMinLeftColumnWidth = true
                     
                     topLeftItemLayoutAndApply = makeTopLeftItemLayout(
                         item.context,
                         params.width,
                         item.presentationData,
                         formatBalanceText(stats.balances.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
-                        "Available Balance", //item.presentationData.strings.Monetization_Overview_Available,
+                        item.presentationData.strings.Monetization_StarsProceeds_Available,
                         (stats.balances.availableBalance == 0 ? "" : "≈\(formatUsdValue(stats.balances.availableBalance, rate: stats.usdRate))", .generic),
                         .ton
                     )
@@ -777,7 +782,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         params.width,
                         item.presentationData,
                         formatBalanceText(stats.balances.currentBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
-                        "Current Balance", //item.presentationData.strings.Monetization_Overview_Current,
+                        item.presentationData.strings.Monetization_StarsProceeds_Current,
                         (stats.balances.currentBalance == 0 ? "" : "≈\(formatUsdValue(stats.balances.currentBalance, rate: stats.usdRate))", .generic),
                         .ton
                     )
@@ -787,7 +792,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         params.width,
                         item.presentationData,
                         formatBalanceText(stats.balances.overallRevenue, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
-                        "Lifetime Proceeds",//item.presentationData.strings.Monetization_Overview_Total,
+                        item.presentationData.strings.Monetization_StarsProceeds_Total,
                         (stats.balances.overallRevenue == 0 ? "" : "≈\(formatUsdValue(stats.balances.overallRevenue, rate: stats.usdRate))", .generic),
                         .ton
                     )
@@ -957,7 +962,11 @@ class StatsOverviewItemNode: ListViewItemNode {
                         if let bottomLeftItemLayout = bottomLeftItemLayoutAndApply?.0 {
                             maxLeftWidth = max(maxLeftWidth, bottomLeftItemLayout.width)
                         }
-                        secondColumnX = max(layout.size.width / 2.0, firstColumnX + maxLeftWidth + horizontalSpacing)
+                        if useMinLeftColumnWidth {
+                            secondColumnX = min(layout.size.width / 2.0, firstColumnX + maxLeftWidth + horizontalSpacing * 3.0)
+                        } else {
+                            secondColumnX = max(layout.size.width / 2.0, firstColumnX + maxLeftWidth + horizontalSpacing)
+                        }
                     }
                                         
                     if let topLeftItemLayout = topLeftItemLayoutAndApply?.0 {
