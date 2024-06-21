@@ -221,7 +221,7 @@ private final class ValueItemNode: ASDisplayNode {
                 valueOffset = 17.0
             case .stars:
                 iconName = "Premium/Stars/StarMedium"
-                valueOffset = 19.0
+                valueOffset = 21.0
             default:
                 iconName = nil
             }
@@ -803,7 +803,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.presentationData,
                         presentationStringsFormattedNumber(Int32(additionalStats.balances.availableBalance), item.presentationData.dateTimeFormat.groupingSeparator),
                         " ",
-                        (additionalStats.balances.availableBalance == 0 ? "" : "≈\(formatUsdValue(additionalStats.balances.availableBalance, rate: additionalStats.usdRate))", .generic),
+                        (additionalStats.balances.availableBalance == 0 ? "" : "≈\(formatUsdValue(additionalStats.balances.availableBalance, divide: false, rate: additionalStats.usdRate))", .generic),
                         .stars
                     )
                     
@@ -813,7 +813,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.presentationData,
                         presentationStringsFormattedNumber(Int32(additionalStats.balances.currentBalance), item.presentationData.dateTimeFormat.groupingSeparator),
                         " ",
-                        (additionalStats.balances.currentBalance == 0 ? "" : "≈\(formatUsdValue(additionalStats.balances.currentBalance, rate: additionalStats.usdRate))", .generic),
+                        (additionalStats.balances.currentBalance == 0 ? "" : "≈\(formatUsdValue(additionalStats.balances.currentBalance, divide: false, rate: additionalStats.usdRate))", .generic),
                         .stars
                     )
                     
@@ -823,7 +823,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.presentationData,
                         presentationStringsFormattedNumber(Int32(additionalStats.balances.overallRevenue), item.presentationData.dateTimeFormat.groupingSeparator),
                         " ",
-                        (additionalStats.balances.overallRevenue == 0 ? "" : "≈\(formatUsdValue(additionalStats.balances.overallRevenue, rate: additionalStats.usdRate))", .generic),
+                        (additionalStats.balances.overallRevenue == 0 ? "" : "≈\(formatUsdValue(additionalStats.balances.overallRevenue, divide: false, rate: additionalStats.usdRate))", .generic),
                         .stars
                     )
                     

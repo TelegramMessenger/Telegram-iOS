@@ -9,8 +9,9 @@ func formatAddress(_ address: String) -> String {
     return address
 }
 
-func formatUsdValue(_ value: Int64, rate: Double) -> String {
-    let formattedValue = String(format: "%0.2f", (Double(value) / 1000000000) * rate)
+func formatUsdValue(_ value: Int64, divide: Bool = true, rate: Double) -> String {
+    let normalizedValue: Double = divide ? Double(value) / 1000000000 : Double(value)
+    let formattedValue = String(format: "%0.2f", normalizedValue * rate)
     return "$\(formattedValue)"
 }
 
