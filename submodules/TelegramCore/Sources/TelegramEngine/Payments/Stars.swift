@@ -266,6 +266,9 @@ private extension StarsContext.State.Transaction {
             if (apiFlags & (1 << 3)) != 0 {
                 flags.insert(.isRefund)
             }
+            if (apiFlags & (1 << 4)) != 0 {
+                flags.insert(.isPending)
+            }
             if (apiFlags & (1 << 6)) != 0 {
                 flags.insert(.isFailed)
             }
@@ -591,8 +594,8 @@ private final class StarsTransactionsContextImpl {
         var updatedState = self._state
         updatedState.isLoading = true
         self.updateState(updatedState)
-        
-        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, mode: self.mode, offset: nextOffset, limit: 10)
+                
+        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, mode: self.mode, offset: nextOffset, limit: self.nextOffset == "" ? 25 : 50)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             guard let self else {
                 return

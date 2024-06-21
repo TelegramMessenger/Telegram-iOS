@@ -236,7 +236,13 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
                                                 } else {
                                                     updatedFlags.remove(.Incoming)
                                                 }
-                                                return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags))
+                                                
+                                                var updatedMedia = message.media
+                                                if let previousPaidContent = previousMessage.media.first(where: { $0 is TelegramMediaPaidContent }) as? TelegramMediaPaidContent, case .full = previousPaidContent.extendedMedia.first {
+                                                    updatedMedia = previousMessage.media
+                                                }
+                                                
+                                                return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags).withUpdatedMedia(updatedMedia))
                                             })
                                         }
                                     default:
