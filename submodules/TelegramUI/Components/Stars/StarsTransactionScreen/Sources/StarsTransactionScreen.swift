@@ -211,6 +211,10 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         titleText = strings.Stars_Transaction_FragmentWithdrawal_Title
                         via = strings.Stars_Transaction_FragmentWithdrawal_Subtitle
                     }
+                case .ads:
+                    //TODO:localize
+                    titleText = "Stars Withdrawal"
+                    via = "Telegram Ads"
                 case .unsupported:
                     titleText = strings.Stars_Transaction_Unsupported_Title
                     via = nil

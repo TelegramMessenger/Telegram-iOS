@@ -878,6 +878,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[198776256] = { return Api.StarsTopupOption.parse_starsTopupOption($0) }
     dict[766853519] = { return Api.StarsTransaction.parse_starsTransaction($0) }
     dict[-670195363] = { return Api.StarsTransactionPeer.parse_starsTransactionPeer($0) }
+    dict[1617438738] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerAds($0) }
     dict[-1269320843] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerAppStore($0) }
     dict[-382740222] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerFragment($0) }
     dict[2069236235] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerPlayMarket($0) }
@@ -1314,6 +1315,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1314881805] = { return Api.payments.PaymentResult.parse_paymentResult($0) }
     dict[-666824391] = { return Api.payments.PaymentResult.parse_paymentVerificationNeeded($0) }
     dict[-74456004] = { return Api.payments.SavedInfo.parse_savedInfo($0) }
+    dict[961445665] = { return Api.payments.StarsRevenueAdsAccountUrl.parse_starsRevenueAdsAccountUrl($0) }
     dict[-919881925] = { return Api.payments.StarsRevenueStats.parse_starsRevenueStats($0) }
     dict[497778871] = { return Api.payments.StarsRevenueWithdrawalUrl.parse_starsRevenueWithdrawalUrl($0) }
     dict[-1930105248] = { return Api.payments.StarsStatus.parse_starsStatus($0) }
@@ -2342,6 +2344,8 @@ public extension Api {
             case let _1 as Api.payments.PaymentResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.payments.SavedInfo:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.payments.StarsRevenueAdsAccountUrl:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.payments.StarsRevenueStats:
                 _1.serialize(buffer, boxed)

@@ -627,6 +627,13 @@ public final class StarsImageComponent: Component {
                         )
                         iconView.image = UIImage(bundleImageName: "Premium/Stars/Fragment")
                         iconOffset = 5.0
+                    case .ads:
+                        iconBackgroundView.image = generateFilledCircleImage(
+                            diameter: imageSize.width,
+                            color: UIColor(rgb: 0x1b1f24)
+                        )
+                        iconView.image = UIImage(bundleImageName: "Premium/Stars/Fragment")
+                        iconOffset = 5.0
                     case .premiumBot:
                         iconInset = 15.0
                         iconBackgroundView.image = generateGradientFilledCircleImage(

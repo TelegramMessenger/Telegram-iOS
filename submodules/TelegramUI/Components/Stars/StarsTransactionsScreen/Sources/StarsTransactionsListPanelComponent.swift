@@ -236,6 +236,9 @@ final class StarsTransactionsListPanelComponent: Component {
                     case .premiumBot:
                         itemTitle = environment.strings.Stars_Intro_Transaction_PremiumBotTopUp_Title
                         itemSubtitle = environment.strings.Stars_Intro_Transaction_PremiumBotTopUp_Subtitle
+                    case .ads:
+                        itemTitle = "Withdrawal"
+                        itemSubtitle = "via Telegram Ads"
                     case .unsupported:
                         itemTitle = environment.strings.Stars_Intro_Transaction_Unsupported_Title
                         itemSubtitle = nil

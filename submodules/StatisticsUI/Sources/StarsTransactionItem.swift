@@ -232,8 +232,7 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                     switch item.transaction.peer {
                     case let .peer(peer):
                         if !item.transaction.media.isEmpty {
-                            //TODO:localize
-                            itemTitle = "Media Purchase"
+                            itemTitle = item.presentationData.strings.Stars_Intro_Transaction_MediaPurchase
                             itemSubtitle = peer.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast)
                         } else if let title = item.transaction.title {
                             itemTitle = title
@@ -254,6 +253,9 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                     case .premiumBot:
                         itemTitle = item.presentationData.strings.Stars_Intro_Transaction_PremiumBotTopUp_Title
                         itemSubtitle = item.presentationData.strings.Stars_Intro_Transaction_PremiumBotTopUp_Subtitle
+                    case .ads:
+                        itemTitle = "Withdrawal"
+                        itemSubtitle = "via Telegram Ads"
                     case .unsupported:
                         itemTitle = item.presentationData.strings.Stars_Intro_Transaction_Unsupported_Title
                         itemSubtitle = nil

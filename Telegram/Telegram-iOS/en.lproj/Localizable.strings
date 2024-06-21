@@ -12254,6 +12254,7 @@ Sorry for the inconvenience.";
 "Stars.Intro.Incoming" = "Incoming";
 "Stars.Intro.Outgoing" = "Outgoing";
 
+"Stars.Intro.Transaction.MediaPurchase" = "Media Purchase";
 "Stars.Intro.Transaction.AppleTopUp.Title" = "Stars Top-Up";
 "Stars.Intro.Transaction.AppleTopUp.Subtitle" = "via App Store";
 "Stars.Intro.Transaction.GoogleTopUp.Title" = "Stars Top-Up";

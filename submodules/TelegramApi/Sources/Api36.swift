@@ -8732,6 +8732,21 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
+                static func getStarsRevenueAdsAccountUrl(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarsRevenueAdsAccountUrl>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-774377531)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "payments.getStarsRevenueAdsAccountUrl", parameters: [("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.StarsRevenueAdsAccountUrl? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.payments.StarsRevenueAdsAccountUrl?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.payments.StarsRevenueAdsAccountUrl
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
                 static func getStarsRevenueStats(flags: Int32, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarsRevenueStats>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-652215594)

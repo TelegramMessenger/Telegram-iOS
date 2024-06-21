@@ -322,3 +322,26 @@ func _internal_requestStarsRevenueWithdrawalUrl(account: Account, peerId: PeerId
     |> mapError { _ -> RequestStarsRevenueWithdrawalError in }
     |> switchToLatest
 }
+
+func _internal_requestStarsRevenueAdsAccountlUrl(account: Account, peerId: EnginePeer.Id) -> Signal<String?, NoError> {
+    return account.postbox.transaction { transaction -> Signal<String?, NoError> in
+        guard let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) else {
+            return .single(nil)
+        }
+        return account.network.request(Api.functions.payments.getStarsRevenueAdsAccountUrl(peer: inputPeer))
+        |> map(Optional.init)
+        |> `catch` { error -> Signal<Api.payments.StarsRevenueAdsAccountUrl?, NoError> in
+            return .single(nil)
+        }
+        |> map { result -> String? in
+            guard let result else {
+                return nil
+            }
+            switch result {
+            case let .starsRevenueAdsAccountUrl(url):
+                return url
+            }
+        }
+    }
+    |> switchToLatest
+}
