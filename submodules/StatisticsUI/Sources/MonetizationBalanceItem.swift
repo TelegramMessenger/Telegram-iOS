@@ -13,7 +13,7 @@ import TextFormat
 final class MonetizationBalanceItem: ListViewItem, ItemListItem {
     let context: AccountContext
     let presentationData: ItemListPresentationData
-    let stats: RevenueStats
+    let stats: Stats
     let canWithdraw: Bool
     let isEnabled: Bool
     let withdrawAction: () -> Void
@@ -23,7 +23,7 @@ final class MonetizationBalanceItem: ListViewItem, ItemListItem {
     init(
         context: AccountContext,
         presentationData: ItemListPresentationData,
-        stats: RevenueStats,
+        stats: Stats,
         canWithdraw: Bool,
         isEnabled: Bool,
         withdrawAction: @escaping () -> Void,
@@ -158,13 +158,24 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
             let integralFont = Font.with(size: 48.0, design: .round, weight: .semibold)
             let fractionalFont = Font.with(size: 24.0, design: .round, weight: .semibold)
             
-            let cryptoValue = formatBalanceText(item.stats.balances.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
+            let amountString: NSAttributedString
+            let value: String
             
-            let amountString = amountAttributedString(cryptoValue, integralFont: integralFont, fractionalFont: fractionalFont, color: item.presentationData.theme.list.itemPrimaryTextColor)
+            var isStars = false
+            if let stats = item.stats as? RevenueStats {
+                let cryptoValue = formatBalanceText(stats.balances.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
+                amountString = amountAttributedString(cryptoValue, integralFont: integralFont, fractionalFont: fractionalFont, color: item.presentationData.theme.list.itemPrimaryTextColor)
+                value = stats.balances.availableBalance == 0 ? "" : "≈\(formatUsdValue(stats.balances.availableBalance, rate: stats.usdRate))"
+            } else if let stats = item.stats as? StarsRevenueStats {
+                amountString = NSAttributedString(string: presentationStringsFormattedNumber(Int32(stats.balances.availableBalance), item.presentationData.dateTimeFormat.groupingSeparator), font: integralFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+                value = stats.balances.availableBalance == 0 ? "" : "≈\(formatUsdValue(stats.balances.availableBalance, rate: stats.usdRate))"
+                isStars = true
+            } else {
+                fatalError()
+            }
 
             let (balanceLayout, balanceApply) = makeBalanceTextLayout(TextNodeLayoutArguments(attributedString: amountString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            let value = item.stats.balances.availableBalance == 0 ? "" : "≈\(formatUsdValue(item.stats.balances.availableBalance, rate: item.stats.usdRate))"
             let (valueLayout, valueApply) = makeValueTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: value, font: Font.regular(17.0), textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let verticalInset: CGFloat = 13.0
@@ -272,7 +283,11 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     if themeUpdated {
-                        strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonBig"), color: item.presentationData.theme.list.itemAccentColor)
+                        if isStars {
+                            strongSelf.iconNode.image = UIImage(bundleImageName: "Premium/Stars/BalanceStar")
+                        } else {
+                            strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonBig"), color: item.presentationData.theme.list.itemAccentColor)
+                        }
                     }
 
                     var emojiItemSize = CGSize()
@@ -304,7 +319,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.addSubnode(withdrawButtonNode)
                             strongSelf.withdrawButtonNode = withdrawButtonNode
                         }
-                        withdrawButtonNode.title = item.presentationData.strings.Monetization_BalanceWithdraw
+                        withdrawButtonNode.title = isStars ? item.presentationData.strings.Monetization_BalanceStarsWithdraw : item.presentationData.strings.Monetization_BalanceWithdraw
                         withdrawButtonNode.isEnabled = item.isEnabled
                         
                         let buttonWidth = contentSize.width - leftInset - rightInset

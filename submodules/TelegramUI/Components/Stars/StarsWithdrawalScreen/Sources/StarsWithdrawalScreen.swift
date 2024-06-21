@@ -111,13 +111,14 @@ private final class SheetContent: CombinedComponent {
             let minAmount: Int64?
             let maxAmount: Int64?
             
+            let configuration = StarsWithdrawConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+            
             switch component.mode {
             case let .withdraw(status):
                 titleString = environment.strings.Stars_Withdraw_Title
                 amountTitle = environment.strings.Stars_Withdraw_AmountTitle
                 amountPlaceholder = environment.strings.Stars_Withdraw_AmountPlaceholder
                 
-                let configuration = StarsWithdrawConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
                 minAmount = configuration.minWithdrawAmount
                 maxAmount = status.balances.availableBalance
             case .paidMedia:
@@ -126,7 +127,7 @@ private final class SheetContent: CombinedComponent {
                 amountPlaceholder = environment.strings.Stars_PaidContent_AmountPlaceholder
                
                 minAmount = 1
-                maxAmount = nil
+                maxAmount = configuration.maxPaidMediaAmount
             }
             
             let title = title.update(
@@ -335,8 +336,11 @@ private final class SheetContent: CombinedComponent {
     
     func makeState() -> State {
         var amount: Int64?
-        if case let .withdraw(stats) = mode {
+        switch self.mode {
+        case let .withdraw(stats):
             amount = stats.balances.availableBalance
+        case let .paidMedia(initialValue):
+            amount = initialValue
         }
         return State(context: self.context, amount: amount)
     }
@@ -432,7 +436,7 @@ private final class StarsWithdrawSheetComponent: CombinedComponent {
 public final class StarsWithdrawScreen: ViewControllerComponentContainer {
     public enum Mode: Equatable {
         case withdraw(StarsRevenueStats)
-        case paidMedia
+        case paidMedia(Int64?)
     }
     
     private let context: AccountContext
@@ -730,18 +734,29 @@ func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor
 
 private struct StarsWithdrawConfiguration {
     static var defaultValue: StarsWithdrawConfiguration {
-        return StarsWithdrawConfiguration(minWithdrawAmount: nil)
+        return StarsWithdrawConfiguration(minWithdrawAmount: nil, maxPaidMediaAmount: nil)
     }
     
     let minWithdrawAmount: Int64?
+    let maxPaidMediaAmount: Int64?
     
-    fileprivate init(minWithdrawAmount: Int64?) {
+    fileprivate init(minWithdrawAmount: Int64?, maxPaidMediaAmount: Int64?) {
         self.minWithdrawAmount = minWithdrawAmount
+        self.maxPaidMediaAmount = maxPaidMediaAmount
     }
     
     static func with(appConfiguration: AppConfiguration) -> StarsWithdrawConfiguration {
-        if let data = appConfiguration.data, let minWithdrawAmount = data["stars_revenue_withdrawal_min"] as? Double {
-            return StarsWithdrawConfiguration(minWithdrawAmount: Int64(minWithdrawAmount))
+        if let data = appConfiguration.data {
+            var minWithdrawAmount: Int64?
+            if let value = data["stars_revenue_withdrawal_min"] as? Double {
+                minWithdrawAmount = Int64(value)
+            }
+            var maxPaidMediaAmount: Int64?
+            if let value = data["stars_paid_post_amount_max"] as? Double {
+                maxPaidMediaAmount = Int64(value)
+            }
+            
+            return StarsWithdrawConfiguration(minWithdrawAmount: minWithdrawAmount, maxPaidMediaAmount: maxPaidMediaAmount)
         } else {
             return .defaultValue
         }

@@ -81,6 +81,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageGiveawayBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageJoinedChannelBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageFactCheckBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageUnlockMediaNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageStarsMediaInfoNode",
         "//submodules/UIKitRuntimeUtils",
         "//submodules/TelegramUI/Components/Chat/ChatMessageTransitionNode",
         "//submodules/AnimatedStickerNode",

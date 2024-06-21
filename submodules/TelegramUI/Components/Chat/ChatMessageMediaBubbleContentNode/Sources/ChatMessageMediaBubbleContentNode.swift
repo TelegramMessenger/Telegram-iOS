@@ -56,7 +56,7 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 case .automaticPlayback:
                     openChatMessageMode = .automaticPlayback
             }
-            let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: openChatMessageMode))
+            let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: openChatMessageMode, mediaIndex: self.mediaIndex))
         }
         
         self.interactiveImageNode.activateAgeRestrictedMedia = { [weak self] in

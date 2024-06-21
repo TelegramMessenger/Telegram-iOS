@@ -20,6 +20,7 @@ import UndoUI
 import ListItemComponentAdaptor
 import StatisticsUI
 import ItemListUI
+import StarsWithdrawalScreen
 
 final class StarsStatisticsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -644,8 +645,14 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
             guard let self else {
                 return
             }
-            let controller = context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction, isAccount: false)
-            self.push(controller)
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let self, let peer else {
+                    return
+                }
+                let controller = context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction, peer: peer)
+                self.push(controller)
+            })
         }
         
         withdrawImpl = { [weak self] in
@@ -666,7 +673,7 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
                         guard let self, let stats = state.stats else {
                             return
                         }
-                        let controller = StarsWithdrawScreen(context: context, mode: .withdraw(stats), completion: { [weak self] amount in
+                        let controller = self.context.sharedContext.makeStarsWithdrawalScreen(context: context, stats: stats, completion: { [weak self] amount in
                             guard let self else {
                                 return
                             }

@@ -638,6 +638,30 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                             imageDimensions = dimensions.cgSize
                         }
                         break
+                    } else if let paidContent = media as? TelegramMediaPaidContent, let firstMedia = paidContent.extendedMedia.first {
+                        switch firstMedia {
+                        case let .preview(dimensions, immediateThumbnailData, _):
+                            let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                            if let dimensions {
+                                imageDimensions = dimensions.cgSize
+                            }
+                            updatedMediaReference = .standalone(media: thumbnailMedia)
+                        case let .full(fullMedia):
+                            updatedMediaReference = .message(message: MessageReference(message), media: fullMedia)
+                            if let image = fullMedia as? TelegramMediaImage {
+                                if let representation = largestRepresentationForPhoto(image) {
+                                    imageDimensions = representation.dimensions.cgSize
+                                }
+                                break
+                            } else if let file = fullMedia as? TelegramMediaFile {
+                                if !file.isInstantVideo && !file.isSticker, let representation = largestImageRepresentation(file.previewRepresentations) {
+                                    imageDimensions = representation.dimensions.cgSize
+                                } else if file.isAnimated, let dimensions = file.dimensions {
+                                    imageDimensions = dimensions.cgSize
+                                }
+                                break
+                            }
+                        }
                     }
                 }
             }
@@ -681,7 +705,11 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             if mediaUpdated {
                 if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
                     if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
-                        updateImageSignal = chatMessagePhotoThumbnail(account: context.account, userLocation: .peer(message.id.peerId), photoReference: imageReference, blurred: hasSpoiler)
+                        if imageReference.media.representations.isEmpty {
+                            updateImageSignal = chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: imageReference, ignoreFullSize: true, synchronousLoad: true)
+                        } else {
+                            updateImageSignal = chatMessagePhotoThumbnail(account: context.account, userLocation: .peer(message.id.peerId), photoReference: imageReference, blurred: hasSpoiler)
+                        }
                     } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
                         if fileReference.media.isAnimatedSticker {
                             let dimensions = fileReference.media.dimensions ?? PixelDimensions(width: 512, height: 512)

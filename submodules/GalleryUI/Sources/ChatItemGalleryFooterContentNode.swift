@@ -903,7 +903,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
             canEdit = false
         }
         
-        if message.isCopyProtected() || peerIsCopyProtected {
+        if message.isCopyProtected() || peerIsCopyProtected || message.paidContent != nil {
             canShare = false
             canEdit = false
         }
@@ -931,7 +931,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         var messageText = NSAttributedString(string: "")
         var hasCaption = false
         for media in message.media {
-            if media is TelegramMediaImage {
+            if media is TelegramMediaPaidContent {
+                hasCaption = true
+            } else if media is TelegramMediaImage {
                 hasCaption = true
             } else if let file = media as? TelegramMediaFile {
                 hasCaption = file.mimeType.hasPrefix("image/")

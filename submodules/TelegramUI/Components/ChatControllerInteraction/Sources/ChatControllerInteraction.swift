@@ -109,10 +109,12 @@ public struct NavigateToMessageParams {
 
 public struct OpenMessageParams {
     public var mode: ChatControllerInteractionOpenMessageMode
+    public var mediaIndex: Int?
     public var progress: Promise<Bool>?
     
-    public init(mode: ChatControllerInteractionOpenMessageMode, progress: Promise<Bool>? = nil) {
+    public init(mode: ChatControllerInteractionOpenMessageMode, mediaIndex: Int? = nil, progress: Promise<Bool>? = nil) {
         self.mode = mode
+        self.mediaIndex = mediaIndex
         self.progress = progress
     }
 }

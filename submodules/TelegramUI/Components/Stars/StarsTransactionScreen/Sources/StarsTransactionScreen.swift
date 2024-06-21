@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
@@ -29,6 +30,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     let action: () -> Void
     let cancel: (Bool) -> Void
     let openPeer: (EnginePeer) -> Void
+    let openMessage: (EngineMessage.Id) -> Void
     let copyTransactionId: () -> Void
     
     init(
@@ -37,6 +39,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         action: @escaping () -> Void,
         cancel: @escaping  (Bool) -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
+        openMessage: @escaping (EngineMessage.Id) -> Void,
         copyTransactionId: @escaping () -> Void
     ) {
         self.context = context
@@ -44,6 +47,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         self.action = action
         self.cancel = cancel
         self.openPeer = openPeer
+        self.openMessage = openMessage
         self.copyTransactionId = copyTransactionId
     }
     
@@ -172,17 +176,23 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let transactionId: String?
             let date: Int32
             let via: String?
+            let messageId: EngineMessage.Id?
             let toPeer: EnginePeer?
             let transactionPeer: StarsContext.State.Transaction.Peer?
+            let media: [Media]
             let photo: TelegramMediaWebFile?
             let isRefund: Bool
             
             var delayedCloseOnOpenPeer = true
             switch subject {
-            case let .transaction(transaction, isAccount):
+            case let .transaction(transaction, parentPeer):
                 switch transaction.peer {
                 case let .peer(peer):
-                    titleText = transaction.title ?? peer.compactDisplayTitle
+                    if !transaction.media.isEmpty {
+                        titleText = strings.Stars_Transaction_MediaPurchase
+                    } else {
+                        titleText = transaction.title ?? peer.compactDisplayTitle
+                    }
                     via = nil
                 case .appStore:
                     titleText = strings.Stars_Transaction_AppleTopUp_Title
@@ -194,7 +204,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     titleText = strings.Stars_Transaction_PremiumBotTopUp_Title
                     via = strings.Stars_Transaction_PremiumBotTopUp_Subtitle
                 case .fragment:
-                    if isAccount {
+                    if parentPeer.id == component.context.account.peerId {
                         titleText = strings.Stars_Transaction_FragmentTopUp_Title
                         via = strings.Stars_Transaction_FragmentTopUp_Subtitle
                     } else {
@@ -205,7 +215,49 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     titleText = strings.Stars_Transaction_Unsupported_Title
                     via = nil
                 }
-                descriptionText = transaction.description ?? ""
+                if !transaction.media.isEmpty {
+                    var description: String = ""
+                    var photoCount: Int = 0
+                    var videoCount: Int = 0
+                    for media in transaction.media {
+                        if let _ = media as? TelegramMediaFile {
+                            videoCount += 1
+                        } else {
+                            photoCount += 1
+                        }
+                    }
+                    //TODO:localize
+                    if photoCount > 0 && videoCount > 0 {
+                        if photoCount > 1 {
+                            description += "\(photoCount) photos**"
+                        } else {
+                            description += "**\(photoCount) photo**"
+                        }
+                        description += " and "
+                        if videoCount > 1 {
+                            description += "**\(videoCount) videos**"
+                        } else {
+                            description += "**\(videoCount) video**"
+                        }
+                    } else if photoCount > 0 {
+                        if photoCount > 1 {
+                            description += "**\(photoCount) photos**"
+                        } else {
+                            description += "**Photo**"
+                        }
+                    } else if videoCount > 0 {
+                        if videoCount > 1 {
+                            description += "**\(videoCount) videos**"
+                        } else {
+                            description += "**Video**"
+                        }
+                    }
+                    descriptionText = description.replacingOccurrences(of: "**", with: "")
+                } else {
+                    descriptionText = transaction.description ?? ""
+                }
+                
+                messageId = transaction.paidMessageId
 
                 count = transaction.count
                 transactionId = transaction.id
@@ -216,6 +268,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     toPeer = nil
                 }
                 transactionPeer = transaction.peer
+                media = transaction.media
                 photo = transaction.photo
                 isRefund = transaction.flags.contains(.isRefund)
             case let .receipt(receipt):
@@ -223,6 +276,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 descriptionText = receipt.invoiceMedia.description
                 count = (receipt.invoice.prices.first?.amount ?? receipt.invoiceMedia.totalAmount) * -1
                 via = nil
+                messageId = nil
                 transactionId = receipt.transactionId
                 date = receipt.date
                 if let peer = state.peerMap[receipt.botPaymentId] {
@@ -231,6 +285,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     toPeer = nil
                 }
                 transactionPeer = nil
+                media = []
                 photo = receipt.invoiceMedia.photo
                 isRefund = false
                 delayedCloseOnOpenPeer = false
@@ -261,7 +316,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             )
             
             let imageSubject: StarsImageComponent.Subject
-            if let photo {
+            if !media.isEmpty {
+                imageSubject = .media(media)
+            } else if let photo {
                 imageSubject = .photo(photo)
             } else if let transactionPeer {
                 imageSubject = .transactionPeer(transactionPeer)
@@ -275,7 +332,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     context: component.context,
                     subject: imageSubject,
                     theme: theme,
-                    diameter: 90.0
+                    diameter: 90.0,
+                    backgroundColor: theme.actionSheet.opaqueItemBackgroundColor
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: 200.0),
                 transition: .immediate
@@ -342,6 +400,41 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     title: strings.Stars_Transaction_Via,
                     component: AnyComponent(
                         MultilineTextComponent(text: .plain(NSAttributedString(string: via, font: tableFont, textColor: tableTextColor)))
+                    )
+                ))
+            }
+            
+            if let messageId {
+                //TODO:localize
+                let peerName: String
+                if case let .transaction(_, parentPeer) = component.subject {
+                    if parentPeer.id == component.context.account.peerId {
+                        if let toPeer {
+                            peerName = toPeer.addressName ?? "c/\(toPeer.id.id._internalGetInt64Value())"
+                        } else {
+                            peerName = ""
+                        }
+                    } else {
+                        peerName = parentPeer.addressName ?? "c/\(parentPeer.id.id._internalGetInt64Value())"
+                    }
+                } else {
+                    peerName = ""
+                }
+                tableItems.append(.init(
+                    id: "via",
+                    title: strings.Stars_Transaction_Media,
+                    component: AnyComponent(
+                        Button(
+                            content: AnyComponent(
+                                MultilineTextComponent(text: .plain(NSAttributedString(string: "t.me/\(peerName)/\(messageId.id)", font: tableFont, textColor: tableLinkColor)))
+                            ),
+                            action: {
+                                component.openMessage(messageId)
+                                Queue.mainQueue().after(1.0, {
+                                    component.cancel(false)
+                                })
+                            }
+                        )
                     )
                 ))
             }
@@ -544,6 +637,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     let subject: StarsTransactionScreen.Subject
     let action: () -> Void
     let openPeer: (EnginePeer) -> Void
+    let openMessage: (EngineMessage.Id) -> Void
     let copyTransactionId: () -> Void
     
     init(
@@ -551,12 +645,14 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         subject: StarsTransactionScreen.Subject,
         action: @escaping () -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
+        openMessage: @escaping (EngineMessage.Id) -> Void,
         copyTransactionId: @escaping () -> Void
     ) {
         self.context = context
         self.subject = subject
         self.action = action
         self.openPeer = openPeer
+        self.openMessage = openMessage
         self.copyTransactionId = copyTransactionId
     }
     
@@ -599,6 +695,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
                             }
                         },
                         openPeer: context.component.openPeer,
+                        openMessage: context.component.openMessage,
                         copyTransactionId: context.component.copyTransactionId
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
@@ -667,7 +764,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
 
 public class StarsTransactionScreen: ViewControllerComponentContainer {
     public enum Subject: Equatable {
-        case transaction(StarsContext.State.Transaction, Bool)
+        case transaction(StarsContext.State.Transaction, EnginePeer)
         case receipt(BotPaymentReceipt)
     }
     
@@ -685,6 +782,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
         self.context = context
         
         var openPeerImpl: ((EnginePeer) -> Void)?
+        var openMessageImpl: ((EngineMessage.Id) -> Void)?
         var copyTransactionIdImpl: (() -> Void)?
         super.init(
             context: context,
@@ -694,6 +792,9 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 action: action,
                 openPeer: { peerId in
                     openPeerImpl?(peerId)
+                },
+                openMessage: { messageId in
+                    openMessageImpl?(messageId)
                 },
                 copyTransactionId: {
                     copyTransactionIdImpl?()
@@ -721,6 +822,23 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                     return
                 }
                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peer), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: true, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: nil, animated: true))
+            })
+        }
+        
+        openMessageImpl = { [weak self] messageId in
+            guard let self else {
+                return
+            }
+            let _ = (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId)
+            )
+            |> deliverOnMainQueue).start(next: { peer in
+                guard let peer = peer else {
+                    return
+                }
+                if let navigationController = self.navigationController as? NavigationController {
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
+                }
             })
         }
         
@@ -1209,4 +1327,25 @@ private final class TransactionCellComponent: Component {
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
+}
+
+private func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.setFillColor(backgroundColor.cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        
+        context.setLineWidth(2.0)
+        context.setLineCap(.round)
+        context.setStrokeColor(foregroundColor.cgColor)
+        
+        context.move(to: CGPoint(x: 10.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 20.0, y: 20.0))
+        context.strokePath()
+        
+        context.move(to: CGPoint(x: 20.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 10.0, y: 20.0))
+        context.strokePath()
+    })
 }

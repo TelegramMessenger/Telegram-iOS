@@ -478,6 +478,81 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
     }
 }
 
+final class PriceNode: ASDisplayNode {
+    let backgroundNode: NavigationBackgroundNode
+    let iconNode: ASImageNode
+    let lockNode: ASImageNode
+    let labelNode: ImmediateTextNode
+    
+    override init() {
+        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x000000, alpha: 0.35), enableBlur: true)
+        
+        self.lockNode = ASImageNode()
+        self.lockNode.displaysAsynchronously = false
+        self.lockNode.image = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Lock"), color: .white)
+        
+        self.iconNode = ASImageNode()
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.image = UIImage(bundleImageName: "Premium/Stars/StarSmall")
+
+        self.labelNode = ImmediateTextNode()
+        
+        super.init()
+        
+        self.addSubnode(self.backgroundNode)
+        self.backgroundNode.addSubnode(self.lockNode)
+        self.backgroundNode.addSubnode(self.iconNode)
+        self.backgroundNode.addSubnode(self.labelNode)
+    }
+        
+    func update(size: CGSize, price: Int64?, small: Bool, transition: ContainedViewLayoutTransition) {
+        var nodeSize = CGSize(width: 50.0, height: 34.0)
+        var labelSize: CGSize = .zero
+        
+        var backgroundTransition = transition
+        let labelTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+        if let price {
+            //TODO:localize
+            self.labelNode.attributedText = NSAttributedString(string: "\(price)", font: Font.semibold(15.0), textColor: .white)
+            
+            labelSize = self.labelNode.updateLayout(CGSize(width: 240.0, height: 50.0))
+            nodeSize.width = labelSize.width + 40.0
+            
+            if self.labelNode.alpha != 1.0 && self.backgroundNode.frame.width > 0.0 {
+                backgroundTransition = labelTransition
+            }
+            
+            labelTransition.updateAlpha(node: self.labelNode, alpha: 1.0)
+            labelTransition.updateAlpha(node: self.lockNode, alpha: 0.0)
+        } else {
+            if self.labelNode.alpha != 0.0 && self.backgroundNode.frame.width > 0.0 {
+                backgroundTransition = labelTransition
+            }
+            
+            labelTransition.updateAlpha(node: self.labelNode, alpha: 0.0)
+            labelTransition.updateAlpha(node: self.lockNode, alpha: 1.0)
+        }
+        
+
+        self.backgroundNode.update(size: nodeSize, cornerRadius: 17.0, transition: backgroundTransition)
+        backgroundTransition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: floor((size.width - nodeSize.width) / 2.0), y: floor((size.height - nodeSize.height) / 2.0)), size: nodeSize))
+        
+        if let _ = price {
+            if let icon = self.iconNode.image {
+                self.iconNode.frame = CGRect(origin: CGPoint(x: 9.0 - UIScreenPixel, y: floor((nodeSize.height - icon.size.height) / 2.0)), size: icon.size)
+            }
+            self.labelNode.frame = CGRect(origin: CGPoint(x: 30.0, y: floor((nodeSize.height - labelSize.height) / 2.0)), size: labelSize)
+        } else {
+            if let icon = self.iconNode.image {
+                self.iconNode.frame = CGRect(origin: CGPoint(x: 9.0 - UIScreenPixel, y: floor((nodeSize.height - icon.size.height) / 2.0)), size: icon.size)
+            }
+            if let icon = self.lockNode.image {
+                self.lockNode.frame = CGRect(origin: CGPoint(x: 28.0, y: floor((nodeSize.height - icon.size.height) / 2.0)), size: icon.size)
+            }
+        }
+    }
+}
+
 private class MessageBackgroundNode: ASDisplayNode {
     private let backgroundWallpaperNode: ChatMessageBubbleBackdrop
     private let backgroundNode: ChatMessageBackground
@@ -535,6 +610,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
     private let scrollNode: ASScrollNode
     private var backgroundNodes: [Int: MessageBackgroundNode] = [:]
     private var itemNodes: [String: MediaPickerSelectedItemNode] = [:]
+    private var priceNodes: [Int: PriceNode] = [:]
     
     private var reorderFeedback: HapticFeedback?
     private var reorderNode: ReorderingItemNode?
@@ -649,6 +725,14 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
                 }
             }
             
+            for (_, priceNode) in strongSelf.priceNodes {
+                priceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.1)
+                if strongSelf.isExternalPreview {
+                    ComponentTransition.immediate.setScale(layer: priceNode.layer, scale: 0.001)
+                    transition.updateTransformScale(layer: priceNode.layer, scale: 1.0)
+                }
+            }
+            
             for (identifier, itemNode) in strongSelf.itemNodes {
                 if !strongSelf.isObscuredExternalPreview, let (transitionView, _, _) = strongSelf.getTransitionView(identifier) {
                     itemNode.animateFrom(transitionView, transition: transition)
@@ -690,6 +774,10 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
                             itemNode.layer.removeAllAnimations()
                         }
                         
+                        for (_, priceNode) in strongSelf.priceNodes {
+                            priceNode.layer.removeAllAnimations()
+                        }
+                        
                         strongSelf.messageNodes?.first?.layer.removeAllAnimations()
                         strongSelf.messageNodes?.last?.layer.removeAllAnimations()
                         
@@ -707,6 +795,13 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
             backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false)
             if self.isExternalPreview {
                 transition.updateTransformScale(layer: backgroundNode.layer, scale: 0.001)
+            }
+        }
+        
+        for (_, priceNode) in self.priceNodes {
+            priceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false)
+            if self.isExternalPreview {
+                transition.updateTransformScale(layer: priceNode.layer, scale: 0.001)
             }
         }
         
@@ -844,6 +939,8 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
         let sideInset: CGFloat = 34.0
         let boundingWidth = min(320.0, size.width - insets.left - insets.right - sideInset * 2.0)
         
+        var price: Int64?
+        
         var validIds: [String] = []
         for item in items {
             guard let asset = item as? TGMediaEditableItem, let identifier = asset.uniqueIdentifier else {
@@ -871,6 +968,10 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
                 itemSizes.append(adjustments.cropRect.size)
             } else {
                 itemSizes.append(asset.originalSize ?? CGSize())
+            }
+            
+            if price == nil, let priceValue = self.interaction?.editingState.price(for: asset) as? Int64 {
+                price = priceValue
             }
         }
         
@@ -1062,6 +1163,31 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
                 }
             }
             
+            if let price {
+                let priceNode: PriceNode
+                if let current = self.priceNodes[groupIndex] {
+                    priceNode = current
+                } else {
+                    priceNode = PriceNode()
+                    self.priceNodes[groupIndex] = priceNode
+                    self.scrollNode.addSubnode(priceNode)
+                }
+                
+                if priceNode.frame.width.isZero {
+                    itemTransition = .immediate
+                }
+                
+                let priceNodeFrame = groupRect
+                itemTransition.updatePosition(node: priceNode, position: priceNodeFrame.center)
+                itemTransition.updateBounds(node: priceNode, bounds: CGRect(origin: CGPoint(), size: priceNodeFrame.size))
+                priceNode.update(size: priceNode.frame.size, price: price, small: false, transition: itemTransition)
+            } else if let priceNode = self.priceNodes[groupIndex] {
+                self.priceNodes[groupIndex] = nil
+                priceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak priceNode] _ in
+                    priceNode?.removeFromSupernode()
+                })
+            }
+            
             contentHeight += groupSize.height
             contentWidth = max(contentWidth, groupSize.width)
             groupIndex += 1
@@ -1069,7 +1195,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
         
         if let dragNode = self.messageNodes?.last {
             transition.updateAlpha(node: dragNode, alpha: items.count > 1 ? 1.0 : 0.0)
-            transition.updateFrame(node: dragNode, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top + contentHeight + 1.0), size: dragNode.frame.size))
+            transition.updateFrame(node: dragNode, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top + contentHeight + 9.0), size: dragNode.frame.size))
             
             var dragNodeFrame = dragNode.frame
             dragNodeFrame.origin.y = size.height - dragNodeFrame.origin.y - dragNodeFrame.size.height

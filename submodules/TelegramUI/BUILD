@@ -450,6 +450,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Stars/StarsTransactionsScreen",
         "//submodules/TelegramUI/Components/Stars/StarsPurchaseScreen",
         "//submodules/TelegramUI/Components/Stars/StarsTransferScreen",
+        "//submodules/TelegramUI/Components/Stars/StarsTransactionScreen",
+        "//submodules/TelegramUI/Components/Stars/StarsWithdrawalScreen",
         "//submodules/TelegramUI/Components/Chat/FactCheckAlertController",
         "//submodules/TelegramUI/Components/PeerManagement/OwnershipTransferController",
         "//submodules/TelegramUI/Components/PeerManagement/OldChannelsController",

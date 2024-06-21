@@ -114,7 +114,7 @@ private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id
                     
                     var parsedTransactions: [StarsContext.State.Transaction] = []
                     for entry in history {
-                        if let parsedTransaction = StarsContext.State.Transaction(apiTransaction: entry, transaction: transaction) {
+                        if let parsedTransaction = StarsContext.State.Transaction(apiTransaction: entry, peerId: peerId != account.peerId ? peerId : nil, transaction: transaction) {
                             parsedTransactions.append(parsedTransaction)
                         }
                     }
@@ -236,7 +236,7 @@ private final class StarsContextImpl {
 }
 
 private extension StarsContext.State.Transaction {
-    init?(apiTransaction: Api.StarsTransaction, transaction: Transaction) {
+    init?(apiTransaction: Api.StarsTransaction, peerId: EnginePeer.Id?, transaction: Transaction) {
         switch apiTransaction {
         case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId, extendedMedia):
             let parsedPeer: StarsContext.State.Transaction.Peer
@@ -258,7 +258,11 @@ private extension StarsContext.State.Transaction {
                 }
                 parsedPeer = .peer(EnginePeer(peer))
                 if let messageId {
-                    paidMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: messageId)
+                    if let peerId {
+                        paidMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: messageId)
+                    } else {
+                        paidMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: messageId)
+                    }
                 }
             }
             

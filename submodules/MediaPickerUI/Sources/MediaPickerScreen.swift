@@ -2496,30 +2496,6 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                             self?.groupedValue = false
                             self?.controllerNode.send(asFile: false, silently: false, scheduleTime: nil, animated: true, parameters: nil, completion: {})
                         })))
-                        
-//                        if !items.isEmpty {
-//                            items.append(.separator)
-//                        }
-//                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_Grouped, icon: { theme in
-//                            if !grouped {
-//                                return nil
-//                            }
-//                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-//                        }, action: { [weak self] _, f in
-//                            f(.default)
-//                            
-//                            self?.groupedValue = true
-//                        })))
-//                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_Ungrouped, icon: { theme in
-//                            if grouped {
-//                                return nil
-//                            }
-//                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-//                        }, action: {  [weak self] _, f in
-//                            f(.default)
-//                            
-//                            self?.groupedValue = false
-//                        })))
                     }
                     
                     var isPaidAvailable = false
@@ -2585,7 +2561,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                                     return
                                 }
                                 
-                                let controller = self.context.sharedContext.makeStarsAmountScreen(context: self.context, completion: { [weak self] amount in
+                                let controller = self.context.sharedContext.makeStarsAmountScreen(context: self.context, initialValue: price, completion: { [weak self] amount in
                                     guard let strongSelf = self else {
                                         return
                                     }

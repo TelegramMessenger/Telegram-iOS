@@ -1077,6 +1077,26 @@ private final class DemoSheetContent: CombinedComponent {
                         )
                     )
                 )
+                //TODO:localize
+                availableItems[.messageEffects] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.messageEffects,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["effects"],
+                                    decoration: .swirlStars
+                                )),
+                                title: strings.Premium_MessageEffects,
+                                text: strings.Premium_MessageEffectsInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
                 
                 let index: Int = 0
                 var items: [DemoPagerComponent.Item] = []
@@ -1172,6 +1192,9 @@ private final class DemoSheetContent: CombinedComponent {
                 text = strings.Premium_MessagePrivacyInfo
             case .folderTags:
                 text = strings.Premium_FolderTagsStandaloneInfo
+            case .messageEffects:
+                //TODO:localize
+                text = "Add over 500 animated effects to private messages."
             default:
                 text = ""
             }
@@ -1441,6 +1464,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case messagePrivacy
         case business
         case folderTags
+        case messageEffects
         
         case businessLocation
         case businessHours
@@ -1497,6 +1521,8 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
                 return .business
             case .folderTags:
                 return .folderTags
+            case .messageEffects:
+                return .messageEffects
             case .businessLocation:
                 return .businessLocation
             case .businessHours:

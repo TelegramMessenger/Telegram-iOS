@@ -247,25 +247,64 @@ public final class StarsImageComponent: Component {
     public enum Subject: Equatable {
         case none
         case photo(TelegramMediaWebFile)
-        case extendedMedia(TelegramExtendedMedia)
+        case media([Media])
+        case extendedMedia([TelegramExtendedMedia])
         case transactionPeer(StarsContext.State.Transaction.Peer)
+        
+        public static func == (lhs: StarsImageComponent.Subject, rhs: StarsImageComponent.Subject) -> Bool {
+            switch lhs {
+            case .none:
+                if case .none = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .photo(lhsPhoto):
+                if case let .photo(rhsPhoto) = rhs, lhsPhoto == rhsPhoto {
+                    return true
+                } else {
+                    return false
+                }
+            case let .media(lhsMedia):
+                if case let .media(rhsMedia) = rhs, areMediaArraysEqual(lhsMedia, rhsMedia) {
+                    return true
+                } else {
+                    return false
+                }
+            case let .extendedMedia(lhsExtendedMedia):
+                if case let .extendedMedia(rhsExtendedMedia) = rhs, lhsExtendedMedia == rhsExtendedMedia {
+                    return true
+                } else {
+                    return false
+                }
+            case let .transactionPeer(lhsPeer):
+                if case let .transactionPeer(rhsPeer) = rhs, lhsPeer == rhsPeer {
+                    return true
+                } else {
+                    return false
+                }
+            }
+        }
     }
     
     public let context: AccountContext
     public let subject: Subject
     public let theme: PresentationTheme
     public let diameter: CGFloat
+    public let backgroundColor: UIColor
     
     public init(
         context: AccountContext,
         subject: Subject,
         theme: PresentationTheme,
-        diameter: CGFloat
+        diameter: CGFloat,
+        backgroundColor: UIColor
     ) {
         self.context = context
         self.subject = subject
         self.theme = theme
         self.diameter = diameter
+        self.backgroundColor = backgroundColor
     }
     
     public static func ==(lhs: StarsImageComponent, rhs: StarsImageComponent) -> Bool {
@@ -275,7 +314,13 @@ public final class StarsImageComponent: Component {
         if lhs.subject != rhs.subject {
             return false
         }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
         if lhs.diameter != rhs.diameter {
+            return false
+        }
+        if lhs.backgroundColor != rhs.backgroundColor {
             return false
         }
         return true
@@ -288,10 +333,14 @@ public final class StarsImageComponent: Component {
         private var largeParticlesView: StarsParticlesView?
         
         private var imageNode: TransformImageNode?
+        private var imageFrameNode: UIView?
+        private var secondImageNode: TransformImageNode?
         private var avatarNode: ImageNode?
         private var iconBackgroundView: UIImageView?
         private var iconView: UIImageView?
         private var dustNode: MediaDustNode?
+        
+        private var countView = ComponentView<Empty>()
         
         private let fetchDisposable = MetaDisposable()
         
@@ -355,6 +404,77 @@ public final class StarsImageComponent: Component {
 
                 imageNode.frame = imageFrame
                 imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: imageSize.width / 2.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
+            case let .media(media):
+                let imageNode: TransformImageNode
+                var dimensions = imageSize
+                if let current = self.imageNode {
+                    imageNode = current
+                } else {
+                    imageNode = TransformImageNode()
+                    imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
+                    self.addSubview(imageNode.view)
+                    self.imageNode = imageNode
+                             
+                    if let image = media.first as? TelegramMediaImage {
+                        if let imageDimensions = largestImageRepresentation(image.representations)?.dimensions {
+                            dimensions = imageDimensions.cgSize.aspectFilled(imageSize)
+                        }
+                        imageNode.setSignal(chatMessagePhotoThumbnail(account: component.context.account, userLocation: .other, photoReference: .standalone(media: image), onlyFullSize: false, blurred: false))
+                    } else if let file = media.first as? TelegramMediaFile {
+                        if let videoDimensions = file.dimensions {
+                            dimensions = videoDimensions.cgSize.aspectFilled(imageSize)
+                        }
+                        imageNode.setSignal(mediaGridMessageVideo(postbox: component.context.account.postbox, userLocation: .other, videoReference: .standalone(media: file), useLargeThumbnail: true, autoFetchFullSizeThumbnail: true))
+                    }
+                }
+                imageNode.frame = imageFrame
+                imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 16.0), imageSize: dimensions, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
+                
+                if media.count > 1 {
+                    let secondImageNode: TransformImageNode
+                    let imageFrameNode: UIView
+                    if let current = self.secondImageNode, let currentFrame = self.imageFrameNode {
+                        secondImageNode = current
+                        imageFrameNode = currentFrame
+                    } else {
+                        secondImageNode = TransformImageNode()
+                        secondImageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
+                        self.insertSubview(secondImageNode.view, belowSubview: imageNode.view)
+                        self.secondImageNode = secondImageNode
+                        
+                        imageFrameNode = UIView()
+                        imageFrameNode.layer.cornerRadius = 17.0
+                        self.insertSubview(imageFrameNode, belowSubview: imageNode.view)
+                        self.imageFrameNode = imageFrameNode
+                        
+                        if let image = media[1] as? TelegramMediaImage {
+                            if let imageDimensions = largestImageRepresentation(image.representations)?.dimensions {
+                                dimensions = imageDimensions.cgSize.aspectFilled(imageSize)
+                            }
+                            secondImageNode.setSignal(chatMessagePhotoThumbnail(account: component.context.account, userLocation: .other, photoReference: .standalone(media: image), onlyFullSize: false, blurred: false))
+                        }
+                    }
+                    imageFrameNode.backgroundColor = component.backgroundColor
+                    secondImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 16.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
+                    secondImageNode.frame = imageFrame.offsetBy(dx: 6.0, dy: -6.0)
+                    imageFrameNode.frame = imageFrame.insetBy(dx: -2.0, dy: -2.0)
+                    
+                    let countSize = self.countView.update(
+                        transition: .immediate,
+                        component: AnyComponent(
+                            Text(text: "\(media.count)", font: Font.with(size: 30.0, design: .round, weight: .medium), color: .white)
+                        ),
+                        environment: {},
+                        containerSize: imageFrame.size
+                    )
+                    let countFrame = CGRect(origin: CGPoint(x: imageFrame.minX + floorToScreenPixels((imageFrame.width - countSize.width) / 2.0), y: imageFrame.minY + floorToScreenPixels((imageFrame.height - countSize.height) / 2.0)), size: countSize)
+                    if let countView = self.countView.view {
+                        if countView.superview == nil {
+                            self.addSubview(countView)
+                        }
+                        countView.frame = countFrame
+                    }
+                }
             case let .extendedMedia(extendedMedia):
                 let imageNode: TransformImageNode
                 let dustNode: MediaDustNode
@@ -368,12 +488,12 @@ public final class StarsImageComponent: Component {
                     self.imageNode = imageNode
                     
                     let media: TelegramMediaImage
-                    switch extendedMedia {
+                    switch extendedMedia.first {
                     case let .preview(_, immediateThumbnailData, _):
                         let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                         media = thumbnailMedia
-                    case let .full(fullMedia):
-                        media = fullMedia as! TelegramMediaImage
+                    default:
+                        fatalError()
                     }
                                         
                     imageNode.setSignal(chatSecretPhoto(account: component.context.account, userLocation: .other, photoReference: .standalone(media: media), ignoreFullSize: true, synchronousLoad: true))
@@ -383,11 +503,63 @@ public final class StarsImageComponent: Component {
                     self.dustNode = dustNode
                 }
 
+                if extendedMedia.count > 1 {
+                    let secondImageNode: TransformImageNode
+                    let imageFrameNode: UIView
+                    if let current = self.secondImageNode, let currentFrame = self.imageFrameNode {
+                        secondImageNode = current
+                        imageFrameNode = currentFrame
+                    } else {
+                        secondImageNode = TransformImageNode()
+                        secondImageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
+                        self.insertSubview(secondImageNode.view, belowSubview: imageNode.view)
+                        self.secondImageNode = secondImageNode
+                        
+                        imageFrameNode = UIView()
+                        imageFrameNode.layer.cornerRadius = 17.0
+                        self.insertSubview(imageFrameNode, belowSubview: imageNode.view)
+                        self.imageFrameNode = imageFrameNode
+                        
+                        let media: TelegramMediaImage
+                        switch extendedMedia[1] {
+                        case let .preview(_, immediateThumbnailData, _):
+                            let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                            media = thumbnailMedia
+                        default:
+                            fatalError()
+                        }
+                                            
+                        secondImageNode.setSignal(chatSecretPhoto(account: component.context.account, userLocation: .other, photoReference: .standalone(media: media), ignoreFullSize: true, synchronousLoad: true))
+                    }
+                    imageFrameNode.backgroundColor = component.backgroundColor
+                    secondImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 16.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
+                    secondImageNode.frame = imageFrame.offsetBy(dx: 6.0, dy: -6.0)
+                    imageFrameNode.frame = imageFrame.insetBy(dx: -2.0, dy: -2.0)
+                }
+                
                 imageNode.frame = imageFrame
-                imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 12.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
+                imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 16.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
                 
                 dustNode.frame = imageFrame
                 dustNode.update(size: imageFrame.size, color: .white, transition: .immediate)
+                
+                if extendedMedia.count > 1 {
+                    let countSize = self.countView.update(
+                        transition: .immediate,
+                        component: AnyComponent(
+                            Text(text: "\(extendedMedia.count)", font: Font.with(size: 30.0, design: .round, weight: .medium), color: .white)
+                        ),
+                        environment: {},
+                        containerSize: imageFrame.size
+                    )
+                    let countFrame = CGRect(origin: CGPoint(x: imageFrame.minX + floorToScreenPixels((imageFrame.width - countSize.width) / 2.0), y: imageFrame.minY + floorToScreenPixels((imageFrame.height - countSize.height) / 2.0)), size: countSize)
+                    if let countView = self.countView.view {
+                        if countView.superview == nil {
+                            self.addSubview(countView)
+                        }
+                        countView.frame = countFrame
+                    }
+                }
             case let .transactionPeer(peer):
                 if case let .peer(peer) = peer {
                     let avatarNode: ImageNode

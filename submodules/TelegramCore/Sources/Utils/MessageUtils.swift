@@ -526,6 +526,10 @@ public extension Message {
         }
         return nil
     }
+    
+    var paidContent: TelegramMediaPaidContent? {
+        return self.media.first(where: { $0 is TelegramMediaPaidContent }) as? TelegramMediaPaidContent
+    }
 }
 
 public extension Message {

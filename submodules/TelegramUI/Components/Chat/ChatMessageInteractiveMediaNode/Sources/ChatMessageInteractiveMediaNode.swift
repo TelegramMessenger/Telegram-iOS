@@ -2386,7 +2386,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             
             var viewText: String = ""
             if message.isAgeRestricted() {
-                //TODO: localize
+                //TODO:localize
                 viewText = "18+ Content"
             } else {
                 outer: for attribute in message.attributes {
@@ -2403,9 +2403,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     }
                 }
             }
-            if let paidContent {
-                viewText = "⭐️\(paidContent.amount)"
-            }
+//            if let paidContent {
+//                viewText = "⭐️\(paidContent.amount)"
+//            }
             self.extendedMediaOverlayNode?.update(size: self.imageNode.frame.size, text: viewText, imageSignal: self.currentBlurredImageSignal, imageFrame: self.imageNode.view.convert(self.imageNode.bounds, to: self.extendedMediaOverlayNode?.view), corners: self.currentImageArguments?.corners)
         } else if let extendedMediaOverlayNode = self.extendedMediaOverlayNode {
             self.extendedMediaOverlayNode = nil
