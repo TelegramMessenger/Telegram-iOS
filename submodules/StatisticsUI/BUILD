@@ -43,6 +43,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/Components/SheetComponent",
+        "//submodules/Components/BundleIconComponent",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/MultilineTextWithEntitiesComponent",
         "//submodules/TelegramNotices",

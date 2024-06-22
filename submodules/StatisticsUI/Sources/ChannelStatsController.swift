@@ -47,6 +47,7 @@ private final class ChannelStatsControllerArguments {
     
     let requestTonWithdraw: () -> Void
     let requestStarsWithdraw: () -> Void
+    let showTimeoutTooltip: (Int32) -> Void
     let openMonetizationIntro: () -> Void
     let openMonetizationInfo: () -> Void
     let openTonTransaction: (RevenueStatsTransactionsContext.State.Transaction) -> Void
@@ -56,7 +57,7 @@ private final class ChannelStatsControllerArguments {
     let presentCpmLocked: () -> Void
     let dismissInput: () -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPostStats: @escaping (EnginePeer, StatsPostItem) -> Void, openStory: @escaping (EngineStoryItem, UIView) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void, updateStarsSelected: @escaping (Bool) -> Void, requestTonWithdraw: @escaping () -> Void, requestStarsWithdraw: @escaping () -> Void, openMonetizationIntro: @escaping () -> Void, openMonetizationInfo: @escaping () -> Void, openTonTransaction: @escaping (RevenueStatsTransactionsContext.State.Transaction) -> Void, openStarsTransaction: @escaping (StarsContext.State.Transaction) -> Void, expandTransactions: @escaping () -> Void, updateCpmEnabled: @escaping (Bool) -> Void, presentCpmLocked: @escaping () -> Void, dismissInput: @escaping () -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPostStats: @escaping (EnginePeer, StatsPostItem) -> Void, openStory: @escaping (EngineStoryItem, UIView) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void, updateStarsSelected: @escaping (Bool) -> Void, requestTonWithdraw: @escaping () -> Void, requestStarsWithdraw: @escaping () -> Void, showTimeoutTooltip: @escaping (Int32) -> Void, openMonetizationIntro: @escaping () -> Void, openMonetizationInfo: @escaping () -> Void, openTonTransaction: @escaping (RevenueStatsTransactionsContext.State.Transaction) -> Void, openStarsTransaction: @escaping (StarsContext.State.Transaction) -> Void, expandTransactions: @escaping () -> Void, updateCpmEnabled: @escaping (Bool) -> Void, presentCpmLocked: @escaping () -> Void, dismissInput: @escaping () -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openPostStats = openPostStats
@@ -72,6 +73,7 @@ private final class ChannelStatsControllerArguments {
         self.updateStarsSelected = updateStarsSelected
         self.requestTonWithdraw = requestTonWithdraw
         self.requestStarsWithdraw = requestStarsWithdraw
+        self.showTimeoutTooltip = showTimeoutTooltip
         self.openMonetizationIntro = openMonetizationIntro
         self.openMonetizationInfo = openMonetizationInfo
         self.openTonTransaction = openTonTransaction
@@ -241,7 +243,7 @@ private enum StatsEntry: ItemListNodeEntry {
     case adsTonBalanceInfo(PresentationTheme, String)
     
     case adsStarsBalanceTitle(PresentationTheme, String)
-    case adsStarsBalance(PresentationTheme, StarsRevenueStats, Bool, Bool)
+    case adsStarsBalance(PresentationTheme, StarsRevenueStats, Bool, Bool, Int32?)
     case adsStarsBalanceInfo(PresentationTheme, String)
     
     case adsTransactionsTitle(PresentationTheme, String)
@@ -805,8 +807,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .adsStarsBalance(lhsTheme, lhsStats, lhsCanWithdraw, lhsIsEnabled):
-                if case let .adsStarsBalance(rhsTheme, rhsStats, rhsCanWithdraw, rhsIsEnabled) = rhs, lhsTheme === rhsTheme, lhsStats == rhsStats, lhsCanWithdraw == rhsCanWithdraw, lhsIsEnabled == rhsIsEnabled {
+            case let .adsStarsBalance(lhsTheme, lhsStats, lhsCanWithdraw, lhsIsEnabled, lhsCooldownUntilTimestamp):
+                if case let .adsStarsBalance(rhsTheme, rhsStats, rhsCanWithdraw, rhsIsEnabled, rhsCooldownUntilTimestamp) = rhs, lhsTheme === rhsTheme, lhsStats == rhsStats, lhsCanWithdraw == rhsCanWithdraw, lhsIsEnabled == rhsIsEnabled, lhsCooldownUntilTimestamp == rhsCooldownUntilTimestamp {
                     return true
                 } else {
                     return false
@@ -1050,9 +1052,11 @@ private enum StatsEntry: ItemListNodeEntry {
                     stats: stats,
                     canWithdraw: canWithdraw,
                     isEnabled: isEnabled,
+                    actionCooldownUntilTimestamp: nil,
                     withdrawAction: {
                         arguments.requestTonWithdraw()
                     },
+                    buyAdsAction: nil,
                     sectionId: self.section,
                     style: .blocks
                 )
@@ -1060,16 +1064,30 @@ private enum StatsEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
                     arguments.openMonetizationInfo()
                 })
-            case let .adsStarsBalance(_, stats, canWithdraw, isEnabled):
+            case let .adsStarsBalance(_, stats, canWithdraw, isEnabled, cooldownUntilTimestamp):
                 return MonetizationBalanceItem(
                     context: arguments.context,
                     presentationData: presentationData,
                     stats: stats,
                     canWithdraw: canWithdraw,
                     isEnabled: isEnabled,
+                    actionCooldownUntilTimestamp: cooldownUntilTimestamp,
                     withdrawAction: {
-                        arguments.requestStarsWithdraw()
+                        var remainingCooldownSeconds: Int32 = 0
+                        if let cooldownUntilTimestamp {
+                            remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+                            remainingCooldownSeconds = max(0, remainingCooldownSeconds)
+                            
+                            if remainingCooldownSeconds > 0 {
+                                arguments.showTimeoutTooltip(cooldownUntilTimestamp)
+                            } else {
+                                arguments.requestStarsWithdraw()
+                            }
+                        } else {
+                            arguments.requestStarsWithdraw()
+                        }
                     },
+                    buyAdsAction: nil,
                     sectionId: self.section,
                     style: .blocks
                 )
@@ -1538,7 +1556,7 @@ private func monetizationEntries(
     
     if let starsData, starsData.balances.overallRevenue > 0 {
         entries.append(.adsStarsBalanceTitle(presentationData.theme, presentationData.strings.Monetization_StarsBalanceTitle))
-        entries.append(.adsStarsBalance(presentationData.theme, starsData, isCreator && starsData.balances.availableBalance > 0, starsData.balances.withdrawEnabled))
+        entries.append(.adsStarsBalance(presentationData.theme, starsData, isCreator && starsData.balances.availableBalance > 0, starsData.balances.withdrawEnabled, starsData.balances.nextWithdrawalTimestamp))
         entries.append(.adsStarsBalanceInfo(presentationData.theme, presentationData.strings.Monetization_Balance_StarsInfo))
     }
     
@@ -1780,6 +1798,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     var openStarsTransactionImpl: ((StarsContext.State.Transaction) -> Void)?
     var requestTonWithdrawImpl: (() -> Void)?
     var requestStarsWithdrawImpl: (() -> Void)?
+    var showTimeoutTooltipImpl: ((Int32) -> Void)?
     var updateStatusBarImpl: ((StatusBarStyle) -> Void)?
     var dismissInputImpl: (() -> Void)?
     
@@ -1910,6 +1929,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     },
     requestStarsWithdraw: {
         requestStarsWithdrawImpl?()
+    },
+    showTimeoutTooltip: { timestamp in
+        showTimeoutTooltipImpl?(timestamp)
     },
     openMonetizationIntro: {
         let controller = MonetizationIntroScreen(context: context, openMore: {})
@@ -2373,6 +2395,52 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 presentImpl?(controller)
             }
         }))
+    }
+    var tooltipScreen: UndoOverlayController?
+    var timer: Foundation.Timer?
+    showTimeoutTooltipImpl = { cooldownUntilTimestamp in
+        let remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+    
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let content: UndoOverlayContent = .universal(
+            animation: "anim_clock",
+            scale: 0.058,
+            colors: [:],
+            title: nil,
+            text: presentationData.strings.Stars_Withdraw_Withdraw_ErrorTimeout(stringForRemainingTime(remainingCooldownSeconds)).string,
+            customUndoText: nil,
+            timeout: nil
+        )
+        let controller = UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in
+            return true
+        })
+        tooltipScreen = controller
+        presentImpl?(controller)
+        
+        if remainingCooldownSeconds < 3600 {
+            if timer == nil {
+                timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { _ in
+                    if let tooltipScreen {
+                        let remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+                        let content: UndoOverlayContent = .universal(
+                            animation: "anim_clock",
+                            scale: 0.058,
+                            colors: [:],
+                            title: nil,
+                            text: presentationData.strings.Stars_Withdraw_Withdraw_ErrorTimeout(stringForRemainingTime(remainingCooldownSeconds)).string,
+                            customUndoText: nil,
+                            timeout: nil
+                        )
+                        tooltipScreen.content = content
+                    } else {
+                        if let currentTimer = timer {
+                            timer = nil
+                            currentTimer.invalidate()
+                        }
+                    }
+                })
+            }
+        }
     }
     openTonTransactionImpl = { transaction in
         let _ = (peer.get()

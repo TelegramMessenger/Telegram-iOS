@@ -458,6 +458,11 @@ public final class StarsImageComponent: Component {
                                 dimensions = imageDimensions.cgSize.aspectFilled(imageSize)
                             }
                             secondImageNode.setSignal(chatMessagePhotoThumbnail(account: component.context.account, userLocation: .other, photoReference: .standalone(media: image), onlyFullSize: false, blurred: false))
+                        } else if let file = media[1] as? TelegramMediaFile {
+                            if let videoDimensions = file.dimensions {
+                                dimensions = videoDimensions.cgSize.aspectFilled(imageSize)
+                            }
+                            secondImageNode.setSignal(mediaGridMessageVideo(postbox: component.context.account.postbox, userLocation: .other, videoReference: .standalone(media: file), useLargeThumbnail: true, autoFetchFullSizeThumbnail: true))
                         }
                     }
                     imageFrameNode.backgroundColor = component.backgroundColor

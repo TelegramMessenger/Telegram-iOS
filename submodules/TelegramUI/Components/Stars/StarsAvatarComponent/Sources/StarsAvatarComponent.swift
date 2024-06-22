@@ -18,13 +18,15 @@ public final class StarsAvatarComponent: Component {
     let peer: StarsContext.State.Transaction.Peer
     let photo: TelegramMediaWebFile?
     let media: [Media]
+    let backgroundColor: UIColor
 
-    public init(context: AccountContext, theme: PresentationTheme, peer: StarsContext.State.Transaction.Peer, photo: TelegramMediaWebFile?, media: [Media]) {
+    public init(context: AccountContext, theme: PresentationTheme, peer: StarsContext.State.Transaction.Peer, photo: TelegramMediaWebFile?, media: [Media], backgroundColor: UIColor) {
         self.context = context
         self.theme = theme
         self.peer = peer
         self.photo = photo
         self.media = media
+        self.backgroundColor = backgroundColor
     }
 
     public static func ==(lhs: StarsAvatarComponent, rhs: StarsAvatarComponent) -> Bool {
@@ -43,6 +45,9 @@ public final class StarsAvatarComponent: Component {
         if !areMediaArraysEqual(lhs.media, rhs.media) {
             return false
         }
+        if lhs.backgroundColor != rhs.backgroundColor {
+            return false
+        }
         return true
     }
 
@@ -51,6 +56,8 @@ public final class StarsAvatarComponent: Component {
         private let backgroundView = UIImageView()
         private let iconView = UIImageView()
         private var imageNode: TransformImageNode?
+        private var imageFrameNode: UIView?
+        private var secondImageNode: TransformImageNode?
         
         private let fetchDisposable = MetaDisposable()
         
@@ -112,9 +119,48 @@ public final class StarsAvatarComponent: Component {
                             imageNode.setSignal(mediaGridMessageVideo(postbox: component.context.account.postbox, userLocation: .other, videoReference: .standalone(media: file), autoFetchFullSizeThumbnail: true))
                         }
                     }
-                                    
-                    imageNode.frame = CGRect(origin: .zero, size: size)
+                             
+                    var imageFrame = CGRect(origin: .zero, size: size)
+                    if component.media.count > 1 {
+                        imageFrame = imageFrame.insetBy(dx: 2.0, dy: 2.0).offsetBy(dx: -2.0, dy: 2.0)
+                    }
+                    imageNode.frame = imageFrame
                     imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 8.0), imageSize: dimensions, boundingSize: size, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
+                    
+                    if component.media.count > 1 {
+                        let secondImageNode: TransformImageNode
+                        let imageFrameNode: UIView
+                        if let current = self.secondImageNode, let currentFrame = self.imageFrameNode {
+                            secondImageNode = current
+                            imageFrameNode = currentFrame
+                        } else {
+                            secondImageNode = TransformImageNode()
+                            secondImageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
+                            self.insertSubview(secondImageNode.view, belowSubview: imageNode.view)
+                            self.secondImageNode = secondImageNode
+                            
+                            imageFrameNode = UIView()
+                            imageFrameNode.layer.cornerRadius = 8.0
+                            self.insertSubview(imageFrameNode, belowSubview: imageNode.view)
+                            self.imageFrameNode = imageFrameNode
+                            
+                            if let image = component.media[1] as? TelegramMediaImage {
+                                if let imageDimensions = largestImageRepresentation(image.representations)?.dimensions {
+                                    dimensions = imageDimensions.cgSize.aspectFilled(size)
+                                }
+                                secondImageNode.setSignal(chatMessagePhotoThumbnail(account: component.context.account, userLocation: .other, photoReference: .standalone(media: image), onlyFullSize: false, blurred: false))
+                            } else if let file = component.media[1] as? TelegramMediaFile {
+                                if let videoDimensions = file.dimensions {
+                                    dimensions = videoDimensions.cgSize.aspectFilled(size)
+                                }
+                                secondImageNode.setSignal(mediaGridMessageVideo(postbox: component.context.account.postbox, userLocation: .other, videoReference: .standalone(media: file), useLargeThumbnail: true, autoFetchFullSizeThumbnail: true))
+                            }
+                        }
+                        imageFrameNode.backgroundColor = component.backgroundColor
+                        secondImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 8.0), imageSize: dimensions, boundingSize: size, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
+                        secondImageNode.frame = imageFrame.offsetBy(dx: 4.0, dy: -4.0)
+                        imageFrameNode.frame = imageFrame.insetBy(dx: -1.0 - UIScreenPixel, dy: -1.0 - UIScreenPixel)
+                    }
                     
                     self.backgroundView.isHidden = true
                     self.iconView.isHidden = true
