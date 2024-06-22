@@ -472,7 +472,7 @@ final class StarsStatisticsScreenComponent: Component {
                             strings: strings,
                             dateTimeFormat: environment.dateTimeFormat,
                             count: self.starsState?.balances.availableBalance ?? 0,
-                            rate: 0.2,
+                            rate: self.starsState?.usdRate ?? 0,
                             actionTitle: strings.Stars_BotRevenue_Withdraw_Withdraw,
                             actionAvailable: true,
                             actionIsEnabled: self.starsState?.balances.withdrawEnabled ?? true,

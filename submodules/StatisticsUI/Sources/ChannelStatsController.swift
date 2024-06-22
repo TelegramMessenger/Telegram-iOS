@@ -53,12 +53,12 @@ private final class ChannelStatsControllerArguments {
     let openMonetizationInfo: () -> Void
     let openTonTransaction: (RevenueStatsTransactionsContext.State.Transaction) -> Void
     let openStarsTransaction: (StarsContext.State.Transaction) -> Void
-    let expandTransactions: () -> Void
+    let expandTransactions: (Bool) -> Void
     let updateCpmEnabled: (Bool) -> Void
     let presentCpmLocked: () -> Void
     let dismissInput: () -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPostStats: @escaping (EnginePeer, StatsPostItem) -> Void, openStory: @escaping (EngineStoryItem, UIView) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void, updateStarsSelected: @escaping (Bool) -> Void, requestTonWithdraw: @escaping () -> Void, requestStarsWithdraw: @escaping () -> Void, showTimeoutTooltip: @escaping (Int32) -> Void, buyAds: @escaping () -> Void, openMonetizationIntro: @escaping () -> Void, openMonetizationInfo: @escaping () -> Void, openTonTransaction: @escaping (RevenueStatsTransactionsContext.State.Transaction) -> Void, openStarsTransaction: @escaping (StarsContext.State.Transaction) -> Void, expandTransactions: @escaping () -> Void, updateCpmEnabled: @escaping (Bool) -> Void, presentCpmLocked: @escaping () -> Void, dismissInput: @escaping () -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPostStats: @escaping (EnginePeer, StatsPostItem) -> Void, openStory: @escaping (EngineStoryItem, UIView) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void, updateStarsSelected: @escaping (Bool) -> Void, requestTonWithdraw: @escaping () -> Void, requestStarsWithdraw: @escaping () -> Void, showTimeoutTooltip: @escaping (Int32) -> Void, buyAds: @escaping () -> Void, openMonetizationIntro: @escaping () -> Void, openMonetizationInfo: @escaping () -> Void, openTonTransaction: @escaping (RevenueStatsTransactionsContext.State.Transaction) -> Void, openStarsTransaction: @escaping (StarsContext.State.Transaction) -> Void, expandTransactions: @escaping (Bool) -> Void, updateCpmEnabled: @escaping (Bool) -> Void, presentCpmLocked: @escaping () -> Void, dismissInput: @escaping () -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openPostStats = openPostStats
@@ -252,7 +252,7 @@ private enum StatsEntry: ItemListNodeEntry {
     case adsTransactionsTabs(PresentationTheme, String, String, Bool)
     case adsTransaction(Int32, PresentationTheme, RevenueStatsTransactionsContext.State.Transaction)
     case adsStarsTransaction(Int32, PresentationTheme, StarsContext.State.Transaction)
-    case adsTransactionsExpand(PresentationTheme, String)
+    case adsTransactionsExpand(PresentationTheme, String, Bool)
     
     case adsCpmToggle(PresentationTheme, String, Int32, Bool?)
     case adsCpmInfo(PresentationTheme, String)
@@ -845,8 +845,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .adsTransactionsExpand(lhsTheme, lhsText):
-                if case let .adsTransactionsExpand(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .adsTransactionsExpand(lhsTheme, lhsText, lhsStars):
+                if case let .adsTransactionsExpand(rhsTheme, rhsText, rhsStars) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsStars == rhsStars {
                     return true
                 } else {
                     return false
@@ -1155,9 +1155,9 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StarsTransactionItem(context: arguments.context, presentationData: presentationData, transaction: transaction, action: {
                     arguments.openStarsTransaction(transaction)
                 }, sectionId: self.section, style: .blocks)
-            case let .adsTransactionsExpand(theme, title):
+            case let .adsTransactionsExpand(theme, title, stars):
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
-                    arguments.expandTransactions()
+                    arguments.expandTransactions(stars)
                 })
             case let .adsCpmToggle(_, title, minLevel, value):
                 var badgeComponent: AnyComponent<Empty>?
@@ -1256,7 +1256,7 @@ private struct ChannelStatsControllerState: Equatable {
         return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: giftsSelected, starsSelected: self.starsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
     }
     
-    func withUpdatedStarsSelected(_ giftsSelected: Bool) -> ChannelStatsControllerState {
+    func withUpdatedStarsSelected(_ starsSelected: Bool) -> ChannelStatsControllerState {
         return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, starsSelected: starsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
     }
     
@@ -1607,7 +1607,7 @@ private func monetizationEntries(
             } else {
                 moreCount = min(50, transactionsInfo.count - Int32(transactions.count))
             }
-            entries.append(.adsTransactionsExpand(presentationData.theme, presentationData.strings.Monetization_Transaction_ShowMoreTransactions(moreCount)))
+            entries.append(.adsTransactionsExpand(presentationData.theme, presentationData.strings.Monetization_Transaction_ShowMoreTransactions(moreCount), false))
         }
     }
     
@@ -1638,7 +1638,7 @@ private func monetizationEntries(
             } else {
                 moreCount = min(50, Int32(starsTransactionsInfo.transactions.count - transactions.count))
             }
-            entries.append(.adsTransactionsExpand(presentationData.theme, presentationData.strings.Monetization_Transaction_ShowMoreTransactions(moreCount)))
+            entries.append(.adsTransactionsExpand(presentationData.theme, presentationData.strings.Monetization_Transaction_ShowMoreTransactions(moreCount), true))
         }
     }
     
@@ -1955,17 +1955,15 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     openStarsTransaction: { transaction in
         openStarsTransactionImpl?(transaction)
     },
-    expandTransactions: {
-        var starsSelected = false
+    expandTransactions: { stars in
         updateState { state in
-            starsSelected = state.starsSelected
             if state.transactionsExpanded {
                 return state.withUpdatedMoreTransactionsDisplayed(state.moreTransactionsDisplayed + 50)
             } else {
                 return state.withUpdatedTransactionsExpanded(true)
             }
         }
-        if starsSelected {
+        if stars {
             starsTransactions.loadMore()
         } else {
             revenueTransactions.loadMore()

@@ -242,9 +242,9 @@ private final class BoostsTabsItemNode: ListViewItemNode {
                     
                     switch item.selectedTab {
                     case .boosts:
-                        selectionFrame = CGRect(x: strongSelf.boostsTextNode.frame.minX, y: layoutSize.height - selectionHeight, width: strongSelf.boostsTextNode.frame.width, height: selectionHeight)
+                        selectionFrame = CGRect(x: strongSelf.boostsTextNode.frame.minX, y: contentSize.height - selectionHeight, width: strongSelf.boostsTextNode.frame.width, height: selectionHeight)
                     case .gifts:
-                        selectionFrame = CGRect(x: strongSelf.giftsTextNode.frame.minX, y: layoutSize.height - selectionHeight, width: strongSelf.giftsTextNode.frame.width, height: selectionHeight)
+                        selectionFrame = CGRect(x: strongSelf.giftsTextNode.frame.minX, y: contentSize.height - selectionHeight, width: strongSelf.giftsTextNode.frame.width, height: selectionHeight)
                     }
                     
                     var transition: ContainedViewLayoutTransition = .immediate

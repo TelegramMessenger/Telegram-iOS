@@ -510,6 +510,7 @@ public final class StarsImageComponent: Component {
                     imageNode.setSignal(chatSecretPhoto(account: component.context.account, userLocation: .other, photoReference: .standalone(media: media), ignoreFullSize: true, synchronousLoad: true))
                     
                     dustNode = MediaDustNode(enableAnimations: true)
+                    dustNode.isUserInteractionEnabled = false
                     self.addSubview(dustNode.view)
                     self.dustNode = dustNode
                 }
