@@ -67,6 +67,7 @@ private final class SheetContent: CombinedComponent {
             let state = context.state
             
             let theme = environment.theme.withModalBlocksBackground()
+            let strings = environment.strings
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
             let sideInset: CGFloat = 16.0
@@ -200,7 +201,18 @@ private final class SheetContent: CombinedComponent {
                 }
                 amountFooter = AnyComponent(MultilineTextComponent(
                     text: .plain(amountInfoString),
-                    maximumNumberOfLines: 0
+                    maximumNumberOfLines: 0,
+                    highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.2),
+                    highlightAction: { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                        } else {
+                            return nil
+                        }
+                    },
+                    tapAction: { attributes, _ in
+                        component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_PaidContent_AmountInfo_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                    }
                 ))
             } else {
                 amountFooter = nil

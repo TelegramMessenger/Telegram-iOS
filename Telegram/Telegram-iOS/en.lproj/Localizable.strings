@@ -12383,6 +12383,7 @@ Sorry for the inconvenience.";
 "Stars.PaidContent.AmountTitle" = "ENTER UNLOCK COST";
 "Stars.PaidContent.AmountPlaceholder" = "Stars to Unlock";
 "Stars.PaidContent.AmountInfo" = "Users will have to transfer this amount of Stars to your channel in order to view this media.\n[More about Stars >]()";
+"Stars.PaidContent.AmountInfo_URL" = "https://telegram.org";
 "Stars.PaidContent.Create" = "Make This Media Paid";
 
 "MediaEditor.AddLink" = "LINK";
@@ -12420,7 +12421,7 @@ Sorry for the inconvenience.";
 "Monetization.BalanceStarsWithdraw" = "Withdraw via Fragment";
 "Monetization.BalanceStarsWithdrawShort" = "Withdraw";
 "Monetization.BalanceStarsBuyAds" = "Buy Ads";
-"Monetization.Balance.StarsInfo" = "You can withdraw Stars using Fragment, or use Stars to advertise your channel. [Learn More >]()";
+"Monetization.Balance.StarsInfo" = "You can collect rewards for Stars using Fragment, or use Stars to advertise your channel. [Learn More >]()";
 "Monetization.Balance.StarsInfo_URL" = "https://telegram.org";
 
 "Monetization.StarsProceeds.Title" = "Rewards Overview";

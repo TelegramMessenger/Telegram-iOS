@@ -68,6 +68,7 @@ private final class SheetContent: CombinedComponent {
         private let context: AccountContext
         private let starsContext: StarsContext
         private let source: BotPaymentInvoiceSource
+        private let extendedMedia: [TelegramExtendedMedia]
         private let invoice: TelegramMediaInvoice
         
         private(set) var botPeer: EnginePeer?
@@ -92,12 +93,14 @@ private final class SheetContent: CombinedComponent {
             context: AccountContext,
             starsContext: StarsContext,
             source: BotPaymentInvoiceSource,
+            extendedMedia: [TelegramExtendedMedia],
             invoice: TelegramMediaInvoice,
             inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
         ) {
             self.context = context
             self.starsContext = starsContext
             self.source = source
+            self.extendedMedia = extendedMedia
             self.invoice = invoice
             
             super.init()
@@ -150,7 +153,7 @@ private final class SheetContent: CombinedComponent {
             self.optionsDisposable?.dispose()
         }
         
-        func buy(requestTopUp: @escaping (@escaping () -> Void) -> Void, completion: @escaping () -> Void) {
+        func buy(requestTopUp: @escaping (@escaping () -> Void) -> Void, completion: @escaping (Bool) -> Void) {
             guard let form, let balance else {
                 return
             }
@@ -164,7 +167,20 @@ private final class SheetContent: CombinedComponent {
                 
                 let _ = (self.context.engine.payments.sendStarsPaymentForm(formId: form.id, source: self.source)
                 |> deliverOnMainQueue).start(next: { _ in
-                    completion()
+                    completion(true)
+                }, error: { [weak self] error in
+                    guard let self else {
+                        return
+                    }
+                    switch error {
+                    case .alreadyPaid:
+                        if !self.extendedMedia.isEmpty, case let .message(messageId) = self.source  {
+                            let _ = self.context.engine.messages.updateExtendedMedia(messageIds: [messageId]).startStandalone()
+                        }
+                    default:
+                        break
+                    }
+                    completion(false)
                 })
             }
             
@@ -209,7 +225,7 @@ private final class SheetContent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, starsContext: self.starsContext, source: self.source, invoice: self.invoice, inputData: self.inputData)
+        return State(context: self.context, starsContext: self.starsContext, source: self.source, extendedMedia: self.extendedMedia, invoice: self.invoice, inputData: self.inputData)
     }
         
     static var body: Body {
@@ -481,37 +497,38 @@ private final class SheetContent: CombinedComponent {
                                 let alertController = textAlertController(context: accountContext, title: nil, text: presentationData.strings.Stars_Transfer_Unavailable, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                                 controller?.present(alertController, in: .window(.root))
                             }
-                        }, completion: { [weak controller] in
-                            let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
-                            
-                            let text: String
-                            if let _ = component.invoice.extendedMedia {
-                                text = presentationData.strings.Stars_Transfer_UnlockedText( presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string
-                            } else {
-                                text = presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string
-                            }
-                            
-                            if let navigationController = controller?.navigationController {
-                                Queue.mainQueue().after(0.5) {
-                                    if let lastController = navigationController.viewControllers.last as? ViewController {
-                                        let resultController = UndoOverlayController(
-                                            presentationData: presentationData,
-                                            content: .image(
-                                                image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
-                                                title: presentationData.strings.Stars_Transfer_PurchasedTitle,
-                                                text: text,
-                                                round: false,
-                                                undoText: nil
-                                            ),
-                                            elevatedLayout: lastController is ChatController,
-                                            action: { _ in return true}
-                                        )
-                                        lastController.present(resultController, in: .window(.root))
+                        }, completion: { [weak controller] success in
+                            if success {
+                                let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
+                                let text: String
+                                if let _ = component.invoice.extendedMedia {
+                                    text = presentationData.strings.Stars_Transfer_UnlockedText( presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string
+                                } else {
+                                    text = presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string
+                                }
+                                
+                                if let navigationController = controller?.navigationController {
+                                    Queue.mainQueue().after(0.5) {
+                                        if let lastController = navigationController.viewControllers.last as? ViewController {
+                                            let resultController = UndoOverlayController(
+                                                presentationData: presentationData,
+                                                content: .image(
+                                                    image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
+                                                    title: presentationData.strings.Stars_Transfer_PurchasedTitle,
+                                                    text: text,
+                                                    round: false,
+                                                    undoText: nil
+                                                ),
+                                                elevatedLayout: lastController is ChatController,
+                                                action: { _ in return true}
+                                            )
+                                            lastController.present(resultController, in: .window(.root))
+                                        }
                                     }
                                 }
                             }
                             
-                            controller?.complete(paid: true)
+                            controller?.complete(paid: success)
                             controller?.dismissAnimated()
                             
                             starsContext.load(force: true)

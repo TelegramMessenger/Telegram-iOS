@@ -756,6 +756,8 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                 return .fail(.paymentFailed)
             } else if error.errorDescription == "INVOICE_ALREADY_PAID" {
                 return .fail(.alreadyPaid)
+            } else if error.errorDescription == "MEDIA_ALREADY_PAID" {
+                return .fail(.alreadyPaid)
             }
             return .fail(.generic)
         }
