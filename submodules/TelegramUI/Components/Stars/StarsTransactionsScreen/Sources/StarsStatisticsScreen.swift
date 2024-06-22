@@ -30,8 +30,9 @@ final class StarsStatisticsScreenComponent: Component {
     let revenueContext: StarsRevenueStatsContext
     let transactionsContext: StarsTransactionsContext
     let openTransaction: (StarsContext.State.Transaction) -> Void
-    let buy: () -> Void
+    let withdraw: () -> Void
     let showTimeoutTooltip: (Int32) -> Void
+    let buyAds: () -> Void
     
     init(
         context: AccountContext,
@@ -39,16 +40,18 @@ final class StarsStatisticsScreenComponent: Component {
         revenueContext: StarsRevenueStatsContext,
         transactionsContext: StarsTransactionsContext,
         openTransaction: @escaping (StarsContext.State.Transaction) -> Void,
-        buy: @escaping () -> Void,
-        showTimeoutTooltip: @escaping (Int32) -> Void
+        withdraw: @escaping () -> Void,
+        showTimeoutTooltip: @escaping (Int32) -> Void,
+        buyAds: @escaping () -> Void
     ) {
         self.context = context
         self.peerId = peerId
         self.revenueContext = revenueContext
         self.transactionsContext = transactionsContext
         self.openTransaction = openTransaction
-        self.buy = buy
+        self.withdraw = withdraw
         self.showTimeoutTooltip = showTimeoutTooltip
+        self.buyAds = buyAds
     }
     
     static func ==(lhs: StarsStatisticsScreenComponent, rhs: StarsStatisticsScreenComponent) -> Bool {
@@ -474,7 +477,7 @@ final class StarsStatisticsScreenComponent: Component {
                             actionAvailable: true,
                             actionIsEnabled: self.starsState?.balances.withdrawEnabled ?? true,
                             actionCooldownUntilTimestamp: self.starsState?.balances.nextWithdrawalTimestamp,
-                            buy: { [weak self] in
+                            action: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
                                 }
@@ -486,11 +489,17 @@ final class StarsStatisticsScreenComponent: Component {
                                     if remainingCooldownSeconds > 0 {
                                         component.showTimeoutTooltip(cooldownUntilTimestamp)
                                     } else {
-                                        component.buy()
+                                        component.withdraw()
                                     }
                                 } else {
-                                    component.buy()
+                                    component.withdraw()
                                 }
+                            },
+                            buyAds: { [weak self] in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.buyAds()
                             }
                         )
                     ))]
@@ -621,6 +630,7 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
         self.transactionsContext = context.engine.payments.peerStarsTransactionsContext(subject: .peer(peerId), mode: .all)
         
         var withdrawImpl: (() -> Void)?
+        var buyAdsImpl: (() -> Void)?
         var showTimeoutTooltipImpl: ((Int32) -> Void)?
         var openTransactionImpl: ((StarsContext.State.Transaction) -> Void)?
         super.init(context: context, component: StarsStatisticsScreenComponent(
@@ -631,11 +641,14 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
             openTransaction: { transaction in
                 openTransactionImpl?(transaction)
             },
-            buy: {
+            withdraw: {
                 withdrawImpl?()
             },
             showTimeoutTooltip: { timestamp in
                 showTimeoutTooltipImpl?(timestamp)
+            },
+            buyAds: {
+                buyAdsImpl?()
             }
         ), navigationBarAppearance: .transparent)
         
@@ -754,6 +767,17 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
                     })
                 }
             }
+        }
+        
+        buyAdsImpl = {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let _ = (context.engine.peers.requestStarsRevenueAdsAccountlUrl(peerId: peerId)
+            |> deliverOnMainQueue).startStandalone(next: { url in
+                guard let url else {
+                    return
+                }
+                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+            })
         }
         
         self.transactionsContext.loadMore()

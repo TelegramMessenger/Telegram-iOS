@@ -12361,6 +12361,8 @@ Sorry for the inconvenience.";
 
 "Stars.BotRevenue.Withdraw.Balance" = "Available Balance";
 "Stars.BotRevenue.Withdraw.Withdraw" = "Withdraw via Fragment";
+"Stars.BotRevenue.Withdraw.WithdrawShort" = "Withdraw";
+"Stars.BotRevenue.Withdraw.BuyAds" = "Buy Ads";
 "Stars.BotRevenue.Withdraw.Info" = "You can collect rewards for Stars using Fragment, or use Stars to advertise your bot. [Learn More >]()";
 "Stars.BotRevenue.Withdraw.Info_URL" = "https://telegram.org/tos";
 
@@ -12416,6 +12418,8 @@ Sorry for the inconvenience.";
 "Monetization.StarsTransactions" = "Stars Transactions";
 
 "Monetization.BalanceStarsWithdraw" = "Withdraw via Fragment";
+"Monetization.BalanceStarsWithdrawShort" = "Withdraw";
+"Monetization.BalanceStarsBuyAds" = "Buy Ads";
 "Monetization.Balance.StarsInfo" = "You can withdraw Stars using Fragment, or use Stars to advertise your channel. [Learn More >]()";
 "Monetization.Balance.StarsInfo_URL" = "https://telegram.org";
 

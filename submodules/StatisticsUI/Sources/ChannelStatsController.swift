@@ -48,6 +48,7 @@ private final class ChannelStatsControllerArguments {
     let requestTonWithdraw: () -> Void
     let requestStarsWithdraw: () -> Void
     let showTimeoutTooltip: (Int32) -> Void
+    let buyAds: () -> Void
     let openMonetizationIntro: () -> Void
     let openMonetizationInfo: () -> Void
     let openTonTransaction: (RevenueStatsTransactionsContext.State.Transaction) -> Void
@@ -57,7 +58,7 @@ private final class ChannelStatsControllerArguments {
     let presentCpmLocked: () -> Void
     let dismissInput: () -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPostStats: @escaping (EnginePeer, StatsPostItem) -> Void, openStory: @escaping (EngineStoryItem, UIView) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void, updateStarsSelected: @escaping (Bool) -> Void, requestTonWithdraw: @escaping () -> Void, requestStarsWithdraw: @escaping () -> Void, showTimeoutTooltip: @escaping (Int32) -> Void, openMonetizationIntro: @escaping () -> Void, openMonetizationInfo: @escaping () -> Void, openTonTransaction: @escaping (RevenueStatsTransactionsContext.State.Transaction) -> Void, openStarsTransaction: @escaping (StarsContext.State.Transaction) -> Void, expandTransactions: @escaping () -> Void, updateCpmEnabled: @escaping (Bool) -> Void, presentCpmLocked: @escaping () -> Void, dismissInput: @escaping () -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPostStats: @escaping (EnginePeer, StatsPostItem) -> Void, openStory: @escaping (EngineStoryItem, UIView) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void, updateStarsSelected: @escaping (Bool) -> Void, requestTonWithdraw: @escaping () -> Void, requestStarsWithdraw: @escaping () -> Void, showTimeoutTooltip: @escaping (Int32) -> Void, buyAds: @escaping () -> Void, openMonetizationIntro: @escaping () -> Void, openMonetizationInfo: @escaping () -> Void, openTonTransaction: @escaping (RevenueStatsTransactionsContext.State.Transaction) -> Void, openStarsTransaction: @escaping (StarsContext.State.Transaction) -> Void, expandTransactions: @escaping () -> Void, updateCpmEnabled: @escaping (Bool) -> Void, presentCpmLocked: @escaping () -> Void, dismissInput: @escaping () -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openPostStats = openPostStats
@@ -74,6 +75,7 @@ private final class ChannelStatsControllerArguments {
         self.requestTonWithdraw = requestTonWithdraw
         self.requestStarsWithdraw = requestStarsWithdraw
         self.showTimeoutTooltip = showTimeoutTooltip
+        self.buyAds = buyAds
         self.openMonetizationIntro = openMonetizationIntro
         self.openMonetizationInfo = openMonetizationInfo
         self.openTonTransaction = openTonTransaction
@@ -1087,7 +1089,9 @@ private enum StatsEntry: ItemListNodeEntry {
                             arguments.requestStarsWithdraw()
                         }
                     },
-                    buyAdsAction: nil,
+                    buyAdsAction: canWithdraw ? {
+                        arguments.buyAds()
+                    } : nil,
                     sectionId: self.section,
                     style: .blocks
                 )
@@ -1799,6 +1803,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     var requestTonWithdrawImpl: (() -> Void)?
     var requestStarsWithdrawImpl: (() -> Void)?
     var showTimeoutTooltipImpl: ((Int32) -> Void)?
+    var buyAdsImpl: (() -> Void)?
     var updateStatusBarImpl: ((StatusBarStyle) -> Void)?
     var dismissInputImpl: (() -> Void)?
     
@@ -1932,6 +1937,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     },
     showTimeoutTooltip: { timestamp in
         showTimeoutTooltipImpl?(timestamp)
+    },
+    buyAds: {
+        buyAdsImpl?()
     },
     openMonetizationIntro: {
         let controller = MonetizationIntroScreen(context: context, openMore: {})
@@ -2441,6 +2449,16 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 })
             }
         }
+    }
+    buyAdsImpl = {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let _ = (context.engine.peers.requestStarsRevenueAdsAccountlUrl(peerId: peerId)
+        |> deliverOnMainQueue).startStandalone(next: { url in
+            guard let url else {
+                return
+            }
+            context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+        })
     }
     openTonTransactionImpl = { transaction in
         let _ = (peer.get()

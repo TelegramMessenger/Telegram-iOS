@@ -95,6 +95,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
     private let balanceTextNode: TextNode
     private let valueTextNode: TextNode
     private var button = ComponentView<Empty>()
+    private var buyButton = ComponentView<Empty>()
         
     private let activateArea: AccessibilityAreaNode
     
@@ -348,8 +349,14 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                     timer.invalidate()
                 }
             }
+                        
+            var actionTitle = isStars ? item.presentationData.strings.Monetization_BalanceStarsWithdraw : item.presentationData.strings.Monetization_BalanceWithdraw
+            var withdrawWidth = width - leftInset - rightInset
+            if let _ = item.buyAdsAction {
+                withdrawWidth = (withdrawWidth - 10.0) / 2.0
+                actionTitle = item.presentationData.strings.Monetization_BalanceStarsWithdrawShort
+            }
             
-            let actionTitle = isStars ? item.presentationData.strings.Monetization_BalanceStarsWithdraw : item.presentationData.strings.Monetization_BalanceWithdraw
             let content: AnyComponentWithIdentity<Empty>
             if remainingCooldownSeconds > 0 {
                 content = AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(
@@ -364,7 +371,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
             } else {
                 content = AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: actionTitle, font: Font.semibold(17.0), color: item.presentationData.theme.list.itemCheckColors.foregroundColor)))
             }
-            
+                        
             let buttonSize = self.button.update(
                 transition: .immediate,
                 component: AnyComponent(ButtonComponent(
@@ -385,7 +392,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: width - leftInset - rightInset, height: 50.0)
+                containerSize: CGSize(width: withdrawWidth, height: 50.0)
             )
             if let buttonView = self.button.view {
                 if buttonView.superview == nil {
@@ -393,6 +400,40 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                 }
                 let buttonFrame = CGRect(origin: CGPoint(x: leftInset, y: origin), size: buttonSize)
                 buttonView.frame = buttonFrame
+            }
+            
+            if let _ = item.buyAdsAction {
+                let buyButtonSize = self.buyButton.update(
+                    transition: .immediate,
+                    component: AnyComponent(ButtonComponent(
+                        background: ButtonComponent.Background(
+                            color: item.presentationData.theme.list.itemCheckColors.fillColor,
+                            foreground: item.presentationData.theme.list.itemCheckColors.foregroundColor,
+                            pressedColor: item.presentationData.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
+                        ),
+                        content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: item.presentationData.strings.Monetization_BalanceStarsBuyAds, font: Font.semibold(17.0), color: item.presentationData.theme.list.itemCheckColors.foregroundColor))),
+                        isEnabled: true,
+                        allowActionWhenDisabled: false,
+                        displaysProgress: false,
+                        action: { [weak self] in
+                            guard let self, let item = self.item, item.isEnabled else {
+                                return
+                            }
+                            item.buyAdsAction?()
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: withdrawWidth, height: 50.0)
+                )
+                if let buttonView = self.buyButton.view {
+                    if buttonView.superview == nil {
+                        self.view.addSubview(buttonView)
+                    }
+                    let buttonFrame = CGRect(origin: CGPoint(x: leftInset + withdrawWidth + 10.0, y: origin), size: buyButtonSize)
+                    buttonView.frame = buttonFrame
+                }
+            } else if let buttonView = self.buyButton.view {
+                buttonView.removeFromSuperview()
             }
         } else if let buttonView = self.button.view {
             buttonView.removeFromSuperview()
