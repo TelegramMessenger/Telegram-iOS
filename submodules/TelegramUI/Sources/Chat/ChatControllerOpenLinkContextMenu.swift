@@ -19,6 +19,95 @@ import SafariServices
 extension ChatControllerImpl {
     func openLinkContextMenu(url: String, params: ChatControllerInteraction.LongTapParams) -> Void {
         guard let message = params.message, let contentNode = params.contentNode else {
+            var (cleanUrl, _) = parseUrl(url: url, wasConcealed: false)
+            var canAddToReadingList = true
+            var canOpenIn = availableOpenInOptions(context: self.context, item: .url(url: url)).count > 1
+            let mailtoString = "mailto:"
+            let telString = "tel:"
+            var openText = self.presentationData.strings.Conversation_LinkDialogOpen
+            var phoneNumber: String?
+            
+            var isPhoneNumber = false
+            var isEmail = false
+            var hasOpenAction = true
+            
+            if cleanUrl.hasPrefix(mailtoString) {
+                canAddToReadingList = false
+                cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: mailtoString.distance(from: mailtoString.startIndex, to: mailtoString.endIndex))...])
+                isEmail = true
+            } else if cleanUrl.hasPrefix(telString) {
+                canAddToReadingList = false
+                phoneNumber = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: telString.distance(from: telString.startIndex, to: telString.endIndex))...])
+                cleanUrl = phoneNumber!
+                openText = self.presentationData.strings.UserInfo_PhoneCall
+                canOpenIn = false
+                isPhoneNumber = true
+                
+                if cleanUrl.hasPrefix("+888") {
+                    hasOpenAction = false
+                }
+            } else if canOpenIn {
+                openText = self.presentationData.strings.Conversation_FileOpenIn
+            }
+            
+            let actionSheet = ActionSheetController(presentationData: self.presentationData)
+            var items: [ActionSheetItem] = []
+            items.append(ActionSheetTextItem(title: cleanUrl))
+            if hasOpenAction {
+                items.append(ActionSheetButtonItem(title: openText, color: .accent, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    if let strongSelf = self {
+                        if canOpenIn {
+                            strongSelf.openUrlIn(url)
+                        } else {
+                            strongSelf.openUrl(url, concealed: false)
+                        }
+                    }
+                }))
+            }
+            if let phoneNumber = phoneNumber {
+                items.append(ActionSheetButtonItem(title: self.presentationData.strings.Conversation_AddContact, color: .accent, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction?.addContact(phoneNumber)
+                    }
+                }))
+            }
+            items.append(ActionSheetButtonItem(title: canAddToReadingList ? self.presentationData.strings.ShareMenu_CopyShareLink : self.presentationData.strings.Conversation_ContextMenuCopy, color: .accent, action: { [weak actionSheet, weak self] in
+                actionSheet?.dismissAnimated()
+                guard let self else {
+                    return
+                }
+                UIPasteboard.general.string = cleanUrl
+                
+                let content: UndoOverlayContent
+                if isPhoneNumber {
+                    content = .copy(text: self.presentationData.strings.Conversation_PhoneCopied)
+                } else if isEmail {
+                    content = .copy(text: self.presentationData.strings.Conversation_EmailCopied)
+                } else if canAddToReadingList {
+                    content = .linkCopied(text: self.presentationData.strings.Conversation_LinkCopied)
+                } else {
+                    content = .copy(text: self.presentationData.strings.Conversation_TextCopied)
+                }
+                self.present(UndoOverlayController(presentationData: self.presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            }))
+            if canAddToReadingList {
+                items.append(ActionSheetButtonItem(title: self.presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    if let link = URL(string: url) {
+                        let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
+                    }
+                }))
+            }
+            actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])])
+            self.chatDisplayNode.dismissInput()
+            self.present(actionSheet, in: .window(.root))
+            
             return
         }
         

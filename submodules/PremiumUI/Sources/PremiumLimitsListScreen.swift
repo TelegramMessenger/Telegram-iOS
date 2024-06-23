@@ -826,7 +826,6 @@ public class PremiumLimitsListScreen: ViewController {
                         )
                     )
                 )
-                //TODO:localize
                 availableItems[.messageEffects] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
                         id: PremiumDemoScreen.Subject.messageEffects,

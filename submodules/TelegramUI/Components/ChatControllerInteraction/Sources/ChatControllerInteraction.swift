@@ -158,7 +158,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         public var messageNode: ASDisplayNode?
         public var progress: Promise<Bool>?
         
-        public init(message: Message?, contentNode: ContextExtractedContentContainingNode? = nil, messageNode: ASDisplayNode? = nil, progress: Promise<Bool>? = nil) {
+        public init(message: Message? = nil, contentNode: ContextExtractedContentContainingNode? = nil, messageNode: ASDisplayNode? = nil, progress: Promise<Bool>? = nil) {
             self.message = message
             self.contentNode = contentNode
             self.messageNode = messageNode

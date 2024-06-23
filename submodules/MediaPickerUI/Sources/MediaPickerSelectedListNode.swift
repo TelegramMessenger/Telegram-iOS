@@ -512,7 +512,6 @@ final class PriceNode: ASDisplayNode {
         var backgroundTransition = transition
         let labelTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
         if let price {
-            //TODO:localize
             self.labelNode.attributedText = NSAttributedString(string: "\(price)", font: Font.semibold(15.0), textColor: .white)
             
             labelSize = self.labelNode.updateLayout(CGSize(width: 240.0, height: 50.0))

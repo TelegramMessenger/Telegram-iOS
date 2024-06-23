@@ -33,7 +33,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     let openPeer: (EnginePeer) -> Void
     let openMessage: (EngineMessage.Id) -> Void
     let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
-    let copyTransactionId: () -> Void
+    let copyTransactionId: (String) -> Void
     
     init(
         context: AccountContext,
@@ -43,7 +43,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         openPeer: @escaping (EnginePeer) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
-        copyTransactionId: @escaping () -> Void
+        copyTransactionId: @escaping (String) -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -464,7 +464,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                                 )
                             ),
                             action: {
-                                component.copyTransactionId()
+                                component.copyTransactionId(transactionId)
                             }
                         )
                     ),
@@ -650,7 +650,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     let openPeer: (EnginePeer) -> Void
     let openMessage: (EngineMessage.Id) -> Void
     let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
-    let copyTransactionId: () -> Void
+    let copyTransactionId: (String) -> Void
     
     init(
         context: AccountContext,
@@ -659,7 +659,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         openPeer: @escaping (EnginePeer) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
-        copyTransactionId: @escaping () -> Void
+        copyTransactionId: @escaping (String) -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -799,7 +799,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
         var openPeerImpl: ((EnginePeer) -> Void)?
         var openMessageImpl: ((EngineMessage.Id) -> Void)?
         var openMediaImpl: (([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)?
-        var copyTransactionIdImpl: (() -> Void)?
+        var copyTransactionIdImpl: ((String) -> Void)?
         super.init(
             context: context,
             component: StarsTransactionSheetComponent(
@@ -815,8 +815,8 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 openMedia: { media, transitionNode, addToTransitionSurface in
                     openMediaImpl?(media, transitionNode, addToTransitionSurface)
                 },
-                copyTransactionId: {
-                    copyTransactionIdImpl?()
+                copyTransactionId: { transactionId in
+                    copyTransactionIdImpl?(transactionId)
                 }
             ),
             navigationBarAppearance: .none,
@@ -902,10 +902,12 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             }))
         }
         
-        copyTransactionIdImpl = { [weak self] in
+        copyTransactionIdImpl = { [weak self] transactionId in
             guard let self else {
                 return
             }
+            UIPasteboard.general.string = transactionId
+            
             self.dismissAllTooltips()
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }

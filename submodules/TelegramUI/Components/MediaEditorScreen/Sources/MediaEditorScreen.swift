@@ -5750,14 +5750,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             self?.node.presentGallery()
         })))
-        //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Link", icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak self] _, a in
-            a(.default)
-            
-            self?.node.addOrEditLink()
-        })))
+        if self.context.isPremium {
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_Shortcut_Link, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, a in
+                a(.default)
+                
+                self?.node.addOrEditLink()
+            })))
+        }
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_Shortcut_Location, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LocationSmall"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] _, a in

@@ -79,25 +79,7 @@ public class ChatMessageUnlockMediaNode: ASDisplayNode {
         
         self.addSubnode(self.contentNode)
         self.contentNode.addSubnode(self.backgroundNode)
-        
-//        self.contentNode.highligthedChanged = { [weak self] highlighted in
-//            if let strongSelf = self {
-//                if highlighted, !strongSelf.frame.width.isZero {
-//                    let scale = (strongSelf.frame.width - 10.0) / strongSelf.frame.width
-//                    
-//                    strongSelf.contentNode.layer.animateScale(from: 1.0, to: scale, duration: 0.15, removeOnCompletion: false)
-//                    
-//                    strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
-//                    strongSelf.backgroundNode.alpha = 0.2
-//                } else if let presentationLayer = strongSelf.contentNode.layer.presentation() {
-//                    strongSelf.contentNode.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
-//                    
-//                    strongSelf.backgroundNode.alpha = 1.0
-//                    strongSelf.backgroundNode.layer.animateAlpha(from: 0.2, to: 1.0, duration: 0.2)
-//                }
-//            }
-//        }
-        
+                
         self.contentNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
     
@@ -113,8 +95,7 @@ public class ChatMessageUnlockMediaNode: ASDisplayNode {
             let textFont = Font.medium(fontSize)
                            
             let padding: CGFloat = 10.0
-            //TODO:localize
-            let text = NSMutableAttributedString(string: "Unlock for ⭐️ \(arguments.media.amount)", font: textFont, textColor: .white)
+            let text = NSMutableAttributedString(string: arguments.presentationData.strings.Chat_UnlockMedia("⭐️ \(arguments.media.amount)").string, font: textFont, textColor: .white)
             if let range = text.string.range(of: "⭐️") {
                 text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: text.string))
                 text.addAttribute(.baselineOffset, value: 0.5, range: NSRange(range, in: text.string))

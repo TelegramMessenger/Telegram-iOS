@@ -1044,8 +1044,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                                     self.animateOutToEmpty = true
                                     self.environment?.controller()?.dismiss()
                                     
-                                    //TODO:localize
-                                    let premiumController = component.context.sharedContext.makePremiumIntroController(context: component.context, source: .animatedEmoji, forceDark: false, dismissed: nil)
+                                    let premiumController = component.context.sharedContext.makePremiumIntroController(context: component.context, source: .messageEffects, forceDark: false, dismissed: nil)
                                     component.openPremiumPaywall(premiumController)
                                 }
                                 return false

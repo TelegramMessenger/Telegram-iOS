@@ -2864,7 +2864,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if let mosaicRange = mosaicRange, mosaicRange.contains(i), let (framesAndPositions, size) = calculatedGroupFramesAndSize {
                 let mosaicIndex = i - mosaicRange.lowerBound
                 
-                if mosaicIndex == 0 {
+                if mosaicIndex == 0 && i == 0 {
                     if !headerSize.height.isZero {
                         contentNodesHeight += 7.0
                         totalContentNodesHeight += 7.0

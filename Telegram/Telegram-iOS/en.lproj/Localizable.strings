@@ -10629,6 +10629,7 @@ Sorry for the inconvenience.";
 "MediaEditor.Shortcut.Location" = "Location";
 "MediaEditor.Shortcut.Reaction" = "Reaction";
 "MediaEditor.Shortcut.Audio" = "Audio";
+"MediaEditor.Shortcut.Link" = "Link";
 
 "BoostGift.AdditionalPrizes" = "Additional Prizes";
 "BoostGift.AdditionalPrizesPlaceholder" = "Enter Your Prize";
@@ -12431,3 +12432,5 @@ Sorry for the inconvenience.";
 
 "Premium.MessageEffects" = "Message Effects";
 "Premium.MessageEffectsInfo" = "Add over 500 animated effects to private messages.";
+
+"Chat.UnlockMedia" = "Unlock for %@";
