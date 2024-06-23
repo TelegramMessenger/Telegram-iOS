@@ -189,7 +189,18 @@ class ChatImageGalleryItem: GalleryItem {
     }
     
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
-        if let id = self.message.groupInfo?.stableId {
+        if let paidContent = self.message.paidContent {
+            var mediaReference: AnyMediaReference?
+            let mediaIndex = self.mediaIndex ?? 0
+            if case let .full(fullMedia) = paidContent.extendedMedia[Int(mediaIndex)], let m = fullMedia as? TelegramMediaImage {
+                mediaReference = .message(message: MessageReference(self.message), media: m)
+            }
+            if let mediaReference = mediaReference {
+                if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, userLocation: .peer(self.message.id.peerId), mediaReference: mediaReference) {
+                    return (0, item)
+                }
+            }
+        } else if let id = self.message.groupInfo?.stableId {
             var mediaReference: AnyMediaReference?
             for m in self.message.media {
                 if let m = m as? TelegramMediaImage {

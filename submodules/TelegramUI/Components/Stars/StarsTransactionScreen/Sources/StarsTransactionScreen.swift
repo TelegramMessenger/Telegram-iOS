@@ -21,6 +21,7 @@ import TextFormat
 import TelegramStringFormatting
 import UndoUI
 import StarsImageComponent
+import GalleryUI
 
 private final class StarsTransactionSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -31,6 +32,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     let cancel: (Bool) -> Void
     let openPeer: (EnginePeer) -> Void
     let openMessage: (EngineMessage.Id) -> Void
+    let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
     let copyTransactionId: () -> Void
     
     init(
@@ -40,6 +42,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         cancel: @escaping  (Bool) -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
+        openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
         copyTransactionId: @escaping () -> Void
     ) {
         self.context = context
@@ -48,6 +51,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         self.cancel = cancel
         self.openPeer = openPeer
         self.openMessage = openMessage
+        self.openMedia = openMedia
         self.copyTransactionId = copyTransactionId
     }
     
@@ -337,7 +341,10 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     subject: imageSubject,
                     theme: theme,
                     diameter: 90.0,
-                    backgroundColor: theme.actionSheet.opaqueItemBackgroundColor
+                    backgroundColor: theme.actionSheet.opaqueItemBackgroundColor,
+                    action: !media.isEmpty ? { transitionNode, addToTransitionSurface in
+                        component.openMedia(media, transitionNode, addToTransitionSurface)
+                    } : nil
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: 200.0),
                 transition: .immediate
@@ -642,6 +649,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     let action: () -> Void
     let openPeer: (EnginePeer) -> Void
     let openMessage: (EngineMessage.Id) -> Void
+    let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
     let copyTransactionId: () -> Void
     
     init(
@@ -650,6 +658,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         action: @escaping () -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
+        openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
         copyTransactionId: @escaping () -> Void
     ) {
         self.context = context
@@ -657,6 +666,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         self.action = action
         self.openPeer = openPeer
         self.openMessage = openMessage
+        self.openMedia = openMedia
         self.copyTransactionId = copyTransactionId
     }
     
@@ -700,6 +710,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
                         },
                         openPeer: context.component.openPeer,
                         openMessage: context.component.openMessage,
+                        openMedia: context.component.openMedia,
                         copyTransactionId: context.component.copyTransactionId
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
@@ -787,6 +798,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
         
         var openPeerImpl: ((EnginePeer) -> Void)?
         var openMessageImpl: ((EngineMessage.Id) -> Void)?
+        var openMediaImpl: (([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)?
         var copyTransactionIdImpl: (() -> Void)?
         super.init(
             context: context,
@@ -799,6 +811,9 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 },
                 openMessage: { messageId in
                     openMessageImpl?(messageId)
+                },
+                openMedia: { media, transitionNode, addToTransitionSurface in
+                    openMediaImpl?(media, transitionNode, addToTransitionSurface)
                 },
                 copyTransactionId: {
                     copyTransactionIdImpl?()
@@ -844,6 +859,47 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                     context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
                 }
             })
+        }
+        
+        openMediaImpl = { [weak self] media, transitionNode, addToTransitionSurface in
+            guard let self else {
+                return
+            }
+        
+            let message = Message(
+                stableId: 0,
+                stableVersion: 0,
+                id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(0)), namespace: Namespaces.Message.Local, id: 0),
+                globallyUniqueId: 0,
+                groupingKey: nil,
+                groupInfo: nil,
+                threadId: nil,
+                timestamp: 0,
+                flags: [],
+                tags: [],
+                globalTags: [],
+                localTags: [],
+                customTags: [],
+                forwardInfo: nil,
+                author: nil,
+                text: "",
+                attributes: [],
+                media: [TelegramMediaPaidContent(amount: 0, extendedMedia: media.map { .full(media: $0) })],
+                peers: SimpleDictionary(),
+                associatedMessages: SimpleDictionary(),
+                associatedMessageIds: [],
+                associatedMedia: [:],
+                associatedThreadInfo: nil,
+                associatedStories: [:]
+            )
+            let gallery = GalleryController(context: self.context, source: .standaloneMessage(message, 0), replaceRootController: { _, _ in
+            }, baseNavigationController: nil)
+            self.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
+                if let transitionNode = transitionNode(media) {
+                    return GalleryTransitionArguments(transitionNode: transitionNode, addToTransitionSurface: addToTransitionSurface)
+                }
+                return nil
+            }))
         }
         
         copyTransactionIdImpl = { [weak self] in

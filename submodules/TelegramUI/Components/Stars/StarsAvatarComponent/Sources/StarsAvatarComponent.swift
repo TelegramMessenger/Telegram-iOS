@@ -59,7 +59,7 @@ public final class StarsAvatarComponent: Component {
         private var imageFrameNode: UIView?
         private var secondImageNode: TransformImageNode?
         
-        private let fetchDisposable = MetaDisposable()
+        private let fetchDisposable = DisposableSet()
         
         private var component: StarsAvatarComponent?
         private weak var state: EmptyComponentState?
@@ -98,24 +98,30 @@ public final class StarsAvatarComponent: Component {
             case let .peer(peer):
                 if !component.media.isEmpty {
                     let imageNode: TransformImageNode
+                    var isFirstTime = false
                     if let current = self.imageNode {
                         imageNode = current
                     } else {
+                        isFirstTime = true
                         imageNode = TransformImageNode()
                         imageNode.contentAnimations = [.subsequentUpdates]
                         self.addSubview(imageNode.view)
                         self.imageNode = imageNode
-                        
-                        if let image = component.media.first as? TelegramMediaImage {
-                            if let imageDimensions = largestImageRepresentation(image.representations)?.dimensions {
-                                dimensions = imageDimensions.cgSize.aspectFilled(size)
-                            }
+                    }
+                    
+                    if let image = component.media.first as? TelegramMediaImage {
+                        if let imageDimensions = largestImageRepresentation(image.representations)?.dimensions {
+                            dimensions = imageDimensions.cgSize.aspectFilled(size)
+                        }
+                        if isFirstTime {
                             imageNode.setSignal(chatMessagePhotoThumbnail(account: component.context.account, userLocation: .other, photoReference: .standalone(media: image), onlyFullSize: false, blurred: false))
-                            self.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: component.context, userLocation: .other, photoReference: .standalone(media: image), displayAtSize: nil, storeToDownloadsPeerId: nil).startStrict())
-                        } else if let file = component.media.first as? TelegramMediaFile {
-                            if let videoDimensions = file.dimensions {
-                                dimensions = videoDimensions.cgSize.aspectFilled(size)
-                            }
+                            self.fetchDisposable.add(chatMessagePhotoInteractiveFetched(context: component.context, userLocation: .other, photoReference: .standalone(media: image), displayAtSize: nil, storeToDownloadsPeerId: nil).startStrict())
+                        }
+                    } else if let file = component.media.first as? TelegramMediaFile {
+                        if let videoDimensions = file.dimensions {
+                            dimensions = videoDimensions.cgSize.aspectFilled(size)
+                        }
+                        if isFirstTime {
                             imageNode.setSignal(mediaGridMessageVideo(postbox: component.context.account.postbox, userLocation: .other, videoReference: .standalone(media: file), autoFetchFullSizeThumbnail: true))
                         }
                     }
@@ -130,10 +136,13 @@ public final class StarsAvatarComponent: Component {
                     if component.media.count > 1 {
                         let secondImageNode: TransformImageNode
                         let imageFrameNode: UIView
+                        var secondDimensions = size
+                        var isFirstTime = false
                         if let current = self.secondImageNode, let currentFrame = self.imageFrameNode {
                             secondImageNode = current
                             imageFrameNode = currentFrame
                         } else {
+                            isFirstTime = true
                             secondImageNode = TransformImageNode()
                             secondImageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
                             self.insertSubview(secondImageNode.view, belowSubview: imageNode.view)
@@ -143,21 +152,27 @@ public final class StarsAvatarComponent: Component {
                             imageFrameNode.layer.cornerRadius = 8.0
                             self.insertSubview(imageFrameNode, belowSubview: imageNode.view)
                             self.imageFrameNode = imageFrameNode
-                            
-                            if let image = component.media[1] as? TelegramMediaImage {
-                                if let imageDimensions = largestImageRepresentation(image.representations)?.dimensions {
-                                    dimensions = imageDimensions.cgSize.aspectFilled(size)
-                                }
+                        }
+                        
+                        if let image = component.media[1] as? TelegramMediaImage {
+                            if let imageDimensions = largestImageRepresentation(image.representations)?.dimensions {
+                                secondDimensions = imageDimensions.cgSize.aspectFilled(size)
+                            }
+                            if isFirstTime {
                                 secondImageNode.setSignal(chatMessagePhotoThumbnail(account: component.context.account, userLocation: .other, photoReference: .standalone(media: image), onlyFullSize: false, blurred: false))
-                            } else if let file = component.media[1] as? TelegramMediaFile {
-                                if let videoDimensions = file.dimensions {
-                                    dimensions = videoDimensions.cgSize.aspectFilled(size)
-                                }
+                                self.fetchDisposable.add(chatMessagePhotoInteractiveFetched(context: component.context, userLocation: .other, photoReference: .standalone(media: image), displayAtSize: nil, storeToDownloadsPeerId: nil).startStrict())
+                            }
+                        } else if let file = component.media[1] as? TelegramMediaFile {
+                            if let videoDimensions = file.dimensions {
+                                secondDimensions = videoDimensions.cgSize.aspectFilled(size)
+                            }
+                            if isFirstTime {
                                 secondImageNode.setSignal(mediaGridMessageVideo(postbox: component.context.account.postbox, userLocation: .other, videoReference: .standalone(media: file), useLargeThumbnail: true, autoFetchFullSizeThumbnail: true))
                             }
                         }
+                        
                         imageFrameNode.backgroundColor = component.backgroundColor
-                        secondImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 8.0), imageSize: dimensions, boundingSize: size, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
+                        secondImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 8.0), imageSize: secondDimensions, boundingSize: size, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
                         secondImageNode.frame = imageFrame.offsetBy(dx: 4.0, dy: -4.0)
                         imageFrameNode.frame = imageFrame.insetBy(dx: -1.0 - UIScreenPixel, dy: -1.0 - UIScreenPixel)
                     }
@@ -176,7 +191,7 @@ public final class StarsAvatarComponent: Component {
                         self.imageNode = imageNode
                         
                         imageNode.setSignal(chatWebFileImage(account: component.context.account, file: photo))
-                        self.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: component.context.account, userLocation: .other, image: photo).startStrict())
+                        self.fetchDisposable.add(chatMessageWebFileInteractiveFetched(account: component.context.account, userLocation: .other, image: photo).startStrict())
                     }
                                     
                     imageNode.frame = CGRect(origin: .zero, size: size)

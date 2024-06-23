@@ -119,7 +119,18 @@ public class UniversalVideoGalleryItem: GalleryItem {
             return nil
         }
         if case let .message(message) = contentInfo {
-            if let id = message.groupInfo?.stableId {
+            if let paidContent = message.paidContent {
+                var mediaReference: AnyMediaReference?
+                let mediaIndex = 0//self.mediaIndex ?? 0
+                if case let .full(fullMedia) = paidContent.extendedMedia[Int(mediaIndex)], let m = fullMedia as? TelegramMediaFile {
+                    mediaReference = .message(message: MessageReference(message), media: m)
+                }
+                if let mediaReference = mediaReference {
+                    if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, userLocation: .peer(message.id.peerId), mediaReference: mediaReference) {
+                        return (0, item)
+                    }
+                }
+            } else if let id = message.groupInfo?.stableId {
                 var mediaReference: AnyMediaReference?
                 for m in message.media {
                     if let m = m as? TelegramMediaImage {

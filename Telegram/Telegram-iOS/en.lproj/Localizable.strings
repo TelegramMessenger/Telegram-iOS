@@ -12364,7 +12364,7 @@ Sorry for the inconvenience.";
 "Stars.BotRevenue.Withdraw.WithdrawShort" = "Withdraw";
 "Stars.BotRevenue.Withdraw.BuyAds" = "Buy Ads";
 "Stars.BotRevenue.Withdraw.Info" = "You can collect rewards for Stars using Fragment, or use Stars to advertise your bot. [Learn More >]()";
-"Stars.BotRevenue.Withdraw.Info_URL" = "https://telegram.org/tos";
+"Stars.BotRevenue.Withdraw.Info_URL" = "https://telegram.org/tos/bot-developers#6-2-2-tpa-balance";
 
 "Stars.BotRevenue.Transactions.Title" = "Transaction History";
 
@@ -12383,7 +12383,7 @@ Sorry for the inconvenience.";
 "Stars.PaidContent.AmountTitle" = "ENTER UNLOCK COST";
 "Stars.PaidContent.AmountPlaceholder" = "Stars to Unlock";
 "Stars.PaidContent.AmountInfo" = "Users will have to transfer this amount of Stars to your channel in order to view this media.\n[More about Stars >]()";
-"Stars.PaidContent.AmountInfo_URL" = "https://telegram.org";
+"Stars.PaidContent.AmountInfo_URL" = "https://telegram.org/tos/stars";
 "Stars.PaidContent.Create" = "Make This Media Paid";
 
 "MediaEditor.AddLink" = "LINK";

@@ -817,7 +817,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         self.currentMessage = message
         
         var displayInfo = displayInfo
-        if Namespaces.Message.allNonRegular.contains(message.id.namespace) {
+        if Namespaces.Message.allNonRegular.contains(message.id.namespace) || message.timestamp == 0 {
             displayInfo = false
         }
         
