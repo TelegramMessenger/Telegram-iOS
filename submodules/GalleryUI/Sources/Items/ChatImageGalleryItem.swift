@@ -91,6 +91,8 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
             case let .video(fileReference):
                 if let representation = largestImageRepresentation(fileReference.media.previewRepresentations) {
                     return (mediaGridMessageVideo(postbox: self.account.postbox, userLocation: self.userLocation, videoReference: fileReference), representation.dimensions.cgSize)
+                } else if let dimensions = fileReference.media.dimensions {
+                    return (mediaGridMessageVideo(postbox: self.account.postbox, userLocation: self.userLocation, videoReference: fileReference), dimensions.cgSize)
                 } else {
                     return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
                 }
