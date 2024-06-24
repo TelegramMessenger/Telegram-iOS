@@ -209,8 +209,7 @@ final class StarsTransactionsListPanelComponent: Component {
                     switch item.peer {
                     case let .peer(peer):
                         if !item.media.isEmpty {
-                            //TODO:localize
-                            itemTitle = "Media Purchase"
+                            itemTitle = environment.strings.Stars_Intro_Transaction_MediaPurchase
                             itemSubtitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                         } else if let title = item.title {
                             itemTitle = title
@@ -237,8 +236,8 @@ final class StarsTransactionsListPanelComponent: Component {
                         itemTitle = environment.strings.Stars_Intro_Transaction_PremiumBotTopUp_Title
                         itemSubtitle = environment.strings.Stars_Intro_Transaction_PremiumBotTopUp_Subtitle
                     case .ads:
-                        itemTitle = "Withdrawal"
-                        itemSubtitle = "via Telegram Ads"
+                        itemTitle = environment.strings.Stars_Intro_Transaction_TelegramAds_Title
+                        itemSubtitle = environment.strings.Stars_Intro_Transaction_TelegramAds_Subtitle
                     case .unsupported:
                         itemTitle = environment.strings.Stars_Intro_Transaction_Unsupported_Title
                         itemSubtitle = nil

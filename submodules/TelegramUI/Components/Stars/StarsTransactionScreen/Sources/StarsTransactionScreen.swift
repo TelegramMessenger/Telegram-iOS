@@ -216,17 +216,16 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         via = strings.Stars_Transaction_FragmentWithdrawal_Subtitle
                     }
                 case .ads:
-                    //TODO:localize
-                    titleText = "Stars Withdrawal"
-                    via = "Telegram Ads"
+                    titleText = strings.Stars_Transaction_TelegramAds_Title
+                    via = strings.Stars_Transaction_TelegramAds_Subtitle
                 case .unsupported:
                     titleText = strings.Stars_Transaction_Unsupported_Title
                     via = nil
                 }
                 if !transaction.media.isEmpty {
                     var description: String = ""
-                    var photoCount: Int = 0
-                    var videoCount: Int = 0
+                    var photoCount: Int32 = 0
+                    var videoCount: Int32 = 0
                     for media in transaction.media {
                         if let _ = media as? TelegramMediaFile {
                             videoCount += 1
@@ -234,33 +233,22 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                             photoCount += 1
                         }
                     }
-                    //TODO:localize
                     if photoCount > 0 && videoCount > 0 {
-                        if photoCount > 1 {
-                            description += "\(photoCount) photos**"
-                        } else {
-                            description += "**\(photoCount) photo**"
-                        }
-                        description += " and "
-                        if videoCount > 1 {
-                            description += "**\(videoCount) videos**"
-                        } else {
-                            description += "**\(videoCount) video**"
-                        }
+                        description += strings.Stars_Transaction_MediaAnd(strings.Stars_Transaction_Photos(photoCount), strings.Stars_Transaction_Videos(videoCount)).string
                     } else if photoCount > 0 {
                         if photoCount > 1 {
-                            description += "**\(photoCount) photos**"
+                            description += strings.Stars_Transaction_Photos(photoCount)
                         } else {
-                            description += "**Photo**"
+                            description += strings.Stars_Transaction_SinglePhoto
                         }
                     } else if videoCount > 0 {
                         if videoCount > 1 {
-                            description += "**\(videoCount) videos**"
+                            description += strings.Stars_Transaction_Videos(videoCount)
                         } else {
-                            description += "**Video**"
+                            description += strings.Stars_Transaction_SingleVideo
                         }
                     }
-                    descriptionText = description.replacingOccurrences(of: "**", with: "")
+                    descriptionText = description
                 } else {
                     descriptionText = transaction.description ?? ""
                 }
@@ -416,7 +404,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             }
             
             if let messageId {
-                //TODO:localize
                 let peerName: String
                 if case let .transaction(_, parentPeer) = component.subject {
                     if parentPeer.id == component.context.account.peerId {
@@ -432,7 +419,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     peerName = ""
                 }
                 tableItems.append(.init(
-                    id: "via",
+                    id: "media",
                     title: strings.Stars_Transaction_Media,
                     component: AnyComponent(
                         Button(

@@ -905,7 +905,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     switch extendedMedia {
                         case .preview:
                             if displayVoiceMessageDiscardAlert() {
-                                strongSelf.controllerInteraction?.openCheckoutOrReceipt(message.id)
+                                strongSelf.controllerInteraction?.openCheckoutOrReceipt(message.id, params)
                                 return true
                             } else {
                                 return false
@@ -917,7 +917,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     switch extendedMedia {
                         case .preview:
                             if displayVoiceMessageDiscardAlert() {
-                                strongSelf.controllerInteraction?.openCheckoutOrReceipt(message.id)
+                                strongSelf.controllerInteraction?.openCheckoutOrReceipt(message.id, nil)
                                 return true
                             } else {
                                 return false
@@ -2586,7 +2586,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let self {
                 self.openLinkLongTap(action, params: params)
             }
-        }, openCheckoutOrReceipt: { [weak self] messageId in
+        }, openCheckoutOrReceipt: { [weak self] messageId, params in
             guard let strongSelf = self else {
                 return
             }
@@ -2610,6 +2610,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 for media in message.media {
                     if let paidContent = media as? TelegramMediaPaidContent {
+                        let progressSignal = Signal<Never, NoError> { _ in
+                            params?.progress?.set(.single(true))
+                            return ActionDisposable {
+                                params?.progress?.set(.single(false))
+                            }
+                        }
+                        |> runOn(Queue.mainQueue())
+                        |> delay(0.25, queue: Queue.mainQueue())
+                        let progressDisposable = progressSignal.startStrict()
+                        
                         strongSelf.chatDisplayNode.dismissInput()
                         let inputData = Promise<BotCheckoutController.InputData?>()
                         inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, source: .message(message.id))
@@ -2636,6 +2646,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 let invoice = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: paidContent.amount, startParam: "", extendedMedia: .preview(dimensions:dimensions, immediateThumbnailData: immediateThumbnailData, videoDuration: nil), flags: [], version: 0)
                                 let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .message(messageId), extendedMedia: paidContent.extendedMedia, inputData: starsInputData, completion: { _ in })
                                 strongSelf.push(controller)
+                                
+                                progressDisposable.dispose()
                             })
                         }
                     } else if let invoice = media as? TelegramMediaInvoice {

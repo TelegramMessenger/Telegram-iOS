@@ -96,6 +96,8 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
                         return true
                     } else if let file = media as? TelegramMediaFile, file.isVideo {
                         return true
+                    } else if media is TelegramMediaPaidContent {
+                        return true
                     }
                     return false
                 })

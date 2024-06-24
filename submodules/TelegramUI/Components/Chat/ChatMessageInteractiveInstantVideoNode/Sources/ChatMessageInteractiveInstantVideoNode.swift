@@ -473,7 +473,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 updatedPlaybackStatus = combineLatest(messageFileMediaResourceStatus(context: item.context, file: updatedFile, message: EngineMessage(item.message), isRecentActions: item.associatedData.isRecentActions), item.context.account.pendingMessageManager.pendingMessageStatus(item.message.id) |> map { $0.0 })
                 |> map { resourceStatus, pendingStatus -> FileMediaResourceStatus in
                     if let pendingStatus = pendingStatus {
-                        var progress = pendingStatus.progress
+                        var progress = pendingStatus.progress.progress
                         if pendingStatus.isRunning {
                             progress = max(progress, 0.27)
                         }

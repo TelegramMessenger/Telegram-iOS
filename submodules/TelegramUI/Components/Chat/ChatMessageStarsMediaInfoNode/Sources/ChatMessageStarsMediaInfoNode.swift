@@ -239,9 +239,12 @@ public class ChatMessageStarsMediaInfoNode: ASDisplayNode {
             } else {
                 text = NSMutableAttributedString(string: "Purchased", font: textFont, textColor: .white)
             }
+            
+            var offset: CGFloat = 0.0
             if let range = text.string.range(of: "⭐️") {
                 text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: true)), range: NSRange(range, in: text.string))
                 text.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: text.string))
+                offset -= 1.0
             }
             
             let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: text, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: arguments.constrainedSize.width, height: arguments.constrainedSize.height), alignment: .natural, cutout: nil, insets: .zero))
@@ -278,7 +281,7 @@ public class ChatMessageStarsMediaInfoNode: ASDisplayNode {
                 
                 node.contentBackgroundNode.frame = CGRect(origin: .zero, size: size)
                 
-                let textFrame = CGRect(origin: CGPoint(x: padding, y: floorToScreenPixels((size.height - textLayout.size.height) / 2.0) + UIScreenPixel), size: textLayout.size)
+                let textFrame = CGRect(origin: CGPoint(x: padding + offset, y: floorToScreenPixels((size.height - textLayout.size.height) / 2.0) + UIScreenPixel), size: textLayout.size)
                 textNode.textNode.frame = textFrame
                                  
                 return node

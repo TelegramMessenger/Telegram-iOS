@@ -254,8 +254,8 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                         itemTitle = item.presentationData.strings.Stars_Intro_Transaction_PremiumBotTopUp_Title
                         itemSubtitle = item.presentationData.strings.Stars_Intro_Transaction_PremiumBotTopUp_Subtitle
                     case .ads:
-                        itemTitle = "Withdrawal"
-                        itemSubtitle = "via Telegram Ads"
+                        itemTitle = item.presentationData.strings.Stars_Intro_Transaction_TelegramAds_Title
+                        itemSubtitle = item.presentationData.strings.Stars_Intro_Transaction_TelegramAds_Subtitle
                     case .unsupported:
                         itemTitle = item.presentationData.strings.Stars_Intro_Transaction_Unsupported_Title
                         itemSubtitle = nil

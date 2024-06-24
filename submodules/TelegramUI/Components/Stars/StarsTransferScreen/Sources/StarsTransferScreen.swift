@@ -335,10 +335,9 @@ private final class SheetContent: CombinedComponent {
             let amount = component.invoice.totalAmount
             let infoText: String
             if !component.extendedMedia.isEmpty {
-                //TODO:localize
                 var description: String = ""
-                var photoCount: Int = 0
-                var videoCount: Int = 0
+                var photoCount: Int32 = 0
+                var videoCount: Int32 = 0
                 for media in component.extendedMedia {
                     if case let .preview(_, _, videoDuration) = media, videoDuration != nil {
                         videoCount += 1
@@ -347,28 +346,18 @@ private final class SheetContent: CombinedComponent {
                     }
                 }
                 if photoCount > 0 && videoCount > 0 {
-                    if photoCount > 1 {
-                        description += "**\(photoCount) photos**"
-                    } else {
-                        description += "**\(photoCount) photo**"
-                    }
-                    description += " and "
-                    if videoCount > 1 {
-                        description += "**\(videoCount) videos**"
-                    } else {
-                        description += "**\(videoCount) video**"
-                    }
+                    description = strings.Stars_Transfer_MediaAnd("**\(strings.Stars_Transfer_Photos(photoCount))**", "**\(strings.Stars_Transfer_Videos(videoCount))**").string
                 } else if photoCount > 0 {
                     if photoCount > 1 {
-                        description += "**\(photoCount) photos**"
+                        description += "**\(strings.Stars_Transfer_Photos(photoCount))**"
                     } else {
-                        description += "**photo**"
+                        description += "**\(strings.Stars_Transfer_SinglePhoto)**"
                     }
                 } else if videoCount > 0 {
                     if videoCount > 1 {
-                        description += "**\(videoCount) videos**"
+                        description += "**\(strings.Stars_Transfer_Videos(videoCount))**"
                     } else {
-                        description += "**video**"
+                        description += "**\(strings.Stars_Transfer_SingleVideo)**"
                     }
                 }
                 infoText = strings.Stars_Transfer_UnlockInfo(

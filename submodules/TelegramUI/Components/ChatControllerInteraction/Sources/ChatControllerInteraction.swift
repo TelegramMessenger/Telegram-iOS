@@ -207,7 +207,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let presentGlobalOverlayController: (ViewController, Any?) -> Void
     public let callPeer: (PeerId, Bool) -> Void
     public let longTap: (ChatControllerInteractionLongTapAction, LongTapParams?) -> Void
-    public let openCheckoutOrReceipt: (MessageId) -> Void
+    public let openCheckoutOrReceipt: (MessageId, OpenMessageParams?) -> Void
     public let openSearch: () -> Void
     public let setupReply: (MessageId) -> Void
     public let canSetupReply: (Message) -> ChatControllerInteractionSwipeAction
@@ -336,7 +336,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void,
         callPeer: @escaping (PeerId, Bool) -> Void,
         longTap: @escaping (ChatControllerInteractionLongTapAction, LongTapParams?) -> Void,
-        openCheckoutOrReceipt: @escaping (MessageId) -> Void,
+        openCheckoutOrReceipt: @escaping (MessageId, OpenMessageParams?) -> Void,
         openSearch: @escaping () -> Void,
         setupReply: @escaping (MessageId) -> Void,
         canSetupReply: @escaping (Message) -> ChatControllerInteractionSwipeAction,

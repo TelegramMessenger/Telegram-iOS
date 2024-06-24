@@ -1077,7 +1077,7 @@ private final class DemoSheetContent: CombinedComponent {
                         )
                     )
                 )
-                //TODO:localize
+                
                 availableItems[.messageEffects] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
                         id: PremiumDemoScreen.Subject.messageEffects,
@@ -1193,8 +1193,7 @@ private final class DemoSheetContent: CombinedComponent {
             case .folderTags:
                 text = strings.Premium_FolderTagsStandaloneInfo
             case .messageEffects:
-                //TODO:localize
-                text = "Add over 500 animated effects to private messages."
+                text = strings.Premium_MessageEffectsInfo
             default:
                 text = ""
             }

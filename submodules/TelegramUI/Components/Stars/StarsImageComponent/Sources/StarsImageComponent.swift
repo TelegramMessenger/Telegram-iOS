@@ -720,12 +720,15 @@ public final class StarsImageComponent: Component {
                         iconView.image = UIImage(bundleImageName: "Premium/Stars/Fragment")
                         iconOffset = 5.0
                     case .ads:
-                        iconBackgroundView.image = generateFilledCircleImage(
+                        iconBackgroundView.image = generateGradientFilledCircleImage(
                             diameter: imageSize.width,
-                            color: UIColor(rgb: 0x1b1f24)
+                            colors: [
+                                UIColor(rgb: 0xffa85c).cgColor,
+                                UIColor(rgb: 0xffcd6a).cgColor
+                            ],
+                            direction: .mirroredDiagonal
                         )
-                        iconView.image = UIImage(bundleImageName: "Premium/Stars/Fragment")
-                        iconOffset = 5.0
+                        iconView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white)
                     case .premiumBot:
                         iconInset = 15.0
                         iconBackgroundView.image = generateGradientFilledCircleImage(

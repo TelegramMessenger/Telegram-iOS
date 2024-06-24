@@ -12266,6 +12266,8 @@ Sorry for the inconvenience.";
 "Stars.Intro.Transaction.FragmentTopUp.Subtitle" = "via Fragment";
 "Stars.Intro.Transaction.FragmentWithdrawal.Title" = "Withdrawal";
 "Stars.Intro.Transaction.FragmentWithdrawal.Subtitle" = "via Fragment";
+"Stars.Intro.Transaction.TelegramAds.Title" = "Withdrawal";
+"Stars.Intro.Transaction.TelegramAds.Subtitle" = "via Telegram Ads";
 "Stars.Intro.Transaction.Unsupported.Title" = "Unsupported";
 "Stars.Intro.Transaction.Refund" = "Refund";
 
@@ -12310,8 +12312,18 @@ Sorry for the inconvenience.";
 "Stars.Transaction.FragmentTopUp.Subtitle" = "Fragment";
 "Stars.Transaction.FragmentWithdrawal.Title" = "Stars Withdrawal";
 "Stars.Transaction.FragmentWithdrawal.Subtitle" = "Fragment";
+"Stars.Transaction.TelegramAds.Title" = "Stars Withdrawal";
+"Stars.Transaction.TelegramAds.Subtitle" = "Telegram Ads";
 "Stars.Transaction.Unsupported.Title" = "Unsupported";
 "Stars.Transaction.Refund" = "Refund";
+
+"Stars.Transaction.Photos_1" = "%@ Photo";
+"Stars.Transaction.Photos_any" = "%@ Photos";
+"Stars.Transaction.Videos_1" = "%@ Video";
+"Stars.Transaction.Videos_any" = "%@ Videos";
+"Stars.Transaction.SinglePhoto" = "Photo";
+"Stars.Transaction.SingleVideo" = "Video";
+"Stars.Transaction.MediaAnd" = "%1$@ and %2$@";
 
 "Stars.Transfer.Title" = "Confirm Your Purchase";
 "Stars.Transfer.Info" = "Do you want to buy **%1$@** in **%2$@** for **%3$@**?";
@@ -12328,6 +12340,14 @@ Sorry for the inconvenience.";
 "Stars.Transfer.Balance" = "Balance";
 
 "Stars.Transfer.Unavailable" = "Sorry, no star purchases are available from your country.";
+
+"Stars.Transfer.Photos_1" = "%@ photo";
+"Stars.Transfer.Photos_any" = "%@ photos";
+"Stars.Transfer.Videos_1" = "%@ video";
+"Stars.Transfer.Videos_any" = "%@ videos";
+"Stars.Transfer.SinglePhoto" = "photo";
+"Stars.Transfer.SingleVideo" = "video";
+"Stars.Transfer.MediaAnd" = "%1$@ and %2$@";
 
 "Settings.Stars" = "Your Stars";
 

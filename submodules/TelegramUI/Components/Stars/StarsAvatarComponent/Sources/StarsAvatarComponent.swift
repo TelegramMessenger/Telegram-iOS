@@ -245,12 +245,18 @@ public final class StarsAvatarComponent: Component {
                 self.iconView.image = UIImage(bundleImageName: "Premium/Stars/Fragment")
                 iconOffset = 2.0
             case .ads:
-                self.backgroundView.image = generateFilledCircleImage(diameter: size.width, color: UIColor(rgb: 0x1b1f24))
+                self.backgroundView.image = generateGradientFilledCircleImage(
+                    diameter: size.width,
+                    colors: [
+                        UIColor(rgb: 0xffa85c).cgColor,
+                        UIColor(rgb: 0xffcd6a).cgColor
+                    ],
+                    direction: .mirroredDiagonal
+                )
                 self.backgroundView.isHidden = false
                 self.iconView.isHidden = false
                 self.avatarNode.isHidden = true
-                self.iconView.image = UIImage(bundleImageName: "Premium/Stars/Fragment")
-                iconOffset = 2.0
+                self.iconView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white)
             case .premiumBot:
                 iconInset = 7.0
                 self.backgroundView.image = generateGradientFilledCircleImage(

@@ -1475,7 +1475,11 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 updatedStatusSignal = combineLatest(chatMessagePhotoStatus(context: context, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image)), context.account.pendingMessageManager.pendingMessageStatus(message.id) |> map { $0.0 })
                                 |> map { resourceStatus, pendingStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                     if let pendingStatus = pendingStatus {
-                                        let adjustedProgress = max(pendingStatus.progress, 0.027)
+                                        var progress: Float = pendingStatus.progress.progress
+                                        if let id = media.id, let mediaProgress = pendingStatus.progress.mediaProgress[id] {
+                                            progress = mediaProgress
+                                        }
+                                        let adjustedProgress = max(progress, 0.027)
                                         return (.Fetching(isActive: pendingStatus.isRunning, progress: adjustedProgress), resourceStatus)
                                     } else {
                                         return (resourceStatus, nil)
@@ -1491,7 +1495,11 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             updatedStatusSignal = combineLatest(messageMediaFileStatus(context: context, messageId: message.id, file: file, adjustForVideoThumbnail: true), context.account.pendingMessageManager.pendingMessageStatus(message.id) |> map { $0.0 })
                                 |> map { resourceStatus, pendingStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                     if let pendingStatus = pendingStatus {
-                                        let adjustedProgress = max(pendingStatus.progress, 0.027)
+                                        var progress: Float = pendingStatus.progress.progress
+                                        if let id = media.id, let mediaProgress = pendingStatus.progress.mediaProgress[id] {
+                                            progress = mediaProgress
+                                        }
+                                        let adjustedProgress = max(progress, 0.027)
                                         return (.Fetching(isActive: pendingStatus.isRunning, progress: adjustedProgress), resourceStatus)
                                     } else {
                                         return (resourceStatus, nil)

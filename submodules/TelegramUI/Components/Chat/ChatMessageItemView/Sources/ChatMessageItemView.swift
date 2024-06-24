@@ -847,7 +847,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                         item.controllerInteraction.activateSwitchInline(peerId, "@\(addressName) \(query)", peerTypes)
                     }
                 case .payment:
-                    item.controllerInteraction.openCheckoutOrReceipt(item.message.id)
+                    item.controllerInteraction.openCheckoutOrReceipt(item.message.id, nil)
                 case let .urlAuth(url, buttonId):
                     item.controllerInteraction.requestMessageActionUrlAuth(url, .message(id: item.message.id, buttonId: buttonId))
                 case .setupPoll:
@@ -879,6 +879,10 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     }
     
     open func openMessageContextMenu() {
+    }
+    
+    open func makeProgress() -> Promise<Bool>? {
+        return nil
     }
     
     open func targetReactionView(value: MessageReaction.Reaction) -> UIView? {

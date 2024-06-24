@@ -955,7 +955,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                             controllerInteraction.activateSwitchInline(peerId, "@\(addressName) \(query)", peerTypes)
                         }
                     case .payment:
-                        controllerInteraction.openCheckoutOrReceipt(message.id)
+                        controllerInteraction.openCheckoutOrReceipt(message.id, nil)
                     case let .urlAuth(url, buttonId):
                         controllerInteraction.requestMessageActionUrlAuth(url, .message(id: message.id, buttonId: buttonId))
                     case .setupPoll:
