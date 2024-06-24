@@ -398,6 +398,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 } else {
                     let contentMode: InteractiveMediaNodeContentMode = contentMediaAspectFilled ? .aspectFill : .aspectFit
                     
+                    let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: contentMediaValue)
+                    
                     let (_, initialImageWidth, refineLayout) = makeContentMedia(
                         context,
                         presentationData,
@@ -406,7 +408,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         attributes,
                         contentMediaValue,
                         nil,
-                        .full,
+                        automaticDownload ? .full : .none,
                         associatedData.automaticDownloadPeerType,
                         associatedData.automaticDownloadPeerId,
                         .constrained(CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height)),

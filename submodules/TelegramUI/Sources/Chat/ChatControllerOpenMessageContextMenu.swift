@@ -71,6 +71,13 @@ extension ChatControllerImpl {
                 case .custom, .twoLists:
                     break
                 }
+                
+                var allowedReactions = allowedReactions
+                if allowedReactions != nil, case let .customChatContents(customChatContents) = self.presentationInterfaceState.subject {
+                    if case let .hashTagSearch(publicPosts) = customChatContents.kind, publicPosts {
+                        allowedReactions = nil
+                    }
+                }
 
                 var tip: ContextController.Tip?
                 

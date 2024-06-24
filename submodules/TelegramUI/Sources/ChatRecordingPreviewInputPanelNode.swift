@@ -20,7 +20,8 @@ import TelegramNotices
 import ComponentFlow
 import MediaScrubberComponent
 
-#if swift(>=6.0)
+//Xcode 16
+#if canImport(ContactProvider)
 extension AudioWaveformNode: @retroactive CustomMediaPlayerScrubbingForegroundNode {
 }
 #else

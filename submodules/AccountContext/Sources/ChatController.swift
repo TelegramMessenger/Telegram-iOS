@@ -34,6 +34,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let automaticDownloadPeerType: MediaAutoDownloadPeerType
     public let automaticDownloadPeerId: EnginePeer.Id?
     public let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
+    public let preferredStoryHighQuality: Bool
     public let isRecentActions: Bool
     public let subject: ChatControllerSubject?
     public let contactsPeerIds: Set<EnginePeer.Id>
@@ -66,6 +67,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         automaticDownloadPeerType: MediaAutoDownloadPeerType,
         automaticDownloadPeerId: EnginePeer.Id?,
         automaticDownloadNetworkType: MediaAutoDownloadNetworkType,
+        preferredStoryHighQuality: Bool = false,
         isRecentActions: Bool = false,
         subject: ChatControllerSubject? = nil,
         contactsPeerIds: Set<EnginePeer.Id> = Set(),
@@ -97,6 +99,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadPeerId = automaticDownloadPeerId
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
+        self.preferredStoryHighQuality = preferredStoryHighQuality
         self.isRecentActions = isRecentActions
         self.subject = subject
         self.contactsPeerIds = contactsPeerIds
@@ -134,6 +137,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.automaticDownloadNetworkType != rhs.automaticDownloadNetworkType {
+            return false
+        }
+        if lhs.preferredStoryHighQuality != rhs.preferredStoryHighQuality {
             return false
         }
         if lhs.isRecentActions != rhs.isRecentActions {

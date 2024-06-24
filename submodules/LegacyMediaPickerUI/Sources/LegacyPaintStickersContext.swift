@@ -610,7 +610,8 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
     }
 }
 
-#if swift(>=6.0)
+//Xcode 16
+#if canImport(ContactProvider)
 extension SolidRoundedButtonView: @retroactive TGPhotoSolidRoundedButtonView {
     public func updateWidth(_ width: CGFloat) {
         let _ = self.updateLayout(width: width, transition: .immediate)

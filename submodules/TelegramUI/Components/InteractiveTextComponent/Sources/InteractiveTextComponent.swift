@@ -1562,51 +1562,53 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         }
         
         if remainingLines <= 0, let lastSegment = calculatedSegments.last, let lastLine = lastSegment.lines.last, !lastLine.isTruncated, let lineRange = lastLine.range, let lineFont = attributedString.attribute(.font, at: lineRange.lowerBound, effectiveRange: nil) as? UIFont {
-            let truncatedTokenString: NSAttributedString
-            if let customTruncationTokenValue = customTruncationToken?(lineFont, lastSegment.blockQuote != nil) {
-                if lineRange.length == 0 && customTruncationTokenValue.string.hasPrefix("\u{2026} ") {
-                    truncatedTokenString = customTruncationTokenValue.attributedSubstring(from: NSRange(location: 2, length: customTruncationTokenValue.length - 2))
+            if let range = lastLine.range, range.upperBound != attributedString.length {
+                let truncatedTokenString: NSAttributedString
+                if let customTruncationTokenValue = customTruncationToken?(lineFont, lastSegment.blockQuote != nil) {
+                    if lineRange.length == 0 && customTruncationTokenValue.string.hasPrefix("\u{2026} ") {
+                        truncatedTokenString = customTruncationTokenValue.attributedSubstring(from: NSRange(location: 2, length: customTruncationTokenValue.length - 2))
+                    } else {
+                        truncatedTokenString = customTruncationTokenValue
+                    }
                 } else {
-                    truncatedTokenString = customTruncationTokenValue
+                    var truncationTokenAttributes: [NSAttributedString.Key : AnyObject] = [:]
+                    truncationTokenAttributes[NSAttributedString.Key.font] = lineFont
+                    truncationTokenAttributes[NSAttributedString.Key(rawValue:  kCTForegroundColorFromContextAttributeName as String)] = true as NSNumber
+                    let tokenString = "\u{2026}"
+                    
+                    truncatedTokenString = NSAttributedString(string: tokenString, attributes: truncationTokenAttributes)
                 }
-            } else {
-                var truncationTokenAttributes: [NSAttributedString.Key : AnyObject] = [:]
-                truncationTokenAttributes[NSAttributedString.Key.font] = lineFont
-                truncationTokenAttributes[NSAttributedString.Key(rawValue:  kCTForegroundColorFromContextAttributeName as String)] = true as NSNumber
-                let tokenString = "\u{2026}"
                 
-                truncatedTokenString = NSAttributedString(string: tokenString, attributes: truncationTokenAttributes)
-            }
-            
-            let truncationToken = CTLineCreateWithAttributedString(truncatedTokenString)
-            
-            var truncationTokenAscent: CGFloat = 0.0
-            var truncationTokenDescent: CGFloat = 0.0
-            let truncationTokenWidth = CTLineGetTypographicBounds(truncationToken, &truncationTokenAscent, &truncationTokenDescent, nil)
-            
-            if let updatedLine = CTLineCreateTruncatedLine(lastLine.line, max(0.0, lastLine.constrainedWidth - truncationTokenWidth), .end, nil) {
-                var lineAscent: CGFloat = 0.0
-                var lineDescent: CGFloat = 0.0
-                var lineWidth = CTLineGetTypographicBounds(updatedLine, &lineAscent, &lineDescent, nil)
-                lineWidth = min(lineWidth, lastLine.constrainedWidth)
+                let truncationToken = CTLineCreateWithAttributedString(truncatedTokenString)
                 
-                lastSegment.lines[lastSegment.lines.count - 1] = InteractiveTextNodeLine(
-                    line: updatedLine,
-                    constrainedWidth: lastLine.constrainedWidth,
-                    frame: CGRect(origin: lastLine.frame.origin, size: CGSize(width: lineWidth, height: lineAscent + lineDescent)),
-                    intrinsicWidth: lineWidth,
-                    ascent: lineAscent,
-                    descent: lineDescent,
-                    range: lastLine.range,
-                    isTruncated: true,
-                    isRTL: lastLine.isRTL,
-                    strikethroughs: [],
-                    spoilers: [],
-                    spoilerWords: [],
-                    embeddedItems: [],
-                    attachments: [],
-                    additionalTrailingLine: (truncationToken, 0.0)
-                )
+                var truncationTokenAscent: CGFloat = 0.0
+                var truncationTokenDescent: CGFloat = 0.0
+                let truncationTokenWidth = CTLineGetTypographicBounds(truncationToken, &truncationTokenAscent, &truncationTokenDescent, nil)
+                
+                if let updatedLine = CTLineCreateTruncatedLine(lastLine.line, max(0.0, lastLine.constrainedWidth - truncationTokenWidth), .end, nil) {
+                    var lineAscent: CGFloat = 0.0
+                    var lineDescent: CGFloat = 0.0
+                    var lineWidth = CTLineGetTypographicBounds(updatedLine, &lineAscent, &lineDescent, nil)
+                    lineWidth = min(lineWidth, lastLine.constrainedWidth)
+                    
+                    lastSegment.lines[lastSegment.lines.count - 1] = InteractiveTextNodeLine(
+                        line: updatedLine,
+                        constrainedWidth: lastLine.constrainedWidth,
+                        frame: CGRect(origin: lastLine.frame.origin, size: CGSize(width: lineWidth, height: lineAscent + lineDescent)),
+                        intrinsicWidth: lineWidth,
+                        ascent: lineAscent,
+                        descent: lineDescent,
+                        range: lastLine.range,
+                        isTruncated: true,
+                        isRTL: lastLine.isRTL,
+                        strikethroughs: [],
+                        spoilers: [],
+                        spoilerWords: [],
+                        embeddedItems: [],
+                        attachments: [],
+                        additionalTrailingLine: (truncationToken, 0.0)
+                    )
+                }
             }
         }
         
@@ -2316,25 +2318,6 @@ final class TextContentItemLayer: SimpleLayer {
                             }
                         }
                     }
-                    
-                    /*if !line.strikethroughs.isEmpty {
-                        for strikethrough in line.strikethroughs {
-                            guard let lineRange = line.range else {
-                                continue
-                            }
-                            var textColor: UIColor?
-                            params.item.attributedString?.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
-                                if range == strikethrough.range, let color = attributes[NSAttributedString.Key.foregroundColor] as? UIColor {
-                                    textColor = color
-                                }
-                            }
-                            if let textColor = textColor {
-                                context.setFillColor(textColor.cgColor)
-                            }
-                            let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
-                            context.fill(CGRect(x: frame.minX, y: frame.minY - 5.0, width: frame.width, height: 1.0))
-                        }
-                    }*/
                     
                     if let (additionalTrailingLine, _) = line.additionalTrailingLine {
                         context.textPosition = CGPoint(x: lineFrame.minX + line.intrinsicWidth, y: lineFrame.maxY - line.descent)

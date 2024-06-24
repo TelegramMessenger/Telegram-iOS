@@ -687,7 +687,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     }
 }
 
-#if swift(>=6.0)
+//Xcode 16
+#if canImport(ContactProvider)
 extension MediaEditorScreen.Result: @retroactive MediaEditorScreenResult {
 }
 #else

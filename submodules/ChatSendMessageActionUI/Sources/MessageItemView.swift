@@ -423,6 +423,11 @@ final class MessageItemView: UIView {
                     }
                     
                     let messageAttributedText = NSMutableAttributedString(attributedString: textString)
+                    
+                    for entity in generateTextEntities(textString.string, enabledTypes: .all) {
+                        messageAttributedText.addAttribute(.foregroundColor, value: presentationData.theme.chat.message.outgoing.linkTextColor, range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                    }
+                    
                     textNode.attributedText = messageAttributedText
                 }
                 
@@ -620,6 +625,11 @@ final class MessageItemView: UIView {
                 }
                 
                 let messageAttributedText = NSMutableAttributedString(attributedString: textString)
+                
+                for entity in generateTextEntities(textString.string, enabledTypes: .all) {
+                    messageAttributedText.addAttribute(.foregroundColor, value: presentationData.theme.chat.message.outgoing.linkTextColor, range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                }
+                
                 textNode.attributedText = messageAttributedText
             }
             

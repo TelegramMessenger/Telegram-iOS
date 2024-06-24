@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
@@ -379,7 +380,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
     }
 }
 
-private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactListPeer], presences: [EnginePeer.Id: EnginePeer.Presence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, disabledPeerIds: Set<EnginePeer.Id>, peerRequiresPremiumForMessaging: [EnginePeer.Id: Bool], authorizationStatus: AccessType, warningSuppressed: (Bool, Bool), displaySortOptions: Bool, displayCallIcons: Bool, storySubscriptions: EngineStorySubscriptions?, topPeers: [EnginePeer], topPeersPresentation: ContactListPresentation.TopPeers, interaction: ContactListNodeInteraction) -> [ContactListNodeEntry] {
+private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactListPeer], presences: [EnginePeer.Id: EnginePeer.Presence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, disabledPeerIds: Set<EnginePeer.Id>, peerRequiresPremiumForMessaging: [EnginePeer.Id: Bool], peersWithStories: [EnginePeer.Id: PeerStoryStats], authorizationStatus: AccessType, warningSuppressed: (Bool, Bool), displaySortOptions: Bool, displayCallIcons: Bool, storySubscriptions: EngineStorySubscriptions?, topPeers: [EnginePeer], topPeersPresentation: ContactListPresentation.TopPeers, interaction: ContactListNodeInteraction) -> [ContactListNodeEntry] {
     var entries: [ContactListNodeEntry] = []
     
     var commonHeader: ListViewItemHeader?
@@ -665,7 +666,9 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                 }
                 
                 let presence = presences[peer.id]
-                entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, false, true, nil, false))
+                entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, false, true, peersWithStories[peer.id].flatMap {
+                    ContactListNodeEntry.StoryData(count: $0.totalCount, unseenCount: $0.unseenCount, hasUnseenCloseFriends: $0.hasUnseenCloseFriends)
+                }, false))
                 
                 index += 1
             }
@@ -709,7 +712,14 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                     enabled = true
             }
             
-            entries.append(.peer(index, peer, presence, nil, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, false, enabled, nil, false))
+            var storyData: ContactListNodeEntry.StoryData?
+            if case let .peer(id) = peer.id {
+                storyData = peersWithStories[id].flatMap {
+                    ContactListNodeEntry.StoryData(count: $0.totalCount, unseenCount: $0.unseenCount, hasUnseenCloseFriends: $0.hasUnseenCloseFriends)
+                }
+            }
+            
+            entries.append(.peer(index, peer, presence, nil, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, false, enabled, storyData, false))
             index += 1
         }
     }
@@ -755,8 +765,14 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
             enabled = true
         }
         
+        var storyData: ContactListNodeEntry.StoryData?
+        if case let .peer(id) = peer.id {
+            storyData = peersWithStories[id].flatMap {
+                ContactListNodeEntry.StoryData(count: $0.totalCount, unseenCount: $0.unseenCount, hasUnseenCloseFriends: $0.hasUnseenCloseFriends)
+            }
+        }
         
-        entries.append(.peer(index, peer, presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, false, enabled, nil, requiresPremiumForMessaging))
+        entries.append(.peer(index, peer, presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, false, enabled, storyData, requiresPremiumForMessaging))
         index += 1
     }
     return entries
@@ -927,7 +943,7 @@ public final class ContactListNode: ASDisplayNode {
     }
     private var didSetReady = false
     
-    private let contactPeersViewPromise = Promise<(EngineContactList, EnginePeer?, [EnginePeer.Id: Bool])>()
+    private let contactPeersViewPromise = Promise<(EngineContactList, EnginePeer?, [EnginePeer.Id: Bool], [EnginePeer.Id: PeerStoryStats])>()
     let storySubscriptions = Promise<EngineStorySubscriptions?>(nil)
     
     private let selectionStatePromise = Promise<ContactListNodeGroupSelectionState?>(nil)
@@ -1009,6 +1025,34 @@ public final class ContactListNode: ASDisplayNode {
                 } else {
                     contactsWithPremiumRequired = .single([:])
                 }
+                
+                let contactsWithStories: Signal<[EnginePeer.Id: PeerStoryStats], NoError> = self.context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Contacts.List(includePresences: false)
+                )
+                |> map { contacts -> Set<EnginePeer.Id> in
+                    var result = Set<EnginePeer.Id>()
+                    for peer in contacts.peers {
+                        result.insert(peer.id)
+                    }
+                    return result
+                }
+                |> distinctUntilChanged
+                |> mapToSignal { peerIds -> Signal<[EnginePeer.Id: PeerStoryStats], NoError> in
+                    return context.engine.data.subscribe(
+                        EngineDataMap(
+                            peerIds.map(TelegramEngine.EngineData.Item.Peer.StoryStats.init(id:))
+                        )
+                    )
+                    |> map { result -> [EnginePeer.Id: PeerStoryStats] in
+                        var filtered: [EnginePeer.Id: PeerStoryStats] = [:]
+                        for (id, value) in result {
+                            if let value {
+                                filtered[id] = value
+                            }
+                        }
+                        return filtered
+                    }
+                }
                     
                 if value {
                     self.contactPeersViewPromise.set(combineLatest(
@@ -1016,10 +1060,11 @@ public final class ContactListNode: ASDisplayNode {
                             TelegramEngine.EngineData.Item.Contacts.List(includePresences: true),
                             TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.engine.account.peerId)
                         ),
-                        contactsWithPremiumRequired
+                        contactsWithPremiumRequired,
+                        contactsWithStories
                     )
-                    |> mapToThrottled { next, contactsWithPremiumRequired -> Signal<(EngineContactList, EnginePeer?, [EnginePeer.Id: Bool]), NoError> in
-                        return .single((next.0, next.1, contactsWithPremiumRequired))
+                    |> mapToThrottled { next, contactsWithPremiumRequired, contactsWithStories -> Signal<(EngineContactList, EnginePeer?, [EnginePeer.Id: Bool], [EnginePeer.Id: PeerStoryStats]), NoError> in
+                        return .single((next.0, next.1, contactsWithPremiumRequired, contactsWithStories))
                         |> then(
                             .complete()
                             |> delay(5.0, queue: Queue.concurrentDefaultQueue())
@@ -1030,9 +1075,9 @@ public final class ContactListNode: ASDisplayNode {
                         TelegramEngine.EngineData.Item.Contacts.List(includePresences: true),
                         TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.engine.account.peerId)
                     ),
-                    contactsWithPremiumRequired)
-                    |> map { next, contactsWithPremiumRequired -> (EngineContactList, EnginePeer?, [EnginePeer.Id: Bool]) in
-                        return (next.0, next.1, contactsWithPremiumRequired)
+                    contactsWithPremiumRequired, contactsWithStories)
+                    |> map { next, contactsWithPremiumRequired, contactsWithStories -> (EngineContactList, EnginePeer?, [EnginePeer.Id: Bool], [EnginePeer.Id: PeerStoryStats]) in
+                        return (next.0, next.1, contactsWithPremiumRequired, contactsWithStories)
                     }
                     |> take(1))
                 }
@@ -1574,7 +1619,7 @@ public final class ContactListNode: ASDisplayNode {
                                 peers.append(.deviceContact(stableId, contact.0))
                             }
                             
-                            let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, disabledPeerIds: disabledPeerIds, peerRequiresPremiumForMessaging: peerRequiresPremiumForMessaging, authorizationStatus: .allowed, warningSuppressed: (true, true), displaySortOptions: false, displayCallIcons: displayCallIcons, storySubscriptions: nil, topPeers: [], topPeersPresentation: .none, interaction: interaction)
+                            let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, disabledPeerIds: disabledPeerIds, peerRequiresPremiumForMessaging: peerRequiresPremiumForMessaging, peersWithStories: [:], authorizationStatus: .allowed, warningSuppressed: (true, true), displaySortOptions: false, displayCallIcons: displayCallIcons, storySubscriptions: nil, topPeers: [], topPeersPresentation: .none, interaction: interaction)
                             let previous = previousEntries.swap(entries)
                             return .single(preparedContactListNodeTransition(context: context, presentationData: presentationData, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: false, generateIndexSections: generateSections, animation: .none, isSearch: isSearch))
                         }
@@ -1771,7 +1816,7 @@ public final class ContactListNode: ASDisplayNode {
                             isEmpty = true
                         }
                         
-                        let entries = contactListNodeEntries(accountPeer: view.1, peers: peers, presences: presences, presentation: presentation, selectionState: selectionState, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, disabledPeerIds: disabledPeerIds, peerRequiresPremiumForMessaging: view.2, authorizationStatus: authorizationStatus, warningSuppressed: warningSuppressed, displaySortOptions: displaySortOptions, displayCallIcons: displayCallIcons, storySubscriptions: storySubscriptions, topPeers: topPeers.map { $0.peer }, topPeersPresentation: displayTopPeers, interaction: interaction)
+                        let entries = contactListNodeEntries(accountPeer: view.1, peers: peers, presences: presences, presentation: presentation, selectionState: selectionState, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, disabledPeerIds: disabledPeerIds, peerRequiresPremiumForMessaging: view.2, peersWithStories: view.3, authorizationStatus: authorizationStatus, warningSuppressed: warningSuppressed, displaySortOptions: displaySortOptions, displayCallIcons: displayCallIcons, storySubscriptions: storySubscriptions, topPeers: topPeers.map { $0.peer }, topPeersPresentation: displayTopPeers, interaction: interaction)
                         let previous = previousEntries.swap(entries)
                         let previousSelection = previousSelectionState.swap(selectionState)
                         let previousPendingRemovalPeerIds = previousPendingRemovalPeerIds.swap(pendingRemovalPeerIds)
