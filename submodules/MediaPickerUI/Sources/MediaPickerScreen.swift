@@ -2488,7 +2488,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         })))
                     }
                     if selectionCount > 1, price == nil {
-                        items.append(.action(ContextMenuActionItem(text: "Send Without Grouping", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_SendWithoutGrouping, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Media Grid/GroupingOff"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.default)
@@ -2499,7 +2499,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     }
                     
                     var isPaidAvailable = false
-                    if let peer = self.peer, case let .channel(channel) = peer, case .broadcast = channel.info {
+                    if let peer = self.peer, case let .channel(channel) = peer, case .broadcast = channel.info, selectionCount <= 10 {
                         isPaidAvailable = true
                     }
                     if isSpoilerAvailable || isPaidAvailable || (selectionCount > 0 && isCaptionAboveMediaAvailable) {
@@ -2547,10 +2547,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                             let title: String
                             let titleLayout: ContextMenuActionItemTextLayout
                             if let price {
-                                title = "Edit Price"
-                                titleLayout = .secondLineWithValue("\(price) Stars")
+                                title = strings.Attachment_Paid_EditPrice
+                                titleLayout = .secondLineWithValue(strings.Attachment_Paid_EditPrice_Stars(Int32(price)))
                             } else {
-                                title = "Make This Content Paid"
+                                title = strings.Attachment_Paid_Create
                                 titleLayout = .singleLine
                             }
                             items.append(.action(ContextMenuActionItem(text: title, textLayout: titleLayout, icon: { theme in
@@ -2566,6 +2566,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                                         return
                                     }
                                     if let selectionContext = strongSelf.interaction?.selectionState, let editingContext = strongSelf.interaction?.editingState {
+                                        selectionContext.selectionLimit = 10
                                         for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
                                             editingContext.setPrice(NSNumber(value: amount), for: item)
                                         }

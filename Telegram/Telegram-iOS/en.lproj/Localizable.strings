@@ -12454,3 +12454,9 @@ Sorry for the inconvenience.";
 "Premium.MessageEffectsInfo" = "Add over 500 animated effects to private messages.";
 
 "Chat.UnlockMedia" = "Unlock for %@";
+
+"Attachment.SendWithoutGrouping" = "Send Without Grouping";
+"Attachment.Paid.EditPrice" = "Edit Price";
+"Attachment.Paid.EditPrice.Stars_1" = "%@ Star";
+"Attachment.Paid.EditPrice.Stars_any" = "%@ Stars";
+"Attachment.Paid.Create" = "Make This Content Paid";
