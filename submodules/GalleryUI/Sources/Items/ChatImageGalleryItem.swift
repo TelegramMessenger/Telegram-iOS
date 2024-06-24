@@ -258,6 +258,16 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var currentSpeechHolder: SpeechSynthesizerHolder?
     
+    override var baseNavigationController: () -> NavigationController? {
+        didSet {
+            if let _ = self.baseNavigationController() {
+                self.moreBarButton.isHidden = false
+            } else {
+                self.moreBarButton.isHidden = true
+            }
+        }
+    }
+    
     init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
@@ -356,7 +366,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.translateToLanguage = translateToLanguage
         self.peerIsCopyProtected = peerIsCopyProtected
         self.isSecret = isSecret
-        self.imageNode.captureProtected = message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.isCopyProtected() || peerIsCopyProtected || isSecret
+        self.imageNode.captureProtected = message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.isCopyProtected() || peerIsCopyProtected || isSecret || message.paidContent != nil
         self.footerContentNode.setMessage(message, displayInfo: displayInfo, translateToLanguage: translateToLanguage, peerIsCopyProtected: peerIsCopyProtected)
     }
     

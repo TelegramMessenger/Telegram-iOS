@@ -1195,7 +1195,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             var hintSeekable = false
             if let contentInfo = item.contentInfo, case let .message(message, _) = contentInfo {
-                if Namespaces.Message.allNonRegular.contains(message.id.namespace) {
+                if Namespaces.Message.allNonRegular.contains(message.id.namespace) || message.id.namespace == Namespaces.Message.Local {
                     disablePictureInPicture = true
                 } else {
                     let throttledSignal = videoNode.status
@@ -1443,7 +1443,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.hasPictureInPicture = false
             }
 
-            if let contentInfo = item.contentInfo, case let .message(message, _) = contentInfo {
+            if let contentInfo = item.contentInfo, case let .message(message, mediaIndex) = contentInfo {
                 var file: TelegramMediaFile?
                 for m in message.media {
                     if let m = m as? TelegramMediaFile, m.isVideo {
@@ -1451,6 +1451,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         break
                     } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content, let f = content.file, f.isVideo {
                         file = f
+                        break
+                    } else if let paidContent = message.paidContent {
+                        let mediaIndex = mediaIndex ?? 0
+                        let media = paidContent.extendedMedia[mediaIndex]
+                        if case let .full(fullMedia) = media, let m = fullMedia as? TelegramMediaFile {
+                            file = m
+                        }
                         break
                     }
                 }
@@ -1460,6 +1467,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     hasMoreButton = true
                 } else if let file = file, !file.isAnimated {
                     hasMoreButton = true
+                }
+                
+                if let _ = message.paidContent, message.id.namespace == Namespaces.Message.Local {
+                    hasMoreButton = false
                 }
                  
                 if hasMoreButton {
@@ -2327,8 +2338,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
 
                     switch contentInfo {
-                        case let .message(message, _):
-                            let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(id: message.id.peerId), customTag: nil, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), playbackRate: playbackRate, replaceRootController: { controller, ready in
+                        case let .message(message, messageIndex):
+                            let source: GalleryControllerItemSource
+                            if let _ = message.paidContent {
+                                source = .standaloneMessage(message, messageIndex)
+                            } else {
+                                source = .peerMessagesAtId(messageId: message.id, chatLocation: .peer(id: message.id.peerId), customTag: nil, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil))
+                            }
+                        
+                            let gallery = GalleryController(context: context, source: source, playbackRate: playbackRate, replaceRootController: { controller, ready in
                                 if let baseNavigationController = baseNavigationController {
                                     baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
                                 }
