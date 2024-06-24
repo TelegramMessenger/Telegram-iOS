@@ -882,6 +882,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                             starsContext: starsContext,
                                             invoice: invoice,
                                             source: .slug(slug),
+                                            extendedMedia: [],
                                             inputData: starsInputData,
                                             completion: { [weak self] paid in
                                                 guard let self else {

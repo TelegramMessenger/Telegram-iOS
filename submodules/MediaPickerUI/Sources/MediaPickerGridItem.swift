@@ -131,12 +131,14 @@ final class MediaPickerGridItemNode: GridItemNode {
     private var interaction: MediaPickerInteraction?
     private var theme: PresentationTheme?
         
+    private struct SelectionState: Equatable {
+        let selected: Bool
+        let count: Int
+    }
+    private let selectionPromise = ValuePromise<SelectionState>(SelectionState(selected: false, count: 0))
     private let spoilerDisposable = MetaDisposable()
     var spoilerNode: SpoilerOverlayNode?
-    
-    var priceBackgroundNode: NavigationBackgroundNode?
-    var priceIconNode: ASImageNode?
-    var priceLabelNode: ImmediateTextNode?
+    var priceNode: PriceNode?
     
     private let progressDisposable = MetaDisposable()
     
@@ -252,7 +254,7 @@ final class MediaPickerGridItemNode: GridItemNode {
             self.setNeedsLayout()
         }
 
-        if let interaction = self.interaction, let selectionState = interaction.selectionState  {
+        if let interaction = self.interaction, let selectionState = interaction.selectionState {
             let selected = selectionState.isIdentifierSelected(self.identifier)
             if let selectableItem = self.selectableItem {
                 let index = selectionState.index(of: selectableItem)
@@ -261,6 +263,7 @@ final class MediaPickerGridItemNode: GridItemNode {
                 }
             }
             self.checkNode?.setSelected(selected, animated: animated)
+            self.selectionPromise.set(SelectionState(selected: selected, count: selectionState.selectedItems().count))
         }
     }
     
@@ -288,6 +291,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.typeIconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.durationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.draftNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.priceNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         if animateSpoilerNode {
             self.spoilerNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         }
@@ -564,12 +568,12 @@ final class MediaPickerGridItemNode: GridItemNode {
                 }
             }
             
-            self.spoilerDisposable.set((combineLatest(spoilerSignal, priceSignal)
-            |> deliverOnMainQueue).start(next: { [weak self] hasSpoiler, price in
+            self.spoilerDisposable.set((combineLatest(spoilerSignal, priceSignal, self.selectionPromise.get())
+            |> deliverOnMainQueue).start(next: { [weak self] hasSpoiler, price, selectionState in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.updateHasSpoiler(hasSpoiler, price: price)
+                strongSelf.updateHasSpoiler(hasSpoiler, price: selectionState.selected ? price : nil, isSingle: selectionState.count == 1)
             }))
             
             if self.currentDraftState != nil {
@@ -635,7 +639,7 @@ final class MediaPickerGridItemNode: GridItemNode {
     }
     
     private var didSetupSpoiler = false
-    private func updateHasSpoiler(_ hasSpoiler: Bool, price: Int64?) {
+    private func updateHasSpoiler(_ hasSpoiler: Bool, price: Int64?, isSingle: Bool) {
         var animated = true
         if !self.didSetupSpoiler {
             animated = false
@@ -659,45 +663,35 @@ final class MediaPickerGridItemNode: GridItemNode {
             self.spoilerNode?.frame = CGRect(origin: .zero, size: bounds.size)
             
             if let price {
-                let backgroundNode: NavigationBackgroundNode
-                let labelNode: ImmediateTextNode
-                let iconNode: ASImageNode
-                
-                if let currentBackground = self.priceBackgroundNode, let currentLabel = self.priceLabelNode, let currentIcon = self.priceIconNode {
-                    backgroundNode = currentBackground
-                    labelNode = currentLabel
-                    iconNode = currentIcon
+                let priceNode: PriceNode
+                if let currentPriceNode = self.priceNode {
+                    priceNode = currentPriceNode
                 } else {
-                    backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x000000, alpha: 0.5), enableBlur: true)
-                    labelNode = ImmediateTextNode()
-                    iconNode = ASImageNode()
-                    iconNode.displaysAsynchronously = false
-                    iconNode.image = UIImage(bundleImageName: "Premium/Stars/StarSmall")
-                    
+                    priceNode = PriceNode()
                     if let spoilerNode = self.spoilerNode {
-                        self.insertSubnode(backgroundNode, aboveSubnode: spoilerNode)
+                        self.insertSubnode(priceNode, aboveSubnode: spoilerNode)
                     }
-                    backgroundNode.addSubnode(labelNode)
-                    backgroundNode.addSubnode(iconNode)
+                    self.priceNode = priceNode
+                    
+                    if animated {
+                        priceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
                 }
-                labelNode.attributedText = NSAttributedString(string: "\(price)", font: Font.semibold(15.0), textColor: .white)
                 
-                let labelSize = labelNode.updateLayout(CGSize(width: 200.0, height: 50.0))
-                let size = CGSize(width: labelSize.width + 40.0, height: 34.0)
-                
-                backgroundNode.update(size: size, cornerRadius: 17.0, transition: .immediate)
-                backgroundNode.frame = CGRect(origin: CGPoint(x: floor((bounds.width - size.width) / 2.0), y: floor((bounds.height - size.height) / 2.0)), size: size)
-                
-                if let icon = iconNode.image {
-                    iconNode.frame = CGRect(origin: CGPoint(x: 10.0, y: floor((size.height - icon.size.height) / 2.0)), size: icon.size)
-                }
-                labelNode.frame = CGRect(origin: CGPoint(x: 30.0, y: floor((size.height - labelSize.height) / 2.0)), size: labelSize)
+                self.priceNode?.update(size: bounds.size, price: isSingle ? price : nil, small: true, transition: .immediate)
             }
         } else if let spoilerNode = self.spoilerNode {
             self.spoilerNode = nil
             spoilerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak spoilerNode] _ in
                 spoilerNode?.removeFromSupernode()
             })
+            
+            if let priceNode = self.priceNode {
+                self.priceNode = nil
+                priceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak priceNode] _ in
+                    priceNode?.removeFromSupernode()
+                })
+            }
         }
     }
     

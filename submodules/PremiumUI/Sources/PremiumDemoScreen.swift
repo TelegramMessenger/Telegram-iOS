@@ -1078,6 +1078,26 @@ private final class DemoSheetContent: CombinedComponent {
                     )
                 )
                 
+                availableItems[.messageEffects] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.messageEffects,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["effects"],
+                                    decoration: .swirlStars
+                                )),
+                                title: strings.Premium_MessageEffects,
+                                text: strings.Premium_MessageEffectsInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
                 let index: Int = 0
                 var items: [DemoPagerComponent.Item] = []
                 if let item = availableItems.first(where: { $0.value.content.id == component.subject as AnyHashable }) {
@@ -1172,6 +1192,8 @@ private final class DemoSheetContent: CombinedComponent {
                 text = strings.Premium_MessagePrivacyInfo
             case .folderTags:
                 text = strings.Premium_FolderTagsStandaloneInfo
+            case .messageEffects:
+                text = strings.Premium_MessageEffectsInfo
             default:
                 text = ""
             }
@@ -1441,6 +1463,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case messagePrivacy
         case business
         case folderTags
+        case messageEffects
         
         case businessLocation
         case businessHours
@@ -1497,6 +1520,8 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
                 return .business
             case .folderTags:
                 return .folderTags
+            case .messageEffects:
+                return .messageEffects
             case .businessLocation:
                 return .businessLocation
             case .businessHours:

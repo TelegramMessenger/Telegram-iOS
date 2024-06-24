@@ -408,6 +408,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         attributes,
                         contentMediaValue,
                         nil,
+                        nil,
                         automaticDownload ? .full : .none,
                         associatedData.automaticDownloadPeerType,
                         associatedData.automaticDownloadPeerId,

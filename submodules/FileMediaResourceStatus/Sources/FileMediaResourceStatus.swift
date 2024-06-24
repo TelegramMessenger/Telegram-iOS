@@ -67,7 +67,7 @@ public func messageFileMediaResourceStatus(context: AccountContext, file: Telegr
                         }
                 }
             } else if let pendingStatus = pendingStatus {
-                mediaStatus = .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: pendingStatus.progress))
+                mediaStatus = .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: pendingStatus.progress.progress))
             } else {
                 mediaStatus = .fetchStatus(EngineMediaResource.FetchStatus(resourceStatus))
             }
@@ -104,7 +104,7 @@ public func messageImageMediaResourceStatus(context: AccountContext, image: Tele
         |> map { resourceStatus, pendingStatus -> FileMediaResourceStatus in
             let mediaStatus: FileMediaResourceMediaStatus
             if let pendingStatus = pendingStatus {
-                mediaStatus = .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: pendingStatus.progress))
+                mediaStatus = .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: pendingStatus.progress.progress))
             } else {
                 mediaStatus = .fetchStatus(EngineMediaResource.FetchStatus(resourceStatus))
             }

@@ -54,7 +54,7 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
     let uploadedMedia: Signal<PendingMessageUploadedContentResult?, NoError>
     switch media {
     case .keep:
-        uploadedMedia = .single(.progress(0.0))
+        uploadedMedia = .single(.progress(PendingMessageUploadedContentProgress(progress: 0.0)))
         |> then(.single(nil))
     case let .update(media):
         let generateUploadSignal: (Bool) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>? = { forceReupload in
@@ -69,14 +69,14 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
             return mediaContentToUpload(accountPeerId: accountPeerId, network: network, postbox: postbox, auxiliaryMethods: stateManager.auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: mediaReferenceRevalidationContext, forceReupload: forceReupload, isGrouped: false, passFetchProgress: false, forceNoBigParts: false, peerId: messageId.peerId, media: augmentedMedia, text: "", autoremoveMessageAttribute: nil, autoclearMessageAttribute: nil, messageId: nil, attributes: attributes, mediaReference: nil)
         }
         if let uploadSignal = generateUploadSignal(forceReupload) {
-            uploadedMedia = .single(.progress(0.027))
+            uploadedMedia = .single(.progress(PendingMessageUploadedContentProgress(progress: 0.027)))
             |> then(uploadSignal)
             |> map { result -> PendingMessageUploadedContentResult? in
                 switch result {
-                    case let .progress(value):
-                        return .progress(max(value, 0.027))
-                    case let .content(content):
-                        return .content(content)
+                case let .progress(value):
+                    return .progress(PendingMessageUploadedContentProgress(progress: max(value.progress, 0.027)))
+                case let .content(content):
+                    return .content(content)
                 }
             }
             |> `catch` { _ -> Signal<PendingMessageUploadedContentResult?, NoError> in
@@ -92,10 +92,10 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
         var pendingMediaContent: PendingMessageUploadedContent?
         if let uploadedMediaResult = uploadedMediaResult {
             switch uploadedMediaResult {
-                case let .progress(value):
-                    return .single(.progress(value))
-                case let .content(content):
-                    pendingMediaContent = content.content
+            case let .progress(value):
+                return .single(.progress(value.progress))
+            case let .content(content):
+                pendingMediaContent = content.content
             }
         }
         return postbox.transaction { transaction -> (Peer?, Message?, SimpleDictionary<PeerId, Peer>) in
@@ -236,7 +236,13 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
                                                 } else {
                                                     updatedFlags.remove(.Incoming)
                                                 }
-                                                return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags))
+                                                
+                                                var updatedMedia = message.media
+                                                if let previousPaidContent = previousMessage.media.first(where: { $0 is TelegramMediaPaidContent }) as? TelegramMediaPaidContent, case .full = previousPaidContent.extendedMedia.first {
+                                                    updatedMedia = previousMessage.media
+                                                }
+                                                
+                                                return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags).withUpdatedMedia(updatedMedia))
                                             })
                                         }
                                     default:

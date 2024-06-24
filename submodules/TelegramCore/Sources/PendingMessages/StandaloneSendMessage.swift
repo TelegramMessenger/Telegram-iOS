@@ -206,7 +206,7 @@ public func standaloneSendEnqueueMessages(
             switch result.result {
             case let .progress(value):
                 allDone = false
-                progressSum += value
+                progressSum += value.progress
             case let .content(content):
                 allResults.append((content, result.media))
             }

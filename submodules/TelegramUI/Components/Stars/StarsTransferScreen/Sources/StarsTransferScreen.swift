@@ -26,6 +26,7 @@ private final class SheetContent: CombinedComponent {
     let starsContext: StarsContext
     let invoice: TelegramMediaInvoice
     let source: BotPaymentInvoiceSource
+    let extendedMedia: [TelegramExtendedMedia]
     let inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
     let dismiss: () -> Void
     
@@ -34,6 +35,7 @@ private final class SheetContent: CombinedComponent {
         starsContext: StarsContext,
         invoice: TelegramMediaInvoice,
         source: BotPaymentInvoiceSource,
+        extendedMedia: [TelegramExtendedMedia],
         inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>,
         dismiss: @escaping () -> Void
     ) {
@@ -41,6 +43,7 @@ private final class SheetContent: CombinedComponent {
         self.starsContext = starsContext
         self.invoice = invoice
         self.source = source
+        self.extendedMedia = extendedMedia
         self.inputData = inputData
         self.dismiss = dismiss
     }
@@ -50,6 +53,9 @@ private final class SheetContent: CombinedComponent {
             return false
         }
         if lhs.invoice != rhs.invoice {
+            return false
+        }
+        if lhs.extendedMedia != rhs.extendedMedia {
             return false
         }
         return true
@@ -62,9 +68,11 @@ private final class SheetContent: CombinedComponent {
         private let context: AccountContext
         private let starsContext: StarsContext
         private let source: BotPaymentInvoiceSource
+        private let extendedMedia: [TelegramExtendedMedia]
         private let invoice: TelegramMediaInvoice
         
-        private(set) var peer: EnginePeer?
+        private(set) var botPeer: EnginePeer?
+        private(set) var chatPeer: EnginePeer?
         private var peerDisposable: Disposable?
         private(set) var balance: Int64?
         private(set) var form: BotPaymentForm?
@@ -85,24 +93,37 @@ private final class SheetContent: CombinedComponent {
             context: AccountContext,
             starsContext: StarsContext,
             source: BotPaymentInvoiceSource,
+            extendedMedia: [TelegramExtendedMedia],
             invoice: TelegramMediaInvoice,
             inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
         ) {
             self.context = context
             self.starsContext = starsContext
             self.source = source
+            self.extendedMedia = extendedMedia
             self.invoice = invoice
             
             super.init()
             
-            self.peerDisposable = (inputData
-            |> deliverOnMainQueue).start(next: { [weak self] inputData in
+            let chatPeer: Signal<EnginePeer?, NoError>
+            if case let .message(messageId) = source {
+                chatPeer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
+            } else {
+                chatPeer = .single(nil)
+            }
+            
+            self.peerDisposable = (combineLatest(
+                inputData,
+                chatPeer
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] inputData, chatPeer in
                 guard let self else {
                     return
                 }
                 self.balance = inputData?.0.balance ?? 0
                 self.form = inputData?.1
-                self.peer = inputData?.2
+                self.botPeer = inputData?.2
+                self.chatPeer = chatPeer
                 self.updated(transition: .immediate)
                 
                 if self.optionsDisposable == nil, let balance = self.balance, balance < self.invoice.totalAmount {
@@ -132,7 +153,7 @@ private final class SheetContent: CombinedComponent {
             self.optionsDisposable?.dispose()
         }
         
-        func buy(requestTopUp: @escaping (@escaping () -> Void) -> Void, completion: @escaping () -> Void) {
+        func buy(requestTopUp: @escaping (@escaping () -> Void) -> Void, completion: @escaping (Bool) -> Void) {
             guard let form, let balance else {
                 return
             }
@@ -146,7 +167,20 @@ private final class SheetContent: CombinedComponent {
                 
                 let _ = (self.context.engine.payments.sendStarsPaymentForm(formId: form.id, source: self.source)
                 |> deliverOnMainQueue).start(next: { _ in
-                    completion()
+                    completion(true)
+                }, error: { [weak self] error in
+                    guard let self else {
+                        return
+                    }
+                    switch error {
+                    case .alreadyPaid:
+                        if !self.extendedMedia.isEmpty, case let .message(messageId) = self.source  {
+                            let _ = self.context.engine.messages.updateExtendedMedia(messageIds: [messageId]).startStandalone()
+                        }
+                    default:
+                        break
+                    }
+                    completion(false)
                 })
             }
             
@@ -191,7 +225,7 @@ private final class SheetContent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, starsContext: self.starsContext, source: self.source, invoice: self.invoice, inputData: self.inputData)
+        return State(context: self.context, starsContext: self.starsContext, source: self.source, extendedMedia: self.extendedMedia, invoice: self.invoice, inputData: self.inputData)
     }
         
     static var body: Body {
@@ -228,9 +262,9 @@ private final class SheetContent: CombinedComponent {
             )
             
             let subject: StarsImageComponent.Subject
-            if let extendedMedia = component.invoice.extendedMedia {
-                subject = .extendedMedia(extendedMedia)
-            } else if let peer = state.peer {
+            if !component.extendedMedia.isEmpty {
+                subject = .extendedMedia(component.extendedMedia)
+            } else if let peer = state.botPeer {
                 if let photo = component.invoice.photo {
                     subject = .photo(photo)
                 } else {
@@ -244,7 +278,8 @@ private final class SheetContent: CombinedComponent {
                     context: component.context,
                     subject: subject,
                     theme: theme,
-                    diameter: 90.0
+                    diameter: 90.0,
+                    backgroundColor: theme.list.blocksBackgroundColor
                 ),
                 availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                 transition: context.transition
@@ -299,14 +334,41 @@ private final class SheetContent: CombinedComponent {
             
             let amount = component.invoice.totalAmount
             let infoText: String
-            if let _ = component.invoice.extendedMedia {
+            if !component.extendedMedia.isEmpty {
+                var description: String = ""
+                var photoCount: Int32 = 0
+                var videoCount: Int32 = 0
+                for media in component.extendedMedia {
+                    if case let .preview(_, _, videoDuration) = media, videoDuration != nil {
+                        videoCount += 1
+                    } else {
+                        photoCount += 1
+                    }
+                }
+                if photoCount > 0 && videoCount > 0 {
+                    description = strings.Stars_Transfer_MediaAnd("**\(strings.Stars_Transfer_Photos(photoCount))**", "**\(strings.Stars_Transfer_Videos(videoCount))**").string
+                } else if photoCount > 0 {
+                    if photoCount > 1 {
+                        description += "**\(strings.Stars_Transfer_Photos(photoCount))**"
+                    } else {
+                        description += "**\(strings.Stars_Transfer_SinglePhoto)**"
+                    }
+                } else if videoCount > 0 {
+                    if videoCount > 1 {
+                        description += "**\(strings.Stars_Transfer_Videos(videoCount))**"
+                    } else {
+                        description += "**\(strings.Stars_Transfer_SingleVideo)**"
+                    }
+                }
                 infoText = strings.Stars_Transfer_UnlockInfo(
+                    description,
+                    state.chatPeer?.compactDisplayTitle ?? "",
                     strings.Stars_Transfer_Info_Stars(Int32(amount))
                 ).string
             } else {
                 infoText = strings.Stars_Transfer_Info(
                     component.invoice.title,
-                    state.peer?.compactDisplayTitle ?? "",
+                    state.botPeer?.compactDisplayTitle ?? "",
                     strings.Stars_Transfer_Info_Stars(Int32(amount))
                 ).string
             }
@@ -386,7 +448,7 @@ private final class SheetContent: CombinedComponent {
                         
             let accountContext = component.context
             let starsContext = component.starsContext
-            let botTitle = state.peer?.compactDisplayTitle ?? ""
+            let botTitle = state.botPeer?.compactDisplayTitle ?? ""
             let invoice = component.invoice
             let button = button.update(
                 component: ButtonComponent(
@@ -410,7 +472,7 @@ private final class SheetContent: CombinedComponent {
                                     context: accountContext,
                                     starsContext: starsContext,
                                     options: state?.options ?? [],
-                                    peerId: state?.peer?.id,
+                                    peerId: state?.botPeer?.id,
                                     requiredStars: invoice.totalAmount,
                                     completion: { [weak starsContext] stars in
                                         starsContext?.add(balance: stars)
@@ -424,29 +486,38 @@ private final class SheetContent: CombinedComponent {
                                 let alertController = textAlertController(context: accountContext, title: nil, text: presentationData.strings.Stars_Transfer_Unavailable, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                                 controller?.present(alertController, in: .window(.root))
                             }
-                        }, completion: { [weak controller] in
-                            let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
-                            if let navigationController = controller?.navigationController {
-                                Queue.mainQueue().after(0.5) {
-                                    if let lastController = navigationController.viewControllers.last as? ViewController {
-                                        let resultController = UndoOverlayController(
-                                            presentationData: presentationData,
-                                            content: .image(
-                                                image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
-                                                title: presentationData.strings.Stars_Transfer_PurchasedTitle,
-                                                text: presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string,
-                                                round: false,
-                                                undoText: nil
-                                            ),
-                                            elevatedLayout: lastController is ChatController,
-                                            action: { _ in return true}
-                                        )
-                                        lastController.present(resultController, in: .window(.root))
+                        }, completion: { [weak controller] success in
+                            if success {
+                                let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
+                                let text: String
+                                if let _ = component.invoice.extendedMedia {
+                                    text = presentationData.strings.Stars_Transfer_UnlockedText( presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string
+                                } else {
+                                    text = presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string
+                                }
+                                
+                                if let navigationController = controller?.navigationController {
+                                    Queue.mainQueue().after(0.5) {
+                                        if let lastController = navigationController.viewControllers.last as? ViewController {
+                                            let resultController = UndoOverlayController(
+                                                presentationData: presentationData,
+                                                content: .image(
+                                                    image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
+                                                    title: presentationData.strings.Stars_Transfer_PurchasedTitle,
+                                                    text: text,
+                                                    round: false,
+                                                    undoText: nil
+                                                ),
+                                                elevatedLayout: lastController is ChatController,
+                                                action: { _ in return true}
+                                            )
+                                            lastController.present(resultController, in: .window(.root))
+                                        }
                                     }
                                 }
                             }
                             
-                            controller?.complete(paid: true)
+                            controller?.complete(paid: success)
                             controller?.dismissAnimated()
                             
                             starsContext.load(force: true)
@@ -476,6 +547,7 @@ private final class StarsTransferSheetComponent: CombinedComponent {
     private let starsContext: StarsContext
     private let invoice: TelegramMediaInvoice
     private let source: BotPaymentInvoiceSource
+    private let extendedMedia: [TelegramExtendedMedia]
     private let inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
     
     init(
@@ -483,12 +555,14 @@ private final class StarsTransferSheetComponent: CombinedComponent {
         starsContext: StarsContext,
         invoice: TelegramMediaInvoice,
         source: BotPaymentInvoiceSource,
+        extendedMedia: [TelegramExtendedMedia],
         inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
     ) {
         self.context = context
         self.starsContext = starsContext
         self.invoice = invoice
         self.source = source
+        self.extendedMedia = extendedMedia
         self.inputData = inputData
     }
     
@@ -497,6 +571,9 @@ private final class StarsTransferSheetComponent: CombinedComponent {
             return false
         }
         if lhs.invoice != rhs.invoice {
+            return false
+        }
+        if lhs.extendedMedia != rhs.extendedMedia {
             return false
         }
         return true
@@ -518,6 +595,7 @@ private final class StarsTransferSheetComponent: CombinedComponent {
                         starsContext: context.component.starsContext,
                         invoice: context.component.invoice,
                         source: context.component.source,
+                        extendedMedia: context.component.extendedMedia,
                         inputData: context.component.inputData,
                         dismiss: {
                             animateOut.invoke(Action { _ in
@@ -576,6 +654,7 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
         starsContext: StarsContext,
         invoice: TelegramMediaInvoice,
         source: BotPaymentInvoiceSource,
+        extendedMedia: [TelegramExtendedMedia],
         inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>,
         completion: @escaping (Bool) -> Void
     ) {
@@ -589,6 +668,7 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
                 starsContext: starsContext,
                 invoice: invoice,
                 source: source,
+                extendedMedia: extendedMedia,
                 inputData: inputData
             ),
             navigationBarAppearance: .none,

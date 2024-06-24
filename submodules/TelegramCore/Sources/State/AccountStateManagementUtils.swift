@@ -3885,7 +3885,13 @@ func replayFinalState(
                     if let message = locallyRenderedMessage(message: message, peers: peers) {
                         generatedEvent = reactionGeneratedEvent(previousMessage.reactionsAttribute, message.reactionsAttribute, message: message, transaction: transaction)
                     }
-                    return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags).withUpdatedAttributes(updatedAttributes))
+                    
+                    var updatedMedia = message.media
+                    if let previousPaidContent = previousMessage.media.first(where: { $0 is TelegramMediaPaidContent }) as? TelegramMediaPaidContent, case .full = previousPaidContent.extendedMedia.first {
+                        updatedMedia = previousMessage.media
+                    }
+                    
+                    return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags).withUpdatedAttributes(updatedAttributes).withUpdatedMedia(updatedMedia))
                 })
                 if let generatedEvent = generatedEvent {
                     addedReactionEvents.append(generatedEvent)
@@ -4633,41 +4639,25 @@ func replayFinalState(
                 transaction.updateMessage(messageId, update: { currentMessage in
                     var media = currentMessage.media
                     let invoice = media.first(where: { $0 is TelegramMediaInvoice }) as? TelegramMediaInvoice
-                    let currentExtendedMedia = invoice?.extendedMedia
+                    let paidContent = media.first(where: { $0 is TelegramMediaPaidContent }) as? TelegramMediaPaidContent
                     
                     var storeForwardInfo: StoreMessageForwardInfo?
                     if let forwardInfo = currentMessage.forwardInfo {
                         storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
                     }
                     
-                    let updatedExtendedMedia: TelegramExtendedMedia?
-                    switch apiExtendedMedia {
-                        case let .messageExtendedMediaPreview(_, width, height, thumb, videoDuration):
-                            var dimensions: PixelDimensions?
-                            if let width = width, let height = height {
-                                dimensions = PixelDimensions(width: width, height: height)
-                            }
-                            var immediateThumbnailData: Data?
-                            if let thumb = thumb, case let .photoStrippedSize(_, bytes) = thumb {
-                                immediateThumbnailData = bytes.makeData()
-                            }
-                            updatedExtendedMedia = .preview(dimensions: dimensions, immediateThumbnailData: immediateThumbnailData, videoDuration: videoDuration)
-                        case let .messageExtendedMedia(apiMedia):
-                            let (media, _, _, _, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
-                            if let media = media {
-                                updatedExtendedMedia = .full(media: media)
-                            } else {
-                                updatedExtendedMedia = currentExtendedMedia
-                            }
-                    }
+                    let updatedExtendedMedia = apiExtendedMedia.compactMap { TelegramExtendedMedia(apiExtendedMedia: $0, peerId: messageId.peerId) }
                     
-                    if let updatedExtendedMedia = updatedExtendedMedia, var invoice = invoice {
-                        if let currentExtendedMedia = currentExtendedMedia, case .full = currentExtendedMedia, case .preview = updatedExtendedMedia {
-                            
-                        } else   {
+                    if let first = updatedExtendedMedia.first, case .full = first {
+                        if var invoice = invoice {
                             media = media.filter { !($0 is TelegramMediaInvoice) }
-                            invoice = invoice.withUpdatedExtendedMedia(updatedExtendedMedia)
+                            invoice = invoice.withUpdatedExtendedMedia(first)
                             media.append(invoice)
+                        }
+                        if var paidContent = paidContent {
+                            media = media.filter { !($0 is TelegramMediaPaidContent) }
+                            paidContent = paidContent.withUpdatedExtendedMedia(updatedExtendedMedia)
+                            media.append(paidContent)
                         }
                     }
                     

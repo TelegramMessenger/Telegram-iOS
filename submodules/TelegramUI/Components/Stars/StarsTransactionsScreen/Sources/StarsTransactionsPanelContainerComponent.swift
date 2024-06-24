@@ -29,6 +29,8 @@ final class StarsTransactionsPanelEnvironment: Equatable {
     let containerInsets: UIEdgeInsets
     let isScrollable: Bool
     let isCurrent: Bool
+    let externalScrollBounds: CGRect?
+    let externalBottomOffset: CGFloat?
     
     init(
         theme: PresentationTheme,
@@ -36,7 +38,9 @@ final class StarsTransactionsPanelEnvironment: Equatable {
         dateTimeFormat: PresentationDateTimeFormat,
         containerInsets: UIEdgeInsets,
         isScrollable: Bool,
-        isCurrent: Bool
+        isCurrent: Bool,
+        externalScrollBounds: CGRect? = nil,
+        externalBottomOffset: CGFloat? = nil
     ) {
         self.theme = theme
         self.strings = strings
@@ -44,6 +48,8 @@ final class StarsTransactionsPanelEnvironment: Equatable {
         self.containerInsets = containerInsets
         self.isScrollable = isScrollable
         self.isCurrent = isCurrent
+        self.externalScrollBounds = externalScrollBounds
+        self.externalBottomOffset = externalBottomOffset
     }
 
     static func ==(lhs: StarsTransactionsPanelEnvironment, rhs: StarsTransactionsPanelEnvironment) -> Bool {
@@ -63,6 +69,12 @@ final class StarsTransactionsPanelEnvironment: Equatable {
             return false
         }
         if lhs.isCurrent != rhs.isCurrent {
+            return false
+        }
+        if lhs.externalScrollBounds != rhs.externalScrollBounds {
+            return false
+        }
+        if lhs.externalBottomOffset != rhs.externalBottomOffset {
             return false
         }
         return true

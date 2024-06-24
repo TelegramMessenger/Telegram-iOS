@@ -47,6 +47,12 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
         if (force || fromFile.size == toFile.size || fromFile.resource.size == toFile.resource.size) && fromFile.mimeType == toFile.mimeType {
             copyOrMoveResourceData(from: fromFile.resource, to: toFile.resource, mediaBox: postbox.mediaBox)
         }
+    } else if let fromPaidContent = from as? TelegramMediaPaidContent, let toPaidContent = to as? TelegramMediaPaidContent {
+        for (fromMedia, toMedia) in zip(fromPaidContent.extendedMedia, toPaidContent.extendedMedia) {
+            if case let .full(fullFromMedia) = fromMedia, case let .full(fullToMedia) = toMedia {
+                applyMediaResourceChanges(from: fullFromMedia, to: fullToMedia, postbox: postbox, force: force)
+            }
+        }
     }
 }
 

@@ -21,7 +21,8 @@ final class StarsBalanceComponent: Component {
     let actionAvailable: Bool
     let actionIsEnabled: Bool
     let actionCooldownUntilTimestamp: Int32?
-    let buy: () -> Void
+    let action: () -> Void
+    let buyAds: (() -> Void)?
     
     init(
         theme: PresentationTheme,
@@ -33,7 +34,8 @@ final class StarsBalanceComponent: Component {
         actionAvailable: Bool,
         actionIsEnabled: Bool,
         actionCooldownUntilTimestamp: Int32? = nil,
-        buy: @escaping () -> Void
+        action: @escaping () -> Void,
+        buyAds: (() -> Void)?
     ) {
         self.theme = theme
         self.strings = strings
@@ -44,7 +46,8 @@ final class StarsBalanceComponent: Component {
         self.actionAvailable = actionAvailable
         self.actionIsEnabled = actionIsEnabled
         self.actionCooldownUntilTimestamp = actionCooldownUntilTimestamp
-        self.buy = buy
+        self.action = action
+        self.buyAds = buyAds
     }
     
     static func ==(lhs: StarsBalanceComponent, rhs: StarsBalanceComponent) -> Bool {
@@ -83,6 +86,7 @@ final class StarsBalanceComponent: Component {
         private let title = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
         private var button = ComponentView<Empty>()
+        private var buyAdsButton = ComponentView<Empty>()
         
         private var component: StarsBalanceComponent?
         private weak var state: EmptyComponentState?
@@ -187,11 +191,18 @@ final class StarsBalanceComponent: Component {
             if component.actionAvailable {
                 contentHeight += 12.0
                 
+                var actionTitle = component.actionTitle
+                var withdrawWidth = availableSize.width - sideInset * 2.0
+                if let _ = component.buyAds {
+                    withdrawWidth = (withdrawWidth - 10.0) / 2.0
+                    actionTitle = component.strings.Stars_BotRevenue_Withdraw_WithdrawShort
+                }
+                
                 let content: AnyComponentWithIdentity<Empty>
                 if remainingCooldownSeconds > 0 {
                     content = AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(
                         VStack([
-                            AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(Text(text: component.actionTitle, font: Font.semibold(17.0), color: component.theme.list.itemCheckColors.foregroundColor))),
+                            AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(Text(text: actionTitle, font: Font.semibold(17.0), color: component.theme.list.itemCheckColors.foregroundColor))),
                             AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(HStack([
                                 AnyComponentWithIdentity(id: 1, component: AnyComponent(BundleIconComponent(name: "Chat List/StatusLockIcon", tintColor: component.theme.list.itemCheckColors.fillColor.mixedWith(component.theme.list.itemCheckColors.foregroundColor, alpha: 0.7)))),
                                 AnyComponentWithIdentity(id: 0, component: AnyComponent(Text(text: stringForRemainingTime(remainingCooldownSeconds), font: Font.with(size: 11.0, weight: .medium, traits: [.monospacedNumbers]), color: component.theme.list.itemCheckColors.fillColor.mixedWith(component.theme.list.itemCheckColors.foregroundColor, alpha: 0.7))))
@@ -199,7 +210,7 @@ final class StarsBalanceComponent: Component {
                         ], spacing: 1.0)
                     ))
                 } else {
-                    content = AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: component.actionTitle, font: Font.semibold(17.0), color: component.theme.list.itemCheckColors.foregroundColor)))
+                    content = AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: actionTitle, font: Font.semibold(17.0), color: component.theme.list.itemCheckColors.foregroundColor)))
                 }
                                 
                 let buttonSize = self.button.update(
@@ -218,11 +229,11 @@ final class StarsBalanceComponent: Component {
                             guard let self, let component = self.component else {
                                 return
                             }
-                            component.buy()
+                            component.action()
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)
+                    containerSize: CGSize(width: withdrawWidth, height: 50.0)
                 )
                 if let buttonView = self.button.view {
                     if buttonView.superview == nil {
@@ -231,6 +242,40 @@ final class StarsBalanceComponent: Component {
                     let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: buttonSize)
                     buttonView.frame = buttonFrame
                 }
+                
+                if let _ = component.buyAds {
+                    let buttonSize = self.buyAdsButton.update(
+                        transition: transition,
+                        component: AnyComponent(ButtonComponent(
+                            background: ButtonComponent.Background(
+                                color: component.theme.list.itemCheckColors.fillColor,
+                                foreground: component.theme.list.itemCheckColors.foregroundColor,
+                                pressedColor: component.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
+                            ),
+                            content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: component.strings.Stars_BotRevenue_Withdraw_BuyAds, font: Font.semibold(17.0), color: component.theme.list.itemCheckColors.foregroundColor))),
+                            isEnabled: component.actionIsEnabled,
+                            allowActionWhenDisabled: false,
+                            displaysProgress: false,
+                            action: { [weak self] in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.buyAds?()
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: withdrawWidth, height: 50.0)
+                    )
+                    if let buttonView = self.buyAdsButton.view {
+                        if buttonView.superview == nil {
+                            self.addSubview(buttonView)
+                        }
+                        let buttonFrame = CGRect(origin: CGPoint(x: sideInset + withdrawWidth + 10.0, y: contentHeight), size: buttonSize)
+                        buttonView.frame = buttonFrame
+                    }
+                }
+                
+                
                 contentHeight += buttonSize.height
             }
             contentHeight += sideInset

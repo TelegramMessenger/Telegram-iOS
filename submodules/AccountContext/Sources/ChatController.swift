@@ -1069,6 +1069,7 @@ public enum FileMediaResourceMediaStatus: Equatable {
 }
 
 public protocol ChatMessageItemNodeProtocol: ListViewItemNode {
+    func makeProgress() -> Promise<Bool>?
     func targetReactionView(value: MessageReaction.Reaction) -> UIView?
     func targetForStoryTransition(id: StoryId) -> UIView?
     func contentFrame() -> CGRect

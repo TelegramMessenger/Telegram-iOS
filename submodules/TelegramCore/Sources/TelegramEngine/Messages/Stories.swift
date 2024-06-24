@@ -1093,7 +1093,7 @@ func _internal_uploadStoryImpl(
         |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
             switch result {
             case let .progress(progress):
-                return .single(.progress(progress))
+                return .single(.progress(progress.progress))
             case let .content(content):
                 return postbox.transaction { transaction -> Signal<StoryUploadResult, NoError> in
                     let privacyRules = apiInputPrivacyRules(privacy: privacy, transaction: transaction)
@@ -1278,7 +1278,7 @@ func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: Eng
     return contentSignal
     |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
         if let result = result, case let .progress(progress) = result {
-            return .single(.progress(progress))
+            return .single(.progress(progress.progress))
         }
         
         let inputMedia: Api.InputMedia?

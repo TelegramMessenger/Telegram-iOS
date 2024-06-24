@@ -10629,6 +10629,7 @@ Sorry for the inconvenience.";
 "MediaEditor.Shortcut.Location" = "Location";
 "MediaEditor.Shortcut.Reaction" = "Reaction";
 "MediaEditor.Shortcut.Audio" = "Audio";
+"MediaEditor.Shortcut.Link" = "Link";
 
 "BoostGift.AdditionalPrizes" = "Additional Prizes";
 "BoostGift.AdditionalPrizesPlaceholder" = "Enter Your Prize";
@@ -12254,6 +12255,7 @@ Sorry for the inconvenience.";
 "Stars.Intro.Incoming" = "Incoming";
 "Stars.Intro.Outgoing" = "Outgoing";
 
+"Stars.Intro.Transaction.MediaPurchase" = "Media Purchase";
 "Stars.Intro.Transaction.AppleTopUp.Title" = "Stars Top-Up";
 "Stars.Intro.Transaction.AppleTopUp.Subtitle" = "via App Store";
 "Stars.Intro.Transaction.GoogleTopUp.Title" = "Stars Top-Up";
@@ -12264,6 +12266,8 @@ Sorry for the inconvenience.";
 "Stars.Intro.Transaction.FragmentTopUp.Subtitle" = "via Fragment";
 "Stars.Intro.Transaction.FragmentWithdrawal.Title" = "Withdrawal";
 "Stars.Intro.Transaction.FragmentWithdrawal.Subtitle" = "via Fragment";
+"Stars.Intro.Transaction.TelegramAds.Title" = "Withdrawal";
+"Stars.Intro.Transaction.TelegramAds.Subtitle" = "via Telegram Ads";
 "Stars.Intro.Transaction.Unsupported.Title" = "Unsupported";
 "Stars.Intro.Transaction.Refund" = "Refund";
 
@@ -12290,12 +12294,14 @@ Sorry for the inconvenience.";
 "Stars.Transaction.Via" = "Via";
 "Stars.Transaction.To" = "To";
 "Stars.Transaction.From" = "From";
+"Stars.Transaction.Media" = "Media";
 "Stars.Transaction.Id" = "Transaction ID";
 "Stars.Transaction.Date" = "Date";
 "Stars.Transaction.Terms" = "Review the [Terms of Service]() for Stars.";
 "Stars.Transaction.Terms_URL" = "https://telegram.org/tos";
 "Stars.Transaction.CopiedId" = "Transaction ID copied to clipboard.";
 
+"Stars.Transaction.MediaPurchase" = "Media Purchase";
 "Stars.Transaction.AppleTopUp.Title" = "Stars Top-Up";
 "Stars.Transaction.AppleTopUp.Subtitle" = "App Store";
 "Stars.Transaction.GoogleTopUp.Title" = "Stars Top-Up";
@@ -12306,8 +12312,18 @@ Sorry for the inconvenience.";
 "Stars.Transaction.FragmentTopUp.Subtitle" = "Fragment";
 "Stars.Transaction.FragmentWithdrawal.Title" = "Stars Withdrawal";
 "Stars.Transaction.FragmentWithdrawal.Subtitle" = "Fragment";
+"Stars.Transaction.TelegramAds.Title" = "Stars Withdrawal";
+"Stars.Transaction.TelegramAds.Subtitle" = "Telegram Ads";
 "Stars.Transaction.Unsupported.Title" = "Unsupported";
 "Stars.Transaction.Refund" = "Refund";
+
+"Stars.Transaction.Photos_1" = "%@ Photo";
+"Stars.Transaction.Photos_any" = "%@ Photos";
+"Stars.Transaction.Videos_1" = "%@ Video";
+"Stars.Transaction.Videos_any" = "%@ Videos";
+"Stars.Transaction.SinglePhoto" = "Photo";
+"Stars.Transaction.SingleVideo" = "Video";
+"Stars.Transaction.MediaAnd" = "%1$@ and %2$@";
 
 "Stars.Transfer.Title" = "Confirm Your Purchase";
 "Stars.Transfer.Info" = "Do you want to buy **%1$@** in **%2$@** for **%3$@**?";
@@ -12318,11 +12334,20 @@ Sorry for the inconvenience.";
 "Stars.Transfer.PurchasedText" = "You acquired **%1$@** in **%2$@** for **%3$@**.";
 "Stars.Transfer.Purchased.Stars_1" = "%@ Star";
 "Stars.Transfer.Purchased.Stars_any" = "%@ Stars";
-"Stars.Transfer.UnlockInfo" = "Do you want to unlock media for **%1$@**?";
+"Stars.Transfer.UnlockedText" = "You unlocked media for **%1$@**.";
+"Stars.Transfer.UnlockInfo" = "Do you want to unlock %1$@ in **%2$@** for **%3$@**?";
 
 "Stars.Transfer.Balance" = "Balance";
 
 "Stars.Transfer.Unavailable" = "Sorry, no star purchases are available from your country.";
+
+"Stars.Transfer.Photos_1" = "%@ photo";
+"Stars.Transfer.Photos_any" = "%@ photos";
+"Stars.Transfer.Videos_1" = "%@ video";
+"Stars.Transfer.Videos_any" = "%@ videos";
+"Stars.Transfer.SinglePhoto" = "photo";
+"Stars.Transfer.SingleVideo" = "video";
+"Stars.Transfer.MediaAnd" = "%1$@ and %2$@";
 
 "Settings.Stars" = "Your Stars";
 
@@ -12348,16 +12373,19 @@ Sorry for the inconvenience.";
 "HashtagSearch.StoriesFoundInfo" = "View stories with %@";
 
 "Stars.BotRevenue.Title" = "Stars Balance";
-"Stars.BotRevenue.Revenue.Title" = "Revenue";
-"Stars.BotRevenue.Proceeds.Title" = "Proceeds Overview";
+"Stars.BotRevenue.Revenue.Title" = "Stars Received";
+"Stars.BotRevenue.Proceeds.Title" = "Rewards Overview";
 "Stars.BotRevenue.Proceeds.Available" = "Available Balance";
-"Stars.BotRevenue.Proceeds.Total" = "Total Lifetime Proceeds";
-"Stars.BotRevenue.Proceeds.Info" = "Stars from your total balance become available for spending on ads and rewards 21 days after they are earned.";
+"Stars.BotRevenue.Proceeds.Current" = "Total Balance";
+"Stars.BotRevenue.Proceeds.Total" = "Lifetime Proceeds";
+"Stars.BotRevenue.Proceeds.Info" = "Stars from your total balance can be used for ads or withdrawn as rewards 21 days after they are earned.";
 
 "Stars.BotRevenue.Withdraw.Balance" = "Available Balance";
 "Stars.BotRevenue.Withdraw.Withdraw" = "Withdraw via Fragment";
-"Stars.BotRevenue.Withdraw.Info" = "You can withdraw Stars using Fragment, or use Stars to advertise your bot. [Learn More >]()";
-"Stars.BotRevenue.Withdraw.Info_URL" = "https://telegram.org/tos";
+"Stars.BotRevenue.Withdraw.WithdrawShort" = "Withdraw";
+"Stars.BotRevenue.Withdraw.BuyAds" = "Buy Ads";
+"Stars.BotRevenue.Withdraw.Info" = "You can collect rewards for Stars using Fragment, or use Stars to advertise your bot. [Learn More >]()";
+"Stars.BotRevenue.Withdraw.Info_URL" = "https://telegram.org/tos/bot-developers#6-2-2-tpa-balance";
 
 "Stars.BotRevenue.Transactions.Title" = "Transaction History";
 
@@ -12376,6 +12404,7 @@ Sorry for the inconvenience.";
 "Stars.PaidContent.AmountTitle" = "ENTER UNLOCK COST";
 "Stars.PaidContent.AmountPlaceholder" = "Stars to Unlock";
 "Stars.PaidContent.AmountInfo" = "Users will have to transfer this amount of Stars to your channel in order to view this media.\n[More about Stars >]()";
+"Stars.PaidContent.AmountInfo_URL" = "https://telegram.org/tos/stars";
 "Stars.PaidContent.Create" = "Make This Media Paid";
 
 "MediaEditor.AddLink" = "LINK";
@@ -12401,3 +12430,33 @@ Sorry for the inconvenience.";
 
 "Chat.MessagesDeletedToast.Text_1" = "Message Deleted";
 "Chat.MessagesDeletedToast.Text_any" = "%d Messages Deleted";
+
+"Monetization.StarsRevenueTitle" = "REVENUE";
+
+"Monetization.TonBalanceTitle" = "TON BALANCE";
+"Monetization.StarsBalanceTitle" = "STARS BALANCE";
+
+"Monetization.TonTransactions" = "TON Transactions";
+"Monetization.StarsTransactions" = "Stars Transactions";
+
+"Monetization.BalanceStarsWithdraw" = "Withdraw via Fragment";
+"Monetization.BalanceStarsWithdrawShort" = "Withdraw";
+"Monetization.BalanceStarsBuyAds" = "Buy Ads";
+"Monetization.Balance.StarsInfo" = "You can collect rewards for Stars using Fragment, or use Stars to advertise your channel. [Learn More >]()";
+"Monetization.Balance.StarsInfo_URL" = "https://telegram.org";
+
+"Monetization.StarsProceeds.Title" = "Rewards Overview";
+"Monetization.StarsProceeds.Available" = "Available Balance";
+"Monetization.StarsProceeds.Current" = "Total Balance";
+"Monetization.StarsProceeds.Total" = "Lifetime Proceeds";
+
+"Premium.MessageEffects" = "Message Effects";
+"Premium.MessageEffectsInfo" = "Add over 500 animated effects to private messages.";
+
+"Chat.UnlockMedia" = "Unlock for %@";
+
+"Attachment.SendWithoutGrouping" = "Send Without Grouping";
+"Attachment.Paid.EditPrice" = "Edit Price";
+"Attachment.Paid.EditPrice.Stars_1" = "%@ Star";
+"Attachment.Paid.EditPrice.Stars_any" = "%@ Stars";
+"Attachment.Paid.Create" = "Make This Content Paid";

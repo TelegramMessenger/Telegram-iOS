@@ -114,7 +114,7 @@ private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id
                     
                     var parsedTransactions: [StarsContext.State.Transaction] = []
                     for entry in history {
-                        if let parsedTransaction = StarsContext.State.Transaction(apiTransaction: entry, transaction: transaction) {
+                        if let parsedTransaction = StarsContext.State.Transaction(apiTransaction: entry, peerId: peerId != account.peerId ? peerId : nil, transaction: transaction) {
                             parsedTransactions.append(parsedTransaction)
                         }
                     }
@@ -199,7 +199,7 @@ private final class StarsContextImpl {
             return
         }
         var transactions = state.transactions
-        transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil), at: 0)
+        transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, media: []), at: 0)
         
         self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: state.balance + balance, transactions: transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
     }
@@ -236,10 +236,11 @@ private final class StarsContextImpl {
 }
 
 private extension StarsContext.State.Transaction {
-    init?(apiTransaction: Api.StarsTransaction, transaction: Transaction) {
+    init?(apiTransaction: Api.StarsTransaction, peerId: EnginePeer.Id?, transaction: Transaction) {
         switch apiTransaction {
-        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl):
+        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId, extendedMedia):
             let parsedPeer: StarsContext.State.Transaction.Peer
+            var paidMessageId: MessageId?
             switch transactionPeer {
             case .starsTransactionPeerAppStore:
                 parsedPeer = .appStore
@@ -249,6 +250,8 @@ private extension StarsContext.State.Transaction {
                 parsedPeer = .fragment
             case .starsTransactionPeerPremiumBot:
                 parsedPeer = .premiumBot
+            case .starsTransactionPeerAds:
+                parsedPeer = .ads
             case .starsTransactionPeerUnsupported:
                 parsedPeer = .unsupported
             case let .starsTransactionPeer(apiPeer):
@@ -256,13 +259,28 @@ private extension StarsContext.State.Transaction {
                     return nil
                 }
                 parsedPeer = .peer(EnginePeer(peer))
+                if let messageId {
+                    if let peerId {
+                        paidMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: messageId)
+                    } else {
+                        paidMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: messageId)
+                    }
+                }
             }
             
             var flags: Flags = []
             if (apiFlags & (1 << 3)) != 0 {
                 flags.insert(.isRefund)
             }
-            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl)
+            if (apiFlags & (1 << 4)) != 0 {
+                flags.insert(.isPending)
+            }
+            if (apiFlags & (1 << 6)) != 0 {
+                flags.insert(.isFailed)
+            }
+            
+            let media = extendedMedia.flatMap({ $0.compactMap { textMediaAndExpirationTimerFromApiMedia($0, PeerId(0)).media } }) ?? []
+            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId, media: media)
         }
     }
 }
@@ -280,6 +298,7 @@ public final class StarsContext {
                 public static let isRefund = Flags(rawValue: 1 << 0)
                 public static let isLocal = Flags(rawValue: 1 << 1)
                 public static let isPending = Flags(rawValue: 1 << 2)
+                public static let isFailed = Flags(rawValue: 1 << 3)
             }
             
             public enum Peer: Equatable {
@@ -287,6 +306,7 @@ public final class StarsContext {
                 case playMarket
                 case fragment
                 case premiumBot
+                case ads
                 case unsupported
                 case peer(EnginePeer)
             }
@@ -301,6 +321,8 @@ public final class StarsContext {
             public let photo: TelegramMediaWebFile?
             public let transactionDate: Int32?
             public let transactionUrl: String?
+            public let paidMessageId: MessageId?
+            public let media: [Media]
             
             public init(
                 flags: Flags,
@@ -312,7 +334,9 @@ public final class StarsContext {
                 description: String?,
                 photo: TelegramMediaWebFile?,
                 transactionDate: Int32?,
-                transactionUrl: String?
+                transactionUrl: String?,
+                paidMessageId: MessageId?,
+                media: [Media]
             ) {
                 self.flags = flags
                 self.id = id
@@ -324,6 +348,48 @@ public final class StarsContext {
                 self.photo = photo
                 self.transactionDate = transactionDate
                 self.transactionUrl = transactionUrl
+                self.paidMessageId = paidMessageId
+                self.media = media
+            }
+            
+            public static func == (lhs: Transaction, rhs: Transaction) -> Bool {
+                if lhs.flags != rhs.flags {
+                    return false
+                }
+                if lhs.id != rhs.id {
+                    return false
+                }
+                if lhs.count != rhs.count {
+                    return false
+                }
+                if lhs.date != rhs.date {
+                    return false
+                }
+                if lhs.peer != rhs.peer {
+                    return false
+                }
+                if lhs.title != rhs.title {
+                    return false
+                }
+                if lhs.description != rhs.description {
+                    return false
+                }
+                if lhs.photo != rhs.photo {
+                    return false
+                }
+                if lhs.transactionDate != rhs.transactionDate {
+                    return false
+                }
+                if lhs.transactionUrl != rhs.transactionUrl {
+                    return false
+                }
+                if lhs.paidMessageId != rhs.paidMessageId {
+                    return false
+                }
+                if !areMediaArraysEqual(lhs.media, rhs.media) {
+                    return false
+                }
+                return true
             }
         }
         
@@ -535,8 +601,8 @@ private final class StarsTransactionsContextImpl {
         var updatedState = self._state
         updatedState.isLoading = true
         self.updateState(updatedState)
-        
-        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, mode: self.mode, offset: nextOffset, limit: 10)
+                
+        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, mode: self.mode, offset: nextOffset, limit: self.nextOffset == "" ? 25 : 50)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             guard let self else {
                 return
@@ -689,6 +755,8 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
             } else if error.errorDescription == "PAYMENT_FAILED" {
                 return .fail(.paymentFailed)
             } else if error.errorDescription == "INVOICE_ALREADY_PAID" {
+                return .fail(.alreadyPaid)
+            } else if error.errorDescription == "MEDIA_ALREADY_PAID" {
                 return .fail(.alreadyPaid)
             }
             return .fail(.generic)

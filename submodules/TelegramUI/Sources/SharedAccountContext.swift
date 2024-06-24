@@ -67,6 +67,8 @@ import BirthdayPickerScreen
 import StarsTransactionsScreen
 import StarsPurchaseScreen
 import StarsTransferScreen
+import StarsTransactionScreen
+import StarsWithdrawalScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1720,7 +1722,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return nil
         }, chatControllerNode: {
             return nil
-        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
+        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _, _ in }, openSearch: { }, setupReply: { _ in
         }, canSetupReply: { _ in
             return .none
         }, canSendMessages: {
@@ -2072,6 +2074,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .messageTags
         case .folderTags:
             mappedSource = .folderTags
+        case .messageEffects:
+            mappedSource = .messageEffects
         case .animatedEmoji:
             mappedSource = .animatedEmoji
         }
@@ -2128,6 +2132,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .messagePrivacy
         case .folderTags:
             mappedSubject = .folderTags
+        case .messageEffects:
+            mappedSubject = .messageEffects
         case .business:
             mappedSubject = .business
             buttonText = presentationData.strings.Chat_EmptyStateIntroFooterPremiumActionButton
@@ -2628,12 +2634,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsPurchaseScreen(context: context, starsContext: starsContext, options: options, peerId: peerId, requiredStars: requiredStars, modal: true, completion: completion)
     }
     
-    public func makeStarsTransferScreen(context: AccountContext, starsContext: StarsContext, invoice: TelegramMediaInvoice, source: BotPaymentInvoiceSource, inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>, completion: @escaping (Bool) -> Void) -> ViewController {
-        return StarsTransferScreen(context: context, starsContext: starsContext, invoice: invoice, source: source, inputData: inputData, completion: completion)
+    public func makeStarsTransferScreen(context: AccountContext, starsContext: StarsContext, invoice: TelegramMediaInvoice, source: BotPaymentInvoiceSource, extendedMedia: [TelegramExtendedMedia], inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>, completion: @escaping (Bool) -> Void) -> ViewController {
+        return StarsTransferScreen(context: context, starsContext: starsContext, invoice: invoice, source: source, extendedMedia: extendedMedia, inputData: inputData, completion: completion)
     }
     
-    public func makeStarsTransactionScreen(context: AccountContext, transaction: StarsContext.State.Transaction, isAccount: Bool) -> ViewController {
-        return StarsTransactionScreen(context: context, subject: .transaction(transaction, isAccount), action: {})
+    public func makeStarsTransactionScreen(context: AccountContext, transaction: StarsContext.State.Transaction, peer: EnginePeer) -> ViewController {
+        return StarsTransactionScreen(context: context, subject: .transaction(transaction, peer), action: {})
     }
     
     public func makeStarsReceiptScreen(context: AccountContext, receipt: BotPaymentReceipt) -> ViewController {
@@ -2644,8 +2650,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsStatisticsScreen(context: context, peerId: peerId, revenueContext: revenueContext)
     }
     
-    public func makeStarsAmountScreen(context: AccountContext, completion: @escaping (Int64) -> Void) -> ViewController {
-        return StarsWithdrawScreen(context: context, mode: .paidMedia, completion: completion)
+    public func makeStarsAmountScreen(context: AccountContext, initialValue: Int64?, completion: @escaping (Int64) -> Void) -> ViewController {
+        return StarsWithdrawScreen(context: context, mode: .paidMedia(initialValue), completion: completion)
+    }
+    
+    public func makeStarsWithdrawalScreen(context: AccountContext, stats: StarsRevenueStats, completion: @escaping (Int64) -> Void) -> ViewController {
+        return StarsWithdrawScreen(context: context, mode: .withdraw(stats), completion: completion)
     }
 }
 

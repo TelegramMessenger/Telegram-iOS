@@ -6,8 +6,23 @@ import MtProtoKit
 
 
 public struct PendingMessageStatus: Equatable {
+    public struct Progress: Equatable {
+        public let progress: Float
+        public let mediaProgress: [MediaId: Float]
+        
+        public init(progress: Float, mediaProgress: [MediaId: Float] = [:]) {
+            self.progress = progress
+            self.mediaProgress = mediaProgress
+        }
+        
+        init(_ contentProgress: PendingMessageUploadedContentProgress) {
+            self.progress = contentProgress.progress
+            self.mediaProgress = contentProgress.mediaProgress
+        }
+    }
+    
     public let isRunning: Bool
-    public let progress: Float
+    public let progress: Progress
 }
 
 private enum PendingMessageState {
@@ -364,7 +379,7 @@ public final class PendingMessageManager {
                 self.messageContexts[id] = messageContext
             }
             
-            let status = PendingMessageStatus(isRunning: false, progress: 0.0)
+            let status = PendingMessageStatus(isRunning: false, progress: PendingMessageStatus.Progress(progress: 0.0))
             if status != messageContext.status {
                 messageContext.status = status
                 for subscriber in messageContext.statusSubscribers.copyItems() {
@@ -618,7 +633,7 @@ public final class PendingMessageManager {
                 switch next {
                     case let .progress(progress):
                         if let current = strongSelf.messageContexts[messageId] {
-                            let status = PendingMessageStatus(isRunning: true, progress: progress)
+                            let status = PendingMessageStatus(isRunning: true, progress: PendingMessageStatus.Progress(progress: progress))
                             current.status = status
                             for subscriber in current.statusSubscribers.copyItems() {
                                 subscriber(current.status, current.error)
@@ -636,7 +651,7 @@ public final class PendingMessageManager {
     private func beginUploadingMessage(messageContext: PendingMessageContext, id: MessageId, threadId: Int64?, groupId: Int64?, uploadSignal: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>) {
         messageContext.state = .uploading(groupId: groupId)
         
-        let status = PendingMessageStatus(isRunning: true, progress: 0.0)
+        let status = PendingMessageStatus(isRunning: true, progress: PendingMessageStatus.Progress(progress: 0.0))
         messageContext.status = status
         for subscriber in messageContext.statusSubscribers.copyItems() {
             subscriber(messageContext.status, messageContext.error)
@@ -678,7 +693,7 @@ public final class PendingMessageManager {
                 switch next {
                     case let .progress(progress):
                         if let current = strongSelf.messageContexts[id] {
-                            let status = PendingMessageStatus(isRunning: true, progress: progress)
+                            let status = PendingMessageStatus(isRunning: true, progress: PendingMessageStatus.Progress(progress))
                             current.status = status
                             for subscriber in current.statusSubscribers.copyItems() {
                                 subscriber(current.status, current.error)
@@ -712,7 +727,7 @@ public final class PendingMessageManager {
             if case let .waitingForUploadToStart(groupId, uploadSignal) = context.state {
                 if self.canBeginUploadingMessage(id: contextId, type: context.contentType ?? .media) {
                     context.state = .uploading(groupId: groupId)
-                    let status = PendingMessageStatus(isRunning: true, progress: 0.0)
+                    let status = PendingMessageStatus(isRunning: true, progress: PendingMessageStatus.Progress(progress: 0.0))
                     context.status = status
                     for subscriber in context.statusSubscribers.copyItems() {
                         subscriber(context.status, context.error)
@@ -734,7 +749,7 @@ public final class PendingMessageManager {
                             switch next {
                                 case let .progress(progress):
                                     if let current = strongSelf.messageContexts[contextId] {
-                                        let status = PendingMessageStatus(isRunning: true, progress: progress)
+                                        let status = PendingMessageStatus(isRunning: true, progress: PendingMessageStatus.Progress(progress))
                                         current.status = status
                                         for subscriber in current.statusSubscribers.copyItems() {
                                             subscriber(context.status, context.error)

@@ -901,47 +901,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 }
-                
-//                #if DEBUG
-//                if message.text == "#", let telegramImage = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage {
-//                    let invoice = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: 100, startParam: "", extendedMedia: .preview(dimensions: telegramImage.representations.first?.dimensions ?? PixelDimensions(width: 1, height: 1), immediateThumbnailData: telegramImage.immediateThumbnailData, videoDuration: nil), flags: [], version: 0)
-//                    
-//                    let inputData = Promise<BotCheckoutController.InputData?>()
-//                    inputData.set(.single(
-//                        BotCheckoutController.InputData(
-//                            form: BotPaymentForm(id: 123, canSaveCredentials: false, passwordMissing: false, invoice: BotPaymentInvoice(isTest: false, requestedFields: [], currency: "XTR", prices: [BotPaymentPrice(label: "", amount: 100)], tip: nil, termsInfo: nil), paymentBotId: message.id.peerId, providerId: nil, url: nil, nativeProvider: nil, savedInfo: nil, savedCredentials: [], additionalPaymentMethods: []),
-//                            validatedFormInfo: nil,
-//                            botPeer: nil
-//                    )))
-//                    if invoice.currency == "XTR", let starsContext = strongSelf.context.starsContext {
-//                        let starsInputData = combineLatest(
-//                            inputData.get(),
-//                            starsContext.state
-//                        )
-//                        |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
-//                            if let data, let state {
-//                                return (state, data.form, data.botPeer)
-//                            } else {
-//                                return nil
-//                            }
-//                        }
-//                        let _ = (starsInputData |> filter { $0 != nil } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
-//                            guard let strongSelf = self else {
-//                                return
-//                            }
-//                            let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .message(message.id), inputData: starsInputData, completion: { _ in })
-//                            strongSelf.push(controller)
-//                        })
-//                    }
-//                    return true
-//                }
-//                #endif
-                
-                if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia {
+                if let paidContent = media as? TelegramMediaPaidContent, let extendedMedia = paidContent.extendedMedia.first {
                     switch extendedMedia {
                         case .preview:
                             if displayVoiceMessageDiscardAlert() {
-                                strongSelf.controllerInteraction?.openCheckoutOrReceipt(message.id)
+                                strongSelf.controllerInteraction?.openCheckoutOrReceipt(message.id, params)
+                                return true
+                            } else {
+                                return false
+                            }
+                        case .full:
+                            break
+                    }
+                } else if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia {
+                    switch extendedMedia {
+                        case .preview:
+                            if displayVoiceMessageDiscardAlert() {
+                                strongSelf.controllerInteraction?.openCheckoutOrReceipt(message.id, nil)
                                 return true
                             } else {
                                 return false
@@ -1279,7 +1255,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 standalone = true
             }
             
-            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: openChatLocation, chatFilterTag: chatFilterTag, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, standalone: standalone, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
+            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: openChatLocation, chatFilterTag: chatFilterTag, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, mediaIndex: params.mediaIndex, standalone: standalone, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a in
                 self?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -2615,7 +2591,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let self {
                 self.openLinkLongTap(action, params: params)
             }
-        }, openCheckoutOrReceipt: { [weak self] messageId in
+        }, openCheckoutOrReceipt: { [weak self] messageId, params in
             guard let strongSelf = self else {
                 return
             }
@@ -2638,7 +2614,48 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 for media in message.media {
-                    if let invoice = media as? TelegramMediaInvoice {
+                    if let paidContent = media as? TelegramMediaPaidContent {
+                        let progressSignal = Signal<Never, NoError> { _ in
+                            params?.progress?.set(.single(true))
+                            return ActionDisposable {
+                                params?.progress?.set(.single(false))
+                            }
+                        }
+                        |> runOn(Queue.mainQueue())
+                        |> delay(0.25, queue: Queue.mainQueue())
+                        let progressDisposable = progressSignal.startStrict()
+                        
+                        strongSelf.chatDisplayNode.dismissInput()
+                        let inputData = Promise<BotCheckoutController.InputData?>()
+                        inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, source: .message(message.id))
+                        |> map(Optional.init)
+                        |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
+                            return .single(nil)
+                        })
+                        if let starsContext = strongSelf.context.starsContext {
+                            let starsInputData = combineLatest(
+                                inputData.get(),
+                                starsContext.state
+                            )
+                            |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
+                                if let data, let state {
+                                    return (state, data.form, data.botPeer)
+                                } else {
+                                    return nil
+                                }
+                            }
+                            let _ = (starsInputData |> filter { $0 != nil } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+                                guard let strongSelf = self, let extendedMedia = paidContent.extendedMedia.first, case let .preview(dimensions, immediateThumbnailData, _) = extendedMedia else {
+                                    return
+                                }
+                                let invoice = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: paidContent.amount, startParam: "", extendedMedia: .preview(dimensions:dimensions, immediateThumbnailData: immediateThumbnailData, videoDuration: nil), flags: [], version: 0)
+                                let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .message(messageId), extendedMedia: paidContent.extendedMedia, inputData: starsInputData, completion: { _ in })
+                                strongSelf.push(controller)
+                                
+                                progressDisposable.dispose()
+                            })
+                        }
+                    } else if let invoice = media as? TelegramMediaInvoice {
                         strongSelf.chatDisplayNode.dismissInput()
                         if let receiptMessageId = invoice.receiptMessageId {
                             if invoice.currency == "XTR" {
@@ -2675,7 +2692,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .message(messageId), inputData: starsInputData, completion: { _ in })
+                                    let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .message(messageId), extendedMedia: [], inputData: starsInputData, completion: { _ in })
                                     strongSelf.push(controller)
                                 })
                             } else {

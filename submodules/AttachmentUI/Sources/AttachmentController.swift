@@ -1040,8 +1040,13 @@ public class AttachmentController: ViewController {
     
     public override var isMinimized: Bool {
         didSet {
-            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-            transition.updateAlpha(node: self.node.dim, alpha: self.isMinimized ? 0.0 : 1.0)
+            guard self.isMinimized != oldValue else {
+                return
+            }
+            if !self.node.isDismissing {
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+                transition.updateAlpha(node: self.node.dim, alpha: self.isMinimized ? 0.0 : 1.0)
+            }
         }
     }
     

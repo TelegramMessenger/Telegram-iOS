@@ -118,7 +118,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         }, presentGlobalOverlayController: { _, _ in
         }, callPeer: { _, _ in
         }, longTap: { _, _ in
-        }, openCheckoutOrReceipt: { _ in
+        }, openCheckoutOrReceipt: { _, _ in
         }, openSearch: {
         }, setupReply: { _ in
         }, canSetupReply: { _ in

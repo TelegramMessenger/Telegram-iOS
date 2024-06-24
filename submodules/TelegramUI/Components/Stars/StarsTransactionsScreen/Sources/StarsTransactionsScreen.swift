@@ -525,12 +525,13 @@ final class StarsTransactionsScreenComponent: Component {
                             actionTitle: environment.strings.Stars_Intro_Buy,
                             actionAvailable: !premiumConfiguration.areStarsDisabled,
                             actionIsEnabled: true,
-                            buy: { [weak self] in
+                            action: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
                                 }
                                 component.buy()
-                            }
+                            },
+                            buyAds: nil
                         )
                     ))]
                 )),
@@ -723,8 +724,14 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
             guard let self else {
                 return
             }
-            let controller = context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction, isAccount: true)
-            self.push(controller)
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let self, let peer else {
+                    return
+                }
+                let controller = context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction, peer: peer)
+                self.push(controller)
+            })
         }
         
         buyImpl = { [weak self] in

@@ -9,24 +9,31 @@ import ItemListUI
 import SolidRoundedButtonNode
 import TelegramCore
 import TextFormat
+import ComponentFlow
+import ButtonComponent
+import BundleIconComponent
 
 final class MonetizationBalanceItem: ListViewItem, ItemListItem {
     let context: AccountContext
     let presentationData: ItemListPresentationData
-    let stats: RevenueStats
+    let stats: Stats
     let canWithdraw: Bool
     let isEnabled: Bool
+    let actionCooldownUntilTimestamp: Int32?
     let withdrawAction: () -> Void
+    let buyAdsAction: (() -> Void)?
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
     init(
         context: AccountContext,
         presentationData: ItemListPresentationData,
-        stats: RevenueStats,
+        stats: Stats,
         canWithdraw: Bool,
         isEnabled: Bool,
+        actionCooldownUntilTimestamp: Int32?,
         withdrawAction: @escaping () -> Void,
+        buyAdsAction: (() -> Void)?,
         sectionId: ItemListSectionId,
         style: ItemListStyle
     ) {
@@ -35,7 +42,9 @@ final class MonetizationBalanceItem: ListViewItem, ItemListItem {
         self.stats = stats
         self.canWithdraw = canWithdraw
         self.isEnabled = isEnabled
+        self.actionCooldownUntilTimestamp = actionCooldownUntilTimestamp
         self.withdrawAction = withdrawAction
+        self.buyAdsAction = buyAdsAction
         self.sectionId = sectionId
         self.style = style
     }
@@ -85,12 +94,15 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
     private let iconNode: ASImageNode
     private let balanceTextNode: TextNode
     private let valueTextNode: TextNode
-    
-    private var withdrawButtonNode: SolidRoundedButtonNode?
+    private var button = ComponentView<Empty>()
+    private var buyButton = ComponentView<Empty>()
         
     private let activateArea: AccessibilityAreaNode
     
+    private var timer: Foundation.Timer?
+    
     private var item: MonetizationBalanceItem?
+    private var buttonLayout: (isStars: Bool, origin: CGFloat, width: CGFloat, leftInset: CGFloat, rightInset: CGFloat)?
     
     override var canBeSelected: Bool {
         return false
@@ -158,13 +170,24 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
             let integralFont = Font.with(size: 48.0, design: .round, weight: .semibold)
             let fractionalFont = Font.with(size: 24.0, design: .round, weight: .semibold)
             
-            let cryptoValue = formatBalanceText(item.stats.balances.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
+            let amountString: NSAttributedString
+            let value: String
             
-            let amountString = amountAttributedString(cryptoValue, integralFont: integralFont, fractionalFont: fractionalFont, color: item.presentationData.theme.list.itemPrimaryTextColor)
+            var isStars = false
+            if let stats = item.stats as? RevenueStats {
+                let cryptoValue = formatBalanceText(stats.balances.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
+                amountString = amountAttributedString(cryptoValue, integralFont: integralFont, fractionalFont: fractionalFont, color: item.presentationData.theme.list.itemPrimaryTextColor)
+                value = stats.balances.availableBalance == 0 ? "" : "≈\(formatUsdValue(stats.balances.availableBalance, rate: stats.usdRate))"
+            } else if let stats = item.stats as? StarsRevenueStats {
+                amountString = NSAttributedString(string: presentationStringsFormattedNumber(Int32(stats.balances.availableBalance), item.presentationData.dateTimeFormat.groupingSeparator), font: integralFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+                value = stats.balances.availableBalance == 0 ? "" : "≈\(formatUsdValue(stats.balances.availableBalance, divide: false, rate: stats.usdRate))"
+                isStars = true
+            } else {
+                fatalError()
+            }
 
             let (balanceLayout, balanceApply) = makeBalanceTextLayout(TextNodeLayoutArguments(attributedString: amountString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            let value = item.stats.balances.availableBalance == 0 ? "" : "≈\(formatUsdValue(item.stats.balances.availableBalance, rate: item.stats.usdRate))"
             let (valueLayout, valueApply) = makeValueTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: value, font: Font.regular(17.0), textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let verticalInset: CGFloat = 13.0
@@ -272,7 +295,11 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     if themeUpdated {
-                        strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonBig"), color: item.presentationData.theme.list.itemAccentColor)
+                        if isStars {
+                            strongSelf.iconNode.image = UIImage(bundleImageName: "Premium/Stars/BalanceStar")
+                        } else {
+                            strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonBig"), color: item.presentationData.theme.list.itemAccentColor)
+                        }
                     }
 
                     var emojiItemSize = CGSize()
@@ -288,34 +315,128 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                     
                     strongSelf.valueTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - valueLayout.size.width) / 2.0), y: balanceTextFrame.maxY - 5.0), size: valueLayout.size)
                                       
-                    if item.canWithdraw {
-                        let withdrawButtonNode: SolidRoundedButtonNode
-                        if let currentWithdrawButtonNode = strongSelf.withdrawButtonNode {
-                            withdrawButtonNode = currentWithdrawButtonNode
-                        } else {
-                            var buttonTheme = SolidRoundedButtonTheme(theme: item.presentationData.theme)
-                            buttonTheme = buttonTheme.withUpdated(disabledBackgroundColor: buttonTheme.backgroundColor, disabledForegroundColor: buttonTheme.foregroundColor.withAlphaComponent(0.6))
-                            withdrawButtonNode = SolidRoundedButtonNode(theme: buttonTheme, height: buttonHeight, cornerRadius: 11.0)
-                            withdrawButtonNode.pressed = { [weak self] in
-                                if let self, let item = self.item, item.isEnabled {
-                                    item.withdrawAction()
-                                }
-                            }
-                            strongSelf.addSubnode(withdrawButtonNode)
-                            strongSelf.withdrawButtonNode = withdrawButtonNode
-                        }
-                        withdrawButtonNode.title = item.presentationData.strings.Monetization_BalanceWithdraw
-                        withdrawButtonNode.isEnabled = item.isEnabled
-                        
-                        let buttonWidth = contentSize.width - leftInset - rightInset
-                        let _ = withdrawButtonNode.updateLayout(width: buttonWidth, transition: .immediate)
-                        withdrawButtonNode.frame = CGRect(x: leftInset, y: strongSelf.valueTextNode.frame.maxY + buttonSpacing + 3.0, width: buttonWidth, height: buttonHeight)
-                    } else {
-                        strongSelf.withdrawButtonNode?.removeFromSupernode()
-                        strongSelf.withdrawButtonNode = nil
-                    }
+                    strongSelf.buttonLayout = (isStars: isStars, origin: strongSelf.valueTextNode.frame.maxY + buttonSpacing + 3.0, width: params.width, leftInset: leftInset, rightInset: rightInset)
+                    strongSelf.updateButton()
                 }
             })
+        }
+    }
+    
+    func updateButton() {
+        guard let item = self.item, let (isStars, origin, width, leftInset, rightInset) = self.buttonLayout else {
+            return
+        }
+        
+        if item.canWithdraw {
+            var remainingCooldownSeconds: Int32 = 0
+            if let cooldownUntilTimestamp = item.actionCooldownUntilTimestamp {
+                remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+                remainingCooldownSeconds = max(0, remainingCooldownSeconds)
+            }
+            
+            if remainingCooldownSeconds > 0 {
+                if self.timer == nil {
+                    self.timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.updateButton()
+                    })
+                }
+            } else {
+                if let timer = self.timer {
+                    self.timer = nil
+                    timer.invalidate()
+                }
+            }
+                        
+            var actionTitle = isStars ? item.presentationData.strings.Monetization_BalanceStarsWithdraw : item.presentationData.strings.Monetization_BalanceWithdraw
+            var withdrawWidth = width - leftInset - rightInset
+            if let _ = item.buyAdsAction {
+                withdrawWidth = (withdrawWidth - 10.0) / 2.0
+                actionTitle = item.presentationData.strings.Monetization_BalanceStarsWithdrawShort
+            }
+            
+            let content: AnyComponentWithIdentity<Empty>
+            if remainingCooldownSeconds > 0 {
+                content = AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(
+                    VStack([
+                        AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(Text(text: actionTitle, font: Font.semibold(17.0), color: item.presentationData.theme.list.itemCheckColors.foregroundColor))),
+                        AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(HStack([
+                            AnyComponentWithIdentity(id: 1, component: AnyComponent(BundleIconComponent(name: "Chat List/StatusLockIcon", tintColor: item.presentationData.theme.list.itemCheckColors.fillColor.mixedWith(item.presentationData.theme.list.itemCheckColors.foregroundColor, alpha: 0.7)))),
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(Text(text: stringForRemainingTime(remainingCooldownSeconds), font: Font.with(size: 11.0, weight: .medium, traits: [.monospacedNumbers]), color: item.presentationData.theme.list.itemCheckColors.fillColor.mixedWith(item.presentationData.theme.list.itemCheckColors.foregroundColor, alpha: 0.7))))
+                        ], spacing: 3.0)))
+                    ], spacing: 1.0)
+                ))
+            } else {
+                content = AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: actionTitle, font: Font.semibold(17.0), color: item.presentationData.theme.list.itemCheckColors.foregroundColor)))
+            }
+                        
+            let buttonSize = self.button.update(
+                transition: .immediate,
+                component: AnyComponent(ButtonComponent(
+                    background: ButtonComponent.Background(
+                        color: item.presentationData.theme.list.itemCheckColors.fillColor,
+                        foreground: item.presentationData.theme.list.itemCheckColors.foregroundColor,
+                        pressedColor: item.presentationData.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
+                    ),
+                    content: content,
+                    isEnabled: item.isEnabled,
+                    allowActionWhenDisabled: false,
+                    displaysProgress: false,
+                    action: { [weak self] in
+                        guard let self, let item = self.item, item.isEnabled else {
+                            return
+                        }
+                        item.withdrawAction()
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: withdrawWidth, height: 50.0)
+            )
+            if let buttonView = self.button.view {
+                if buttonView.superview == nil {
+                    self.view.addSubview(buttonView)
+                }
+                let buttonFrame = CGRect(origin: CGPoint(x: leftInset, y: origin), size: buttonSize)
+                buttonView.frame = buttonFrame
+            }
+            
+            if let _ = item.buyAdsAction {
+                let buyButtonSize = self.buyButton.update(
+                    transition: .immediate,
+                    component: AnyComponent(ButtonComponent(
+                        background: ButtonComponent.Background(
+                            color: item.presentationData.theme.list.itemCheckColors.fillColor,
+                            foreground: item.presentationData.theme.list.itemCheckColors.foregroundColor,
+                            pressedColor: item.presentationData.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
+                        ),
+                        content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: item.presentationData.strings.Monetization_BalanceStarsBuyAds, font: Font.semibold(17.0), color: item.presentationData.theme.list.itemCheckColors.foregroundColor))),
+                        isEnabled: true,
+                        allowActionWhenDisabled: false,
+                        displaysProgress: false,
+                        action: { [weak self] in
+                            guard let self, let item = self.item, item.isEnabled else {
+                                return
+                            }
+                            item.buyAdsAction?()
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: withdrawWidth, height: 50.0)
+                )
+                if let buttonView = self.buyButton.view {
+                    if buttonView.superview == nil {
+                        self.view.addSubview(buttonView)
+                    }
+                    let buttonFrame = CGRect(origin: CGPoint(x: leftInset + withdrawWidth + 10.0, y: origin), size: buyButtonSize)
+                    buttonView.frame = buttonFrame
+                }
+            } else if let buttonView = self.buyButton.view {
+                buttonView.removeFromSuperview()
+            }
+        } else if let buttonView = self.button.view {
+            buttonView.removeFromSuperview()
         }
     }
     
@@ -330,4 +451,17 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
     override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
+}
+
+func stringForRemainingTime(_ duration: Int32) -> String {
+    let hours = duration / 3600
+    let minutes = duration / 60 % 60
+    let seconds = duration % 60
+    let durationString: String
+    if hours > 0 {
+        durationString = String(format: "%d:%02d", hours, minutes)
+    } else {
+        durationString = String(format: "%02d:%02d", minutes, seconds)
+    }
+    return durationString
 }

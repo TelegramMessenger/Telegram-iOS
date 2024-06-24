@@ -859,6 +859,9 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
                     let signal = mediaGridMessagePhoto(account: self.context.account, userLocation: .peer(self.message.id.peerId), photoReference: .message(message: MessageReference(self.message._asMessage()), media: image), fullRepresentationSize: CGSize(width: 36.0, height: 36.0), blurred: hasSpoiler, synchronousLoad: synchronousLoads)
                     self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
                 }
+            } else {
+                let signal = chatSecretPhoto(account: self.context.account, userLocation: .peer(self.message.id.peerId), photoReference: .standalone(media: image), ignoreFullSize: true, synchronousLoad: synchronousLoads)
+                self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
             }
         } else if case let .action(action) = self.media, case let .suggestedProfilePhoto(image) = action.action, let image = image {
             isRound = true
@@ -2565,7 +2568,36 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 }
                                 
                                 inner: for media in message.media {
-                                    if let image = media as? TelegramMediaImage {
+                                    if let paidContent = media as? TelegramMediaPaidContent {
+                                        let fitSize = contentImageSize
+                                        var index: Int64 = 0
+                                        for media in paidContent.extendedMedia.prefix(3) {
+                                            switch media {
+                                            case let .preview(dimensions, immediateThumbnailData, videoDuration):
+                                                if let immediateThumbnailData {
+                                                    if let videoDuration {
+                                                        let thumbnailMedia = TelegramMediaFile(fileId: MediaId(namespace: 0, id: index), partialReference: nil, resource: EmptyMediaResource(), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Video(duration: Double(videoDuration), size: dimensions ?? PixelDimensions(width: 1, height: 1), flags: [], preloadSize: nil)])
+                                                        contentImageSpecs.append(ContentImageSpec(message: message, media:  .file(thumbnailMedia), size: fitSize))
+                                                    } else {
+                                                        let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: index), representations: [], immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                                                        contentImageSpecs.append(ContentImageSpec(message: message, media:  .image(thumbnailMedia), size: fitSize))
+                                                    }
+                                                    index += 1
+                                                }
+                                            case let .full(fullMedia):
+                                                if let image = fullMedia as? TelegramMediaImage {
+                                                    if let _ = largestImageRepresentation(image.representations) {
+                                                        contentImageSpecs.append(ContentImageSpec(message: message, media:  .image(image), size: fitSize))
+                                                    }
+                                                } else if let file = fullMedia as? TelegramMediaFile {
+                                                    if file.isVideo, !file.isVideoSticker, let _ = file.dimensions {
+                                                        contentImageSpecs.append(ContentImageSpec(message: message,  media: .file(file), size: fitSize))
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        break inner
+                                    } else if let image = media as? TelegramMediaImage {
                                         if let _ = largestImageRepresentation(image.representations) {
                                             let fitSize = contentImageSize
                                             contentImageSpecs.append(ContentImageSpec(message: message, media:  .image(image), size: fitSize))

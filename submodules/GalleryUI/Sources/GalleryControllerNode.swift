@@ -228,15 +228,19 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
                         fromLeft = true
                     }
                     if let current = strongSelf.currentThumbnailContainerNode {
+                        strongSelf.currentThumbnailContainerNode = nil
                         if thumbnailContainerVisible {
                             current.animateOut(toRight: fromLeft)
                             current.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak current] _ in
                                 current?.removeFromSupernode()
                             })
+                            if let (navigationHeight, layout) = strongSelf.containerLayout, node == nil {
+                                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+                            }
                         }
                     }
-                    strongSelf.currentThumbnailContainerNode = node
                     if let node = node {
+                        strongSelf.currentThumbnailContainerNode = node
                         strongSelf.insertSubnode(node, aboveSubnode: strongSelf.footerNode)
                         if let (navigationHeight, layout) = strongSelf.containerLayout, thumbnailContainerVisible {
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)

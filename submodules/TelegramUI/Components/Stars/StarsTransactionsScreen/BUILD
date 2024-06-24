@@ -45,6 +45,8 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerManagement/OwnershipTransferController",
         "//submodules/TelegramUI/Components/ListItemComponentAdaptor",
         "//submodules/StatisticsUI",
+        "//submodules/TelegramUI/Components/Stars/StarsWithdrawalScreen",
+        "//submodules/TelegramUI/Components/Stars/StarsAvatarComponent",
     ],
     visibility = [
         "//visibility:public",

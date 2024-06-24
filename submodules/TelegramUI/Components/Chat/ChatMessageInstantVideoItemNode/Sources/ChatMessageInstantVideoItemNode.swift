@@ -1490,7 +1490,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
             reactionButtonsNode.offset(value: value, animationCurve: animationCurve, duration: duration)
         }
     }
-    
+        
     override public func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
         if let result = self.reactionButtonsNode?.reactionTargetView(value: value) {
             return result

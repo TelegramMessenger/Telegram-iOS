@@ -43,6 +43,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/Components/SheetComponent",
+        "//submodules/Components/BundleIconComponent",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/MultilineTextWithEntitiesComponent",
         "//submodules/TelegramNotices",
@@ -50,6 +51,10 @@ swift_library(
         "//submodules/PasswordSetupUI",
         "//submodules/TelegramUI/Components/PeerManagement/OwnershipTransferController",
         "//submodules/TelegramUI/Components/ListItemComponentAdaptor",
+        "//submodules/TelegramUI/Components/Stars/StarsWithdrawalScreen",
+        "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/TelegramUI/Components/ListActionItemComponent",
+        "//submodules/TelegramUI/Components/Stars/StarsAvatarComponent",
     ],
     visibility = [
         "//visibility:public",

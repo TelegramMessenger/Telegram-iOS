@@ -109,10 +109,12 @@ public struct NavigateToMessageParams {
 
 public struct OpenMessageParams {
     public var mode: ChatControllerInteractionOpenMessageMode
+    public var mediaIndex: Int?
     public var progress: Promise<Bool>?
     
-    public init(mode: ChatControllerInteractionOpenMessageMode, progress: Promise<Bool>? = nil) {
+    public init(mode: ChatControllerInteractionOpenMessageMode, mediaIndex: Int? = nil, progress: Promise<Bool>? = nil) {
         self.mode = mode
+        self.mediaIndex = mediaIndex
         self.progress = progress
     }
 }
@@ -156,7 +158,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         public var messageNode: ASDisplayNode?
         public var progress: Promise<Bool>?
         
-        public init(message: Message?, contentNode: ContextExtractedContentContainingNode? = nil, messageNode: ASDisplayNode? = nil, progress: Promise<Bool>? = nil) {
+        public init(message: Message? = nil, contentNode: ContextExtractedContentContainingNode? = nil, messageNode: ASDisplayNode? = nil, progress: Promise<Bool>? = nil) {
             self.message = message
             self.contentNode = contentNode
             self.messageNode = messageNode
@@ -205,7 +207,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let presentGlobalOverlayController: (ViewController, Any?) -> Void
     public let callPeer: (PeerId, Bool) -> Void
     public let longTap: (ChatControllerInteractionLongTapAction, LongTapParams?) -> Void
-    public let openCheckoutOrReceipt: (MessageId) -> Void
+    public let openCheckoutOrReceipt: (MessageId, OpenMessageParams?) -> Void
     public let openSearch: () -> Void
     public let setupReply: (MessageId) -> Void
     public let canSetupReply: (Message) -> ChatControllerInteractionSwipeAction
@@ -334,7 +336,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void,
         callPeer: @escaping (PeerId, Bool) -> Void,
         longTap: @escaping (ChatControllerInteractionLongTapAction, LongTapParams?) -> Void,
-        openCheckoutOrReceipt: @escaping (MessageId) -> Void,
+        openCheckoutOrReceipt: @escaping (MessageId, OpenMessageParams?) -> Void,
         openSearch: @escaping () -> Void,
         setupReply: @escaping (MessageId) -> Void,
         canSetupReply: @escaping (Message) -> ChatControllerInteractionSwipeAction,

@@ -54,6 +54,8 @@ public final class GalleryFooterNode: ASDisplayNode {
                 }
                 self.addSubnode(footerContentNode)
             }
+        } else if let _ = self.currentThumbnailPanelHeight {
+            self.currentThumbnailPanelHeight = thumbnailPanelHeight
         }
         
         var animateOverlayIn = false

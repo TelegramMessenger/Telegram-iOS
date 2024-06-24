@@ -153,7 +153,13 @@ private func areResourcesEqual(_ lhs: MediaResource, _ rhs: MediaResource) -> Bo
 }
 
 private func findMediaResource(media: Media, previousMedia: Media?, resource: MediaResource) -> TelegramMediaResource? {
-    if let image = media as? TelegramMediaImage {
+    if let paidContent = media as? TelegramMediaPaidContent {
+        for case let .full(fullMedia) in paidContent.extendedMedia {
+            if let resource = findMediaResource(media: fullMedia, previousMedia: previousMedia, resource: resource) {
+                return resource
+            }
+        }
+    } else if let image = media as? TelegramMediaImage {
         for representation in image.representations {
             if let updatedResource = representation.resource as? CloudPhotoSizeMediaResource, let previousResource = resource as? CloudPhotoSizeMediaResource {
                 if updatedResource.photoId == previousResource.photoId && updatedResource.sizeSpec == previousResource.sizeSpec {

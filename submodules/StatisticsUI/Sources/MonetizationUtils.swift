@@ -9,8 +9,9 @@ func formatAddress(_ address: String) -> String {
     return address
 }
 
-func formatUsdValue(_ value: Int64, rate: Double) -> String {
-    let formattedValue = String(format: "%0.2f", (Double(value) / 1000000000) * rate)
+func formatUsdValue(_ value: Int64, divide: Bool = true, rate: Double) -> String {
+    let normalizedValue: Double = divide ? Double(value) / 1000000000 : Double(value)
+    let formattedValue = String(format: "%0.2f", normalizedValue * rate)
     return "$\(formattedValue)"
 }
 
@@ -38,6 +39,11 @@ func formatBalanceText(_ value: Int64, decimalSeparator: String, showPlus: Bool 
     } else if showPlus {
         balanceText.insert("+", at: balanceText.startIndex)
     }
+    
+    if let dec = balanceText.range(of: decimalSeparator) {
+        balanceText = String(balanceText[balanceText.startIndex ..< min(balanceText.endIndex, balanceText.index(dec.upperBound, offsetBy: 2))])
+    }
+    
     return balanceText
 }
 
