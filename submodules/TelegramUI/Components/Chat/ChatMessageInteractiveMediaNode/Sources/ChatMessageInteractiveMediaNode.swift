@@ -412,6 +412,14 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     }
 }
 
+private func selectStoryMedia(item: Stories.Item, preferredHighQuality: Bool) -> Media? {
+    if !preferredHighQuality, let alternativeMedia = item.alternativeMedia {
+        return alternativeMedia
+    } else {
+        return item.media
+    }
+}
+
 public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitionNode {
     private let pinchContainerNode: PinchSourceContainerNode
     private let imageNode: TransformImageNode
@@ -443,6 +451,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     private var wideLayout: Bool?
     private var automaticDownload: InteractiveMediaNodeAutodownloadMode?
     public var automaticPlayback: Bool?
+    private var preferredStoryHighQuality: Bool = false
     
     private let statusDisposable = MetaDisposable()
     private let fetchControls = Atomic<FetchControls?>(value: nil)
@@ -667,6 +676,13 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 } else if let media = media as? TelegramMediaImage, let resource = largestImageRepresentation(media.representations)?.resource {
                                     messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: media, resource: resource)
                                 }
+                                if let alternativeMedia = item.alternativeMedia {
+                                    if let media = alternativeMedia as? TelegramMediaFile {
+                                        messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: media)
+                                    } else if let media = alternativeMedia as? TelegramMediaImage, let resource = largestImageRepresentation(media.representations)?.resource {
+                                        messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: media, resource: resource)
+                                    }
+                                }
                             }
                         }
                     }
@@ -704,8 +720,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     }
                     
                     if let storyMedia = media as? TelegramMediaStory, let storyItem = self.message?.associatedStories[storyMedia.storyId]?.get(Stories.StoredItem.self) {
-                        if case let .item(item) = storyItem, let mediaValue = item.media {
-                            media = mediaValue
+                        if case let .item(item) = storyItem, let _ = item.media {
+                            media = selectStoryMedia(item: item, preferredHighQuality: self.preferredStoryHighQuality)
                         }
                     }
                     
@@ -723,8 +739,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     } else if let _ = self.media as? TelegramMediaPaidContent {
                         self.activateLocalContent(.default)
                     } else if let storyMedia = media as? TelegramMediaStory, let storyItem = self.message?.associatedStories[storyMedia.storyId]?.get(Stories.StoredItem.self) {
-                        if case let .item(item) = storyItem, let mediaValue = item.media {
-                            let _ = mediaValue
+                        if case let .item(item) = storyItem, let _ = item.media {
                             self.activateLocalContent(.default)
                         }
                     } else {
@@ -1143,7 +1158,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 replaceAnimatedStickerNode = true
                             }
                             
-                            if let storyItem = message.associatedStories[story.storyId]?.get(Stories.StoredItem.self), case let .item(item) = storyItem, let media = item.media {
+                            if let storyItem = message.associatedStories[story.storyId]?.get(Stories.StoredItem.self), case let .item(item) = storyItem, let media = selectStoryMedia(item: item, preferredHighQuality: associatedData.preferredStoryHighQuality) {
                                 if let image = media as? TelegramMediaImage {
                                     if hasCurrentVideoNode {
                                         replaceVideoNode = true
@@ -1465,7 +1480,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             media = fullMedia
                         }
                         if let storyMedia = media as? TelegramMediaStory, let storyItem = message.associatedStories[storyMedia.storyId]?.get(Stories.StoredItem.self) {
-                            if case let .item(item) = storyItem, let mediaValue = item.media {
+                            if case let .item(item) = storyItem, let mediaValue = selectStoryMedia(item: item, preferredHighQuality: associatedData.preferredStoryHighQuality) {
                                 media = mediaValue
                             }
                         }
@@ -1537,6 +1552,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             strongSelf.sizeCalculation = sizeCalculation
                             strongSelf.automaticPlayback = automaticPlayback
                             strongSelf.automaticDownload = automaticDownload
+                            strongSelf.preferredStoryHighQuality = associatedData.preferredStoryHighQuality
                             
                             if let previousArguments = strongSelf.currentImageArguments {
                                 if previousArguments.imageSize == arguments.imageSize {
@@ -1783,7 +1799,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     media = fullMedia
                                 }
                                 if let storyMedia = media as? TelegramMediaStory, let storyItem = message.associatedStories[storyMedia.storyId]?.get(Stories.StoredItem.self) {
-                                    if case let .item(item) = storyItem, let mediaValue = item.media {
+                                    if case let .item(item) = storyItem, let mediaValue = selectStoryMedia(item: item, preferredHighQuality: associatedData.preferredStoryHighQuality) {
                                         media = mediaValue
                                     }
                                 }
@@ -2072,7 +2088,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 media = fullMedia
             }
             if let storyMedia = media as? TelegramMediaStory, let storyItem = message.associatedStories[storyMedia.storyId]?.get(Stories.StoredItem.self) {
-                if case let .item(item) = storyItem, let mediaValue = item.media {
+                if case let .item(item) = storyItem, let mediaValue = selectStoryMedia(item: item, preferredHighQuality: self.preferredStoryHighQuality) {
                     media = mediaValue
                 }
             }

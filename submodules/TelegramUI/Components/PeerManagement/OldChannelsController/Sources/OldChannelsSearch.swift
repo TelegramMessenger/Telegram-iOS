@@ -14,7 +14,8 @@ import SearchUI
 import ChatListSearchItemHeader
 import ContactsPeerItem
 
-#if swift(>=6.0)
+//Xcode 16
+#if canImport(ContactProvider)
 extension NavigationBarSearchContentNode: @retroactive ItemListControllerSearchNavigationContentNode {
     public func activate() {
     }

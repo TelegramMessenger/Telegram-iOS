@@ -561,10 +561,10 @@ public extension TelegramEngine {
             return _internal_removePeerChat(account: self.account, peerId: peerId, reportChatSpam: reportChatSpam, deleteGloballyIfPossible: deleteGloballyIfPossible)
         }
 
-        public func removePeerChats(peerIds: [PeerId]) -> Signal<Never, NoError> {
+        public func removePeerChats(peerIds: [PeerId], deleteGloballyIfPossible: Bool = false) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 for peerId in peerIds {
-                    _internal_removePeerChat(account: self.account, transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: peerId.namespace == Namespaces.Peer.SecretChat)
+                    _internal_removePeerChat(account: self.account, transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: peerId.namespace == Namespaces.Peer.SecretChat || deleteGloballyIfPossible)
                 }
             }
             |> ignoreValues
