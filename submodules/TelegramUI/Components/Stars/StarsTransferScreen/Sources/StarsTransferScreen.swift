@@ -213,7 +213,16 @@ private final class SheetContent: CombinedComponent {
                             }
                             |> take(1)
                             |> deliverOnMainQueue).start(next: { _ in
-                                action()
+                                Queue.mainQueue().after(0.1, { [weak self] in
+                                    if let self, let balance = self.balance, balance < self.invoice.totalAmount {
+                                        self.inProgress = false
+                                        self.updated()
+                                        
+                                        self.buy(requestTopUp: requestTopUp, completion: completion)
+                                    } else {
+                                        action()
+                                    }
+                                })
                             })
                         })
                     }
@@ -437,7 +446,8 @@ private final class SheetContent: CombinedComponent {
                 state.cachedStarImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: .white)!, theme)
             }
             
-            let buttonAttributedString = NSMutableAttributedString(string: "\(strings.Stars_Transfer_Pay)   #  \(amount)", font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .center)
+            let amountString = presentationStringsFormattedNumber(Int32(amount), presentationData.dateTimeFormat.groupingSeparator)
+            let buttonAttributedString = NSMutableAttributedString(string: "\(strings.Stars_Transfer_Pay)   #  \(amountString)", font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .center)
             if let range = buttonAttributedString.string.range(of: "#"), let starImage = state.cachedStarImage?.0 {
                 buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
                 buttonAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xffffff), range: NSRange(range, in: buttonAttributedString.string))
@@ -450,6 +460,7 @@ private final class SheetContent: CombinedComponent {
             let starsContext = component.starsContext
             let botTitle = state.botPeer?.compactDisplayTitle ?? ""
             let invoice = component.invoice
+            let isMedia = !component.extendedMedia.isEmpty
             let button = button.update(
                 component: ButtonComponent(
                     background: ButtonComponent.Background(
@@ -472,7 +483,7 @@ private final class SheetContent: CombinedComponent {
                                     context: accountContext,
                                     starsContext: starsContext,
                                     options: state?.options ?? [],
-                                    peerId: state?.botPeer?.id,
+                                    peerId: isMedia ? nil : state?.botPeer?.id,
                                     requiredStars: invoice.totalAmount,
                                     completion: { [weak starsContext] stars in
                                         starsContext?.add(balance: stars)

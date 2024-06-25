@@ -1177,9 +1177,11 @@ public extension ContainedViewLayoutTransition {
         self.updateTransform(layer: node.layer, transform: transform, beginWithCurrentState: beginWithCurrentState, delay: delay, completion: completion)
     }
     
-    func updateTransform(layer: CALayer, transform: CGAffineTransform, beginWithCurrentState: Bool = false, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
-        let transform = CATransform3DMakeAffineTransform(transform)
-
+    func updateTransform(node: ASDisplayNode, transform: CATransform3D, beginWithCurrentState: Bool = false, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        self.updateTransform(layer: node.layer, transform: transform, beginWithCurrentState: beginWithCurrentState, delay: delay, completion: completion)
+    }
+    
+    func updateTransform(layer: CALayer, transform: CATransform3D, beginWithCurrentState: Bool = false, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
         if CATransform3DEqualToTransform(layer.transform, transform) {
             if let completion = completion {
                 completion(true)
@@ -1205,6 +1207,11 @@ public extension ContainedViewLayoutTransition {
                 completion?(value)
             })
         }
+    }
+        
+    func updateTransform(layer: CALayer, transform: CGAffineTransform, beginWithCurrentState: Bool = false, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        let transform = CATransform3DMakeAffineTransform(transform)
+        self.updateTransform(layer: layer, transform: transform, beginWithCurrentState: beginWithCurrentState, delay: delay, completion: completion)
     }
     
     func updateTransformScale(node: ASDisplayNode, scale: CGFloat, beginWithCurrentState: Bool = false, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {

@@ -12,7 +12,6 @@ struct ModalContainerLayout {
     var controllers: [ViewController]
     var isFlat: Bool
     var isStandalone: Bool
-    var isMinimized: Bool
 }
 
 struct NavigationLayout {
@@ -20,7 +19,7 @@ struct NavigationLayout {
     var modal: [ModalContainerLayout]
 }
 
-func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewLayout, controllers: [ViewController], minimizedControllers: [ViewController]) -> NavigationLayout {
+func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewLayout, controllers: [ViewController]) -> NavigationLayout {
     var rootControllers: [ViewController] = []
     var modalStack: [ModalContainerLayout] = []
     for controller in controllers {
@@ -55,7 +54,7 @@ func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewL
         if requiresModal {
             controller._presentedInModal = true
             if beginsModal || modalStack.isEmpty || modalStack[modalStack.count - 1].isStandalone {
-                modalStack.append(ModalContainerLayout(controllers: [controller], isFlat: isFlat, isStandalone: isStandalone, isMinimized: false))
+                modalStack.append(ModalContainerLayout(controllers: [controller], isFlat: isFlat, isStandalone: isStandalone))
             } else {
                 modalStack[modalStack.count - 1].controllers.append(controller)
             }
@@ -65,7 +64,7 @@ func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewL
                 controller._presentedInModal = true
             }
             if modalStack[modalStack.count - 1].isStandalone {
-                modalStack.append(ModalContainerLayout(controllers: [controller], isFlat: isFlat, isStandalone: isStandalone, isMinimized: false))
+                modalStack.append(ModalContainerLayout(controllers: [controller], isFlat: isFlat, isStandalone: isStandalone))
             } else {
                 modalStack[modalStack.count - 1].controllers.append(controller)
             }
@@ -73,22 +72,6 @@ func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewL
             controller._presentedInModal = false
             rootControllers.append(controller)
         }
-    }
-    
-    var minimizedModalContainer: ModalContainerLayout?
-    for controller in minimizedControllers {
-        controller._presentedInModal = false
-        if var container = minimizedModalContainer {
-            container.controllers.append(controller)
-            minimizedModalContainer = container
-        } else {
-            let container = ModalContainerLayout(controllers: [controller], isFlat: false, isStandalone: false, isMinimized: true)
-            minimizedModalContainer = container
-        }
-    }
-    
-    if let minimizedModalContainer {
-        modalStack.insert(minimizedModalContainer, at: 0)
     }
     
     let rootLayout: RootNavigationLayout

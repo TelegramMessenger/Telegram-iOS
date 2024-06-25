@@ -3752,6 +3752,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return state.updatedShowWebView(true).updatedForceInputCommandsHidden(true)
                     }
                     
+                    let context = strongSelf.context
                     let params = WebAppParameters(source: .menu, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false)
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                         self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
@@ -3798,7 +3799,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                     }, getNavigationController: { [weak self] in
-                        return self?.effectiveNavigationController
+                        return self?.effectiveNavigationController ?? context.sharedContext.mainWindow?.viewController as? NavigationController
                     })
                     controller.navigationPresentation = .flatModal
                     strongSelf.push(controller)
@@ -3823,6 +3824,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
+                        let context = strongSelf.context
                         let params = WebAppParameters(source: isInline ? .inline : .simple, peerId: peerId, botId: botId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false)
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                             self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
@@ -3843,7 +3845,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                         }, getNavigationController: { [weak self] in
-                            return self?.effectiveNavigationController
+                            return self?.effectiveNavigationController ?? context.sharedContext.mainWindow?.viewController as? NavigationController
                         })
                         controller.navigationPresentation = .flatModal
                         strongSelf.currentWebAppController = controller
@@ -3863,13 +3865,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
+                        let context = strongSelf.context
                         let params = WebAppParameters(source: .generic, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, forceHasSettings: false)
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                             self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
                         }, completion: { [weak self] in
                             self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
                         }, getNavigationController: { [weak self] in
-                            return self?.effectiveNavigationController
+                            return self?.effectiveNavigationController ?? context.sharedContext.mainWindow?.viewController as? NavigationController
                         })
                         controller.navigationPresentation = .flatModal
                         strongSelf.currentWebAppController = controller
@@ -8188,6 +8191,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return
                 }
+                let context = strongSelf.context
                 let params = WebAppParameters(source: .generic, peerId: peerId, botId: botPeer.id, botName: botApp.title, url: url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, forceHasSettings: botApp.flags.contains(.hasSettings))
                 let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                     self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
@@ -8210,7 +8214,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }, completion: { [weak self] in
                     self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
                 }, getNavigationController: { [weak self] in
-                    return self?.effectiveNavigationController
+                    return self?.effectiveNavigationController ?? context.sharedContext.mainWindow?.viewController as? NavigationController
                 })
                 controller.navigationPresentation = .flatModal
                 strongSelf.currentWebAppController = controller
