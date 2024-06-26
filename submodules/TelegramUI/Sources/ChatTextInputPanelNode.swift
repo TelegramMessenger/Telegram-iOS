@@ -1743,7 +1743,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 self.menuButtonIconNode.enqueueState(.close, animated: false)
             } else if case .webView = interfaceState.botMenuButton, let previousShowWebView = previousState?.showWebView, previousShowWebView != interfaceState.showWebView {
                 if interfaceState.showWebView {
-                    self.menuButtonIconNode.enqueueState(.close, animated: true)
+//                    self.menuButtonIconNode.enqueueState(.close, animated: true)
                 } else {
                     self.menuButtonIconNode.enqueueState(.app, animated: true)
                 }
@@ -4536,7 +4536,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             }
         } else if case let .webView(title, url) = presentationInterfaceState.botMenuButton {
             let willShow = !(self.presentationInterfaceState?.showWebView ?? false)
-            if willShow {
+            if willShow || "".isEmpty {
                 self.interfaceInteraction?.openWebView(title, url, false, .menu)
             } else {
                 self.interfaceInteraction?.updateShowWebView { _ in

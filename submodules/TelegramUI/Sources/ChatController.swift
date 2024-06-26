@@ -3754,7 +3754,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let openWebView = {
                 if source == .menu {
                     strongSelf.updateChatPresentationInterfaceState(interactive: false) { state in
-                        return state.updatedShowWebView(true).updatedForceInputCommandsHidden(true)
+                        return state.updatedForceInputCommandsHidden(true)
+//                        return state.updatedShowWebView(true).updatedForceInputCommandsHidden(true)
                     }
                     
                     let context = strongSelf.context
