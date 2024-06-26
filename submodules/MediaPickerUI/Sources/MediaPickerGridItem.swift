@@ -638,6 +638,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.updateHiddenMedia()
     }
     
+    private var currentPrice: Int64?
     private var didSetupSpoiler = false
     private func updateHasSpoiler(_ hasSpoiler: Bool, price: Int64?, isSingle: Bool) {
         var animated = true
@@ -645,7 +646,8 @@ final class MediaPickerGridItemNode: GridItemNode {
             animated = false
             self.didSetupSpoiler = true
         }
-    
+        self.currentPrice = isSingle ? price : nil
+        
         if hasSpoiler || price != nil {
             if self.spoilerNode == nil {
                 let spoilerNode = SpoilerOverlayNode(enableAnimations: self.enableAnimations)
@@ -722,6 +724,11 @@ final class MediaPickerGridItemNode: GridItemNode {
         if let spoilerNode = self.spoilerNode, self.bounds.width > 0.0 {
             spoilerNode.frame = self.bounds
             spoilerNode.update(size: self.bounds.size, transition: .immediate)
+        }
+        
+        if let priceNode = self.priceNode, self.bounds.width > 0.0 {
+            priceNode.frame = self.bounds
+            priceNode.update(size: self.bounds.size, price: self.currentPrice, small: true, transition: .immediate)
         }
         
         let statusSize = CGSize(width: 40.0, height: 40.0)

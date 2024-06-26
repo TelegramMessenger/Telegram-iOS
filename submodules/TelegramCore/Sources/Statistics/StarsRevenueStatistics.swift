@@ -234,6 +234,7 @@ public enum RequestStarsRevenueWithdrawalError : Equatable {
     case limitExceeded
     case requestPassword
     case invalidPassword
+    case serverProvided(text: String)
 }
 
 func _internal_checkStarsRevenueWithdrawalAvailability(account: Account) -> Signal<Never, RequestStarsRevenueWithdrawalError> {
@@ -292,7 +293,9 @@ func _internal_requestStarsRevenueWithdrawalUrl(account: Account, peerId: PeerId
         |> mapToSignal { password -> Signal<String, RequestStarsRevenueWithdrawalError> in
             return account.network.request(Api.functions.payments.getStarsRevenueWithdrawalUrl(peer: inputPeer, stars: amount, password: password), automaticFloodWait: false)
             |> mapError { error -> RequestStarsRevenueWithdrawalError in
-                if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                if error.errorCode == 406 {
+                    return .serverProvided(text: error.errorDescription)
+                } else if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                     return .limitExceeded
                 } else if error.errorDescription == "PASSWORD_HASH_INVALID" {
                     return .invalidPassword

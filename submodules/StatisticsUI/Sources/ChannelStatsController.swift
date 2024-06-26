@@ -2369,6 +2369,8 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         withdrawalDisposable.set((context.engine.peers.checkStarsRevenueWithdrawalAvailability()
         |> deliverOnMainQueue).start(error: { error in
             switch error {
+            case .serverProvided:
+                return
             case .requestPassword:
                 let _ = (starsContext.state
                 |> take(1)
