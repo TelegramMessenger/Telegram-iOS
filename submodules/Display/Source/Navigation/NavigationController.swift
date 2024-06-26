@@ -1567,6 +1567,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                         
             self.updateContainersNonReentrant(transition: transition)
         }
+        viewController.isMinimized = true
         self.filterController(viewController, animated: true)
         minimizedContainer?.addController(viewController, transition: transition)
     }
@@ -1587,6 +1588,9 @@ open class NavigationController: UINavigationController, ContainableController, 
             var viewControllers = self.viewControllers
             viewControllers.append(viewController)
             self.setViewControllers(viewControllers, animated: false)
+            
+            viewController.isMinimized = false
+            
             self.isMaximizing = false
             
             if dismissed, let minimizedContainer = self.minimizedContainer {

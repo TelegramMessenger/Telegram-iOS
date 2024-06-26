@@ -57,8 +57,8 @@ final class MinimizedHeaderNode: ASDisplayNode {
     
     var title: String? {
         didSet {
-            if let (size, insets) = self.validLayout {
-                self.update(size: size, insets: insets, transition: .immediate)
+            if let (size, insets, isExpanded) = self.validLayout {
+                self.update(size: size, insets: insets, isExpanded: isExpanded, transition: .immediate)
             }
         }
     }
@@ -66,7 +66,7 @@ final class MinimizedHeaderNode: ASDisplayNode {
     var requestClose: () -> Void = {}
     var requestMaximize: () -> Void = {}
     
-    private var validLayout: (CGSize, UIEdgeInsets)?
+    private var validLayout: (CGSize, UIEdgeInsets, Bool)?
     
     init(theme: NavigationControllerTheme, strings: PresentationStrings) {
         self.theme = theme
@@ -123,19 +123,22 @@ final class MinimizedHeaderNode: ASDisplayNode {
         }
     }
     
-    func update(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, insets)
+    func update(size: CGSize, insets: UIEdgeInsets, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, insets, isExpanded)
                 
         let headerHeight: CGFloat = 44.0
-        let titleSideInset: CGFloat = 56.0 + insets.left
+        var titleSideInset: CGFloat = 56.0
+        if !isExpanded {
+            titleSideInset += insets.left
+        }
         
-        self.minimizedTitleNode.attributedText = NSAttributedString(string: title ?? "", font: Font.bold(17.0), textColor: self.theme.navigationBar.primaryTextColor)
+        self.minimizedTitleNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.bold(17.0), textColor: self.theme.navigationBar.primaryTextColor)
         
         let titleSize = self.minimizedTitleNode.updateLayout(CGSize(width: size.width - titleSideInset * 2.0, height: headerHeight))
         let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: floorToScreenPixels((headerHeight - titleSize.height) / 2.0)), size: titleSize)
         self.minimizedTitleNode.bounds = CGRect(origin: .zero, size: titleFrame.size)
         transition.updatePosition(node: self.minimizedTitleNode, position: titleFrame.center)
-        transition.updateFrame(node: self.minimizedCloseButton, frame: CGRect(origin: CGPoint(x: insets.left, y: 0.0), size: CGSize(width: 44.0, height: 44.0)))
+        transition.updateFrame(node: self.minimizedCloseButton, frame: CGRect(origin: CGPoint(x: isExpanded ? 0.0 : insets.left, y: 0.0), size: CGSize(width: 44.0, height: 44.0)))
         
         transition.updateFrame(node: self.minimizedBackgroundNode, frame: CGRect(origin: .zero, size: CGSize(width: size.width, height: 243.0)))
     }

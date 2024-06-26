@@ -48,6 +48,8 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         private let dimCoverNode: ASDisplayNode
         private let shadowNode: ASImageNode
         
+        private var controllerView: UIView?
+        
         var tapped: (() -> Void)?
         var highlighted: ((Bool) -> Void)?
         var closeTapped: (() -> Void)?
@@ -58,9 +60,8 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 transition.updateAlpha(node: self.dimCoverNode, alpha: self.isCovered ? 0.25 : 0.0)
             }
         }
-        var isExpanded = false
         
-        private var validLayout: (CGSize, UIEdgeInsets)?
+        private var validLayout: (CGSize, UIEdgeInsets, Bool)?
         
         init(theme: PresentationTheme, strings: PresentationStrings, item: Item) {
             self.theme = theme
@@ -94,9 +95,15 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             applySmoothRoundedCorners(self.containerNode.layer)
             
             self.shadowNode.image = shadowImage
-            
+                        
             self.addSubnode(self.containerNode)
-            self.containerNode.addSubnode(self.item.controller.displayNode)
+            if let snapshotView = self.item.controller.displayNode.view.snapshotView(afterScreenUpdates: false) {
+                self.controllerView = snapshotView
+                self.containerNode.view.addSubview(snapshotView)
+            } else {
+                self.controllerView = self.item.controller.displayNode.view
+                self.containerNode.view.addSubview(self.item.controller.displayNode.view)
+            }
             self.addSubnode(self.headerNode)
             self.addSubnode(self.dimCoverNode)
             self.addSubnode(self.shadowNode)
@@ -152,7 +159,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         }
         
         @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
-            guard let (_, insets) = self.validLayout else {
+            guard let (_, insets, _) = self.validLayout else {
                 return
             }
             switch recognizer.state {
@@ -174,8 +181,8 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             }
         }
         
-        func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
-            self.validLayout = (size, insets)
+        func updateLayout(size: CGSize, insets: UIEdgeInsets, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+            self.validLayout = (size, insets, isExpanded)
             
             var topInset = insets.top
             if size.width < size.height {
@@ -187,17 +194,22 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             self.shadowNode.frame = CGRect(origin: .zero, size: CGSize(width: size.width, height: size.height - topInset))
             
             var navigationHeight: CGFloat = minimizedNavigationHeight
-            if !self.isExpanded {
+            if !isExpanded {
                 navigationHeight += insets.bottom
             }
             
             let headerFrame = CGRect(origin: .zero, size: CGSize(width: size.width, height: navigationHeight))
-            self.headerNode.update(size: size, insets: insets, transition: transition)
+            self.headerNode.update(size: size, insets: insets, isExpanded: isExpanded, transition: transition)
             transition.updateFrame(node: self.headerNode, frame: headerFrame)
             transition.updateFrame(node: self.dimCoverNode, frame: CGRect(origin: .zero, size: size))
             
+            if let controllerView = self.controllerView {
+                let controllerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - controllerView.bounds.size.width) / 2.0), y: 0.0), size: controllerView.bounds.size)
+                transition.updateFrame(view: controllerView, frame: controllerFrame)
+            }
+            
             if !self.isDismissed {
-                transition.updateAlpha(node: self.shadowNode, alpha: self.isExpanded ? 1.0 : 0.0)
+                transition.updateAlpha(node: self.shadowNode, alpha: isExpanded ? 1.0 : 0.0)
             }
         }
     }
@@ -225,6 +237,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     private var dismissingItemOffset: CGFloat?
         
     private var currentTransition: Transition?
+    private var isApplyingTransition = false
     private var validLayout: ContainerViewLayout?
     
     public init(context: AccountContext, navigationController: NavigationController) {
@@ -299,7 +312,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         let insets = layout.insets(options: [.statusBar])
         let itemCount = self.items.count
         let spacing = interitemSpacing(itemCount: itemCount, boundingSize: self.scrollView.bounds.size, insets: insets)
-        return max(0, min(Int(floor((y - additionalInsetTop) / spacing)), itemCount - 1))
+        return max(0, min(Int(floor((y - additionalInsetTop - insets.top) / spacing)), itemCount - 1))
     }
     
     public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -463,7 +476,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         }
         
         self.validLayout = layout
-        
+                
         let bounds = CGRect(origin: .zero, size: layout.size)
         
         containerTransition.updateFrame(view: self.blurView, frame: bounds)
@@ -492,6 +505,10 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         if isFirstTime {
             let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
             transition.animatePosition(layer: self.bottomEdgeView.layer, from: self.bottomEdgeView.layer.position.offsetBy(dx: 0.0, dy: minimizedNavigationHeight + minimizedTopMargin), to: self.bottomEdgeView.layer.position)
+        }
+        
+        if self.isApplyingTransition {
+            return
         }
         
         let insets = layout.insets(options: [.statusBar])
@@ -569,7 +586,6 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             } else {
                 itemNode.layer.zPosition = 0.0
             }
-            itemNode.isExpanded = self.isExpanded
             
             if self.isExpanded {
                 let currentItemFrame = frameForIndex(index: index, size: layout.size, insets: itemInsets, itemCount: self.items.count, boundingSize: layout.size)
@@ -652,7 +668,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             }
             
             itemNode.bounds = CGRect(origin: .zero, size: itemFrame.size)
-            itemNode.updateLayout(size: layout.size, insets: itemInsets, transition: itemTransition)
+            itemNode.updateLayout(size: itemFrame.size, insets: itemInsets, isExpanded: self.isExpanded, transition: itemTransition)
             
             if index == self.items.count - 1 && !self.isExpanded {
                 itemNode.setTitleControllers(self.items.map { $0.controller })
@@ -677,6 +693,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         self.scrollView.isScrollEnabled = self.isExpanded
         
         if let currentTransition = self.currentTransition {
+            self.isApplyingTransition = true
             switch self.currentTransition {
             case let .minimize(itemId):
                 guard let itemNode = self.itemNodes[itemId] else {
@@ -692,7 +709,6 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                     dimView.removeFromSuperview()
                 })
                 
-                
                 itemNode.animateIn()
                 
                 var initialOffset = insets.top + itemNode.item.controller.minimizedTopEdgeOffset
@@ -704,6 +720,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 }
                 
                 transition.animatePosition(node: itemNode, from: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0 + initialOffset), completion: { _ in
+                    self.isApplyingTransition = false
                     if self.currentTransition == currentTransition {
                         self.currentTransition = nil
                     }
@@ -724,6 +741,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 itemNode.animateOut()
                 transition.updateTransform(node: itemNode, transform: CATransform3DIdentity)
                 transition.updatePosition(node: itemNode, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0 + topInset + self.scrollView.contentOffset.y), completion: { _ in
+                    self.isApplyingTransition = false
                     if self.currentTransition == currentTransition {
                         self.currentTransition = nil
                     }
@@ -750,6 +768,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                         itemNode.animateOut()
                         transition.updateTransform(node: itemNode, transform: CATransform3DIdentity)
                         transition.updatePosition(node: itemNode, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0 + topInset + self.scrollView.contentOffset.y), completion: { _ in
+                            self.isApplyingTransition = false
                             if self.currentTransition == currentTransition {
                                 self.currentTransition = nil
                             }
@@ -766,6 +785,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                     transition.updatePosition(node: dismissedItemNode, position: CGPoint(x: -layout.size.width, y: dismissedItemNode.position.y))
                 } else {
                     transition.updatePosition(node: dismissedItemNode, position: CGPoint(x: -layout.size.width, y: dismissedItemNode.position.y), completion: { _ in
+                        self.isApplyingTransition = false
                         if self.currentTransition == currentTransition {
                             self.currentTransition = nil
                         }
@@ -778,6 +798,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             case .dismissAll:
                 let dismissOffset = collapsedHeight(layout: layout)
                 transition.updatePosition(layer: self.bottomEdgeView.layer, position: self.bottomEdgeView.layer.position.offsetBy(dx: 0.0, dy: dismissOffset), completion: { _ in
+                    self.isApplyingTransition = false
                     if self.currentTransition == currentTransition {
                         self.currentTransition = nil
                     }
@@ -794,133 +815,3 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         return minimizedNavigationHeight + minimizedTopMargin + layout.intrinsicInsets.bottom
     }
 }
-
-private let maxInteritemSpacing: CGFloat = 240.0
-private let additionalInsetTop: CGFloat = 16.0
-private let additionalInsetBottom: CGFloat = 0.0
-private let zOffset: CGFloat = -60.0
-
-private let perspectiveCorrection: CGFloat = -1.0 / 1000.0
-private let maxRotationAngle: CGFloat = -CGFloat.pi / 2.2
-
-private func angle(for origin: CGFloat, itemCount: Int, scrollBounds: CGRect, contentHeight: CGFloat?, insets: UIEdgeInsets) -> CGFloat {
-    var rotationAngle = rotationAngleAt0(itemCount: itemCount)
-    
-    var contentOffset = scrollBounds.origin.y
-    if contentOffset < 0.0 {
-        contentOffset *= 2.0
-    }
-    
-    var yOnScreen = origin - contentOffset - additionalInsetTop - insets.top
-    if yOnScreen < 0 {
-        yOnScreen = 0
-    } else if yOnScreen > scrollBounds.height {
-        yOnScreen = scrollBounds.height
-    }
-    
-    let maxRotationVariance = maxRotationAngle - rotationAngleAt0(itemCount: itemCount)
-    rotationAngle += (maxRotationVariance / scrollBounds.height) * yOnScreen
-
-    return rotationAngle
-}
-
-private func final3dTransform(for origin: CGFloat, size: CGSize, contentHeight: CGFloat?, itemCount: Int, forcedAngle: CGFloat? = nil, additionalAngle: CGFloat? = nil, scrollBounds: CGRect, insets: UIEdgeInsets) -> CATransform3D {
-    var transform = CATransform3DIdentity
-    transform.m34 = perspectiveCorrection
-    
-    let rotationAngle = forcedAngle ?? angle(for: origin, itemCount: itemCount, scrollBounds: scrollBounds, contentHeight: contentHeight, insets: insets)
-    var effectiveRotationAngle = rotationAngle
-    if let additionalAngle = additionalAngle {
-        effectiveRotationAngle += additionalAngle
-    }
-    
-    let r = size.height / 2.0 + abs(zOffset / sin(rotationAngle))
-    
-    let zTranslation = r * sin(rotationAngle)
-    let yTranslation: CGFloat = r * (1 - cos(rotationAngle))
-    
-    let zTranslateTransform = CATransform3DTranslate(transform, 0.0, -yTranslation, zTranslation)
-    
-    let rotateTransform = CATransform3DRotate(zTranslateTransform, effectiveRotationAngle, 1.0, 0.0, 0.0)
-    
-    return rotateTransform
-}
-
-private func interitemSpacing(itemCount: Int, boundingSize: CGSize, insets: UIEdgeInsets) -> CGFloat {
-    var interitemSpacing = maxInteritemSpacing
-    if itemCount > 0 {
-        interitemSpacing = (boundingSize.height - additionalInsetTop - additionalInsetBottom  - insets.top) / CGFloat(min(itemCount, 5))
-    }
-    return interitemSpacing
-}
-
-private func frameForIndex(index: Int, size: CGSize, insets: UIEdgeInsets, itemCount: Int, boundingSize: CGSize) -> CGRect {
-    let spacing = interitemSpacing(itemCount: itemCount, boundingSize: boundingSize, insets: insets)
-    let y = additionalInsetTop + insets.top + spacing * CGFloat(index)
-    let origin = CGPoint(x: insets.left, y: y)
-    
-    return CGRect(origin: origin, size: CGSize(width: size.width - insets.left - insets.right, height: size.height))
-}
-
-private func rotationAngleAt0(itemCount: Int) -> CGFloat {
-    let multiplier: CGFloat = min(CGFloat(itemCount), 5.0) - 1.0
-    return -CGFloat.pi / 7.0 - CGFloat.pi / 7.0 * multiplier / 4.0
-}
-
-private class BlurView: UIVisualEffectView {
-    private func setup() {
-        for subview in self.subviews {
-            if subview.description.contains("VisualEffectSubview") {
-                subview.isHidden = true
-            }
-        }
-        
-        if let sublayer = self.layer.sublayers?[0], let filters = sublayer.filters {
-            sublayer.backgroundColor = nil
-            sublayer.isOpaque = false
-            let allowedKeys: [String] = [
-                "gaussianBlur",
-                "colorSaturate"
-            ]
-            sublayer.filters = filters.filter { filter in
-                guard let filter = filter as? NSObject else {
-                    return true
-                }
-                let filterName = String(describing: filter)
-                if !allowedKeys.contains(filterName) {
-                    return false
-                }
-                return true
-            }
-        }
-    }
-    
-    override var effect: UIVisualEffect? {
-        get {
-            return super.effect
-        }
-        set {
-            super.effect = newValue
-            self.setup()
-        }
-    }
-    
-    override func didAddSubview(_ subview: UIView) {
-        super.didAddSubview(subview)
-        self.setup()
-    }
-}
-
-private let shadowImage: UIImage? = {
-    return generateImage(CGSize(width: 1.0, height: 480.0), rotatedContext: { size, context in
-        let bounds = CGRect(origin: CGPoint(), size: size)
-        context.clear(bounds)
-        
-        let gradientColors = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.55).cgColor, UIColor.black.withAlphaComponent(0.55).cgColor] as CFArray
-        
-        var locations: [CGFloat] = [0.0, 0.65, 1.0]
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: bounds.height), options: [])
-    })
-}()

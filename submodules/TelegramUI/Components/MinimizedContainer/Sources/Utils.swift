@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 
 extension CATransform3D {
     func interpolate(with other: CATransform3D, fraction: CGFloat) -> CATransform3D {
@@ -50,3 +51,133 @@ extension CGRect {
         return CGRect(origin: self.origin.interpolate(with: other.origin, fraction: fraction), size: self.size.interpolate(with: other.size, fraction: fraction))
     }
 }
+
+private let maxInteritemSpacing: CGFloat = 240.0
+let additionalInsetTop: CGFloat = 16.0
+private let additionalInsetBottom: CGFloat = 0.0
+private let zOffset: CGFloat = -60.0
+
+private let perspectiveCorrection: CGFloat = -1.0 / 1000.0
+private let maxRotationAngle: CGFloat = -CGFloat.pi / 2.2
+
+func angle(for origin: CGFloat, itemCount: Int, scrollBounds: CGRect, contentHeight: CGFloat?, insets: UIEdgeInsets) -> CGFloat {
+    var rotationAngle = rotationAngleAt0(itemCount: itemCount)
+    
+    var contentOffset = scrollBounds.origin.y
+    if contentOffset < 0.0 {
+        contentOffset *= 2.0
+    }
+    
+    var yOnScreen = origin - contentOffset - additionalInsetTop - insets.top
+    if yOnScreen < 0 {
+        yOnScreen = 0
+    } else if yOnScreen > scrollBounds.height {
+        yOnScreen = scrollBounds.height
+    }
+    
+    let maxRotationVariance = maxRotationAngle - rotationAngleAt0(itemCount: itemCount)
+    rotationAngle += (maxRotationVariance / scrollBounds.height) * yOnScreen
+
+    return rotationAngle
+}
+
+func final3dTransform(for origin: CGFloat, size: CGSize, contentHeight: CGFloat?, itemCount: Int, forcedAngle: CGFloat? = nil, additionalAngle: CGFloat? = nil, scrollBounds: CGRect, insets: UIEdgeInsets) -> CATransform3D {
+    var transform = CATransform3DIdentity
+    transform.m34 = perspectiveCorrection
+    
+    let rotationAngle = forcedAngle ?? angle(for: origin, itemCount: itemCount, scrollBounds: scrollBounds, contentHeight: contentHeight, insets: insets)
+    var effectiveRotationAngle = rotationAngle
+    if let additionalAngle = additionalAngle {
+        effectiveRotationAngle += additionalAngle
+    }
+    
+    let r = size.height / 2.0 + abs(zOffset / sin(rotationAngle))
+    
+    let zTranslation = r * sin(rotationAngle)
+    let yTranslation: CGFloat = r * (1 - cos(rotationAngle))
+    
+    let zTranslateTransform = CATransform3DTranslate(transform, 0.0, -yTranslation, zTranslation)
+    
+    let rotateTransform = CATransform3DRotate(zTranslateTransform, effectiveRotationAngle, 1.0, 0.0, 0.0)
+    
+    return rotateTransform
+}
+
+func interitemSpacing(itemCount: Int, boundingSize: CGSize, insets: UIEdgeInsets) -> CGFloat {
+    var interitemSpacing = maxInteritemSpacing
+    if itemCount > 0 {
+        interitemSpacing = (boundingSize.height - additionalInsetTop - additionalInsetBottom  - insets.top) / CGFloat(min(itemCount, 5))
+    }
+    return interitemSpacing
+}
+
+func frameForIndex(index: Int, size: CGSize, insets: UIEdgeInsets, itemCount: Int, boundingSize: CGSize) -> CGRect {
+    let spacing = interitemSpacing(itemCount: itemCount, boundingSize: boundingSize, insets: insets)
+    let y = additionalInsetTop + insets.top + spacing * CGFloat(index)
+    let origin = CGPoint(x: insets.left, y: y)
+    
+    return CGRect(origin: origin, size: CGSize(width: size.width - insets.left - insets.right, height: size.height))
+}
+
+func rotationAngleAt0(itemCount: Int) -> CGFloat {
+    let multiplier: CGFloat = min(CGFloat(itemCount), 5.0) - 1.0
+    return -CGFloat.pi / 7.0 - CGFloat.pi / 7.0 * multiplier / 4.0
+}
+
+final class BlurView: UIVisualEffectView {
+    private func setup() {
+        for subview in self.subviews {
+            if subview.description.contains("VisualEffectSubview") {
+                subview.isHidden = true
+            }
+        }
+        
+        if let sublayer = self.layer.sublayers?[0], let filters = sublayer.filters {
+            sublayer.backgroundColor = nil
+            sublayer.isOpaque = false
+            let allowedKeys: [String] = [
+                "gaussianBlur",
+                "colorSaturate"
+            ]
+            sublayer.filters = filters.filter { filter in
+                guard let filter = filter as? NSObject else {
+                    return true
+                }
+                let filterName = String(describing: filter)
+                if !allowedKeys.contains(filterName) {
+                    return false
+                }
+                return true
+            }
+        }
+    }
+    
+    override var effect: UIVisualEffect? {
+        get {
+            return super.effect
+        }
+        set {
+            super.effect = newValue
+            self.setup()
+        }
+    }
+    
+    override func didAddSubview(_ subview: UIView) {
+        super.didAddSubview(subview)
+        self.setup()
+    }
+}
+
+let shadowImage: UIImage? = {
+    return generateImage(CGSize(width: 1.0, height: 480.0), rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        let gradientColors = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.55).cgColor, UIColor.black.withAlphaComponent(0.55).cgColor] as CFArray
+        
+        var locations: [CGFloat] = [0.0, 0.65, 1.0]
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: bounds.height), options: [])
+    })
+}()

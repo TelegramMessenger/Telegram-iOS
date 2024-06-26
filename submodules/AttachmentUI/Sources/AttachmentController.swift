@@ -1061,35 +1061,30 @@ public class AttachmentController: ViewController {
         return self.buttons.contains(.standalone)
     }
     
-    private var snapshotView: UIView?
-    public override var isMinimized: Bool {
-        didSet {
-            guard self.isMinimized != oldValue else {
-                return
-            }
-            if self.isMinimized {
-                if self.snapshotView == nil, let lastController = self.node.container.container.controllers.last, let snapshotView = lastController.view.snapshotView(afterScreenUpdates: false) {
-                    snapshotView.isUserInteractionEnabled = false
-                    self.snapshotView = snapshotView
-                    lastController.view.addSubview(snapshotView)
-                }
-            } else {
-                if let snapshotView = self.snapshotView {
-                    self.snapshotView = nil
-                    Queue.mainQueue().after(0.5) {
-                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion:  { _ in
-                            snapshotView.removeFromSuperview()
-                        })
-                    }
-                }
-            }
-            
-            if !self.node.isDismissing {
-                let transition: ContainedViewLayoutTransition = self.isMinimized ? .immediate : .animated(duration: 0.2, curve: .easeInOut)
-                transition.updateAlpha(node: self.node.dim, alpha: self.isMinimized ? 0.0 : 1.0)
-            }
-        }
-    }
+//    private var snapshotView: UIView?
+//    public override var isMinimized: Bool {
+//        didSet {
+//            guard self.isMinimized != oldValue else {
+//                return
+//            }
+//            if self.isMinimized {
+//                if self.snapshotView == nil, let lastController = self.node.container.container.controllers.last, let snapshotView = lastController.view.snapshotView(afterScreenUpdates: false) {
+//                    snapshotView.isUserInteractionEnabled = false
+//                    self.snapshotView = snapshotView
+//                    lastController.view.addSubview(snapshotView)
+//                }
+//            } else {
+//                if let snapshotView = self.snapshotView {
+//                    self.snapshotView = nil
+//                    Queue.mainQueue().after(0.15) {
+//                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion:  { _ in
+//                            snapshotView.removeFromSuperview()
+//                        })
+//                    }
+//                }
+//            }
+//        }
+//    }
     
     public func updateSelectionCount(_ count: Int) {
         self.node.updateSelectionCount(count, animated: false)

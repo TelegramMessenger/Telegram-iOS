@@ -723,15 +723,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
                     transition.updateTransformScale(layer: backgroundNode.layer, scale: 1.0)
                 }
             }
-            
-            for (_, priceNode) in strongSelf.priceNodes {
-                priceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.1)
-                if strongSelf.isExternalPreview {
-                    ComponentTransition.immediate.setScale(layer: priceNode.layer, scale: 0.001)
-                    transition.updateTransformScale(layer: priceNode.layer, scale: 1.0)
-                }
-            }
-            
+                        
             for (identifier, itemNode) in strongSelf.itemNodes {
                 if !strongSelf.isObscuredExternalPreview, let (transitionView, _, _) = strongSelf.getTransitionView(identifier) {
                     itemNode.animateFrom(transitionView, transition: transition)
@@ -743,6 +735,15 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
                     } else {
                         itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
                     }
+                }
+            }
+            
+            for (_, priceNode) in strongSelf.priceNodes {
+                strongSelf.scrollNode.addSubnode(priceNode)
+                priceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.1)
+                if strongSelf.isExternalPreview {
+                    ComponentTransition.immediate.setScale(layer: priceNode.layer, scale: 0.001)
+                    transition.updateTransformScale(layer: priceNode.layer, scale: 1.0)
                 }
             }
             
