@@ -2182,7 +2182,7 @@ public func standaloneWebAppController(
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.source == .menu, hasTextInput: false, makeEntityInputView: {
         return nil
     })
-    controller.getInputContainerNode = getInputContainerNode
+//    controller.getInputContainerNode = getInputContainerNode
     controller.requestController = { _, present in
         let webAppController = WebAppController(context: context, updatedPresentationData: updatedPresentationData, params: params, replyToMessageId: nil, threadId: threadId)
         webAppController.openUrl = openUrl
@@ -2195,12 +2195,8 @@ public func standaloneWebAppController(
     controller.didDismiss = didDismiss
     controller.getSourceRect = getSourceRect
     controller.title = params.botName
-    controller.shouldMinimizeOnSwipe = {
-        if params.source != .menu {
-            return true
-        } else {
-            return false
-        }
+    controller.shouldMinimizeOnSwipe = { _ in
+        return true
     }
     return controller
 }

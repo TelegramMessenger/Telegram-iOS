@@ -277,6 +277,13 @@ extension ChatControllerImpl {
                 }
                 return EntityInputView(context: strongSelf.context, isDark: false, areCustomEmojiEnabled: strongSelf.presentationInterfaceState.customEmojiAvailable)
             })
+            attachmentController.shouldMinimizeOnSwipe = { [weak attachmentController] button in
+                if case .app = button {
+                    attachmentController?.convertToStandalone()
+                    return true
+                }
+                return false
+            }
             attachmentController.didDismiss = { [weak self] in
                 self?.attachmentController = nil
                 self?.canReadHistory.set(true)

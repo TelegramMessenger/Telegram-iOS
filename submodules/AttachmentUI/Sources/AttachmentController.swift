@@ -28,6 +28,29 @@ public enum AttachmentButtonType: Equatable {
     case gift
     case standalone
     
+    public var key: String {
+        switch self {
+        case .gallery:
+            return "gallery"
+        case .file:
+            return "file"
+        case .location:
+            return "location"
+        case .quickReply:
+            return "quickReply"
+        case .contact:
+            return "contact"
+        case .poll:
+            return "poll"
+        case let .app(bot):
+            return "app_\(bot.shortName)"
+        case .gift:
+            return "gift"
+        case .standalone:
+            return "standalone"
+        }
+    }
+    
     public static func ==(lhs: AttachmentButtonType, rhs: AttachmentButtonType) -> Bool {
         switch lhs {
         case .gallery:
@@ -207,10 +230,10 @@ public class AttachmentController: ViewController {
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let chatLocation: ChatLocation?
     private let isScheduledMessages: Bool
-    private let buttons: [AttachmentButtonType]
+    private var buttons: [AttachmentButtonType]
     private let initialButton: AttachmentButtonType
     private let fromMenu: Bool
-    private let hasTextInput: Bool
+    private var hasTextInput: Bool
     private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
     public var animateAppearance: Bool = false
     
@@ -239,7 +262,7 @@ public class AttachmentController: ViewController {
         private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
         let panel: AttachmentPanel
         
-        private var currentType: AttachmentButtonType?
+        fileprivate var currentType: AttachmentButtonType?
         private var currentControllers: [AttachmentContainable] = []
         
         private var validLayout: ContainerViewLayout?
@@ -368,7 +391,7 @@ public class AttachmentController: ViewController {
             
             self.container.interactivelyDismissed = { [weak self] velocity in
                 if let strongSelf = self, let layout = strongSelf.validLayout {
-                    if let controller = strongSelf.controller, controller.shouldMinimizeOnSwipe?() == true, let navigationController = controller.navigationController as? NavigationController {
+                    if let controller = strongSelf.controller, controller.shouldMinimizeOnSwipe?(strongSelf.currentType) == true, let navigationController = controller.navigationController as? NavigationController {
 
                         let delta = layout.size.height - controller.minimizedTopEdgeOffset
                         let damping: CGFloat = 180
@@ -390,7 +413,6 @@ public class AttachmentController: ViewController {
                         
                         strongSelf.isMinimizing = true
                         strongSelf.container.update(isExpanded: true, force: true, transition: .immediate)
-//                        strongSelf.container.update(isExpanded: true, force: true, transition: .animated(duration: 0.4, curve: .customSpring(damping: 180.0, initialVelocity: initialVelocity)))
                         strongSelf.isMinimizing = false
                         
                         Queue.mainQueue().after(0.45, {
@@ -1025,7 +1047,7 @@ public class AttachmentController: ViewController {
     
     public var getSourceRect: (() -> CGRect?)?
     
-    public var shouldMinimizeOnSwipe: (() -> Bool)?
+    public var shouldMinimizeOnSwipe: ((AttachmentButtonType?) -> Bool)?
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation?, isScheduledMessages: Bool = false, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
         self.context = context
@@ -1061,31 +1083,18 @@ public class AttachmentController: ViewController {
         return self.buttons.contains(.standalone)
     }
     
-//    private var snapshotView: UIView?
-//    public override var isMinimized: Bool {
-//        didSet {
-//            guard self.isMinimized != oldValue else {
-//                return
-//            }
-//            if self.isMinimized {
-//                if self.snapshotView == nil, let lastController = self.node.container.container.controllers.last, let snapshotView = lastController.view.snapshotView(afterScreenUpdates: false) {
-//                    snapshotView.isUserInteractionEnabled = false
-//                    self.snapshotView = snapshotView
-//                    lastController.view.addSubview(snapshotView)
-//                }
-//            } else {
-//                if let snapshotView = self.snapshotView {
-//                    self.snapshotView = nil
-//                    Queue.mainQueue().after(0.15) {
-//                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion:  { _ in
-//                            snapshotView.removeFromSuperview()
-//                        })
-//                    }
-//                }
-//            }
-//        }
-//    }
-    
+    public func convertToStandalone() {
+        guard self.buttons != [.standalone] else {
+            return
+        }
+        if case let .app(bot) = self.node.currentType {
+            self.title = bot.peer.compactDisplayTitle
+        }
+        self.buttons = [.standalone]
+        self.hasTextInput = false
+        self.requestLayout(transition: .immediate)
+    }
+        
     public func updateSelectionCount(_ count: Int) {
         self.node.updateSelectionCount(count, animated: false)
     }

@@ -701,7 +701,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
     private let backgroundNode: NavigationBackgroundNode
     private let scrollNode: ASScrollNode
     private let separatorNode: ASDisplayNode
-    private var buttonViews: [Int: ComponentHostView<Empty>] = [:]
+    private var buttonViews: [AnyHashable: ComponentHostView<Empty>] = [:]
     
     private var textInputPanelNode: AttachmentTextInputPanelNode?
     private var progressNode: LoadingProgressNode?
@@ -1169,7 +1169,6 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
         }
         
         let visibleRect = self.scrollNode.bounds.insetBy(dx: -180.0, dy: 0.0)
-        var validButtons = Set<Int>()
         
         var distanceBetweenNodes = layout.size.width / CGFloat(self.buttons.count)
         let internalWidth = distanceBetweenNodes * CGFloat(self.buttons.count - 1)
@@ -1182,26 +1181,29 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
             leftNodeOriginX = layout.safeInsets.left + sideInset + buttonWidth / 2.0
         }
         
+        var validIds = Set<AnyHashable>()
+        
         for i in 0 ..< self.buttons.count {
             let originX = floor(leftNodeOriginX + CGFloat(i) * distanceBetweenNodes - buttonWidth / 2.0)
             let buttonFrame = CGRect(origin: CGPoint(x: originX, y: 0.0), size: CGSize(width: buttonWidth, height: buttonSize.height))
             if !visibleRect.intersects(buttonFrame) {
                 continue
             }
-            validButtons.insert(i)
+            
+            let type = self.buttons[i]
+            let _ = validIds.insert(type.key)
             
             var buttonTransition = transition
             let buttonView: ComponentHostView<Empty>
-            if let current = self.buttonViews[i] {
+            if let current = self.buttonViews[type.key] {
                 buttonView = current
             } else {
                 buttonTransition = .immediate
                 buttonView = ComponentHostView<Empty>()
-                self.buttonViews[i] = buttonView
+                self.buttonViews[type.key] = buttonView
                 self.scrollNode.view.addSubview(buttonView)
             }
             
-            let type = self.buttons[i]
             if case let .app(bot) = type {
                 for (name, file) in bot.icons {
                     if [.default, .iOSAnimated, .iOSSettingsStatic, .placeholder].contains(name) {
@@ -1284,6 +1286,16 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
             buttonView.isAccessibilityElement = true
             buttonView.accessibilityLabel = accessibilityTitle
             buttonView.accessibilityTraits = [.button]
+        }
+        var removeIds: [AnyHashable] = []
+        for (id, itemView) in self.buttonViews {
+            if !validIds.contains(id) {
+                removeIds.append(id)
+                itemView.removeFromSuperview()
+            }
+        }
+        for id in removeIds {
+            self.buttonViews.removeValue(forKey: id)
         }
     }
     
