@@ -679,6 +679,8 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
                     return
                 }
                 switch error {
+                case .serverProvided:
+                    return
                 case .requestPassword:
                     let _ = (revenueContext.state
                     |> take(1)

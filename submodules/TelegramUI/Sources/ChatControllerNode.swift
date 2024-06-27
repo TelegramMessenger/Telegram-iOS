@@ -1714,13 +1714,19 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             transition.updateFrame(node: backgroundEffectNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         }
         
-        let wallpaperBounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width - wrappingInsets.left - wrappingInsets.right, height: layout.size.height)
+        var wallpaperBounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width - wrappingInsets.left - wrappingInsets.right, height: layout.size.height)
         
         transition.updateFrame(node: self.backgroundNode, frame: wallpaperBounds)
         
         var displayMode: WallpaperDisplayMode = .aspectFill
         if case .regular = layout.metrics.widthClass, layout.size.height == layout.deviceMetrics.screenSize.width {
             displayMode = .aspectFit
+        } else if case .compact = layout.metrics.widthClass {
+            if layout.size.width < layout.size.height && layout.size.height < layout.deviceMetrics.screenSize.height {
+                wallpaperBounds.size.height = layout.deviceMetrics.screenSize.height
+            } else if layout.size.width > layout.size.height && layout.size.height < layout.deviceMetrics.screenSize.width {
+                wallpaperBounds.size.height = layout.deviceMetrics.screenSize.width
+            }
         }
         self.backgroundNode.updateLayout(size: wallpaperBounds.size, displayMode: displayMode, transition: transition)
 

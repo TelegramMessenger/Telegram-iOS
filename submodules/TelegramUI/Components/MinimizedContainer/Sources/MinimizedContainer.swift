@@ -232,7 +232,6 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     
     private var highlightedItemId: AnyHashable?
     
-    private var dismissGestureRecognizer: UIPanGestureRecognizer?
     private var dismissingItemId: AnyHashable?
     private var dismissingItemOffset: CGFloat?
         
@@ -297,11 +296,10 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         self.scrollView.showsVerticalScrollIndicator = false
         self.scrollView.showsHorizontalScrollIndicator = false
         
-        let dismissGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.dismissPan(_:)))
-        dismissGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
-        dismissGestureRecognizer.delaysTouchesBegan = true
-        self.scrollView.addGestureRecognizer(dismissGestureRecognizer)
-        self.dismissGestureRecognizer = dismissGestureRecognizer
+        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+        panGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
+        panGestureRecognizer.delaysTouchesBegan = true
+        self.scrollView.addGestureRecognizer(panGestureRecognizer)
     }
     
     func item(at y: CGFloat) -> Int? {
@@ -323,13 +321,35 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         let location = panGesture.location(in: gestureRecognizer.view)
         let velocity = panGesture.velocity(in: gestureRecognizer.view)
         
-        if abs(velocity.x) > abs(velocity.y), let _ = self.item(at: location.y) {
-            return true
+        if let _ = self.item(at: location.y) {
+            if self.isExpanded {
+                return abs(velocity.x) > abs(velocity.y)
+            } else {
+                return abs(velocity.y) > abs(velocity.x)
+            }
         }
         return false
     }
     
-    @objc func dismissPan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    @objc func panGesture(_ gestureRecognizer: UIPanGestureRecognizer) {
+        if self.isExpanded {
+            self.dismissPanGesture(gestureRecognizer)
+        } else {
+            self.expandPanGesture(gestureRecognizer)
+        }
+    }
+    
+    @objc func expandPanGesture(_ gestureRecognizer: UIPanGestureRecognizer) {
+        let translation = gestureRecognizer.translation(in: self.view)
+        if translation.y < -10.0 {
+            gestureRecognizer.isEnabled = false
+            gestureRecognizer.isEnabled = true
+            
+            self.expand()
+        }
+    }
+    
+    @objc func dismissPanGesture(_ gestureRecognizer: UIPanGestureRecognizer) {
         let scrollView = self.scrollView
         
         switch gestureRecognizer.state {
@@ -357,7 +377,8 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             var needsLayout = true
             if let itemId = self.dismissingItemId {
                 if let offset = self.dismissingItemOffset {
-                    if offset < -self.frame.width / 4.0 {
+                    let velocity = gestureRecognizer.velocity(in: self.view)
+                    if offset < -self.frame.width / 3.0 || velocity.x < -300.0 {
                         self.currentTransition = .dismiss(itemId: itemId)
                         
                         self.items.removeAll(where: { $0.id == itemId })
@@ -448,6 +469,18 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring), completion: { _ in
             completion()
         })
+    }
+    
+    public func expand() {
+        guard !self.items.isEmpty && !self.isExpanded else {
+            return
+        }
+        if self.items.count == 1, let item = self.items.first {
+            self.navigationController?.maximizeViewController(item.controller, animated: true)
+        } else {
+            self.isExpanded = true
+            self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
+        }
     }
         
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -569,12 +602,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 if self.isExpanded {
                     self.navigationController?.maximizeViewController(item.controller, animated: true)
                 } else {
-                    if self.items.count == 1 {
-                        self.navigationController?.maximizeViewController(item.controller, animated: true)
-                    } else {
-                        self.isExpanded = true
-                        self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
-                    }
+                    self.expand()
                 }
             }
                  
