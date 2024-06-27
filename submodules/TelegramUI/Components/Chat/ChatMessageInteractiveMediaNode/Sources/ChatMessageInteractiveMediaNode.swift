@@ -1140,11 +1140,21 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                         
                         if let extendedMedia {
                             switch extendedMedia {
-                                case let .preview(_, immediateThumbnailData, _):
-                                    let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
-                                    media = thumbnailMedia
-                                case let .full(fullMedia):
+                            case let .preview(_, immediateThumbnailData, _):
+                                let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                                media = thumbnailMedia
+                            case let .full(fullMedia):
+                                if presentationData.isPreview {
+                                    if let image = fullMedia as? TelegramMediaImage {
+                                        let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                                        media = thumbnailMedia
+                                    } else if let video = fullMedia as? TelegramMediaFile {
+                                        let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: video.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                                        media = thumbnailMedia
+                                    }
+                                } else {
                                     media = fullMedia
+                                }
                             }
                         }
                         
@@ -1475,7 +1485,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 extendedMedia = paidContent.extendedMedia[selectedMediaIndex]
                             }
                         }
-                        if let extendedMedia, case let .full(fullMedia) = extendedMedia {
+                        if let extendedMedia, case let .full(fullMedia) = extendedMedia, !presentationData.isPreview {
                             isExtendedMedia = true
                             media = fullMedia
                         }
@@ -2362,6 +2372,11 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
         }
         
         if let extendedMedia, case .preview = extendedMedia {
+            if let invoice, invoice.currency != "XTR" {
+                icon = .lock
+            }
+            displaySpoiler = true
+        } else if let _ = extendedMedia, isPreview {
             if let invoice, invoice.currency != "XTR" {
                 icon = .lock
             }

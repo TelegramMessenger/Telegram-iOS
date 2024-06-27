@@ -129,6 +129,14 @@ private final class SheetContent: CombinedComponent {
                
                 minAmount = 1
                 maxAmount = configuration.maxPaidMediaAmount
+            case .reaction:
+                titleString = environment.strings.Stars_SendStars_Title
+                amountTitle = environment.strings.Stars_SendStars_AmountTitle
+                amountPlaceholder = environment.strings.Stars_SendStars_AmountPlaceholder
+                
+                minAmount = 1
+                //TODO:
+                maxAmount = configuration.maxPaidMediaAmount
             }
             
             let title = title.update(
@@ -142,7 +150,16 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += title.size.height
             contentSize.height += 40.0
             
-            if case let .withdraw(starsState) = component.mode {
+            let balance: Int64?
+            if case .reaction = component.mode {
+                balance = state.balance
+            } else if case let .withdraw(starsState) = component.mode {
+                balance = starsState.balances.availableBalance
+            } else {
+                balance = nil
+            }
+            
+            if let balance {
                 let balanceTitle = balanceTitle.update(
                     component: MultilineTextComponent(
                         text: .plain(NSAttributedString(
@@ -158,7 +175,7 @@ private final class SheetContent: CombinedComponent {
                 let balanceValue = balanceValue.update(
                     component: MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: presentationStringsFormattedNumber(Int32(starsState.balances.availableBalance), environment.dateTimeFormat.groupingSeparator),
+                            string: presentationStringsFormattedNumber(Int32(balance), environment.dateTimeFormat.groupingSeparator),
                             font: Font.semibold(16.0),
                             textColor: theme.list.itemPrimaryTextColor
                         )),
@@ -185,17 +202,18 @@ private final class SheetContent: CombinedComponent {
                 )
             }
             
+            let amountFont = Font.regular(13.0)
+            let amountTextColor = theme.list.freeTextColor
+            let amountMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: amountFont, textColor: amountTextColor), bold: MarkdownAttributeSet(font: amountFont, textColor: amountTextColor), link: MarkdownAttributeSet(font: amountFont, textColor: theme.list.itemAccentColor), linkAttribute: { contents in
+                return (TelegramTextAttributes.URL, contents)
+            })
+            if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
+                state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: environment.theme.list.itemAccentColor)!, environment.theme)
+            }
             let amountFooter: AnyComponent<Empty>?
-            if case .paidMedia = component.mode {
-                let amountFont = Font.regular(13.0)
-                let amountTextColor = theme.list.freeTextColor
-                let amountMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: amountFont, textColor: amountTextColor), bold: MarkdownAttributeSet(font: amountFont, textColor: amountTextColor), link: MarkdownAttributeSet(font: amountFont, textColor: theme.list.itemAccentColor), linkAttribute: { contents in
-                    return (TelegramTextAttributes.URL, contents)
-                })
+            switch component.mode {
+            case .paidMedia:
                 let amountInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_PaidContent_AmountInfo, attributes: amountMarkdownAttributes, textAlignment: .natural))
-                if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
-                    state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: environment.theme.list.itemAccentColor)!, environment.theme)
-                }
                 if let range = amountInfoString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
                     amountInfoString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: amountInfoString.string))
                 }
@@ -214,7 +232,13 @@ private final class SheetContent: CombinedComponent {
                         component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_PaidContent_AmountInfo_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
                     }
                 ))
-            } else {
+            case let .reaction(starsToTop):
+                let amountInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SendStars_AmountInfo("\(starsToTop ?? 0)").string, attributes: amountMarkdownAttributes, textAlignment: .natural))
+                amountFooter = AnyComponent(MultilineTextComponent(
+                    text: .plain(amountInfoString),
+                    maximumNumberOfLines: 0
+                ))
+            default:
                 amountFooter = nil
             }
                          
@@ -296,7 +320,7 @@ private final class SheetContent: CombinedComponent {
                         id: AnyHashable(0),
                         component: AnyComponent(MultilineTextComponent(text: .plain(buttonAttributedString)))
                     ),
-                    isEnabled: true,
+                    isEnabled: (state.amount ?? 0) > 0,
                     displaysProgress: false,
                     action: { [weak state] in
                         if let controller = controller() as? StarsWithdrawScreen, let amount = state?.amount {
@@ -328,8 +352,12 @@ private final class SheetContent: CombinedComponent {
     
     final class State: ComponentState {
         private let context: AccountContext
+        private let mode: StarsWithdrawScreen.Mode
         
         fileprivate var amount: Int64?
+        
+        fileprivate var balance: Int64?
+        private var stateDisposable: Disposable?
         
         var cachedCloseImage: (UIImage, PresentationTheme)?
         var cachedStarImage: (UIImage, PresentationTheme)?
@@ -337,24 +365,43 @@ private final class SheetContent: CombinedComponent {
         
         init(
             context: AccountContext,
-            amount: Int64?
+            mode: StarsWithdrawScreen.Mode
         ) {
             self.context = context
+            self.mode = mode
+            
+            var amount: Int64?
+            switch mode {
+            case let .withdraw(stats):
+                amount = stats.balances.availableBalance
+            case let .paidMedia(initialValue):
+                amount = initialValue
+            case .reaction:
+                amount = nil
+            }
+            
             self.amount = amount
             
             super.init()
+            
+            if case .reaction = self.mode, let starsContext = context.starsContext {
+                self.stateDisposable = (starsContext.state
+                |> deliverOnMainQueue).startStrict(next: { [weak self] state in
+                    if let self, let balance = state?.balance {
+                        self.balance = balance
+                        self.updated()
+                    }
+                })
+            }
+        }
+        
+        deinit {
+            self.stateDisposable?.dispose()
         }
     }
     
     func makeState() -> State {
-        var amount: Int64?
-        switch self.mode {
-        case let .withdraw(stats):
-            amount = stats.balances.availableBalance
-        case let .paidMedia(initialValue):
-            amount = initialValue
-        }
-        return State(context: self.context, amount: amount)
+        return State(context: self.context, mode: self.mode)
     }
 }
 
@@ -449,6 +496,7 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
     public enum Mode: Equatable {
         case withdraw(StarsRevenueStats)
         case paidMedia(Int64?)
+        case reaction(Int64?)
     }
     
     private let context: AccountContext
@@ -638,12 +686,11 @@ private final class AmountFieldComponent: Component {
             
             if let component = self.component {
                 let amount: Int64?
-                if !newText.isEmpty, let value = Int64(newText) {
+                if !newText.isEmpty, let value = Int64(normalizeArabicNumeralString(newText, type: .western)) {
                     amount = value
                 } else {
                     amount = nil
                 }
-                
                 if let amount, let maxAmount = component.maxValue, amount > maxAmount {
                     textField.text = "\(maxAmount)"
                     self.textChanged(self.textField)

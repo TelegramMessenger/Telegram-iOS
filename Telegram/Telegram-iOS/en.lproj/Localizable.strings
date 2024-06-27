@@ -12466,3 +12466,9 @@ Sorry for the inconvenience.";
 "WebApp.MinimizedTitleFormat" = "%1$@ & %2$@";
 "WebApp.MinimizedTitle.Others_1" = "%@ Other";
 "WebApp.MinimizedTitle.Others_any" = "%@ Others";
+
+"Stars.SendStars.Title" = "Send Stars";
+"Stars.SendStars.AmountTitle" = "ENTER AMOUNT";
+"Stars.SendStars.AmountPlaceholder" = "Stars Amount";
+"Stars.SendStars.AmountInfo" = "Send %@ or more to highlight your profile in the TOP 3 supporters of this message.";
+"Stars.SendStars.SendStars" = "Confirm and Send";

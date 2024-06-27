@@ -2948,7 +2948,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         contentSize.height += totalContentNodesHeight
         
         if let paidContent = item.message.media.first(where: { $0 is TelegramMediaPaidContent }) as? TelegramMediaPaidContent, let media = paidContent.extendedMedia.first {
+            var isLocked = false
             if case .preview = media {
+                isLocked = true
+            } else if item.presentationData.isPreview {
+                isLocked = true
+            }
+            if isLocked {
                 let sizeAndApply = unlockButtonLayout(ChatMessageUnlockMediaNode.Arguments(
                     presentationData: item.presentationData,
                     strings: item.presentationData.strings,

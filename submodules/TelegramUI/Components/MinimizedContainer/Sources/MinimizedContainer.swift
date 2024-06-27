@@ -716,7 +716,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 itemFrame = effectiveItemFrame
                 itemTransform = effectiveItemTransform
                 
-                itemNode.isCovered = index == self.items.count - 2
+                itemNode.isCovered = index <= self.items.count - 2
             }
             
             itemNode.bounds = CGRect(origin: .zero, size: itemFrame.size)

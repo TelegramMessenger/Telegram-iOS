@@ -643,7 +643,7 @@ public final class StarsImageComponent: Component {
                 }
                 
                 var totalLabelWidth: CGFloat = 0.0
-                let labelSpacing: CGFloat = 3.0
+                let labelSpacing: CGFloat = 4.0
                 let lockView: UIImageView
                 if let current = self.lockView {
                     lockView = current

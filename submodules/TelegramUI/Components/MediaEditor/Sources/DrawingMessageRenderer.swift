@@ -193,7 +193,7 @@ public final class DrawingMessageRenderer {
                 mainRadius: presentationData.chatBubbleCorners.mainRadius,
                 auxiliaryRadius: presentationData.chatBubbleCorners.auxiliaryRadius,
                 mergeBubbleCorners: presentationData.chatBubbleCorners.mergeBubbleCorners,
-                hasTails: false
+                hasTails: !self.isLink
             )
             
             let avatarHeaderItem: ListViewItemHeader?

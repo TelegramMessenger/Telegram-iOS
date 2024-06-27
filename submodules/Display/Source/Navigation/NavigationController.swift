@@ -153,6 +153,13 @@ open class NavigationController: UINavigationController, ContainableController, 
     open var minimizedContainer: MinimizedContainer? {
         didSet {
             self.minimizedContainer?.navigationController = self
+            self.minimizedContainer?.willMaximize = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.isMaximizing = true
+                self.updateContainersNonReentrant(transition: .animated(duration: 0.4, curve: .spring))
+            }
         }
     }
     
@@ -1575,7 +1582,6 @@ open class NavigationController: UINavigationController, ContainableController, 
                 self.isMaximizing = true
                 self.updateContainersNonReentrant(transition: .animated(duration: 0.4, curve: .spring))
             }
-            
             
             self.minimizedContainer?.removeFromSupernode()
             self.minimizedContainer = minimizedContainer
