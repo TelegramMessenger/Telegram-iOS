@@ -1771,9 +1771,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
     fileprivate let moreButtonNode: MoreButtonNode
     
     private let context: AccountContext
-    private let source: WebAppParameters.Source
+    public let source: WebAppParameters.Source
     private let peerId: PeerId
-    private let botId: PeerId
+    public let botId: PeerId
     private let botName: String
     private let url: String?
     private let queryId: Int64?
@@ -2094,12 +2094,16 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
     }
     
-    public func shouldDismissImmediately() -> Bool {
-        if self.controllerNode.needDismissConfirmation {
-            return false
-        } else {
-            return true
+    public override var isMinimized: Bool {
+        didSet {
+            if self.isMinimized != oldValue && self.isMinimized {
+                self.controllerNode.webView?.hideScrollIndicators()
+            }
         }
+    }
+    
+    public func shouldDismissImmediately() -> Bool {
+        return true
     }
 }
 
@@ -2182,7 +2186,6 @@ public func standaloneWebAppController(
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.source == .menu, hasTextInput: false, makeEntityInputView: {
         return nil
     })
-//    controller.getInputContainerNode = getInputContainerNode
     controller.requestController = { _, present in
         let webAppController = WebAppController(context: context, updatedPresentationData: updatedPresentationData, params: params, replyToMessageId: nil, threadId: threadId)
         webAppController.openUrl = openUrl

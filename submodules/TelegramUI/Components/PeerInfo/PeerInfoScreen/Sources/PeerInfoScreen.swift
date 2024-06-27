@@ -5296,6 +5296,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         guard let controller = self.controller else {
             return
         }
+        
+        if let navigationController = controller.navigationController as? NavigationController, let minimizedContainer = navigationController.minimizedContainer {
+            for controller in minimizedContainer.controllers {
+                if let controller = controller as? AttachmentController, let mainController = controller.mainController as? WebAppController, mainController.botId == bot.peer.id && mainController.source == .settings {
+                    navigationController.maximizeViewController(controller, animated: true)
+                    return
+                }
+            }
+        }
+        
         let presentationData = self.presentationData
         let proceed: (Bool) -> Void = { [weak self] installed in
             guard let self else {

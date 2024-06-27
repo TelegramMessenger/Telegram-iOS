@@ -160,6 +160,12 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             }
             return true
         }
+        if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer.description.contains("WKDeferringGesture") {
+            return true
+        }
+        if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer.description.contains("UIWebTouchEventsGesture") {
+            return true
+        }
         if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UILongPressGestureRecognizer {
             return true
         }

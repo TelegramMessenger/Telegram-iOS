@@ -88,6 +88,15 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     
     private var applicationInFocusDisposable: Disposable?
     private var storyUploadEventsDisposable: Disposable?
+    
+    override public var minimizedContainer: MinimizedContainer? {
+        didSet {
+            self.minimizedContainer?.navigationController = self
+            self.minimizedContainerUpdated(self.minimizedContainer)
+        }
+    }
+    
+    public var minimizedContainerUpdated: (MinimizedContainer?) -> Void = { _ in }
         
     public init(context: AccountContext) {
         self.context = context

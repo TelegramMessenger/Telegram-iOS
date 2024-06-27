@@ -168,6 +168,10 @@ final class AuthorizedApplicationContext {
         self.notificationController = NotificationContainerController(context: context)
         
         self.rootController = TelegramRootController(context: context)
+        self.rootController.minimizedContainer = self.sharedApplicationContext.minimizedContainer
+        self.rootController.minimizedContainerUpdated = { [weak self] minimizedContainer in
+            self?.sharedApplicationContext.minimizedContainer = minimizedContainer
+        }
         
         self.rootController.globalOverlayControllersUpdated = { [weak self] in
             guard let strongSelf = self else {

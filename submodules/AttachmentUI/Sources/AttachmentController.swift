@@ -263,7 +263,7 @@ public class AttachmentController: ViewController {
         let panel: AttachmentPanel
         
         fileprivate var currentType: AttachmentButtonType?
-        private var currentControllers: [AttachmentContainable] = []
+        fileprivate var currentControllers: [AttachmentContainable] = []
         
         private var validLayout: ContainerViewLayout?
         private var modalProgress: CGFloat = 0.0
@@ -402,7 +402,7 @@ public class AttachmentController: ViewController {
                             if let current = current as? MinimizedContainerImpl {
                                 minimizedContainer = current
                             } else if let context = self?.controller?.context {
-                                minimizedContainer = MinimizedContainerImpl(context: context, navigationController: navigationController)
+                                minimizedContainer = MinimizedContainerImpl(sharedContext: context.sharedContext)
                             } else {
                                 minimizedContainer = nil
                             }
@@ -954,7 +954,7 @@ public class AttachmentController: ViewController {
             if fromMenu && !hasButton, let inputContainerHeight = self.inputContainerHeight {
                panelHeight = inputContainerHeight
             }
-            if hasPanel || hasButton || (fromMenu && isCompact) {
+            if hasPanel || hasButton {
                 containerInsets.bottom = panelHeight
             }
             
@@ -1145,6 +1145,12 @@ public class AttachmentController: ViewController {
         return false
     }
     
+    public override var isMinimized: Bool {
+        didSet {
+            self.mainController.isMinimized = self.isMinimized
+        }
+    }
+    
     private var validLayout: ContainerViewLayout?
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -1158,6 +1164,10 @@ public class AttachmentController: ViewController {
             }
         }
         self.node.containerLayoutUpdated(layout, transition: transition)
+    }
+    
+    public var mainController: ViewController {
+        return self.node.currentControllers.first!
     }
     
     public final class InputPanelTransition {

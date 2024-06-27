@@ -2,6 +2,9 @@ import Foundation
 import AsyncDisplayKit
 
 public protocol MinimizedContainer: ASDisplayNode {
+    var navigationController: NavigationController? { get set }
+    var controllers: [ViewController] { get }
+    
     var willMaximize: (() -> Void)? { get set }
     
     func addController(_ viewController: ViewController, transition: ContainedViewLayoutTransition)

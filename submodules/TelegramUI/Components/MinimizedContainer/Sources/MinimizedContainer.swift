@@ -49,6 +49,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         private let shadowNode: ASImageNode
         
         private var controllerView: UIView?
+        fileprivate var snapshotView: UIView?
         
         var tapped: (() -> Void)?
         var highlighted: ((Bool) -> Void)?
@@ -97,13 +98,19 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             self.shadowNode.image = shadowImage
                         
             self.addSubnode(self.containerNode)
-            if let snapshotView = self.item.controller.displayNode.view.snapshotView(afterScreenUpdates: false) {
-                self.controllerView = snapshotView
-                self.containerNode.view.addSubview(snapshotView)
-            } else {
-                self.controllerView = self.item.controller.displayNode.view
-                self.containerNode.view.addSubview(self.item.controller.displayNode.view)
+            self.controllerView = self.item.controller.displayNode.view
+            self.containerNode.view.addSubview(self.item.controller.displayNode.view)
+            
+            Queue.mainQueue().after(0.45) {
+                if !self.isDismissed, let snapshotView = self.controllerView?.snapshotView(afterScreenUpdates: false) {
+                    self.snapshotView = snapshotView
+                    self.controllerView?.removeFromSuperview()
+                    self.controllerView = snapshotView
+                    self.containerNode.view.addSubview(snapshotView)
+                    self.requestLayout(transition: .immediate)
+                }
             }
+            
             self.addSubnode(self.headerNode)
             self.addSubnode(self.dimCoverNode)
             self.addSubnode(self.shadowNode)
@@ -181,6 +188,13 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             }
         }
         
+        private func requestLayout(transition: ContainedViewLayoutTransition) {
+            guard let (size, insets, isExpanded) = self.validLayout else {
+                return
+            }
+            self.updateLayout(size: size, insets: insets, isExpanded: isExpanded, transition: transition)
+        }
+        
         func updateLayout(size: CGSize, insets: UIEdgeInsets, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
             self.validLayout = (size, insets, isExpanded)
             
@@ -203,7 +217,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             transition.updateFrame(node: self.headerNode, frame: headerFrame)
             transition.updateFrame(node: self.dimCoverNode, frame: CGRect(origin: .zero, size: size))
             
-            if let controllerView = self.controllerView {
+            if let controllerView = self.snapshotView {
                 let controllerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - controllerView.bounds.size.width) / 2.0), y: 0.0), size: controllerView.bounds.size)
                 transition.updateFrame(view: controllerView, frame: controllerFrame)
             }
@@ -214,8 +228,8 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         }
     }
     
-    private let context: AccountContext
-    private weak var navigationController: NavigationController?
+    private let sharedContext: SharedAccountContext
+    public weak var navigationController: NavigationController?
     private var items: [Item] = []
     
     private var presentationData: PresentationData
@@ -239,10 +253,13 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     private var isApplyingTransition = false
     private var validLayout: ContainerViewLayout?
     
-    public init(context: AccountContext, navigationController: NavigationController) {
-        self.context = context
-        self.navigationController = navigationController
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    public var controllers: [ViewController] {
+        return self.items.map { $0.controller }
+    }
+    
+    public init(sharedContext: SharedAccountContext) {
+        self.sharedContext = sharedContext
+        self.presentationData = sharedContext.currentPresentationData.with { $0 }
         
         self.bottomEdgeView = UIImageView()
         self.bottomEdgeView.contentMode = .scaleToFill
@@ -275,7 +292,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         self.view.addSubview(self.dimView)
         self.view.addSubview(self.scrollView)
         
-        self.presentationDataDisposable = (self.context.sharedContext.presentationData
+        self.presentationDataDisposable = (self.sharedContext.presentationData
         |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData in
             guard let self else {
                 return
@@ -488,6 +505,13 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             return
         }
         self.requestUpdate(transition: .immediate)
+        
+        if scrollView.contentOffset.y < -64.0 {
+            self.isExpanded = false
+            scrollView.panGestureRecognizer.isEnabled = false
+            scrollView.panGestureRecognizer.isEnabled = true
+            self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
+        }
     }
     
     private func requestUpdate(transition: ContainedViewLayoutTransition, completion: @escaping (Transition) -> Void = { _ in }) {
@@ -773,6 +797,16 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                     if self.currentTransition == currentTransition {
                         self.currentTransition = nil
                     }
+                    
+                    if let snaphotView = itemNode.snapshotView {
+                        itemNode.item.controller.displayNode.view.addSubview(snaphotView)
+                        Queue.mainQueue().after(0.15, {
+                            snaphotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                                snaphotView.removeFromSuperview()
+                            })
+                        })
+                    }
+                    
                     completion(currentTransition)
                     self.itemNodes[itemId] = nil
                     itemNode.removeFromSupernode()
