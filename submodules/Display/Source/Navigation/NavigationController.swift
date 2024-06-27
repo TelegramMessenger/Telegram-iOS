@@ -150,6 +150,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     private var rootModalFrame: NavigationModalFrame?
     private var modalContainers: [NavigationModalContainer] = []
     private var overlayContainers: [NavigationOverlayContainer] = []
+    private var minimizedContainer: MinimizedContainer?
     
     private var globalOverlayContainers: [NavigationOverlayContainer] = []
     private var globalOverlayBelowKeyboardContainerParent: GlobalOverlayContainerParent?
@@ -177,15 +178,6 @@ open class NavigationController: UINavigationController, ContainableController, 
             return self._viewControllers.map { $0 as UIViewController }
         } set(value) {
             self.setViewControllers(value, animated: false)
-        }
-    }
-    
-    private var _minimizedViewControllers: [ViewController] = []
-    open var minimizedViewControllers: [UIViewController] {
-        get {
-            return self._minimizedViewControllers.map { $0 as UIViewController }
-        } set(value) {
-            self.setMinimizedViewControllers(value, animated: false)
         }
     }
     
@@ -475,7 +467,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             transition.updateFrame(node: globalOverlayContainerParent, frame: CGRect(origin: CGPoint(), size: layout.size))
         }
         
-        let navigationLayout = makeNavigationLayout(mode: self.mode, layout: layout, controllers: self._viewControllers, minimizedControllers: self._minimizedViewControllers)
+        let navigationLayout = makeNavigationLayout(mode: self.mode, layout: layout, controllers: self._viewControllers)
         
         var transition = transition
         var statusBarStyle: StatusBarStyle = .Ignore
@@ -497,9 +489,8 @@ open class NavigationController: UINavigationController, ContainableController, 
             let modalContainer: NavigationModalContainer
             if let existingModalContainer = existingModalContainer {
                 modalContainer = existingModalContainer
-                modalContainer.isMinimized = navigationLayout.modal[i].isMinimized
             } else {
-                modalContainer = NavigationModalContainer(theme: self.theme, isFlat: navigationLayout.modal[i].isFlat, isMinimized: navigationLayout.modal[i].isMinimized, controllerRemoved: { [weak self] controller in
+                modalContainer = NavigationModalContainer(theme: self.theme, isFlat: navigationLayout.modal[i].isFlat, controllerRemoved: { [weak self] controller in
                     self?.controllerRemoved(controller)
                 })
                 modalContainer.container.statusBarStyleUpdated = { [weak self] transition in
@@ -533,32 +524,6 @@ open class NavigationController: UINavigationController, ContainableController, 
                     strongSelf.ignoreInputHeight = hadInputFocus
                     strongSelf.setViewControllers(controllers, animated: false)
                     strongSelf.ignoreInputHeight = false
-                }
-                modalContainer.minimizedRequestMaximize = { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    
-                    var controllers = self._viewControllers
-                    for controller in self._minimizedViewControllers {
-                        controllers.append(controller)
-                    }
-                    self._viewControllers = controllers
-                    self._minimizedViewControllers = []
-                    
-                    self.updateContainersNonReentrant(transition: .animated(duration: 0.5, curve: .spring))
-                }
-                modalContainer.minimizedRequestDismiss = { [weak self, weak modalContainer] animated in
-                    guard let self, let modalContainer else {
-                        return
-                    }
-                    
-                    let minimizedControllers = self.minimizedViewControllers.filter { controller in
-                        return !modalContainer.container.controllers.contains(where: { $0 === controller })
-                    }
-                    if minimizedControllers.count != self.minimizedViewControllers.count {
-                        self.setMinimizedViewControllers(minimizedControllers, animated: animated)
-                    }
                 }
             }
             modalContainers.append(modalContainer)
@@ -731,7 +696,6 @@ open class NavigationController: UINavigationController, ContainableController, 
         var topVisibleModalContainerWithStatusBar: NavigationModalContainer?
         var visibleModalCount = 0
         var topModalIsFlat = false
-        var topModalIsMinimized = false
         var topFlatModalHasProgress = false
         let isLandscape = layout.orientation == .landscape
         var hasVisibleStandaloneModal = false
@@ -771,7 +735,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                 modalStyleOverlayTransitionFactor = max(modalStyleOverlayTransitionFactor, lastController.modalStyleOverlayTransitionFactor)
                 topFlatModalHasProgress = modalStyleOverlayTransitionFactor > 0.0
             }
-            
+                        
             containerTransition.updateFrame(node: modalContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
             modalContainer.update(layout: modalContainer.isFlat ? globalOverlayLayout : layout, controllers: navigationLayout.modal[i].controllers, coveredByModalTransition: effectiveModalTransition, transition: containerTransition)
             
@@ -791,16 +755,13 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             
             if modalContainer.supernode != nil {
-                if !hasVisibleStandaloneModal && !isStandaloneModal && !modalContainer.isFlat && !modalContainer.isMinimized {
+                if !hasVisibleStandaloneModal && !isStandaloneModal && !modalContainer.isFlat {
                     visibleModalCount += 1
                 }
                 if isStandaloneModal {
                     hasVisibleStandaloneModal = true
                     visibleModalCount = 0
                 }
-                
-                topModalIsMinimized = modalContainer.isMinimized
-                
                 if previousModalContainer == nil {
                     topModalIsFlat = modalContainer.isFlat
                     
@@ -857,6 +818,11 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         
+        if self.isMaximizing && layout.size.width < layout.size.height {
+            modalStyleOverlayTransitionFactor = 1.0
+            topFlatModalHasProgress = true
+        }
+        
         layout.additionalInsets.left = max(layout.intrinsicInsets.left, additionalSideInsets.left)
         layout.additionalInsets.right = max(layout.intrinsicInsets.right, additionalSideInsets.right)
         
@@ -865,18 +831,18 @@ open class NavigationController: UINavigationController, ContainableController, 
             if let rootContainer = self.rootContainer {
                 switch rootContainer {
                 case let .flat(flatContainer):
-                    if let previousModalContainer, !previousModalContainer.isMinimized {
-                        flatContainer.keyboardViewManager = nil
-                        flatContainer.canHaveKeyboardFocus = false
-                    } else {
+                    if previousModalContainer == nil {
                         flatContainer.keyboardViewManager = self.keyboardViewManager
                         flatContainer.canHaveKeyboardFocus = true
+                    } else {
+                        flatContainer.keyboardViewManager = nil
+                        flatContainer.canHaveKeyboardFocus = false
                     }
-                    
+
                     var updatedSize = layout.size
                     var updatedIntrinsicInsets = layout.intrinsicInsets
-                    if topModalIsMinimized && (layout.inputHeight ?? 0.0).isZero {
-                        updatedSize.height -= 81.0
+                    if let minimizedContainer = self.minimizedContainer, (layout.inputHeight ?? 0.0).isZero {
+                        updatedSize.height -= minimizedContainer.collapsedHeight(layout: layout)
                         updatedIntrinsicInsets.bottom = 0.0
                     }
                     let updatedLayout = layout.withUpdatedSize(updatedSize).withUpdatedIntrinsicInsets(updatedIntrinsicInsets)
@@ -1143,6 +1109,11 @@ open class NavigationController: UINavigationController, ContainableController, 
                 }
                 ContainedViewLayoutTransition.immediate.updateSublayerTransformScaleAndOffset(node: rootContainerNode, scale: 1.0, offset: CGPoint())
             }
+        }
+        
+        if let minimizedContainer = self.minimizedContainer {
+            minimizedContainer.frame = CGRect(origin: .zero, size: layout.size)
+            minimizedContainer.updateLayout(layout, transition: transition)
         }
         
         if self.inCallStatusBar != nil {
@@ -1432,11 +1403,6 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.setViewControllers(controllers, animated: animated)
             self.ignoreInputHeight = false
         }
-        
-        let minimizedControllers = self.minimizedViewControllers.filter({ $0 !== controller })
-        if minimizedControllers.count != self.minimizedViewControllers.count {
-            self.setMinimizedViewControllers(minimizedControllers, animated: animated)
-        }
     }
     
     public func replaceController(_ controller: ViewController, with other: ViewController, animated: Bool) {
@@ -1575,28 +1541,75 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         self._viewControllersPromise.set(self.viewControllers)
     }
-    
-    private func setMinimizedViewControllers(_ viewControllers: [UIViewController], animated: Bool) {
-        self._viewControllers = self._viewControllers.filter { controller in
-            return !viewControllers.contains(controller)
-        }
         
-        self._minimizedViewControllers = viewControllers.map { controller in
-            let controller = controller as! ViewController
-            controller.navigation_setNavigationController(self)
-            return controller
+    public func minimizeViewController(_ viewController: ViewController, damping: CGFloat?, velocity: CGFloat? = nil, setupContainer: (MinimizedContainer?) -> MinimizedContainer?, animated: Bool) {
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .customSpring(damping: damping ?? 124.0, initialVelocity: velocity ?? 0.0)) : .immediate
+        
+        let minimizedContainer = setupContainer(self.minimizedContainer)
+        if self.minimizedContainer !== minimizedContainer {
+            minimizedContainer?.willMaximize = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.isMaximizing = true
+                self.updateContainersNonReentrant(transition: .animated(duration: 0.4, curve: .spring))
+            }
+            self.minimizedContainer?.removeFromSupernode()
+            self.minimizedContainer = minimizedContainer
+            
+            if let minimizedContainer {
+                if let modalContainer = self.modalContainers.first {
+                    self.displayNode.insertSubnode(minimizedContainer, belowSubnode: modalContainer)
+                } else {
+                    self.displayNode.addSubnode(minimizedContainer)
+                }
+            }
+                        
+            self.updateContainersNonReentrant(transition: transition)
         }
-        if let layout = self.validLayout {
-            self.updateContainers(layout: layout, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate, completion: { [weak self] in
-                self?.notifyAccessibilityScreenChanged()
-            })
-        }
+        viewController.isMinimized = true
+        self.filterController(viewController, animated: true)
+        minimizedContainer?.addController(viewController, transition: transition)
     }
     
-    public func minimizeViewController(_ viewController: UIViewController, animated: Bool) {
-        var controllers = self.minimizedViewControllers
-        controllers.append(viewController)
-        self.setMinimizedViewControllers(controllers, animated: animated)
+    private var isMaximizing = false
+    public func maximizeViewController(_ viewController: ViewController, animated: Bool) {
+        guard let minimizedContainer = self.minimizedContainer else {
+            return
+        }
+        if animated {
+            self.isMaximizing = true
+            self.updateContainersNonReentrant(transition: .animated(duration: 0.4, curve: .spring))
+        }
+        minimizedContainer.maximizeController(viewController, animated: animated, completion: { [weak self] dismissed in
+            guard let self else {
+                return
+            }
+            var viewControllers = self.viewControllers
+            viewControllers.append(viewController)
+            self.setViewControllers(viewControllers, animated: false)
+            
+            viewController.isMinimized = false
+            
+            self.isMaximizing = false
+            
+            if dismissed, let minimizedContainer = self.minimizedContainer {
+                self.minimizedContainer = nil
+                minimizedContainer.removeFromSupernode()
+            }
+        })
+    }
+    
+    public func dismissMinimizedControllers(animated: Bool) {
+        guard let minimizedContainer = self.minimizedContainer else {
+            return
+        }
+        self.minimizedContainer = nil
+        
+        minimizedContainer.dismissAll(completion: { [weak minimizedContainer] in
+            minimizedContainer?.removeFromSupernode()
+        })
+        self.updateContainersNonReentrant(transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate)
     }
     
     public var _keepModalDismissProgress = false
@@ -1862,8 +1875,9 @@ open class NavigationController: UINavigationController, ContainableController, 
             return
         }
         transition.updateTransform(node: container, transform: CGAffineTransformMakeTranslation(offset, 0.0))
-        if let minimizedModalContainer = self.modalContainers.first(where: { $0.isMinimized }) {
-            transition.updateTransform(node: minimizedModalContainer, transform: CGAffineTransformMakeTranslation(offset, 0.0))
+        
+        if let minimizedContainer = self.minimizedContainer {
+            transition.updateTransform(node: minimizedContainer, transform: CGAffineTransformMakeTranslation(offset, 0.0))
         }
     }
 }

@@ -41,6 +41,7 @@ swift_library(
         "//submodules/TelegramUI/Components/LegacyMessageInputPanelInputView",
         "//submodules/ReactionSelectionNode",
         "//submodules/TelegramUI/Components/Chat/TopMessageReactions",
+        "//submodules/TelegramUI/Components/MinimizedContainer",
     ],
     visibility = [
         "//visibility:public",

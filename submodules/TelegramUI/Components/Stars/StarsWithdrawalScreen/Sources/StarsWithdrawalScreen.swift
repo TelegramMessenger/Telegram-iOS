@@ -519,6 +519,8 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
     }
 }
 
+private let invalidAmountCharacters = CharacterSet.decimalDigits.inverted
+
 private final class AmountFieldComponent: Component {
     typealias EnvironmentType = Empty
     
@@ -623,7 +625,16 @@ private final class AmountFieldComponent: Component {
         }
         
         func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-            let newText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
+            if string.rangeOfCharacter(from: invalidAmountCharacters) != nil {
+                return false
+            }
+            var newText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
+            if newText == "0" || (newText.count > 1 && newText.hasPrefix("0")) {
+                newText.removeFirst()
+                textField.text = newText
+                self.textChanged(self.textField)
+                return false
+            }
             
             if let component = self.component {
                 let amount: Int64?

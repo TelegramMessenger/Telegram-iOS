@@ -2196,7 +2196,11 @@ public func standaloneWebAppController(
     controller.getSourceRect = getSourceRect
     controller.title = params.botName
     controller.shouldMinimizeOnSwipe = {
-        return false
+        if params.source != .menu {
+            return true
+        } else {
+            return false
+        }
     }
     return controller
 }

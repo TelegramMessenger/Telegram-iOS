@@ -12284,6 +12284,7 @@ Sorry for the inconvenience.";
 "Stars.Purchase.StarsNeeded_1" = "%@ Star Needed";
 "Stars.Purchase.StarsNeeded_any" = "%@ Stars Needed";
 "Stars.Purchase.StarsNeededInfo" = "Buy Stars to use them on **%@** and other miniapps.";
+"Stars.Purchase.StarsNeededUnlockInfo" = "Buy Stars to unlock media and use them on miniapps.";
 
 "Stars.Purchase.Stars_1" = "%@ Star";
 "Stars.Purchase.Stars_any" = "%@ Stars";
@@ -12453,10 +12454,15 @@ Sorry for the inconvenience.";
 "Premium.MessageEffects" = "Message Effects";
 "Premium.MessageEffectsInfo" = "Add over 500 animated effects to private messages.";
 
-"Chat.UnlockMedia" = "Unlock for %@";
+"Chat.PaidMedia.UnlockMedia" = "Unlock for %@";
+"Chat.PaidMedia.Purchased" = "Purchased";
 
 "Attachment.SendWithoutGrouping" = "Send Without Grouping";
 "Attachment.Paid.EditPrice" = "Edit Price";
 "Attachment.Paid.EditPrice.Stars_1" = "%@ Star";
 "Attachment.Paid.EditPrice.Stars_any" = "%@ Stars";
 "Attachment.Paid.Create" = "Make This Content Paid";
+
+"WebApp.MinimizedTitleFormat" = "%1$@ & %2$@";
+"WebApp.MinimizedTitle.Others_1" = "%@ Other";
+"WebApp.MinimizedTitle.Others_any" = "%@ Others";

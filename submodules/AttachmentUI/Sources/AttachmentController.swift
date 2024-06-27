@@ -15,6 +15,7 @@ import LegacyMessageInputPanel
 import LegacyMessageInputPanelInputView
 import AttachmentTextInputPanelNode
 import ChatSendMessageActionUI
+import MinimizedContainer
 
 public enum AttachmentButtonType: Equatable {
     case gallery
@@ -342,7 +343,7 @@ public class AttachmentController: ViewController {
                 }
             }
             
-            self.container.updateModalProgress = { [weak self] progress, topInset, transition in
+            self.container.updateModalProgress = { [weak self] progress, topInset, bounds, transition in
                 if let strongSelf = self, let layout = strongSelf.validLayout, !strongSelf.isDismissing {
                     var transition = transition
                     if strongSelf.container.supernode == nil {
@@ -350,7 +351,8 @@ public class AttachmentController: ViewController {
                     }
                     
                     strongSelf.modalProgress = progress
-                    strongSelf.controller?.modalTopEdgeOffset = topInset
+                    strongSelf.controller?.minimizedTopEdgeOffset = topInset
+                    strongSelf.controller?.minimizedBounds = bounds
                     
                     if !strongSelf.isMinimizing {
                         strongSelf.controller?.updateModalStyleOverlayTransitionFactor(progress, transition: transition)
@@ -364,16 +366,37 @@ public class AttachmentController: ViewController {
                 }
             }
             
-            self.container.interactivelyDismissed = { [weak self] in
-                if let strongSelf = self {
+            self.container.interactivelyDismissed = { [weak self] velocity in
+                if let strongSelf = self, let layout = strongSelf.validLayout {
                     if let controller = strongSelf.controller, controller.shouldMinimizeOnSwipe?() == true, let navigationController = controller.navigationController as? NavigationController {
-                        navigationController.minimizeViewController(controller, animated: true)
+
+                        let delta = layout.size.height - controller.minimizedTopEdgeOffset
+                        let damping: CGFloat = 180
+                        let initialVelocity: CGFloat = delta > 0.0 ? velocity / delta : 0.0
+
+                        navigationController.minimizeViewController(controller, damping: damping, velocity: initialVelocity, setupContainer: { [weak self] current in
+                            let minimizedContainer: MinimizedContainerImpl?
+                            if let current = current as? MinimizedContainerImpl {
+                                minimizedContainer = current
+                            } else if let context = self?.controller?.context {
+                                minimizedContainer = MinimizedContainerImpl(context: context, navigationController: navigationController)
+                            } else {
+                                minimizedContainer = nil
+                            }
+                            return minimizedContainer
+                        }, animated: true)
                         
-                        Queue.mainQueue().after(0.5) {
-                            strongSelf.isMinimizing = true
-                            strongSelf.container.update(isExpanded: true, transition: .immediate)
-                            strongSelf.isMinimizing = false
-                        }
+                        strongSelf.dim.isHidden = true
+                        
+                        strongSelf.isMinimizing = true
+                        strongSelf.container.update(isExpanded: true, force: true, transition: .immediate)
+//                        strongSelf.container.update(isExpanded: true, force: true, transition: .animated(duration: 0.4, curve: .customSpring(damping: 180.0, initialVelocity: initialVelocity)))
+                        strongSelf.isMinimizing = false
+                        
+                        Queue.mainQueue().after(0.45, {
+                            strongSelf.dim.isHidden = false
+                        })
+                        
                         return false
                     } else {
                         strongSelf.controller?.dismiss(animated: true)
@@ -1038,17 +1061,30 @@ public class AttachmentController: ViewController {
         return self.buttons.contains(.standalone)
     }
     
-    public override var isMinimized: Bool {
-        didSet {
-            guard self.isMinimized != oldValue else {
-                return
-            }
-            if !self.node.isDismissing {
-                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-                transition.updateAlpha(node: self.node.dim, alpha: self.isMinimized ? 0.0 : 1.0)
-            }
-        }
-    }
+//    private var snapshotView: UIView?
+//    public override var isMinimized: Bool {
+//        didSet {
+//            guard self.isMinimized != oldValue else {
+//                return
+//            }
+//            if self.isMinimized {
+//                if self.snapshotView == nil, let lastController = self.node.container.container.controllers.last, let snapshotView = lastController.view.snapshotView(afterScreenUpdates: false) {
+//                    snapshotView.isUserInteractionEnabled = false
+//                    self.snapshotView = snapshotView
+//                    lastController.view.addSubview(snapshotView)
+//                }
+//            } else {
+//                if let snapshotView = self.snapshotView {
+//                    self.snapshotView = nil
+//                    Queue.mainQueue().after(0.15) {
+//                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion:  { _ in
+//                            snapshotView.removeFromSuperview()
+//                        })
+//                    }
+//                }
+//            }
+//        }
+//    }
     
     public func updateSelectionCount(_ count: Int) {
         self.node.updateSelectionCount(count, animated: false)

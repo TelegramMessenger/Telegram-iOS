@@ -34,13 +34,13 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     private(set) var dismissProgress: CGFloat = 0.0
     var isReadyUpdated: (() -> Void)?
     var updateDismissProgress: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
-    var interactivelyDismissed: (() -> Bool)?
+    var interactivelyDismissed: ((CGFloat) -> Bool)?
     var controllerRemoved: ((ViewController) -> Void)?
     
     var shouldCancelPanGesture: (() -> Bool)?
     var requestDismiss: (() -> Void)?
     
-    var updateModalProgress: ((CGFloat, CGFloat, ContainedViewLayoutTransition) -> Void)?
+    var updateModalProgress: ((CGFloat, CGFloat, CGRect, ContainedViewLayoutTransition) -> Void)?
     
     private var isUpdatingState = false
     private var isDismissed = false
@@ -306,10 +306,13 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                     ignoreDismiss = true
                 }
             
+                var minimizing = false
                 var dismissing = false
                 if (bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 1800.0)) && !ignoreDismiss {
-                    if self.interactivelyDismissed?() == true {
+                    if self.interactivelyDismissed?(velocity.y) == true {
                         dismissing = true
+                    } else {
+                        minimizing = true
                     }
                 } else if self.isExpanded {
                     if velocity.y > 300.0 || offset > topInset / 2.0 {
@@ -363,7 +366,9 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                     let previousBounds = bounds
                     bounds.origin.y = 0.0
                     self.bounds = bounds
-                    self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                    if !minimizing {
+                        self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                    }
                 }
             case .cancelled:
                 self.panGestureArguments = nil
@@ -391,8 +396,8 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         return true
     }
     
-    func update(isExpanded: Bool, transition: ContainedViewLayoutTransition) {
-        guard isExpanded != self.isExpanded else {
+    func update(isExpanded: Bool, force: Bool = false, transition: ContainedViewLayoutTransition) {
+        guard isExpanded != self.isExpanded || force else {
             return
         }
         self.isExpanded = isExpanded
@@ -437,7 +442,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         })
         
         let modalProgress = isLandscape ? 0.0 : (1.0 - topInset / defaultTopInset)
-        self.updateModalProgress?(modalProgress, topInset, transition)
+        self.updateModalProgress?(modalProgress, topInset, self.bounds, transition)
                 
         let containerLayout: ContainerViewLayout
         let containerFrame: CGRect

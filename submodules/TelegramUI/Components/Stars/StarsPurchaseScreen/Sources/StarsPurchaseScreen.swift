@@ -229,7 +229,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             
             let textString: String
             if let _ = context.component.requiredStars {
-                textString = strings.Stars_Purchase_StarsNeededInfo(state.peer?.compactDisplayTitle ?? "").string
+                textString = state.peer == nil ? strings.Stars_Purchase_StarsNeededUnlockInfo : strings.Stars_Purchase_StarsNeededInfo(state.peer?.compactDisplayTitle ?? "").string
             } else {
                 textString = strings.Stars_Purchase_GetStarsInfo
             }
@@ -310,11 +310,11 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                     minimumCount = requiredStars - balance
                 }
                 for product in products {
-                    if let minimumCount, minimumCount > product.option.count {
+                    if let minimumCount, minimumCount > product.option.count && !(items.isEmpty && product.id == products.last?.id) {
                         continue
                     }
                     
-                    if let _ =  minimumCount, items.isEmpty {
+                    if let _ = minimumCount, items.isEmpty {
                         
                     } else if !context.component.expanded && !initialValues.contains(product.option.count) {
                         continue
@@ -381,7 +381,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                 }
             }
             
-            if !context.component.expanded {
+            if !context.component.expanded && items.count > 1 {
                 let titleComponent = AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
                         string: strings.Stars_Purchase_ShowMore,
