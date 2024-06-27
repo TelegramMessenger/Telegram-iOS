@@ -2079,7 +2079,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             if let invoice = media as? TelegramMediaInvoice, let selectedMedia = invoice.extendedMedia {
                 extendedMedia = selectedMedia
             } else if let paidContent = media as? TelegramMediaPaidContent {
-                let selectedMediaIndex = mediaIndex ?? 0
+                let selectedMediaIndex = self.mediaIndex ?? 0
                 if selectedMediaIndex < paidContent.extendedMedia.count {
                     extendedMedia = paidContent.extendedMedia[selectedMediaIndex]
                 }
@@ -2427,9 +2427,6 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     }
                 }
             }
-//            if let paidContent {
-//                viewText = "⭐️\(paidContent.amount)"
-//            }
             self.extendedMediaOverlayNode?.update(size: self.imageNode.frame.size, text: viewText, imageSignal: self.currentBlurredImageSignal, imageFrame: self.imageNode.view.convert(self.imageNode.bounds, to: self.extendedMediaOverlayNode?.view), corners: self.currentImageArguments?.corners)
         } else if let extendedMediaOverlayNode = self.extendedMediaOverlayNode {
             self.extendedMediaOverlayNode = nil
