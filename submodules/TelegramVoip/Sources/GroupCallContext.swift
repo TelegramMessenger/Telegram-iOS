@@ -57,7 +57,7 @@ final class NetworkBroadcastPartSource: BroadcastPartSource {
     private var dataSource: AudioBroadcastDataSource?
     
     #if DEBUG
-    private let debugDumpDirectory: EngineTempBox.Directory?
+    private var debugDumpDirectory: EngineTempBox.Directory?
     #endif
     
     init(queue: Queue, engine: TelegramEngine, callId: Int64, accessHash: Int64, isExternalStream: Bool) {
@@ -67,8 +67,8 @@ final class NetworkBroadcastPartSource: BroadcastPartSource {
         self.accessHash = accessHash
         self.isExternalStream = isExternalStream
         
-        #if DEBUG && true
-        self.debugDumpDirectory = EngineTempBox.shared.tempDirectory()
+        #if DEBUG
+        //self.debugDumpDirectory = EngineTempBox.shared.tempDirectory()
         #endif
     }
 

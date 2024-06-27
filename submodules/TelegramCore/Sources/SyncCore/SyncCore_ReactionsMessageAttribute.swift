@@ -3,6 +3,8 @@ import Postbox
 import TelegramApi
 
 public struct MessageReaction: Equatable, PostboxCoding, Codable {
+    public static let starsReactionId: Int64 = 5435957248314579621
+    
     public enum Reaction: Hashable, Comparable, Codable, PostboxCoding {
         case builtin(String)
         case custom(Int64)

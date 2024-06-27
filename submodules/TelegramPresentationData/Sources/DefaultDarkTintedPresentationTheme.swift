@@ -744,6 +744,10 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
                     reactionInactiveForeground: UIColor(rgb: 0xffffff, alpha: 1.0),
                     reactionActiveBackground: accentColor,
                     reactionActiveForeground: UIColor(rgb: 0xffffff, alpha: 1.0),
+                    reactionStarsInactiveBackground: UIColor(rgb: 0xFEF1D4, alpha: 1.0),
+                    reactionStarsInactiveForeground: UIColor(rgb: 0xD3720A),
+                    reactionStarsActiveBackground: UIColor(rgb: 0xD3720A, alpha: 1.0),
+                    reactionStarsActiveForeground: .clear,
                     reactionInactiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1),
                     reactionActiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1)
                 ),
@@ -756,6 +760,10 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
                     reactionInactiveForeground: UIColor(rgb: 0xffffff, alpha: 1.0),
                     reactionActiveBackground: accentColor,
                     reactionActiveForeground: UIColor(rgb: 0xffffff, alpha: 1.0),
+                    reactionStarsInactiveBackground: UIColor(rgb: 0xFEF1D4, alpha: 1.0),
+                    reactionStarsInactiveForeground: UIColor(rgb: 0xD3720A),
+                    reactionStarsActiveBackground: UIColor(rgb: 0xD3720A, alpha: 1.0),
+                    reactionStarsActiveForeground: .clear,
                     reactionInactiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1),
                     reactionActiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1)
                 )
@@ -772,6 +780,10 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
                     reactionInactiveForeground: UIColor(rgb: 0xffffff),
                     reactionActiveBackground: UIColor(rgb: 0xffffff, alpha: 1.0),
                     reactionActiveForeground: .clear,
+                    reactionStarsInactiveBackground: UIColor(rgb: 0xFEF1D4, alpha: 1.0),
+                    reactionStarsInactiveForeground: UIColor(rgb: 0xD3720A),
+                    reactionStarsActiveBackground: UIColor(rgb: 0xD3720A, alpha: 1.0),
+                    reactionStarsActiveForeground: .clear,
                     reactionInactiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1),
                     reactionActiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1)
                 ),
@@ -784,6 +796,10 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
                     reactionInactiveForeground: UIColor(rgb: 0xffffff),
                     reactionActiveBackground: UIColor(rgb: 0xffffff, alpha: 1.0),
                     reactionActiveForeground: .clear,
+                    reactionStarsInactiveBackground: UIColor(rgb: 0xFEF1D4, alpha: 1.0),
+                    reactionStarsInactiveForeground: UIColor(rgb: 0xD3720A),
+                    reactionStarsActiveBackground: UIColor(rgb: 0xD3720A, alpha: 1.0),
+                    reactionStarsActiveForeground: .clear,
                     reactionInactiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1),
                     reactionActiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1)
                 )
@@ -799,6 +815,10 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
                 reactionInactiveForeground: UIColor(rgb: 0xffffff),
                 reactionActiveBackground: accentColor,
                 reactionActiveForeground: UIColor(rgb: 0xffffff),
+                reactionStarsInactiveBackground: UIColor(rgb: 0xFEF1D4, alpha: 1.0),
+                reactionStarsInactiveForeground: UIColor(rgb: 0xD3720A),
+                reactionStarsActiveBackground: UIColor(rgb: 0xD3720A, alpha: 1.0),
+                reactionStarsActiveForeground: .clear,
                 reactionInactiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1),
                 reactionActiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1)
             ),
@@ -811,6 +831,10 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
                 reactionInactiveForeground: UIColor(rgb: 0xffffff),
                 reactionActiveBackground: accentColor,
                 reactionActiveForeground: UIColor(rgb: 0xffffff),
+                reactionStarsInactiveBackground: UIColor(rgb: 0xFEF1D4, alpha: 1.0),
+                reactionStarsInactiveForeground: UIColor(rgb: 0xD3720A),
+                reactionStarsActiveBackground: UIColor(rgb: 0xD3720A, alpha: 1.0),
+                reactionStarsActiveForeground: .clear,
                 reactionInactiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1),
                 reactionActiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1)
             )

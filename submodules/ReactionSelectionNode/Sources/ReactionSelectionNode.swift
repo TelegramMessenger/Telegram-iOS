@@ -56,6 +56,25 @@ protocol ReactionItemNode: ASDisplayNode {
 private let lockedBackgroundImage: UIImage = generateFilledCircleImage(diameter: 16.0, color: .white)!.withRenderingMode(.alwaysTemplate)
 private let lockedBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/PanelBadgeLock"), color: .white)
 
+private final class StarsReactionEffectLayer: SimpleLayer {
+    override init() {
+        super.init()
+        
+        self.backgroundColor = UIColor.blue.withAlphaComponent(0.2).cgColor
+    }
+    
+    override init(layer: Any) {
+        super.init(layer: layer)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func update(size: CGSize) {
+    }
+}
+
 public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     let context: AccountContext
     let theme: PresentationTheme
@@ -68,6 +87,8 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     
     let selectionTintView: UIView?
     let selectionView: UIView?
+    
+    private var starsEffectLayer: StarsReactionEffectLayer?
     
     private var animateInAnimationNode: AnimatedStickerNode?
     private var staticAnimationPlaceholderView: UIImageView?
@@ -128,6 +149,12 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         }
         
         super.init()
+        
+        if case .custom(MessageReaction.starsReactionId) = item.reaction.rawValue {
+            let starsEffectLayer = StarsReactionEffectLayer()
+            self.starsEffectLayer = starsEffectLayer
+            self.layer.addSublayer(starsEffectLayer)
+        }
         
         if item.stillAnimation.isCustomTemplateEmoji {
             if let animationNode = self.staticAnimationNode as? DefaultAnimatedStickerNodeImpl {
@@ -231,6 +258,11 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     
     public func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
         let intrinsicSize = size
+        
+        if let starsEffectLayer = self.starsEffectLayer {
+            transition.updateFrame(layer: starsEffectLayer, frame: CGRect(origin: CGPoint(), size: size))
+            starsEffectLayer.update(size: size)
+        }
         
         let animationSize = self.item.stillAnimation.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         var animationDisplaySize = animationSize.aspectFitted(intrinsicSize)

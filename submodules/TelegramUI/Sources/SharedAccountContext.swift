@@ -532,7 +532,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         sortIndex = sortOrder.order
                     } else if case let .backupData(backupDataValue) = attribute {
                         backupData = backupDataValue.data
-                    } else if case .supportUserInfo = attribute {
+                    } else if case .supportUserInfo = attribute, !"".isEmpty {
                         isSupportUser = true
                     }
                 }

@@ -255,7 +255,15 @@ public func topMessageReactions(context: AccountContext, message: Message, subPe
         guard let allowedReactions = allowedReactions else {
             return .single(nil)
         }
+        
         if case let .set(reactions) = allowedReactions {
+            #if DEBUG
+            var reactions = reactions
+            if "".isEmpty {
+                reactions.insert(.custom(MessageReaction.starsReactionId))
+            }
+            #endif
+            
             return context.engine.stickers.resolveInlineStickers(fileIds: reactions.compactMap { item -> Int64? in
                 switch item {
                 case .builtin:
@@ -265,10 +273,17 @@ public func topMessageReactions(context: AccountContext, message: Message, subPe
                 }
             })
             |> map { files -> (reactions: AllowedReactions, files: [Int64: TelegramMediaFile]) in
-                return (allowedReactions, files)
+                return (.set(reactions), files)
             }
         } else {
+            #if DEBUG
+            return context.engine.stickers.resolveInlineStickers(fileIds: [MessageReaction.starsReactionId])
+            |> map { files -> (reactions: AllowedReactions, files: [Int64: TelegramMediaFile]) in
+                return (allowedReactions, files)
+            }
+            #else
             return .single((allowedReactions, [:]))
+            #endif
         }
     }
 
@@ -285,6 +300,25 @@ public func topMessageReactions(context: AccountContext, message: Message, subPe
         
         var result: [ReactionItem] = []
         var existingIds = Set<MessageReaction.Reaction>()
+        
+        #if DEBUG
+        if "".isEmpty {
+            if let file = allowedReactionsAndFiles.files[MessageReaction.starsReactionId] {
+                existingIds.insert(.custom(MessageReaction.starsReactionId))
+                
+                result.append(ReactionItem(
+                    reaction: ReactionItem.Reaction(rawValue: .custom(file.fileId.id)),
+                    appearAnimation: file,
+                    stillAnimation: file,
+                    listAnimation: file,
+                    largeListAnimation: file,
+                    applicationAnimation: nil,
+                    largeApplicationAnimation: nil,
+                    isCustom: true
+                ))
+            }
+        }
+        #endif
         
         for topReaction in topReactions {
             switch topReaction.content {

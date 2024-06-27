@@ -365,7 +365,7 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
                             
                             let user = TelegramUser(user: user)
                             var isSupportUser = false
-                            if let phone = user.phone, phone.hasPrefix("42") {
+                            if let phone = user.phone, phone.hasPrefix("42"), phone.count <= 5 {
                                 isSupportUser = true
                             }
                             let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil, invalidatedChannels: [])
