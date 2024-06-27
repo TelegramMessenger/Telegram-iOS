@@ -783,6 +783,10 @@ public final class PresentationThemeBubbleColorComponents {
     public let reactionInactiveForeground: UIColor
     public let reactionActiveBackground: UIColor
     public let reactionActiveForeground: UIColor
+    public let reactionStarsInactiveBackground: UIColor
+    public let reactionStarsInactiveForeground: UIColor
+    public let reactionStarsActiveBackground: UIColor
+    public let reactionStarsActiveForeground: UIColor
     public let reactionInactiveMediaPlaceholder: UIColor
     public let reactionActiveMediaPlaceholder: UIColor
     
@@ -795,6 +799,10 @@ public final class PresentationThemeBubbleColorComponents {
         reactionInactiveForeground: UIColor,
         reactionActiveBackground: UIColor,
         reactionActiveForeground: UIColor,
+        reactionStarsInactiveBackground: UIColor,
+        reactionStarsInactiveForeground: UIColor,
+        reactionStarsActiveBackground: UIColor,
+        reactionStarsActiveForeground: UIColor,
         reactionInactiveMediaPlaceholder: UIColor,
         reactionActiveMediaPlaceholder: UIColor
     ) {
@@ -806,6 +814,10 @@ public final class PresentationThemeBubbleColorComponents {
         self.reactionInactiveForeground = reactionInactiveForeground
         self.reactionActiveBackground = reactionActiveBackground
         self.reactionActiveForeground = reactionActiveForeground
+        self.reactionStarsInactiveBackground = reactionStarsInactiveBackground
+        self.reactionStarsInactiveForeground = reactionStarsInactiveForeground
+        self.reactionStarsActiveBackground = reactionStarsActiveBackground
+        self.reactionStarsActiveForeground = reactionStarsActiveForeground
         self.reactionInactiveMediaPlaceholder = reactionInactiveMediaPlaceholder
         self.reactionActiveMediaPlaceholder = reactionActiveMediaPlaceholder
     }
@@ -818,6 +830,10 @@ public final class PresentationThemeBubbleColorComponents {
         reactionInactiveForeground: UIColor? = nil,
         reactionActiveBackground: UIColor? = nil,
         reactionActiveForeground: UIColor? = nil,
+        reactionStarsInactiveBackground: UIColor? = nil,
+        reactionStarsInactiveForeground: UIColor? = nil,
+        reactionStarsActiveBackground: UIColor? = nil,
+        reactionStarsActiveForeground: UIColor? = nil,
         reactionInactiveMediaPlaceholder: UIColor? = nil,
         reactionActiveMediaPlaceholder: UIColor? = nil
     ) -> PresentationThemeBubbleColorComponents {
@@ -830,6 +846,10 @@ public final class PresentationThemeBubbleColorComponents {
             reactionInactiveForeground: reactionInactiveForeground ?? self.reactionInactiveForeground,
             reactionActiveBackground: reactionActiveBackground ?? self.reactionActiveBackground,
             reactionActiveForeground: reactionActiveForeground ?? self.reactionActiveForeground,
+            reactionStarsInactiveBackground: reactionStarsInactiveBackground ?? self.reactionStarsInactiveBackground,
+            reactionStarsInactiveForeground: reactionStarsInactiveForeground ?? self.reactionStarsInactiveForeground,
+            reactionStarsActiveBackground: reactionStarsActiveBackground ?? self.reactionStarsActiveBackground,
+            reactionStarsActiveForeground: reactionStarsActiveForeground ?? self.reactionStarsActiveForeground,
             reactionInactiveMediaPlaceholder: reactionInactiveMediaPlaceholder ?? self.reactionInactiveMediaPlaceholder,
             reactionActiveMediaPlaceholder: reactionActiveMediaPlaceholder ?? self.reactionActiveMediaPlaceholder
         )
