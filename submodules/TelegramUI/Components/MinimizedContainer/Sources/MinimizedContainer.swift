@@ -212,7 +212,9 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 topInset += 10.0
             }
             self.containerNode.frame = CGRect(origin: .zero, size: size)
-            self.containerNode.subnodeTransform = CATransform3DMakeTranslation(0.0, -topInset, 0.0)
+            if let _ = self.item.controller.minimizedTopEdgeOffset {
+                self.containerNode.subnodeTransform = CATransform3DMakeTranslation(0.0, -topInset, 0.0)
+            }
             
             self.snapshotContainerView.frame = CGRect(origin: .zero, size: size)
             
@@ -234,11 +236,15 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 var requiresBlur = false
                 var blurFrame = snapshotFrame
                 if snapshotView.frame.width * 1.1 < size.width {
-                    snapshotFrame = snapshotFrame.offsetBy(dx: 0.0, dy: -66.0)
+                    if let _ = self.item.controller.minimizedTopEdgeOffset {
+                        snapshotFrame = snapshotFrame.offsetBy(dx: 0.0, dy: -66.0)
+                    }
                     blurFrame = CGRect(origin: CGPoint(x: 0.0, y: snapshotFrame.minY), size: CGSize(width: size.width, height: snapshotFrame.height))
                     requiresBlur = true
                 } else if snapshotView.frame.width > size.width * 1.5 {
-                    snapshotFrame = snapshotFrame.offsetBy(dx: 0.0, dy: 66.0)
+                    if let _ = self.item.controller.minimizedTopEdgeOffset {
+                        snapshotFrame = snapshotFrame.offsetBy(dx: 0.0, dy: 66.0)
+                    }
                     blurFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - snapshotView.frame.width) / 2.0), y: snapshotFrame.minY), size: CGSize(width: snapshotFrame.width, height: size.height))
                     requiresBlur = true
                 }
@@ -282,7 +288,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    var isExpanded: Bool = false
+    public private(set) var isExpanded: Bool = false
     public var willMaximize: (() -> Void)?
     
     private let bottomEdgeView: UIImageView
@@ -551,6 +557,12 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             self.isExpanded = true
             self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
         }
+    }
+    
+    public func collapse() {
+        self.isExpanded = false
+        self.currentTransition = .collapse
+        self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
     }
         
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -824,7 +836,10 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 
                 itemNode.animateIn()
                 
-                var initialOffset = insets.top + itemNode.item.controller.minimizedTopEdgeOffset
+                var initialOffset = insets.top
+                if let minimizedTopEdgeOffset = itemNode.item.controller.minimizedTopEdgeOffset {
+                    initialOffset += minimizedTopEdgeOffset
+                }
                 if layout.size.width < layout.size.height {
                     initialOffset += 10.0
                 }

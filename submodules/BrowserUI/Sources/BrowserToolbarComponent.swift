@@ -104,7 +104,9 @@ final class BrowserToolbarComponent: CombinedComponent {
                         transition.animatePosition(view: view, from: CGPoint(x: 0.0, y: size.height), to: .zero, additive: true)
                     }))
                     .disappear(ComponentTransition.Disappear({ view, transition, completion in
-                        transition.animatePosition(view: view, from: .zero, to: CGPoint(x: 0.0, y: size.height), additive: true, completion: { _ in
+                        let from = view.center
+                        view.center = from.offsetBy(dx: 0.0, dy: size.height)
+                        transition.animatePosition(view: view, from: from, to: view.center, completion: { _ in
                             completion()
                         })
                     }))
@@ -224,12 +226,12 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                 component: Button(
                     content: AnyComponent(
                         BundleIconComponent(
-                            name: "Chat/Context Menu/Browser",
+                            name: "Instant View/Minimize",
                             tintColor: context.component.textColor
                         )
                     ),
                     action: {
-                        performAction.invoke(.openIn)
+                        performAction.invoke(.minimize)
                     }
                 ).minSize(buttonSize),
                 availableSize: buttonSize,

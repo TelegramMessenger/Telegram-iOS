@@ -1335,7 +1335,9 @@ open class NavigationController: UINavigationController, ContainableController, 
         if let _ = self.inCallStatusBar {
             self.inCallNavigate?()
         } else if let rootContainer = self.rootContainer {
-            if let modalContainer = self.modalContainers.last {
+            if let minimizedContainer = self.minimizedContainer, minimizedContainer.isExpanded {
+                minimizedContainer.collapse()
+            } else if let modalContainer = self.modalContainers.last {
                 modalContainer.container.controllers.last?.scrollToTop?()
             } else {
                 switch rootContainer {

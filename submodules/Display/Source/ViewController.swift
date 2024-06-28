@@ -230,7 +230,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     
     private var navigationBarOrigin: CGFloat = 0.0
     
-    public var minimizedTopEdgeOffset: CGFloat = 0.0
+    public var minimizedTopEdgeOffset: CGFloat?
     public var minimizedBounds: CGRect?
     open var isMinimized: Bool = false
     

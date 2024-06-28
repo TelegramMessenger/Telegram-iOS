@@ -1453,9 +1453,13 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.experimentalCompatibility(experimentalSettings.experimentalCompatibility))
         entries.append(.enableDebugDataDisplay(experimentalSettings.enableDebugDataDisplay))
         entries.append(.acceleratedStickers(experimentalSettings.acceleratedStickers))
+        #if DEBUG
+        entries.append(.browserExperiment(experimentalSettings.browserExperiment))
+        #else
         if sharedContext.applicationBindings.appBuildType == .internal {
             entries.append(.browserExperiment(experimentalSettings.browserExperiment))
         }
+        #endif
         entries.append(.localTranscription(experimentalSettings.localTranscription))
         if case .internal = sharedContext.applicationBindings.appBuildType {
             entries.append(.enableReactionOverrides(experimentalSettings.enableReactionOverrides))

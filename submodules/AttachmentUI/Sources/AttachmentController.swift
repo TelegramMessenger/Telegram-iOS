@@ -392,7 +392,10 @@ public class AttachmentController: ViewController {
             self.container.interactivelyDismissed = { [weak self] velocity in
                 if let strongSelf = self, let layout = strongSelf.validLayout {
                     if let controller = strongSelf.controller, controller.shouldMinimizeOnSwipe?(strongSelf.currentType) == true {
-                        let delta = layout.size.height - controller.minimizedTopEdgeOffset
+                        var delta = layout.size.height
+                        if let minimizedTopEdgeOffset = controller.minimizedTopEdgeOffset {
+                            delta -= minimizedTopEdgeOffset
+                        }
                         let damping: CGFloat = 180.0
                         let initialVelocity: CGFloat = delta > 0.0 ? velocity / delta : 0.0
 

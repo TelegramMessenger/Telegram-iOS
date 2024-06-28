@@ -41,7 +41,7 @@ func _internal_inactiveChannelList(network: Network) -> Signal<[InactiveChannel]
             }
             var inactive: [InactiveChannel] = []
             for (i, channel) in channels.enumerated() {
-                inactive.append(InactiveChannel(peer: channel, lastActivityDate: dates[i], participantsCount: participantsCounts[channel.id]))
+                inactive.append(InactiveChannel(peer: channel, lastActivityDate: i < dates.count ? dates[i] : 0, participantsCount: participantsCounts[channel.id]))
             }
             return inactive
         }
