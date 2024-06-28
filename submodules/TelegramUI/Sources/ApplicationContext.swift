@@ -30,6 +30,7 @@ import ChatListUI
 import StoryContainerScreen
 import ChatMessageNotificationItem
 import PhoneNumberFormat
+import AttachmentUI
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -434,6 +435,10 @@ final class AuthorizedApplicationContext {
                                             strongSelf.notificationController.removeItemsWithGroupingKey(firstMessage.id.peerId)
                                             
                                             return false
+                                        }
+                                        
+                                        if let topContoller = strongSelf.rootController.topViewController as? AttachmentController {
+                                            topContoller.minimizeIfNeeded()
                                         }
                                         
                                         for controller in strongSelf.rootController.viewControllers {

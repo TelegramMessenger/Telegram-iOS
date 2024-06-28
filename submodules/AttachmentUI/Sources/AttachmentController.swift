@@ -567,7 +567,7 @@ public class AttachmentController: ViewController {
             }
         }
         
-        private func minimize(damping: CGFloat? = nil, initialVelocity: CGFloat? = nil) {
+        fileprivate func minimize(damping: CGFloat? = nil, initialVelocity: CGFloat? = nil) {
             guard let controller = self.controller, let navigationController = controller.navigationController as? NavigationController else {
                 return
             }
@@ -1103,6 +1103,12 @@ public class AttachmentController: ViewController {
         self.buttons = [.standalone]
         self.hasTextInput = false
         self.requestLayout(transition: .immediate)
+    }
+    
+    public func minimizeIfNeeded() {
+        if self.shouldMinimizeOnSwipe?(self.node.currentType) == true {
+            self.node.minimize()
+        }
     }
         
     public func updateSelectionCount(_ count: Int) {

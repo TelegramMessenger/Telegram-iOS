@@ -1935,16 +1935,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
             
             let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId && !$0.flags.contains(.notActivated) })
             
-//            items.append(.action(ContextMenuActionItem(text: "Minimize", icon: { theme in
-//                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/HideArchive"), color: theme.contextMenu.primaryColor)
-//            }, action: { [weak self] c, _ in
-//                c?.dismiss(completion: nil)
-//                
-//                if let self, let parentController = self.parentController(), let navigationController = self.getNavigationController() {
-//                    navigationController.minimizeViewController(parentController, animated: true)
-//                }
-//            })))
-            
             if hasSettings {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_Settings, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.contextMenu.primaryColor)

@@ -43,6 +43,10 @@ extension ChatControllerImpl {
     }
     
     func presentAttachmentMenu(subject: AttachMenuSubject) {
+        guard self.audioRecorderValue == nil && self.videoRecorderValue == nil else {
+            return
+        }
+        
         let context = self.context
         let inputIsActive = self.presentationInterfaceState.inputMode == .text
         
