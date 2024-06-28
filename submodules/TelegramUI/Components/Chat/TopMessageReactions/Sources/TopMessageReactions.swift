@@ -259,7 +259,7 @@ public func topMessageReactions(context: AccountContext, message: Message, subPe
         if case let .set(reactions) = allowedReactions {
             #if DEBUG
             var reactions = reactions
-            if "".isEmpty {
+            if context.sharedContext.applicationBindings.appBuildType == .internal {
                 reactions.insert(.custom(MessageReaction.starsReactionId))
             }
             #endif
@@ -277,13 +277,14 @@ public func topMessageReactions(context: AccountContext, message: Message, subPe
             }
         } else {
             #if DEBUG
-            return context.engine.stickers.resolveInlineStickers(fileIds: [MessageReaction.starsReactionId])
-            |> map { files -> (reactions: AllowedReactions, files: [Int64: TelegramMediaFile]) in
-                return (allowedReactions, files)
+            if context.sharedContext.applicationBindings.appBuildType == .internal {
+                return context.engine.stickers.resolveInlineStickers(fileIds: [MessageReaction.starsReactionId])
+                |> map { files -> (reactions: AllowedReactions, files: [Int64: TelegramMediaFile]) in
+                    return (allowedReactions, files)
+                }
             }
-            #else
-            return .single((allowedReactions, [:]))
             #endif
+            return .single((allowedReactions, [:]))
         }
     }
 
@@ -302,7 +303,7 @@ public func topMessageReactions(context: AccountContext, message: Message, subPe
         var existingIds = Set<MessageReaction.Reaction>()
         
         #if DEBUG
-        if "".isEmpty {
+        if context.sharedContext.applicationBindings.appBuildType == .internal {
             if let file = allowedReactionsAndFiles.files[MessageReaction.starsReactionId] {
                 existingIds.insert(.custom(MessageReaction.starsReactionId))
                 

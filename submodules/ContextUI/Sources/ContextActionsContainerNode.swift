@@ -436,6 +436,12 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             self.targetSelectionIndex = nil
             icon = nil
             isUserInteractionEnabled = action != nil
+        case let .starsReactions(topCount):
+            self.action = nil
+            self.text = "Send \(topCount) or more to highlight your profile"
+            self.targetSelectionIndex = nil
+            icon = nil
+            isUserInteractionEnabled = action != nil
         }
         
         self.iconNode = ASImageNode()

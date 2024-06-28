@@ -905,7 +905,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                             let canViewReactionList = arguments.canViewReactionList
                             item.node.view.activateAfterCompletion = !canViewReactionList
                             item.node.view.activated = { [weak itemNode] gesture, _ in
-                                guard let strongSelf = self, canViewReactionList else {
+                                guard let strongSelf = self else {
                                     return
                                 }
                                 guard let itemNode = itemNode else {

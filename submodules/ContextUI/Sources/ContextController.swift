@@ -2277,6 +2277,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         public var allPresetReactionsAreAvailable: Bool
         public var getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?
         public var disablePositionLock: Bool
+        public var previewReaction: TelegramMediaFile?
         public var tip: Tip?
         public var tipSignal: Signal<Tip?, NoError>?
         public var dismissed: (() -> Void)?
@@ -2294,6 +2295,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             allPresetReactionsAreAvailable: Bool = false,
             getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)? = nil,
             disablePositionLock: Bool = false,
+            previewReaction: TelegramMediaFile? = nil,
             tip: Tip? = nil,
             tipSignal: Signal<Tip?, NoError>? = nil,
             dismissed: (() -> Void)? = nil
@@ -2310,6 +2312,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             self.allPresetReactionsAreAvailable = allPresetReactionsAreAvailable
             self.getEmojiContent = getEmojiContent
             self.disablePositionLock = disablePositionLock
+            self.previewReaction = previewReaction
             self.tip = tip
             self.tipSignal = tipSignal
             self.dismissed = dismissed
@@ -2327,6 +2330,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             self.allPresetReactionsAreAvailable = false
             self.getEmojiContent = nil
             self.disablePositionLock = false
+            self.previewReaction = nil
             self.tip = nil
             self.tipSignal = nil
             self.dismissed = nil
@@ -2345,6 +2349,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         case messageCopyProtection(isChannel: Bool)
         case animatedEmoji(text: String?, arguments: TextNodeWithEntities.Arguments?, file: TelegramMediaFile?, action: (() -> Void)?)
         case notificationTopicExceptions(text: String, action: (() -> Void)?)
+        case starsReactions(topCount: Int)
         
         public static func ==(lhs: Tip, rhs: Tip) -> Bool {
             switch lhs {
@@ -2386,6 +2391,12 @@ public final class ContextController: ViewController, StandalonePresentableContr
                 }
             case let .notificationTopicExceptions(text, _):
                 if case .notificationTopicExceptions(text, _) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .starsReactions(topCount):
+                if case .starsReactions(topCount) = rhs {
                     return true
                 } else {
                     return false

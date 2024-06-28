@@ -31,6 +31,7 @@ swift_library(
         "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/UIKitRuntimeUtils",
+        "//submodules/TelegramUI/Components/EmojiStatusComponent",
     ],
     visibility = [
         "//visibility:public",

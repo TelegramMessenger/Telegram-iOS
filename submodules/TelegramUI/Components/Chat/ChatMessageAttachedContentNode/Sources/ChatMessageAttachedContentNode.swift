@@ -737,7 +737,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 replyCount: dateReplies,
                                 isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
                                 hasAutoremove: message.isSelfExpiring,
-                                canViewReactionList: canViewMessageReactionList(message: message, isInline: associatedData.isInline),
+                                canViewReactionList: canViewMessageReactionList(message: message),
                                 animationCache: controllerInteraction.presentationContext.animationCache,
                                 animationRenderer: controllerInteraction.presentationContext.animationRenderer
                             ))

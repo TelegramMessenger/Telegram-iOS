@@ -59,6 +59,16 @@ public struct ContextControllerReactionItems {
     }
 }
 
+public final class ContextControllerPreviewReaction {
+    public let context: AccountContext
+    public let file: TelegramMediaFile
+    
+    public init(context: AccountContext, file: TelegramMediaFile) {
+        self.context = context
+        self.file = file
+    }
+}
+
 public protocol ContextControllerActionsStackItem: AnyObject {
     func node(
         getController: @escaping () -> ContextControllerProtocol?,
@@ -71,6 +81,7 @@ public protocol ContextControllerActionsStackItem: AnyObject {
     var tip: ContextController.Tip? { get }
     var tipSignal: Signal<ContextController.Tip?, NoError>? { get }
     var reactionItems: ContextControllerReactionItems? { get }
+    var previewReaction: ContextControllerPreviewReaction? { get }
     var dismissed: (() -> Void)? { get }
 }
 
@@ -936,6 +947,7 @@ public final class ContextControllerActionsListStackItem: ContextControllerActio
     public let id: AnyHashable?
     public let items: [ContextMenuItem]
     public let reactionItems: ContextControllerReactionItems?
+    public let previewReaction: ContextControllerPreviewReaction?
     public let tip: ContextController.Tip?
     public let tipSignal: Signal<ContextController.Tip?, NoError>?
     public let dismissed: (() -> Void)?
@@ -944,6 +956,7 @@ public final class ContextControllerActionsListStackItem: ContextControllerActio
         id: AnyHashable?,
         items: [ContextMenuItem],
         reactionItems: ContextControllerReactionItems?,
+        previewReaction: ContextControllerPreviewReaction?,
         tip: ContextController.Tip?,
         tipSignal: Signal<ContextController.Tip?, NoError>?,
         dismissed: (() -> Void)?
@@ -951,6 +964,7 @@ public final class ContextControllerActionsListStackItem: ContextControllerActio
         self.id = id
         self.items = items
         self.reactionItems = reactionItems
+        self.previewReaction = previewReaction
         self.tip = tip
         self.tipSignal = tipSignal
         self.dismissed = dismissed
@@ -1034,6 +1048,7 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
     let id: AnyHashable?
     private let content: ContextControllerItemsContent
     let reactionItems: ContextControllerReactionItems?
+    let previewReaction: ContextControllerPreviewReaction?
     let tip: ContextController.Tip?
     let tipSignal: Signal<ContextController.Tip?, NoError>?
     let dismissed: (() -> Void)?
@@ -1042,6 +1057,7 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
         id: AnyHashable?,
         content: ContextControllerItemsContent,
         reactionItems: ContextControllerReactionItems?,
+        previewReaction: ContextControllerPreviewReaction?,
         tip: ContextController.Tip?,
         tipSignal: Signal<ContextController.Tip?, NoError>?,
         dismissed: (() -> Void)?
@@ -1049,6 +1065,7 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
         self.id = id
         self.content = content
         self.reactionItems = reactionItems
+        self.previewReaction = previewReaction
         self.tip = tip
         self.tipSignal = tipSignal
         self.dismissed = dismissed
@@ -1084,13 +1101,17 @@ func makeContextControllerActionsStackItem(items: ContextController.Items) -> [C
             getEmojiContent: items.getEmojiContent
         )
     }
+    var previewReaction: ContextControllerPreviewReaction?
+    if let context = items.context, let file = items.previewReaction {
+        previewReaction = ContextControllerPreviewReaction(context: context, file: file)
+    }
     switch items.content {
     case let .list(listItems):
-        return [ContextControllerActionsListStackItem(id: items.id, items: listItems, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal, dismissed: items.dismissed)]
+        return [ContextControllerActionsListStackItem(id: items.id, items: listItems, reactionItems: reactionItems, previewReaction: previewReaction, tip: items.tip, tipSignal: items.tipSignal, dismissed: items.dismissed)]
     case let .twoLists(listItems1, listItems2):
-        return [ContextControllerActionsListStackItem(id: items.id, items: listItems1, reactionItems: nil, tip: nil, tipSignal: nil, dismissed: items.dismissed), ContextControllerActionsListStackItem(id: nil, items: listItems2, reactionItems: nil, tip: nil, tipSignal: nil, dismissed: nil)]
+        return [ContextControllerActionsListStackItem(id: items.id, items: listItems1, reactionItems: nil, previewReaction: nil, tip: nil, tipSignal: nil, dismissed: items.dismissed), ContextControllerActionsListStackItem(id: nil, items: listItems2, reactionItems: nil, previewReaction: nil, tip: nil, tipSignal: nil, dismissed: nil)]
     case let .custom(customContent):
-        return [ContextControllerActionsCustomStackItem(id: items.id, content: customContent, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal, dismissed: items.dismissed)]
+        return [ContextControllerActionsCustomStackItem(id: items.id, content: customContent, reactionItems: reactionItems, previewReaction: previewReaction, tip: items.tip, tipSignal: items.tipSignal, dismissed: items.dismissed)]
     }
 }
 
@@ -1207,6 +1228,7 @@ public final class ContextControllerActionsStackNode: ASDisplayNode {
         let tipSignal: Signal<ContextController.Tip?, NoError>?
         var tipNode: InnerTextSelectionTipContainerNode?
         let reactionItems: ContextControllerReactionItems?
+        let previewReaction: ContextControllerPreviewReaction?
         let itemDismissed: (() -> Void)?
         var storedScrollingState: CGFloat?
         let positionLock: CGFloat?
@@ -1222,6 +1244,7 @@ public final class ContextControllerActionsStackNode: ASDisplayNode {
             tip: ContextController.Tip?,
             tipSignal: Signal<ContextController.Tip?, NoError>?,
             reactionItems: ContextControllerReactionItems?,
+            previewReaction: ContextControllerPreviewReaction?,
             itemDismissed: (() -> Void)?,
             positionLock: CGFloat?
         ) {
@@ -1240,6 +1263,7 @@ public final class ContextControllerActionsStackNode: ASDisplayNode {
             self.dimNode.alpha = 0.0
             
             self.reactionItems = reactionItems
+            self.previewReaction = previewReaction
             self.itemDismissed = itemDismissed
             self.positionLock = positionLock
             
@@ -1376,6 +1400,10 @@ public final class ContextControllerActionsStackNode: ASDisplayNode {
         return self.itemContainers.last?.reactionItems
     }
     
+    public var topPreviewReaction: ContextControllerPreviewReaction? {
+        return self.itemContainers.last?.previewReaction
+    }
+    
     public var topPositionLock: CGFloat? {
         return self.itemContainers.last?.positionLock
     }
@@ -1509,6 +1537,7 @@ public final class ContextControllerActionsStackNode: ASDisplayNode {
             tip: item.tip,
             tipSignal: item.tipSignal,
             reactionItems: item.reactionItems,
+            previewReaction: item.previewReaction,
             itemDismissed: item.dismissed,
             positionLock: positionLock
         )

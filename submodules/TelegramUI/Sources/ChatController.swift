@@ -1748,6 +1748,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageIds: [message.id], reactions: mappedUpdatedReactions, isLarge: false, storeAsRecentlyUsed: false).startStandalone()
+                    
+                    #if DEBUG
+                    if strongSelf.context.sharedContext.applicationBindings.appBuildType == .internal {
+                        if mappedUpdatedReactions.contains(where: {
+                            if case let .custom(fileId, _) = $0, fileId == MessageReaction.starsReactionId {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }) {
+                            let _ = (strongSelf.context.engine.stickers.resolveInlineStickers(fileIds: [MessageReaction.starsReactionId])
+                            |> deliverOnMainQueue).start(next: { [weak strongSelf] files in
+                                guard let strongSelf, let file = files[MessageReaction.starsReactionId] else {
+                                    return
+                                }
+                                //TODO:localize
+                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .starsSent(context: strongSelf.context, file: file, amount: 1, title: "Star Sent", text: "Long tap on {star} to select custom quantity of stars."), elevatedLayout: false, action: { _ in
+                                    return false
+                                }), in: .current)
+                            })
+                        }
+                    }
+                    #endif
                 }
             })
         }, activateMessagePinch: { [weak self] sourceNode in

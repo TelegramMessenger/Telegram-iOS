@@ -967,7 +967,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     replyCount: dateAndStatus.dateReplies,
                     isPinned: dateAndStatus.isPinned,
                     hasAutoremove: message.isSelfExpiring,
-                    canViewReactionList: canViewMessageReactionList(message: message, isInline: associatedData.isInline),
+                    canViewReactionList: canViewMessageReactionList(message: message),
                     animationCache: presentationContext.animationCache,
                     animationRenderer: presentationContext.animationRenderer
                 ))

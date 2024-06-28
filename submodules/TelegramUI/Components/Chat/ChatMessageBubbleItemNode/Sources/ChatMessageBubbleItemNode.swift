@@ -2277,7 +2277,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     replyCount: dateReplies,
                     isPinned: message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                     hasAutoremove: message.isSelfExpiring,
-                    canViewReactionList: canViewMessageReactionList(message: message, isInline: item.associatedData.isInline),
+                    canViewReactionList: canViewMessageReactionList(message: message),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,
                     animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                 ))
