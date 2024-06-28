@@ -873,6 +873,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     let updatedLayout = layout.withUpdatedSize(updatedSize).withUpdatedIntrinsicInsets(updatedIntrinsicInsets)
                     transition.updateFrame(node: flatContainer, frame: CGRect(origin: CGPoint(), size: updatedSize))
                     flatContainer.update(layout: updatedLayout, canBeClosed: false, controllers: controllers, transition: transition)
+                    flatContainer.minimizedContainer = self.minimizedContainer
                 case let .split(splitContainer):
                     let flatContainer = NavigationContainer(isFlat: self.isFlat, controllerRemoved: { [weak self] controller in
                         self?.controllerRemoved(controller)

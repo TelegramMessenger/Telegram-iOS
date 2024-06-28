@@ -157,10 +157,6 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             }
             if let view = otherGestureRecognizer.view, view.description.contains("WKChildScroll") {
                 return false
-//                let velocity = panGestureRecognizer.velocity(in: nil)
-//                if abs(velocity.x) > abs(velocity.y) * 2.0 {
-//                    return false
-//                }
             }
             if let _ = otherGestureRecognizer.view?.asyncdisplaykit_node as? CollectionIndexNode {
                 return false
@@ -222,7 +218,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 let currentHitView = self.hitTest(point, with: nil)
                 
                 var scrollViewAndListNode = self.findScrollView(view: currentHitView)
-                if scrollViewAndListNode?.0.frame.height == self.frame.width {
+                if scrollViewAndListNode?.0.frame.height == self.frame.width || scrollViewAndListNode?.0.isDescendant(of: self.view) == false {
                     scrollViewAndListNode = nil
                 }
                 let scrollView = scrollViewAndListNode?.0
