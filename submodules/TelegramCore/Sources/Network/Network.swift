@@ -929,7 +929,11 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
                     datacenterId = id
                     isCdn = true
                 }
-                return strongSelf.makeWorker(datacenterId: datacenterId, isCdn: isCdn, isMedia: isMedia, tag: tag, continueInBackground: continueInBackground)
+                if datacenterId != 0 {
+                    return strongSelf.makeWorker(datacenterId: datacenterId, isCdn: isCdn, isMedia: isMedia, tag: tag, continueInBackground: continueInBackground)
+                } else {
+                    return nil
+                }
             }
             return nil
         })
