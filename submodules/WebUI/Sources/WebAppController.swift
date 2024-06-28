@@ -487,12 +487,31 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                     })
                 } else {
-                    let _ = (self.context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: controller.payload, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.source == .menu, replyToMessageId: controller.replyToMessageId, threadId: controller.threadId)
-                    |> deliverOnMainQueue).start(next: { [weak self] result in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        if let parsedUrl = URL(string: result.url) {
+                    if let url = controller.url, isTelegramMeLink(url), let internalUrl = parseFullInternalUrl(sharedContext: self.context.sharedContext, url: url), case .peer(_, .appStart) = internalUrl {
+                        let _ = (self.context.sharedContext.resolveUrl(context: self.context, peerId: controller.peerId, url: url, skipUrlAuth: false)
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
+                            guard let self, let controller = self.controller else {
+                                return
+                            }
+                            guard case let .peer(peer, params) = result, let peer, case let .withBotApp(appStart) = params else {
+                                controller.dismiss()
+                                return
+                            }
+                            let _ = (self.context.engine.messages.requestAppWebView(peerId: peer.id, appReference: .id(id: appStart.botApp.id, accessHash: appStart.botApp.accessHash), payload: appStart.payload, themeParams: generateWebAppThemeParams(self.presentationData.theme), compact: appStart.compact, allowWrite: true)
+                            |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
+                                guard let self, let parsedUrl = URL(string: result.url) else {
+                                    return
+                                }
+                                self.controller?.titleView?.title = CounterControllerTitle(title: appStart.botApp.title, counter: self.presentationData.strings.Bot_GenericBotStatus)
+                                self.webView?.load(URLRequest(url: parsedUrl))
+                            })
+                        })
+                    } else {
+                        let _ = (self.context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: controller.payload, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.source == .menu, replyToMessageId: controller.replyToMessageId, threadId: controller.threadId)
+                        |> deliverOnMainQueue).start(next: { [weak self] result in
+                            guard let strongSelf = self, let parsedUrl = URL(string: result.url) else {
+                                return
+                            }
                             strongSelf.queryId = result.queryId
                             strongSelf.webView?.load(URLRequest(url: parsedUrl))
                             
@@ -509,8 +528,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     }
                                 })
                             }
-                        }
-                    })
+                        })
+                    }
                 }
             }
         }

@@ -11,6 +11,7 @@ import AccountContext
 import TelegramNotices
 import PresentationDataUtils
 import UndoUI
+import UrlHandling
 
 public extension ChatControllerImpl {
     func openWebApp(buttonText: String, url: String, simple: Bool, source: ChatOpenWebViewSource) {
@@ -89,8 +90,13 @@ public extension ChatControllerImpl {
                     }
                 }
                 
+                var fullSize = false
+                if isTelegramMeLink(url), let internalUrl = parseFullInternalUrl(sharedContext: self.context.sharedContext, url: url), case .peer(_, .appStart) = internalUrl {
+                    fullSize = !url.contains("?mode=compact")
+                }
+                
                 let context = self.context
-                let params = WebAppParameters(source: .menu, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: false)
+                let params = WebAppParameters(source: .menu, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: fullSize)
                 let controller = standaloneWebAppController(context: self.context, updatedPresentationData: self.updatedPresentationData, params: params, threadId: self.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                     self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
                 }, requestSwitchInline: { [weak self] query, chatTypes, completion in
