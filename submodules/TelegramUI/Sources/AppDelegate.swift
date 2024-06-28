@@ -178,6 +178,7 @@ final class SharedApplicationContext {
     let notificationManager: SharedNotificationManager
     let wakeupManager: SharedWakeupManager
     let overlayMediaController: ViewController & OverlayMediaController
+    var minimizedContainer: MinimizedContainer?
     
     init(sharedContext: SharedAccountContextImpl, notificationManager: SharedNotificationManager, wakeupManager: SharedWakeupManager) {
         self.sharedContext = sharedContext

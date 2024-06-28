@@ -913,9 +913,6 @@ public final class StoryItemSetContainerComponent: Component {
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state, let component = self.component, let itemLayout = self.itemLayout {
                 
-                if let _ = self.sendMessageContext.menuController {
-                    return
-                }
                 if self.displayLikeReactions {
                     self.displayLikeReactions = false
                     self.sendMessageContext.currentInputMode = .text

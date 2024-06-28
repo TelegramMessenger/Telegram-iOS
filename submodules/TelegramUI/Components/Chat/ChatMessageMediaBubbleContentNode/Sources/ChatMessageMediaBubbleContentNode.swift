@@ -186,9 +186,7 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
             }
-            
-            let _ = selectedMediaIndex
-            
+                        
             if let extendedMedia, case let .full(media) = extendedMedia {
                 if let telegramImage = media as? TelegramMediaImage {
                     if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: telegramImage) {

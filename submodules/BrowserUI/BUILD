@@ -26,6 +26,7 @@ swift_library(
         "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
         "//submodules/Components/BundleIconComponent:BundleIconComponent",
         "//submodules/Components/BlurredBackgroundComponent:BlurredBackgroundComponent",
+        "//submodules/TelegramUI/Components/MinimizedContainer",
     ],
     visibility = [
         "//visibility:public",

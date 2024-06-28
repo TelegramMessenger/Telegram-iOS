@@ -134,6 +134,7 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
         
         var hasOther = false
         var hasNotOwnMessages = false
+        var hasPaid = false
         for message in messages {
             if let author = message.effectiveAuthor {
                 if !uniquePeerIds.contains(author.id) {
@@ -159,6 +160,8 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
                     if !message.text.isEmpty {
                         hasCaptions = true
                     }
+                } else if media is TelegramMediaPaidContent {
+                    hasPaid = true
                 }
             }
             if !isDice && !isMusic {
@@ -168,6 +171,9 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
         
         var canHideNames = hasNotOwnMessages && hasOther
         if case let .peer(peerId) = selfController.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
+            canHideNames = false
+        }
+        if hasPaid {
             canHideNames = false
         }
         let hideNames = forwardOptions.hideNames
@@ -194,7 +200,7 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
             })))
         }
         
-        if hasCaptions {
+        if hasCaptions && !hasPaid {
             items.append(.action(ContextMenuActionItem(text: hideCaptions ? presentationData.strings.Conversation_ForwardOptions_ShowCaption : presentationData.strings.Conversation_ForwardOptions_HideCaption, icon: { _ in
                 return nil
             }, iconAnimation: ContextMenuActionItem.IconAnimation(

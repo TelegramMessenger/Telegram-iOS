@@ -133,9 +133,10 @@ final class MediaPickerGridItemNode: GridItemNode {
         
     private struct SelectionState: Equatable {
         let selected: Bool
+        let index: Int?
         let count: Int
     }
-    private let selectionPromise = ValuePromise<SelectionState>(SelectionState(selected: false, count: 0))
+    private let selectionPromise = ValuePromise<SelectionState>(SelectionState(selected: false, index: nil, count: 0))
     private let spoilerDisposable = MetaDisposable()
     var spoilerNode: SpoilerOverlayNode?
     var priceNode: PriceNode?
@@ -256,14 +257,16 @@ final class MediaPickerGridItemNode: GridItemNode {
 
         if let interaction = self.interaction, let selectionState = interaction.selectionState {
             let selected = selectionState.isIdentifierSelected(self.identifier)
+            var selectionIndex: Int?
             if let selectableItem = self.selectableItem {
                 let index = selectionState.index(of: selectableItem)
                 if index != NSNotFound {
                     self.checkNode?.content = .counter(Int(index))
+                    selectionIndex = Int(index)
                 }
             }
             self.checkNode?.setSelected(selected, animated: animated)
-            self.selectionPromise.set(SelectionState(selected: selected, count: selectionState.selectedItems().count))
+            self.selectionPromise.set(SelectionState(selected: selected, index: selectionIndex, count: selectionState.selectedItems().count))
         }
     }
     
@@ -292,7 +295,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.durationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.draftNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.priceNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        if animateSpoilerNode {
+        if animateSpoilerNode || self.priceNode != nil {
             self.spoilerNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         }
     }
@@ -573,7 +576,7 @@ final class MediaPickerGridItemNode: GridItemNode {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.updateHasSpoiler(hasSpoiler, price: selectionState.selected ? price : nil, isSingle: selectionState.count == 1)
+                strongSelf.updateHasSpoiler(hasSpoiler, price: selectionState.selected ? price : nil, isSingle: selectionState.count == 1 || selectionState.index == 1)
             }))
             
             if self.currentDraftState != nil {

@@ -196,7 +196,7 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
                         badgeIconName: badgeIconName,
                         badgeText: "\(item.count)",
                         badgePosition: CGFloat(item.count) / CGFloat(item.premiumCount),
-                        badgeGraphPosition: CGFloat(item.count) / CGFloat(item.premiumCount),
+                        badgeGraphPosition: CGFloat(item.limit) / CGFloat(item.premiumCount),
                         isPremiumDisabled: item.isPremiumDisabled
                     ))
                     let containerSize = CGSize(width: layout.size.width - params.leftInset - params.rightInset, height: 200.0)

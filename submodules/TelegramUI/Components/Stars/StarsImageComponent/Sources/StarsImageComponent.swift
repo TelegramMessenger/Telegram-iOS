@@ -347,6 +347,7 @@ public final class StarsImageComponent: Component {
         private var dustNode: MediaDustNode?
         private var button: UIControl?
         
+        private var lockView: UIImageView?
         private var countView = ComponentView<Empty>()
         
         private let fetchDisposable = MetaDisposable()
@@ -641,6 +642,19 @@ public final class StarsImageComponent: Component {
                     imageFrameNode.frame = imageFrame.insetBy(dx: -2.0, dy: -2.0)
                 }
                 
+                var totalLabelWidth: CGFloat = 0.0
+                let labelSpacing: CGFloat = 4.0
+                let lockView: UIImageView
+                if let current = self.lockView {
+                    lockView = current
+                } else {
+                    lockView = UIImageView(image: UIImage(bundleImageName: "Premium/Stars/MediaLock"))
+                    containerNode.view.addSubview(lockView)
+                }
+                if let icon = lockView.image {
+                    totalLabelWidth += icon.size.width
+                }
+                
                 if extendedMedia.count > 1 {
                     let countSize = self.countView.update(
                         transition: .immediate,
@@ -650,7 +664,9 @@ public final class StarsImageComponent: Component {
                         environment: {},
                         containerSize: imageFrame.size
                     )
-                    let countFrame = CGRect(origin: CGPoint(x: imageFrame.minX + floorToScreenPixels((imageFrame.width - countSize.width) / 2.0), y: imageFrame.minY + floorToScreenPixels((imageFrame.height - countSize.height) / 2.0)), size: countSize)
+                    let iconWidth = totalLabelWidth
+                    totalLabelWidth += countSize.width + labelSpacing
+                    let countFrame = CGRect(origin: CGPoint(x: imageFrame.minX + floorToScreenPixels((imageFrame.width - totalLabelWidth) / 2.0) + iconWidth + labelSpacing, y: imageFrame.minY + floorToScreenPixels((imageFrame.height - countSize.height) / 2.0)), size: countSize)
                     if let countView = self.countView.view {
                         if countView.superview == nil {
                             containerNode.view.addSubview(countView)
@@ -658,6 +674,8 @@ public final class StarsImageComponent: Component {
                         countView.frame = countFrame
                     }
                 }
+                
+                lockView.frame = CGRect(origin: CGPoint(x: imageFrame.minX + floorToScreenPixels((imageFrame.width - totalLabelWidth) / 2.0), y: imageFrame.minY + floorToScreenPixels((imageFrame.height - lockView.bounds.height) / 2.0)), size: lockView.bounds.size)
             case let .transactionPeer(peer):
                 if case let .peer(peer) = peer {
                     let avatarNode: ImageNode

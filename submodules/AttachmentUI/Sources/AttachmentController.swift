@@ -263,7 +263,7 @@ public class AttachmentController: ViewController {
         let panel: AttachmentPanel
         
         fileprivate var currentType: AttachmentButtonType?
-        private var currentControllers: [AttachmentContainable] = []
+        fileprivate var currentControllers: [AttachmentContainable] = []
         
         private var validLayout: ContainerViewLayout?
         private var modalProgress: CGFloat = 0.0
@@ -391,33 +391,15 @@ public class AttachmentController: ViewController {
             
             self.container.interactivelyDismissed = { [weak self] velocity in
                 if let strongSelf = self, let layout = strongSelf.validLayout {
-                    if let controller = strongSelf.controller, controller.shouldMinimizeOnSwipe?(strongSelf.currentType) == true, let navigationController = controller.navigationController as? NavigationController {
-
-                        let delta = layout.size.height - controller.minimizedTopEdgeOffset
-                        let damping: CGFloat = 180
+                    if let controller = strongSelf.controller, controller.shouldMinimizeOnSwipe?(strongSelf.currentType) == true {
+                        var delta = layout.size.height
+                        if let minimizedTopEdgeOffset = controller.minimizedTopEdgeOffset {
+                            delta -= minimizedTopEdgeOffset
+                        }
+                        let damping: CGFloat = 180.0
                         let initialVelocity: CGFloat = delta > 0.0 ? velocity / delta : 0.0
 
-                        navigationController.minimizeViewController(controller, damping: damping, velocity: initialVelocity, setupContainer: { [weak self] current in
-                            let minimizedContainer: MinimizedContainerImpl?
-                            if let current = current as? MinimizedContainerImpl {
-                                minimizedContainer = current
-                            } else if let context = self?.controller?.context {
-                                minimizedContainer = MinimizedContainerImpl(context: context, navigationController: navigationController)
-                            } else {
-                                minimizedContainer = nil
-                            }
-                            return minimizedContainer
-                        }, animated: true)
-                        
-                        strongSelf.dim.isHidden = true
-                        
-                        strongSelf.isMinimizing = true
-                        strongSelf.container.update(isExpanded: true, force: true, transition: .immediate)
-                        strongSelf.isMinimizing = false
-                        
-                        Queue.mainQueue().after(0.45, {
-                            strongSelf.dim.isHidden = false
-                        })
+                        strongSelf.minimize(damping: damping, initialVelocity: initialVelocity)
                         
                         return false
                     } else {
@@ -588,6 +570,33 @@ public class AttachmentController: ViewController {
             }
         }
         
+        fileprivate func minimize(damping: CGFloat? = nil, initialVelocity: CGFloat? = nil) {
+            guard let controller = self.controller, let navigationController = controller.navigationController as? NavigationController else {
+                return
+            }
+            navigationController.minimizeViewController(controller, damping: damping, velocity: initialVelocity, setupContainer: { [weak self] current in
+                let minimizedContainer: MinimizedContainerImpl?
+                if let current = current as? MinimizedContainerImpl {
+                    minimizedContainer = current
+                } else if let context = self?.controller?.context {
+                    minimizedContainer = MinimizedContainerImpl(sharedContext: context.sharedContext)
+                } else {
+                    minimizedContainer = nil
+                }
+                return minimizedContainer
+            }, animated: true)
+            
+            self.dim.isHidden = true
+            
+            self.isMinimizing = true
+            self.container.update(isExpanded: true, force: true, transition: .immediate)
+            self.isMinimizing = false
+            
+            Queue.mainQueue().after(0.45, {
+                self.dim.isHidden = false
+            })
+        }
+        
         fileprivate func updateSelectionCount(_ count: Int, animated: Bool = true) {
             self.selectionCount = count
             if let layout = self.validLayout {
@@ -600,8 +609,12 @@ public class AttachmentController: ViewController {
                 return
             }
             if case .ended = recognizer.state {
-                if let controller = self.currentControllers.last {
-                    controller.requestDismiss(completion: { [weak self] in
+                if let lastController = self.currentControllers.last {
+                    if let controller = self.controller, controller.shouldMinimizeOnSwipe?(self.currentType) == true {
+                        self.minimize()
+                        return
+                    }
+                    lastController.requestDismiss(completion: { [weak self] in
                         self?.controller?.dismiss(animated: true)
                     })
                 } else {
@@ -954,7 +967,7 @@ public class AttachmentController: ViewController {
             if fromMenu && !hasButton, let inputContainerHeight = self.inputContainerHeight {
                panelHeight = inputContainerHeight
             }
-            if hasPanel || hasButton || (fromMenu && isCompact) {
+            if hasPanel || hasButton {
                 containerInsets.bottom = panelHeight
             }
             
@@ -1094,6 +1107,12 @@ public class AttachmentController: ViewController {
         self.hasTextInput = false
         self.requestLayout(transition: .immediate)
     }
+    
+    public func minimizeIfNeeded() {
+        if self.shouldMinimizeOnSwipe?(self.node.currentType) == true {
+            self.node.minimize()
+        }
+    }
         
     public func updateSelectionCount(_ count: Int) {
         self.node.updateSelectionCount(count, animated: false)
@@ -1145,6 +1164,12 @@ public class AttachmentController: ViewController {
         return false
     }
     
+    public override var isMinimized: Bool {
+        didSet {
+            self.mainController.isMinimized = self.isMinimized
+        }
+    }
+    
     private var validLayout: ContainerViewLayout?
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -1158,6 +1183,10 @@ public class AttachmentController: ViewController {
             }
         }
         self.node.containerLayoutUpdated(layout, transition: transition)
+    }
+    
+    public var mainController: ViewController {
+        return self.node.currentControllers.first!
     }
     
     public final class InputPanelTransition {

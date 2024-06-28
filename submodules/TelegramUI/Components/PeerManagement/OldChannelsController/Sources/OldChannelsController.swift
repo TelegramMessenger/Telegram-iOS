@@ -187,7 +187,7 @@ private struct OldChannelsState: Equatable {
 private func oldChannelsEntries(presentationData: PresentationData, state: OldChannelsState, isPremium: Bool, isPremiumDisabled: Bool, limit: Int32, premiumLimit: Int32, peers: [InactiveChannel]?, intent: OldChannelsControllerIntent) -> [OldChannelsEntry] {
     var entries: [OldChannelsEntry] = []
     
-    let count = max(limit, Int32(peers?.count ?? 0))
+    let count = max(isPremium ? premiumLimit : limit, Int32(peers?.count ?? 0))
     var text: String?
     if count >= premiumLimit {
         switch intent {
@@ -359,7 +359,7 @@ public func oldChannelsController(context: AccountContext, updatedPresentationDa
         }
         
         let footerItem: IncreaseLimitFooterItem?
-        if (state.isSearching || premiumConfiguration.isPremiumDisabled) && state.selectedPeers.count == 0 {
+        if (state.isSearching || premiumConfiguration.isPremiumDisabled || isPremium) && state.selectedPeers.count == 0 {
             footerItem = nil
         } else {
             footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: buttonText, colorful: colorful, action: {

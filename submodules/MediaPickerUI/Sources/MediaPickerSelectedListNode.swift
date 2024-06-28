@@ -185,7 +185,7 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             self.didSetupSpoiler = true
         }
     
-        if hasSpoiler || price != nil {
+        if hasSpoiler {
             if self.spoilerNode == nil {
                 let spoilerNode = SpoilerOverlayNode(enableAnimations: self.enableAnimations)
                 self.insertSubnode(spoilerNode, aboveSubnode: self.imageNode)
@@ -498,6 +498,8 @@ final class PriceNode: ASDisplayNode {
         self.labelNode = ImmediateTextNode()
         
         super.init()
+        
+        self.isUserInteractionEnabled = false
         
         self.addSubnode(self.backgroundNode)
         self.backgroundNode.addSubnode(self.lockNode)
@@ -890,11 +892,24 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
             self.reorderFeedback = HapticFeedback()
         }
         self.reorderFeedback?.impact()
+        
+        let priceTransition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
+        for (_, node) in self.priceNodes {
+            priceTransition.updateAlpha(node: node, alpha: 0.0)
+        }
     }
     
     private func endReordering(point: CGPoint?) {
         if let reorderNode = self.reorderNode {
             self.reorderNode = nil
+            
+            let completion = {
+                let priceTransition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
+                for (_, node) in self.priceNodes {
+                    node.supernode?.view.bringSubviewToFront(node.view)
+                    priceTransition.updateAlpha(node: node, alpha: 1.0)
+                }
+            }
         
             if let itemNode = reorderNode.itemNode, let point = point {
                 var targetNode: MediaPickerSelectedItemNode?
@@ -910,11 +925,13 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
                 }
                 reorderNode.animateCompletion(completion: { [weak reorderNode] in
                     reorderNode?.removeFromSupernode()
+                    completion()
                 })
                 self.reorderFeedback?.tap()
             } else {
                 reorderNode.removeFromSupernode()
                 reorderNode.itemNode?.isHidden = false
+                completion()
             }
         }
         

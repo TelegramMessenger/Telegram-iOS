@@ -1140,11 +1140,21 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                         
                         if let extendedMedia {
                             switch extendedMedia {
-                                case let .preview(_, immediateThumbnailData, _):
-                                    let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
-                                    media = thumbnailMedia
-                                case let .full(fullMedia):
+                            case let .preview(_, immediateThumbnailData, _):
+                                let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                                media = thumbnailMedia
+                            case let .full(fullMedia):
+                                if presentationData.isPreview {
+                                    if let image = fullMedia as? TelegramMediaImage {
+                                        let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                                        media = thumbnailMedia
+                                    } else if let video = fullMedia as? TelegramMediaFile {
+                                        let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: video.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                                        media = thumbnailMedia
+                                    }
+                                } else {
                                     media = fullMedia
+                                }
                             }
                         }
                         
@@ -1475,7 +1485,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 extendedMedia = paidContent.extendedMedia[selectedMediaIndex]
                             }
                         }
-                        if let extendedMedia, case let .full(fullMedia) = extendedMedia {
+                        if let extendedMedia, case let .full(fullMedia) = extendedMedia, !presentationData.isPreview {
                             isExtendedMedia = true
                             media = fullMedia
                         }
@@ -2079,7 +2089,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             if let invoice = media as? TelegramMediaInvoice, let selectedMedia = invoice.extendedMedia {
                 extendedMedia = selectedMedia
             } else if let paidContent = media as? TelegramMediaPaidContent {
-                let selectedMediaIndex = mediaIndex ?? 0
+                let selectedMediaIndex = self.mediaIndex ?? 0
                 if selectedMediaIndex < paidContent.extendedMedia.count {
                     extendedMedia = paidContent.extendedMedia[selectedMediaIndex]
                 }
@@ -2366,6 +2376,11 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 icon = .lock
             }
             displaySpoiler = true
+        } else if let _ = extendedMedia, isPreview {
+            if let invoice, invoice.currency != "XTR" {
+                icon = .lock
+            }
+            displaySpoiler = true
         } else if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) {
             displaySpoiler = true
         } else if isSecretMedia {
@@ -2427,9 +2442,6 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     }
                 }
             }
-//            if let paidContent {
-//                viewText = "⭐️\(paidContent.amount)"
-//            }
             self.extendedMediaOverlayNode?.update(size: self.imageNode.frame.size, text: viewText, imageSignal: self.currentBlurredImageSignal, imageFrame: self.imageNode.view.convert(self.imageNode.bounds, to: self.extendedMediaOverlayNode?.view), corners: self.currentImageArguments?.corners)
         } else if let extendedMediaOverlayNode = self.extendedMediaOverlayNode {
             self.extendedMediaOverlayNode = nil

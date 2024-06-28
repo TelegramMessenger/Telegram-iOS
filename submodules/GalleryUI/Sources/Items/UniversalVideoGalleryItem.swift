@@ -1195,7 +1195,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             var hintSeekable = false
             if let contentInfo = item.contentInfo, case let .message(message, _) = contentInfo {
-                if Namespaces.Message.allNonRegular.contains(message.id.namespace) || message.id.namespace == Namespaces.Message.Local {
+                if message.paidContent != nil {
+                    disablePictureInPicture = true
+                } else if Namespaces.Message.allNonRegular.contains(message.id.namespace) || message.id.namespace == Namespaces.Message.Local {
                     disablePictureInPicture = true
                 } else {
                     let throttledSignal = videoNode.status

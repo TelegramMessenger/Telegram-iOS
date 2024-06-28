@@ -3347,32 +3347,7 @@ final class StoryItemSetContainerSendMessage {
         var actions: [ContextMenuAction] = []
         switch mediaArea {
         case let .venue(coordinates, venue):
-            let action = { [weak controller, weak view] in
-                let _ = view
-                /*let subject = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: PeerId(0), namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [.geo(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: venue.venue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
-                let locationController = LocationViewController(
-                    context: context,
-                    updatedPresentationData: updatedPresentationData,
-                    subject: subject,
-                    isStoryLocation: true,
-                    params: LocationViewParams(
-                        sendLiveLocation: { _ in },
-                        stopLiveLocation: { _ in },
-                        openUrl: { url in
-                            context.sharedContext.applicationBindings.openUrl(url)
-                        },
-                        openPeer: { _ in }
-                    )
-                )
-                view?.updateModalTransitionFactor(1.0, transition: .animated(duration: 0.5, curve: .spring))
-                locationController.dismissed = { [weak view] in
-                    view?.updateModalTransitionFactor(0.0, transition: .animated(duration: 0.5, curve: .spring))
-                    Queue.mainQueue().after(0.5, {
-                        view?.updateIsProgressPaused()
-                    })
-                }
-                controller?.push(locationController)*/
-                
+            let action = { [weak controller] in
                 let searchController = context.sharedContext.makeStorySearchController(context: context, scope: .location(coordinates: coordinates, venue: venue), listContext: nil)
                 controller?.push(searchController)
             }
@@ -3475,12 +3450,16 @@ final class StoryItemSetContainerSendMessage {
         let node = controller.displayNode
         let menuController = makeContextMenuController(actions: actions, blurred: true)
         menuController.centerHorizontally = true
-        menuController.dismissed = { [weak self, weak view] in
+        menuController.dismissed = { [weak self, weak view, weak menuController] in
             if let self, let view {
-                self.selectedMediaArea = nil
-                Queue.mainQueue().after(0.1) {
-                    self.menuController = nil
-                    view.updateIsProgressPaused()
+                if self.menuController === menuController {
+                    self.selectedMediaArea = nil
+                    Queue.mainQueue().after(0.1) {
+                        if self.menuController === menuController {
+                            self.menuController = nil
+                            view.updateIsProgressPaused()
+                        }
+                    }
                 }
             }
         }

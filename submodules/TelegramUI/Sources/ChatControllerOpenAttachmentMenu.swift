@@ -43,6 +43,10 @@ extension ChatControllerImpl {
     }
     
     func presentAttachmentMenu(subject: AttachMenuSubject) {
+        guard self.audioRecorderValue == nil && self.videoRecorderValue == nil else {
+            return
+        }
+        
         let context = self.context
         let inputIsActive = self.presentationInterfaceState.inputMode == .text
         
@@ -1166,6 +1170,10 @@ extension ChatControllerImpl {
         if case .scheduledMessages = self.presentationInterfaceState.subject {
             isScheduledMessages = true
         }
+        var paidMediaAllowed = false
+        if let cachedData = self.peerView?.cachedData as? CachedChannelData, cachedData.flags.contains(.paidMediaAllowed) {
+            paidMediaAllowed = true
+        }
         let controller = MediaPickerScreen(
             context: self.context,
             updatedPresentationData: self.updatedPresentationData,
@@ -1176,6 +1184,7 @@ extension ChatControllerImpl {
             bannedSendPhotos: bannedSendPhotos,
             bannedSendVideos: bannedSendVideos,
             canBoostToUnrestrict: (self.presentationInterfaceState.boostsToUnrestrict ?? 0) > 0 && bannedSendPhotos?.1 != true && bannedSendVideos?.1 != true,
+            paidMediaAllowed: paidMediaAllowed,
             subject: subject,
             saveEditedPhotos: saveEditedPhotos
         )

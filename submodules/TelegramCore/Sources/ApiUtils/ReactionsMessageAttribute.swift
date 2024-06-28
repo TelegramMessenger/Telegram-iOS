@@ -111,6 +111,8 @@ public func mergedMessageReactionsAndPeers(accountPeerId: EnginePeer.Id, account
             reactions.insert(MessageReaction(value: .custom(MessageReaction.starsReactionId), count: 1000000, chosenOrder: nil), at: 0)
         }
     }
+    #else
+    let reactions = attribute.reactions
     #endif
     
     return (reactions, recentPeers)

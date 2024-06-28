@@ -6,7 +6,12 @@ import SwiftSignalKit
 import TelegramPresentationData
 
 final class MinimizedHeaderNode: ASDisplayNode {
-    var theme: NavigationControllerTheme
+    var theme: NavigationControllerTheme {
+        didSet {
+            self.minimizedBackgroundNode.backgroundColor = self.theme.navigationBar.opaqueBackgroundColor
+            self.minimizedCloseButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Instant View/Close"), color: self.theme.navigationBar.primaryTextColor), for: .normal)
+        }
+    }
     let strings: PresentationStrings
     
     private let minimizedBackgroundNode: ASDisplayNode
@@ -83,7 +88,7 @@ final class MinimizedHeaderNode: ASDisplayNode {
         self.minimizedTitleNode = ImmediateTextNode()
         
         self.minimizedCloseButton = HighlightableButtonNode()
-        self.minimizedCloseButton.setImage(UIImage(bundleImageName: "Instant View/Close"), for: .normal)
+        self.minimizedCloseButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Instant View/Close"), color: self.theme.navigationBar.primaryTextColor), for: .normal)
         
         super.init()
         

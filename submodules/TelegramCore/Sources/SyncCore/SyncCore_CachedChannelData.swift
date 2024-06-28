@@ -22,6 +22,7 @@ public struct CachedChannelFlags: OptionSet {
     public static let translationHidden = CachedChannelFlags(rawValue: 1 << 8)
     public static let adsRestricted = CachedChannelFlags(rawValue: 1 << 9)
     public static let canViewRevenue = CachedChannelFlags(rawValue: 1 << 10)
+    public static let paidMediaAllowed = CachedChannelFlags(rawValue: 1 << 11)
 }
 
 public struct CachedChannelParticipantsSummary: PostboxCoding, Equatable {

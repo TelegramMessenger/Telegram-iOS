@@ -1227,6 +1227,9 @@
                             else if (groupedId != nil && !hasAnyTimers)
                                 dict[@"groupedId"] = groupedId;
                             
+                            if (price != nil)
+                                dict[@"price"] = price;
+                            
                             if (spoiler) {
                                 dict[@"spoiler"] = @true;
                             }
