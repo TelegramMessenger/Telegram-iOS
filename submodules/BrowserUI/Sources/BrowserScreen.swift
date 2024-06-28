@@ -447,7 +447,9 @@ public class BrowserScreen: ViewController {
             guard let controller = self.controller, let navigationController = controller.navigationController as? NavigationController else {
                 return
             }
-            navigationController.minimizeViewController(controller, damping: nil, setupContainer: { [weak self] current in
+            navigationController.minimizeViewController(controller, damping: nil, beforeMaximize: { _, completion in
+                completion()
+            }, setupContainer: { [weak self] current in
                 let minimizedContainer: MinimizedContainerImpl?
                 if let current = current as? MinimizedContainerImpl {
                     minimizedContainer = current

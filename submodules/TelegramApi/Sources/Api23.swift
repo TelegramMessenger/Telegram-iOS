@@ -397,42 +397,6 @@ public extension Api {
     }
 }
 public extension Api {
-    enum SimpleWebViewResult: TypeConstructorDescription {
-        case simpleWebViewResultUrl(url: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .simpleWebViewResultUrl(let url):
-                    if boxed {
-                        buffer.appendInt32(-2010155333)
-                    }
-                    serializeString(url, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .simpleWebViewResultUrl(let url):
-                return ("simpleWebViewResultUrl", [("url", url as Any)])
-    }
-    }
-    
-        public static func parse_simpleWebViewResultUrl(_ reader: BufferReader) -> SimpleWebViewResult? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SimpleWebViewResult.simpleWebViewResultUrl(url: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
     enum SmsJob: TypeConstructorDescription {
         case smsJob(jobId: String, phoneNumber: String, text: String)
     

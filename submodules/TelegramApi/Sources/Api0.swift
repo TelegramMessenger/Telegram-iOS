@@ -54,7 +54,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[571523412] = { return $0.readDouble() }
     dict[-1255641564] = { return parseString($0) }
     dict[-1194283041] = { return Api.AccountDaysTTL.parse_accountDaysTTL($0) }
-    dict[1008422669] = { return Api.AppWebViewResult.parse_appWebViewResultUrl($0) }
     dict[-653423106] = { return Api.AttachMenuBot.parse_attachMenuBot($0) }
     dict[-1297663893] = { return Api.AttachMenuBotIcon.parse_attachMenuBotIcon($0) }
     dict[1165423600] = { return Api.AttachMenuBotIconColor.parse_attachMenuBotIconColor($0) }
@@ -446,6 +445,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[859091184] = { return Api.InputSecureFile.parse_inputSecureFileUploaded($0) }
     dict[-618540889] = { return Api.InputSecureValue.parse_inputSecureValue($0) }
     dict[482797855] = { return Api.InputSingleMedia.parse_inputSingleMedia($0) }
+    dict[543876817] = { return Api.InputStarsTransaction.parse_inputStarsTransaction($0) }
     dict[42402760] = { return Api.InputStickerSet.parse_inputStickerSetAnimatedEmoji($0) }
     dict[215889721] = { return Api.InputStickerSet.parse_inputStickerSetAnimatedEmojiAnimations($0) }
     dict[-427863538] = { return Api.InputStickerSet.parse_inputStickerSetDice($0) }
@@ -870,7 +870,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-378127636] = { return Api.SendMessageAction.parse_sendMessageUploadVideoAction($0) }
     dict[-651419003] = { return Api.SendMessageAction.parse_speakingInGroupCallAction($0) }
     dict[-1239335713] = { return Api.ShippingOption.parse_shippingOption($0) }
-    dict[-2010155333] = { return Api.SimpleWebViewResult.parse_simpleWebViewResultUrl($0) }
     dict[-425595208] = { return Api.SmsJob.parse_smsJob($0) }
     dict[-1108478618] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
     dict[1124938064] = { return Api.SponsoredMessageReportOption.parse_sponsoredMessageReportOption($0) }
@@ -1105,7 +1104,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[781501415] = { return Api.WebPageAttribute.parse_webPageAttributeStory($0) }
     dict[1421174295] = { return Api.WebPageAttribute.parse_webPageAttributeTheme($0) }
     dict[211046684] = { return Api.WebViewMessageSent.parse_webViewMessageSent($0) }
-    dict[202659196] = { return Api.WebViewResult.parse_webViewResultUrl($0) }
+    dict[1294139288] = { return Api.WebViewResult.parse_webViewResultUrl($0) }
     dict[-1389486888] = { return Api.account.AuthorizationForm.parse_authorizationForm($0) }
     dict[1275039392] = { return Api.account.Authorizations.parse_authorizations($0) }
     dict[1674235686] = { return Api.account.AutoDownloadSettings.parse_autoDownloadSettings($0) }
@@ -1155,7 +1154,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1035688326] = { return Api.auth.SentCodeType.parse_sentCodeTypeApp($0) }
     dict[1398007207] = { return Api.auth.SentCodeType.parse_sentCodeTypeCall($0) }
     dict[-196020837] = { return Api.auth.SentCodeType.parse_sentCodeTypeEmailCode($0) }
-    dict[331943703] = { return Api.auth.SentCodeType.parse_sentCodeTypeFirebaseSms($0) }
+    dict[10475318] = { return Api.auth.SentCodeType.parse_sentCodeTypeFirebaseSms($0) }
     dict[-1425815847] = { return Api.auth.SentCodeType.parse_sentCodeTypeFlashCall($0) }
     dict[-648651719] = { return Api.auth.SentCodeType.parse_sentCodeTypeFragmentSms($0) }
     dict[-2113903484] = { return Api.auth.SentCodeType.parse_sentCodeTypeMissedCall($0) }
@@ -1436,8 +1435,6 @@ public extension Api {
     static func serializeObject(_ object: Any, buffer: Buffer, boxed: Swift.Bool) {
         switch object {
             case let _1 as Api.AccountDaysTTL:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.AppWebViewResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.AttachMenuBot:
                 _1.serialize(buffer, boxed)
@@ -1749,6 +1746,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputSingleMedia:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.InputStarsTransaction:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputStickerSet:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputStickerSetItem:
@@ -1978,8 +1977,6 @@ public extension Api {
             case let _1 as Api.SendMessageAction:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ShippingOption:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.SimpleWebViewResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SmsJob:
                 _1.serialize(buffer, boxed)

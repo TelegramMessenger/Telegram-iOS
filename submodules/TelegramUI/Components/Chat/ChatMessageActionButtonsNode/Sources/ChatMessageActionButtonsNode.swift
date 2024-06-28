@@ -7,6 +7,7 @@ import Display
 import TelegramPresentationData
 import AccountContext
 import WallpaperBackgroundNode
+import UrlHandling
 
 private let titleFont = Font.medium(16.0)
 
@@ -178,7 +179,9 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                 case .text:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingMessageIconImage : graphics.chatBubbleActionButtonOutgoingMessageIconImage
                 case let .url(value):
-                    if value.lowercased().contains("?startgroup=") {
+                    if isTelegramMeLink(value), let internalUrl = parseFullInternalUrl(sharedContext: context.sharedContext, url: value), case .peer(_, .appStart) = internalUrl {
+                        iconImage = incoming ? graphics.chatBubbleActionButtonIncomingWebAppIconImage : graphics.chatBubbleActionButtonOutgoingWebAppIconImage
+                    } else if value.lowercased().contains("?startgroup=") {
                         iconImage = incoming ? graphics.chatBubbleActionButtonIncomingAddToChatIconImage : graphics.chatBubbleActionButtonOutgoingAddToChatIconImage
                     } else {
                         iconImage = incoming ? graphics.chatBubbleActionButtonIncomingLinkIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage

@@ -160,15 +160,16 @@ public extension Api {
 }
 public extension Api {
     enum WebViewResult: TypeConstructorDescription {
-        case webViewResultUrl(queryId: Int64, url: String)
+        case webViewResultUrl(flags: Int32, queryId: Int64?, url: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .webViewResultUrl(let queryId, let url):
+                case .webViewResultUrl(let flags, let queryId, let url):
                     if boxed {
-                        buffer.appendInt32(202659196)
+                        buffer.appendInt32(1294139288)
                     }
-                    serializeInt64(queryId, buffer: buffer, boxed: false)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(queryId!, buffer: buffer, boxed: false)}
                     serializeString(url, buffer: buffer, boxed: false)
                     break
     }
@@ -176,20 +177,23 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .webViewResultUrl(let queryId, let url):
-                return ("webViewResultUrl", [("queryId", queryId as Any), ("url", url as Any)])
+                case .webViewResultUrl(let flags, let queryId, let url):
+                return ("webViewResultUrl", [("flags", flags as Any), ("queryId", queryId as Any), ("url", url as Any)])
     }
     }
     
         public static func parse_webViewResultUrl(_ reader: BufferReader) -> WebViewResult? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: String?
-            _2 = parseString(reader)
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt64() }
+            var _3: String?
+            _3 = parseString(reader)
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.WebViewResult.webViewResultUrl(queryId: _1!, url: _2!)
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.WebViewResult.webViewResultUrl(flags: _1!, queryId: _2, url: _3!)
             }
             else {
                 return nil

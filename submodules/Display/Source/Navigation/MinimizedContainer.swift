@@ -8,7 +8,7 @@ public protocol MinimizedContainer: ASDisplayNode {
     
     var willMaximize: (() -> Void)? { get set }
     
-    func addController(_ viewController: ViewController, transition: ContainedViewLayoutTransition)
+    func addController(_ viewController: ViewController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, transition: ContainedViewLayoutTransition)
     func maximizeController(_ viewController: ViewController, animated: Bool, completion: @escaping (Bool) -> Void)
     func collapse()
     func dismissAll(completion: @escaping () -> Void)

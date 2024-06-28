@@ -208,6 +208,7 @@ public struct WebAppParameters {
     let buttonText: String?
     let keepAliveSignal: Signal<Never, KeepWebViewError>?
     let forceHasSettings: Bool
+    let fullSize: Bool
     
     public init(
         source: Source,
@@ -219,7 +220,8 @@ public struct WebAppParameters {
         payload: String?,
         buttonText: String?,
         keepAliveSignal: Signal<Never, KeepWebViewError>?,
-        forceHasSettings: Bool
+        forceHasSettings: Bool,
+        fullSize: Bool
     ) {
         self.source = source
         self.peerId = peerId
@@ -231,6 +233,7 @@ public struct WebAppParameters {
         self.buttonText = buttonText
         self.keepAliveSignal = keepAliveSignal
         self.forceHasSettings = forceHasSettings
+        self.fullSize = fullSize
     }
 }
 
@@ -288,6 +291,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private let context: AccountContext
         var presentationData: PresentationData
         private var queryId: Int64?
+        fileprivate let canMinimize = true
         
         private var placeholderDisposable: Disposable?
         private var iconDisposable: Disposable?
@@ -306,7 +310,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.context = context
             self.controller = controller
             self.presentationData = controller.presentationData
-            
+                        
             self.backgroundNode = ASDisplayNode()
             self.headerBackgroundNode = ASDisplayNode()
             self.topOverscrollNode = ASDisplayNode()
@@ -477,7 +481,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         guard let strongSelf = self else {
                             return
                         }
-                        if let parsedUrl = URL(string: result) {
+                        if let parsedUrl = URL(string: result.url) {
+                            strongSelf.queryId = result.queryId
                             strongSelf.webView?.load(URLRequest(url: parsedUrl))
                         }
                     })
@@ -491,17 +496,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             strongSelf.queryId = result.queryId
                             strongSelf.webView?.load(URLRequest(url: parsedUrl))
                             
-                            strongSelf.keepAliveDisposable = (result.keepAliveSignal
-                            |> deliverOnMainQueue).start(error: { [weak self] _ in
-                                if let strongSelf = self {
-                                    strongSelf.controller?.dismiss()
-                                }
-                            }, completed: { [weak self] in
-                                if let strongSelf = self {
-                                    strongSelf.controller?.completion()
-                                    strongSelf.controller?.dismiss()
-                                }
-                            })
+                            if let keepAliveSignal = result.keepAliveSignal {
+                                strongSelf.keepAliveDisposable = (keepAliveSignal
+                                |> deliverOnMainQueue).start(error: { [weak self] _ in
+                                    if let strongSelf = self {
+                                        strongSelf.controller?.dismiss()
+                                    }
+                                }, completed: { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.controller?.completion()
+                                        strongSelf.controller?.dismiss()
+                                    }
+                                })
+                            }
                         }
                     })
                 }
@@ -909,6 +916,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 case "web_app_open_link":
                     if let json = json, let url = json["url"] as? String {
+                        let webAppConfiguration = WebAppConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+                        if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let url = URL(string: escapedUrl), let scheme = url.scheme?.lowercased(), !["http", "https"].contains(scheme) && !webAppConfiguration.allowedProtocols.contains(scheme) {
+                            return
+                        }
+                        
                         let tryInstantView = json["try_instant_view"] as? Bool ?? false
                         if let lastTouchTimestamp = self.webView?.lastTouchTimestamp, currentTimestamp < lastTouchTimestamp + 10.0 {
                             self.webView?.lastTouchTimestamp = nil
@@ -1877,6 +1889,25 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.presentationDataDisposable?.dispose()
     }
     
+    public func beforeMaximize(navigationController: NavigationController, completion: @escaping () -> Void) {
+        switch self.source {
+        case .generic, .settings:
+            completion()
+        case .inline, .attachMenu, .menu, .simple:
+            let _ = (self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] chatPeer in
+                guard let self, let chatPeer else {
+                    return
+                }
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(chatPeer), completion: { _ in
+                    completion()
+                }))
+            })
+        }
+    }
+    
     fileprivate func updateNavigationBarTheme(transition: ContainedViewLayoutTransition) {
         let navigationBarPresentationData: NavigationBarPresentationData
         if let backgroundColor = self.controllerNode.headerColor, let textColor = self.controllerNode.headerPrimaryTextColor {
@@ -2095,6 +2126,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public func shouldDismissImmediately() -> Bool {
         return true
     }
+    
+    fileprivate var canMinimize: Bool {
+        return self.controllerNode.canMinimize
+    }
 }
 
 final class WebAppPickerContext: AttachmentMediaPickerContext {
@@ -2172,8 +2207,9 @@ public func standaloneWebAppController(
     willDismiss: @escaping () -> Void = {},
     didDismiss: @escaping () -> Void = {},
     getNavigationController: @escaping () -> NavigationController? = { return nil },
-    getSourceRect: (() -> CGRect?)? = nil) -> ViewController {
-    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.source == .menu, hasTextInput: false, makeEntityInputView: {
+    getSourceRect: (() -> CGRect?)? = nil
+) -> ViewController {
+    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.source == .menu, hasTextInput: false, isFullSize: params.fullSize, makeEntityInputView: {
         return nil
     })
     controller.requestController = { _, present in
@@ -2188,8 +2224,35 @@ public func standaloneWebAppController(
     controller.didDismiss = didDismiss
     controller.getSourceRect = getSourceRect
     controller.title = params.botName
-    controller.shouldMinimizeOnSwipe = { _ in
-        return true
+    controller.shouldMinimizeOnSwipe = { [weak controller] _ in
+        if let controller, let mainController = controller.mainController as? WebAppController {
+            return mainController.canMinimize
+        }
+        return false
     }
     return controller
+}
+
+private struct WebAppConfiguration {
+    static var defaultValue: WebAppConfiguration {
+        return WebAppConfiguration(allowedProtocols: [])
+    }
+    
+    let allowedProtocols: [String]
+    
+    fileprivate init(allowedProtocols: [String]) {
+        self.allowedProtocols = allowedProtocols
+    }
+    
+    static func with(appConfiguration: AppConfiguration) -> WebAppConfiguration {
+        if let data = appConfiguration.data {
+            var allowedProtocols: [String] = []
+            if let value = data["web_app_allowed_protocols"] as? [String] {
+                allowedProtocols = value
+            }
+            return WebAppConfiguration(allowedProtocols: allowedProtocols)
+        } else {
+            return .defaultValue
+        }
+    }
 }

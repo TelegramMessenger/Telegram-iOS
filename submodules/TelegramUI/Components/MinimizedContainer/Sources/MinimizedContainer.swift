@@ -27,10 +27,12 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     final class Item {
         let id: AnyHashable
         let controller: ViewController
+        let beforeMaximize: (NavigationController, @escaping () -> Void) -> Void
         
-        init(id: AnyHashable, controller: ViewController) {
+        init(id: AnyHashable, controller: ViewController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void) {
             self.id = id
             self.controller = controller
+            self.beforeMaximize = beforeMaximize
         }
     }
     
@@ -302,6 +304,8 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     private var dismissingItemId: AnyHashable?
     private var dismissingItemOffset: CGFloat?
         
+    private var expandedTapGestureRecoginzer: UITapGestureRecognizer?
+    
     private var currentTransition: Transition?
     private var isApplyingTransition = false
     private var validLayout: ContainerViewLayout?
@@ -370,6 +374,11 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         panGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         panGestureRecognizer.delaysTouchesBegan = true
         self.scrollView.addGestureRecognizer(panGestureRecognizer)
+        
+        let expandedTapGestureRecoginzer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        expandedTapGestureRecoginzer.isEnabled = false
+        self.expandedTapGestureRecoginzer = expandedTapGestureRecoginzer
+        self.scrollView.addGestureRecognizer(expandedTapGestureRecoginzer)
     }
     
     func item(at y: CGFloat) -> Int? {
@@ -399,6 +408,15 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             }
         }
         return false
+    }
+    
+    @objc func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
+        guard self.isExpanded else {
+            return
+        }
+        if let result = self.scrollView.hitTest(gestureRecognizer.location(in: self.scrollView), with: nil), result === self.scrollView {
+            self.collapse()
+        }
     }
     
     @objc func panGesture(_ gestureRecognizer: UIPanGestureRecognizer) {
@@ -483,10 +501,11 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         return result
     }
     
-    public func addController(_ viewController: ViewController, transition: ContainedViewLayoutTransition) {
+    public func addController(_ viewController: ViewController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, transition: ContainedViewLayoutTransition) {
         let item = Item(
             id: AnyHashable(Int64.random(in: Int64.min ... Int64.max)),
-            controller: viewController
+            controller: viewController,
+            beforeMaximize: beforeMaximize
         )
         self.items.append(item)
         
@@ -552,7 +571,11 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             return
         }
         if self.items.count == 1, let item = self.items.first {
-            self.navigationController?.maximizeViewController(item.controller, animated: true)
+            if let navigationController = self.navigationController {
+                item.beforeMaximize(navigationController, { [weak self] in
+                    self?.navigationController?.maximizeViewController(item.controller, animated: true)
+                })
+            }
         } else {
             self.isExpanded = true
             self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
@@ -697,7 +720,11 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                     return
                 }
                 if self.isExpanded {
-                    self.navigationController?.maximizeViewController(item.controller, animated: true)
+                    if let navigationController = self.navigationController {
+                        itemNode.item.beforeMaximize(navigationController, { [weak self] in
+                            self?.navigationController?.maximizeViewController(item.controller, animated: true)
+                        })
+                    }
                 } else {
                     self.expand()
                 }
@@ -816,6 +843,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         }
         self.scrollView.passthrough = !self.isExpanded
         self.scrollView.isScrollEnabled = self.isExpanded
+        self.expandedTapGestureRecoginzer?.isEnabled = self.isExpanded
         
         if let currentTransition = self.currentTransition {
             self.isApplyingTransition = true
@@ -904,28 +932,33 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                     return
                 }
                 if self.items.count == 1 {
-                    if let itemNode = self.itemNodes.first(where: { $0.0 != itemId })?.value {
-                        let dimView = UIView()
-                        dimView.frame = CGRect(origin: .zero, size: layout.size)
-                        dimView.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
-                        self.view.insertSubview(dimView, aboveSubview: self.blurView)
-                        dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-                        
-                        itemNode.animateOut()
-                        transition.updateTransform(node: itemNode, transform: CATransform3DIdentity)
-                        transition.updatePosition(node: itemNode, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0 + topInset + self.scrollView.contentOffset.y), completion: { _ in
-                            self.isApplyingTransition = false
-                            if self.currentTransition == currentTransition {
-                                self.currentTransition = nil
+                    if let itemNode = self.itemNodes.first(where: { $0.0 != itemId })?.value, let navigationController = self.navigationController {
+                        itemNode.item.beforeMaximize(navigationController, { [weak self] in
+                            guard let self else {
+                                return
                             }
-                            completion(currentTransition)
-                            self.itemNodes[itemId] = nil
-                            itemNode.removeFromSupernode()
-                            dimView.removeFromSuperview()
+                            let dimView = UIView()
+                            dimView.frame = CGRect(origin: .zero, size: layout.size)
+                            dimView.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
+                            self.view.insertSubview(dimView, aboveSubview: self.blurView)
+                            dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                             
-                            self.navigationController?.maximizeViewController(itemNode.item.controller, animated: false)
-                            
-                            self.requestUpdate(transition: .immediate)
+                            itemNode.animateOut()
+                            transition.updateTransform(node: itemNode, transform: CATransform3DIdentity)
+                            transition.updatePosition(node: itemNode, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0 + topInset + self.scrollView.contentOffset.y), completion: { _ in
+                                self.isApplyingTransition = false
+                                if self.currentTransition == currentTransition {
+                                    self.currentTransition = nil
+                                }
+                                completion(currentTransition)
+                                self.itemNodes[itemId] = nil
+                                itemNode.removeFromSupernode()
+                                dimView.removeFromSuperview()
+                                
+                                self.navigationController?.maximizeViewController(itemNode.item.controller, animated: false)
+                                
+                                self.requestUpdate(transition: .immediate)
+                            })
                         })
                     }
                     transition.updatePosition(node: dismissedItemNode, position: CGPoint(x: -layout.size.width, y: dismissedItemNode.position.y))

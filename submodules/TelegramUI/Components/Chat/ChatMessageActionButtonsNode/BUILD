@@ -17,6 +17,7 @@ swift_library(
         "//submodules/TelegramPresentationData",
         "//submodules/AccountContext",
         "//submodules/WallpaperBackgroundNode",
+        "//submodules/UrlHandling",
     ],
     visibility = [
         "//visibility:public",

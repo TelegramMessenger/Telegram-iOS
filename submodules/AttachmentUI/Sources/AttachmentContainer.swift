@@ -47,6 +47,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     private var isDismissed = false
     private var isInteractiveDimissEnabled = true
     
+    private let isFullSize: Bool
     public private(set) var isExpanded = false
     
     private var validLayout: (layout: ContainerViewLayout, controllers: [AttachmentContainable], coveredByModalTransition: CGFloat)?
@@ -72,7 +73,12 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     var isPanGestureEnabled: (() -> Bool)?
     var onExpandAnimationCompleted: () -> Void = {}
     
-    override init() {
+    init(isFullSize: Bool) {
+        self.isFullSize = isFullSize
+        if isFullSize {
+            self.isExpanded = true
+        }
+        
         self.wrappingNode = ASDisplayNode()
         self.clipNode = ASDisplayNode()
         
@@ -268,14 +274,14 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                     }
                 }
             
-                if !self.isExpanded, translation > 40.0, let shouldCancelPanGesture = self.shouldCancelPanGesture, shouldCancelPanGesture() {
+                if !self.isExpanded || self.isFullSize, translation > 40.0, let shouldCancelPanGesture = self.shouldCancelPanGesture, shouldCancelPanGesture() {
                     self.cancelPanGesture()
                     self.requestDismiss?()
                     return
                 }
             
                 var bounds = self.bounds
-                if self.isExpanded {
+                if self.isExpanded && !self.isFullSize {
                     bounds.origin.y = -max(0.0, translation - edgeTopInset)
                 } else {
                     bounds.origin.y = -translation
@@ -307,7 +313,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 }
             
                 var bounds = self.bounds
-                if self.isExpanded {
+                if self.isExpanded && !self.isFullSize {
                     bounds.origin.y = -max(0.0, translation - edgeTopInset)
                 } else {
                     bounds.origin.y = -translation
@@ -326,21 +332,29 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             
                 var minimizing = false
                 var dismissing = false
-                if (bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 1800.0)) && !ignoreDismiss {
+            
+                let thresholdOffset: CGFloat
+                if self.isFullSize {
+                    thresholdOffset = -180.0
+                } else {
+                    thresholdOffset = -60.0
+                }
+            
+                if (bounds.minY < thresholdOffset || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 1800.0)) && !ignoreDismiss {
                     if self.interactivelyDismissed?(velocity.y) == true {
                         dismissing = true
                     } else {
                         minimizing = true
                     }
                 } else if self.isExpanded {
-                    if velocity.y > 300.0 || offset > topInset / 2.0 {
+                    if (velocity.y > 300.0 || offset > topInset / 2.0) && !self.isFullSize {
                         self.isExpanded = false
                         if let listNode = listNode {
                             listNode.scroller.setContentOffset(CGPoint(), animated: false)
                         } else if let scrollView = scrollView {
                             scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: -scrollView.contentInset.top), animated: false)
                         }
-                        
+                    
                         let distance = topInset - offset
                         let initialVelocity: CGFloat = distance.isZero ? 0.0 : abs(velocity.y / distance)
                         let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
@@ -432,6 +446,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         self.isUpdatingState = true
         
+        let isFirstTime = self.validLayout == nil
         self.validLayout = (layout, controllers, coveredByModalTransition)
                 
         self.panGestureRecognizer?.isEnabled = (layout.inputHeight == nil || layout.inputHeight == 0.0)
@@ -446,7 +461,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         
         let topInset: CGFloat
-        if let (panInitialTopInset, panOffset, _, _) = self.panGestureArguments {
+        if !self.isFullSize, let (panInitialTopInset, panOffset, _, _) = self.panGestureArguments {
             if effectiveExpanded {
                 topInset = min(edgeTopInset, panInitialTopInset + max(0.0, panOffset))
             } else {
@@ -459,9 +474,29 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             completion()
         })
         
-        let modalProgress = isLandscape ? 0.0 : (1.0 - topInset / defaultTopInset)
-        self.updateModalProgress?(modalProgress, topInset, self.bounds, transition)
-                
+        let modalProgress: CGFloat
+        if isLandscape {
+            modalProgress = 0.0
+        } else {
+            if self.isFullSize, self.panGestureArguments != nil {
+                modalProgress = 1.0 - min(1.0, max(0.0, -1.0 * self.bounds.minY / defaultTopInset))
+            } else {
+                modalProgress = 1.0 - topInset / defaultTopInset
+            }
+        }
+        
+        if isFirstTime {
+            Queue.mainQueue().justDispatch {
+                var transition = transition
+                if modalProgress == 1.0 {
+                    transition = .animated(duration: 0.4, curve: .spring)
+                }
+                self.updateModalProgress?(modalProgress, topInset, self.bounds, transition)
+            }
+        } else {
+            self.updateModalProgress?(modalProgress, topInset, self.bounds, transition)
+        }
+        
         let containerLayout: ContainerViewLayout
         let containerFrame: CGRect
         let clipFrame: CGRect

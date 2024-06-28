@@ -842,7 +842,11 @@ open class NavigationController: UINavigationController, ContainableController, 
         if case .flat = navigationLayout.root, let minimizedContainer = self.minimizedContainer {
             if minimizedContainer.supernode !== self.displayNode {
                 if let rootContainer = self.rootContainer, case let .flat(flatContainer) = rootContainer {
-                    self.displayNode.insertSubnode(minimizedContainer, aboveSubnode: flatContainer)
+                    if let rootModalFrame = self.rootModalFrame {
+                        self.displayNode.insertSubnode(minimizedContainer, aboveSubnode: rootModalFrame)
+                    } else {
+                        self.displayNode.insertSubnode(minimizedContainer, aboveSubnode: flatContainer)
+                    }
                 } else {
                     self.displayNode.insertSubnode(minimizedContainer, at: 0)
                 }
@@ -1572,7 +1576,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         self._viewControllersPromise.set(self.viewControllers)
     }
         
-    public func minimizeViewController(_ viewController: ViewController, damping: CGFloat?, velocity: CGFloat? = nil, setupContainer: (MinimizedContainer?) -> MinimizedContainer?, animated: Bool) {
+    public func minimizeViewController(_ viewController: ViewController, damping: CGFloat?, velocity: CGFloat? = nil, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, setupContainer: (MinimizedContainer?) -> MinimizedContainer?, animated: Bool) {
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .customSpring(damping: damping ?? 124.0, initialVelocity: velocity ?? 0.0)) : .immediate
         
         let minimizedContainer = setupContainer(self.minimizedContainer)
@@ -1592,7 +1596,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         viewController.isMinimized = true
         self.filterController(viewController, animated: true)
-        minimizedContainer?.addController(viewController, transition: transition)
+        minimizedContainer?.addController(viewController, beforeMaximize: beforeMaximize, transition: transition)
     }
     
     private var isMaximizing = false

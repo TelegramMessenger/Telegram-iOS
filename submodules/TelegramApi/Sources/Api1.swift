@@ -35,42 +35,6 @@ public extension Api {
     }
 }
 public extension Api {
-    enum AppWebViewResult: TypeConstructorDescription {
-        case appWebViewResultUrl(url: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .appWebViewResultUrl(let url):
-                    if boxed {
-                        buffer.appendInt32(1008422669)
-                    }
-                    serializeString(url, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .appWebViewResultUrl(let url):
-                return ("appWebViewResultUrl", [("url", url as Any)])
-    }
-    }
-    
-        public static func parse_appWebViewResultUrl(_ reader: BufferReader) -> AppWebViewResult? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.AppWebViewResult.appWebViewResultUrl(url: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
     enum AttachMenuBot: TypeConstructorDescription {
         case attachMenuBot(flags: Int32, botId: Int64, shortName: String, peerTypes: [Api.AttachMenuPeerType]?, icons: [Api.AttachMenuBotIcon])
     
@@ -1188,6 +1152,46 @@ public extension Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.BotBusinessConnection.botBusinessConnection(flags: _1!, connectionId: _2!, userId: _3!, dcId: _4!, date: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum BotCommand: TypeConstructorDescription {
+        case botCommand(command: String, description: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .botCommand(let command, let description):
+                    if boxed {
+                        buffer.appendInt32(-1032140601)
+                    }
+                    serializeString(command, buffer: buffer, boxed: false)
+                    serializeString(description, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botCommand(let command, let description):
+                return ("botCommand", [("command", command as Any), ("description", description as Any)])
+    }
+    }
+    
+        public static func parse_botCommand(_ reader: BufferReader) -> BotCommand? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.BotCommand.botCommand(command: _1!, description: _2!)
             }
             else {
                 return nil

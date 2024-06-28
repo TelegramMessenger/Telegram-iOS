@@ -131,6 +131,8 @@ public protocol AttachmentContainable: ViewController {
     
     func requestDismiss(completion: @escaping () -> Void)
     func shouldDismissImmediately() -> Bool
+    
+    func beforeMaximize(navigationController: NavigationController, completion: @escaping () -> Void)
 }
 
 public extension AttachmentContainable {
@@ -152,6 +154,10 @@ public extension AttachmentContainable {
     
     func shouldDismissImmediately() -> Bool {
          return true
+    }
+    
+    func beforeMaximize(navigationController: NavigationController, completion: @escaping () -> Void) {
+        completion()
     }
     
     var isPanGestureEnabled: (() -> Bool)? {
@@ -234,6 +240,7 @@ public class AttachmentController: ViewController {
     private let initialButton: AttachmentButtonType
     private let fromMenu: Bool
     private var hasTextInput: Bool
+    private let isFullSize: Bool
     private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
     public var animateAppearance: Bool = false
     
@@ -345,7 +352,7 @@ public class AttachmentController: ViewController {
             self.wrapperNode = ASDisplayNode()
             self.wrapperNode.clipsToBounds = true
             
-            self.container = AttachmentContainer()
+            self.container = AttachmentContainer(isFullSize: controller.isFullSize)
             self.container.canHaveKeyboardFocus = true
             self.panel = AttachmentPanel(controller: controller, context: controller.context, chatLocation: controller.chatLocation, isScheduledMessages: controller.isScheduledMessages, updatedPresentationData: controller.updatedPresentationData, makeEntityInputView: makeEntityInputView)
             self.panel.fromMenu = controller.fromMenu
@@ -574,7 +581,13 @@ public class AttachmentController: ViewController {
             guard let controller = self.controller, let navigationController = controller.navigationController as? NavigationController else {
                 return
             }
-            navigationController.minimizeViewController(controller, damping: damping, velocity: initialVelocity, setupContainer: { [weak self] current in
+            navigationController.minimizeViewController(controller, damping: damping, velocity: initialVelocity, beforeMaximize: { navigationController, completion in
+                if let controller = controller.mainController as? AttachmentContainable {
+                    controller.beforeMaximize(navigationController: navigationController, completion: completion)
+                } else {
+                    completion()
+                }
+            }, setupContainer: { [weak self] current in
                 let minimizedContainer: MinimizedContainerImpl?
                 if let current = current as? MinimizedContainerImpl {
                     minimizedContainer = current
@@ -1062,7 +1075,7 @@ public class AttachmentController: ViewController {
     
     public var shouldMinimizeOnSwipe: ((AttachmentButtonType?) -> Bool)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation?, isScheduledMessages: Bool = false, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation?, isScheduledMessages: Bool = false, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, isFullSize: Bool = false, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.chatLocation = chatLocation
@@ -1071,6 +1084,7 @@ public class AttachmentController: ViewController {
         self.initialButton = initialButton
         self.fromMenu = fromMenu
         self.hasTextInput = hasTextInput
+        self.isFullSize = isFullSize
         self.makeEntityInputView = makeEntityInputView
         
         super.init(navigationBarPresentationData: nil)

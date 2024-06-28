@@ -72,7 +72,7 @@ func _internal_requestChangeAccountPhoneNumberVerification(account: Account, api
                     parsedNextType = AuthorizationCodeNextType(apiType: nextType)
                 }
                 
-                if case let .sentCodeTypeFirebaseSms(_, _, _, receipt, pushTimeout, _) = type {
+                if case let .sentCodeTypeFirebaseSms(_, _, _, _, receipt, pushTimeout, _) = type {
                     return firebaseSecretStream
                     |> map { mapping -> String? in
                         guard let receipt = receipt else {
@@ -147,7 +147,7 @@ private func internalResendChangeAccountPhoneNumberVerification(account: Account
                 parsedNextType = AuthorizationCodeNextType(apiType: nextType)
             }
             
-            if case let .sentCodeTypeFirebaseSms(_, _, _, receipt, pushTimeout, _) = type {
+            if case let .sentCodeTypeFirebaseSms(_, _, _, _, receipt, pushTimeout, _) = type {
                 return firebaseSecretStream
                 |> map { mapping -> String? in
                     guard let receipt = receipt else {

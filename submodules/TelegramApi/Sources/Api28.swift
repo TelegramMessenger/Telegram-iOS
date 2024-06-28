@@ -589,7 +589,7 @@ public extension Api.auth {
         case sentCodeTypeApp(length: Int32)
         case sentCodeTypeCall(length: Int32)
         case sentCodeTypeEmailCode(flags: Int32, emailPattern: String, length: Int32, resetAvailablePeriod: Int32?, resetPendingDate: Int32?)
-        case sentCodeTypeFirebaseSms(flags: Int32, nonce: Buffer?, playIntegrityNonce: Buffer?, receipt: String?, pushTimeout: Int32?, length: Int32)
+        case sentCodeTypeFirebaseSms(flags: Int32, nonce: Buffer?, playIntegrityProjectId: Int64?, playIntegrityNonce: Buffer?, receipt: String?, pushTimeout: Int32?, length: Int32)
         case sentCodeTypeFlashCall(pattern: String)
         case sentCodeTypeFragmentSms(url: String, length: Int32)
         case sentCodeTypeMissedCall(prefix: String, length: Int32)
@@ -622,12 +622,13 @@ public extension Api.auth {
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt32(resetAvailablePeriod!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 4) != 0 {serializeInt32(resetPendingDate!, buffer: buffer, boxed: false)}
                     break
-                case .sentCodeTypeFirebaseSms(let flags, let nonce, let playIntegrityNonce, let receipt, let pushTimeout, let length):
+                case .sentCodeTypeFirebaseSms(let flags, let nonce, let playIntegrityProjectId, let playIntegrityNonce, let receipt, let pushTimeout, let length):
                     if boxed {
-                        buffer.appendInt32(331943703)
+                        buffer.appendInt32(10475318)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeBytes(nonce!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt64(playIntegrityProjectId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeBytes(playIntegrityNonce!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(receipt!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(pushTimeout!, buffer: buffer, boxed: false)}
@@ -690,8 +691,8 @@ public extension Api.auth {
                 return ("sentCodeTypeCall", [("length", length as Any)])
                 case .sentCodeTypeEmailCode(let flags, let emailPattern, let length, let resetAvailablePeriod, let resetPendingDate):
                 return ("sentCodeTypeEmailCode", [("flags", flags as Any), ("emailPattern", emailPattern as Any), ("length", length as Any), ("resetAvailablePeriod", resetAvailablePeriod as Any), ("resetPendingDate", resetPendingDate as Any)])
-                case .sentCodeTypeFirebaseSms(let flags, let nonce, let playIntegrityNonce, let receipt, let pushTimeout, let length):
-                return ("sentCodeTypeFirebaseSms", [("flags", flags as Any), ("nonce", nonce as Any), ("playIntegrityNonce", playIntegrityNonce as Any), ("receipt", receipt as Any), ("pushTimeout", pushTimeout as Any), ("length", length as Any)])
+                case .sentCodeTypeFirebaseSms(let flags, let nonce, let playIntegrityProjectId, let playIntegrityNonce, let receipt, let pushTimeout, let length):
+                return ("sentCodeTypeFirebaseSms", [("flags", flags as Any), ("nonce", nonce as Any), ("playIntegrityProjectId", playIntegrityProjectId as Any), ("playIntegrityNonce", playIntegrityNonce as Any), ("receipt", receipt as Any), ("pushTimeout", pushTimeout as Any), ("length", length as Any)])
                 case .sentCodeTypeFlashCall(let pattern):
                 return ("sentCodeTypeFlashCall", [("pattern", pattern as Any)])
                 case .sentCodeTypeFragmentSms(let url, let length):
@@ -759,22 +760,25 @@ public extension Api.auth {
             _1 = reader.readInt32()
             var _2: Buffer?
             if Int(_1!) & Int(1 << 0) != 0 {_2 = parseBytes(reader) }
-            var _3: Buffer?
-            if Int(_1!) & Int(1 << 2) != 0 {_3 = parseBytes(reader) }
-            var _4: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_4 = parseString(reader) }
-            var _5: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
+            var _3: Int64?
+            if Int(_1!) & Int(1 << 2) != 0 {_3 = reader.readInt64() }
+            var _4: Buffer?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = parseBytes(reader) }
+            var _5: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
             var _6: Int32?
-            _6 = reader.readInt32()
+            if Int(_1!) & Int(1 << 1) != 0 {_6 = reader.readInt32() }
+            var _7: Int32?
+            _7 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.auth.SentCodeType.sentCodeTypeFirebaseSms(flags: _1!, nonce: _2, playIntegrityNonce: _3, receipt: _4, pushTimeout: _5, length: _6!)
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.auth.SentCodeType.sentCodeTypeFirebaseSms(flags: _1!, nonce: _2, playIntegrityProjectId: _3, playIntegrityNonce: _4, receipt: _5, pushTimeout: _6, length: _7!)
             }
             else {
                 return nil
