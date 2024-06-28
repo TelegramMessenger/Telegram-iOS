@@ -39,6 +39,7 @@ public enum UndoOverlayContent {
     case copy(text: String)
     case mediaSaved(text: String)
     case paymentSent(currencyValue: String, itemTitle: String)
+    case starsSent(context: AccountContext, file: TelegramMediaFile, amount: Int64, title: String, text: String?)
     case inviteRequestSent(title: String, text: String)
     case image(image: UIImage, title: String?, text: String, round: Bool, undoText: String?)
     case notificationSoundAdded(title: String, text: String, action: (() -> Void)?)

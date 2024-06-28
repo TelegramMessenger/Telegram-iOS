@@ -664,6 +664,9 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                 }
                 
                 strongSelf.hideExpandedTopPanel = emojiContent.panelItemGroups.isEmpty
+                if emojiContent.panelItemGroups.count == 1 && emojiContent.panelItemGroups[0].groupId == AnyHashable("recent") {
+                    strongSelf.hideExpandedTopPanel = true
+                }
                 
                 var emojiContent = emojiContent
                 if let emojiSearchResult = emojiSearchState.result {

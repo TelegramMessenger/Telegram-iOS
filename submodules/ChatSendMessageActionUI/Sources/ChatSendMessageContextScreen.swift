@@ -601,6 +601,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                     id: AnyHashable("items"),
                     items: items,
                     reactionItems: nil,
+                    previewReaction: nil,
                     tip: nil,
                     tipSignal: .single(nil),
                     dismissed: nil
@@ -630,6 +631,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                         id: AnyHashable("items"),
                         items: items,
                         reactionItems: nil,
+                        previewReaction: nil,
                         tip: nil,
                         tipSignal: .single(nil),
                         dismissed: nil

@@ -24,7 +24,7 @@ private final class StarsButtonEffectLayer: SimpleLayer {
     override init() {
         super.init()
         
-        self.backgroundColor = UIColor.blue.withAlphaComponent(0.2).cgColor
+        self.backgroundColor = UIColor.lightGray.withAlphaComponent(0.2).cgColor
     }
     
     override init(layer: Any) {

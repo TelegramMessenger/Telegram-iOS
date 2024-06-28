@@ -362,14 +362,11 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                     let itemValue = item.value
                     let itemNode = item.node
                     item.node.view.isGestureEnabled = true
-                    let canViewReactionList = canViewMessageReactionList(message: message, isInline: associatedData.isInline)
+                    let canViewReactionList = canViewMessageReactionList(message: message)
                     item.node.view.activateAfterCompletion = !canViewReactionList
                     item.node.view.activated = { [weak itemNode] gesture, _ in
                         guard let strongSelf = self, let itemNode = itemNode else {
                             gesture.cancel()
-                            return
-                        }
-                        if !canViewReactionList {
                             return
                         }
                         strongSelf.openReactionPreview?(gesture, itemNode.view.containerView, itemValue)
