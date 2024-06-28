@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ComponentFlow
 import AccountContext
+import UIKitRuntimeUtils
 
 private let minimizedNavigationHeight: CGFloat = 44.0
 private let minimizedTopMargin: CGFloat = 3.0
@@ -42,6 +43,8 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             }
         }
         
+        var isReady = false
+        
         let item: Item
         private let containerNode: ASDisplayNode
         private let headerNode: MinimizedHeaderNode
@@ -49,7 +52,9 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         private let shadowNode: ASImageNode
         
         private var controllerView: UIView?
+        fileprivate let snapshotContainerView = UIView()
         fileprivate var snapshotView: UIView?
+        fileprivate var blurredSnapshotView: UIView?
         
         var tapped: (() -> Void)?
         var highlighted: ((Bool) -> Void)?
@@ -88,6 +93,8 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             self.dimCoverNode.backgroundColor = UIColor.black
             self.dimCoverNode.isUserInteractionEnabled = false
             
+            self.snapshotContainerView.isUserInteractionEnabled = false
+            
             super.init()
                         
             self.clipsToBounds = true
@@ -102,11 +109,13 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             self.containerNode.view.addSubview(self.item.controller.displayNode.view)
             
             Queue.mainQueue().after(0.45) {
+                self.isReady = true
                 if !self.isDismissed, let snapshotView = self.controllerView?.snapshotView(afterScreenUpdates: false) {
+                    self.containerNode.view.addSubview(self.snapshotContainerView)
                     self.snapshotView = snapshotView
                     self.controllerView?.removeFromSuperview()
-                    self.controllerView = snapshotView
-                    self.containerNode.view.addSubview(snapshotView)
+                    self.controllerView = nil
+                    self.snapshotContainerView.addSubview(snapshotView)
                     self.requestLayout(transition: .immediate)
                 }
             }
@@ -166,7 +175,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         }
         
         @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
-            guard let (_, insets, _) = self.validLayout else {
+            guard let (_, insets, _) = self.validLayout, self.isReady else {
                 return
             }
             switch recognizer.state {
@@ -205,6 +214,8 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             self.containerNode.frame = CGRect(origin: .zero, size: size)
             self.containerNode.subnodeTransform = CATransform3DMakeTranslation(0.0, -topInset, 0.0)
             
+            self.snapshotContainerView.frame = CGRect(origin: .zero, size: size)
+            
             self.shadowNode.frame = CGRect(origin: .zero, size: CGSize(width: size.width, height: size.height - topInset))
             
             var navigationHeight: CGFloat = minimizedNavigationHeight
@@ -217,9 +228,45 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             transition.updateFrame(node: self.headerNode, frame: headerFrame)
             transition.updateFrame(node: self.dimCoverNode, frame: CGRect(origin: .zero, size: size))
             
-            if let controllerView = self.snapshotView {
-                let controllerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - controllerView.bounds.size.width) / 2.0), y: 0.0), size: controllerView.bounds.size)
-                transition.updateFrame(view: controllerView, frame: controllerFrame)
+            if let snapshotView = self.snapshotView {
+                var snapshotFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - snapshotView.bounds.size.width) / 2.0), y: 0.0), size: snapshotView.bounds.size)
+                
+                var requiresBlur = false
+                var blurFrame = snapshotFrame
+                if snapshotView.frame.width * 1.1 < size.width {
+                    snapshotFrame = snapshotFrame.offsetBy(dx: 0.0, dy: -66.0)
+                    blurFrame = CGRect(origin: CGPoint(x: 0.0, y: snapshotFrame.minY), size: CGSize(width: size.width, height: snapshotFrame.height))
+                    requiresBlur = true
+                } else if snapshotView.frame.width > size.width * 1.5 {
+                    snapshotFrame = snapshotFrame.offsetBy(dx: 0.0, dy: 66.0)
+                    blurFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - snapshotView.frame.width) / 2.0), y: snapshotFrame.minY), size: CGSize(width: snapshotFrame.width, height: size.height))
+                    requiresBlur = true
+                }
+                
+                if requiresBlur {
+                    let blurredSnapshotView: UIView?
+                    if let current = self.blurredSnapshotView {
+                        blurredSnapshotView = current
+                    } else {
+                        blurredSnapshotView = snapshotView.snapshotView(afterScreenUpdates: false)
+                        if let blurredSnapshotView {
+                            if let blurFilter = makeBlurFilter() {
+                                blurFilter.setValue(20.0 as NSNumber, forKey: "inputRadius")
+                                blurFilter.setValue(true as NSNumber, forKey: "inputNormalizeEdges")
+                                blurredSnapshotView.layer.filters = [blurFilter]
+                            }
+                            self.snapshotContainerView.insertSubview(blurredSnapshotView, at: 0)
+                            self.blurredSnapshotView = blurredSnapshotView
+                        }
+                    }
+                    blurredSnapshotView?.frame = blurFrame
+                } else if let blurredSnapshotView = self.blurredSnapshotView {
+                    self.blurredSnapshotView = nil
+                    blurredSnapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                        blurredSnapshotView.removeFromSuperview()
+                    })
+                }
+                transition.updateFrame(view: snapshotView, frame: snapshotFrame)
             }
             
             if !self.isDismissed {
@@ -357,6 +404,9 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     }
     
     @objc func expandPanGesture(_ gestureRecognizer: UIPanGestureRecognizer) {
+        guard let lastItem = self.items.last, let itemNode = self.itemNodes[lastItem.id], itemNode.isReady else {
+            return
+        }
         let translation = gestureRecognizer.translation(in: self.view)
         if translation.y < -10.0 {
             gestureRecognizer.isEnabled = false
@@ -443,6 +493,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         case maximize(itemId: AnyHashable)
         case dismiss(itemId: AnyHashable)
         case dismissAll
+        case collapse
         
         func matches(item: Item) -> Bool {
             switch self {
@@ -452,6 +503,8 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 return item.id == itemId
             case .dismissAll:
                 return true
+            case .collapse:
+                return false
             }
         }
     }
@@ -489,7 +542,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     }
     
     public func expand() {
-        guard !self.items.isEmpty && !self.isExpanded else {
+        guard !self.items.isEmpty && !self.isExpanded && self.currentTransition == nil else {
             return
         }
         if self.items.count == 1, let item = self.items.first {
@@ -501,16 +554,24 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     }
         
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        guard self.isExpanded else {
+        guard self.isExpanded, let layout = self.validLayout else {
             return
         }
         self.requestUpdate(transition: .immediate)
         
-        if scrollView.contentOffset.y < -64.0 {
+        let contentOffset = scrollView.contentOffset
+        if scrollView.contentOffset.y < -64.0, let lastItemId = self.items.last?.id, let itemNode = self.itemNodes[lastItemId] {
+            let velocity = scrollView.panGestureRecognizer.velocity(in: self.view).y
+            let distance = layout.size.height - self.collapsedHeight(layout: layout) - itemNode.frame.minY
+            let initialVelocity = distance != 0.0 ? abs(velocity / distance) : 0.0
+            
             self.isExpanded = false
+            scrollView.isScrollEnabled = false
             scrollView.panGestureRecognizer.isEnabled = false
             scrollView.panGestureRecognizer.isEnabled = true
-            self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
+            scrollView.contentOffset = contentOffset
+            self.currentTransition = .collapse
+            self.requestUpdate(transition: .animated(duration: 0.4, curve: .customSpring(damping: 180.0, initialVelocity: initialVelocity)))
         }
     }
     
@@ -791,23 +852,31 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                 
                 itemNode.animateOut()
+                if itemInsets.left > 0.0 {
+                    itemNode.updateLayout(size: layout.size, insets: itemInsets, isExpanded: true, transition: transition)
+                    transition.updateBounds(node: itemNode, bounds: CGRect(origin: .zero, size: layout.size))
+                }
                 transition.updateTransform(node: itemNode, transform: CATransform3DIdentity)
                 transition.updatePosition(node: itemNode, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0 + topInset + self.scrollView.contentOffset.y), completion: { _ in
                     self.isApplyingTransition = false
                     if self.currentTransition == currentTransition {
                         self.currentTransition = nil
                     }
+                                        
+                    completion(currentTransition)
                     
-                    if let snaphotView = itemNode.snapshotView {
-                        itemNode.item.controller.displayNode.view.addSubview(snaphotView)
+                    if let _ = itemNode.snapshotView {
+                        let snapshotContainerView = itemNode.snapshotContainerView
+                        snapshotContainerView.layer.allowsGroupOpacity = true
+                        snapshotContainerView.center = CGPoint(x: itemNode.item.controller.displayNode.view.bounds.width / 2.0, y: snapshotContainerView.bounds.height / 2.0)
+                        itemNode.item.controller.displayNode.view.addSubview(snapshotContainerView)
                         Queue.mainQueue().after(0.15, {
-                            snaphotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
-                                snaphotView.removeFromSuperview()
+                            snapshotContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                                snapshotContainerView.removeFromSuperview()
                             })
                         })
                     }
                     
-                    completion(currentTransition)
                     self.itemNodes[itemId] = nil
                     itemNode.removeFromSupernode()
                     dimView.removeFromSuperview()
@@ -867,6 +936,14 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                     completion(currentTransition)
                 })
                 transition.updatePosition(layer: self.scrollView.layer, position: self.scrollView.center.offsetBy(dx: 0.0, dy: dismissOffset))
+            case .collapse:
+                transition.updateBounds(layer: self.scrollView.layer, bounds: CGRect(origin: .zero, size: self.scrollView.bounds.size), completion: { _ in
+                    self.isApplyingTransition = false
+                    if self.currentTransition == currentTransition {
+                        self.currentTransition = nil
+                    }
+                    completion(currentTransition)
+                })
             default:
                 break
             }

@@ -16,6 +16,7 @@ swift_library(
         "//submodules/TelegramPresentationData",
         "//submodules/ComponentFlow",
         "//submodules/AccountContext",
+        "//submodules/UIKitRuntimeUtils",
     ],
     visibility = [
         "//visibility:public",

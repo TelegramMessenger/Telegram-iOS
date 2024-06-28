@@ -188,6 +188,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     private let bannedSendPhotos: (Int32, Bool)?
     private let bannedSendVideos: (Int32, Bool)?
     private let canBoostToUnrestrict: Bool
+    private let paidMediaAllowed: Bool
     private let subject: Subject
     private let saveEditedPhotos: Bool
     
@@ -1750,6 +1751,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         bannedSendPhotos: (Int32, Bool)? = nil,
         bannedSendVideos: (Int32, Bool)? = nil,
         canBoostToUnrestrict: Bool = false,
+        paidMediaAllowed: Bool = false,
         subject: Subject,
         editingContext: TGMediaEditingContext? = nil,
         selectionContext: TGMediaSelectionContext? = nil,
@@ -1769,6 +1771,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.bannedSendPhotos = bannedSendPhotos
         self.bannedSendVideos = bannedSendVideos
         self.canBoostToUnrestrict = canBoostToUnrestrict
+        self.paidMediaAllowed = paidMediaAllowed
         self.subject = subject
         self.saveEditedPhotos = saveEditedPhotos
         self.mainButtonState = mainButtonState
@@ -2499,7 +2502,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     }
                     
                     var isPaidAvailable = false
-                    if let peer = self.peer, case let .channel(channel) = peer, case .broadcast = channel.info, selectionCount <= 10 {
+                    if self.paidMediaAllowed, selectionCount <= 10 {
                         isPaidAvailable = true
                     }
                     if isSpoilerAvailable || isPaidAvailable || (selectionCount > 0 && isCaptionAboveMediaAvailable) {

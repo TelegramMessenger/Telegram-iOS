@@ -42,6 +42,9 @@ extension ChatControllerImpl {
                         filter.insert(.excludeChannels)
                         break
                     }
+                    if let _ = media as? TelegramMediaPaidContent {
+                        filter.insert(.excludeSecretChats)
+                    }
                 }
             }
             var attemptSelectionImpl: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?

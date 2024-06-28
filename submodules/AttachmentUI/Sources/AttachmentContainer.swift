@@ -7,6 +7,7 @@ import Display
 import DirectionalPanGesture
 import TelegramPresentationData
 import MapKit
+import WebKit
 
 private let overflowInset: CGFloat = 0.0
 
@@ -160,11 +161,22 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             }
             return true
         }
-        if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer.description.contains("WKDeferringGesture") {
-            return true
-        }
-        if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer.description.contains("UIWebTouchEventsGesture") {
-            return true
+        if gestureRecognizer is UIPanGestureRecognizer {
+            func findWebViewAncestor(view: UIView?) -> WKWebView? {
+                guard let view else {
+                    return nil
+                }
+                if let view = view as? WKWebView {
+                    return view
+                } else if view != self.view {
+                    return findWebViewAncestor(view: view.superview)
+                } else {
+                    return nil
+                }
+            }
+            if let otherView = otherGestureRecognizer.view, let _ = findWebViewAncestor(view: otherView) {
+                return true
+            }
         }
         if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UILongPressGestureRecognizer {
             return true
