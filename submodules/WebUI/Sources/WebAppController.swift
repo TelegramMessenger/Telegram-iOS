@@ -25,6 +25,7 @@ import QrCodeUI
 import InstantPageUI
 import InstantPageCache
 import LocalAuth
+import OpenInExternalAppUI
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -158,7 +159,7 @@ public class WebAppCancelButtonNode: ASDisplayNode {
         let color = self.color ?? self.theme.rootController.navigationBar.accentTextColor
         
         self.arrowNode.isHidden = state == .cancel
-        self.labelNode.attributedText = NSAttributedString(string: state == .cancel ? self.strings.Common_Cancel : self.strings.Common_Back, font: Font.regular(17.0), textColor: color)
+        self.labelNode.attributedText = NSAttributedString(string: state == .cancel ? self.strings.Common_Close : self.strings.Common_Back, font: Font.regular(17.0), textColor: color)
         
         let labelSize = self.labelNode.updateLayout(CGSize(width: 120.0, height: 56.0))
         
@@ -941,6 +942,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                         
                         let tryInstantView = json["try_instant_view"] as? Bool ?? false
+                        let tryBrowser = json["try_browser"] as? String
+                        
                         if let lastTouchTimestamp = self.webView?.lastTouchTimestamp, currentTimestamp < lastTouchTimestamp + 10.0 {
                             self.webView?.lastTouchTimestamp = nil
                             if tryInstantView {
@@ -964,6 +967,40 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     }
                                 })
                             } else {
+                                var url = url
+                                if let tryBrowser {
+                                    let openInOptions = availableOpenInOptions(context: self.context, item: .url(url: url))
+                                    var matchingOption: OpenInOption?
+                                    for option in openInOptions {
+                                        if case let .other(identifier, _, _, _) = option.application {
+                                            switch tryBrowser {
+                                            case "safari":
+                                                break
+                                            case "chrome":
+                                                if identifier == "chrome" {
+                                                    matchingOption = option
+                                                    break
+                                                }
+                                            case "firefox":
+                                                if ["firefox", "firefoxFocus"].contains(identifier) {
+                                                    matchingOption = option
+                                                    break
+                                                }
+                                            case "opera":
+                                                if ["operaMini", "operaTouch"].contains(identifier) {
+                                                    matchingOption = option
+                                                    break
+                                                }
+                                            default:
+                                                break
+                                            }
+                                        }
+                                    }
+                                    if let matchingOption, case let .openUrl(newUrl) = matchingOption.action() {
+                                        url = newUrl
+                                    }
+                                }
+
                                 self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: true, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
                             }
                         }
@@ -1920,9 +1957,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 guard let self, let chatPeer else {
                     return
                 }
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(chatPeer), completion: { _ in
-                    completion()
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(chatPeer), keepStack: .always, completion: { _ in
                 }))
+                completion()
             })
         }
     }
