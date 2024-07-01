@@ -2012,7 +2012,8 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     
     let peerData = context.engine.data.get(
          TelegramEngine.EngineData.Item.Peer.AdsRestricted(id: peerId),
-         TelegramEngine.EngineData.Item.Peer.CanViewRevenue(id: peerId)
+         TelegramEngine.EngineData.Item.Peer.CanViewRevenue(id: peerId),
+         TelegramEngine.EngineData.Item.Peer.CanViewStarsRevenue(id: peerId)
     )
     
     let longLoadingSignal: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(2.0, queue: Queue.mainQueue()))
@@ -2038,7 +2039,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     )
     |> deliverOnMainQueue
     |> map { presentationData, state, peer, data, messageView, stories, boostData, boostersState, giftsState, revenueState, revenueTransactions, starsState, starsTransactions, peerData, longLoading -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let (adsRestricted, canViewRevenue) = peerData
+        let (adsRestricted, canViewRevenue, _) = peerData
         
         var isGroup = false
         if let peer, case let .channel(channel) = peer, case .group = channel.info {

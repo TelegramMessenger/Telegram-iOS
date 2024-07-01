@@ -316,6 +316,7 @@ private enum MediaReferenceRevalidationKey: Hashable {
     case notificationSoundList
     case customEmoji(fileId: Int64)
     case story(peer: PeerReference, id: Int32)
+    case starsTransaction(transaction: StarsTransactionReference)
 }
 
 private final class MediaReferenceRevalidationItemContext {
@@ -752,6 +753,30 @@ final class MediaReferenceRevalidationContext {
         }
     }
     
+    func starsTransaction(accountPeerId: PeerId, postbox: Postbox, network: Network, background: Bool, transaction: StarsTransactionReference) -> Signal<StarsContext.State.Transaction, RevalidateMediaReferenceError> {
+        return self.genericItem(key: .starsTransaction(transaction: transaction), background: background, request: { next, error in
+            return (_internal_getStarsTransaction(accountPeerId: accountPeerId, postbox: postbox, network: network, transactionReference: transaction)
+            |> castError(RevalidateMediaReferenceError.self)
+            |> mapToSignal { result -> Signal<StarsContext.State.Transaction, RevalidateMediaReferenceError> in
+                if let result {
+                    return .single(result)
+                } else {
+                    return .fail(.generic)
+                }
+            }).start(next: { value in
+                next(value)
+            }, error: { _ in
+                error(.generic)
+            })
+        }) |> mapToSignal { next -> Signal<StarsContext.State.Transaction, RevalidateMediaReferenceError> in
+            if let next = next as? StarsContext.State.Transaction {
+                return .single(next)
+            } else {
+                return .fail(.generic)
+            }
+        }
+    }
+    
     func notificationSoundList(postbox: Postbox, network: Network, background: Bool) -> Signal<[TelegramMediaFile], RevalidateMediaReferenceError> {
         return self.genericItem(key: .notificationSoundList, background: background, request: { next, error in
             return (requestNotificationSoundList(network: network, hash: 0)
@@ -936,6 +961,16 @@ func revalidateMediaResourceReference(accountPeerId: PeerId, postbox: Postbox, n
                         } else {
                             return .fail(.generic)
                         }
+                    }
+                case let .starsTransaction(transaction, _):
+                    return revalidationContext.starsTransaction(accountPeerId: accountPeerId, postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, transaction: transaction)
+                    |> mapToSignal { transaction -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
+                        for transactionMedia in transaction.media {
+                            if let updatedResource = findUpdatedMediaResource(media: transactionMedia, previousMedia: nil, resource: resource) {
+                                return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
+                            }
+                        }
+                        return .fail(.generic)
                     }
                 case let .standalone(media):
                     if let file = media as? TelegramMediaFile {

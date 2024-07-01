@@ -763,3 +763,59 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
         }
     }
 }
+
+public struct StarsTransactionReference: PostboxCoding, Hashable, Equatable {
+    public let peerId: EnginePeer.Id
+    public let id: String
+    public let isRefund: Bool
+    
+    public init(peerId: EnginePeer.Id,  id: String, isRefund: Bool) {
+        self.peerId = peerId
+        self.id = id
+        self.isRefund = isRefund
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.peerId = EnginePeer.Id(decoder.decodeInt64ForKey("peerId", orElse: 0))
+        self.id = decoder.decodeStringForKey("id", orElse: "")
+        self.isRefund = decoder.decodeBoolForKey("refund", orElse: false)
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt64(self.peerId.toInt64(), forKey: "peerId")
+        encoder.encodeString(self.id, forKey: "id")
+        encoder.encodeBool(self.isRefund, forKey: "refund")
+    }
+}
+
+func _internal_getStarsTransaction(accountPeerId: PeerId, postbox: Postbox, network: Network, transactionReference: StarsTransactionReference) -> Signal<StarsContext.State.Transaction?, NoError> {
+    return postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(transactionReference.peerId).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer -> Signal<StarsContext.State.Transaction?, NoError> in
+        guard let inputPeer else {
+            return .single(nil)
+        }
+        return network.request(
+            Api.functions.payments.getStarsTransactionsByID(
+                peer: inputPeer,
+                id: [.inputStarsTransaction(flags: transactionReference.isRefund ? (1 << 0) : 0, id: transactionReference.id)]
+            )
+        )
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.payments.StarsStatus?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<StarsContext.State.Transaction?, NoError> in
+            return postbox.transaction { transaction -> StarsContext.State.Transaction? in
+                guard let result, case let .starsStatus(_, _, transactions, _, chats, users) = result, let matchingTransaction = transactions.first else {
+                    return nil
+                }
+                let peers = AccumulatedPeers(chats: chats, users: users)
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: peers)
+                
+                return StarsContext.State.Transaction(apiTransaction: matchingTransaction, peerId: transactionReference.peerId, transaction: transaction)
+            }
+        }
+    }
+}

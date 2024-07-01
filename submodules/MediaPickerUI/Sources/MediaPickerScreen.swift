@@ -2554,7 +2554,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                                 titleLayout = .secondLineWithValue(strings.Attachment_Paid_EditPrice_Stars(Int32(price)))
                             } else {
                                 title = strings.Attachment_Paid_Create
-                                titleLayout = .singleLine
+                                titleLayout = .twoLinesMax
                             }
                             items.append(.action(ContextMenuActionItem(text: title, textLayout: titleLayout, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Paid"), color: theme.contextMenu.primaryColor)
