@@ -268,7 +268,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
-            
+    
     fileprivate class Node: ViewControllerTracingNode, WKNavigationDelegate, WKUIDelegate, ASScrollViewDelegate {
         private weak var controller: WebAppController?
         
@@ -2171,7 +2171,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
     }
     
-    public override var isMinimized: Bool {
+    public var isMinimized: Bool = false {
         didSet {
             if self.isMinimized != oldValue && self.isMinimized {
                 self.controllerNode.webView?.hideScrollIndicators()

@@ -111,7 +111,7 @@ public enum AttachmentButtonType: Equatable {
     }
 }
 
-public protocol AttachmentContainable: ViewController {
+public protocol AttachmentContainable: ViewController, MinimizableController {
     var requestAttachmentMenuExpansion: () -> Void { get set }
     var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void { get set }
     var parentController: () -> ViewController? { get set }
@@ -158,6 +158,14 @@ public extension AttachmentContainable {
     
     func beforeMaximize(navigationController: NavigationController, completion: @escaping () -> Void) {
         completion()
+    }
+    
+    var minimizedBounds: CGRect? {
+        return nil
+    }
+    
+    var minimizedTopEdgeOffset: CGFloat? {
+        return nil
     }
     
     var isPanGestureEnabled: (() -> Bool)? {
@@ -231,7 +239,7 @@ private func generateMaskImage() -> UIImage? {
     })?.stretchableImage(withLeftCapWidth: 195, topCapHeight: 110)
 }
 
-public class AttachmentController: ViewController {
+public class AttachmentController: ViewController, MinimizableController {
     private let context: AccountContext
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let chatLocation: ChatLocation?
@@ -260,6 +268,9 @@ public class AttachmentController: ViewController {
     override public var ready: Promise<Bool> {
         return self._ready
     }
+    
+    public private(set) var minimizedTopEdgeOffset: CGFloat?
+    public private(set) var minimizedBounds: CGRect?
         
     private final class Node: ASDisplayNode {
         private weak var controller: AttachmentController?
@@ -582,11 +593,7 @@ public class AttachmentController: ViewController {
                 return
             }
             navigationController.minimizeViewController(controller, damping: damping, velocity: initialVelocity, beforeMaximize: { navigationController, completion in
-                if let controller = controller.mainController as? AttachmentContainable {
-                    controller.beforeMaximize(navigationController: navigationController, completion: completion)
-                } else {
-                    completion()
-                }
+                controller.mainController.beforeMaximize(navigationController: navigationController, completion: completion)
             }, setupContainer: { [weak self] current in
                 let minimizedContainer: MinimizedContainerImpl?
                 if let current = current as? MinimizedContainerImpl {
@@ -1178,7 +1185,7 @@ public class AttachmentController: ViewController {
         return false
     }
     
-    public override var isMinimized: Bool {
+    public var isMinimized: Bool = false {
         didSet {
             self.mainController.isMinimized = self.isMinimized
         }
@@ -1199,7 +1206,7 @@ public class AttachmentController: ViewController {
         self.node.containerLayoutUpdated(layout, transition: transition)
     }
     
-    public var mainController: ViewController {
+    public var mainController: AttachmentContainable {
         return self.node.currentControllers.first!
     }
     

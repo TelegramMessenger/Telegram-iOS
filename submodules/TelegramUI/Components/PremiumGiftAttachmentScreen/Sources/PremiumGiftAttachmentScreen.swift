@@ -17,6 +17,7 @@ public class PremiumGiftAttachmentScreen: PremiumGiftScreen, AttachmentContainab
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
+    public var isMinimized: Bool = false
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {
         return PremiumGiftContext(controller: self)

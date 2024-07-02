@@ -88,6 +88,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     var cancelPanGesture: () -> Void = { }
     var isContainerPanning: () -> Bool = { return false }
     var isContainerExpanded: () -> Bool = { return false }
+    var isMinimized: Bool = false
     
     var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)?
     

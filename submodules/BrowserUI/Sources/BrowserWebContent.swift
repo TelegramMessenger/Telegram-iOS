@@ -246,6 +246,14 @@ final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
         })
     }
     
+    func stop() {
+        self.webView.stopLoading()
+    }
+    
+    func reload() {
+        self.webView.reload()
+    }
+    
     func navigateBack() {
         self.webView.goBack()
     }

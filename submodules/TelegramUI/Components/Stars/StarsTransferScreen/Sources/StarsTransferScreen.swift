@@ -18,6 +18,7 @@ import UndoUI
 import AccountContext
 import PresentationDataUtils
 import StarsImageComponent
+import ConfettiEffect
 
 private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -256,9 +257,7 @@ private final class SheetContent: CombinedComponent {
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let theme = presentationData.theme
             let strings = presentationData.strings
-            
-//            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            
+                        
             var contentSize = CGSize(width: context.availableSize.width, height: 18.0)
                         
             let background = background.update(
@@ -658,6 +657,7 @@ private final class StarsTransferSheetComponent: CombinedComponent {
 
 public final class StarsTransferScreen: ViewControllerComponentContainer {
     private let context: AccountContext
+    private let extendedMedia: [TelegramExtendedMedia]
     private let completion: (Bool) -> Void
         
     public init(
@@ -670,6 +670,7 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
         completion: @escaping (Bool) -> Void
     ) {
         self.context = context
+        self.extendedMedia =  extendedMedia
         self.completion = completion
                 
         super.init(
@@ -707,6 +708,10 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
         }
         self.didComplete = true
         self.completion(paid)
+        
+        if !self.extendedMedia.isEmpty && paid {
+            self.navigationController?.view.addSubview(ConfettiView(frame: self.view.bounds, customImage: UIImage(bundleImageName: "Peer Info/PremiumIcon")))
+        }
     }
     
     public func dismissAnimated() {

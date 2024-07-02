@@ -70,7 +70,7 @@ private final class BrowserScreenComponent: CombinedComponent {
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let performAction = context.component.performAction
-            
+                        
             let navigationContent: AnyComponentWithIdentity<Empty>?
             let navigationLeftItems: [AnyComponentWithIdentity<Empty>]
             let navigationRightItems: [AnyComponentWithIdentity<Empty>]
@@ -88,10 +88,11 @@ private final class BrowserScreenComponent: CombinedComponent {
                 navigationLeftItems = []
                 navigationRightItems = []
             } else {
+                let title = context.component.contentState?.title ?? ""
                 navigationContent = AnyComponentWithIdentity(
-                    id: "title",
+                    id: "title_\(title)",
                     component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: context.component.contentState?.title ?? "", font: Font.bold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor, paragraphAlignment: .center)), horizontalAlignment: .center, maximumNumberOfLines: 1)
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: title, font: Font.bold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor, paragraphAlignment: .center)), horizontalAlignment: .center, maximumNumberOfLines: 1)
                     )
                 )
                 navigationLeftItems = [
@@ -100,10 +101,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                         component: AnyComponent(
                             Button(
                                 content: AnyComponent(
-                                    BundleIconComponent(
-                                        name: "Instant View/Close",
-                                        tintColor: environment.theme.rootController.navigationBar.primaryTextColor
-                                    )
+                                    MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Common_Close, font: Font.regular(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor, paragraphAlignment: .center)), horizontalAlignment: .left, maximumNumberOfLines: 1)
                                 ),
                                 action: {
                                     performAction.invoke(.close)
@@ -112,9 +110,28 @@ private final class BrowserScreenComponent: CombinedComponent {
                         )
                     )
                 ]
+                
+                let isLoading = (context.component.contentState?.estimatedProgress ?? 1.0) < 1.0
                 navigationRightItems = [
                     AnyComponentWithIdentity(
-                        id: "close",
+                        id: isLoading ? "stop" : "reload",
+                        component: AnyComponent(
+                            ReferenceButtonComponent(
+                                content: AnyComponent(
+                                    BundleIconComponent(
+                                        name: isLoading ? "Instant View/CloseIcon" : "Chat/Context Menu/Reload",
+                                        tintColor: environment.theme.rootController.navigationBar.primaryTextColor
+                                    )
+                                ),
+                                tag: settingsTag,
+                                action: {
+                                    performAction.invoke(isLoading ? .stop : .reload)
+                                }
+                            )
+                        )
+                    ),
+                    AnyComponentWithIdentity(
+                        id: "settings",
                         component: AnyComponent(
                             ReferenceButtonComponent(
                                 content: AnyComponent(
@@ -226,9 +243,11 @@ struct BrowserPresentationState: Equatable {
     var searchQueryIsEmpty: Bool
 }
 
-public class BrowserScreen: ViewController {
+public class BrowserScreen: ViewController, MinimizableController {
     enum Action {
         case close
+        case reload
+        case stop
         case navigateBack
         case navigateForward
         case share
@@ -294,7 +313,7 @@ public class BrowserScreen: ViewController {
                 }
                 strongSelf.controller?.title = state.title
                 strongSelf.contentState = state
-                strongSelf.requestLayout(transition: .immediate)
+                strongSelf.requestLayout(transition: .easeInOut(duration: 0.25))
             }).strict()
             
             self.content?.onScrollingUpdate = { [weak self] update in
@@ -308,6 +327,10 @@ public class BrowserScreen: ViewController {
                 switch action {
                 case .close:
                     self.controller?.dismiss()
+                case .reload:
+                    content.reload()
+                case .stop:
+                    content.stop()
                 case .navigateBack:
                     content.navigateBack()
                 case .navigateForward:
@@ -682,7 +705,7 @@ public class BrowserScreen: ViewController {
             if let content = self.content {
                 let collapsedHeight: CGFloat = 24.0
                 let topInset: CGFloat = environment.statusBarHeight + navigationBarHeight * (1.0 - self.scrollingPanelOffsetFraction) + collapsedHeight * self.scrollingPanelOffsetFraction
-                let bottomInset = layout.intrinsicInsets.bottom
+                let bottomInset = 49.0 + layout.intrinsicInsets.bottom
                 content.updateLayout(size: layout.size, insets: UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: bottomInset, right: layout.safeInsets.right), transition: transition)
                 transition.setFrame(view: content, frame: CGRect(origin: .zero, size: layout.size))
             }
@@ -729,6 +752,8 @@ public class BrowserScreen: ViewController {
         
         (self.displayNode as! Node).containerLayoutUpdated(layout: layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.height, transition: ComponentTransition(transition))
     }
+    
+    public var isMinimized = false
 }
 
 private final class BrowserReferenceContentSource: ContextReferenceContentSource {

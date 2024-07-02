@@ -345,6 +345,7 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
+    public var isMinimized: Bool = false
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {
         return ThemeColorsGridContext(controller: self)

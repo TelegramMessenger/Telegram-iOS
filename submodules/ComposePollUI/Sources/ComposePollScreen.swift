@@ -1483,6 +1483,8 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     
     fileprivate private(set) var sendButtonItem: UIBarButtonItem?
     
+    public var isMinimized: Bool = false
+    
     public var requestAttachmentMenuExpansion: () -> Void = {
     }
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in

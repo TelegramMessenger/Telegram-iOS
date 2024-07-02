@@ -160,6 +160,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                 self.isMaximizing = true
                 self.updateContainersNonReentrant(transition: .animated(duration: 0.4, curve: .spring))
             }
+            self.minimizedContainer?.statusBarStyleUpdated = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.updateContainersNonReentrant(transition: .animated(duration: 0.3, curve: .easeInOut))
+            }
         }
     }
     
@@ -1165,6 +1171,16 @@ open class NavigationController: UINavigationController, ContainableController, 
             statusBarHidden = true
         }
         
+        if let minimizedContainer = self.minimizedContainer, minimizedContainer.isExpanded {
+            if case .Hide = minimizedContainer.statusBarStyle {
+                statusBarHidden = true
+                statusBarStyle = .White
+            } else {
+                statusBarHidden = false
+                statusBarStyle = minimizedContainer.statusBarStyle
+            }
+        }
+        
         let resolvedStatusBarStyle: NavigationStatusBarStyle
         switch statusBarStyle {
         case .Ignore, .Hide:
@@ -1577,19 +1593,11 @@ open class NavigationController: UINavigationController, ContainableController, 
         self._viewControllersPromise.set(self.viewControllers)
     }
         
-    public func minimizeViewController(_ viewController: ViewController, damping: CGFloat?, velocity: CGFloat? = nil, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, setupContainer: (MinimizedContainer?) -> MinimizedContainer?, animated: Bool) {
+    public func minimizeViewController(_ viewController: MinimizableController, damping: CGFloat?, velocity: CGFloat? = nil, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, setupContainer: (MinimizedContainer?) -> MinimizedContainer?, animated: Bool) {
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .customSpring(damping: damping ?? 124.0, initialVelocity: velocity ?? 0.0)) : .immediate
         
         let minimizedContainer = setupContainer(self.minimizedContainer)
         if self.minimizedContainer !== minimizedContainer {
-            minimizedContainer?.willMaximize = { [weak self] in
-                guard let self else {
-                    return
-                }
-                self.isMaximizing = true
-                self.updateContainersNonReentrant(transition: .animated(duration: 0.4, curve: .spring))
-            }
-            
             self.minimizedContainer?.removeFromSupernode()
             self.minimizedContainer = minimizedContainer
             
@@ -1601,7 +1609,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     private var isMaximizing = false
-    public func maximizeViewController(_ viewController: ViewController, animated: Bool) {
+    public func maximizeViewController(_ viewController: MinimizableController, animated: Bool) {
         guard let minimizedContainer = self.minimizedContainer else {
             return
         }

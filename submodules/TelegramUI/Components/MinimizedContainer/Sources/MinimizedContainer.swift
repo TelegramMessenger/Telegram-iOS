@@ -26,10 +26,10 @@ final class ScrollViewImpl: UIScrollView {
 public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     final class Item {
         let id: AnyHashable
-        let controller: ViewController
+        let controller: MinimizableController
         let beforeMaximize: (NavigationController, @escaping () -> Void) -> Void
         
-        init(id: AnyHashable, controller: ViewController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void) {
+        init(id: AnyHashable, controller: MinimizableController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void) {
             self.id = id
             self.controller = controller
             self.beforeMaximize = beforeMaximize
@@ -112,7 +112,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             
             Queue.mainQueue().after(0.45) {
                 self.isReady = true
-                if !self.isDismissed, let snapshotView = self.controllerView?.snapshotView(afterScreenUpdates: false) {
+                if !self.isDismissed, let snapshotView = self.item.controller.makeContentSnapshotView() {
                     self.containerNode.view.addSubview(self.snapshotContainerView)
                     self.snapshotView = snapshotView
                     self.controllerView?.removeFromSuperview()
@@ -141,7 +141,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             self.headerNode.controllers = [item.controller]
         }
         
-        func setTitleControllers(_ controllers: [ViewController]?) {
+        func setTitleControllers(_ controllers: [MinimizableController]?) {
             self.headerNode.controllers = controllers ?? [self.item.controller]
         }
         
@@ -293,6 +293,9 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     public private(set) var isExpanded: Bool = false
     public var willMaximize: (() -> Void)?
     
+    public private(set) var statusBarStyle: StatusBarStyle = .White
+    public var statusBarStyleUpdated: (() -> Void)?
+    
     private let bottomEdgeView: UIImageView
     private let blurView: BlurView
     private let dimView: UIView
@@ -310,7 +313,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     private var isApplyingTransition = false
     private var validLayout: ContainerViewLayout?
     
-    public var controllers: [ViewController] {
+    public var controllers: [MinimizableController] {
         return self.items.map { $0.controller }
     }
     
@@ -501,7 +504,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         return result
     }
     
-    public func addController(_ viewController: ViewController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, transition: ContainedViewLayoutTransition) {
+    public func addController(_ viewController: MinimizableController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, transition: ContainedViewLayoutTransition) {
         let item = Item(
             id: AnyHashable(Int64.random(in: Int64.min ... Int64.max)),
             controller: viewController,
@@ -534,7 +537,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         }
     }
     
-    public func maximizeController(_ viewController: ViewController, animated: Bool, completion: @escaping (Bool) -> Void) {
+    public func maximizeController(_ viewController: MinimizableController, animated: Bool, completion: @escaping (Bool) -> Void) {
         guard let item = self.items.first(where: { $0.controller === viewController }) else {
             completion(self.items.count == 0)
             return
@@ -715,14 +718,16 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                     self.navigationController?.dismissMinimizedControllers(animated: true)
                 }
             }
-            itemNode.tapped = { [weak self] in
+            itemNode.tapped = { [weak self, weak itemNode] in
                 guard let self else {
                     return
                 }
-                if self.isExpanded {
+                if self.isExpanded, let itemNode {
                     if let navigationController = self.navigationController {
-                        itemNode.item.beforeMaximize(navigationController, { [weak self] in
-                            self?.navigationController?.maximizeViewController(item.controller, animated: true)
+                        itemNode.item.beforeMaximize(navigationController, { [weak self, weak itemNode] in
+                            if let item = itemNode?.item {
+                                self?.navigationController?.maximizeViewController(item.controller, animated: true)
+                            }
                         })
                     }
                 } else {
@@ -844,6 +849,21 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         self.scrollView.passthrough = !self.isExpanded
         self.scrollView.isScrollEnabled = self.isExpanded
         self.expandedTapGestureRecoginzer?.isEnabled = self.isExpanded
+        
+        var resolvedStatusBarStyle: StatusBarStyle = .Ignore
+        if self.isExpanded {
+            if self.scrollView.contentOffset.y > additionalInsetTop + insets.top / 2.0 {
+                resolvedStatusBarStyle = .Hide
+            } else {
+                resolvedStatusBarStyle = .White
+            }
+        }
+        if self.statusBarStyle != resolvedStatusBarStyle {
+            self.statusBarStyle = resolvedStatusBarStyle
+            Queue.mainQueue().justDispatch {
+                self.statusBarStyleUpdated?()
+            }
+        }
         
         if let currentTransition = self.currentTransition {
             self.isApplyingTransition = true

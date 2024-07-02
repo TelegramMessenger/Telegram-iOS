@@ -31,6 +31,7 @@ import StoryContainerScreen
 import ChatMessageNotificationItem
 import PhoneNumberFormat
 import AttachmentUI
+import MinimizedContainer
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -440,7 +441,9 @@ final class AuthorizedApplicationContext {
                                             return false
                                         }
                                         
-                                        if let topContoller = strongSelf.rootController.topViewController as? AttachmentController {
+                                        if let minimizedContainer = strongSelf.rootController.minimizedContainer, minimizedContainer.isExpanded {
+                                            minimizedContainer.collapse()
+                                        } else if let topContoller = strongSelf.rootController.topViewController as? AttachmentController {
                                             topContoller.minimizeIfNeeded()
                                         }
                                         
