@@ -12473,6 +12473,10 @@ Sorry for the inconvenience.";
 "WebApp.MinimizedTitle.Others_1" = "%@ Other";
 "WebApp.MinimizedTitle.Others_any" = "%@ Others";
 
+"WebApp.Minimized.CloseAllTitle" = "Are you sure you want to close all open tabs?";
+"WebApp.Minimized.CloseAll_1" = "Close All %@ Tab";
+"WebApp.Minimized.CloseAll_any" = "Close All %@ Tabs";
+
 "Stars.SendStars.Title" = "Send Stars";
 "Stars.SendStars.AmountTitle" = "ENTER AMOUNT";
 "Stars.SendStars.AmountPlaceholder" = "Stars Amount";

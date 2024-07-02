@@ -24,8 +24,10 @@ public protocol MinimizableController: ViewController {
     var minimizedTopEdgeOffset: CGFloat? { get }
     var minimizedBounds: CGRect? { get }
     var isMinimized: Bool { get set }
+    var isMinimizable: Bool { get }
     
     func makeContentSnapshotView() -> UIView?
+    func shouldDismissImmediately() -> Bool
 }
 
 public extension MinimizableController {
@@ -41,7 +43,15 @@ public extension MinimizableController {
         return false
     }
     
+    var isMinimizable: Bool {
+        return false
+    }
+    
     func makeContentSnapshotView() -> UIView? {
         return self.displayNode.view.snapshotView(afterScreenUpdates: false)
+    }
+    
+    func shouldDismissImmediately() -> Bool {
+        return true
     }
 }

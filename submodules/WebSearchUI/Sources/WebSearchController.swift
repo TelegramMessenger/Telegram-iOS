@@ -590,25 +590,6 @@ public class WebSearchPickerContext: AttachmentMediaPickerContext {
         }
     }
     
-    public var hasCaption: Bool {
-        return false
-    }
-    
-    public var captionIsAboveMedia: Signal<Bool, NoError> {
-        return .single(false)
-    }
-    
-    public func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
-    }
-        
-    public var loadingProgress: Signal<CGFloat?, NoError> {
-        return .single(nil)
-    }
-    
-    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
-        return .single(nil)
-    }
-
     init(interaction: WebSearchControllerInteraction) {
         self.interaction = interaction
     }
@@ -623,9 +604,5 @@ public class WebSearchPickerContext: AttachmentMediaPickerContext {
     
     public func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?) {
         self.interaction?.schedule(parameters)
-    }
-    
-    public func mainButtonAction() {
-        
     }
 }

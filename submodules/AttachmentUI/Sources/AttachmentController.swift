@@ -121,6 +121,7 @@ public protocol AttachmentContainable: ViewController, MinimizableController {
     var isContainerPanning: () -> Bool { get set }
     var isContainerExpanded: () -> Bool { get set }
     var isPanGestureEnabled: (() -> Bool)? { get }
+    var isInnerPanGestureEnabled: (() -> Bool)? { get }
     var mediaPickerContext: AttachmentMediaPickerContext? { get }
     var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)? { get }
     
@@ -172,6 +173,10 @@ public extension AttachmentContainable {
         return nil
     }
     
+    var isInnerPanGestureEnabled: (() -> Bool)? {
+        return nil
+    }
+    
     var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)? {
         return nil
     }
@@ -196,6 +201,10 @@ public protocol AttachmentMediaPickerContext {
     var captionIsAboveMedia: Signal<Bool, NoError> { get }
     func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void
     
+    var canMakePaidContent: Bool { get }
+    var price: Int64? { get }
+    func setPrice(_ price: Int64) -> Void
+    
     var loadingProgress: Signal<CGFloat?, NoError> { get }
     var mainButtonState: Signal<AttachmentMainButtonState?, NoError> { get }
     
@@ -204,6 +213,58 @@ public protocol AttachmentMediaPickerContext {
     func setCaption(_ caption: NSAttributedString)
     func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?)
     func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?)
+}
+
+public extension AttachmentMediaPickerContext {
+    var selectionCount: Signal<Int, NoError> {
+        return .single(0)
+    }
+    
+    var caption: Signal<NSAttributedString?, NoError> {
+        return .single(nil)
+    }
+    
+    var captionIsAboveMedia: Signal<Bool, NoError> {
+        return .single(false)
+    }
+    
+    var hasCaption: Bool {
+        return false
+    }
+    
+    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
+    }
+
+    var canMakePaidContent: Bool {
+        return false
+    }
+
+    var price: Int64? {
+        return nil
+    }
+    
+    func setPrice(_ price: Int64) -> Void {
+    }
+    
+    var loadingProgress: Signal<CGFloat?, NoError> {
+        return .single(nil)
+    }
+    
+    var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
+        return .single(nil)
+    }
+            
+    func setCaption(_ caption: NSAttributedString) {
+    }
+    
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?) {
+    }
+    
+    func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?) {
+    }
+    
+    func mainButtonAction() {
+    }
 }
 
 private func generateShadowImage() -> UIImage? {
@@ -439,6 +500,17 @@ public class AttachmentController: ViewController, MinimizableController {
                 }
                 if let isPanGestureEnabled = currentController.isPanGestureEnabled {
                     return isPanGestureEnabled()
+                } else {
+                    return true
+                }
+            }
+            
+            self.container.isInnerPanGestureEnabled = { [weak self] in
+                guard let self, let currentController = self.currentControllers.last else {
+                    return true
+                }
+                if let isInnerPanGestureEnabled = currentController.isInnerPanGestureEnabled {
+                    return isInnerPanGestureEnabled()
                 } else {
                     return true
                 }
@@ -1189,6 +1261,14 @@ public class AttachmentController: ViewController, MinimizableController {
         didSet {
             self.mainController.isMinimized = self.isMinimized
         }
+    }
+    
+    public var isMinimizable: Bool {
+        return self.mainController.isMinimizable
+    }
+    
+    public func shouldDismissImmediately() -> Bool {
+        return self.mainController.shouldDismissImmediately()
     }
     
     private var validLayout: ContainerViewLayout?

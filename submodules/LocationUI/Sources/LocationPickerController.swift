@@ -397,44 +397,6 @@ public final class LocationPickerController: ViewController, AttachmentContainab
 }
 
 private final class LocationPickerContext: AttachmentMediaPickerContext {
-    var selectionCount: Signal<Int, NoError> {
-        return .single(0)
-    }
-    
-    var caption: Signal<NSAttributedString?, NoError> {
-        return .single(nil)
-    }
-    
-    var hasCaption: Bool {
-        return false
-    }
-    
-    var captionIsAboveMedia: Signal<Bool, NoError> {
-        return .single(false)
-    }
-    
-    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
-    }
-    
-    public var loadingProgress: Signal<CGFloat?, NoError> {
-        return .single(nil)
-    }
-    
-    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
-        return .single(nil)
-    }
-            
-    func setCaption(_ caption: NSAttributedString) {
-    }
-    
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?) {
-    }
-    
-    func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?) {
-    }
-    
-    func mainButtonAction() {
-    }
 }
 
 public func storyLocationPickerController(

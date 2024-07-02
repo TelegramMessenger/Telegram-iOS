@@ -697,25 +697,91 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 self.scrollView.addSubnode(itemNode)
                 self.itemNodes[item.id] = itemNode
             }
-            itemNode.closeTapped = { [weak self] in
+            itemNode.closeTapped = { [weak self, weak itemNode] in
                 guard let self else {
                     return
                 }
                 if self.isExpanded {
-                    var needsLayout = true
-                    self.currentTransition = .dismiss(itemId: item.id)
-                    
-                    self.items.removeAll(where: { $0.id == item.id })
-                    if self.items.count == 1 {
-                        self.isExpanded = false
-                        self.willMaximize?()
-                        needsLayout = false
+                    let proceed = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        var needsLayout = true
+                        self.currentTransition = .dismiss(itemId: item.id)
+                        
+                        self.items.removeAll(where: { $0.id == item.id })
+                        if self.items.count == 1 {
+                            self.isExpanded = false
+                            self.willMaximize?()
+                            needsLayout = false
+                        }
+                        if needsLayout {
+                            self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
+                        }
                     }
-                    if needsLayout {
-                        self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
+                    if let item = itemNode?.item, !item.controller.shouldDismissImmediately() {
+                        let actionSheet = ActionSheetController(presentationData: self.presentationData)
+                        actionSheet.setItemGroups([
+                            ActionSheetItemGroup(items: [
+                                ActionSheetTextItem(title: self.presentationData.strings.WebApp_CloseConfirmation),
+                                ActionSheetButtonItem(title: self.presentationData.strings.WebApp_CloseAnyway, color: .destructive, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    
+                                    proceed()
+                                })
+                            ]),
+                            ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])
+                        ])
+                        self.navigationController?.presentOverlay(controller: actionSheet, inGlobal: false, blockInteraction: false)
+                    } else {
+                        proceed()
                     }
                 } else {
-                    self.navigationController?.dismissMinimizedControllers(animated: true)
+                    if self.items.count > 1 {
+                        let actionSheet = ActionSheetController(presentationData: self.presentationData)
+                        actionSheet.setItemGroups([
+                            ActionSheetItemGroup(items: [
+                                ActionSheetTextItem(title: self.presentationData.strings.WebApp_Minimized_CloseAllTitle),
+                                ActionSheetButtonItem(title: self.presentationData.strings.WebApp_Minimized_CloseAll(Int32(self.items.count)), color: .destructive, action: { [weak self, weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    
+                                    self?.navigationController?.dismissMinimizedControllers(animated: true)
+                                })
+                            ]),
+                            ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])
+                        ])
+                        self.navigationController?.presentOverlay(controller: actionSheet, inGlobal: false, blockInteraction: false)
+                    } else if let item = self.items.first {
+                        if !item.controller.shouldDismissImmediately() {
+                            let actionSheet = ActionSheetController(presentationData: self.presentationData)
+                            actionSheet.setItemGroups([
+                                ActionSheetItemGroup(items: [
+                                    ActionSheetTextItem(title: self.presentationData.strings.WebApp_CloseConfirmation),
+                                    ActionSheetButtonItem(title: self.presentationData.strings.WebApp_CloseAnyway, color: .destructive, action: { [weak self, weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                        
+                                        self?.navigationController?.dismissMinimizedControllers(animated: true)
+                                    })
+                                ]),
+                                ActionSheetItemGroup(items: [
+                                    ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                    })
+                                ])
+                            ])
+                            self.navigationController?.presentOverlay(controller: actionSheet, inGlobal: false, blockInteraction: false)
+                        } else {
+                            self.navigationController?.dismissMinimizedControllers(animated: true)
+                        }
+                    }
                 }
             }
             itemNode.tapped = { [weak self, weak itemNode] in

@@ -184,6 +184,7 @@ public class WebAppCancelButtonNode: ASDisplayNode {
 public struct WebAppParameters {
     public enum Source {
         case generic
+        case button
         case menu
         case attachMenu
         case inline
@@ -1211,6 +1212,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
 
                         self.openBotSettings()
                     }
+                case "web_app_setup_swipe_behavior":
+                    if let json = json, let isPanGestureEnabled = json["allow_vertical_swipe"] as? Bool {
+                        self.controller?._isPanGestureEnabled = isPanGestureEnabled
+                    }
                 default:
                     break
             }
@@ -1949,7 +1954,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         switch self.source {
         case .generic, .settings:
             completion()
-        case .inline, .attachMenu, .menu, .simple:
+        case .button, .inline, .attachMenu, .menu, .simple:
             let _ = (self.context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)
             )
@@ -2179,8 +2184,26 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
     }
     
-    public func shouldDismissImmediately() -> Bool {
+    public var isMinimizable: Bool {
         return true
+    }
+    
+    public func shouldDismissImmediately() -> Bool {
+        if self.controllerNode.needDismissConfirmation {
+            return false
+        } else {
+            return true
+        }
+    }
+    
+    fileprivate var _isPanGestureEnabled = true
+    public var isInnerPanGestureEnabled: (() -> Bool)? {
+        return { [weak self] in
+            guard let self else {
+                return true
+            }
+            return self._isPanGestureEnabled
+        }
     }
     
     fileprivate var canMinimize: Bool {
@@ -2190,25 +2213,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
 
 final class WebAppPickerContext: AttachmentMediaPickerContext {
     private weak var controller: WebAppController?
-    
-    var selectionCount: Signal<Int, NoError> {
-        return .single(0)
-    }
-    
-    var caption: Signal<NSAttributedString?, NoError> {
-        return .single(nil)
-    }
-    
-    var hasCaption: Bool {
-        return false
-    }
-    
-    var captionIsAboveMedia: Signal<Bool, NoError> {
-        return .single(false)
-    }
-    
-    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
-    }
     
     public var loadingProgress: Signal<CGFloat?, NoError> {
         return self.controller?.controllerNode.loadingProgressPromise.get() ?? .single(nil)
@@ -2220,15 +2224,6 @@ final class WebAppPickerContext: AttachmentMediaPickerContext {
         
     init(controller: WebAppController) {
         self.controller = controller
-    }
-    
-    func setCaption(_ caption: NSAttributedString) {
-    }
-    
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?) {
-    }
-    
-    func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?) {
     }
     
     func mainButtonAction() {

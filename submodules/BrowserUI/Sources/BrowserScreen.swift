@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 import Display
+import TelegramCore
 import TelegramPresentationData
 import ComponentFlow
 import ViewControllerComponent
@@ -14,6 +15,7 @@ import TelegramUIPreferences
 import OpenInExternalAppUI
 import MultilineTextComponent
 import MinimizedContainer
+import InstantPageUI
 
 private let settingsTag = GenericComponentViewTag()
 
@@ -72,8 +74,8 @@ private final class BrowserScreenComponent: CombinedComponent {
             let performAction = context.component.performAction
                         
             let navigationContent: AnyComponentWithIdentity<Empty>?
-            let navigationLeftItems: [AnyComponentWithIdentity<Empty>]
-            let navigationRightItems: [AnyComponentWithIdentity<Empty>]
+            var navigationLeftItems: [AnyComponentWithIdentity<Empty>]
+            var navigationRightItems: [AnyComponentWithIdentity<Empty>]
             if context.component.presentationState.isSearching {
                 navigationContent = AnyComponentWithIdentity(
                     id: "search",
@@ -114,23 +116,6 @@ private final class BrowserScreenComponent: CombinedComponent {
                 let isLoading = (context.component.contentState?.estimatedProgress ?? 1.0) < 1.0
                 navigationRightItems = [
                     AnyComponentWithIdentity(
-                        id: isLoading ? "stop" : "reload",
-                        component: AnyComponent(
-                            ReferenceButtonComponent(
-                                content: AnyComponent(
-                                    BundleIconComponent(
-                                        name: isLoading ? "Instant View/CloseIcon" : "Chat/Context Menu/Reload",
-                                        tintColor: environment.theme.rootController.navigationBar.primaryTextColor
-                                    )
-                                ),
-                                tag: settingsTag,
-                                action: {
-                                    performAction.invoke(isLoading ? .stop : .reload)
-                                }
-                            )
-                        )
-                    ),
-                    AnyComponentWithIdentity(
                         id: "settings",
                         component: AnyComponent(
                             ReferenceButtonComponent(
@@ -148,6 +133,28 @@ private final class BrowserScreenComponent: CombinedComponent {
                         )
                     )
                 ]
+                if case .webPage = context.component.contentState?.contentType {
+                    navigationRightItems.insert(
+                        AnyComponentWithIdentity(
+                            id: isLoading ? "stop" : "reload",
+                            component: AnyComponent(
+                                ReferenceButtonComponent(
+                                    content: AnyComponent(
+                                        BundleIconComponent(
+                                            name: isLoading ? "Instant View/CloseIcon" : "Chat/Context Menu/Reload",
+                                            tintColor: environment.theme.rootController.navigationBar.primaryTextColor
+                                        )
+                                    ),
+                                    tag: settingsTag,
+                                    action: {
+                                        performAction.invoke(isLoading ? .stop : .reload)
+                                    }
+                                )
+                            )
+                        ),
+                        at: 0
+                    )
+                }
             }
             
             let collapseFraction = context.component.presentationState.isSearching ? 0.0 : context.component.panelCollapseFraction
@@ -303,6 +310,8 @@ public class BrowserScreen: ViewController, MinimizableController {
             switch controller.subject {
             case let .webPage(url):
                 content = BrowserWebContent(context: controller.context, url: url)
+            case let .instantPage(webPage, sourceLocation):
+                content = BrowserInstantPageContent(context: controller.context, webPage: webPage, url: webPage.content.url ?? "", sourceLocation: sourceLocation)
             }
             
             self.content = content
@@ -717,6 +726,7 @@ public class BrowserScreen: ViewController, MinimizableController {
     
     public enum Subject {
         case webPage(url: String)
+        case instantPage(webPage: TelegramMediaWebpage, sourceLocation: InstantPageSourceLocation)
     }
     
     private let context: AccountContext
@@ -754,6 +764,7 @@ public class BrowserScreen: ViewController, MinimizableController {
     }
     
     public var isMinimized = false
+    public var isMinimizable = true
 }
 
 private final class BrowserReferenceContentSource: ContextReferenceContentSource {

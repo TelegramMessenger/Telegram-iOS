@@ -110,7 +110,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         
         return { context in
             var availableWidth = context.availableSize.width
-            let sideInset: CGFloat = 11.0 + context.component.sideInset
+            let sideInset: CGFloat = 16.0 + context.component.sideInset
             
             let collapsedHeight: CGFloat = 24.0
             let expandedHeight = context.component.height
@@ -202,8 +202,8 @@ final class BrowserNavigationBarComponent: CombinedComponent {
                 centerLeftInset += item.size.width + 8.0
             }
     
-            var centerRightInset = sideInset
-            var rightItemX = context.availableSize.width - sideInset
+            var centerRightInset = sideInset - 5.0
+            var rightItemX = context.availableSize.width - (sideInset - 5.0)
             for item in rightItemList.reversed() {
                 context.add(item
                     .position(CGPoint(x: rightItemX - item.size.width / 2.0 + (item.size.width / 2.0 * 0.35 * context.component.collapseFraction), y: context.component.topInset + contentHeight / 2.0))
