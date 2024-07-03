@@ -455,13 +455,13 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         case .changed:
             guard let _ = self.dismissingItemId else { return }
             
-            var delta = gestureRecognizer.translation(in: scrollView)
-            delta.y = 0
+            var translation = gestureRecognizer.translation(in: scrollView)
+            translation.y = 0
             
             if let offset = self.dismissingItemOffset {
-                self.dismissingItemOffset = offset + delta.x
+                self.dismissingItemOffset = offset + translation.x
             } else {
-                self.dismissingItemOffset = delta.x
+                self.dismissingItemOffset = translation.x
             }
             
             gestureRecognizer.setTranslation(.zero, in: scrollView)
@@ -473,17 +473,35 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 if let offset = self.dismissingItemOffset {
                     let velocity = gestureRecognizer.velocity(in: self.view)
                     if offset < -self.frame.width / 3.0 || velocity.x < -300.0 {
-                        self.currentTransition = .dismiss(itemId: itemId)
-                        
-                        self.items.removeAll(where: { $0.id == itemId })
-                        if self.items.count == 1 {
-                            self.isExpanded = false
-                            self.willMaximize?()
-                            needsLayout = false
+                        let proceed = {
+                            self.currentTransition = .dismiss(itemId: itemId)
+                            
+                            self.items.removeAll(where: { $0.id == itemId })
+                            if self.items.count == 1 {
+                                self.isExpanded = false
+                                self.willMaximize?()
+                                needsLayout = false
+                            }
                         }
+                        if let item = self.items.first(where: { $0.id == itemId }), !item.controller.shouldDismissImmediately() {
+                            self.displayDismissConfirmation(completion: { commit in
+                                self.dismissingItemOffset = nil
+                                self.dismissingItemId = nil
+                                if commit {
+                                    proceed()
+                                } else {
+                                    self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
+                                }
+                            })
+                        } else {
+                            proceed()
+                            self.dismissingItemOffset = nil
+                            self.dismissingItemId = nil
+                        }
+                    } else {
+                        self.dismissingItemOffset = nil
+                        self.dismissingItemId = nil
                     }
-                    self.dismissingItemOffset = nil
-                    self.dismissingItemId = nil
                 }
             }
             if needsLayout {
@@ -613,6 +631,26 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         }
     }
     
+    private func displayDismissConfirmation(completion: @escaping (Bool) -> Void) {
+        let actionSheet = ActionSheetController(presentationData: self.presentationData)
+        actionSheet.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: self.presentationData.strings.WebApp_CloseConfirmation),
+                ActionSheetButtonItem(title: self.presentationData.strings.WebApp_CloseAnyway, color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    completion(true)
+                })
+            ]),
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    completion(false)
+                })
+            ])
+        ])
+        self.navigationController?.presentOverlay(controller: actionSheet, inGlobal: false, blockInteraction: false)
+    }
+    
     private func requestUpdate(transition: ContainedViewLayoutTransition, completion: @escaping (Transition) -> Void = { _ in }) {
         guard let layout = self.validLayout else {
             return
@@ -720,23 +758,11 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                         }
                     }
                     if let item = itemNode?.item, !item.controller.shouldDismissImmediately() {
-                        let actionSheet = ActionSheetController(presentationData: self.presentationData)
-                        actionSheet.setItemGroups([
-                            ActionSheetItemGroup(items: [
-                                ActionSheetTextItem(title: self.presentationData.strings.WebApp_CloseConfirmation),
-                                ActionSheetButtonItem(title: self.presentationData.strings.WebApp_CloseAnyway, color: .destructive, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                    
-                                    proceed()
-                                })
-                            ]),
-                            ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                })
-                            ])
-                        ])
-                        self.navigationController?.presentOverlay(controller: actionSheet, inGlobal: false, blockInteraction: false)
+                        self.displayDismissConfirmation(completion: { commit in
+                            if commit {
+                                proceed()
+                            }
+                        })
                     } else {
                         proceed()
                     }
@@ -761,23 +787,11 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                         self.navigationController?.presentOverlay(controller: actionSheet, inGlobal: false, blockInteraction: false)
                     } else if let item = self.items.first {
                         if !item.controller.shouldDismissImmediately() {
-                            let actionSheet = ActionSheetController(presentationData: self.presentationData)
-                            actionSheet.setItemGroups([
-                                ActionSheetItemGroup(items: [
-                                    ActionSheetTextItem(title: self.presentationData.strings.WebApp_CloseConfirmation),
-                                    ActionSheetButtonItem(title: self.presentationData.strings.WebApp_CloseAnyway, color: .destructive, action: { [weak self, weak actionSheet] in
-                                        actionSheet?.dismissAnimated()
-                                        
-                                        self?.navigationController?.dismissMinimizedControllers(animated: true)
-                                    })
-                                ]),
-                                ActionSheetItemGroup(items: [
-                                    ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                        actionSheet?.dismissAnimated()
-                                    })
-                                ])
-                            ])
-                            self.navigationController?.presentOverlay(controller: actionSheet, inGlobal: false, blockInteraction: false)
+                            self.displayDismissConfirmation(completion: { [weak self] commit in
+                                if commit {
+                                    self?.navigationController?.dismissMinimizedControllers(animated: true)
+                                }
+                            })
                         } else {
                             self.navigationController?.dismissMinimizedControllers(animated: true)
                         }
