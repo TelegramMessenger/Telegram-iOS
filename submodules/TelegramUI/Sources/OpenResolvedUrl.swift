@@ -207,7 +207,7 @@ func openResolvedUrlImpl(
             dismissInput()
             navigationController?.pushViewController(controller)
         case let .channelMessage(peer, messageId, timecode):
-            openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: timecode), peekData: nil))
+            openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: timecode, setupReply: false), peekData: nil))
         case let .replyThreadMessage(replyThreadMessage, messageId):
             if let navigationController = navigationController, let effectiveMessageId = replyThreadMessage.effectiveMessageId {
                 let _ = ChatControllerImpl.openMessageReplies(context: context, navigationController: navigationController, present: { c, a in
@@ -1076,7 +1076,7 @@ func openResolvedUrlImpl(
                                     guard let peer else {
                                         return
                                     }
-                                    openPeer(peer, .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), peekData: nil))
+                                    openPeer(peer, .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), peekData: nil))
                                     if case let .chat(peerId, _, _) = urlContext, peerId == messageId.peerId {
                                         dismissImpl?()
                                     }

@@ -532,59 +532,78 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
 
     private func contextMenuMainItems() -> Signal<[ContextMenuItem], NoError> {
-        var items: [ContextMenuItem] = []
-        
+        let peer: Signal<EnginePeer?, NoError>
         if let message = self.message {
-            let context = self.context
-            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
-                
-                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId))
-                         |> deliverOnMainQueue).start(next: { [weak self] peer in
-                    guard let strongSelf = self, let peer = peer else {
-                        return
-                    }
-                    if let navigationController = strongSelf.baseNavigationController() {
-                        strongSelf.beginCustomDismiss(true)
+            peer = self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId))
+        } else {
+            peer = .single(nil)
+        }
+    
+        let context = self.context
+        return peer
+        |> map { [weak self] peer -> [ContextMenuItem] in
+            guard let self else {
+                return []
+            }
+            var items: [ContextMenuItem] = []
+            if let message = self.message {
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
+                    if let self, let peer, let navigationController = self.baseNavigationController() {
+                        self.beginCustomDismiss(true)
                         
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil)))
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false)))
                         
                         Queue.mainQueue().after(0.3) {
-                            strongSelf.completeCustomDismiss()
+                            self.completeCustomDismiss()
                         }
                     }
                     f(.default)
-                })
-            })))
+                })))
+                
+                if !message.isCopyProtected() && !self.peerIsCopyProtected && message.paidContent == nil, let media = self.contextAndMedia?.1 {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Gallery_SaveImage, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
+                        f(.default)
+                        
+                        let _ = (SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: media)
+                        |> deliverOnMainQueue).start(completed: { [weak self] in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            guard let controller = strongSelf.galleryController() else {
+                                return
+                            }
+                            controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: strongSelf.presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                        })
+                    })))
+                }
+            }
             
-            if !message.isCopyProtected() && !self.peerIsCopyProtected && message.paidContent == nil, let media = self.contextAndMedia?.1 {
-                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Gallery_SaveImage, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
+            if let peer, let message = self.message, canSendMessagesToPeer(peer._asPeer()) {
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuReply, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reply"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
+                    if let self, let navigationController = self.baseNavigationController() {
+                        self.beginCustomDismiss(true)
+                        
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: true)))
+                        
+                        Queue.mainQueue().after(0.3) {
+                            self.completeCustomDismiss()
+                        }
+                    }
                     f(.default)
-                    
-                    let _ = (SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: media)
-                    |> deliverOnMainQueue).start(completed: { [weak self] in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        guard let controller = strongSelf.galleryController() else {
-                            return
-                        }
-                        controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: strongSelf.presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-                    })
                 })))
             }
-        }
-        
-        if self.canDelete() {
-            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] _, f in
-                f(.default)
+            
+            if self.canDelete() {
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] _, f in
+                    f(.default)
 
-                if let strongSelf = self {
-                    strongSelf.footerContentNode.deleteButtonPressed()
-                }
-            })))
+                    if let strongSelf = self {
+                        strongSelf.footerContentNode.deleteButtonPressed()
+                    }
+                })))
+            }
+            return items
         }
-
-        return .single(items)
     }
     
     private func openMoreMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {

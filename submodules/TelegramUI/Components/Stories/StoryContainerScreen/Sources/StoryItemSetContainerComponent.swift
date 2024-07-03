@@ -3388,7 +3388,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 guard let self else {
                                     return
                                 }
-                                self.navigateToPeer(peer: peer, chat: true, subject: .message(id: .id(messageId), highlight: nil, timecode: nil))
+                                self.navigateToPeer(peer: peer, chat: true, subject: .message(id: .id(messageId), highlight: nil, timecode: nil, setupReply: false))
                             },
                             peerContextAction: { [weak self] peer, sourceView, gesture in
                                 guard let self, let component = self.component else {
@@ -4644,7 +4644,7 @@ public final class StoryItemSetContainerComponent: Component {
                                                 presentationData: presentationData,
                                                 content: .sticker(context: context, file: animation, loop: false, title: nil, text: component.strings.Story_ToastReactionSent, undoText: component.strings.Story_ToastViewInChat, customAction: { [weak self] in
                                                     if let messageId = messageIds.first, let self {
-                                                        self.navigateToPeer(peer: peer, chat: true, subject: messageId.flatMap { .message(id: .id($0), highlight: nil, timecode: nil) })
+                                                        self.navigateToPeer(peer: peer, chat: true, subject: messageId.flatMap { .message(id: .id($0), highlight: nil, timecode: nil, setupReply: false) })
                                                     }
                                                 }),
                                                 elevatedLayout: false,

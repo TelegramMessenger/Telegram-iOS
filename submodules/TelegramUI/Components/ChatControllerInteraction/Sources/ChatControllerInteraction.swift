@@ -98,12 +98,14 @@ public struct NavigateToMessageParams {
     public var quote: Quote?
     public var progress: Promise<Bool>?
     public var forceNew: Bool
+    public var setupReply: Bool
     
-    public init(timestamp: Double?, quote: Quote?, progress: Promise<Bool>? = nil, forceNew: Bool = false) {
+    public init(timestamp: Double?, quote: Quote?, progress: Promise<Bool>? = nil, forceNew: Bool = false, setupReply: Bool = false) {
         self.timestamp = timestamp
         self.quote = quote
         self.progress = progress
         self.forceNew = forceNew
+        self.setupReply = setupReply
     }
 }
 

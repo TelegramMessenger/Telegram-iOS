@@ -147,7 +147,7 @@ extension ChatControllerImpl {
                 } else {
                     navigateToLocation = .peer(peer)
                 }
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: navigateToLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), keepStack: .always))
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: navigateToLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), keepStack: .always))
                 
                 completion?()
             })
@@ -177,7 +177,7 @@ extension ChatControllerImpl {
                     }
                     
                     let context = self.context
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: chatLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil), keepStack: .always, chatListCompletion: { chatListController in
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: chatLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil, setupReply: false), keepStack: .always, chatListCompletion: { chatListController in
                         if displayMessageNotFoundToast {
                             let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
                             chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Conversation_MessageDoesntExist, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
@@ -214,11 +214,13 @@ extension ChatControllerImpl {
                     }
                     
                     var quote: (string: String, offset: Int?)?
+                    var setupReply = false
                     if case let .id(_, params) = messageLocation {
                         quote = params.quote.flatMap { quote in (string: quote.string, offset: quote.offset) }
+                        setupReply = params.setupReply
                     }
-                    
-                    self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: message.index, animated: animated, quote: quote, scrollPosition: scrollPosition)
+
+                    self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: message.index, animated: animated, quote: quote, scrollPosition: scrollPosition, setupReply: setupReply)
                     
                     if delayCompletion {
                         Queue.mainQueue().after(0.25, {
@@ -236,12 +238,14 @@ extension ChatControllerImpl {
                 } else if case let .index(index) = messageLocation, index.id.id == 0, index.timestamp > 0, case .scheduledMessages = self.presentationInterfaceState.subject {
                     self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: index, animated: animated, scrollPosition: scrollPosition)
                 } else {
+                    var setupReply = false
                     var quote: (string: String, offset: Int?)?
                     if case let .id(messageId, params) = messageLocation {
                         if params.timestamp != nil {
                             self.scheduledScrollToMessageId = (messageId, params)
                         }
                         quote = params.quote.flatMap { ($0.string, $0.offset) }
+                        setupReply = params.setupReply
                     }
                     var progress: Promise<Bool>?
                     if case let .id(_, params) = messageLocation {
@@ -267,7 +271,7 @@ extension ChatControllerImpl {
                         }
                     }
                     var historyView: Signal<ChatHistoryViewUpdate, NoError>
-                    historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: nil), count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tag: nil, additionalData: [])
+                    historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: nil), count: 50, highlight: true, setupReply: setupReply), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tag: nil, additionalData: [])
                     
                     var signal: Signal<(MessageIndex?, Bool), NoError>
                     signal = historyView
@@ -338,7 +342,7 @@ extension ChatControllerImpl {
                     }
                     |> deliverOnMainQueue).startStrict(next: { [weak self] index in
                         if let strongSelf = self, let index = index.0 {
-                            strongSelf.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: index, animated: animated, quote: quote, scrollPosition: scrollPosition)
+                            strongSelf.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: index, animated: animated, quote: quote, scrollPosition: scrollPosition, setupReply: setupReply)
                         } else if index.1 {
                             if !progressStarted {
                                 progressStarted = true
@@ -380,11 +384,13 @@ extension ChatControllerImpl {
                 self.loadingMessage.set(.single(statusSubject) |> delay(0.1, queue: .mainQueue()))
                 
                 var quote: ChatControllerSubject.MessageHighlight.Quote?
+                var setupReply = false
                 if case let .id(_, params) = messageLocation {
                     quote = params.quote.flatMap { quote in ChatControllerSubject.MessageHighlight.Quote(string: quote.string, offset: quote.offset) }
+                    setupReply = params.setupReply
                 }
                 
-                let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: quote.flatMap { quote in MessageHistoryInitialSearchSubject.Quote(string: quote.string, offset: quote.offset) }), count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tag: nil, additionalData: [])
+                let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: quote.flatMap { quote in MessageHistoryInitialSearchSubject.Quote(string: quote.string, offset: quote.offset) }), count: 50, highlight: true, setupReply: setupReply), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tag: nil, additionalData: [])
                 var signal: Signal<MessageIndex?, NoError>
                 signal = historyView
                 |> mapToSignal { historyView -> Signal<MessageIndex?, NoError> in
@@ -416,11 +422,13 @@ extension ChatControllerImpl {
                                 
                                 if let navigationController = strongSelf.effectiveNavigationController {
                                     var quote: ChatControllerSubject.MessageHighlight.Quote?
+                                    var setupReply = false
                                     if case let .id(_, params) = messageLocation {
                                         quote = params.quote.flatMap { quote in ChatControllerSubject.MessageHighlight.Quote(string: quote.string, offset: quote.offset) }
+                                        setupReply = params.setupReply
                                     }
                                     
-                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil) }, keepStack: .always))
+                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil, setupReply: setupReply) }, keepStack: .always))
                                 }
                             })
                             completion?()
@@ -438,7 +446,7 @@ extension ChatControllerImpl {
                         return
                     }
                     if let navigationController = self.effectiveNavigationController {
-                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil) }))
+                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false) }))
                     }
                     completion?()
                 })

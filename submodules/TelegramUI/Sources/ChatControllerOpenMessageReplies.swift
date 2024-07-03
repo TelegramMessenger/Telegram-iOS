@@ -81,9 +81,9 @@ extension ChatControllerImpl {
                 
                 let subject: ChatControllerSubject?
                 if let atMessageId = atMessageId {
-                    subject = .message(id: .id(atMessageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil)
+                    subject = .message(id: .id(atMessageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false)
                 } else if let index = result.scrollToLowerBoundMessage {
-                    subject = .message(id: .id(index.id), highlight: nil, timecode: nil)
+                    subject = .message(id: .id(index.id), highlight: nil, timecode: nil, setupReply: false)
                 } else {
                     subject = nil
                 }

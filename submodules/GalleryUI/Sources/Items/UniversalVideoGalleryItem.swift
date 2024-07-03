@@ -2509,11 +2509,17 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         guard let videoNode = self.videoNode, let item = self.item else {
             return .single([])
         }
+        
+        let peer: Signal<EnginePeer?, NoError>
+        if let (message, _, _) = self.contentInfo() {
+            peer = self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId))
+        } else {
+            peer = .single(nil)
+        }
 
-        return videoNode.status
+        return combineLatest(queue: Queue.mainQueue(), videoNode.status, peer)
         |> take(1)
-        |> deliverOnMainQueue
-        |> map { [weak self] status -> [ContextMenuItem] in
+        |> map { [weak self] status, peer -> [ContextMenuItem] in
             guard let status = status, let strongSelf = self else {
                 return []
             }
@@ -2552,23 +2558,19 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let (message, _, _) = strongSelf.contentInfo() {
                 let context = strongSelf.context
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
-                    
-                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId))
-                    |> deliverOnMainQueue).start(next: { [weak self] peer in
-                        guard let strongSelf = self, let peer = peer else {
-                            return
+                    guard let strongSelf = self, let peer = peer else {
+                        return
+                    }
+                    if let navigationController = strongSelf.baseNavigationController() {
+                        strongSelf.beginCustomDismiss(true)
+                        
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false)))
+                        
+                        Queue.mainQueue().after(0.3) {
+                            strongSelf.completeCustomDismiss()
                         }
-                        if let navigationController = strongSelf.baseNavigationController() {
-                            strongSelf.beginCustomDismiss(true)
-                            
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil)))
-                            
-                            Queue.mainQueue().after(0.3) {
-                                strongSelf.completeCustomDismiss()
-                            }
-                        }
-                        f(.default)
-                    })
+                    }
+                    f(.default)
                 })))
             }
 
@@ -2637,6 +2639,22 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 })))
             }
+            
+            if let peer, let (message, _, _) = strongSelf.contentInfo(), canSendMessagesToPeer(peer._asPeer()) {
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuReply, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reply"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
+                    if let self, let navigationController = self.baseNavigationController() {
+                        self.beginCustomDismiss(true)
+                        
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: true)))
+                        
+                        Queue.mainQueue().after(0.3) {
+                            self.completeCustomDismiss()
+                        }
+                    }
+                    f(.default)
+                })))
+            }
+            
             if strongSelf.canDelete() {
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                     f(.default)
