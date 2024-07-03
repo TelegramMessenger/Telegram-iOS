@@ -973,22 +973,22 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     let openInOptions = availableOpenInOptions(context: self.context, item: .url(url: url))
                                     var matchingOption: OpenInOption?
                                     for option in openInOptions {
-                                        if case let .other(identifier, _, _, _) = option.application {
+                                        if case .other = option.application {
                                             switch tryBrowser {
                                             case "safari":
                                                 break
                                             case "chrome":
-                                                if identifier == "chrome" {
+                                                if option.identifier == "chrome" {
                                                     matchingOption = option
                                                     break
                                                 }
                                             case "firefox":
-                                                if ["firefox", "firefoxFocus"].contains(identifier) {
+                                                if ["firefox", "firefoxFocus"].contains(option.identifier) {
                                                     matchingOption = option
                                                     break
                                                 }
                                             case "opera":
-                                                if ["operaMini", "operaTouch"].contains(identifier) {
+                                                if ["operaMini", "operaTouch"].contains(option.identifier) {
                                                     matchingOption = option
                                                     break
                                                 }
