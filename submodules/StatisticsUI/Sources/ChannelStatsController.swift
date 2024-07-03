@@ -1531,9 +1531,10 @@ private func monetizationEntries(
     canViewStarsRevenue: Bool
 ) -> [StatsEntry] {
     var entries: [StatsEntry] = []
-    entries.append(.adsHeader(presentationData.theme, presentationData.strings.Monetization_Header))
     
     if canViewRevenue {
+        entries.append(.adsHeader(presentationData.theme, presentationData.strings.Monetization_Header))
+        
         if !data.topHoursGraph.isEmpty {
             entries.append(.adsImpressionsTitle(presentationData.theme, presentationData.strings.Monetization_ImpressionsTitle))
             entries.append(.adsImpressionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.topHoursGraph, .hourlyStep))
