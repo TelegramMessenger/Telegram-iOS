@@ -26,10 +26,10 @@ final class ScrollViewImpl: UIScrollView {
 public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     final class Item {
         let id: AnyHashable
-        let controller: ViewController
+        let controller: MinimizableController
         let beforeMaximize: (NavigationController, @escaping () -> Void) -> Void
         
-        init(id: AnyHashable, controller: ViewController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void) {
+        init(id: AnyHashable, controller: MinimizableController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void) {
             self.id = id
             self.controller = controller
             self.beforeMaximize = beforeMaximize
@@ -112,7 +112,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             
             Queue.mainQueue().after(0.45) {
                 self.isReady = true
-                if !self.isDismissed, let snapshotView = self.controllerView?.snapshotView(afterScreenUpdates: false) {
+                if !self.isDismissed, let snapshotView = self.item.controller.makeContentSnapshotView() {
                     self.containerNode.view.addSubview(self.snapshotContainerView)
                     self.snapshotView = snapshotView
                     self.controllerView?.removeFromSuperview()
@@ -141,7 +141,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             self.headerNode.controllers = [item.controller]
         }
         
-        func setTitleControllers(_ controllers: [ViewController]?) {
+        func setTitleControllers(_ controllers: [MinimizableController]?) {
             self.headerNode.controllers = controllers ?? [self.item.controller]
         }
         
@@ -293,6 +293,9 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     public private(set) var isExpanded: Bool = false
     public var willMaximize: (() -> Void)?
     
+    public private(set) var statusBarStyle: StatusBarStyle = .White
+    public var statusBarStyleUpdated: (() -> Void)?
+    
     private let bottomEdgeView: UIImageView
     private let blurView: BlurView
     private let dimView: UIView
@@ -310,7 +313,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     private var isApplyingTransition = false
     private var validLayout: ContainerViewLayout?
     
-    public var controllers: [ViewController] {
+    public var controllers: [MinimizableController] {
         return self.items.map { $0.controller }
     }
     
@@ -452,13 +455,13 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         case .changed:
             guard let _ = self.dismissingItemId else { return }
             
-            var delta = gestureRecognizer.translation(in: scrollView)
-            delta.y = 0
+            var translation = gestureRecognizer.translation(in: scrollView)
+            translation.y = 0
             
             if let offset = self.dismissingItemOffset {
-                self.dismissingItemOffset = offset + delta.x
+                self.dismissingItemOffset = offset + translation.x
             } else {
-                self.dismissingItemOffset = delta.x
+                self.dismissingItemOffset = translation.x
             }
             
             gestureRecognizer.setTranslation(.zero, in: scrollView)
@@ -470,17 +473,35 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 if let offset = self.dismissingItemOffset {
                     let velocity = gestureRecognizer.velocity(in: self.view)
                     if offset < -self.frame.width / 3.0 || velocity.x < -300.0 {
-                        self.currentTransition = .dismiss(itemId: itemId)
-                        
-                        self.items.removeAll(where: { $0.id == itemId })
-                        if self.items.count == 1 {
-                            self.isExpanded = false
-                            self.willMaximize?()
-                            needsLayout = false
+                        let proceed = {
+                            self.currentTransition = .dismiss(itemId: itemId)
+                            
+                            self.items.removeAll(where: { $0.id == itemId })
+                            if self.items.count == 1 {
+                                self.isExpanded = false
+                                self.willMaximize?()
+                                needsLayout = false
+                            }
                         }
+                        if let item = self.items.first(where: { $0.id == itemId }), !item.controller.shouldDismissImmediately() {
+                            self.displayDismissConfirmation(completion: { commit in
+                                self.dismissingItemOffset = nil
+                                self.dismissingItemId = nil
+                                if commit {
+                                    proceed()
+                                } else {
+                                    self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
+                                }
+                            })
+                        } else {
+                            proceed()
+                            self.dismissingItemOffset = nil
+                            self.dismissingItemId = nil
+                        }
+                    } else {
+                        self.dismissingItemOffset = nil
+                        self.dismissingItemId = nil
                     }
-                    self.dismissingItemOffset = nil
-                    self.dismissingItemId = nil
                 }
             }
             if needsLayout {
@@ -501,7 +522,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         return result
     }
     
-    public func addController(_ viewController: ViewController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, transition: ContainedViewLayoutTransition) {
+    public func addController(_ viewController: MinimizableController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, transition: ContainedViewLayoutTransition) {
         let item = Item(
             id: AnyHashable(Int64.random(in: Int64.min ... Int64.max)),
             controller: viewController,
@@ -534,7 +555,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         }
     }
     
-    public func maximizeController(_ viewController: ViewController, animated: Bool, completion: @escaping (Bool) -> Void) {
+    public func maximizeController(_ viewController: MinimizableController, animated: Bool, completion: @escaping (Bool) -> Void) {
         guard let item = self.items.first(where: { $0.controller === viewController }) else {
             completion(self.items.count == 0)
             return
@@ -608,6 +629,26 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             self.currentTransition = .collapse
             self.requestUpdate(transition: .animated(duration: 0.4, curve: .customSpring(damping: 180.0, initialVelocity: initialVelocity)))
         }
+    }
+    
+    private func displayDismissConfirmation(completion: @escaping (Bool) -> Void) {
+        let actionSheet = ActionSheetController(presentationData: self.presentationData)
+        actionSheet.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: self.presentationData.strings.WebApp_CloseConfirmation),
+                ActionSheetButtonItem(title: self.presentationData.strings.WebApp_CloseAnyway, color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    completion(true)
+                })
+            ]),
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    completion(false)
+                })
+            ])
+        ])
+        self.navigationController?.presentOverlay(controller: actionSheet, inGlobal: false, blockInteraction: false)
     }
     
     private func requestUpdate(transition: ContainedViewLayoutTransition, completion: @escaping (Transition) -> Void = { _ in }) {
@@ -694,35 +735,79 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 self.scrollView.addSubnode(itemNode)
                 self.itemNodes[item.id] = itemNode
             }
-            itemNode.closeTapped = { [weak self] in
+            itemNode.closeTapped = { [weak self, weak itemNode] in
                 guard let self else {
                     return
                 }
                 if self.isExpanded {
-                    var needsLayout = true
-                    self.currentTransition = .dismiss(itemId: item.id)
-                    
-                    self.items.removeAll(where: { $0.id == item.id })
-                    if self.items.count == 1 {
-                        self.isExpanded = false
-                        self.willMaximize?()
-                        needsLayout = false
+                    let proceed = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        var needsLayout = true
+                        self.currentTransition = .dismiss(itemId: item.id)
+                        
+                        self.items.removeAll(where: { $0.id == item.id })
+                        if self.items.count == 1 {
+                            self.isExpanded = false
+                            self.willMaximize?()
+                            needsLayout = false
+                        }
+                        if needsLayout {
+                            self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
+                        }
                     }
-                    if needsLayout {
-                        self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
+                    if let item = itemNode?.item, !item.controller.shouldDismissImmediately() {
+                        self.displayDismissConfirmation(completion: { commit in
+                            if commit {
+                                proceed()
+                            }
+                        })
+                    } else {
+                        proceed()
                     }
                 } else {
-                    self.navigationController?.dismissMinimizedControllers(animated: true)
+                    if self.items.count > 1 {
+                        let actionSheet = ActionSheetController(presentationData: self.presentationData)
+                        actionSheet.setItemGroups([
+                            ActionSheetItemGroup(items: [
+                                ActionSheetTextItem(title: self.presentationData.strings.WebApp_Minimized_CloseAllTitle),
+                                ActionSheetButtonItem(title: self.presentationData.strings.WebApp_Minimized_CloseAll(Int32(self.items.count)), color: .destructive, action: { [weak self, weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    
+                                    self?.navigationController?.dismissMinimizedControllers(animated: true)
+                                })
+                            ]),
+                            ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])
+                        ])
+                        self.navigationController?.presentOverlay(controller: actionSheet, inGlobal: false, blockInteraction: false)
+                    } else if let item = self.items.first {
+                        if !item.controller.shouldDismissImmediately() {
+                            self.displayDismissConfirmation(completion: { [weak self] commit in
+                                if commit {
+                                    self?.navigationController?.dismissMinimizedControllers(animated: true)
+                                }
+                            })
+                        } else {
+                            self.navigationController?.dismissMinimizedControllers(animated: true)
+                        }
+                    }
                 }
             }
-            itemNode.tapped = { [weak self] in
+            itemNode.tapped = { [weak self, weak itemNode] in
                 guard let self else {
                     return
                 }
-                if self.isExpanded {
+                if self.isExpanded, let itemNode {
                     if let navigationController = self.navigationController {
-                        itemNode.item.beforeMaximize(navigationController, { [weak self] in
-                            self?.navigationController?.maximizeViewController(item.controller, animated: true)
+                        itemNode.item.beforeMaximize(navigationController, { [weak self, weak itemNode] in
+                            if let item = itemNode?.item {
+                                self?.navigationController?.maximizeViewController(item.controller, animated: true)
+                            }
                         })
                     }
                 } else {
@@ -844,6 +929,21 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         self.scrollView.passthrough = !self.isExpanded
         self.scrollView.isScrollEnabled = self.isExpanded
         self.expandedTapGestureRecoginzer?.isEnabled = self.isExpanded
+        
+        var resolvedStatusBarStyle: StatusBarStyle = .Ignore
+        if self.isExpanded {
+            if self.scrollView.contentOffset.y > additionalInsetTop + insets.top / 2.0 {
+                resolvedStatusBarStyle = .Hide
+            } else {
+                resolvedStatusBarStyle = .White
+            }
+        }
+        if self.statusBarStyle != resolvedStatusBarStyle {
+            self.statusBarStyle = resolvedStatusBarStyle
+            Queue.mainQueue().justDispatch {
+                self.statusBarStyleUpdated?()
+            }
+        }
         
         if let currentTransition = self.currentTransition {
             self.isApplyingTransition = true

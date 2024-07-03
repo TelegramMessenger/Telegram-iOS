@@ -25,6 +25,7 @@ import QrCodeUI
 import InstantPageUI
 import InstantPageCache
 import LocalAuth
+import OpenInExternalAppUI
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -158,7 +159,7 @@ public class WebAppCancelButtonNode: ASDisplayNode {
         let color = self.color ?? self.theme.rootController.navigationBar.accentTextColor
         
         self.arrowNode.isHidden = state == .cancel
-        self.labelNode.attributedText = NSAttributedString(string: state == .cancel ? self.strings.Common_Cancel : self.strings.Common_Back, font: Font.regular(17.0), textColor: color)
+        self.labelNode.attributedText = NSAttributedString(string: state == .cancel ? self.strings.Common_Close : self.strings.Common_Back, font: Font.regular(17.0), textColor: color)
         
         let labelSize = self.labelNode.updateLayout(CGSize(width: 120.0, height: 56.0))
         
@@ -183,6 +184,7 @@ public class WebAppCancelButtonNode: ASDisplayNode {
 public struct WebAppParameters {
     public enum Source {
         case generic
+        case button
         case menu
         case attachMenu
         case inline
@@ -267,7 +269,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
-            
+    
     fileprivate class Node: ViewControllerTracingNode, WKNavigationDelegate, WKUIDelegate, ASScrollViewDelegate {
         private weak var controller: WebAppController?
         
@@ -941,6 +943,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                         
                         let tryInstantView = json["try_instant_view"] as? Bool ?? false
+                        let tryBrowser = json["try_browser"] as? String
+                        
                         if let lastTouchTimestamp = self.webView?.lastTouchTimestamp, currentTimestamp < lastTouchTimestamp + 10.0 {
                             self.webView?.lastTouchTimestamp = nil
                             if tryInstantView {
@@ -964,6 +968,40 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     }
                                 })
                             } else {
+                                var url = url
+                                if let tryBrowser {
+                                    let openInOptions = availableOpenInOptions(context: self.context, item: .url(url: url))
+                                    var matchingOption: OpenInOption?
+                                    for option in openInOptions {
+                                        if case let .other(identifier, _, _, _) = option.application {
+                                            switch tryBrowser {
+                                            case "safari":
+                                                break
+                                            case "chrome":
+                                                if identifier == "chrome" {
+                                                    matchingOption = option
+                                                    break
+                                                }
+                                            case "firefox":
+                                                if ["firefox", "firefoxFocus"].contains(identifier) {
+                                                    matchingOption = option
+                                                    break
+                                                }
+                                            case "opera":
+                                                if ["operaMini", "operaTouch"].contains(identifier) {
+                                                    matchingOption = option
+                                                    break
+                                                }
+                                            default:
+                                                break
+                                            }
+                                        }
+                                    }
+                                    if let matchingOption, case let .openUrl(newUrl) = matchingOption.action() {
+                                        url = newUrl
+                                    }
+                                }
+
                                 self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: true, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
                             }
                         }
@@ -1173,6 +1211,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         self.webView?.lastTouchTimestamp = nil
 
                         self.openBotSettings()
+                    }
+                case "web_app_setup_swipe_behavior":
+                    if let json = json, let isPanGestureEnabled = json["allow_vertical_swipe"] as? Bool {
+                        self.controller?._isPanGestureEnabled = isPanGestureEnabled
                     }
                 default:
                     break
@@ -1912,7 +1954,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         switch self.source {
         case .generic, .settings:
             completion()
-        case .inline, .attachMenu, .menu, .simple:
+        case .button, .inline, .attachMenu, .menu, .simple:
             let _ = (self.context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)
             )
@@ -1920,9 +1962,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 guard let self, let chatPeer else {
                     return
                 }
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(chatPeer), completion: { _ in
-                    completion()
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(chatPeer), keepStack: .always, completion: { _ in
                 }))
+                completion()
             })
         }
     }
@@ -2134,7 +2176,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
     }
     
-    public override var isMinimized: Bool {
+    public var isMinimized: Bool = false {
         didSet {
             if self.isMinimized != oldValue && self.isMinimized {
                 self.controllerNode.webView?.hideScrollIndicators()
@@ -2142,8 +2184,26 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
     }
     
-    public func shouldDismissImmediately() -> Bool {
+    public var isMinimizable: Bool {
         return true
+    }
+    
+    public func shouldDismissImmediately() -> Bool {
+        if self.controllerNode.needDismissConfirmation {
+            return false
+        } else {
+            return true
+        }
+    }
+    
+    fileprivate var _isPanGestureEnabled = true
+    public var isInnerPanGestureEnabled: (() -> Bool)? {
+        return { [weak self] in
+            guard let self else {
+                return true
+            }
+            return self._isPanGestureEnabled
+        }
     }
     
     fileprivate var canMinimize: Bool {
@@ -2153,25 +2213,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
 
 final class WebAppPickerContext: AttachmentMediaPickerContext {
     private weak var controller: WebAppController?
-    
-    var selectionCount: Signal<Int, NoError> {
-        return .single(0)
-    }
-    
-    var caption: Signal<NSAttributedString?, NoError> {
-        return .single(nil)
-    }
-    
-    var hasCaption: Bool {
-        return false
-    }
-    
-    var captionIsAboveMedia: Signal<Bool, NoError> {
-        return .single(false)
-    }
-    
-    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
-    }
     
     public var loadingProgress: Signal<CGFloat?, NoError> {
         return self.controller?.controllerNode.loadingProgressPromise.get() ?? .single(nil)
@@ -2183,15 +2224,6 @@ final class WebAppPickerContext: AttachmentMediaPickerContext {
         
     init(controller: WebAppController) {
         self.controller = controller
-    }
-    
-    func setCaption(_ caption: NSAttributedString) {
-    }
-    
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?) {
-    }
-    
-    func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?) {
     }
     
     func mainButtonAction() {

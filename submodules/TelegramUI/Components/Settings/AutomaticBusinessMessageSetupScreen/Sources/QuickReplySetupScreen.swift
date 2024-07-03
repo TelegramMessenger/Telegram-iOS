@@ -1317,6 +1317,7 @@ public final class QuickReplySetupScreen: ViewControllerComponentContainer, Atta
     public var isContainerExpanded: () -> Bool = {
         return false
     }
+    public var isMinimized: Bool = false
     public var mediaPickerContext: AttachmentMediaPickerContext?
     
     public init(context: AccountContext, initialData: InitialData, mode: Mode) {

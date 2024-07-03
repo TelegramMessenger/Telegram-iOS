@@ -31,6 +31,7 @@ import StoryContainerScreen
 import ChatMessageNotificationItem
 import PhoneNumberFormat
 import AttachmentUI
+import MinimizedContainer
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -169,9 +170,12 @@ final class AuthorizedApplicationContext {
         self.notificationController = NotificationContainerController(context: context)
         
         self.rootController = TelegramRootController(context: context)
-        self.rootController.minimizedContainer = self.sharedApplicationContext.minimizedContainer
+        self.rootController.minimizedContainer = self.sharedApplicationContext.minimizedContainer[context.account.id]
         self.rootController.minimizedContainerUpdated = { [weak self] minimizedContainer in
-            self?.sharedApplicationContext.minimizedContainer = minimizedContainer
+            guard let self else {
+                return
+            }
+            self.sharedApplicationContext.minimizedContainer[self.context.account.id] = minimizedContainer
         }
         
         self.rootController.globalOverlayControllersUpdated = { [weak self] in
@@ -437,7 +441,9 @@ final class AuthorizedApplicationContext {
                                             return false
                                         }
                                         
-                                        if let topContoller = strongSelf.rootController.topViewController as? AttachmentController {
+                                        if let minimizedContainer = strongSelf.rootController.minimizedContainer, minimizedContainer.isExpanded {
+                                            minimizedContainer.collapse()
+                                        } else if let topContoller = strongSelf.rootController.topViewController as? AttachmentController {
                                             topContoller.minimizeIfNeeded()
                                         }
                                         

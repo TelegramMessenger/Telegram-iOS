@@ -78,7 +78,6 @@ public extension ChatControllerImpl {
             if source == .menu {
                 self.updateChatPresentationInterfaceState(interactive: false) { state in
                     return state.updatedForceInputCommandsHidden(true)
-//                    return state.updatedShowWebView(true).updatedForceInputCommandsHidden(true)
                 }
                 
                 if let navigationController = self.navigationController as? NavigationController, let minimizedContainer = navigationController.minimizedContainer {
@@ -199,7 +198,7 @@ public extension ChatControllerImpl {
                     }
                 }))
             } else {
-                self.messageActionCallbackDisposable.set(((self.context.engine.messages.requestWebView(peerId: peerId, botId: peerId, url: !url.isEmpty ? url : nil, payload: nil, themeParams: generateWebAppThemeParams(self.presentationData.theme), fromMenu: buttonText == "Menu", replyToMessageId: nil, threadId: self.chatLocation.threadId)
+                self.messageActionCallbackDisposable.set(((self.context.engine.messages.requestWebView(peerId: peerId, botId: peerId, url: !url.isEmpty ? url : nil, payload: nil, themeParams: generateWebAppThemeParams(self.presentationData.theme), fromMenu: false, replyToMessageId: nil, threadId: self.chatLocation.threadId)
                 |> afterDisposed {
                     updateProgress()
                 })
@@ -208,7 +207,7 @@ public extension ChatControllerImpl {
                         return
                     }
                     let context = strongSelf.context
-                    let params = WebAppParameters(source: .generic, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, forceHasSettings: false, fullSize: result.flags.contains(.fullSize))
+                    let params = WebAppParameters(source: .button, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, forceHasSettings: false, fullSize: result.flags.contains(.fullSize))
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                         self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
                     }, completion: { [weak self] in

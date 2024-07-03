@@ -5136,43 +5136,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func openPeer(peerId: PeerId, navigation: ChatControllerInteractionNavigateToPeer) {
-        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-        |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
-            guard let self, let peer = peer else {
-                return
-            }
-            
-            switch navigation {
-            case .default:
-                if let navigationController = self.controller?.navigationController as? NavigationController {
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), keepStack: .always))
-                }
-            case let .chat(_, subject, peekData):
-                if let navigationController = self.controller?.navigationController as? NavigationController {
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: subject, keepStack: .always, peekData: peekData))
-                }
-            case .info:
-                if peer.restrictionText(platform: "ios", contentSettings: self.context.currentContentSettings.with { $0 }) == nil {
-                    if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
-                        (self.controller?.navigationController as? NavigationController)?.pushViewController(infoController)
-                    }
-                }
-            case let .withBotStartPayload(startPayload):
-                if let navigationController = self.controller?.navigationController as? NavigationController {
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), botStart: startPayload))
-                }
-            case let .withAttachBot(attachBotStart):
-                if let navigationController = self.controller?.navigationController as? NavigationController {
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), attachBotStart: attachBotStart))
-                }
-            case let .withBotApp(botAppStart):
-                if let navigationController = self.controller?.navigationController as? NavigationController {
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), botAppStart: botAppStart))
-                }
-            }
-        })
+        guard let navigationController = self.controller?.navigationController as? NavigationController else {
+            return
+        }
+        PeerInfoScreenImpl.openPeer(context: self.context, peerId: peerId, navigation: navigation, navigationController: navigationController)
     }
-    
+        
     private func openPeerMention(_ name: String, navigation: ChatControllerInteractionNavigateToPeer = .default) {
         let disposable: MetaDisposable
         if let resolvePeerByNameDisposable = self.resolvePeerByNameDisposable {
@@ -5311,16 +5280,54 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             guard let self else {
                 return
             }
-            
+            let context = self.context
+            let peerId = self.peerId
             let params = WebAppParameters(source: .settings, peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: bot.flags.contains(.hasSettings), fullSize: true)
-            let controller = standaloneWebAppController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, params: params, threadId: nil, openUrl: { [weak self] url, concealed, commit in
-                self?.openUrl(url: url, concealed: concealed, external: false, forceExternal: true, commit: commit)
+            
+            var openUrlImpl: ((String, Bool, @escaping () -> Void) -> Void)?
+            var presentImpl: ((ViewController, Any?) -> Void)?
+            
+            let controller = standaloneWebAppController(context: context, updatedPresentationData: self.controller?.updatedPresentationData, params: params, threadId: nil, openUrl: { url, concealed, commit in
+               openUrlImpl?(url, concealed, commit)
             }, requestSwitchInline: { _, _, _ in
             }, getNavigationController: { [weak self] in
-                return self?.controller?.navigationController as? NavigationController
+                return (self?.controller?.navigationController as? NavigationController) ?? context.sharedContext.mainWindow?.viewController as? NavigationController
             })
             controller.navigationPresentation = .flatModal
             self.controller?.push(controller)
+            
+            openUrlImpl = { [weak self, weak controller] url, concealed, commit in
+                let _ = openUserGeneratedUrl(context: context, peerId: peerId, url: url, concealed: concealed, present: { [weak self] c in
+                    self?.controller?.present(c, in: .window(.root))
+                }, openResolved: { result in
+                    var navigationController: NavigationController?
+                    if let current = self?.controller?.navigationController as? NavigationController {
+                        navigationController = current
+                    } else if let current = controller?.navigationController as? NavigationController {
+                        navigationController = current
+                    }
+                    context.sharedContext.openResolvedUrl(result, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
+                        if let navigationController {
+                            PeerInfoScreenImpl.openPeer(context: context, peerId: peer.id, navigation: navigation, navigationController: navigationController)
+                        }
+                        commit()
+                    }, sendFile: nil,
+                    sendSticker: nil,
+                    sendEmoji: nil,
+                    requestMessageActionUrlAuth: nil,
+                    joinVoiceChat: { peerId, invite, call in
+                        
+                    },
+                    present: { c, a in
+                        presentImpl?(c, a)
+                    }, dismissInput: {
+                        context.sharedContext.mainWindow?.viewController?.view.endEditing(false)
+                    }, contentContext: nil, progress: nil, completion: nil)
+                })
+            }
+            presentImpl = { [weak controller] c, a in
+                controller?.present(c, in: .window(.root), with: a)
+            }
             
             if installed {
                 Queue.mainQueue().after(0.3, {
@@ -12370,6 +12377,33 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             self.loadDisplayNode()
         }
         self.controllerNode.updateProfileVideo(image, asset: asset, adjustments: adjustments, mode: mode)
+    }
+    
+    static func openPeer(context: AccountContext, peerId: PeerId, navigation: ChatControllerInteractionNavigateToPeer, navigationController: NavigationController) {
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        |> deliverOnMainQueue).startStandalone(next: { peer in
+            guard let peer else {
+                return
+            }
+            switch navigation {
+            case .default:
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), keepStack: .always))
+            case let .chat(_, subject, peekData):
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: subject, keepStack: .always, peekData: peekData))
+            case .info:
+                if peer.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) == nil {
+                    if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                        navigationController.pushViewController(infoController)
+                    }
+                }
+            case let .withBotStartPayload(startPayload):
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), botStart: startPayload))
+            case let .withAttachBot(attachBotStart):
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), attachBotStart: attachBotStart))
+            case let .withBotApp(botAppStart):
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), botAppStart: botAppStart))
+            }
+        })
     }
     
     public static func displayChatNavigationMenu(context: AccountContext, chatNavigationStack: [ChatNavigationStackItem], nextFolderId: Int32?, parentController: ViewController, backButtonView: UIView, navigationController: NavigationController, gesture: ContextGesture) {

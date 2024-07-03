@@ -12456,6 +12456,7 @@ Sorry for the inconvenience.";
 "Monetization.StarsProceeds.Available" = "Available Balance";
 "Monetization.StarsProceeds.Current" = "Total Balance";
 "Monetization.StarsProceeds.Total" = "Lifetime Proceeds";
+"Monetization.StarsProceeds.Info" = "Funds from your total balance can be used for ads or withdrawn as rewards 21 days after they are earned.";
 
 "Premium.MessageEffects" = "Message Effects";
 "Premium.MessageEffectsInfo" = "Add over 500 animated effects to private messages.";
@@ -12472,6 +12473,10 @@ Sorry for the inconvenience.";
 "WebApp.MinimizedTitleFormat" = "%1$@ & %2$@";
 "WebApp.MinimizedTitle.Others_1" = "%@ Other";
 "WebApp.MinimizedTitle.Others_any" = "%@ Others";
+
+"WebApp.Minimized.CloseAllTitle" = "Are you sure you want to close all open tabs?";
+"WebApp.Minimized.CloseAll_1" = "Close All %@ Tab";
+"WebApp.Minimized.CloseAll_any" = "Close All %@ Tabs";
 
 "Stars.SendStars.Title" = "Send Stars";
 "Stars.SendStars.AmountTitle" = "ENTER AMOUNT";

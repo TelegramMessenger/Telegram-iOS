@@ -50,11 +50,11 @@ public final class InstantPageScrollableContentNode: ASDisplayNode {
     }
 }
 
-final class InstantPageScrollableNode: ASScrollNode, InstantPageNode {
-    let item: InstantPageScrollableItem
+public final class InstantPageScrollableNode: ASScrollNode, InstantPageNode {
+    public let item: InstantPageScrollableItem
     let contentNode: InstantPageScrollableContentNode
     
-    var contentOffset: CGPoint {
+    public var contentOffset: CGPoint {
         return self.view.contentOffset
     }
     
@@ -90,19 +90,19 @@ final class InstantPageScrollableNode: ASScrollNode, InstantPageNode {
         }
     }
     
-    func updateIsVisible(_ isVisible: Bool) {
+    public func updateIsVisible(_ isVisible: Bool) {
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
     }
     
-    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    public func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return nil
     }
     
-    func updateHiddenMedia(media: InstantPageMedia?) {
+    public func updateHiddenMedia(media: InstantPageMedia?) {
     }
     
-    func update(strings: PresentationStrings, theme: InstantPageTheme) {
+    public func update(strings: PresentationStrings, theme: InstantPageTheme) {
     }
 }

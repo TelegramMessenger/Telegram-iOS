@@ -183,7 +183,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let messageId: EngineMessage.Id?
             let toPeer: EnginePeer?
             let transactionPeer: StarsContext.State.Transaction.Peer?
-            let media: [Media]
+            let media: [AnyMediaReference]
             let photo: TelegramMediaWebFile?
             let isRefund: Bool
             
@@ -264,7 +264,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     toPeer = nil
                 }
                 transactionPeer = transaction.peer
-                media = transaction.media
+                media = transaction.media.map { AnyMediaReference.starsTransaction(transaction: StarsTransactionReference(peerId: parentPeer.id, id: transaction.id, isRefund: transaction.flags.contains(.isRefund)), media: $0) }
                 photo = transaction.photo
                 isRefund = transaction.flags.contains(.isRefund)
             case let .receipt(receipt):
@@ -331,7 +331,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     diameter: 90.0,
                     backgroundColor: theme.actionSheet.opaqueItemBackgroundColor,
                     action: !media.isEmpty ? { transitionNode, addToTransitionSurface in
-                        component.openMedia(media, transitionNode, addToTransitionSurface)
+                        component.openMedia(media.map { $0.media }, transitionNode, addToTransitionSurface)
                     } : nil
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: 200.0),

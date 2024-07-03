@@ -188,7 +188,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     private let bannedSendPhotos: (Int32, Bool)?
     private let bannedSendVideos: (Int32, Bool)?
     private let canBoostToUnrestrict: Bool
-    private let paidMediaAllowed: Bool
+    fileprivate let paidMediaAllowed: Bool
     private let subject: Subject
     private let saveEditedPhotos: Bool
     
@@ -222,6 +222,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
+    public var isMinimized: Bool = false
     
     public var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)? = nil
     
@@ -2206,7 +2207,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         })
     }
     
-    private var selectionCount: Int32 = 0
+    fileprivate var selectionCount: Int32 = 0
     fileprivate func updateSelectionState(count: Int32) {
         self.selectionCount = count
     
@@ -2554,7 +2555,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                                 titleLayout = .secondLineWithValue(strings.Attachment_Paid_EditPrice_Stars(Int32(price)))
                             } else {
                                 title = strings.Attachment_Paid_Create
-                                titleLayout = .singleLine
+                                titleLayout = .twoLinesMax
                             }
                             items.append(.action(ContextMenuActionItem(text: title, textLayout: titleLayout, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Paid"), color: theme.contextMenu.primaryColor)
@@ -2664,6 +2665,45 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
             return false
         }
         return isForcedCaption
+    }
+    
+    var canMakePaidContent: Bool {
+        guard let controller = self.controller else {
+            return false
+        }
+        var isPaidAvailable = false
+        if controller.paidMediaAllowed && controller.selectionCount <= 10 {
+            isPaidAvailable = true
+        }
+        return isPaidAvailable
+    }
+    
+    var price: Int64? {
+        guard let controller = self.controller else {
+            return nil
+        }
+        var price: Int64?
+        if let selectionContext = controller.interaction?.selectionState, let editingContext = controller.interaction?.editingState {
+            for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
+                if price == nil, let itemPrice = editingContext.price(for: item) as? Int64 {
+                    price = itemPrice
+                    break
+                }
+            }
+        }
+        return price
+    }
+    
+    func setPrice(_ price: Int64) {
+        guard let controller = self.controller else {
+            return
+        }
+        if let selectionContext = controller.interaction?.selectionState, let editingContext = controller.interaction?.editingState {
+            selectionContext.selectionLimit = 10
+            for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
+                editingContext.setPrice(NSNumber(value: price), for: item)
+            }
+        }
     }
     
     var captionIsAboveMedia: Signal<Bool, NoError> {

@@ -319,7 +319,7 @@ public final class InstantPageContentNode : ASDisplayNode {
         //        }
     }
     
-    func updateDetailsExpanded(_ index: Int, _ expanded: Bool, animated: Bool = true, requestLayout: Bool = true) {
+    public func updateDetailsExpanded(_ index: Int, _ expanded: Bool, animated: Bool = true, requestLayout: Bool = true) {
         if var currentExpandedDetails = self.currentExpandedDetails {
             currentExpandedDetails[index] = expanded
             self.currentExpandedDetails = currentExpandedDetails
@@ -353,7 +353,7 @@ public final class InstantPageContentNode : ASDisplayNode {
         return contentOffset
     }
     
-    func nodeForDetailsItem(_ item: InstantPageDetailsItem) -> InstantPageDetailsNode? {
+    public func nodeForDetailsItem(_ item: InstantPageDetailsItem) -> InstantPageDetailsNode? {
         for (_, itemNode) in self.visibleItemsWithNodes {
             if let detailsNode = itemNode as? InstantPageDetailsNode, detailsNode.item === item {
                 return detailsNode

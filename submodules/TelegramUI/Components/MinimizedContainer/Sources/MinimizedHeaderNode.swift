@@ -103,10 +103,6 @@ final class MinimizedHeaderNode: ASDisplayNode {
         applySmoothRoundedCorners(self.minimizedBackgroundNode.layer)
     }
     
-    deinit {
-        self.minimizedTitleDisposable?.dispose()
-    }
-    
     override func didLoad() {
         super.didLoad()
         

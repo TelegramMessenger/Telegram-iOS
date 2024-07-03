@@ -110,7 +110,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         
         return { context in
             var availableWidth = context.availableSize.width
-            let sideInset: CGFloat = 11.0 + context.component.sideInset
+            let sideInset: CGFloat = 16.0 + context.component.sideInset
             
             let collapsedHeight: CGFloat = 24.0
             let expandedHeight = context.component.height
@@ -171,18 +171,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             if !leftItemList.isEmpty || !rightItemList.isEmpty {
                 availableWidth -= 32.0
             }
-            
-            let centerItem = context.component.centerItem.flatMap { item in
-                centerItems[item.id].update(
-                    component: item.component,
-                    availableSize: CGSize(width: availableWidth, height: expandedHeight),
-                    transition: context.transition
-                )
-            }
-            if let centerItem = centerItem {
-                availableWidth -= centerItem.size.width
-            }
-            
+                        
             context.add(background
                 .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
             )
@@ -205,28 +194,42 @@ final class BrowserNavigationBarComponent: CombinedComponent {
                 context.add(item
                     .position(CGPoint(x: leftItemX + item.size.width / 2.0 - (item.size.width / 2.0 * 0.35 * context.component.collapseFraction), y: context.component.topInset + contentHeight / 2.0))
                     .scale(1.0 - 0.35 * context.component.collapseFraction)
-                    .appear(.default(scale: false, alpha: true))
-                    .disappear(.default(scale: false, alpha: true))
+                    .opacity(1.0 - context.component.collapseFraction)
+                    .appear(.default(scale: true, alpha: true))
+                    .disappear(.default(scale: true, alpha: true))
                 )
                 leftItemX -= item.size.width + 8.0
                 centerLeftInset += item.size.width + 8.0
             }
     
-            var centerRightInset = sideInset
-            var rightItemX = context.availableSize.width - sideInset
+            var centerRightInset = sideInset - 5.0
+            var rightItemX = context.availableSize.width - (sideInset - 5.0)
             for item in rightItemList.reversed() {
                 context.add(item
                     .position(CGPoint(x: rightItemX - item.size.width / 2.0 + (item.size.width / 2.0 * 0.35 * context.component.collapseFraction), y: context.component.topInset + contentHeight / 2.0))
                     .scale(1.0 - 0.35 * context.component.collapseFraction)
                     .opacity(1.0 - context.component.collapseFraction)
-                    .appear(.default(scale: false, alpha: true))
-                    .disappear(.default(scale: false, alpha: true))
+                    .appear(.default(scale: true, alpha: true))
+                    .disappear(.default(scale: true, alpha: true))
                 )
                 rightItemX -= item.size.width + 8.0
                 centerRightInset += item.size.width + 8.0
             }
             
             let maxCenterInset = max(centerLeftInset, centerRightInset)
+            
+            if !leftItemList.isEmpty || !rightItemList.isEmpty {
+                availableWidth -= 20.0
+            }
+            
+            let centerItem = context.component.centerItem.flatMap { item in
+                centerItems[item.id].update(
+                    component: item.component,
+                    availableSize: CGSize(width: availableWidth, height: expandedHeight),
+                    transition: context.transition
+                )
+            }
+
             if let centerItem = centerItem {
                 context.add(centerItem
                     .position(CGPoint(x: maxCenterInset + (context.availableSize.width - maxCenterInset * 2.0) / 2.0, y: context.component.topInset + contentHeight / 2.0))

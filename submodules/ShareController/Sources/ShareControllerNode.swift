@@ -550,7 +550,13 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                         added = true
                     }
                     
-                    strongSelf.contentNode?.setEnsurePeerVisibleOnLayout(peer.peerId)
+                    if openedTopicList {
+                        Queue.mainQueue().after(0.4) {
+                            strongSelf.contentNode?.setEnsurePeerVisibleOnLayout(peer.peerId)
+                        }
+                    } else {
+                        strongSelf.contentNode?.setEnsurePeerVisibleOnLayout(peer.peerId)
+                    }
                 }
                 
                 if search && added {
@@ -718,7 +724,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             if let searchContentNode = strongSelf.contentNode as? ShareSearchContainerNode {
                 searchContentNode.setDidBeginDragging(nil)
                 searchContentNode.setContentOffsetUpdated(nil)
-                let scrollDelta = topicsContentNode.contentGridNode.scrollView.contentOffset.y - searchContentNode.contentGridNode.scrollView.contentOffset.y
+                let scrollDelta = topicsContentNode.contentGridNode.scrollView.contentOffset.y - searchContentNode.effectiveGridNode.scrollView.contentOffset.y
                 if let sourceFrame = searchContentNode.animateOut(peerId: peer.peerId, scrollDelta: scrollDelta) {
                     topicsContentNode.animateIn(sourceFrame: sourceFrame, scrollDelta: scrollDelta)
                 }
@@ -767,9 +773,9 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             searchContentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
                 self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
             })
-            self.contentNodeOffsetUpdated(searchContentNode.contentGridNode.scrollView.contentOffset.y, transition: .animated(duration: 0.4, curve: .spring))
+            self.contentNodeOffsetUpdated(searchContentNode.effectiveGridNode.scrollView.contentOffset.y, transition: .animated(duration: 0.4, curve: .spring))
             
-            let scrollDelta = topicsContentNode.contentGridNode.scrollView.contentOffset.y - searchContentNode.contentGridNode.scrollView.contentOffset.y
+            let scrollDelta = topicsContentNode.contentGridNode.scrollView.contentOffset.y - searchContentNode.effectiveGridNode.scrollView.contentOffset.y
             if let targetFrame = searchContentNode.animateIn(peerId: peerId, scrollDelta: scrollDelta) {
                 topicsContentNode.animateOut(targetFrame: targetFrame, scrollDelta: scrollDelta, completion: { [weak self] in
                     if let topicsContentNode = self?.topicsContentNode {

@@ -26,7 +26,7 @@ public final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     private let buttonNode: HighlightableButtonNode
     private let arrowNode: InstantPageDetailsArrowNode
     let separatorNode: ASDisplayNode
-    let contentNode: InstantPageContentNode
+    public let contentNode: InstantPageContentNode
     
     private let updateExpanded: (Bool) -> Void
     var expanded: Bool
@@ -114,7 +114,7 @@ public final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         self.updateExpanded(expanded)
     }
     
-    func setExpanded(_ expanded: Bool, animated: Bool) {
+    public func setExpanded(_ expanded: Bool, animated: Bool) {
         self.expanded = expanded
         self.arrowNode.setOpen(expanded, animated: animated)
     }

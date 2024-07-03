@@ -985,8 +985,12 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                 }
                 
                 var captionIsAboveMedia: Signal<Bool, NoError> = .single(false)
+                var canMakePaidContent = false
+                var currentPrice: Int64?
                 if let controller = strongSelf.controller, let mediaPickerContext = controller.mediaPickerContext {
                     captionIsAboveMedia = mediaPickerContext.captionIsAboveMedia
+                    canMakePaidContent = mediaPickerContext.canMakePaidContent
+                    currentPrice = mediaPickerContext.price
                 }
                 
                 let _ = (combineLatest(
@@ -1016,7 +1020,9 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                             messageEffect: nil,
                             attachment: true,
                             canSendWhenOnline: sendWhenOnlineAvailable,
-                            forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
+                            forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [],
+                            canMakePaidContent: canMakePaidContent,
+                            currentPrice: currentPrice
                         )),
                         hasEntityKeyboard: hasEntityKeyboard,
                         gesture: gesture,
@@ -1037,6 +1043,12 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                         },
                         schedule: { [weak textInputPanelNode] messageEffect in
                             textInputPanelNode?.sendMessage(.schedule, messageEffect)
+                        },
+                        editPrice: { [weak strongSelf] price in
+                            guard let strongSelf, let controller = strongSelf.controller, let mediaPickerContext = controller.mediaPickerContext else {
+                                return
+                            }
+                            mediaPickerContext.setPrice(price)
                         },
                         openPremiumPaywall: { [weak self] c in
                             guard let self else {

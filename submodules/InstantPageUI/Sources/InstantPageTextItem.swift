@@ -96,7 +96,7 @@ public final class InstantPageTextItem: InstantPageItem {
     let alignment: NSTextAlignment
     let opaqueBackground: Bool
     public let medias: [InstantPageMedia] = []
-    let anchors: [String: (Int, Bool)]
+    public let anchors: [String: (Int, Bool)]
     public let wantsNode: Bool = false
     public let separatesTiles: Bool = false
     public var selectable: Bool = true

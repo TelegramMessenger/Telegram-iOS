@@ -34,7 +34,8 @@ swift_library(
         "//submodules/Markdown:Markdown",
         "//submodules/TextFormat:TextFormat",
         "//submodules/LocalAuth",
-        "//submodules/InstantPageCache"
+        "//submodules/InstantPageCache",
+        "//submodules/OpenInExternalAppUI"
     ],
     visibility = [
         "//visibility:public",

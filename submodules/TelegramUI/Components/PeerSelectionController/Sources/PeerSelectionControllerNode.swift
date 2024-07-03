@@ -709,7 +709,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         messageEffect: nil,
                         attachment: false,
                         canSendWhenOnline: false,
-                        forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
+                        forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [],
+                        canMakePaidContent: false,
+                        currentPrice: nil
                     )),
                     hasEntityKeyboard: hasEntityKeyboard,
                     gesture: gesture,
@@ -731,6 +733,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     schedule: { [weak textInputPanelNode] messageEffect in
                         textInputPanelNode?.sendMessage(.schedule, messageEffect)
                     },
+                    editPrice: { _ in },
                     openPremiumPaywall: { [weak controller] c in
                         guard let controller else {
                             return

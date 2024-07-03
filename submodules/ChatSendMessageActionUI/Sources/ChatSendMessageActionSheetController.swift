@@ -20,6 +20,8 @@ public enum SendMessageActionSheetControllerParams {
         public let attachment: Bool
         public let canSendWhenOnline: Bool
         public let forwardMessageIds: [EngineMessage.Id]
+        public let canMakePaidContent: Bool
+        public let currentPrice: Int64?
         
         public init(
             isScheduledMessages: Bool,
@@ -28,7 +30,9 @@ public enum SendMessageActionSheetControllerParams {
             messageEffect: (ChatSendMessageActionSheetControllerSendParameters.Effect?, (ChatSendMessageActionSheetControllerSendParameters.Effect?) -> Void)?,
             attachment: Bool,
             canSendWhenOnline: Bool,
-            forwardMessageIds: [EngineMessage.Id]
+            forwardMessageIds: [EngineMessage.Id],
+            canMakePaidContent: Bool,
+            currentPrice: Int64?
         ) {
             self.isScheduledMessages = isScheduledMessages
             self.mediaPreview = mediaPreview
@@ -37,6 +41,8 @@ public enum SendMessageActionSheetControllerParams {
             self.attachment = attachment
             self.canSendWhenOnline = canSendWhenOnline
             self.forwardMessageIds = forwardMessageIds
+            self.canMakePaidContent = canMakePaidContent
+            self.currentPrice = currentPrice
         }
     }
     
@@ -71,6 +77,7 @@ public func makeChatSendMessageActionSheetController(
     completion: @escaping () -> Void,
     sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void,
     schedule: @escaping (ChatSendMessageActionSheetController.SendParameters?) -> Void,
+    editPrice: @escaping (Int64) -> Void,
     openPremiumPaywall: @escaping (ViewController) -> Void,
     reactionItems: [ReactionItem]? = nil,
     availableMessageEffects: AvailableMessageEffects? = nil,
@@ -91,6 +98,7 @@ public func makeChatSendMessageActionSheetController(
         completion: completion,
         sendMessage: sendMessage,
         schedule: schedule,
+        editPrice: editPrice,
         openPremiumPaywall: openPremiumPaywall,
         reactionItems: reactionItems,
         availableMessageEffects: availableMessageEffects,

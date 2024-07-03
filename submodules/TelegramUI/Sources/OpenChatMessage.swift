@@ -24,6 +24,7 @@ import WebsiteType
 import GalleryData
 import StoryContainerScreen
 import WallpaperGalleryScreen
+import BrowserUI
 
 func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
     var story: TelegramMediaStory?
@@ -373,7 +374,13 @@ func openChatInstantPageImpl(context: AccountContext, message: Message, sourcePe
     if let (webpage, anchor) = instantPageAndAnchor(message: message) {
         let sourceLocation = InstantPageSourceLocation(userLocation: .peer(message.id.peerId), peerType: sourcePeerType ?? .channel)
         
-        let pageController = InstantPageController(context: context, webPage: webpage, sourceLocation: sourceLocation, anchor: anchor)
+        let pageController: ViewController
+        if !"".isEmpty, context.sharedContext.immediateExperimentalUISettings.browserExperiment {
+            let _ = anchor
+            pageController = BrowserScreen(context: context, subject: .instantPage(webPage: webpage, sourceLocation: sourceLocation))
+        } else {
+            pageController = InstantPageController(context: context, webPage: webpage, sourceLocation: sourceLocation, anchor: anchor)
+        }
         navigationController.pushViewController(pageController)
     }
 }

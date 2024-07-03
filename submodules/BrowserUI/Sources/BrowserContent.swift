@@ -81,6 +81,9 @@ protocol BrowserContent: UIView {
     
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void { get set }
         
+    func reload()
+    func stop()
+    
     func navigateBack()
     func navigateForward()
     

@@ -20,7 +20,7 @@ public final class InstantPageImageItem: InstantPageItem {
     
     let webPage: TelegramMediaWebpage
     
-    let media: InstantPageMedia
+    public let media: InstantPageMedia
     let attributes: [InstantPageImageAttribute]
     
     public var medias: [InstantPageMedia] {

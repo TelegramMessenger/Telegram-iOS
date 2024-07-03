@@ -71,6 +71,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     var isPanningUpdated: (Bool) -> Void = { _ in }
     var isExpandedUpdated: (Bool) -> Void = { _ in }
     var isPanGestureEnabled: (() -> Bool)?
+    var isInnerPanGestureEnabled: (() -> Bool)?
     var onExpandAnimationCompleted: () -> Void = {}
     
     init(isFullSize: Bool) {
@@ -146,6 +147,23 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                     return false
                 }
             }
+            if let isInnerPanGestureEnabled = self.isInnerPanGestureEnabled, !isInnerPanGestureEnabled() {
+                func findWebViewAncestor(view: UIView?) -> WKWebView? {
+                    guard let view else {
+                        return nil
+                    }
+                    if let view = view as? WKWebView {
+                        return view
+                    } else if view != self.view {
+                        return findWebViewAncestor(view: view.superview)
+                    } else {
+                        return nil
+                    }
+                }
+                if let otherView = self.hitTest(gestureRecognizer.location(in: self.view), with: nil), let _ = findWebViewAncestor(view: otherView) {
+                    return false
+                }
+            }
         }
         return true
     }
@@ -162,23 +180,6 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 return false
             }
             return true
-        }
-        if gestureRecognizer is UIPanGestureRecognizer {
-            func findWebViewAncestor(view: UIView?) -> WKWebView? {
-                guard let view else {
-                    return nil
-                }
-                if let view = view as? WKWebView {
-                    return view
-                } else if view != self.view {
-                    return findWebViewAncestor(view: view.superview)
-                } else {
-                    return nil
-                }
-            }
-            if let otherView = otherGestureRecognizer.view, let _ = findWebViewAncestor(view: otherView) {
-                return true
-            }
         }
         if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UILongPressGestureRecognizer {
             return true
@@ -197,7 +198,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     
     private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?, listNode: ListView?)?
     @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
-        guard let (layout, controllers, coveredByModalTransition) = self.validLayout else {
+        guard let (layout, controllers, coveredByModalTransition) = self.validLayout, let lastController = controllers.last else {
             return
         }
         
@@ -271,9 +272,13 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 }
             
                 if !self.isExpanded || self.isFullSize, translation > 40.0, let shouldCancelPanGesture = self.shouldCancelPanGesture, shouldCancelPanGesture() {
-                    self.cancelPanGesture()
-                    self.requestDismiss?()
-                    return
+                    if lastController.isMinimizable {
+                        
+                    } else {
+                        self.cancelPanGesture()
+                        self.requestDismiss?()
+                        return
+                    }
                 }
             
                 var bounds = self.bounds
@@ -323,7 +328,11 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             
                 var ignoreDismiss = false
                 if let shouldCancelPanGesture = self.shouldCancelPanGesture, shouldCancelPanGesture() {
-                    ignoreDismiss = true
+                    if lastController.isMinimizable {
+                        
+                    } else {
+                        ignoreDismiss = true
+                    }
                 }
             
                 var minimizing = false
