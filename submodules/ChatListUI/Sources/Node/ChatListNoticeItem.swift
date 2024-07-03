@@ -312,6 +312,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                             avatarsNode = current
                         } else {
                             avatarsNode = MergedAvatarsNode()
+                            avatarsNode.isUserInteractionEnabled = false
                             strongSelf.addSubnode(avatarsNode)
                             strongSelf.avatarsNode = avatarsNode
                         }

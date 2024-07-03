@@ -4700,7 +4700,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        guard let item = self.item else {
+        guard let item = self.item, self.frame.height > 0.0 else {
             return nil
         }
         
