@@ -388,7 +388,7 @@ class StatsOverviewItemNode: ListViewItemNode {
             }
             
             var twoColumnLayout = true
-            var useMinLeftColumnWidth = true
+            var useMinLeftColumnWidth = false
             
             var topLeftItemLayoutAndApply: (CGSize, () -> ValueItemNode)?
             var topRightItemLayoutAndApply: (CGSize, () -> ValueItemNode)?
