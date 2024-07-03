@@ -153,9 +153,10 @@ class BarsComponentController: GeneralChartComponentController {
     func verticalLimitsLabels(verticalRange: ClosedRange<CGFloat>, secondary: Bool) -> (ClosedRange<CGFloat>, [LinesChartLabel]) {
         var (range, labels) = super.verticalLimitsLabels(verticalRange: verticalRange)
         if secondary {
+            let allowedChars = "0123456789\(self.verticalLimitsNumberFormatter.decimalSeparator ?? ".")"
             var updatedLabels: [LinesChartLabel] = []
             for label in labels {
-                let convertedValue = (Double(label.text) ?? 0.0) * self.conversionRate
+                let convertedValue = (Double(label.text.filter(allowedChars.contains)) ?? 0.0) * self.conversionRate
                 let text: String
                 if convertedValue > 1.0 {
                     text = String(format: "%0.1f", convertedValue)

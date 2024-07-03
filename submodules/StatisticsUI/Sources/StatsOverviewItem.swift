@@ -47,14 +47,14 @@ class StatsOverviewItem: ListViewItem, ItemListItem {
     let context: AccountContext
     let presentationData: ItemListPresentationData
     let isGroup: Bool
-    let stats: Stats
+    let stats: Stats?
     let additionalStats: Stats?
     let storyViews: EngineStoryItem.Views?
     let publicShares: Int32?
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(context: AccountContext, presentationData: ItemListPresentationData, isGroup: Bool, stats: Stats, additionalStats: Stats? = nil, storyViews: EngineStoryItem.Views? = nil, publicShares: Int32? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(context: AccountContext, presentationData: ItemListPresentationData, isGroup: Bool, stats: Stats?, additionalStats: Stats? = nil, storyViews: EngineStoryItem.Views? = nil, publicShares: Int32? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.context = context
         self.presentationData = presentationData
         self.isGroup = isGroup
@@ -863,6 +863,40 @@ class StatsOverviewItemNode: ListViewItemNode {
                     
                     height += topLeftItemLayoutAndApply!.0.height * 3.0 + verticalSpacing * 2.0
                 }
+            } else if let stats = item.stats as? StarsRevenueStats {
+                twoColumnLayout = false
+                
+                topLeftItemLayoutAndApply = makeTopLeftItemLayout(
+                    item.context,
+                    params.width,
+                    item.presentationData,
+                    presentationStringsFormattedNumber(Int32(stats.balances.availableBalance), item.presentationData.dateTimeFormat.groupingSeparator),
+                    item.presentationData.strings.Monetization_StarsProceeds_Available,
+                    (stats.balances.availableBalance == 0 ? "" : "≈\(formatUsdValue(stats.balances.availableBalance, rate: stats.usdRate))", .generic),
+                    .stars
+                )
+                
+                topRightItemLayoutAndApply = makeTopRightItemLayout(
+                    item.context,
+                    params.width,
+                    item.presentationData,
+                    presentationStringsFormattedNumber(Int32(stats.balances.currentBalance), item.presentationData.dateTimeFormat.groupingSeparator),
+                    item.presentationData.strings.Monetization_StarsProceeds_Current,
+                    (stats.balances.currentBalance == 0 ? "" : "≈\(formatUsdValue(stats.balances.currentBalance, rate: stats.usdRate))", .generic),
+                    .stars
+                )
+                
+                middle1LeftItemLayoutAndApply = makeMiddle1LeftItemLayout(
+                    item.context,
+                    params.width,
+                    item.presentationData,
+                    presentationStringsFormattedNumber(Int32(stats.balances.overallRevenue), item.presentationData.dateTimeFormat.groupingSeparator),
+                    item.presentationData.strings.Monetization_StarsProceeds_Total,
+                    (stats.balances.overallRevenue == 0 ? "" : "≈\(formatUsdValue(stats.balances.overallRevenue, rate: stats.usdRate))", .generic),
+                    .stars
+                )
+                
+                height += topLeftItemLayoutAndApply!.0.height * 3.0 + verticalSpacing * 2.0
             }
         
             let contentSize = CGSize(width: params.width, height: height)

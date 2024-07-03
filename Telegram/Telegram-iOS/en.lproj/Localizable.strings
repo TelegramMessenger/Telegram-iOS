@@ -12456,6 +12456,7 @@ Sorry for the inconvenience.";
 "Monetization.StarsProceeds.Available" = "Available Balance";
 "Monetization.StarsProceeds.Current" = "Total Balance";
 "Monetization.StarsProceeds.Total" = "Lifetime Proceeds";
+"Monetization.StarsProceeds.Info" = "Funds from your total balance can be used for ads or withdrawn as rewards 21 days after they are earned.";
 
 "Premium.MessageEffects" = "Message Effects";
 "Premium.MessageEffectsInfo" = "Add over 500 animated effects to private messages.";

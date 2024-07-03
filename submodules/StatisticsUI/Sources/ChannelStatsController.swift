@@ -238,8 +238,9 @@ private enum StatsEntry: ItemListNodeEntry {
     case adsStarsRevenueGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType, Double)
     
     case adsProceedsTitle(PresentationTheme, String)
-    case adsProceedsOverview(PresentationTheme, RevenueStats, StarsRevenueStats?)
-
+    case adsProceedsOverview(PresentationTheme, RevenueStats?, StarsRevenueStats?)
+    case adsProceedsInfo(PresentationTheme, String)
+    
     case adsTonBalanceTitle(PresentationTheme, String)
     case adsTonBalance(PresentationTheme, RevenueStats, Bool, Bool)
     case adsTonBalanceInfo(PresentationTheme, String)
@@ -307,7 +308,7 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StatsSection.adsTonRevenue.rawValue
             case .adsStarsRevenueTitle, .adsStarsRevenueGraph:
                 return StatsSection.adsStarsRevenue.rawValue
-            case .adsProceedsTitle, .adsProceedsOverview:
+            case .adsProceedsTitle, .adsProceedsOverview, .adsProceedsInfo:
                 return StatsSection.adsProceeds.rawValue
             case .adsTonBalanceTitle, .adsTonBalance, .adsTonBalanceInfo:
                 return StatsSection.adsTonBalance.rawValue
@@ -430,24 +431,26 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 20007
             case .adsProceedsOverview:
                 return 20008
-            case .adsTonBalanceTitle:
+            case .adsProceedsInfo:
                 return 20009
-            case .adsTonBalance:
+            case .adsTonBalanceTitle:
                 return 20010
-            case .adsTonBalanceInfo:
+            case .adsTonBalance:
                 return 20011
-            case .adsStarsBalanceTitle:
+            case .adsTonBalanceInfo:
                 return 20012
-            case .adsStarsBalance:
+            case .adsStarsBalanceTitle:
                 return 20013
-            case .adsStarsBalanceInfo:
+            case .adsStarsBalance:
                 return 20014
-            case .adsTransactionsTitle:
+            case .adsStarsBalanceInfo:
                 return 20015
-            case .adsTransactionsTabs:
+            case .adsTransactionsTitle:
                 return 20016
+            case .adsTransactionsTabs:
+                return 20017
             case let .adsTransaction(index, _, _):
-                return 20017 + index
+                return 20018 + index
             case let .adsStarsTransaction(index, _, _):
                 return 30017 + index
             case .adsTransactionsExpand:
@@ -785,6 +788,12 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .adsProceedsInfo(lhsTheme, lhsText):
+                if case let .adsProceedsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .adsTonBalanceTitle(lhsTheme, lhsText):
                 if case let .adsTonBalanceTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -904,7 +913,8 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .boostersInfo(_, text),
                  let .boostLinkInfo(_, text),
                  let .boostGiftsInfo(_, text),
-                 let .adsCpmInfo(_, text):
+                 let .adsCpmInfo(_, text),
+                 let .adsProceedsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .overview(_, stats):
                 return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: false, stats: stats, sectionId: self.section, style: .blocks)
@@ -1046,7 +1056,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     arguments.openMonetizationIntro()
                 })
             case let .adsProceedsOverview(_, stats, starsStats):
-                return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: false, stats: stats, additionalStats: starsStats, sectionId: self.section, style: .blocks)
+                return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: false, stats: stats ?? starsStats, additionalStats: stats != nil ? starsStats : nil, sectionId: self.section, style: .blocks)
             case let .adsTonBalance(_, stats, canWithdraw, isEnabled):
                 return MonetizationBalanceItem(
                     context: arguments.context,
@@ -1542,8 +1552,9 @@ private func monetizationEntries(
         }
     }
         
-    entries.append(.adsProceedsTitle(presentationData.theme, presentationData.strings.Monetization_OverviewTitle))
-    entries.append(.adsProceedsOverview(presentationData.theme, data, starsData))
+    entries.append(.adsProceedsTitle(presentationData.theme, presentationData.strings.Monetization_StarsProceeds_Title))
+    entries.append(.adsProceedsOverview(presentationData.theme, canViewRevenue ? data : nil, canViewStarsRevenue ? starsData : nil))
+    entries.append(.adsProceedsInfo(presentationData.theme, presentationData.strings.Monetization_StarsProceeds_Info))
     
     var isCreator = false
     if let peer, case let .channel(channel) = peer, channel.flags.contains(.isCreator) {
