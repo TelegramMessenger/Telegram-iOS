@@ -4765,8 +4765,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let actionSheet = ActionSheetController(presentationData: self.presentationData)
                     var items: [ActionSheetItem] = []
                     if havePrivateChats {
-                        //TODO:localize
-                        items.append(ActionSheetButtonItem(title: haveNonPrivateChats ? "Delete from both sides where possible" : "Delete from both sides", color: .destructive, action: { [weak self, weak actionSheet] in
+                        items.append(ActionSheetButtonItem(title: haveNonPrivateChats ? self.presentationData.strings.ChatList_DeleteForAllWhenPossible : self.presentationData.strings.ChatList_DeleteForAll, color: .destructive, action: { [weak self, weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             
                             guard let strongSelf = self else {
@@ -4838,8 +4837,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             strongSelf.donePressed()
                         }))
                     }
-                    //TODO:localize
-                    items.append(ActionSheetButtonItem(title: havePrivateChats ? "Delete for me" : self.presentationData.strings.ChatList_DeleteConfirmation(Int32(peerIds.count)), color: .destructive, action: { [weak self, weak actionSheet] in
+                    items.append(ActionSheetButtonItem(title: havePrivateChats ? self.presentationData.strings.ChatList_DeleteForMe : self.presentationData.strings.ChatList_DeleteConfirmation(Int32(peerIds.count)), color: .destructive, action: { [weak self, weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         
                         guard let strongSelf = self else {

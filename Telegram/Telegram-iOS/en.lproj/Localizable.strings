@@ -12483,3 +12483,7 @@ Sorry for the inconvenience.";
 "Stars.SendStars.AmountPlaceholder" = "Stars Amount";
 "Stars.SendStars.AmountInfo" = "Send %@ or more to highlight your profile in the TOP 3 supporters of this message.";
 "Stars.SendStars.SendStars" = "Confirm and Send";
+
+"ChatList.DeleteForMe" = "Delete for me";
+"ChatList.DeleteForAllWhenPossible" = "Delete from both sides where possible";
+"ChatList.DeleteForAll" = "Delete from both sides";
