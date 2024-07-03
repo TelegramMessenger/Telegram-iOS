@@ -2057,7 +2057,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             return
                         }
                         if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
-                            strongSelf.dismiss()
+                            (strongSelf.parentController() as? AttachmentController)?.minimizeIfNeeded()
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(botPeer)))
                         }
                     })
