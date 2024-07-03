@@ -18,6 +18,8 @@ public extension ChatControllerImpl {
         guard let peerId = self.chatLocation.peerId, let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
+        let context = self.context
+        
         self.chatDisplayNode.dismissInput()
         
         let botName: String
@@ -73,7 +75,8 @@ public extension ChatControllerImpl {
                 }
             }
         }
-        
+                
+    
         let openWebView = {
             if source == .menu {
                 self.updateChatPresentationInterfaceState(interactive: false) { state in
@@ -93,27 +96,15 @@ public extension ChatControllerImpl {
                 if isTelegramMeLink(url), let internalUrl = parseFullInternalUrl(sharedContext: self.context.sharedContext, url: url), case .peer(_, .appStart) = internalUrl {
                     fullSize = !url.contains("?mode=compact")
                 }
-                
-                let context = self.context
+
+                var presentImpl: ((ViewController, Any?) -> Void)?
                 let params = WebAppParameters(source: .menu, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: fullSize)
                 let controller = standaloneWebAppController(context: self.context, updatedPresentationData: self.updatedPresentationData, params: params, threadId: self.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
-                    self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
+                    ChatControllerImpl.botOpenUrl(context: context, peerId: peerId, controller: self, url: url, concealed: concealed, present: { c, a in
+                        presentImpl?(c, a)
+                    }, commit: commit)
                 }, requestSwitchInline: { [weak self] query, chatTypes, completion in
-                    if let strongSelf = self {
-                        if let chatTypes {
-                            let controller = strongSelf.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: strongSelf.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: chatTypes, hasContactSelector: false, hasCreation: false))
-                            controller.peerSelected = { [weak self, weak controller] peer, _ in
-                                if let strongSelf = self {
-                                    completion()
-                                    controller?.dismiss()
-                                    strongSelf.controllerInteraction?.activateSwitchInline(peer.id, "@\(botAddress) \(query)", nil)
-                                }
-                            }
-                            strongSelf.push(controller)
-                        } else {
-                            strongSelf.controllerInteraction?.activateSwitchInline(peerId, "@\(botAddress) \(query)", nil)
-                        }
-                    }
+                    ChatControllerImpl.botRequestSwitchInline(context: context, controller: self, peerId: peerId, botAddress: botAddress, query: query, chatTypes: chatTypes, completion: completion)
                 }, getInputContainerNode: { [weak self] in
                     if let strongSelf = self, let layout = strongSelf.validLayout, case .compact = layout.metrics.widthClass {
                         return (strongSelf.chatDisplayNode.getWindowInputAccessoryHeight(), strongSelf.chatDisplayNode.inputPanelContainerNode, {
@@ -145,6 +136,10 @@ public extension ChatControllerImpl {
                 })
                 controller.navigationPresentation = .flatModal
                 self.push(controller)
+                
+                presentImpl = { [weak controller] c, a in
+                    controller?.present(c, in: .window(.root), with: a)
+                }
             } else if simple {
                 var isInline = false
                 var botId = peerId
@@ -165,32 +160,25 @@ public extension ChatControllerImpl {
                     guard let strongSelf = self else {
                         return
                     }
+                    var presentImpl: ((ViewController, Any?) -> Void)?
                     let context = strongSelf.context
                     let params = WebAppParameters(source: isInline ? .inline : .simple, peerId: peerId, botId: botId, botName: botName, url: result.url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: result.flags.contains(.fullSize))
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
-                        self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
+                        ChatControllerImpl.botOpenUrl(context: context, peerId: peerId, controller: self, url: url, concealed: concealed, present: { c, a in
+                            presentImpl?(c, a)
+                        }, commit: commit)
                     }, requestSwitchInline: { [weak self] query, chatTypes, completion in
-                        if let strongSelf = self {
-                            if let chatTypes {
-                                let controller = strongSelf.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: strongSelf.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: chatTypes, hasContactSelector: false, hasCreation: false))
-                                controller.peerSelected = { [weak self, weak controller] peer, _ in
-                                    if let strongSelf = self {
-                                        completion()
-                                        controller?.dismiss()
-                                        strongSelf.controllerInteraction?.activateSwitchInline(peer.id, "@\(botAddress) \(query)", nil)
-                                    }
-                                }
-                                strongSelf.push(controller)
-                            } else {
-                                strongSelf.controllerInteraction?.activateSwitchInline(peerId, "@\(botAddress) \(query)", nil)
-                            }
-                        }
+                        ChatControllerImpl.botRequestSwitchInline(context: context, controller: self, peerId: peerId, botAddress: botAddress, query: query, chatTypes: chatTypes, completion: completion)
                     }, getNavigationController: { [weak self] in
                         return self?.effectiveNavigationController ?? context.sharedContext.mainWindow?.viewController as? NavigationController
                     })
                     controller.navigationPresentation = .flatModal
                     strongSelf.currentWebAppController = controller
                     strongSelf.push(controller)
+                    
+                    presentImpl = { [weak controller] c, a in
+                        controller?.present(c, in: .window(.root), with: a)
+                    }
                 }, error: { [weak self] error in
                     if let strongSelf = self {
                         strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
@@ -206,10 +194,13 @@ public extension ChatControllerImpl {
                     guard let strongSelf = self else {
                         return
                     }
+                    var presentImpl: ((ViewController, Any?) -> Void)?
                     let context = strongSelf.context
                     let params = WebAppParameters(source: .button, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, forceHasSettings: false, fullSize: result.flags.contains(.fullSize))
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
-                        self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
+                        ChatControllerImpl.botOpenUrl(context: context, peerId: peerId, controller: self, url: url, concealed: concealed, present: { c, a in
+                            presentImpl?(c, a)
+                        }, commit: commit)
                     }, completion: { [weak self] in
                         self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
                     }, getNavigationController: { [weak self] in
@@ -218,6 +209,10 @@ public extension ChatControllerImpl {
                     controller.navigationPresentation = .flatModal
                     strongSelf.currentWebAppController = controller
                     strongSelf.push(controller)
+                    
+                    presentImpl = { [weak controller] c, a in
+                        controller?.present(c, in: .window(.root), with: a)
+                    }
                 }, error: { [weak self] error in
                     if let strongSelf = self {
                         strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
@@ -249,11 +244,104 @@ public extension ChatControllerImpl {
         })
     }
     
+    private static func botRequestSwitchInline(context: AccountContext, controller: ChatControllerImpl?, peerId: EnginePeer.Id, botAddress: String, query: String, chatTypes: [ReplyMarkupButtonRequestPeerType]?, completion:  @escaping () -> Void) -> Void {
+            let activateSwitchInline = {
+                var chatController: ChatControllerImpl?
+                if let current = controller {
+                    chatController = current
+                } else if let navigationController = context.sharedContext.mainWindow?.viewController as? NavigationController {
+                    for controller in navigationController.viewControllers.reversed() {
+                        if let controller = controller as? ChatControllerImpl {
+                            chatController = controller
+                            break
+                        }
+                    }
+                }
+                if let chatController {
+                    chatController.controllerInteraction?.activateSwitchInline(peerId, "@\(botAddress) \(query)", nil)
+                }
+            }
+        
+            if let chatTypes {
+                let peerController = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: chatTypes, hasContactSelector: false, hasCreation: false))
+                peerController.peerSelected = { [weak peerController] peer, _ in
+                    completion()
+                    peerController?.dismiss()
+                    activateSwitchInline()
+                }
+                if let controller {
+                    controller.push(peerController)
+                } else {
+                    ((context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface)?.viewControllers.last as? ViewController)?.push(peerController)
+                }
+            } else {
+                activateSwitchInline()
+            }
+    }
+    
+    private static func botOpenPeer(context: AccountContext, peerId: EnginePeer.Id, navigation: ChatControllerInteractionNavigateToPeer, navigationController: NavigationController) {
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        |> deliverOnMainQueue).startStandalone(next: { peer in
+            guard let peer else {
+                return
+            }
+            switch navigation {
+            case .default:
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), keepStack: .always))
+            case let .chat(_, subject, peekData):
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: subject, keepStack: .always, peekData: peekData))
+            case .info:
+                if peer.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) == nil {
+                    if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                        navigationController.pushViewController(infoController)
+                    }
+                }
+            case let .withBotStartPayload(startPayload):
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), botStart: startPayload))
+            case let .withAttachBot(attachBotStart):
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), attachBotStart: attachBotStart))
+            case let .withBotApp(botAppStart):
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), botAppStart: botAppStart))
+            }
+        })
+    }
+    
+    private static func botOpenUrl(context: AccountContext, peerId: EnginePeer.Id, controller: ChatControllerImpl?, url: String, concealed: Bool, present: @escaping (ViewController, Any?) -> Void, commit: @escaping () -> Void = {}) {
+        if let controller {
+            controller.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
+        } else {
+            let _ = openUserGeneratedUrl(context: context, peerId: peerId, url: url, concealed: concealed, present: { c in
+                present(c, nil)
+            }, openResolved: { result in
+                var navigationController: NavigationController?
+                if let current = controller?.navigationController as? NavigationController {
+                    navigationController = current
+                } else if let main = context.sharedContext.mainWindow?.viewController as? NavigationController {
+                    navigationController = main
+                }
+                context.sharedContext.openResolvedUrl(result, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
+                    if let navigationController {
+                        ChatControllerImpl.botOpenPeer(context: context, peerId: peer.id, navigation: navigation, navigationController: navigationController)
+                    }
+                    commit()
+                }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: { peerId, invite, call in
+                },
+                present: { c, a in
+                    present(c, a)
+                }, dismissInput: {
+                    context.sharedContext.mainWindow?.viewController?.view.endEditing(false)
+                }, contentContext: nil, progress: nil, completion: nil)
+            })
+        }
+    }
+    
     func presentBotApp(botApp: BotApp, botPeer: EnginePeer, payload: String?, compact: Bool, concealed: Bool = false, commit: @escaping () -> Void = {}) {
         guard let peerId = self.chatLocation.peerId else {
             return
         }
         self.attachmentController?.dismiss(animated: true, completion: nil)
+        
+        
         
         let openBotApp: (Bool, Bool) -> Void = { [weak self] allowWrite, justInstalled in
             guard let strongSelf = self else {
@@ -314,24 +402,13 @@ public extension ChatControllerImpl {
                 }
                 let context = strongSelf.context
                 let params = WebAppParameters(source: .generic, peerId: peerId, botId: botPeer.id, botName: botApp.title, url: result.url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, forceHasSettings: botApp.flags.contains(.hasSettings), fullSize: result.flags.contains(.fullSize))
+                var presentImpl: ((ViewController, Any?) -> Void)?
                 let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
-                    self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
+                    ChatControllerImpl.botOpenUrl(context: context, peerId: peerId, controller: self, url: url, concealed: concealed, present: { c, a in
+                        presentImpl?(c, a)
+                    }, commit: commit)
                 }, requestSwitchInline: { [weak self] query, chatTypes, completion in
-                    if let strongSelf = self {
-                        if let chatTypes {
-                            let controller = strongSelf.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: strongSelf.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: chatTypes, hasContactSelector: false, hasCreation: false))
-                            controller.peerSelected = { [weak self, weak controller] peer, _ in
-                                if let strongSelf = self {
-                                    completion()
-                                    controller?.dismiss()
-                                    strongSelf.controllerInteraction?.activateSwitchInline(peer.id, "@\(botAddress) \(query)", nil)
-                                }
-                            }
-                            strongSelf.push(controller)
-                        } else {
-                            strongSelf.controllerInteraction?.activateSwitchInline(peerId, "@\(botAddress) \(query)", nil)
-                        }
-                    }
+                    ChatControllerImpl.botRequestSwitchInline(context: context, controller: self, peerId: peerId, botAddress: botAddress, query: query, chatTypes: chatTypes, completion: completion)
                 }, completion: { [weak self] in
                     self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
                 }, getNavigationController: { [weak self] in
@@ -340,6 +417,10 @@ public extension ChatControllerImpl {
                 controller.navigationPresentation = .flatModal
                 strongSelf.currentWebAppController = controller
                 strongSelf.push(controller)
+                
+                presentImpl = { [weak controller] c, a in
+                    controller?.present(c, in: .window(.root), with: a)
+                }
                 
                 if justInstalled {
                     let content: UndoOverlayContent = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(botPeer.compactDisplayTitle).string, timeout: 5.0, customUndoText: nil)

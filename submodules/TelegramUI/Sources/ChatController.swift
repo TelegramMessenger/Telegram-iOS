@@ -294,7 +294,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let temporaryHiddenGalleryMediaDisposable = MetaDisposable()
 
     let chatBackgroundNode: WallpaperBackgroundNode
-    private(set) var controllerInteraction: ChatControllerInteraction?
+    public private(set) var controllerInteraction: ChatControllerInteraction?
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     
     let messageContextDisposable = MetaDisposable()
