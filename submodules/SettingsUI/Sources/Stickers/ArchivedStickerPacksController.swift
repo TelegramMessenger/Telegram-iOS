@@ -210,11 +210,18 @@ private struct ArchivedStickerPacksControllerState: Equatable {
     }
 }
 
-private func archivedStickerPacksControllerEntries(context: AccountContext, presentationData: PresentationData, state: ArchivedStickerPacksControllerState, packs: [ArchivedStickerPackItem]?, installedView: CombinedView, stickerSettings: StickerSettings) -> [ArchivedStickerPacksEntry] {
+private func archivedStickerPacksControllerEntries(context: AccountContext, mode: ArchivedStickerPacksControllerMode, presentationData: PresentationData, state: ArchivedStickerPacksControllerState, packs: [ArchivedStickerPackItem]?, installedView: CombinedView, stickerSettings: StickerSettings) -> [ArchivedStickerPacksEntry] {
     var entries: [ArchivedStickerPacksEntry] = []
     
     if let packs = packs {
-        entries.append(.info(presentationData.theme, presentationData.strings.StickerPacksSettings_ArchivedPacks_Info + "\n\n"))
+        let info: String
+        switch mode {
+        case .emoji:
+            info = presentationData.strings.EmojiPacksSettings_ArchivedPacks_Info
+        default:
+            info = presentationData.strings.StickerPacksSettings_ArchivedPacks_Info
+        }
+        entries.append(.info(presentationData.theme, info + "\n\n"))
         
         var installedIds = Set<ItemCollectionId>()
         if let view = installedView.views[.itemCollectionIds(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionIdsView, let ids = view.idsByNamespace[Namespaces.ItemCollection.CloudStickerPacks] {
@@ -340,7 +347,18 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
                 }
             }
             
-            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+            let title: String
+            let text: String
+            switch mode {
+            case .emoji:
+                title = presentationData.strings.EmojiPackActionInfo_AddedTitle
+                text = presentationData.strings.EmojiPackActionInfo_AddedText(info.title).string
+            default:
+                title = presentationData.strings.StickerPackActionInfo_AddedTitle
+                text = presentationData.strings.StickerPackActionInfo_AddedText(info.title).string
+            }
+            
+            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: title, text: text, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
                 return true
             }), nil)
             
@@ -495,8 +513,17 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
                     presentControllerImpl?(actionSheet, nil)
                 }), .init(title: presentationData.strings.StickerPacks_ActionUnarchive, isEnabled: selectedCount > 0, action: {
                     let actionSheet = ActionSheetController(presentationData: presentationData)
+                    
+                    let text: String
+                    switch mode {
+                    case .emoji:
+                        text = presentationData.strings.EmojiPacks_UnarchiveEmojiPacksConfirmation(selectedCount)
+                    default:
+                        text = presentationData.strings.StickerPacks_UnarchiveStickerPacksConfirmation(selectedCount)
+                    }
+                    
                     var items: [ActionSheetItem] = []
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.StickerPacks_UnarchiveStickerPacksConfirmation(selectedCount), color: .destructive, action: { [weak actionSheet] in
+                    items.append(ActionSheetButtonItem(title: text, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                        
                         updateState {
@@ -550,9 +577,17 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
             emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.StickerPacksSettings_ArchivedPacks), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        let title: String
+        switch mode {
+        case .emoji:
+            title = presentationData.strings.EmojiPacksSettings_ArchivedPacks
+        default:
+            title = presentationData.strings.StickerPacksSettings_ArchivedPacks
+        }
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: archivedStickerPacksControllerEntries(context: context, presentationData: presentationData, state: state, packs: packs, installedView: installedView, stickerSettings: stickerSettings), style: .blocks, emptyStateItem: emptyStateItem, toolbarItem: toolbarItem, animateChanges: previous != nil && packs != nil && (previous! != 0 && previous! >= packs!.count - 10))
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: archivedStickerPacksControllerEntries(context: context, mode: mode, presentationData: presentationData, state: state, packs: packs, installedView: installedView, stickerSettings: stickerSettings), style: .blocks, emptyStateItem: emptyStateItem, toolbarItem: toolbarItem, animateChanges: previous != nil && packs != nil && (previous! != 0 && previous! >= packs!.count - 10))
         return (controllerState, (listState, arguments))
     } |> afterDisposed {
         actionsDisposable.dispose()

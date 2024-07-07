@@ -59,6 +59,8 @@ private final class StatusReactionNode: ASDisplayNode {
     private var resolvedFile: TelegramMediaFile?
     private var fileDisposable: Disposable?
     
+    private var alternativeTextView: ImmediateTextView?
+    
     override init() {
         self.iconView = ReactionIconView()
         
@@ -72,66 +74,11 @@ private final class StatusReactionNode: ASDisplayNode {
         self.fileDisposable?.dispose()
     }
     
-    func update(context: AccountContext, type: ChatMessageDateAndStatusType, value: MessageReaction.Reaction, file: TelegramMediaFile?, fileId: Int64?, isSelected: Bool, count: Int, theme: PresentationTheme, wallpaper: TelegramWallpaper, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, animated: Bool) {
+    func update(context: AccountContext, type: ChatMessageDateAndStatusType, value: MessageReaction.Reaction, file: TelegramMediaFile?, fileId: Int64?, alternativeText: String, isSelected: Bool, count: Int, theme: PresentationTheme, wallpaper: TelegramWallpaper, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, animated: Bool) {
         if self.value != value {
             self.value = value
             
-            let boundingImageSize = CGSize(width: 14.0, height: 14.0)
-            /*let defaultImageSize = CGSize(width: boundingImageSize.width + floor(boundingImageSize.width * 0.5 * 2.0), height: boundingImageSize.height + floor(boundingImageSize.height * 0.5 * 2.0))
-            let imageSize: CGSize
-            if let file = file {
-                self.iconImageDisposable.set((reactionStaticImage(context: context, animation: file, pixelSize: CGSize(width: 72.0, height: 72.0), queue: sharedReactionStaticImage)
-                |> deliverOnMainQueue).start(next: { [weak self] data in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    if data.isComplete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                        if let image = UIImage(data: dataValue) {
-                            strongSelf.iconView.imageView.image = image
-                        }
-                    }
-                }))
-                imageSize = file.dimensions?.cgSize.aspectFitted(defaultImageSize) ?? defaultImageSize
-                
-                self.fileDisposable?.dispose()
-                self.fileDisposable = nil
-            } else if let fileId = fileId {
-                self.fileDisposable?.dispose()
-                self.fileDisposable = nil
-                
-                imageSize = boundingImageSize
-                
-                if let resolvedFile = self.resolvedFile, resolvedFile.fileId.id == fileId {
-                } else {
-                    self.fileDisposable = (context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
-                    |> deliverOnMainQueue).start(next: { [weak self] result in
-                        guard let strongSelf = self, let file = result[fileId] else {
-                            return
-                        }
-                        
-                        strongSelf.resolvedFile = file
-                        
-                        strongSelf.iconImageDisposable.set((reactionStaticImage(context: context, animation: file, pixelSize: CGSize(width: 72.0, height: 72.0), queue: sharedReactionStaticImage)
-                        |> deliverOnMainQueue).start(next: { data in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            
-                            if data.isComplete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                                if let image = UIImage(data: dataValue) {
-                                    strongSelf.iconView.imageView.image = image
-                                }
-                            }
-                        }))
-                    })
-                }
-            } else {
-                imageSize = defaultImageSize
-                
-                self.fileDisposable?.dispose()
-                self.fileDisposable = nil
-            }*/
+            let boundingImageSize = CGSize(width: 8.0, height: 8.0)
             
             let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((boundingImageSize.width - boundingImageSize.width) / 2.0), y: floorToScreenPixels((boundingImageSize.height - boundingImageSize.height) / 2.0)), size: boundingImageSize)
             self.iconView.frame = iconFrame
@@ -172,6 +119,22 @@ private final class StatusReactionNode: ASDisplayNode {
                     reaction: value,
                     transition: .immediate
                 )
+                if let alternativeTextView = self.alternativeTextView {
+                    self.alternativeTextView = nil
+                    alternativeTextView.removeFromSuperview()
+                }
+            } else {
+                let alternativeTextView: ImmediateTextView
+                if let current = self.alternativeTextView {
+                    alternativeTextView = current
+                } else {
+                    alternativeTextView = ImmediateTextView()
+                    alternativeTextView.insets = UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
+                    self.view.addSubview(alternativeTextView)
+                }
+                alternativeTextView.attributedText = NSAttributedString(string: alternativeText, font: Font.regular(10.0), textColor: .black)
+                let alternativeTextSize = alternativeTextView.updateLayout(CGSize(width: 100.0, height: 100.0))
+                alternativeTextView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((boundingImageSize.width - alternativeTextSize.width) / 2.0), y: floorToScreenPixels((boundingImageSize.height - alternativeTextSize.height) / 2.0)), size: alternativeTextSize)
             }
         }
     }
@@ -230,6 +193,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
         var reactionPeers: [(MessageReaction.Reaction, EnginePeer)]
         var displayAllReactionPeers: Bool
         var areReactionsTags: Bool
+        var messageEffect: AvailableMessageEffects.MessageEffect?
         var replyCount: Int
         var isPinned: Bool
         var hasAutoremove: Bool
@@ -252,6 +216,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             reactionPeers: [(MessageReaction.Reaction, EnginePeer)],
             displayAllReactionPeers: Bool,
             areReactionsTags: Bool,
+            messageEffect: AvailableMessageEffects.MessageEffect?,
             replyCount: Int,
             isPinned: Bool,
             hasAutoremove: Bool,
@@ -273,6 +238,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             self.reactionPeers = reactionPeers
             self.displayAllReactionPeers = displayAllReactionPeers
             self.areReactionsTags = areReactionsTags
+            self.messageEffect = messageEffect
             self.replyCount = replyCount
             self.isPinned = isPinned
             self.hasAutoremove = hasAutoremove
@@ -292,7 +258,6 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
     private var impressionIcon: ASImageNode?
     private var reactionNodes: [MessageReaction.Reaction: StatusReactionNode] = [:]
     private let reactionButtonsContainer = ReactionButtonsAsyncLayoutContainer()
-    private var reactionCountNode: TextNode?
     private var reactionButtonNode: HighlightTrackingButtonNode?
     private var repliesIcon: ASImageNode?
     private var selfExpiringIcon: ASImageNode?
@@ -356,7 +321,6 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
         let currentTheme = self.theme
 
         let makeReplyCountLayout = TextNode.asyncLayout(self.replyCountNode)
-        let makeReactionCountLayout = TextNode.asyncLayout(self.reactionCountNode)
         
         let reactionButtonsContainer = self.reactionButtonsContainer
         
@@ -392,6 +356,10 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     selectedBackground: themeColors.reactionActiveBackground.argb,
                     deselectedForeground: themeColors.reactionInactiveForeground.argb,
                     selectedForeground: themeColors.reactionActiveForeground.argb,
+                    deselectedStarsBackground: themeColors.reactionStarsInactiveBackground.argb,
+                    selectedStarsBackground: themeColors.reactionStarsActiveBackground.argb,
+                    deselectedStarsForeground: themeColors.reactionStarsInactiveForeground.argb,
+                    selectedStarsForeground: themeColors.reactionStarsActiveForeground.argb,
                     extractedBackground: arguments.presentationData.theme.theme.contextMenu.backgroundColor.argb,
                     extractedForeground: arguments.presentationData.theme.theme.contextMenu.primaryColor.argb,
                     extractedSelectedForeground: arguments.presentationData.theme.theme.overallDarkAppearance ? themeColors.reactionActiveForeground.argb : arguments.presentationData.theme.theme.list.itemCheckColors.foregroundColor.argb,
@@ -406,6 +374,10 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     selectedBackground: themeColors.reactionActiveBackground.argb,
                     deselectedForeground: themeColors.reactionInactiveForeground.argb,
                     selectedForeground: themeColors.reactionActiveForeground.argb,
+                    deselectedStarsBackground: themeColors.reactionStarsInactiveBackground.argb,
+                    selectedStarsBackground: themeColors.reactionStarsActiveBackground.argb,
+                    deselectedStarsForeground: themeColors.reactionStarsInactiveForeground.argb,
+                    selectedStarsForeground: themeColors.reactionStarsActiveForeground.argb,
                     extractedBackground: arguments.presentationData.theme.theme.contextMenu.backgroundColor.argb,
                     extractedForeground: arguments.presentationData.theme.theme.contextMenu.primaryColor.argb,
                     extractedSelectedForeground: arguments.presentationData.theme.theme.overallDarkAppearance ? themeColors.reactionActiveForeground.argb : arguments.presentationData.theme.theme.list.itemCheckColors.foregroundColor.argb,
@@ -679,35 +651,11 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
 
             var replyCountLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             
-            let reactionSize: CGFloat = 17.0
-            var reactionCountLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            let reactionSize: CGFloat = 8.0
             let reactionSpacing: CGFloat = 2.0
             let reactionTrailingSpacing: CGFloat = 6.0
 
             var reactionInset: CGFloat = 0.0
-            if arguments.layoutInput.displayInlineReactions, !arguments.reactions.isEmpty {
-                reactionInset = -1.0 + CGFloat(arguments.reactions.count) * reactionSize + CGFloat(arguments.reactions.count - 1) * reactionSpacing + reactionTrailingSpacing
-                
-                var count = 0
-                for reaction in arguments.reactions {
-                    count += Int(reaction.count)
-                }
-                
-                let countString: String
-                if count > 1000000 {
-                    countString = "\(count / 1000000)M"
-                } else if count > 1000 {
-                    countString = "\(count / 1000)K"
-                } else {
-                    countString = "\(count)"
-                }
-                
-                if count > arguments.reactions.count {
-                    let layoutAndApply = makeReactionCountLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: countString, font: dateFont, textColor: dateColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
-                    reactionInset += layoutAndApply.0.size.width + 4.0
-                    reactionCountLayoutAndApply = layoutAndApply
-                }
-            }
             
             if arguments.replyCount > 0 {
                 let countString: String
@@ -724,6 +672,10 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 replyCountLayoutAndApply = layoutAndApply
             } else if arguments.isPinned {
                 reactionInset += 12.0
+            }
+            
+            if arguments.messageEffect != nil {
+                reactionInset += 13.0
             }
             
             leftInset += reactionInset
@@ -953,7 +905,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                             let canViewReactionList = arguments.canViewReactionList
                             item.node.view.activateAfterCompletion = !canViewReactionList
                             item.node.view.activated = { [weak itemNode] gesture, _ in
-                                guard let strongSelf = self, canViewReactionList else {
+                                guard let strongSelf = self else {
                                     return
                                 }
                                 guard let itemNode = itemNode else {
@@ -1145,59 +1097,34 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                         }
                         
                         var reactionOffset: CGFloat = leftOffset + leftInset - reactionInset + backgroundInsets.left
-                        if arguments.layoutInput.displayInlineReactions {
+                        
+                        if let messageEffect = arguments.messageEffect {
                             var validReactions = Set<MessageReaction.Reaction>()
-                            for reaction in arguments.reactions.sorted(by: { lhs, rhs in
-                                if lhs.isSelected != rhs.isSelected {
-                                    if lhs.isSelected {
-                                        return true
-                                    } else {
-                                        return false
-                                    }
-                                } else {
-                                    if let lhsIndex = lhs.chosenOrder, let rhsIndex = rhs.chosenOrder {
-                                        return lhsIndex < rhsIndex
-                                    } else {
-                                        return lhs.count > rhs.count
-                                    }
-                                }
-                            }) {
+                            do {
                                 let node: StatusReactionNode
                                 var animateNode = true
-                                if let current = strongSelf.reactionNodes[reaction.value] {
+                                if let current = strongSelf.reactionNodes[.custom(messageEffect.id)] {
                                     node = current
                                 } else {
                                     animateNode = false
                                     node = StatusReactionNode()
-                                    strongSelf.reactionNodes[reaction.value] = node
+                                    strongSelf.reactionNodes[.custom(messageEffect.id)] = node
                                 }
-                                validReactions.insert(reaction.value)
+                                validReactions.insert(.custom(messageEffect.id))
                                 
                                 var centerAnimation: TelegramMediaFile?
-                                var reactionFileId: Int64?
                                 
-                                switch reaction.value {
-                                case .builtin:
-                                    if let availableReactions = arguments.availableReactions {
-                                        for availableReaction in availableReactions.reactions {
-                                            if availableReaction.value == reaction.value {
-                                                centerAnimation = availableReaction.centerAnimation
-                                                break
-                                            }
-                                        }
-                                    }
-                                case let .custom(fileId):
-                                    reactionFileId = fileId
-                                }
+                                centerAnimation = messageEffect.staticIcon
                                 
                                 node.update(
                                     context: arguments.context,
                                     type: arguments.type,
-                                    value: reaction.value,
+                                    value: .custom(messageEffect.id),
                                     file: centerAnimation,
-                                    fileId: reactionFileId,
-                                    isSelected: reaction.isSelected,
-                                    count: Int(reaction.count),
+                                    fileId: centerAnimation?.fileId.id,
+                                    alternativeText: messageEffect.emoticon,
+                                    isSelected: false,
+                                    count: 0,
                                     theme: arguments.presentationData.theme.theme,
                                     wallpaper: arguments.presentationData.theme.wallpaper,
                                     animationCache: arguments.animationCache,
@@ -1210,7 +1137,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                                         node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                                     }
                                 }
-                                let nodeFrame = CGRect(origin: CGPoint(x: reactionOffset, y: backgroundInsets.top + offset + verticalInset), size: CGSize(width: reactionSize, height: reactionSize))
+                                let nodeFrame = CGRect(origin: CGPoint(x: reactionOffset, y: backgroundInsets.top + offset + 3.0 + UIScreenPixel + verticalInset), size: CGSize(width: reactionSize, height: reactionSize))
                                 if animateNode {
                                     animation.animator.updateFrame(layer: node.layer, frame: nodeFrame, completion: nil)
                                 } else {
@@ -1256,30 +1183,6 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                             }
                             for id in removeIds {
                                 strongSelf.reactionNodes.removeValue(forKey: id)
-                            }
-                        }
-                        
-                        if let (layout, apply) = reactionCountLayoutAndApply {
-                            let node = apply()
-                            if strongSelf.reactionCountNode !== node {
-                                strongSelf.reactionCountNode?.removeFromSupernode()
-                                strongSelf.addSubnode(node)
-                                strongSelf.reactionCountNode = node
-                                if animation.isAnimated {
-                                    node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-                                }
-                            }
-                            let nodeFrame = CGRect(origin: CGPoint(x: reactionOffset - 4.0, y: backgroundInsets.top + 1.0 + offset + verticalInset), size: layout.size)
-                            animation.animator.updateFrame(layer: node.layer, frame: nodeFrame, completion: nil)
-                            reactionOffset += 1.0 + layout.size.width + 4.0
-                        } else if let reactionCountNode = strongSelf.reactionCountNode {
-                            strongSelf.reactionCountNode = nil
-                            if animation.isAnimated {
-                                reactionCountNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak reactionCountNode] _ in
-                                    reactionCountNode?.removeFromSupernode()
-                                })
-                            } else {
-                                reactionCountNode.removeFromSupernode()
                             }
                         }
                         
@@ -1363,15 +1266,17 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
     }
     
     public func reactionView(value: MessageReaction.Reaction) -> UIView? {
-        for (id, node) in self.reactionNodes {
-            if id == value {
-                return node.iconView
-            }
-        }
         for (key, button) in self.reactionButtonsContainer.buttons {
             if key == value {
                 return button.view.iconView
             }
+        }
+        return nil
+    }
+    
+    public func messageEffectTargetView() -> UIView? {
+        for (_, node) in self.reactionNodes {
+            return node.iconView
         }
         return nil
     }

@@ -13,6 +13,7 @@ import SearchUI
 import TelegramPermissionsUI
 import AppBundle
 import DeviceAccess
+import ShareController
 
 public class ComposeControllerImpl: ViewController, ComposeController {
     private let context: AccountContext
@@ -157,7 +158,7 @@ public class ComposeControllerImpl: ViewController, ComposeController {
                 strongSelf.createActionDisposable.set((controller.result
                     |> take(1)
                     |> deliverOnMainQueue).startStrict(next: { [weak controller] result in
-                    if let strongSelf = self, let (contactPeers, _, _, _, _) = result, case let .peer(peer, _, _) = contactPeers.first {
+                    if let strongSelf = self, let (contactPeers, _, _, _, _, _) = result, case let .peer(peer, _, _) = contactPeers.first {
                         controller?.dismissSearch()
                         controller?.displayNavigationActivity = true
                         strongSelf.createActionDisposable.set((strongSelf.context.engine.peers.createSecretChat(peerId: peer.id) |> deliverOnMainQueue).startStrict(next: { peerId in
@@ -200,7 +201,7 @@ public class ComposeControllerImpl: ViewController, ComposeController {
                 switch status {
                     case .allowed:
                         let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: "", lastName: "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: "+")]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .create(peer: nil, contactData: contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: ShareControllerAppAccountContext(context: strongSelf.context), environment: ShareControllerAppEnvironment(sharedContext: strongSelf.context.sharedContext), subject: .create(peer: nil, contactData: contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
                             guard let strongSelf = self else {
                                 return
                             }
@@ -211,7 +212,7 @@ public class ComposeControllerImpl: ViewController, ComposeController {
                                     }
                                 }
                             } else {
-                                (strongSelf.navigationController as? NavigationController)?.replaceAllButRootController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .vcard(nil, stableId, contactData), completed: nil, cancelled: nil), animated: true)
+                                (strongSelf.navigationController as? NavigationController)?.replaceAllButRootController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: ShareControllerAppAccountContext(context: strongSelf.context), environment: ShareControllerAppEnvironment(sharedContext: strongSelf.context.sharedContext), subject: .vcard(nil, stableId, contactData), completed: nil, cancelled: nil), animated: true)
                             }
                         }), completed: nil, cancelled: nil))
                     case .notDetermined:

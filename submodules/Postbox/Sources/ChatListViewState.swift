@@ -1640,6 +1640,7 @@ struct ChatListViewState {
                             includeFrom: true,
                             to: .absoluteLowerBound().withPeerId(associatedMessageId.peerId).withNamespace(associatedMessageId.namespace),
                             ignoreMessagesInTimestampRange: nil,
+                            ignoreMessageIds: Set(),
                             limit: 2
                         )
                         for innerMessage in innerMessages {

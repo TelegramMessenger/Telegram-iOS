@@ -589,6 +589,9 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             if (flags2 & Int32(1 << 12)) != 0 {
                                                 channelFlags.insert(.canViewRevenue)
                                             }
+                                            if (flags2 & Int32(1 << 14)) != 0 {
+                                                channelFlags.insert(.paidMediaAllowed)
+                                            }
                                         
                                             let sendAsPeerId = defaultSendAs?.peerId
                                             

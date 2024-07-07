@@ -16,6 +16,8 @@ import ChatPresentationInterfaceState
 import ContactsPeerItem
 import ItemListUI
 import ChatListSearchItemHeader
+import LottieComponent
+import MultilineTextComponent
 
 public final class ChatInlineSearchResultsListComponent: Component {
     public struct Presentation: Equatable {
@@ -73,9 +75,11 @@ public final class ChatInlineSearchResultsListComponent: Component {
     
     public let context: AccountContext
     public let presentation: Presentation
-    public let peerId: EnginePeer.Id
+    public let peerId: EnginePeer.Id?
     public let contents: Contents
     public let insets: UIEdgeInsets
+    public let inputHeight: CGFloat
+    public let showEmptyResults: Bool
     public let messageSelected: (EngineMessage) -> Void
     public let peerSelected: (EnginePeer) -> Void
     public let loadTagMessages: (MemoryBuffer, MessageIndex?) -> Signal<MessageHistoryView, NoError>?
@@ -86,9 +90,11 @@ public final class ChatInlineSearchResultsListComponent: Component {
     public init(
         context: AccountContext,
         presentation: Presentation,
-        peerId: EnginePeer.Id,
+        peerId: EnginePeer.Id?,
         contents: Contents,
         insets: UIEdgeInsets,
+        inputHeight: CGFloat,
+        showEmptyResults: Bool,
         messageSelected: @escaping (EngineMessage) -> Void,
         peerSelected: @escaping (EnginePeer) -> Void,
         loadTagMessages: @escaping (MemoryBuffer, MessageIndex?) -> Signal<MessageHistoryView, NoError>?,
@@ -101,6 +107,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
         self.peerId = peerId
         self.contents = contents
         self.insets = insets
+        self.inputHeight = inputHeight
+        self.showEmptyResults = showEmptyResults
         self.messageSelected = messageSelected
         self.peerSelected = peerSelected
         self.loadTagMessages = loadTagMessages
@@ -123,6 +131,12 @@ public final class ChatInlineSearchResultsListComponent: Component {
             return false
         }
         if lhs.insets != rhs.insets {
+            return false
+        }
+        if lhs.inputHeight != rhs.inputHeight {
+            return false
+        }
+        if lhs.showEmptyResults != rhs.showEmptyResults {
             return false
         }
         return true
@@ -216,6 +230,9 @@ public final class ChatInlineSearchResultsListComponent: Component {
         private var isUpdating: Bool = false
         
         private let listNode: ListView
+        private let emptyResultsTitle = ComponentView<Empty>()
+        private let emptyResultsText = ComponentView<Empty>()
+        private let emptyResultsAnimation = ComponentView<Empty>()
         
         private var tagContents: (index: MessageIndex?, disposable: Disposable?)?
         private var searchContents: (index: MessageIndex?, disposable: Disposable?)?
@@ -239,6 +256,13 @@ public final class ChatInlineSearchResultsListComponent: Component {
             super.init(frame: frame)
             
             self.addSubnode(self.listNode)
+            
+            self.listNode.beganInteractiveDragging = { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.window?.endEditing(true)
+            }
         }
         
         required public init?(coder: NSCoder) {
@@ -248,6 +272,10 @@ public final class ChatInlineSearchResultsListComponent: Component {
         deinit {
             self.tagContents?.disposable?.dispose()
             self.searchContents?.disposable?.dispose()
+        }
+        
+        public func scrollToTop() {
+            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         }
         
         public func animateIn() {
@@ -275,7 +303,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
             }
         }
         
-        func update(component: ChatInlineSearchResultsListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ChatInlineSearchResultsListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -740,10 +768,14 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         }
                         
                         let renderedPeer: EngineRenderedPeer
-                        if let effectiveAuthor {
+                        if let effectiveAuthor, !component.showEmptyResults {
                             renderedPeer = EngineRenderedPeer(peer: effectiveAuthor)
                         } else {
-                            renderedPeer = EngineRenderedPeer(peerId: message.id.peerId, peers: [:], associatedMedia: [:])
+                            var peers: [EnginePeer.Id: EnginePeer] = [:]
+                            if let peer = message.peers[message.id.peerId] {
+                                peers[message.id.peerId] = EnginePeer(peer)
+                            }
+                            renderedPeer = EngineRenderedPeer(peerId: message.id.peerId, peers: peers, associatedMedia: [:])
                         }
                         
                         return ChatListItem(
@@ -772,7 +804,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
                                 inputActivities: nil,
                                 promoInfo: nil,
                                 ignoreUnreadBadge: false,
-                                displayAsMessage: component.peerId != component.context.account.peerId,
+                                displayAsMessage: component.peerId != component.context.account.peerId && !component.showEmptyResults,
                                 hasFailedMessages: false,
                                 forumTopicData: nil,
                                 topForumTopicItems: [],
@@ -839,6 +871,111 @@ public final class ChatInlineSearchResultsListComponent: Component {
                 }
             }
             
+            let fadeTransition = ComponentTransition.easeInOut(duration: 0.25)
+            if component.showEmptyResults, let appliedContentsState = self.appliedContentsState, appliedContentsState.entries.isEmpty, case let .search(query, _) = component.contents, !query.isEmpty {
+                let sideInset: CGFloat = 44.0
+                let emptyAnimationHeight = 148.0
+                let topInset: CGFloat = component.insets.top
+                let bottomInset: CGFloat = max(component.insets.bottom, component.inputHeight)
+                let visibleHeight = availableSize.height
+                let emptyAnimationSpacing: CGFloat = 8.0
+                let emptyTextSpacing: CGFloat = 8.0
+                
+                let emptyResultsTitleSize = self.emptyResultsTitle.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: component.presentation.strings.HashtagSearch_NoResults, font: Font.semibold(17.0), textColor: component.presentation.theme.list.itemSecondaryTextColor)),
+                            horizontalAlignment: .center
+                        )
+                    ),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                
+                let placeholderText: String
+                if query.hasPrefix("$") {
+                    placeholderText = component.presentation.strings.HashtagSearch_NoResultsQueryCashtagDescription(query).string
+                } else {
+                    placeholderText = component.presentation.strings.HashtagSearch_NoResultsQueryDescription(query).string
+                }
+                
+                let emptyResultsTextSize = self.emptyResultsText.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: placeholderText, font: Font.regular(15.0), textColor: component.presentation.theme.list.itemSecondaryTextColor)),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 0
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+                )
+                let emptyResultsAnimationSize = self.emptyResultsAnimation.update(
+                    transition: .immediate,
+                    component: AnyComponent(LottieComponent(
+                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: emptyAnimationHeight, height: emptyAnimationHeight)
+                )
+      
+                let emptyTotalHeight = emptyAnimationHeight + emptyAnimationSpacing + emptyResultsTitleSize.height + emptyResultsTextSize.height + emptyTextSpacing
+                let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
+                
+                let emptyResultsAnimationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - emptyResultsAnimationSize.width) / 2.0), y: emptyAnimationY), size: emptyResultsAnimationSize)
+                
+                let emptyResultsTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - emptyResultsTitleSize.width) / 2.0), y: emptyResultsAnimationFrame.maxY + emptyAnimationSpacing), size: emptyResultsTitleSize)
+                
+                let emptyResultsTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - emptyResultsTextSize.width) / 2.0), y: emptyResultsTitleFrame.maxY + emptyTextSpacing), size: emptyResultsTextSize)
+                
+                if let view = self.emptyResultsAnimation.view as? LottieComponent.View {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.addSubview(view)
+                        view.playOnce()
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsAnimationFrame.size)
+                    transition.setPosition(view: view, position: emptyResultsAnimationFrame.center)
+                }
+                if let view = self.emptyResultsTitle.view {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.addSubview(view)
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
+                    transition.setPosition(view: view, position: emptyResultsTitleFrame.center)
+                }
+                if let view = self.emptyResultsText.view {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.addSubview(view)
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsTextFrame.size)
+                    transition.setPosition(view: view, position: emptyResultsTextFrame.center)
+                }
+            } else {
+                if let view = self.emptyResultsAnimation.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+                if let view = self.emptyResultsTitle.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+                if let view = self.emptyResultsText.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+            }
+            
             return availableSize
         }
     }
@@ -847,7 +984,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

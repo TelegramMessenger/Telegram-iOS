@@ -28,6 +28,10 @@ private func prerenderTextTransformations(entity: DrawingEntity, image: UIImage,
         angle = -entity.rotation
         scale = entity.scale
         position = entity.position
+    } else if let entity = entity as? DrawingLinkEntity {
+        angle = -entity.rotation
+        scale = entity.scale
+        position = entity.position
     } else {
         fatalError()
     }
@@ -67,14 +71,19 @@ func composerEntitiesForDrawingEntity(postbox: Postbox, textScale: CGFloat, enti
             return []
         } else {
             let content: MediaEditorComposerStickerEntity.Content
+            var scale = entity.scale
             switch entity.content {
             case let .file(file, _):
                 content = .file(file.media)
             case let .image(image, _):
                 content = .image(image)
             case let .animatedImage(data, _):
-                let _ = data
-                return []
+                if let animatedImage = UIImage.animatedImageFromData(data: data) {
+                    content = .animatedImage(animatedImage.images, animatedImage.duration)
+                    scale *= 1.0
+                } else {
+                    return []
+                }
             case let .video(file):
                 content = .video(file)
             case .dualVideoReference:
@@ -93,7 +102,7 @@ func composerEntitiesForDrawingEntity(postbox: Postbox, textScale: CGFloat, enti
                     return []
                 }
             }
-            return [MediaEditorComposerStickerEntity(postbox: postbox, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace, tintColor: tintColor, isStatic: entity.isExplicitlyStatic)]
+            return [MediaEditorComposerStickerEntity(postbox: postbox, content: content, position: entity.position, scale: scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace, tintColor: tintColor, isStatic: entity.isExplicitlyStatic)]
         }
     } else if let renderImage = entity.renderImage, let image = CIImage(image: renderImage, options: [.colorSpace: colorSpace]) {
         if let entity = entity as? DrawingBubbleEntity {
@@ -112,6 +121,8 @@ func composerEntitiesForDrawingEntity(postbox: Postbox, textScale: CGFloat, enti
             }
             return entities
         } else if let entity = entity as? DrawingLocationEntity {
+            return [prerenderTextTransformations(entity: entity, image: renderImage, textScale: textScale, colorSpace: colorSpace)]
+        } else if let entity = entity as? DrawingLinkEntity {
             return [prerenderTextTransformations(entity: entity, image: renderImage, textScale: textScale, colorSpace: colorSpace)]
         }
     }
@@ -296,8 +307,9 @@ final class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
             self.imagePromise.set(.single(image))
         case let .animatedImage(images, duration):
             self.isAnimated = true
-            let _ = images
-            let _ = duration
+            self.videoFrameRate = Float(images.count) / Float(duration)
+            self.totalDuration = duration
+            self.durationPromise.set(.single(duration))
         case .video:
             self.isAnimated = true
         }
@@ -338,7 +350,37 @@ final class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     func image(for time: CMTime, frameRate: Float, context: CIContext, completion: @escaping (CIImage?) -> Void) {
         let currentTime = CMTimeGetSeconds(time)
         
-        if case .video = self.content {
+        if case let .animatedImage(images, _) = self.content {
+            var frameAdvancement: Int = 0
+            if let frameRate = self.videoFrameRate, frameRate > 0 {
+                let frameTime = 1.0 / Double(frameRate)
+                let frameIndex = Int(floor(currentTime / frameTime))
+                
+                let currentFrameIndex = self.currentFrameIndex
+                if currentFrameIndex != frameIndex {
+                    let previousFrameIndex = currentFrameIndex
+                    self.currentFrameIndex = frameIndex
+                    
+                    var delta = 1
+                    if let previousFrameIndex = previousFrameIndex {
+                        delta = max(1, frameIndex - previousFrameIndex)
+                    }
+                    frameAdvancement = delta
+                }
+            }
+            if frameAdvancement == 0, let image = self.image {
+                completion(image)
+                return
+            } else if let currentFrameIndex = self.currentFrameIndex {
+                let index = currentFrameIndex % images.count
+                var image = images[index]
+                image = generateScaledImage(image: images[index], size: image.size.aspectFitted(CGSize(width: 384, height: 384)), opaque: false, scale: 1.0)!
+                let ciImage = CIImage(image: image)
+                self.image = ciImage
+                completion(ciImage)
+                return
+            }
+        } else if case .video = self.content {
             if self.videoOutput == nil {
                 self.setupVideoOutput()
             }
@@ -474,7 +516,6 @@ final class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                             let ioSurfaceProperties = NSMutableDictionary()
                             let options = NSMutableDictionary()
                             options.setObject(ioSurfaceProperties, forKey: kCVPixelBufferIOSurfacePropertiesKey as NSString)
-                            
                             
                             var pixelBuffer: CVPixelBuffer?
                             CVPixelBufferCreate(

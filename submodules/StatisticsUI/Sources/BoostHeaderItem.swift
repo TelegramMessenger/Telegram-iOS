@@ -206,7 +206,7 @@ final class BoostHeaderItemNode: ItemListControllerHeaderItemNode {
         
         if let hostView = self.hostView {
             let size = hostView.update(
-                transition: Transition(transition),
+                transition: ComponentTransition(transition),
                 component: component,
                 environment: {},
                 containerSize: containerSize
@@ -308,7 +308,9 @@ private final class BoostHeaderComponent: CombinedComponent {
                         UIColor(rgb: 0x6b93ff),
                         UIColor(rgb: 0x8878ff),
                         UIColor(rgb: 0xe46ace)
-                    ]
+                    ],
+                    cornerRadius: 0.0,
+                    topOverscroll: true
                 ),
                 availableSize: size,
                 transition: context.transition

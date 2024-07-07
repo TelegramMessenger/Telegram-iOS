@@ -43,7 +43,7 @@ final class TextView: UIView {
         return super.action(for: layer, forKey: event)
     }
     
-    func update(string: String, fontSize: CGFloat, fontWeight: CGFloat, monospacedDigits: Bool = false, alignment: NSTextAlignment = .natural, color: UIColor, constrainedWidth: CGFloat, transition: Transition) -> CGSize {
+    func update(string: String, fontSize: CGFloat, fontWeight: CGFloat, monospacedDigits: Bool = false, alignment: NSTextAlignment = .natural, color: UIColor, constrainedWidth: CGFloat, transition: ComponentTransition) -> CGSize {
         let params = Params(string: string, fontSize: fontSize, fontWeight: fontWeight, monospacedDigits: monospacedDigits, alignment: alignment, constrainedWidth: constrainedWidth)
         if let layoutState = self.layoutState, layoutState.params == params {
             return layoutState.size

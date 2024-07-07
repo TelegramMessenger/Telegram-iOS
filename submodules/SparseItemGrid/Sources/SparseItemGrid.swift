@@ -42,6 +42,7 @@ public protocol SparseItemGridBinding: AnyObject {
     func onTagTap()
     func didScroll()
     func coveringInsetOffsetUpdated(transition: ContainedViewLayoutTransition)
+    func scrollingOffsetUpdated(transition: ContainedViewLayoutTransition)
     func onBeginFastScrolling()
     func getShimmerColors() -> SparseItemGrid.ShimmerColors
 }
@@ -1442,6 +1443,16 @@ public final class SparseItemGrid: ASDisplayNode {
             return 0.0
         }
     }
+    
+    public var scrollingOffset: CGFloat {
+        if let currentViewportTransition = self.currentViewportTransition {
+            return currentViewportTransition.offset
+        } else if let currentViewport = self.currentViewport {
+            return currentViewport.offset
+        } else {
+            return 0.0
+        }
+    }
 
     public var cancelExternalContentGestures: (() -> Void)?
     public var zoomLevelUpdated: ((ZoomLevel) -> Void)?
@@ -1886,9 +1897,15 @@ public final class SparseItemGrid: ASDisplayNode {
     }
     
     private func offsetUpdated(viewport: Viewport, transition: ContainedViewLayoutTransition) {
+        guard let items = self.items else {
+            return
+        }
+        
         if self.currentViewportTransition != nil {
             return
         }
+        
+        items.itemBinding.scrollingOffsetUpdated(transition: transition)
         
         if let headerTextView = self.headerText?.view {
             headerTextView.layer.transform = CATransform3DMakeTranslation(0.0, -viewport.offset, 0.0)
@@ -1896,9 +1913,15 @@ public final class SparseItemGrid: ASDisplayNode {
     }
 
     private func transitionOffsetUpdated(transition: ContainedViewLayoutTransition) {
+        guard let items = self.items else {
+            return
+        }
+        
         guard let currentViewportTransition = self.currentViewportTransition else {
             return
         }
+        
+        items.itemBinding.scrollingOffsetUpdated(transition: transition)
         
         if let headerTextView = self.headerText?.view {
             headerTextView.layer.transform = CATransform3DMakeTranslation(0.0, -currentViewportTransition.offset, 0.0)

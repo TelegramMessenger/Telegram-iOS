@@ -8,6 +8,24 @@ import PhotoResources
 import ImageCompression
 
 public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, media: AnyMediaReference, opportunistic: Bool) -> Signal<AnyMediaReference?, NoError> {
+    if let paidContent = media.media as? TelegramMediaPaidContent {
+        var signals: [Signal<AnyMediaReference?, NoError>] = []
+        for case let .full(fullMedia) in paidContent.extendedMedia {
+            signals.append(transformOutgoingMessageMedia(postbox: postbox, network: network, media: media.withUpdatedMedia(fullMedia), opportunistic: opportunistic))
+        }
+        return combineLatest(signals)
+        |> mapToSignal { results -> Signal<AnyMediaReference?, NoError> in
+            let mediaResults = results.compactMap { $0?.media }
+            if mediaResults.count == signals.count {
+                return .single(media.withUpdatedMedia(TelegramMediaPaidContent(amount: paidContent.amount, extendedMedia: mediaResults.map { .full(media: $0) })))
+            } else if opportunistic {
+                return .single(nil)
+            } else {
+                return .complete()
+            }
+        }
+    }
+    
     switch media.media {
         case let file as TelegramMediaFile:
             let signal = Signal<MediaResourceData, NoError> { subscriber in

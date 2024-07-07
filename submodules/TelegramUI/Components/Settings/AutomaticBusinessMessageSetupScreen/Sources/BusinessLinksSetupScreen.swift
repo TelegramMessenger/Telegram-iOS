@@ -115,7 +115,7 @@ final class BusinessLinksSetupScreenComponent: Component {
         }
         
         var scrolledUp = true
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             let navigationRevealOffsetY: CGFloat = 0.0
             
             let navigationAlphaDistance: CGFloat = 16.0
@@ -212,7 +212,8 @@ final class BusinessLinksSetupScreenComponent: Component {
                 chatLocation: .customChatContents,
                 subject: .customChatContents(contents: contents),
                 botStart: nil,
-                mode: .standard(.default)
+                mode: .standard(.default),
+                params: nil
             )
             if openKeyboard {
                 chatController.activateInput(type: .text)
@@ -259,7 +260,7 @@ final class BusinessLinksSetupScreenComponent: Component {
             environment.controller()?.present(ShareController(context: component.context, subject: .url(link.url), showInChat: nil, externalShare: false, immediateExternalShare: false), in: .window(.root))
         }
         
-        func update(component: BusinessLinksSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: BusinessLinksSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -293,7 +294,7 @@ final class BusinessLinksSetupScreenComponent: Component {
             self.component = component
             self.state = state
             
-            let alphaTransition: Transition
+            let alphaTransition: ComponentTransition
             if !transition.animation.isImmediate {
                 alphaTransition = .easeInOut(duration: 0.25)
             } else {
@@ -416,7 +417,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                 leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
                     name: "Item List/AddLinkIcon",
                     tintColor: environment.theme.list.itemAccentColor
-                )))),
+                ))), false),
                 accessory: nil,
                 action: { [weak self] _ in
                     guard let self else {
@@ -550,7 +551,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                             textColor: .primary,
                             icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) },
                             action: { [weak self] c, _ in
-                                c.dismiss(completion: {
+                                c?.dismiss(completion: {
                                     guard let self else {
                                         return
                                     }
@@ -563,7 +564,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                             textColor: .destructive,
                             icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) },
                             action: { [weak self] c, _ in
-                                c.dismiss(completion: {
+                                c?.dismiss(completion: {
                                     guard let self else {
                                         return
                                     }
@@ -653,7 +654,7 @@ final class BusinessLinksSetupScreenComponent: Component {
         return View()
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

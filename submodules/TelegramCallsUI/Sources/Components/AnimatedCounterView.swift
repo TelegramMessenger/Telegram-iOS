@@ -43,7 +43,7 @@ public final class AnimatedCountView: UIView {
         self.updateFrames()
     }
     
-    func updateFrames(transition: ComponentFlow.Transition? = nil) {
+    func updateFrames(transition: ComponentFlow.ComponentTransition? = nil) {
         let subtitleHeight: CGFloat = subtitleLabel.intrinsicContentSize.height
         let subtitleFrame = CGRect(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: self.countLabel.attributedText?.length == 0 ? bounds.midY - subtitleHeight / 2 : bounds.height - subtitleHeight, width: subtitleLabel.intrinsicContentSize.width + 20, height: subtitleHeight)
         if let transition {

@@ -660,10 +660,10 @@ private final class ChannelItemComponent: Component {
                     
                     if highlighted {
                         self.contextContainer.layer.removeAnimation(forKey: "sublayerTransform")
-                        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                        let transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                         transition.setScale(layer: self.contextContainer.layer, scale: topScale)
                     } else {
-                        let transition = Transition(animation: .none)
+                        let transition = ComponentTransition(animation: .none)
                         transition.setScale(layer: self.contextContainer.layer, scale: 1.0)
                         
                         self.contextContainer.layer.animateScale(from: topScale, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
@@ -691,7 +691,7 @@ private final class ChannelItemComponent: Component {
             }
         }
         
-        func update(component: ChannelItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ChannelItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let previousComponent = self.component
             self.component = component
             self.state = state
@@ -880,7 +880,7 @@ private final class ChannelItemComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -1024,7 +1024,7 @@ final class ChannelListPanelComponent: Component {
             }
         }
         
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             guard let component = self.component, let itemLayout = self.itemLayout else {
                 return
             }
@@ -1123,7 +1123,7 @@ final class ChannelListPanelComponent: Component {
             }
         }
         
-        func update(component: ChannelListPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ChannelListPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
                         
             let itemLayout = ItemLayout(
@@ -1159,7 +1159,7 @@ final class ChannelListPanelComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

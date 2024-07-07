@@ -551,6 +551,14 @@ const NSInteger PGCameraFrameRate = 30;
     [self setZoomLevel:zoomLevel animated:false];
 }
 
+- (int32_t)maxMarkZoomValue {
+    return 25.0;
+}
+
+- (int32_t)secondMarkZoomValue {
+    return 5.0;
+}
+
 - (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated
 {
     if (![self.videoDevice respondsToSelector:@selector(setVideoZoomFactor:)])

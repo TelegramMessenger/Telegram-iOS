@@ -219,13 +219,13 @@ public final class ChatListNavigationBar: Component {
             return result
         }
         
-        public func applyCurrentScroll(transition: Transition) {
+        public func applyCurrentScroll(transition: ComponentTransition) {
             if let rawScrollOffset = self.rawScrollOffset, self.hasDeferredScrollOffset {
                 self.applyScroll(offset: rawScrollOffset, allowAvatarsExpansion: self.currentAllowAvatarsExpansion, transition: transition)
             }
         }
         
-        public func applyScroll(offset: CGFloat, allowAvatarsExpansion: Bool, forceUpdate: Bool = false, transition: Transition) {
+        public func applyScroll(offset: CGFloat, allowAvatarsExpansion: Bool, forceUpdate: Bool = false, transition: ComponentTransition) {
             let transition = transition
             
             self.rawScrollOffset = offset
@@ -574,7 +574,7 @@ public final class ChatListNavigationBar: Component {
             }
         }
         
-        func update(component: ChatListNavigationBar, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ChatListNavigationBar, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let themeUpdated = self.component?.theme !== component.theme
             
             var uploadProgressUpdated = false
@@ -638,7 +638,7 @@ public final class ChatListNavigationBar: Component {
         return View(frame: CGRect())
     }
 
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

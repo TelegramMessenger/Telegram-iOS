@@ -128,21 +128,21 @@ final class ModeComponent: Component {
         }
         
         private var animatedOut = false
-        func animateOutToEditor(transition: Transition) {
+        func animateOutToEditor(transition: ComponentTransition) {
             self.animatedOut = true
             
             transition.setAlpha(view: self.containerView, alpha: 0.0)
             transition.setSublayerTransform(view: self.containerView, transform: CATransform3DMakeTranslation(0.0, -buttonSize.height, 0.0))
         }
         
-        func animateInFromEditor(transition: Transition) {
+        func animateInFromEditor(transition: ComponentTransition) {
             self.animatedOut = false
             
             transition.setAlpha(view: self.containerView, alpha: 1.0)
             transition.setSublayerTransform(view: self.containerView, transform: CATransform3DIdentity)
         }
                 
-        func update(component: ModeComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: ModeComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
         
             let isTablet = component.isTablet
@@ -207,7 +207,7 @@ final class ModeComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -246,7 +246,7 @@ final class HintLabelComponent: Component {
             preconditionFailure()
         }
             
-        func update(component: HintLabelComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: HintLabelComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let previousComponent = self.component
             self.component = component
             
@@ -293,7 +293,7 @@ final class HintLabelComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

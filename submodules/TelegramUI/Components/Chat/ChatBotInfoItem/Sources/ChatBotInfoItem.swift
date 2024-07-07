@@ -175,7 +175,7 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                     break
                 case .ignore:
                     return .fail
-                case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji:
+                case .url, .phone, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji, .custom:
                     return .waitForSingleTap
                 }
             }
@@ -481,15 +481,15 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                                 case .none, .ignore:
                                     break
                                 case let .url(url):
-                                    item.controllerInteraction.longTap(.url(url.url), nil)
+                                    item.controllerInteraction.longTap(.url(url.url), ChatControllerInteraction.LongTapParams())
                                 case let .peerMention(peerId, mention, _):
-                                    item.controllerInteraction.longTap(.peerMention(peerId, mention), nil)
+                                    item.controllerInteraction.longTap(.peerMention(peerId, mention), ChatControllerInteraction.LongTapParams())
                                 case let .textMention(name):
-                                    item.controllerInteraction.longTap(.mention(name), nil)
+                                    item.controllerInteraction.longTap(.mention(name), ChatControllerInteraction.LongTapParams())
                                 case let .botCommand(command):
-                                    item.controllerInteraction.longTap(.command(command), nil)
+                                    item.controllerInteraction.longTap(.command(command), ChatControllerInteraction.LongTapParams())
                                 case let .hashtag(_, hashtag):
-                                    item.controllerInteraction.longTap(.hashtag(hashtag), nil)
+                                    item.controllerInteraction.longTap(.hashtag(hashtag), ChatControllerInteraction.LongTapParams())
                                 default:
                                     break
                                 }

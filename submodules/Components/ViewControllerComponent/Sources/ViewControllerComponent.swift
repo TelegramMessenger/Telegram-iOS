@@ -166,7 +166,7 @@ open class ViewControllerComponentContainer: ViewController {
             self.view.addSubview(self.hostView)
         }
         
-        func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ComponentTransition) {
             self.currentLayout = (layout, navigationHeight)
             
             let environment = ViewControllerComponentContainer.Environment(
@@ -206,10 +206,10 @@ open class ViewControllerComponentContainer: ViewController {
             guard let currentLayout = self.currentLayout else {
                 return
             }
-            self.containerLayoutUpdated(layout: currentLayout.layout, navigationHeight: currentLayout.navigationHeight, transition: animated ? Transition(animation: .none).withUserData(isVisible ? AnimateInTransition() : AnimateOutTransition()) : .immediate)
+            self.containerLayoutUpdated(layout: currentLayout.layout, navigationHeight: currentLayout.navigationHeight, transition: animated ? ComponentTransition(animation: .none).withUserData(isVisible ? AnimateInTransition() : AnimateOutTransition()) : .immediate)
         }
         
-        func updateComponent(component: AnyComponent<ViewControllerComponentContainer.Environment>, transition: Transition) {
+        func updateComponent(component: AnyComponent<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) {
             self.component = component
             
             guard let currentLayout = self.currentLayout else {
@@ -369,10 +369,10 @@ open class ViewControllerComponentContainer: ViewController {
         let navigationHeight = self.navigationLayout(layout: layout).navigationFrame.maxY
         
         self.validLayout = layout
-        self.node.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
+        self.node.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(transition))
     }
     
-    public func updateComponent(component: AnyComponent<ViewControllerComponentContainer.Environment>, transition: Transition) {
+    public func updateComponent(component: AnyComponent<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) {
         self.node.updateComponent(component: component, transition: transition)
     }
 }

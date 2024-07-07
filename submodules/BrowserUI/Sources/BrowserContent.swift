@@ -93,7 +93,7 @@ protocol BrowserContent: UIView {
     
     func scrollToTop()
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: Transition)
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ComponentTransition)
 }
 
 struct ContentScrollingUpdate {
@@ -102,7 +102,7 @@ struct ContentScrollingUpdate {
     public var absoluteOffsetToBottomEdge: CGFloat?
     public var isReset: Bool
     public var isInteracting: Bool
-    public var transition: Transition
+    public var transition: ComponentTransition
     
     public init(
         relativeOffset: CGFloat,
@@ -110,7 +110,7 @@ struct ContentScrollingUpdate {
         absoluteOffsetToBottomEdge: CGFloat?,
         isReset: Bool,
         isInteracting: Bool,
-        transition: Transition
+        transition: ComponentTransition
     ) {
         self.relativeOffset = relativeOffset
         self.absoluteOffsetToTopEdge = absoluteOffsetToTopEdge

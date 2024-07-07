@@ -78,13 +78,13 @@ final class ChatPremiumRequiredInputPanelNode: ChatInputPanelNode {
             return currentLayout.height
         }
 
-        let height = self.update(params: params, transition: Transition(transition))
+        let height = self.update(params: params, transition: ComponentTransition(transition))
         self.currentLayout = Layout(params: params, height: height)
 
         return height
     }
 
-    private func update(params: Params, transition: Transition) -> CGFloat {
+    private func update(params: Params, transition: ComponentTransition) -> CGFloat {
         let height: CGFloat
         if case .regular = params.metrics.widthClass {
             height = 49.0

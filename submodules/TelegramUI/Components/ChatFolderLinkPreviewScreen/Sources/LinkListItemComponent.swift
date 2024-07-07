@@ -139,11 +139,11 @@ final class LinkListItemComponent: Component {
                 }
                 self.isExtractedToContextMenu = value
                 
-                let mappedTransition: Transition
+                let mappedTransition: ComponentTransition
                 if value {
-                    mappedTransition = Transition(transition)
+                    mappedTransition = ComponentTransition(transition)
                 } else {
-                    mappedTransition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                    mappedTransition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                 }
                 self.state?.updated(transition: mappedTransition)
             }
@@ -198,7 +198,7 @@ final class LinkListItemComponent: Component {
             component.action(component.link)
         }
         
-        func update(component: LinkListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: LinkListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let themeUpdated = self.component?.theme !== component.theme
             
             self.component = component
@@ -323,7 +323,7 @@ final class LinkListItemComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

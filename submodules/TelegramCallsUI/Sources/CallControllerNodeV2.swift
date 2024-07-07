@@ -716,7 +716,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 interfaceOrientation: layout.metrics.orientation ?? .portrait,
                 screenCornerRadius: layout.deviceMetrics.screenCornerRadius,
                 state: callScreenState,
-                transition: Transition(transition)
+                transition: ComponentTransition(transition)
             )
         }
     }
@@ -784,7 +784,7 @@ private func copyI420BufferToNV12Buffer(buffer: OngoingGroupCallContext.VideoFra
     return true
 }
 
-private final class AdaptedCallVideoSource: VideoSource {
+final class AdaptedCallVideoSource: VideoSource {
     final class I420DataBuffer: Output.DataBuffer {
         private let buffer: OngoingGroupCallContext.VideoFrameData.I420Buffer
         

@@ -322,7 +322,7 @@ private final class CheckComponent: Component {
         }
 
     
-        func update(component: CheckComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: CheckComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.checkLayer.setSelected(component.selected, animated: true)
             self.checkLayer.theme = component.theme.checkNodeTheme
             
@@ -334,7 +334,7 @@ private final class CheckComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

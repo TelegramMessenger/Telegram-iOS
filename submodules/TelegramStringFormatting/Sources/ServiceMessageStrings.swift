@@ -547,7 +547,16 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 
                 range = (mutableString.string as NSString).range(of: "{amount}")
                 if range.location != NSNotFound {
-                    mutableString.replaceCharacters(in: range, with: NSAttributedString(string: formatCurrencyAmount(totalAmount, currency: currency), font: titleBoldFont, textColor: primaryTextColor))
+                    if currency == "XTR" {
+                        let amountAttributedString = NSMutableAttributedString(string: "#\(totalAmount)", font: titleBoldFont, textColor: primaryTextColor)
+                        if let range = amountAttributedString.string.range(of: "#") {
+                            amountAttributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: true)), range: NSRange(range, in: amountAttributedString.string))
+                            amountAttributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: amountAttributedString.string))
+                        }
+                        mutableString.replaceCharacters(in: range, with: amountAttributedString)
+                    } else {
+                        mutableString.replaceCharacters(in: range, with: NSAttributedString(string: formatCurrencyAmount(totalAmount, currency: currency), font: titleBoldFont, textColor: primaryTextColor))
+                    }
                 }
                 range = (mutableString.string as NSString).range(of: "{name}")
                 if range.location != NSNotFound {

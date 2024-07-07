@@ -1,4 +1,324 @@
 public extension Api {
+    enum InputPeerNotifySettings: TypeConstructorDescription {
+        case inputPeerNotifySettings(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, sound: Api.NotificationSound?, storiesMuted: Api.Bool?, storiesHideSender: Api.Bool?, storiesSound: Api.NotificationSound?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputPeerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let sound, let storiesMuted, let storiesHideSender, let storiesSound):
+                    if boxed {
+                        buffer.appendInt32(-892638494)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {showPreviews!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {silent!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(muteUntil!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {sound!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 6) != 0 {storiesMuted!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 7) != 0 {storiesHideSender!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 8) != 0 {storiesSound!.serialize(buffer, true)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPeerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let sound, let storiesMuted, let storiesHideSender, let storiesSound):
+                return ("inputPeerNotifySettings", [("flags", flags as Any), ("showPreviews", showPreviews as Any), ("silent", silent as Any), ("muteUntil", muteUntil as Any), ("sound", sound as Any), ("storiesMuted", storiesMuted as Any), ("storiesHideSender", storiesHideSender as Any), ("storiesSound", storiesSound as Any)])
+    }
+    }
+    
+        public static func parse_inputPeerNotifySettings(_ reader: BufferReader) -> InputPeerNotifySettings? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Bool?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            var _3: Api.Bool?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
+            var _5: Api.NotificationSound?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.NotificationSound
+            } }
+            var _6: Api.Bool?
+            if Int(_1!) & Int(1 << 6) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            var _7: Api.Bool?
+            if Int(_1!) & Int(1 << 7) != 0 {if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            var _8: Api.NotificationSound?
+            if Int(_1!) & Int(1 << 8) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.NotificationSound
+            } }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 6) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 7) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 8) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: _1!, showPreviews: _2, silent: _3, muteUntil: _4, sound: _5, storiesMuted: _6, storiesHideSender: _7, storiesSound: _8)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum InputPhoneCall: TypeConstructorDescription {
+        case inputPhoneCall(id: Int64, accessHash: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputPhoneCall(let id, let accessHash):
+                    if boxed {
+                        buffer.appendInt32(506920429)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPhoneCall(let id, let accessHash):
+                return ("inputPhoneCall", [("id", id as Any), ("accessHash", accessHash as Any)])
+    }
+    }
+    
+        public static func parse_inputPhoneCall(_ reader: BufferReader) -> InputPhoneCall? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputPhoneCall.inputPhoneCall(id: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum InputPhoto: TypeConstructorDescription {
+        case inputPhoto(id: Int64, accessHash: Int64, fileReference: Buffer)
+        case inputPhotoEmpty
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputPhoto(let id, let accessHash, let fileReference):
+                    if boxed {
+                        buffer.appendInt32(1001634122)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeBytes(fileReference, buffer: buffer, boxed: false)
+                    break
+                case .inputPhotoEmpty:
+                    if boxed {
+                        buffer.appendInt32(483901197)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPhoto(let id, let accessHash, let fileReference):
+                return ("inputPhoto", [("id", id as Any), ("accessHash", accessHash as Any), ("fileReference", fileReference as Any)])
+                case .inputPhotoEmpty:
+                return ("inputPhotoEmpty", [])
+    }
+    }
+    
+        public static func parse_inputPhoto(_ reader: BufferReader) -> InputPhoto? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Buffer?
+            _3 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputPhoto.inputPhoto(id: _1!, accessHash: _2!, fileReference: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputPhotoEmpty(_ reader: BufferReader) -> InputPhoto? {
+            return Api.InputPhoto.inputPhotoEmpty
+        }
+    
+    }
+}
+public extension Api {
+    enum InputPrivacyKey: TypeConstructorDescription {
+        case inputPrivacyKeyAbout
+        case inputPrivacyKeyAddedByPhone
+        case inputPrivacyKeyBirthday
+        case inputPrivacyKeyChatInvite
+        case inputPrivacyKeyForwards
+        case inputPrivacyKeyPhoneCall
+        case inputPrivacyKeyPhoneNumber
+        case inputPrivacyKeyPhoneP2P
+        case inputPrivacyKeyProfilePhoto
+        case inputPrivacyKeyStatusTimestamp
+        case inputPrivacyKeyVoiceMessages
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputPrivacyKeyAbout:
+                    if boxed {
+                        buffer.appendInt32(941870144)
+                    }
+                    
+                    break
+                case .inputPrivacyKeyAddedByPhone:
+                    if boxed {
+                        buffer.appendInt32(-786326563)
+                    }
+                    
+                    break
+                case .inputPrivacyKeyBirthday:
+                    if boxed {
+                        buffer.appendInt32(-698740276)
+                    }
+                    
+                    break
+                case .inputPrivacyKeyChatInvite:
+                    if boxed {
+                        buffer.appendInt32(-1107622874)
+                    }
+                    
+                    break
+                case .inputPrivacyKeyForwards:
+                    if boxed {
+                        buffer.appendInt32(-1529000952)
+                    }
+                    
+                    break
+                case .inputPrivacyKeyPhoneCall:
+                    if boxed {
+                        buffer.appendInt32(-88417185)
+                    }
+                    
+                    break
+                case .inputPrivacyKeyPhoneNumber:
+                    if boxed {
+                        buffer.appendInt32(55761658)
+                    }
+                    
+                    break
+                case .inputPrivacyKeyPhoneP2P:
+                    if boxed {
+                        buffer.appendInt32(-610373422)
+                    }
+                    
+                    break
+                case .inputPrivacyKeyProfilePhoto:
+                    if boxed {
+                        buffer.appendInt32(1461304012)
+                    }
+                    
+                    break
+                case .inputPrivacyKeyStatusTimestamp:
+                    if boxed {
+                        buffer.appendInt32(1335282456)
+                    }
+                    
+                    break
+                case .inputPrivacyKeyVoiceMessages:
+                    if boxed {
+                        buffer.appendInt32(-1360618136)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPrivacyKeyAbout:
+                return ("inputPrivacyKeyAbout", [])
+                case .inputPrivacyKeyAddedByPhone:
+                return ("inputPrivacyKeyAddedByPhone", [])
+                case .inputPrivacyKeyBirthday:
+                return ("inputPrivacyKeyBirthday", [])
+                case .inputPrivacyKeyChatInvite:
+                return ("inputPrivacyKeyChatInvite", [])
+                case .inputPrivacyKeyForwards:
+                return ("inputPrivacyKeyForwards", [])
+                case .inputPrivacyKeyPhoneCall:
+                return ("inputPrivacyKeyPhoneCall", [])
+                case .inputPrivacyKeyPhoneNumber:
+                return ("inputPrivacyKeyPhoneNumber", [])
+                case .inputPrivacyKeyPhoneP2P:
+                return ("inputPrivacyKeyPhoneP2P", [])
+                case .inputPrivacyKeyProfilePhoto:
+                return ("inputPrivacyKeyProfilePhoto", [])
+                case .inputPrivacyKeyStatusTimestamp:
+                return ("inputPrivacyKeyStatusTimestamp", [])
+                case .inputPrivacyKeyVoiceMessages:
+                return ("inputPrivacyKeyVoiceMessages", [])
+    }
+    }
+    
+        public static func parse_inputPrivacyKeyAbout(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyAbout
+        }
+        public static func parse_inputPrivacyKeyAddedByPhone(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyAddedByPhone
+        }
+        public static func parse_inputPrivacyKeyBirthday(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyBirthday
+        }
+        public static func parse_inputPrivacyKeyChatInvite(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyChatInvite
+        }
+        public static func parse_inputPrivacyKeyForwards(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyForwards
+        }
+        public static func parse_inputPrivacyKeyPhoneCall(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyPhoneCall
+        }
+        public static func parse_inputPrivacyKeyPhoneNumber(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyPhoneNumber
+        }
+        public static func parse_inputPrivacyKeyPhoneP2P(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyPhoneP2P
+        }
+        public static func parse_inputPrivacyKeyProfilePhoto(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyProfilePhoto
+        }
+        public static func parse_inputPrivacyKeyStatusTimestamp(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyStatusTimestamp
+        }
+        public static func parse_inputPrivacyKeyVoiceMessages(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyVoiceMessages
+        }
+    
+    }
+}
+public extension Api {
     enum InputPrivacyRule: TypeConstructorDescription {
         case inputPrivacyValueAllowAll
         case inputPrivacyValueAllowChatParticipants(chats: [Int64])
@@ -500,358 +820,6 @@ public extension Api {
             let _c9 = (Int(_1!) & Int(1 << 5) == 0) || _9 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
                 return Api.InputSecureValue.inputSecureValue(flags: _1!, type: _2!, data: _3, frontSide: _4, reverseSide: _5, selfie: _6, translation: _7, files: _8, plainData: _9)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    indirect enum InputSingleMedia: TypeConstructorDescription {
-        case inputSingleMedia(flags: Int32, media: Api.InputMedia, randomId: Int64, message: String, entities: [Api.MessageEntity]?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputSingleMedia(let flags, let media, let randomId, let message, let entities):
-                    if boxed {
-                        buffer.appendInt32(482797855)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    media.serialize(buffer, true)
-                    serializeInt64(randomId, buffer: buffer, boxed: false)
-                    serializeString(message, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(entities!.count))
-                    for item in entities! {
-                        item.serialize(buffer, true)
-                    }}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputSingleMedia(let flags, let media, let randomId, let message, let entities):
-                return ("inputSingleMedia", [("flags", flags as Any), ("media", media as Any), ("randomId", randomId as Any), ("message", message as Any), ("entities", entities as Any)])
-    }
-    }
-    
-        public static func parse_inputSingleMedia(_ reader: BufferReader) -> InputSingleMedia? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.InputMedia?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.InputMedia
-            }
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: [Api.MessageEntity]?
-            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputSingleMedia.inputSingleMedia(flags: _1!, media: _2!, randomId: _3!, message: _4!, entities: _5)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputStickerSet: TypeConstructorDescription {
-        case inputStickerSetAnimatedEmoji
-        case inputStickerSetAnimatedEmojiAnimations
-        case inputStickerSetDice(emoticon: String)
-        case inputStickerSetEmojiChannelDefaultStatuses
-        case inputStickerSetEmojiDefaultStatuses
-        case inputStickerSetEmojiDefaultTopicIcons
-        case inputStickerSetEmojiGenericAnimations
-        case inputStickerSetEmpty
-        case inputStickerSetID(id: Int64, accessHash: Int64)
-        case inputStickerSetPremiumGifts
-        case inputStickerSetShortName(shortName: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputStickerSetAnimatedEmoji:
-                    if boxed {
-                        buffer.appendInt32(42402760)
-                    }
-                    
-                    break
-                case .inputStickerSetAnimatedEmojiAnimations:
-                    if boxed {
-                        buffer.appendInt32(215889721)
-                    }
-                    
-                    break
-                case .inputStickerSetDice(let emoticon):
-                    if boxed {
-                        buffer.appendInt32(-427863538)
-                    }
-                    serializeString(emoticon, buffer: buffer, boxed: false)
-                    break
-                case .inputStickerSetEmojiChannelDefaultStatuses:
-                    if boxed {
-                        buffer.appendInt32(1232373075)
-                    }
-                    
-                    break
-                case .inputStickerSetEmojiDefaultStatuses:
-                    if boxed {
-                        buffer.appendInt32(701560302)
-                    }
-                    
-                    break
-                case .inputStickerSetEmojiDefaultTopicIcons:
-                    if boxed {
-                        buffer.appendInt32(1153562857)
-                    }
-                    
-                    break
-                case .inputStickerSetEmojiGenericAnimations:
-                    if boxed {
-                        buffer.appendInt32(80008398)
-                    }
-                    
-                    break
-                case .inputStickerSetEmpty:
-                    if boxed {
-                        buffer.appendInt32(-4838507)
-                    }
-                    
-                    break
-                case .inputStickerSetID(let id, let accessHash):
-                    if boxed {
-                        buffer.appendInt32(-1645763991)
-                    }
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    break
-                case .inputStickerSetPremiumGifts:
-                    if boxed {
-                        buffer.appendInt32(-930399486)
-                    }
-                    
-                    break
-                case .inputStickerSetShortName(let shortName):
-                    if boxed {
-                        buffer.appendInt32(-2044933984)
-                    }
-                    serializeString(shortName, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputStickerSetAnimatedEmoji:
-                return ("inputStickerSetAnimatedEmoji", [])
-                case .inputStickerSetAnimatedEmojiAnimations:
-                return ("inputStickerSetAnimatedEmojiAnimations", [])
-                case .inputStickerSetDice(let emoticon):
-                return ("inputStickerSetDice", [("emoticon", emoticon as Any)])
-                case .inputStickerSetEmojiChannelDefaultStatuses:
-                return ("inputStickerSetEmojiChannelDefaultStatuses", [])
-                case .inputStickerSetEmojiDefaultStatuses:
-                return ("inputStickerSetEmojiDefaultStatuses", [])
-                case .inputStickerSetEmojiDefaultTopicIcons:
-                return ("inputStickerSetEmojiDefaultTopicIcons", [])
-                case .inputStickerSetEmojiGenericAnimations:
-                return ("inputStickerSetEmojiGenericAnimations", [])
-                case .inputStickerSetEmpty:
-                return ("inputStickerSetEmpty", [])
-                case .inputStickerSetID(let id, let accessHash):
-                return ("inputStickerSetID", [("id", id as Any), ("accessHash", accessHash as Any)])
-                case .inputStickerSetPremiumGifts:
-                return ("inputStickerSetPremiumGifts", [])
-                case .inputStickerSetShortName(let shortName):
-                return ("inputStickerSetShortName", [("shortName", shortName as Any)])
-    }
-    }
-    
-        public static func parse_inputStickerSetAnimatedEmoji(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetAnimatedEmoji
-        }
-        public static func parse_inputStickerSetAnimatedEmojiAnimations(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetAnimatedEmojiAnimations
-        }
-        public static func parse_inputStickerSetDice(_ reader: BufferReader) -> InputStickerSet? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStickerSet.inputStickerSetDice(emoticon: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputStickerSetEmojiChannelDefaultStatuses(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetEmojiChannelDefaultStatuses
-        }
-        public static func parse_inputStickerSetEmojiDefaultStatuses(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetEmojiDefaultStatuses
-        }
-        public static func parse_inputStickerSetEmojiDefaultTopicIcons(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetEmojiDefaultTopicIcons
-        }
-        public static func parse_inputStickerSetEmojiGenericAnimations(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetEmojiGenericAnimations
-        }
-        public static func parse_inputStickerSetEmpty(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetEmpty
-        }
-        public static func parse_inputStickerSetID(_ reader: BufferReader) -> InputStickerSet? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputStickerSet.inputStickerSetID(id: _1!, accessHash: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputStickerSetPremiumGifts(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetPremiumGifts
-        }
-        public static func parse_inputStickerSetShortName(_ reader: BufferReader) -> InputStickerSet? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStickerSet.inputStickerSetShortName(shortName: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputStickerSetItem: TypeConstructorDescription {
-        case inputStickerSetItem(flags: Int32, document: Api.InputDocument, emoji: String, maskCoords: Api.MaskCoords?, keywords: String?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputStickerSetItem(let flags, let document, let emoji, let maskCoords, let keywords):
-                    if boxed {
-                        buffer.appendInt32(853188252)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    document.serialize(buffer, true)
-                    serializeString(emoji, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {maskCoords!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(keywords!, buffer: buffer, boxed: false)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputStickerSetItem(let flags, let document, let emoji, let maskCoords, let keywords):
-                return ("inputStickerSetItem", [("flags", flags as Any), ("document", document as Any), ("emoji", emoji as Any), ("maskCoords", maskCoords as Any), ("keywords", keywords as Any)])
-    }
-    }
-    
-        public static func parse_inputStickerSetItem(_ reader: BufferReader) -> InputStickerSetItem? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.InputDocument?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.InputDocument
-            }
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: Api.MaskCoords?
-            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.MaskCoords
-            } }
-            var _5: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputStickerSetItem.inputStickerSetItem(flags: _1!, document: _2!, emoji: _3!, maskCoords: _4, keywords: _5)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputStickeredMedia: TypeConstructorDescription {
-        case inputStickeredMediaDocument(id: Api.InputDocument)
-        case inputStickeredMediaPhoto(id: Api.InputPhoto)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputStickeredMediaDocument(let id):
-                    if boxed {
-                        buffer.appendInt32(70813275)
-                    }
-                    id.serialize(buffer, true)
-                    break
-                case .inputStickeredMediaPhoto(let id):
-                    if boxed {
-                        buffer.appendInt32(1251549527)
-                    }
-                    id.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputStickeredMediaDocument(let id):
-                return ("inputStickeredMediaDocument", [("id", id as Any)])
-                case .inputStickeredMediaPhoto(let id):
-                return ("inputStickeredMediaPhoto", [("id", id as Any)])
-    }
-    }
-    
-        public static func parse_inputStickeredMediaDocument(_ reader: BufferReader) -> InputStickeredMedia? {
-            var _1: Api.InputDocument?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputDocument
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStickeredMedia.inputStickeredMediaDocument(id: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputStickeredMediaPhoto(_ reader: BufferReader) -> InputStickeredMedia? {
-            var _1: Api.InputPhoto?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputPhoto
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStickeredMedia.inputStickeredMediaPhoto(id: _1!)
             }
             else {
                 return nil

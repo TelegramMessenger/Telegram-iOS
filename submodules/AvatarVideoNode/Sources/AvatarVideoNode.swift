@@ -27,7 +27,7 @@ public final class AvatarVideoNode: ASDisplayNode {
     
     private var fileDisposable = MetaDisposable()
     private var animationFile: TelegramMediaFile?
-    private var itemLayer: EmojiPagerContentComponent.View.ItemLayer?
+    private var itemLayer: EmojiKeyboardItemLayer?
     private var useAnimationNode = false
     private var animationNode: AnimatedStickerNode?
     private let stickerFetchedDisposable = MetaDisposable()
@@ -101,7 +101,7 @@ public final class AvatarVideoNode: ASDisplayNode {
             let itemNativeFitSize = self.internalSize.width > 100.0 ? CGSize(width: 192.0, height: 192.0) : CGSize(width: 64.0, height: 64.0)
             
             let animationData = EntityKeyboardAnimationData(file: animationFile)
-            let itemLayer = EmojiPagerContentComponent.View.ItemLayer(
+            let itemLayer = EmojiKeyboardItemLayer(
                 item: EmojiPagerContentComponent.Item(
                     animationData: animationData,
                     content: .animation(animationData),

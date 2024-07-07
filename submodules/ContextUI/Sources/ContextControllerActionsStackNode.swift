@@ -59,6 +59,16 @@ public struct ContextControllerReactionItems {
     }
 }
 
+public final class ContextControllerPreviewReaction {
+    public let context: AccountContext
+    public let file: TelegramMediaFile
+    
+    public init(context: AccountContext, file: TelegramMediaFile) {
+        self.context = context
+        self.file = file
+    }
+}
+
 public protocol ContextControllerActionsStackItem: AnyObject {
     func node(
         getController: @escaping () -> ContextControllerProtocol?,
@@ -71,6 +81,7 @@ public protocol ContextControllerActionsStackItem: AnyObject {
     var tip: ContextController.Tip? { get }
     var tipSignal: Signal<ContextController.Tip?, NoError>? { get }
     var reactionItems: ContextControllerReactionItems? { get }
+    var previewReaction: ContextControllerPreviewReaction? { get }
     var dismissed: (() -> Void)? { get }
 }
 
@@ -175,12 +186,8 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
     }
     
     @objc private func pressed() {
-        guard let controller = self.getController() else {
-            return
-        }
-        
         self.item.action?(ContextMenuActionItem.Action(
-            controller: controller,
+            controller: self.getController(),
             dismissWithResult: { [weak self] result in
                 guard let strongSelf = self else {
                     return
@@ -232,21 +239,7 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
         let iconSpacing: CGFloat = 8.0
         
         self.highlightBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
-        
-        var subtitle: String?
-        switch self.item.textLayout {
-        case .singleLine:
-            self.titleLabelNode.maximumNumberOfLines = 1
-        case .twoLinesMax:
-            self.titleLabelNode.maximumNumberOfLines = 2
-        case let .secondLineWithValue(subtitleValue):
-            self.titleLabelNode.maximumNumberOfLines = 1
-            subtitle = subtitleValue
-        case .multiline:
-            self.titleLabelNode.maximumNumberOfLines = 0
-            self.titleLabelNode.lineSpacing = 0.1
-        }
-        
+                
         var forcedHeight: CGFloat?
         var titleVerticalOffset: CGFloat?
         let titleFont: UIFont
@@ -268,6 +261,30 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
         
         let subtitleFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)
         let subtitleColor = presentationData.theme.contextMenu.secondaryColor
+        
+        var subtitle: NSAttributedString?
+        switch self.item.textLayout {
+        case .singleLine:
+            self.titleLabelNode.maximumNumberOfLines = 1
+        case .twoLinesMax:
+            self.titleLabelNode.maximumNumberOfLines = 2
+        case let .secondLineWithValue(subtitleValue):
+            self.titleLabelNode.maximumNumberOfLines = 1
+            subtitle = NSAttributedString(
+                string: subtitleValue,
+                font: subtitleFont,
+                textColor: subtitleColor
+            )
+        case let .secondLineWithAttributedValue(subtitleValue):
+            self.titleLabelNode.maximumNumberOfLines = 1
+            let mutableString = subtitleValue.mutableCopy() as! NSMutableAttributedString
+            mutableString.addAttribute(.foregroundColor, value: subtitleColor, range: NSRange(location: 0, length: mutableString.length))
+            mutableString.addAttribute(.font, value: subtitleFont, range: NSRange(location: 0, length: mutableString.length))
+            subtitle = mutableString
+        case .multiline:
+            self.titleLabelNode.maximumNumberOfLines = 0
+            self.titleLabelNode.lineSpacing = 0.1
+        }
         
         let titleColor: UIColor
         switch self.item.textColor {
@@ -312,13 +329,7 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
         
         self.titleLabelNode.isUserInteractionEnabled = self.titleLabelNode.tapAttributeAction != nil && self.item.action == nil
         
-        self.subtitleNode.attributedText = subtitle.flatMap { subtitle in
-            return NSAttributedString(
-                string: subtitle,
-                font: subtitleFont,
-                textColor: subtitleColor
-            )
-        }
+        self.subtitleNode.attributedText = subtitle
         
         var iconSize: CGSize?
         if let iconSource = self.item.iconSource {
@@ -669,7 +680,7 @@ private final class ContextControllerActionsListCustomItemNode: ASDisplayNode, C
     }
 }
 
-final class ContextControllerActionsListStackItem: ContextControllerActionsStackItem {
+public final class ContextControllerActionsListStackItem: ContextControllerActionsStackItem {
     final class Node: ASDisplayNode, ContextControllerActionsStackItemNode {
         private final class Item {
             let node: ContextControllerActionsListItemNode
@@ -933,17 +944,19 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
         }
     }
     
-    let id: AnyHashable?
-    let items: [ContextMenuItem]
-    let reactionItems: ContextControllerReactionItems?
-    let tip: ContextController.Tip?
-    let tipSignal: Signal<ContextController.Tip?, NoError>?
-    let dismissed: (() -> Void)?
+    public let id: AnyHashable?
+    public let items: [ContextMenuItem]
+    public let reactionItems: ContextControllerReactionItems?
+    public let previewReaction: ContextControllerPreviewReaction?
+    public let tip: ContextController.Tip?
+    public let tipSignal: Signal<ContextController.Tip?, NoError>?
+    public let dismissed: (() -> Void)?
     
-    init(
+    public init(
         id: AnyHashable?,
         items: [ContextMenuItem],
         reactionItems: ContextControllerReactionItems?,
+        previewReaction: ContextControllerPreviewReaction?,
         tip: ContextController.Tip?,
         tipSignal: Signal<ContextController.Tip?, NoError>?,
         dismissed: (() -> Void)?
@@ -951,12 +964,13 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
         self.id = id
         self.items = items
         self.reactionItems = reactionItems
+        self.previewReaction = previewReaction
         self.tip = tip
         self.tipSignal = tipSignal
         self.dismissed = dismissed
     }
     
-    func node(
+    public func node(
         getController: @escaping () -> ContextControllerProtocol?,
         requestDismiss: @escaping (ContextMenuActionResult) -> Void,
         requestUpdate: @escaping (ContainedViewLayoutTransition) -> Void,
@@ -1034,6 +1048,7 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
     let id: AnyHashable?
     private let content: ContextControllerItemsContent
     let reactionItems: ContextControllerReactionItems?
+    let previewReaction: ContextControllerPreviewReaction?
     let tip: ContextController.Tip?
     let tipSignal: Signal<ContextController.Tip?, NoError>?
     let dismissed: (() -> Void)?
@@ -1042,6 +1057,7 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
         id: AnyHashable?,
         content: ContextControllerItemsContent,
         reactionItems: ContextControllerReactionItems?,
+        previewReaction: ContextControllerPreviewReaction?,
         tip: ContextController.Tip?,
         tipSignal: Signal<ContextController.Tip?, NoError>?,
         dismissed: (() -> Void)?
@@ -1049,6 +1065,7 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
         self.id = id
         self.content = content
         self.reactionItems = reactionItems
+        self.previewReaction = previewReaction
         self.tip = tip
         self.tipSignal = tipSignal
         self.dismissed = dismissed
@@ -1084,18 +1101,22 @@ func makeContextControllerActionsStackItem(items: ContextController.Items) -> [C
             getEmojiContent: items.getEmojiContent
         )
     }
+    var previewReaction: ContextControllerPreviewReaction?
+    if let context = items.context, let file = items.previewReaction {
+        previewReaction = ContextControllerPreviewReaction(context: context, file: file)
+    }
     switch items.content {
     case let .list(listItems):
-        return [ContextControllerActionsListStackItem(id: items.id, items: listItems, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal, dismissed: items.dismissed)]
+        return [ContextControllerActionsListStackItem(id: items.id, items: listItems, reactionItems: reactionItems, previewReaction: previewReaction, tip: items.tip, tipSignal: items.tipSignal, dismissed: items.dismissed)]
     case let .twoLists(listItems1, listItems2):
-        return [ContextControllerActionsListStackItem(id: items.id, items: listItems1, reactionItems: nil, tip: nil, tipSignal: nil, dismissed: items.dismissed), ContextControllerActionsListStackItem(id: nil, items: listItems2, reactionItems: nil, tip: nil, tipSignal: nil, dismissed: nil)]
+        return [ContextControllerActionsListStackItem(id: items.id, items: listItems1, reactionItems: nil, previewReaction: nil, tip: nil, tipSignal: nil, dismissed: items.dismissed), ContextControllerActionsListStackItem(id: nil, items: listItems2, reactionItems: nil, previewReaction: nil, tip: nil, tipSignal: nil, dismissed: nil)]
     case let .custom(customContent):
-        return [ContextControllerActionsCustomStackItem(id: items.id, content: customContent, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal, dismissed: items.dismissed)]
+        return [ContextControllerActionsCustomStackItem(id: items.id, content: customContent, reactionItems: reactionItems, previewReaction: previewReaction, tip: items.tip, tipSignal: items.tipSignal, dismissed: items.dismissed)]
     }
 }
 
-final class ContextControllerActionsStackNode: ASDisplayNode {
-    enum Presentation {
+public final class ContextControllerActionsStackNode: ASDisplayNode {
+    public enum Presentation {
         case modal
         case inline
         case additional
@@ -1207,6 +1228,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         let tipSignal: Signal<ContextController.Tip?, NoError>?
         var tipNode: InnerTextSelectionTipContainerNode?
         let reactionItems: ContextControllerReactionItems?
+        let previewReaction: ContextControllerPreviewReaction?
         let itemDismissed: (() -> Void)?
         var storedScrollingState: CGFloat?
         let positionLock: CGFloat?
@@ -1222,6 +1244,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             tip: ContextController.Tip?,
             tipSignal: Signal<ContextController.Tip?, NoError>?,
             reactionItems: ContextControllerReactionItems?,
+            previewReaction: ContextControllerPreviewReaction?,
             itemDismissed: (() -> Void)?,
             positionLock: CGFloat?
         ) {
@@ -1240,6 +1263,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             self.dimNode.alpha = 0.0
             
             self.reactionItems = reactionItems
+            self.previewReaction = previewReaction
             self.itemDismissed = itemDismissed
             self.positionLock = positionLock
             
@@ -1372,19 +1396,23 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     
     private var selectionPanGesture: UIPanGestureRecognizer?
     
-    var topReactionItems: ContextControllerReactionItems? {
+    public var topReactionItems: ContextControllerReactionItems? {
         return self.itemContainers.last?.reactionItems
     }
     
-    var topPositionLock: CGFloat? {
+    public var topPreviewReaction: ContextControllerPreviewReaction? {
+        return self.itemContainers.last?.previewReaction
+    }
+    
+    public var topPositionLock: CGFloat? {
         return self.itemContainers.last?.positionLock
     }
     
-    var storedScrollingState: CGFloat? {
+    public var storedScrollingState: CGFloat? {
         return self.itemContainers.last?.storedScrollingState
     }
     
-    init(
+    public init(
         getController: @escaping () -> ContextControllerProtocol?,
         requestDismiss: @escaping (ContextMenuActionResult) -> Void,
         requestUpdate: @escaping (ContainedViewLayoutTransition) -> Void
@@ -1434,7 +1462,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         }
     }
     
-    func replace(item: ContextControllerActionsStackItem, animated: Bool?) {
+    public func replace(item: ContextControllerActionsStackItem, animated: Bool?) {
         if let item = item as? ContextControllerActionsListStackItem, let topContainer = self.itemContainers.first, let topItem = topContainer.item as? ContextControllerActionsListStackItem, let topId = topItem.id, let id = item.id, topId == id, item.items.count == topItem.items.count {
             if let topNode = topContainer.node as? ContextControllerActionsListStackItem.Node {
                 var matches = true
@@ -1491,7 +1519,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         self.push(item: item, currentScrollingState: nil, positionLock: nil, animated: resolvedAnimated)
     }
     
-    func push(item: ContextControllerActionsStackItem, currentScrollingState: CGFloat?, positionLock: CGFloat?, animated: Bool) {
+    public func push(item: ContextControllerActionsStackItem, currentScrollingState: CGFloat?, positionLock: CGFloat?, animated: Bool) {
         if let itemContainer = self.itemContainers.last {
             itemContainer.storedScrollingState = currentScrollingState
         }
@@ -1509,6 +1537,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             tip: item.tip,
             tipSignal: item.tipSignal,
             reactionItems: item.reactionItems,
+            previewReaction: item.previewReaction,
             itemDismissed: item.dismissed,
             positionLock: positionLock
         )
@@ -1525,11 +1554,11 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         self.requestUpdate(transition)
     }
     
-    func clearStoredScrollingState() {
+    public func clearStoredScrollingState() {
         self.itemContainers.last?.storedScrollingState = nil
     }
     
-    func pop() {
+    public func pop() {
         if self.itemContainers.count == 1 {
             //dismiss
         } else {
@@ -1546,7 +1575,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         self.requestUpdate(transition)
     }
     
-    func update(
+    public func update(
         presentationData: PresentationData,
         constrainedSize: CGSize,
         presentation: Presentation,
@@ -1770,37 +1799,37 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         return CGSize(width: topItemWidth, height: topItemSize.height)
     }
     
-    func highlightGestureMoved(location: CGPoint) {
+    public func highlightGestureMoved(location: CGPoint) {
         if let topItemContainer = self.itemContainers.last {
             topItemContainer.highlightGestureMoved(location: self.view.convert(location, to: topItemContainer.view))
         }
     }
     
-    func highlightGestureFinished(performAction: Bool) {
+    public func highlightGestureFinished(performAction: Bool) {
         if let topItemContainer = self.itemContainers.last {
             topItemContainer.highlightGestureFinished(performAction: performAction)
         }
     }
     
-    func decreaseHighlightedIndex() {
+    public func decreaseHighlightedIndex() {
         if let topItemContainer = self.itemContainers.last {
             topItemContainer.decreaseHighlightedIndex()
         }
     }
     
-    func increaseHighlightedIndex() {
+    public func increaseHighlightedIndex() {
         if let topItemContainer = self.itemContainers.last {
             topItemContainer.increaseHighlightedIndex()
         }
     }
     
-    func updatePanSelection(isEnabled: Bool) {
+    public func updatePanSelection(isEnabled: Bool) {
         if let selectionPanGesture = self.selectionPanGesture {
             selectionPanGesture.isEnabled = isEnabled
         }
     }
     
-    func animateIn() {
+    public func animateIn() {
         for itemContainer in self.itemContainers {
             if let tipNode = itemContainer.tipNode {
                 tipNode.animateIn()

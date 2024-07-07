@@ -33,7 +33,7 @@ public class GeneralLinesChartController: BaseLinesChartController {
     
     private var prevoiusHorizontalStrideInterval: Int = 1
     
-    private (set) var chartLines: [LinesChartRenderer.LineData] = []
+    private(set) var chartLines: [LinesChartRenderer.LineData] = []
 
     override public init(chartsCollection: ChartsCollection)  {
         self.initialChartCollection = chartsCollection

@@ -22,31 +22,6 @@ import ChatControllerInteraction
 
 private let titleFont: UIFont = Font.semibold(15.0)
 
-public func defaultWebpageImageSizeIsSmall(webpage: TelegramMediaWebpageLoadedContent) -> Bool {
-    let type = websiteType(of: webpage.websiteName)
-    
-    let mainMedia: Media?
-    switch type {
-    case .instagram, .twitter:
-        mainMedia = webpage.story ?? webpage.image ?? webpage.file
-    default:
-        mainMedia = webpage.story ?? webpage.file ?? webpage.image
-    }
-    
-    if let image = mainMedia as? TelegramMediaImage {
-        if let type = webpage.type, (["photo", "video", "embed", "gif", "document", "telegram_album"] as [String]).contains(type) {
-        } else if let type = webpage.type, (["article"] as [String]).contains(type) {
-            return true
-        } else if let _ = largestImageRepresentation(image.representations)?.dimensions {
-            if webpage.instantPage == nil {
-                return true
-            }
-        }
-    }
-    
-    return false
-}
-
 public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     private var webPage: TelegramMediaWebpage?
     
@@ -140,7 +115,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
         self.contentNode.activateAction = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
                 if let _ = item.message.adAttribute {
-                    item.controllerInteraction.activateAdAction(item.message.id)
+                    item.controllerInteraction.activateAdAction(item.message.id, strongSelf.contentNode.makeProgress())
                 } else {
                     var webPageContent: TelegramMediaWebpageLoadedContent?
                     for media in item.message.media {
@@ -748,5 +723,9 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
     
     override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         return self.contentNode.reactionTargetView(value: value)
+    }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        return self.contentNode.messageEffectTargetView()
     }
 }

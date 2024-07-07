@@ -150,7 +150,7 @@ private final class MediaGridLayer: SimpleLayer {
         })?.cgImage
     }
     
-    func updateSelection(size: CGSize, selectionState: SelectionState, theme: PresentationTheme, transition: Transition) {
+    func updateSelection(size: CGSize, selectionState: SelectionState, theme: PresentationTheme, transition: ComponentTransition) {
         if self.size == size && self.selectionState == selectionState && self.theme === theme {
             return
         }
@@ -535,7 +535,7 @@ final class StorageMediaGridPanelComponent: Component {
             }
         }
         
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             guard let component = self.component, let environment = self.environment, let items = component.items, let itemLayout = self.itemLayout else {
                 return
             }
@@ -613,7 +613,7 @@ final class StorageMediaGridPanelComponent: Component {
             }
         }
         
-        func update(component: StorageMediaGridPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StorageUsagePanelEnvironment>, transition: Transition) -> CGSize {
+        func update(component: StorageMediaGridPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StorageUsagePanelEnvironment>, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             let environment = environment[StorageUsagePanelEnvironment.self].value
@@ -657,7 +657,7 @@ final class StorageMediaGridPanelComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StorageUsagePanelEnvironment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StorageUsagePanelEnvironment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

@@ -29,7 +29,7 @@ public extension TelegramEngine {
         public func sendBotPaymentForm(source: BotPaymentInvoiceSource, formId: Int64, validatedInfoId: String?, shippingOptionId: String?, tipAmount: Int64?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
             return _internal_sendBotPaymentForm(account: self.account, formId: formId, source: source, validatedInfoId: validatedInfoId, shippingOptionId: shippingOptionId, tipAmount: tipAmount, credentials: credentials)
         }
-
+        
         public func requestBotPaymentReceipt(messageId: MessageId) -> Signal<BotPaymentReceipt, RequestBotPaymentReceiptError> {
             return _internal_requestBotPaymentReceipt(account: self.account, messageId: messageId)
         }
@@ -64,6 +64,26 @@ public extension TelegramEngine {
         
         public func launchPrepaidGiveaway(peerId: EnginePeer.Id, id: Int64, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32) -> Signal<Never, LaunchPrepaidGiveawayError> {
             return _internal_launchPrepaidGiveaway(account: self.account, peerId: peerId, id: id, additionalPeerIds: additionalPeerIds, countries: countries, onlyNewSubscribers: onlyNewSubscribers, showWinners: showWinners, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate)
+        }
+        
+        public func starsTopUpOptions() -> Signal<[StarsTopUpOption], NoError> {
+            return _internal_starsTopUpOptions(account: self.account)
+        }
+        
+        public func peerStarsContext() -> StarsContext {
+            return StarsContext(account: self.account)
+        }
+        
+        public func peerStarsRevenueContext(peerId: EnginePeer.Id) -> StarsRevenueStatsContext {
+            return StarsRevenueStatsContext(account: self.account, peerId: peerId)
+        }
+        
+        public func peerStarsTransactionsContext(subject: StarsTransactionsContext.Subject, mode: StarsTransactionsContext.Mode) -> StarsTransactionsContext {
+            return StarsTransactionsContext(account: self.account, subject: subject, mode: mode)
+        }
+        
+        public func sendStarsPaymentForm(formId: Int64, source: BotPaymentInvoiceSource) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
+            return _internal_sendStarsPaymentForm(account: self.account, formId: formId, source: source)
         }
     }
 }

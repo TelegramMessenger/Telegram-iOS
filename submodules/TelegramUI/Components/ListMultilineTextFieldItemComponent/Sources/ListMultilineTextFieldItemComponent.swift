@@ -52,7 +52,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
     public let updated: ((String) -> Void)?
     public let returnKeyAction: (() -> Void)?
     public let backspaceKeyAction: (() -> Void)?
-    public let textUpdateTransition: Transition
+    public let textUpdateTransition: ComponentTransition
     public let tag: AnyObject?
     
     public init(
@@ -72,7 +72,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
         updated: ((String) -> Void)? = nil,
         returnKeyAction: (() -> Void)? = nil,
         backspaceKeyAction: (() -> Void)? = nil,
-        textUpdateTransition: Transition = .immediate,
+        textUpdateTransition: ComponentTransition = .immediate,
         tag: AnyObject? = nil
     ) {
         self.externalState = externalState
@@ -203,7 +203,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
             }
         }
         
-        func update(component: ListMultilineTextFieldItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ListMultilineTextFieldItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -257,6 +257,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
                     externalState: self.textFieldExternalState,
                     fontSize: 17.0,
                     textColor: component.theme.list.itemPrimaryTextColor,
+                    accentColor: component.theme.list.itemPrimaryTextColor,
                     insets: UIEdgeInsets(top: verticalInset, left: sideInset - 8.0, bottom: verticalInset, right: sideInset - 8.0 + measureTextLimitInset),
                     hideKeyboard: false,
                     customInputView: nil,
@@ -376,7 +377,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
             return size
         }
         
-        public func updateCustomPlaceholder(value: String, size: CGSize, transition: Transition) {
+        public func updateCustomPlaceholder(value: String, size: CGSize, transition: ComponentTransition) {
             guard let component = self.component else {
                 return
             }
@@ -426,7 +427,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

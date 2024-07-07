@@ -18,6 +18,7 @@ import ItemListPeerActionItem
 import Markdown
 import UndoUI
 import Postbox
+import OldChannelsController
 
 private final class ChannelPermissionsControllerArguments {
     let context: AccountContext

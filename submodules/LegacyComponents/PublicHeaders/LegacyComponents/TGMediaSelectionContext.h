@@ -11,7 +11,7 @@
 - (instancetype)initWithGroupingAllowed:(bool)allowGrouping selectionLimit:(int)selectionLimit;
 
 @property (nonatomic, readonly) bool allowGrouping;
-@property (nonatomic, readonly) int selectionLimit;
+@property (nonatomic, assign) int selectionLimit;
 @property (nonatomic, copy) void (^selectionLimitExceeded)(void);
 @property (nonatomic, copy) bool (^attemptSelectingItem)(id<TGMediaSelectableItem>);
 

@@ -318,7 +318,7 @@ private final class ChatListItemTagListComponent: Component {
             preconditionFailure()
         }
         
-        func update(component: ChatListItemTagListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ChatListItemTagListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             var validIds: [Int32] = []
             let spacing: CGFloat = floorToScreenPixels(5.0 * component.sizeFactor)
             var nextX: CGFloat = 0.0
@@ -387,7 +387,7 @@ private final class ChatListItemTagListComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -859,6 +859,9 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
                     let signal = mediaGridMessagePhoto(account: self.context.account, userLocation: .peer(self.message.id.peerId), photoReference: .message(message: MessageReference(self.message._asMessage()), media: image), fullRepresentationSize: CGSize(width: 36.0, height: 36.0), blurred: hasSpoiler, synchronousLoad: synchronousLoads)
                     self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
                 }
+            } else {
+                let signal = chatSecretPhoto(account: self.context.account, userLocation: .peer(self.message.id.peerId), photoReference: .standalone(media: image), ignoreFullSize: true, synchronousLoad: synchronousLoads)
+                self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
             }
         } else if case let .action(action) = self.media, case let .suggestedProfilePhoto(image) = action.action, let image = image {
             isRound = true
@@ -2565,7 +2568,36 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 }
                                 
                                 inner: for media in message.media {
-                                    if let image = media as? TelegramMediaImage {
+                                    if let paidContent = media as? TelegramMediaPaidContent {
+                                        let fitSize = contentImageSize
+                                        var index: Int64 = 0
+                                        for media in paidContent.extendedMedia.prefix(3) {
+                                            switch media {
+                                            case let .preview(dimensions, immediateThumbnailData, videoDuration):
+                                                if let immediateThumbnailData {
+                                                    if let videoDuration {
+                                                        let thumbnailMedia = TelegramMediaFile(fileId: MediaId(namespace: 0, id: index), partialReference: nil, resource: EmptyMediaResource(), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Video(duration: Double(videoDuration), size: dimensions ?? PixelDimensions(width: 1, height: 1), flags: [], preloadSize: nil)])
+                                                        contentImageSpecs.append(ContentImageSpec(message: message, media:  .file(thumbnailMedia), size: fitSize))
+                                                    } else {
+                                                        let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: index), representations: [], immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                                                        contentImageSpecs.append(ContentImageSpec(message: message, media:  .image(thumbnailMedia), size: fitSize))
+                                                    }
+                                                    index += 1
+                                                }
+                                            case let .full(fullMedia):
+                                                if let image = fullMedia as? TelegramMediaImage {
+                                                    if let _ = largestImageRepresentation(image.representations) {
+                                                        contentImageSpecs.append(ContentImageSpec(message: message, media:  .image(image), size: fitSize))
+                                                    }
+                                                } else if let file = fullMedia as? TelegramMediaFile {
+                                                    if file.isVideo, !file.isVideoSticker, let _ = file.dimensions {
+                                                        contentImageSpecs.append(ContentImageSpec(message: message,  media: .file(file), size: fitSize))
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        break inner
+                                    } else if let image = media as? TelegramMediaImage {
                                         if let _ = largestImageRepresentation(image.representations) {
                                             let fitSize = contentImageSize
                                             contentImageSpecs.append(ContentImageSpec(message: message, media:  .image(image), size: fitSize))
@@ -3049,9 +3081,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     isFirstForumThreadSelectable = forumThread.isUnread
                     forumThreads.append((id: forumThread.id, title: NSAttributedString(string: forumThread.title, font: textFont, textColor: forumThread.isUnread || isSearching ? theme.authorNameColor : theme.messageTextColor), iconId: forumThread.iconId, iconColor: forumThread.iconColor))
                 }
-                for item in topForumTopicItems {
-                    if forumThread?.id != item.id {
-                        forumThreads.append((id: item.id, title: NSAttributedString(string: item.title, font: textFont, textColor: item.isUnread || isSearching ? theme.authorNameColor : theme.messageTextColor), iconId: item.iconFileId, iconColor: item.iconColor))
+                for topicItem in topForumTopicItems {
+                    if case let .peer(peer) = item.content, peer.peer.peerId.id._internalGetInt64Value() == topicItem.id {
+                        
+                    } else if forumThread?.id != topicItem.id {
+                        forumThreads.append((id: topicItem.id, title: NSAttributedString(string: topicItem.title, font: textFont, textColor: topicItem.isUnread || isSearching ? theme.authorNameColor : theme.messageTextColor), iconId: topicItem.iconFileId, iconColor: topicItem.iconColor))
                     }
                 }
                 
@@ -4060,7 +4094,6 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.textNode.textNode.alpha = 0.0
                             strongSelf.authorNode.alpha = 0.0
                             strongSelf.compoundHighlightingNode?.alpha = 0.0
-                            strongSelf.dustNode?.alpha = 0.0
                             strongSelf.forwardedIconNode.alpha = 0.0
                             
                             if animated || animateContent {
@@ -4072,13 +4105,13 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.forwardedIconNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
                             }
                         }
+                        strongSelf.dustNode?.alpha = 0.0
                     } else {
                         if !strongSelf.inputActivitiesNode.alpha.isZero {
                             strongSelf.inputActivitiesNode.alpha = 0.0
                             strongSelf.textNode.textNode.alpha = 1.0
                             strongSelf.authorNode.alpha = 1.0
                             strongSelf.compoundHighlightingNode?.alpha = 1.0
-                            strongSelf.dustNode?.alpha = 1.0
                             strongSelf.forwardedIconNode.alpha = 1.0
                             if animated || animateContent {
                                 strongSelf.inputActivitiesNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { value in
@@ -4095,6 +4128,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.inputActivitiesNode.removeFromSupernode()
                             }
                         }
+                        strongSelf.dustNode?.alpha = 1.0
                     }
                     if let inputActivitiesSize = inputActivitiesSize {
                         let inputActivitiesFrame = CGRect(origin: CGPoint(x: contentRect.minX, y: authorNodeFrame.minY + UIScreenPixel), size: inputActivitiesSize)

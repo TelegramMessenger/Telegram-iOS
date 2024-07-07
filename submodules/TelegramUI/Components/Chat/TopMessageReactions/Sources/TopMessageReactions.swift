@@ -255,7 +255,15 @@ public func topMessageReactions(context: AccountContext, message: Message, subPe
         guard let allowedReactions = allowedReactions else {
             return .single(nil)
         }
+        
         if case let .set(reactions) = allowedReactions {
+            #if DEBUG
+            var reactions = reactions
+            if context.sharedContext.applicationBindings.appBuildType == .internal {
+                reactions.insert(.custom(MessageReaction.starsReactionId))
+            }
+            #endif
+            
             return context.engine.stickers.resolveInlineStickers(fileIds: reactions.compactMap { item -> Int64? in
                 switch item {
                 case .builtin:
@@ -265,9 +273,17 @@ public func topMessageReactions(context: AccountContext, message: Message, subPe
                 }
             })
             |> map { files -> (reactions: AllowedReactions, files: [Int64: TelegramMediaFile]) in
-                return (allowedReactions, files)
+                return (.set(reactions), files)
             }
         } else {
+            #if DEBUG
+            if context.sharedContext.applicationBindings.appBuildType == .internal {
+                return context.engine.stickers.resolveInlineStickers(fileIds: [MessageReaction.starsReactionId])
+                |> map { files -> (reactions: AllowedReactions, files: [Int64: TelegramMediaFile]) in
+                    return (allowedReactions, files)
+                }
+            }
+            #endif
             return .single((allowedReactions, [:]))
         }
     }
@@ -285,6 +301,25 @@ public func topMessageReactions(context: AccountContext, message: Message, subPe
         
         var result: [ReactionItem] = []
         var existingIds = Set<MessageReaction.Reaction>()
+        
+        #if DEBUG
+        if context.sharedContext.applicationBindings.appBuildType == .internal {
+            if let file = allowedReactionsAndFiles.files[MessageReaction.starsReactionId] {
+                existingIds.insert(.custom(MessageReaction.starsReactionId))
+                
+                result.append(ReactionItem(
+                    reaction: ReactionItem.Reaction(rawValue: .custom(file.fileId.id)),
+                    appearAnimation: file,
+                    stillAnimation: file,
+                    listAnimation: file,
+                    largeListAnimation: file,
+                    applicationAnimation: nil,
+                    largeApplicationAnimation: nil,
+                    isCustom: true
+                ))
+            }
+        }
+        #endif
         
         for topReaction in topReactions {
             switch topReaction.content {
@@ -414,6 +449,41 @@ public func topMessageReactions(context: AccountContext, message: Message, subPe
                     }
                 }
             }
+        }
+
+        return result
+    }
+}
+
+public func effectMessageReactions(context: AccountContext) -> Signal<[ReactionItem], NoError> {
+    return context.engine.stickers.availableMessageEffects()
+    |> take(1)
+    |> map { availableMessageEffects -> [ReactionItem] in
+        guard let availableMessageEffects else {
+            return []
+        }
+        
+        var result: [ReactionItem] = []
+        var existingIds = Set<Int64>()
+        
+        for messageEffect in availableMessageEffects.messageEffects {
+            if existingIds.contains(messageEffect.id) {
+                continue
+            }
+            existingIds.insert(messageEffect.id)
+            
+            let mainFile: TelegramMediaFile = messageEffect.effectSticker
+            
+            result.append(ReactionItem(
+                reaction: ReactionItem.Reaction(rawValue: .custom(messageEffect.id)),
+                appearAnimation: mainFile,
+                stillAnimation: mainFile,
+                listAnimation: mainFile,
+                largeListAnimation: mainFile,
+                applicationAnimation: nil,
+                largeApplicationAnimation: nil,
+                isCustom: true
+            ))
         }
 
         return result

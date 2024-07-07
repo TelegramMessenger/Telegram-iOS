@@ -81,21 +81,23 @@ public final class DrawingWallpaperRenderer {
 }
 
 public final class DrawingMessageRenderer {
-    class ContainerNode: ASDisplayNode {
+    final class ContainerNode: ASDisplayNode {
         private let context: AccountContext
         private let messages: [Message]
         private let isNight: Bool
         private let isOverlay: Bool
+        private let isLink: Bool
         
         private let messagesContainerNode: ASDisplayNode
         private var avatarHeaderNode: ListViewItemHeaderNode?
         private var messageNodes: [ListViewItemNode]?
         
-        init(context: AccountContext, messages: [Message], isNight: Bool = false, isOverlay: Bool = false) {
+        init(context: AccountContext, messages: [Message], isNight: Bool = false, isOverlay: Bool = false, isLink: Bool = false) {
             self.context = context
             self.messages = messages
             self.isNight = isNight
             self.isOverlay = isOverlay
+            self.isLink = isLink
             
             self.messagesContainerNode = ASDisplayNode()
             self.messagesContainerNode.clipsToBounds = true
@@ -115,8 +117,9 @@ public final class DrawingMessageRenderer {
             
             let layout = ContainerViewLayout(size: CGSize(width: 360.0, height: 640.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: .portrait), deviceMetrics: .iPhoneX, intrinsicInsets: .zero, safeInsets: .zero, additionalInsets: .zero, statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
             let size = self.updateMessagesLayout(layout: layout, presentationData: mockPresentationData)
+            let _ = self.updateMessagesLayout(layout: layout, presentationData: mockPresentationData)
             
-            Queue.mainQueue().after(0.05, {
+            Queue.mainQueue().after(0.2, {
                 var mediaRect: CGRect?
                 if let messageNode = self.messageNodes?.first {
                     if self.isOverlay {
@@ -157,6 +160,7 @@ public final class DrawingMessageRenderer {
                         }
                     }
                 }
+
                 self.generate(size: size) { image in
                     completion(size, image, mediaRect)
                 }
@@ -185,12 +189,26 @@ public final class DrawingMessageRenderer {
                     
             let theme = presentationData.theme.withUpdated(preview: true)
             
-            let avatarHeaderItem = self.context.sharedContext.makeChatMessageAvatarHeaderItem(context: self.context, timestamp: self.messages.first?.timestamp ?? 0, peer: self.messages.first!.peers[self.messages.first!.author!.id]!, message: self.messages.first!, theme: theme, strings: presentationData.strings, wallpaper: presentationData.chatWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: presentationData.chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder)
-        
-            let items: [ListViewItem] = [self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: self.messages, theme: theme, strings: presentationData.strings, wallpaper: presentationData.theme.chat.defaultWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: presentationData.chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false)]
+            let chatBubbleCorners = PresentationChatBubbleCorners(
+                mainRadius: presentationData.chatBubbleCorners.mainRadius,
+                auxiliaryRadius: presentationData.chatBubbleCorners.auxiliaryRadius,
+                mergeBubbleCorners: presentationData.chatBubbleCorners.mergeBubbleCorners,
+                hasTails: !self.isLink
+            )
+            
+            let avatarHeaderItem: ListViewItemHeader?
+            if let author = self.messages.first?.author {
+                avatarHeaderItem = self.context.sharedContext.makeChatMessageAvatarHeaderItem(context: self.context, timestamp: self.messages.first?.timestamp ?? 0, peer: self.messages.first!.peers[author.id]!, message: self.messages.first!, theme: theme, strings: presentationData.strings, wallpaper: presentationData.chatWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder)
+            } else {
+                avatarHeaderItem = nil
+            }
+            let items: [ListViewItem] = [self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: self.messages, theme: theme, strings: presentationData.strings, wallpaper: presentationData.theme.chat.defaultWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false)]
         
             let inset: CGFloat = 16.0
-            let leftInset: CGFloat = 37.0
+            var leftInset: CGFloat = 37.0
+            if self.isLink {
+                leftInset = -6.0
+            }
             let containerWidth = layout.size.width - inset * 2.0
             let params = ListViewItemLayoutParams(width: containerWidth, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
             
@@ -262,22 +280,29 @@ public final class DrawingMessageRenderer {
                 }
             }
                     
-            let avatarHeaderNode: ListViewItemHeaderNode
-            if let currentAvatarHeaderNode = self.avatarHeaderNode {
-                avatarHeaderNode = currentAvatarHeaderNode
-                avatarHeaderItem.updateNode(avatarHeaderNode, previous: nil, next: avatarHeaderItem)
-            } else {
-                avatarHeaderNode = avatarHeaderItem.node(synchronousLoad: true)
-                avatarHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-                self.messagesContainerNode.addSubnode(avatarHeaderNode)
-                self.avatarHeaderNode = avatarHeaderNode
+            if let avatarHeaderItem {
+                let avatarHeaderNode: ListViewItemHeaderNode
+                if let currentAvatarHeaderNode = self.avatarHeaderNode {
+                    avatarHeaderNode = currentAvatarHeaderNode
+                    avatarHeaderItem.updateNode(avatarHeaderNode, previous: nil, next: avatarHeaderItem)
+                } else {
+                    avatarHeaderNode = avatarHeaderItem.node(synchronousLoad: true)
+                    avatarHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                    self.messagesContainerNode.addSubnode(avatarHeaderNode)
+                    self.avatarHeaderNode = avatarHeaderNode
+                }
+             
+                avatarHeaderNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 3.0), size: CGSize(width: layout.size.width, height: avatarHeaderItem.height))
+                avatarHeaderNode.updateLayout(size: size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
             }
-                    
-            avatarHeaderNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 3.0), size: CGSize(width: layout.size.width, height: avatarHeaderItem.height))
-            avatarHeaderNode.updateLayout(size: size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
             
-            let containerSize = CGSize(width: width + leftInset + 6.0, height: height)
-            self.frame = CGRect(origin: CGPoint(), size: containerSize)
+            var finalWidth: CGFloat = width
+            if leftInset > 0.0 {
+                finalWidth += leftInset + 6.0
+            }
+            
+            let containerSize = CGSize(width: finalWidth, height: height)
+            self.frame = CGRect(origin: CGPoint(x: -1000.0, y: 0.0), size: containerSize)
             self.messagesContainerNode.frame = CGRect(origin: CGPoint(), size: containerSize)
             
             return containerSize
@@ -304,64 +329,74 @@ public final class DrawingMessageRenderer {
     private let nightContainerNode: ContainerNode
     private let overlayContainerNode: ContainerNode
     
-    public init(context: AccountContext, messages: [Message]) {
+    public init(context: AccountContext, messages: [Message], parentView: UIView, isLink: Bool = false) {
         self.context = context
         self.messages = messages
         
-        self.dayContainerNode = ContainerNode(context: context, messages: messages)
-        self.nightContainerNode = ContainerNode(context: context, messages: messages, isNight: true)
-        self.overlayContainerNode = ContainerNode(context: context, messages: messages, isOverlay: true)
+        self.dayContainerNode = ContainerNode(context: context, messages: messages, isLink: isLink)
+        self.nightContainerNode = ContainerNode(context: context, messages: messages, isNight: true, isLink: isLink)
+        self.overlayContainerNode = ContainerNode(context: context, messages: messages, isOverlay: true, isLink: isLink)
+        
+        parentView.addSubview(self.dayContainerNode.view)
+        parentView.addSubview(self.nightContainerNode.view)
+        parentView.addSubview(self.overlayContainerNode.view)
     }
     
     public func render(completion: @escaping (Result) -> Void) {
-        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        let defaultPresentationData = defaultPresentationData()
+        Queue.mainQueue().after(0.12) {
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            let defaultPresentationData = defaultPresentationData()
+                        
+            let mockPresentationData = PresentationData(
+                strings: presentationData.strings,
+                theme: defaultPresentationTheme,
+                autoNightModeTriggered: false,
+                chatWallpaper: presentationData.chatWallpaper,
+                chatFontSize: defaultPresentationData.chatFontSize,
+                chatBubbleCorners: defaultPresentationData.chatBubbleCorners,
+                listsFontSize: defaultPresentationData.listsFontSize,
+                dateTimeFormat: presentationData.dateTimeFormat,
+                nameDisplayOrder: presentationData.nameDisplayOrder,
+                nameSortOrder: presentationData.nameSortOrder,
+                reduceMotion: false,
+                largeEmoji: true
+            )
+            
+            var finalSize: CGSize = .zero
+            var dayImage: UIImage?
+            var nightImage: UIImage?
+            var overlayImage: UIImage?
+            var mediaRect: CGRect?
+            
+            let completeIfReady = {
+                if let dayImage, let nightImage, let overlayImage {
+                    var cornerRadius: CGFloat = defaultPresentationData.chatBubbleCorners.mainRadius
+                    if let mediaRect, mediaRect.width == mediaRect.height, mediaRect.width == 240.0 {
+                        cornerRadius = mediaRect.width / 2.0
+                    } else if let rect = mediaRect {
+                        mediaRect = CGRect(x: rect.minX + 4.0, y: rect.minY, width: rect.width - 6.0, height: rect.height - 1.0)
+                    }
+                    completion(Result(size: finalSize, dayImage: dayImage, nightImage: nightImage, overlayImage: overlayImage, mediaFrame: mediaRect.flatMap { Result.MediaFrame(rect: $0, cornerRadius: cornerRadius) }))
                     
-        let mockPresentationData = PresentationData(
-            strings: presentationData.strings,
-            theme: defaultPresentationTheme,
-            autoNightModeTriggered: false,
-            chatWallpaper: presentationData.chatWallpaper,
-            chatFontSize: defaultPresentationData.chatFontSize,
-            chatBubbleCorners: defaultPresentationData.chatBubbleCorners,
-            listsFontSize: defaultPresentationData.listsFontSize,
-            dateTimeFormat: presentationData.dateTimeFormat,
-            nameDisplayOrder: presentationData.nameDisplayOrder,
-            nameSortOrder: presentationData.nameSortOrder,
-            reduceMotion: false,
-            largeEmoji: true
-        )
-        
-        var finalSize: CGSize = .zero
-        var dayImage: UIImage?
-        var nightImage: UIImage?
-        var overlayImage: UIImage?
-        var mediaRect: CGRect?
-        
-        let completeIfReady = {
-            if let dayImage, let nightImage, let overlayImage {
-                var cornerRadius: CGFloat = defaultPresentationData.chatBubbleCorners.mainRadius
-                if let mediaRect, mediaRect.width == mediaRect.height, mediaRect.width == 240.0 {
-                    cornerRadius = mediaRect.width / 2.0
-                } else if let rect = mediaRect {
-                    mediaRect = CGRect(x: rect.minX + 4.0, y: rect.minY, width: rect.width - 6.0, height: rect.height - 1.0)
+                    self.dayContainerNode.view.removeFromSuperview()
+                    self.nightContainerNode.view.removeFromSuperview()
+                    self.overlayContainerNode.view.removeFromSuperview()
                 }
-                completion(Result(size: finalSize, dayImage: dayImage, nightImage: nightImage, overlayImage: overlayImage, mediaFrame: mediaRect.flatMap { Result.MediaFrame(rect: $0, cornerRadius: cornerRadius) }))
             }
-        }
-        self.dayContainerNode.render(presentationData: mockPresentationData) { size, image, rect in
-            finalSize = size
-            dayImage = image
-            mediaRect = rect
-            completeIfReady()
-        }
-        self.nightContainerNode.render(presentationData: mockPresentationData) { size, image, _ in
-            nightImage = image
-            completeIfReady()
-        }
-        self.overlayContainerNode.render(presentationData: mockPresentationData) { size, image, _ in
-            overlayImage = image
-            completeIfReady()
+            self.dayContainerNode.render(presentationData: mockPresentationData) { size, image, rect in
+                finalSize = size
+                dayImage = image
+                mediaRect = rect
+                completeIfReady()
+            }
+            self.nightContainerNode.render(presentationData: mockPresentationData) { size, image, _ in
+                nightImage = image
+                completeIfReady()
+            }
+            self.overlayContainerNode.render(presentationData: mockPresentationData) { size, image, _ in
+                overlayImage = image
+                completeIfReady()
+            }
         }
     }
 }

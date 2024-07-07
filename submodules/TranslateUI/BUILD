@@ -27,6 +27,7 @@ swift_library(
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/Components/ViewControllerComponent:ViewControllerComponent",
         "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
+        "//submodules/Components/MultilineTextWithEntitiesComponent:MultilineTextWithEntitiesComponent",
         "//submodules/Components/BundleIconComponent:BundleIconComponent",
         "//submodules/UndoUI:UndoUI",
         "//submodules/ActivityIndicator:ActivityIndicator",

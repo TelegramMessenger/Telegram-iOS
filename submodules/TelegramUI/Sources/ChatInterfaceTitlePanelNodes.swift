@@ -54,6 +54,8 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
         inhibitTitlePanelDisplay = true
     case let .customChatContents(customChatContents):
         switch customChatContents.kind {
+        case .hashTagSearch:
+            break
         case .quickReplyMessageInput:
             break
         case .businessLinkSetup:

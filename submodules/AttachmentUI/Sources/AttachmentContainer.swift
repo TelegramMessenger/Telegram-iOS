@@ -7,6 +7,7 @@ import Display
 import DirectionalPanGesture
 import TelegramPresentationData
 import MapKit
+import WebKit
 
 private let overflowInset: CGFloat = 0.0
 
@@ -34,18 +35,19 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     private(set) var dismissProgress: CGFloat = 0.0
     var isReadyUpdated: (() -> Void)?
     var updateDismissProgress: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
-    var interactivelyDismissed: (() -> Void)?
+    var interactivelyDismissed: ((CGFloat) -> Bool)?
     var controllerRemoved: ((ViewController) -> Void)?
     
     var shouldCancelPanGesture: (() -> Bool)?
     var requestDismiss: (() -> Void)?
     
-    var updateModalProgress: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
+    var updateModalProgress: ((CGFloat, CGFloat, CGRect, ContainedViewLayoutTransition) -> Void)?
     
     private var isUpdatingState = false
     private var isDismissed = false
     private var isInteractiveDimissEnabled = true
     
+    private let isFullSize: Bool
     public private(set) var isExpanded = false
     
     private var validLayout: (layout: ContainerViewLayout, controllers: [AttachmentContainable], coveredByModalTransition: CGFloat)?
@@ -71,7 +73,12 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     var isPanGestureEnabled: (() -> Bool)?
     var onExpandAnimationCompleted: () -> Void = {}
     
-    override init() {
+    init(isFullSize: Bool) {
+        self.isFullSize = isFullSize
+        if isFullSize {
+            self.isExpanded = true
+        }
+        
         self.wrappingNode = ASDisplayNode()
         self.clipNode = ASDisplayNode()
         
@@ -150,15 +157,28 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             }
             if let view = otherGestureRecognizer.view, view.description.contains("WKChildScroll") {
                 return false
-//                let velocity = panGestureRecognizer.velocity(in: nil)
-//                if abs(velocity.x) > abs(velocity.y) * 2.0 {
-//                    return false
-//                }
             }
             if let _ = otherGestureRecognizer.view?.asyncdisplaykit_node as? CollectionIndexNode {
                 return false
             }
             return true
+        }
+        if gestureRecognizer is UIPanGestureRecognizer {
+            func findWebViewAncestor(view: UIView?) -> WKWebView? {
+                guard let view else {
+                    return nil
+                }
+                if let view = view as? WKWebView {
+                    return view
+                } else if view != self.view {
+                    return findWebViewAncestor(view: view.superview)
+                } else {
+                    return nil
+                }
+            }
+            if let otherView = otherGestureRecognizer.view, let _ = findWebViewAncestor(view: otherView) {
+                return true
+            }
         }
         if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UILongPressGestureRecognizer {
             return true
@@ -198,7 +218,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 let currentHitView = self.hitTest(point, with: nil)
                 
                 var scrollViewAndListNode = self.findScrollView(view: currentHitView)
-                if scrollViewAndListNode?.0.frame.height == self.frame.width {
+                if scrollViewAndListNode?.0.frame.height == self.frame.width || scrollViewAndListNode?.0.isDescendant(of: self.view) == false {
                     scrollViewAndListNode = nil
                 }
                 let scrollView = scrollViewAndListNode?.0
@@ -250,14 +270,14 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                     }
                 }
             
-                if !self.isExpanded, translation > 40.0, let shouldCancelPanGesture = self.shouldCancelPanGesture, shouldCancelPanGesture() {
+                if !self.isExpanded || self.isFullSize, translation > 40.0, let shouldCancelPanGesture = self.shouldCancelPanGesture, shouldCancelPanGesture() {
                     self.cancelPanGesture()
                     self.requestDismiss?()
                     return
                 }
             
                 var bounds = self.bounds
-                if self.isExpanded {
+                if self.isExpanded && !self.isFullSize {
                     bounds.origin.y = -max(0.0, translation - edgeTopInset)
                 } else {
                     bounds.origin.y = -translation
@@ -289,7 +309,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 }
             
                 var bounds = self.bounds
-                if self.isExpanded {
+                if self.isExpanded && !self.isFullSize {
                     bounds.origin.y = -max(0.0, translation - edgeTopInset)
                 } else {
                     bounds.origin.y = -translation
@@ -306,19 +326,31 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                     ignoreDismiss = true
                 }
             
+                var minimizing = false
                 var dismissing = false
-                if (bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 1800.0)) && !ignoreDismiss {
-                    self.interactivelyDismissed?()
-                    dismissing = true
+            
+                let thresholdOffset: CGFloat
+                if self.isFullSize {
+                    thresholdOffset = -180.0
+                } else {
+                    thresholdOffset = -60.0
+                }
+            
+                if (bounds.minY < thresholdOffset || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 1800.0)) && !ignoreDismiss {
+                    if self.interactivelyDismissed?(velocity.y) == true {
+                        dismissing = true
+                    } else {
+                        minimizing = true
+                    }
                 } else if self.isExpanded {
-                    if velocity.y > 300.0 || offset > topInset / 2.0 {
+                    if (velocity.y > 300.0 || offset > topInset / 2.0) && !self.isFullSize {
                         self.isExpanded = false
                         if let listNode = listNode {
                             listNode.scroller.setContentOffset(CGPoint(), animated: false)
                         } else if let scrollView = scrollView {
                             scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: -scrollView.contentInset.top), animated: false)
                         }
-                        
+                    
                         let distance = topInset - offset
                         let initialVelocity: CGFloat = distance.isZero ? 0.0 : abs(velocity.y / distance)
                         let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
@@ -362,7 +394,9 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                     let previousBounds = bounds
                     bounds.origin.y = 0.0
                     self.bounds = bounds
-                    self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                    if !minimizing {
+                        self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                    }
                 }
             case .cancelled:
                 self.panGestureArguments = nil
@@ -390,8 +424,8 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         return true
     }
     
-    func update(isExpanded: Bool, transition: ContainedViewLayoutTransition) {
-        guard isExpanded != self.isExpanded else {
+    func update(isExpanded: Bool, force: Bool = false, transition: ContainedViewLayoutTransition) {
+        guard isExpanded != self.isExpanded || force else {
             return
         }
         self.isExpanded = isExpanded
@@ -408,6 +442,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         self.isUpdatingState = true
         
+        let isFirstTime = self.validLayout == nil
         self.validLayout = (layout, controllers, coveredByModalTransition)
                 
         self.panGestureRecognizer?.isEnabled = (layout.inputHeight == nil || layout.inputHeight == 0.0)
@@ -422,7 +457,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         
         let topInset: CGFloat
-        if let (panInitialTopInset, panOffset, _, _) = self.panGestureArguments {
+        if !self.isFullSize, let (panInitialTopInset, panOffset, _, _) = self.panGestureArguments {
             if effectiveExpanded {
                 topInset = min(edgeTopInset, panInitialTopInset + max(0.0, panOffset))
             } else {
@@ -435,9 +470,29 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             completion()
         })
         
-        let modalProgress = isLandscape ? 0.0 : (1.0 - topInset / defaultTopInset)
-        self.updateModalProgress?(modalProgress, transition)
-                
+        let modalProgress: CGFloat
+        if isLandscape {
+            modalProgress = 0.0
+        } else {
+            if self.isFullSize, self.panGestureArguments != nil {
+                modalProgress = 1.0 - min(1.0, max(0.0, -1.0 * self.bounds.minY / defaultTopInset))
+            } else {
+                modalProgress = 1.0 - topInset / defaultTopInset
+            }
+        }
+        
+        if isFirstTime {
+            Queue.mainQueue().justDispatch {
+                var transition = transition
+                if modalProgress == 1.0 {
+                    transition = .animated(duration: 0.4, curve: .spring)
+                }
+                self.updateModalProgress?(modalProgress, topInset, self.bounds, transition)
+            }
+        } else {
+            self.updateModalProgress?(modalProgress, topInset, self.bounds, transition)
+        }
+        
         let containerLayout: ContainerViewLayout
         let containerFrame: CGRect
         let clipFrame: CGRect
@@ -473,9 +528,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 if let statusBarHeight = layout.statusBarHeight {
                     containerTopInset += statusBarHeight
                 }
-                
-                let effectiveStatusBarHeight: CGFloat? = nil
-                
+                                
                 var safeInsets = layout.safeInsets
                 safeInsets.left += overflowInset
                 safeInsets.right += overflowInset
@@ -487,7 +540,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 var additionalInsets = layout.additionalInsets
                 additionalInsets.bottom = topInset
                 
-                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width + overflowInset * 2.0, height: layout.size.height - containerTopInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: intrinsicInsets.left, bottom: intrinsicInsets.bottom, right: intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: safeInsets.left, bottom: safeInsets.bottom, right: safeInsets.right), additionalInsets: additionalInsets, statusBarHeight: effectiveStatusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
+                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width + overflowInset * 2.0, height: layout.size.height - containerTopInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: intrinsicInsets.left, bottom: intrinsicInsets.bottom, right: intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: safeInsets.left, bottom: safeInsets.bottom, right: safeInsets.right), additionalInsets: additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
                 let unscaledFrame = CGRect(origin: CGPoint(x: 0.0, y: containerTopInset - coveredByModalTransition * 10.0), size: containerLayout.size)
                 let maxScale: CGFloat = (containerLayout.size.width - 16.0 * 2.0) / containerLayout.size.width
                 containerScale = 1.0 * (1.0 - coveredByModalTransition) + maxScale * coveredByModalTransition

@@ -15,6 +15,8 @@ import TextNodeWithEntities
 import ChatPresentationInterfaceState
 import SavedTagNameAlertController
 import PremiumUI
+import ChatSendStarsScreen
+import ChatMessageItemCommon
 
 extension ChatControllerImpl {
     func presentTagPremiumPaywall() {
@@ -85,7 +87,7 @@ extension ChatControllerImpl {
                         a(.default)
                         return
                     }
-                    c.dismiss(completion: { [weak self] in
+                    c?.dismiss(completion: { [weak self] in
                         guard let self else {
                             return
                         }
@@ -159,6 +161,41 @@ extension ChatControllerImpl {
                 self.window?.presentInGlobalOverlay(controller)
             })
         } else {
+            if self.context.sharedContext.applicationBindings.appBuildType == .internal, case .custom(MessageReaction.starsReactionId) = value {
+                let _ = (ChatSendStarsScreen.initialData(context: self.context, peerId: message.id.peerId)
+                |> deliverOnMainQueue).start(next: { [weak self] initialData in
+                    guard let self, let initialData else {
+                        return
+                    }
+                    self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount in
+                        guard let self else {
+                            return
+                        }
+                        
+                        let _ = (self.context.engine.stickers.resolveInlineStickers(fileIds: [MessageReaction.starsReactionId])
+                        |> deliverOnMainQueue).start(next: { [weak self] files in
+                            guard let self, let file = files[MessageReaction.starsReactionId] else {
+                                return
+                            }
+                            
+                            //TODO:localize
+                            let title: String
+                            if amount == 1 {
+                                title = "Star Sent"
+                            } else {
+                                title = "\(amount) Stars Sent"
+                            }
+                            
+                            self.present(UndoOverlayController(presentationData: self.presentationData, content: .starsSent(context: self.context, file: file, amount: amount, title: title, text: nil), elevatedLayout: false, action: { _ in
+                                return false
+                            }), in: .current)
+                        })
+                    }))
+                })
+                
+                return
+            }
+            
             var customFileIds: [Int64] = []
             if case let .custom(fileId) = value {
                 customFileIds.append(fileId)
@@ -175,21 +212,28 @@ extension ChatControllerImpl {
                 
                 var dismissController: ((@escaping () -> Void) -> Void)?
                 
-                var items = ContextController.Items(content: .custom(ReactionListContextMenuContent(
-                    context: self.context,
-                    displayReadTimestamps: false,
-                    availableReactions: availableReactions,
-                    animationCache: self.controllerInteraction!.presentationContext.animationCache,
-                    animationRenderer: self.controllerInteraction!.presentationContext.animationRenderer,
-                    message: EngineMessage(message), reaction: value, readStats: nil, back: nil, openPeer: { peer, hasReaction in
-                    dismissController?({ [weak self] in
-                        guard let self else {
-                            return
+                var items: ContextController.Items
+                if canViewMessageReactionList(message: message) {
+                    items = ContextController.Items(content: .custom(ReactionListContextMenuContent(
+                        context: self.context,
+                        displayReadTimestamps: false,
+                        availableReactions: availableReactions,
+                        animationCache: self.controllerInteraction!.presentationContext.animationCache,
+                        animationRenderer: self.controllerInteraction!.presentationContext.animationRenderer,
+                        message: EngineMessage(message),
+                        reaction: value, readStats: nil, back: nil, openPeer: { peer, hasReaction in
+                            dismissController?({ [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                self.openPeer(peer: peer, navigation: .default, fromMessage: MessageReference(message), fromReactionMessageId: hasReaction ? message.id : nil)
+                            })
                         }
-                        
-                        self.openPeer(peer: peer, navigation: .default, fromMessage: MessageReference(message), fromReactionMessageId: hasReaction ? message.id : nil)
-                    })
-                })))
+                    )))
+                } else {
+                    items = ContextController.Items(content: .list([]))
+                }
                 
                 var packReferences: [StickerPackReference] = []
                 var existingIds = Set<Int64>()
@@ -314,6 +358,16 @@ extension ChatControllerImpl {
                         }
                     }
                 }
+                
+                let reactionFile: TelegramMediaFile?
+                switch value {
+                case .builtin:
+                    reactionFile = availableReactions?.reactions.first(where: { $0.value == value })?.selectAnimation
+                case let .custom(fileId):
+                    reactionFile = customEmoji[fileId]
+                }
+                items.context = self.context
+                items.previewReaction = reactionFile
                 
                 self.canReadHistory.set(false)
                 

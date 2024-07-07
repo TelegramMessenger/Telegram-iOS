@@ -25,6 +25,7 @@ public final class OpenChatMessageParams {
     public let chatFilterTag: MemoryBuffer?
     public let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?
     public let message: Message
+    public let mediaIndex: Int?
     public let standalone: Bool
     public let reverseMessageGalleryOrder: Bool
     public let mode: ChatControllerInteractionOpenMessageMode
@@ -55,6 +56,7 @@ public final class OpenChatMessageParams {
         chatFilterTag: MemoryBuffer?,
         chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?,
         message: Message,
+        mediaIndex: Int? = nil,
         standalone: Bool,
         reverseMessageGalleryOrder: Bool,
         mode: ChatControllerInteractionOpenMessageMode = .default,
@@ -84,6 +86,7 @@ public final class OpenChatMessageParams {
         self.chatFilterTag = chatFilterTag
         self.chatLocationContextHolder = chatLocationContextHolder
         self.message = message
+        self.mediaIndex = mediaIndex
         self.standalone = standalone
         self.reverseMessageGalleryOrder = reverseMessageGalleryOrder
         self.mode = mode

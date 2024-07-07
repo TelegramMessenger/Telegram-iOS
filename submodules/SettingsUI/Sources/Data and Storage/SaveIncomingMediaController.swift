@@ -167,7 +167,7 @@ private enum SaveIncomingMediaEntry: ItemListNodeEntry {
         switch self {
         case let .peer(peer, presence):
             return ItemListAvatarAndNameInfoItem(
-                accountContext: arguments.context,
+                itemContext: .accountContext(arguments.context),
                 presentationData: presentationData,
                 dateTimeFormat: PresentationDateTimeFormat(),
                 mode: .generic,

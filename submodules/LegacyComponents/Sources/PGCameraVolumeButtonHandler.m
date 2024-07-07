@@ -5,6 +5,8 @@
 #import "TGStringUtils.h"
 #import "Freedom.h"
 
+#import <AVKit/AVKit.h>
+
 static NSString *encodeText(NSString *string, int key) {
     NSMutableString *result = [[NSMutableString alloc] init];
     
@@ -19,7 +21,10 @@ static NSString *encodeText(NSString *string, int key) {
 
 @interface PGCameraVolumeButtonHandler () {
     id _dataSource;
+    id<UIInteraction> _eventInteraction;
 }
+
+@property (nonatomic, weak) UIView *eventView;
 
 @property (nonatomic, copy) void(^upButtonPressedBlock)(void);
 @property (nonatomic, copy) void(^upButtonReleasedBlock)(void);
@@ -30,11 +35,13 @@ static NSString *encodeText(NSString *string, int key) {
 
 @implementation PGCameraVolumeButtonHandler
 
-- (instancetype)initWithUpButtonPressedBlock:(void (^)(void))upButtonPressedBlock upButtonReleasedBlock:(void (^)(void))upButtonReleasedBlock downButtonPressedBlock:(void (^)(void))downButtonPressedBlock downButtonReleasedBlock:(void (^)(void))downButtonReleasedBlock
+- (instancetype)initWithIsCameraSpecific:(bool)isCameraSpecific eventView:(UIView *)eventView upButtonPressedBlock:(void (^)(void))upButtonPressedBlock upButtonReleasedBlock:(void (^)(void))upButtonReleasedBlock downButtonPressedBlock:(void (^)(void))downButtonPressedBlock downButtonReleasedBlock:(void (^)(void))downButtonReleasedBlock
 {
     self = [super init];
     if (self != nil)
     {
+        self.eventView = eventView;
+        
         self.upButtonPressedBlock = upButtonPressedBlock;
         self.upButtonReleasedBlock = upButtonReleasedBlock;
         self.downButtonPressedBlock = downButtonPressedBlock;
@@ -45,9 +52,47 @@ static NSString *encodeText(NSString *string, int key) {
         self.enabled = true;
         
         if (@available(iOS 17.2, *)) {
-            NSString *className = encodeText(@"NQWpmvnfDpouspmmfsTztufnEbubTpvsdf", -1);
-            Class c = NSClassFromString(className);
-            _dataSource = [[c alloc] init];
+            if (isCameraSpecific) {
+                __weak PGCameraVolumeButtonHandler *weakSelf = self;
+                AVCaptureEventInteraction *interaction = [[AVCaptureEventInteraction alloc] initWithPrimaryEventHandler:^(AVCaptureEvent * _Nonnull event) {
+                    __strong PGCameraVolumeButtonHandler *strongSelf = weakSelf;
+                    switch (event.phase) {
+                        case AVCaptureEventPhaseBegan:
+                            strongSelf.downButtonPressedBlock();
+                            break;
+                        case AVCaptureEventPhaseEnded:
+                            strongSelf.downButtonReleasedBlock();
+                            break;
+                        case AVCaptureEventPhaseCancelled:
+                            strongSelf.downButtonReleasedBlock();
+                            break;
+                        default:
+                            break;
+                    }
+                } secondaryEventHandler:^(AVCaptureEvent * _Nonnull event) {
+                    __strong PGCameraVolumeButtonHandler *strongSelf = weakSelf;
+                    switch (event.phase) {
+                        case AVCaptureEventPhaseBegan:
+                            strongSelf.upButtonPressedBlock();
+                            break;
+                        case AVCaptureEventPhaseEnded:
+                            strongSelf.upButtonReleasedBlock();
+                            break;
+                        case AVCaptureEventPhaseCancelled:
+                            strongSelf.upButtonReleasedBlock();
+                            break;
+                        default:
+                            break;
+                    }
+                }];
+                interaction.enabled = true;
+                [eventView addInteraction:interaction];
+                _eventInteraction = interaction;
+            } else {
+                NSString *className = encodeText(@"NQWpmvnfDpouspmmfsTztufnEbubTpvsdf", -1);
+                Class c = NSClassFromString(className);
+                _dataSource = [[c alloc] init];
+            }
         }
     }
     return self;
@@ -55,6 +100,10 @@ static NSString *encodeText(NSString *string, int key) {
 
 - (void)dealloc
 {
+    if (_eventInteraction != nil) {
+        [self.eventView removeInteraction:_eventInteraction];
+    }
+    
     self.enabled = false;
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }

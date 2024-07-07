@@ -20,6 +20,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     private let context: AccountContext
     private let chatLocation: ChatLocation
     private let isScheduledMessages: Bool
+    private let isFile: Bool
     private let present: (ViewController) -> Void
     private let presentInGlobalOverlay:  (ViewController) -> Void
     private let makeEntityInputView: () -> LegacyMessageInputPanelInputView?
@@ -44,6 +45,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         context: AccountContext,
         chatLocation: ChatLocation,
         isScheduledMessages: Bool,
+        isFile: Bool,
         present: @escaping (ViewController) -> Void,
         presentInGlobalOverlay: @escaping (ViewController) -> Void,
         makeEntityInputView: @escaping () -> LegacyMessageInputPanelInputView?
@@ -51,6 +53,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         self.context = context
         self.chatLocation = chatLocation
         self.isScheduledMessages = isScheduledMessages
+        self.isFile = isFile
         self.present = present
         self.presentInGlobalOverlay = presentInGlobalOverlay
         self.makeEntityInputView = makeEntityInputView
@@ -92,7 +95,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     }
     
     public func animate(_ view: UIView, frame: CGRect) {
-        let transition = Transition.spring(duration: 0.4)
+        let transition = ComponentTransition.spring(duration: 0.4)
         transition.setFrame(view: view, frame: frame)
     }
     
@@ -158,17 +161,21 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let theme = defaultDarkColorPresentationTheme
         
-        var timeoutValue: String
+        var timeoutValue: String?
         var timeoutSelected = false
-        if let timeout = self.currentTimeout {
-            if timeout == viewOnceTimeout {
-                timeoutValue = "1"
-            } else {
-                timeoutValue = "\(timeout)"
-            }
-            timeoutSelected = true
+        if self.isFile {
+            timeoutValue = nil
         } else {
-            timeoutValue = "1"
+            if let timeout = self.currentTimeout {
+                if timeout == viewOnceTimeout {
+                    timeoutValue = "1"
+                } else {
+                    timeoutValue = "\(timeout)"
+                }
+                timeoutSelected = true
+            } else {
+                timeoutValue = "1"
+            }
         }
         
         var maxInputPanelHeight = maxHeight
@@ -191,7 +198,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         
         self.inputPanel.parentState = self.state
         let inputPanelSize = self.inputPanel.update(
-            transition: Transition(transition),
+            transition: ComponentTransition(transition),
             component: AnyComponent(
                 MessageInputPanelComponent(
                     externalState: self.inputPanelExternalState,

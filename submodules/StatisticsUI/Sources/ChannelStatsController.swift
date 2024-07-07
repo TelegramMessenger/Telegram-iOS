@@ -25,6 +25,7 @@ import StoryContainerScreen
 import TelegramNotices
 import ComponentFlow
 import BoostLevelIconComponent
+import StarsWithdrawalScreen
 
 private let initialBoostersDisplayedLimit: Int32 = 5
 private let initialTransactionsDisplayedLimit: Int32 = 5
@@ -42,17 +43,22 @@ private final class ChannelStatsControllerArguments {
     let openGifts: () -> Void
     let createPrepaidGiveaway: (PrepaidGiveaway) -> Void
     let updateGiftsSelected: (Bool) -> Void
+    let updateStarsSelected: (Bool) -> Void
     
-    let requestWithdraw: () -> Void
+    let requestTonWithdraw: () -> Void
+    let requestStarsWithdraw: () -> Void
+    let showTimeoutTooltip: (Int32) -> Void
+    let buyAds: () -> Void
     let openMonetizationIntro: () -> Void
     let openMonetizationInfo: () -> Void
-    let openTransaction: (RevenueStatsTransactionsContext.State.Transaction) -> Void
-    let expandTransactions: () -> Void
+    let openTonTransaction: (RevenueStatsTransactionsContext.State.Transaction) -> Void
+    let openStarsTransaction: (StarsContext.State.Transaction) -> Void
+    let expandTransactions: (Bool) -> Void
     let updateCpmEnabled: (Bool) -> Void
     let presentCpmLocked: () -> Void
     let dismissInput: () -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPostStats: @escaping (EnginePeer, StatsPostItem) -> Void, openStory: @escaping (EngineStoryItem, UIView) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void, requestWithdraw: @escaping () -> Void, openMonetizationIntro: @escaping () -> Void, openMonetizationInfo: @escaping () -> Void, openTransaction: @escaping (RevenueStatsTransactionsContext.State.Transaction) -> Void, expandTransactions: @escaping () -> Void, updateCpmEnabled: @escaping (Bool) -> Void, presentCpmLocked: @escaping () -> Void, dismissInput: @escaping () -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPostStats: @escaping (EnginePeer, StatsPostItem) -> Void, openStory: @escaping (EngineStoryItem, UIView) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void, updateStarsSelected: @escaping (Bool) -> Void, requestTonWithdraw: @escaping () -> Void, requestStarsWithdraw: @escaping () -> Void, showTimeoutTooltip: @escaping (Int32) -> Void, buyAds: @escaping () -> Void, openMonetizationIntro: @escaping () -> Void, openMonetizationInfo: @escaping () -> Void, openTonTransaction: @escaping (RevenueStatsTransactionsContext.State.Transaction) -> Void, openStarsTransaction: @escaping (StarsContext.State.Transaction) -> Void, expandTransactions: @escaping (Bool) -> Void, updateCpmEnabled: @escaping (Bool) -> Void, presentCpmLocked: @escaping () -> Void, dismissInput: @escaping () -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openPostStats = openPostStats
@@ -65,10 +71,15 @@ private final class ChannelStatsControllerArguments {
         self.openGifts = openGifts
         self.createPrepaidGiveaway = createPrepaidGiveaway
         self.updateGiftsSelected = updateGiftsSelected
-        self.requestWithdraw = requestWithdraw
+        self.updateStarsSelected = updateStarsSelected
+        self.requestTonWithdraw = requestTonWithdraw
+        self.requestStarsWithdraw = requestStarsWithdraw
+        self.showTimeoutTooltip = showTimeoutTooltip
+        self.buyAds = buyAds
         self.openMonetizationIntro = openMonetizationIntro
         self.openMonetizationInfo = openMonetizationInfo
-        self.openTransaction = openTransaction
+        self.openTonTransaction = openTonTransaction
+        self.openStarsTransaction = openStarsTransaction
         self.expandTransactions = expandTransactions
         self.updateCpmEnabled = updateCpmEnabled
         self.presentCpmLocked = presentCpmLocked
@@ -101,9 +112,11 @@ private enum StatsSection: Int32 {
     
     case adsHeader
     case adsImpressions
-    case adsRevenue
+    case adsTonRevenue
+    case adsStarsRevenue
     case adsProceeds
-    case adsBalance
+    case adsTonBalance
+    case adsStarsBalance
     case adsTransactions
     case adsCpm
 }
@@ -218,19 +231,28 @@ private enum StatsEntry: ItemListNodeEntry {
     case adsImpressionsTitle(PresentationTheme, String)
     case adsImpressionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
-    case adsRevenueTitle(PresentationTheme, String)
-    case adsRevenueGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType, Double)
+    case adsTonRevenueTitle(PresentationTheme, String)
+    case adsTonRevenueGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType, Double)
+    
+    case adsStarsRevenueTitle(PresentationTheme, String)
+    case adsStarsRevenueGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType, Double)
     
     case adsProceedsTitle(PresentationTheme, String)
-    case adsProceedsOverview(PresentationTheme, RevenueStats, TelegramMediaFile?)
+    case adsProceedsOverview(PresentationTheme, RevenueStats, StarsRevenueStats?)
 
-    case adsBalanceTitle(PresentationTheme, String)
-    case adsBalance(PresentationTheme, RevenueStats, Bool, Bool, TelegramMediaFile?)
-    case adsBalanceInfo(PresentationTheme, String)
+    case adsTonBalanceTitle(PresentationTheme, String)
+    case adsTonBalance(PresentationTheme, RevenueStats, Bool, Bool)
+    case adsTonBalanceInfo(PresentationTheme, String)
+    
+    case adsStarsBalanceTitle(PresentationTheme, String)
+    case adsStarsBalance(PresentationTheme, StarsRevenueStats, Bool, Bool, Int32?)
+    case adsStarsBalanceInfo(PresentationTheme, String)
     
     case adsTransactionsTitle(PresentationTheme, String)
+    case adsTransactionsTabs(PresentationTheme, String, String, Bool)
     case adsTransaction(Int32, PresentationTheme, RevenueStatsTransactionsContext.State.Transaction)
-    case adsTransactionsExpand(PresentationTheme, String)
+    case adsStarsTransaction(Int32, PresentationTheme, StarsContext.State.Transaction)
+    case adsTransactionsExpand(PresentationTheme, String, Bool)
     
     case adsCpmToggle(PresentationTheme, String, Int32, Bool?)
     case adsCpmInfo(PresentationTheme, String)
@@ -281,13 +303,17 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StatsSection.adsHeader.rawValue
             case .adsImpressionsTitle, .adsImpressionsGraph:
                 return StatsSection.adsImpressions.rawValue
-            case .adsRevenueTitle, .adsRevenueGraph:
-                return StatsSection.adsRevenue.rawValue
+            case .adsTonRevenueTitle, .adsTonRevenueGraph:
+                return StatsSection.adsTonRevenue.rawValue
+            case .adsStarsRevenueTitle, .adsStarsRevenueGraph:
+                return StatsSection.adsStarsRevenue.rawValue
             case .adsProceedsTitle, .adsProceedsOverview:
                 return StatsSection.adsProceeds.rawValue
-            case .adsBalanceTitle, .adsBalance, .adsBalanceInfo:
-                return StatsSection.adsBalance.rawValue
-            case .adsTransactionsTitle, .adsTransaction, .adsTransactionsExpand:
+            case .adsTonBalanceTitle, .adsTonBalance, .adsTonBalanceInfo:
+                return StatsSection.adsTonBalance.rawValue
+            case .adsStarsBalanceTitle, .adsStarsBalance, .adsStarsBalanceInfo:
+                return StatsSection.adsStarsBalance.rawValue
+            case .adsTransactionsTitle, .adsTransactionsTabs, .adsTransaction, .adsStarsTransaction, .adsTransactionsExpand:
                 return StatsSection.adsTransactions.rawValue
             case .adsCpmToggle, .adsCpmInfo:
                 return StatsSection.adsCpm.rawValue
@@ -392,30 +418,44 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 20001
             case .adsImpressionsGraph:
                 return 20002
-            case .adsRevenueTitle:
+            case .adsTonRevenueTitle:
                 return 20003
-            case .adsRevenueGraph:
+            case .adsTonRevenueGraph:
                 return 20004
-            case .adsProceedsTitle:
+            case .adsStarsRevenueTitle:
                 return 20005
-            case .adsProceedsOverview:
+            case .adsStarsRevenueGraph:
                 return 20006
-            case .adsBalanceTitle:
+            case .adsProceedsTitle:
                 return 20007
-            case .adsBalance:
+            case .adsProceedsOverview:
                 return 20008
-            case .adsBalanceInfo:
+            case .adsTonBalanceTitle:
                 return 20009
-            case .adsTransactionsTitle:
+            case .adsTonBalance:
                 return 20010
+            case .adsTonBalanceInfo:
+                return 20011
+            case .adsStarsBalanceTitle:
+                return 20012
+            case .adsStarsBalance:
+                return 20013
+            case .adsStarsBalanceInfo:
+                return 20014
+            case .adsTransactionsTitle:
+                return 20015
+            case .adsTransactionsTabs:
+                return 20016
             case let .adsTransaction(index, _, _):
-                return 20011 + index
+                return 20017 + index
+            case let .adsStarsTransaction(index, _, _):
+                return 30017 + index
             case .adsTransactionsExpand:
-                return 30000
+                return 40000
             case .adsCpmToggle:
-                return 30001
+                return 40001
             case .adsCpmInfo:
-                return 30002
+                return 40002
         }
     }
     
@@ -709,14 +749,26 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .adsRevenueTitle(lhsTheme, lhsText):
-                if case let .adsRevenueTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .adsTonRevenueTitle(lhsTheme, lhsText):
+                if case let .adsTonRevenueTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .adsRevenueGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType, lhsRate):
-                if case let .adsRevenueGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType, rhsRate) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType,  lhsRate == rhsRate {
+            case let .adsTonRevenueGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType, lhsRate):
+                if case let .adsTonRevenueGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType, rhsRate) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType,  lhsRate == rhsRate {
+                    return true
+                } else {
+                    return false
+                }
+            case let .adsStarsRevenueTitle(lhsTheme, lhsText):
+                if case let .adsStarsRevenueTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .adsStarsRevenueGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType, lhsRate):
+                if case let .adsStarsRevenueGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType, rhsRate) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType,  lhsRate == rhsRate {
                     return true
                 } else {
                     return false
@@ -727,26 +779,44 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .adsProceedsOverview(lhsTheme, lhsStatus, lhsAnimatedEmoji):
-                if case let .adsProceedsOverview(rhsTheme, rhsStatus, rhsAnimatedEmoji) = rhs, lhsTheme === rhsTheme, lhsStatus == rhsStatus, lhsAnimatedEmoji == rhsAnimatedEmoji {
+            case let .adsProceedsOverview(lhsTheme, lhsStatus, lhsStarsStatus):
+                if case let .adsProceedsOverview(rhsTheme, rhsStatus, rhsStarsStatus) = rhs, lhsTheme === rhsTheme, lhsStatus == rhsStatus, lhsStarsStatus == rhsStarsStatus {
                     return true
                 } else {
                     return false
                 }
-            case let .adsBalanceTitle(lhsTheme, lhsText):
-                if case let .adsBalanceTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .adsTonBalanceTitle(lhsTheme, lhsText):
+                if case let .adsTonBalanceTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .adsBalance(lhsTheme, lhsStats, lhsCanWithdraw, lhsIsEnabled, lhsAnimatedEmoji):
-                if case let .adsBalance(rhsTheme, rhsStats, rhsCanWithdraw, rhsIsEnabled, rhsAnimatedEmoji) = rhs, lhsTheme === rhsTheme, lhsStats == rhsStats, lhsCanWithdraw == rhsCanWithdraw, lhsIsEnabled == rhsIsEnabled, lhsAnimatedEmoji == rhsAnimatedEmoji {
+            case let .adsTonBalance(lhsTheme, lhsStats, lhsCanWithdraw, lhsIsEnabled):
+                if case let .adsTonBalance(rhsTheme, rhsStats, rhsCanWithdraw, rhsIsEnabled) = rhs, lhsTheme === rhsTheme, lhsStats == rhsStats, lhsCanWithdraw == rhsCanWithdraw, lhsIsEnabled == rhsIsEnabled {
                     return true
                 } else {
                     return false
                 }
-            case let .adsBalanceInfo(lhsTheme, lhsText):
-                if case let .adsBalanceInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .adsTonBalanceInfo(lhsTheme, lhsText):
+                if case let .adsTonBalanceInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .adsStarsBalanceTitle(lhsTheme, lhsText):
+                if case let .adsStarsBalanceTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .adsStarsBalance(lhsTheme, lhsStats, lhsCanWithdraw, lhsIsEnabled, lhsCooldownUntilTimestamp):
+                if case let .adsStarsBalance(rhsTheme, rhsStats, rhsCanWithdraw, rhsIsEnabled, rhsCooldownUntilTimestamp) = rhs, lhsTheme === rhsTheme, lhsStats == rhsStats, lhsCanWithdraw == rhsCanWithdraw, lhsIsEnabled == rhsIsEnabled, lhsCooldownUntilTimestamp == rhsCooldownUntilTimestamp {
+                    return true
+                } else {
+                    return false
+                }
+            case let .adsStarsBalanceInfo(lhsTheme, lhsText):
+                if case let .adsStarsBalanceInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -757,14 +827,26 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .adsTransactionsTabs(lhsTheme, lhsTonText, lhsStarsText, lhsStarsSelected):
+                if case let .adsTransactionsTabs(rhsTheme, rhsTonText, rhsStarsText, rhsStarsSelected) = rhs, lhsTheme === rhsTheme, lhsTonText == rhsTonText, lhsStarsText == rhsStarsText, lhsStarsSelected == rhsStarsSelected {
+                    return true
+                } else {
+                    return false
+                }
             case let .adsTransaction(lhsIndex, lhsTheme, lhsTransaction):
                 if case let .adsTransaction(rhsIndex, rhsTheme, rhsTransaction) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsTransaction == rhsTransaction {
                     return true
                 } else {
                     return false
                 }
-            case let .adsTransactionsExpand(lhsTheme, lhsText):
-                if case let .adsTransactionsExpand(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .adsStarsTransaction(lhsIndex, lhsTheme, lhsTransaction):
+                if case let .adsStarsTransaction(rhsIndex, rhsTheme, rhsTransaction) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsTransaction == rhsTransaction {
+                    return true
+                } else {
+                    return false
+                }
+            case let .adsTransactionsExpand(lhsTheme, lhsText, lhsStars):
+                if case let .adsTransactionsExpand(rhsTheme, rhsText, rhsStars) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsStars == rhsStars {
                     return true
                 } else {
                     return false
@@ -811,9 +893,11 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .boostersTitle(_, text),
                  let .boostLinkTitle(_, text),
                  let .adsImpressionsTitle(_, text),
-                 let .adsRevenueTitle(_, text),
+                 let .adsTonRevenueTitle(_, text),
+                 let .adsStarsRevenueTitle(_, text),
                  let .adsProceedsTitle(_, text),
-                 let .adsBalanceTitle(_, text),
+                 let .adsTonBalanceTitle(_, text),
+                 let .adsStarsBalanceTitle(_, text),
                  let .adsTransactionsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .boostPrepaidInfo(_, text),
@@ -835,7 +919,9 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .storyReactionsByEmotionGraph(_, _, _, graph, type),
                  let .adsImpressionsGraph(_, _, _, graph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
-            case let .adsRevenueGraph(_, _, _, graph, type, rate):
+            case let .adsTonRevenueGraph(_, _, _, graph, type, rate):
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, conversionRate: rate, sectionId: self.section, style: .blocks)
+            case let .adsStarsRevenueGraph(_, _, _, graph, type, rate):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, conversionRate: rate, sectionId: self.section, style: .blocks)
             case let .postInteractionsGraph(_, _, _, graph, type),
                  let .instantPageInteractionsGraph(_, _, _, graph, type),
@@ -959,24 +1045,63 @@ private enum StatsEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
                     arguments.openMonetizationIntro()
                 })
-            case let .adsProceedsOverview(_, stats, animatedEmoji):
-                return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: false, stats: stats, animatedEmoji: animatedEmoji, sectionId: self.section, style: .blocks)
-            case let .adsBalance(_, stats, canWithdraw, isEnabled, _):
+            case let .adsProceedsOverview(_, stats, starsStats):
+                return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: false, stats: stats, additionalStats: starsStats, sectionId: self.section, style: .blocks)
+            case let .adsTonBalance(_, stats, canWithdraw, isEnabled):
                 return MonetizationBalanceItem(
                     context: arguments.context,
                     presentationData: presentationData,
                     stats: stats,
                     canWithdraw: canWithdraw,
                     isEnabled: isEnabled,
+                    actionCooldownUntilTimestamp: nil,
                     withdrawAction: {
-                        arguments.requestWithdraw()
+                        arguments.requestTonWithdraw()
                     },
+                    buyAdsAction: nil,
                     sectionId: self.section,
                     style: .blocks
                 )
-            case let .adsBalanceInfo(_, text):
+            case let .adsTonBalanceInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
                     arguments.openMonetizationInfo()
+                })
+            case let .adsStarsBalance(_, stats, canWithdraw, isEnabled, cooldownUntilTimestamp):
+                return MonetizationBalanceItem(
+                    context: arguments.context,
+                    presentationData: presentationData,
+                    stats: stats,
+                    canWithdraw: canWithdraw,
+                    isEnabled: isEnabled,
+                    actionCooldownUntilTimestamp: cooldownUntilTimestamp,
+                    withdrawAction: {
+                        var remainingCooldownSeconds: Int32 = 0
+                        if let cooldownUntilTimestamp {
+                            remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+                            remainingCooldownSeconds = max(0, remainingCooldownSeconds)
+                            
+                            if remainingCooldownSeconds > 0 {
+                                arguments.showTimeoutTooltip(cooldownUntilTimestamp)
+                            } else {
+                                arguments.requestStarsWithdraw()
+                            }
+                        } else {
+                            arguments.requestStarsWithdraw()
+                        }
+                    },
+                    buyAdsAction: canWithdraw ? {
+                        arguments.buyAds()
+                    } : nil,
+                    sectionId: self.section,
+                    style: .blocks
+                )
+            case let .adsStarsBalanceInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
+                    arguments.openMonetizationInfo()
+                })
+            case let .adsTransactionsTabs(_, tonText, starsText, starsSelected):
+                return BoostsTabsItem(theme: presentationData.theme, boostsText: tonText, giftsText: starsText, selectedTab: starsSelected ? .gifts : .boosts, sectionId: self.section, selectionUpdated: { tab in
+                    arguments.updateStarsSelected(tab == .gifts)
                 })
             case let .adsTransaction(_, theme, transaction):
                 let font = Font.with(size: floor(presentationData.fontSize.itemListBaseFontSize))
@@ -1024,11 +1149,15 @@ private enum StatsEntry: ItemListNodeEntry {
                 }
                 
                 return ItemListDisclosureItem(presentationData: presentationData, title: "", attributedTitle: title, label: "", attributedLabel: label, labelStyle: .coloredText(labelColor), additionalDetailLabel: detailText, additionalDetailLabelColor: detailColor, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
-                    arguments.openTransaction(transaction)
+                    arguments.openTonTransaction(transaction)
                 })
-            case let .adsTransactionsExpand(theme, title):
+            case let .adsStarsTransaction(_, _, transaction):
+                return StarsTransactionItem(context: arguments.context, presentationData: presentationData, transaction: transaction, action: {
+                    arguments.openStarsTransaction(transaction)
+                }, sectionId: self.section, style: .blocks)
+            case let .adsTransactionsExpand(theme, title, stars):
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
-                    arguments.expandTransactions()
+                    arguments.expandTransactions(stars)
                 })
             case let .adsCpmToggle(_, title, minLevel, value):
                 var badgeComponent: AnyComponent<Empty>?
@@ -1062,23 +1191,26 @@ private struct ChannelStatsControllerState: Equatable {
     let boostersExpanded: Bool
     let moreBoostersDisplayed: Int32
     let giftsSelected: Bool
+    let starsSelected: Bool
     let transactionsExpanded: Bool
     let moreTransactionsDisplayed: Int32
-  
+    
     init() {
         self.section = .stats
         self.boostersExpanded = false
         self.moreBoostersDisplayed = 0
         self.giftsSelected = false
+        self.starsSelected = false
         self.transactionsExpanded = false
         self.moreTransactionsDisplayed = 0
     }
     
-    init(section: ChannelStatsSection, boostersExpanded: Bool, moreBoostersDisplayed: Int32, giftsSelected: Bool, transactionsExpanded: Bool, moreTransactionsDisplayed: Int32) {
+    init(section: ChannelStatsSection, boostersExpanded: Bool, moreBoostersDisplayed: Int32, giftsSelected: Bool, starsSelected: Bool, transactionsExpanded: Bool, moreTransactionsDisplayed: Int32) {
         self.section = section
         self.boostersExpanded = boostersExpanded
         self.moreBoostersDisplayed = moreBoostersDisplayed
         self.giftsSelected = giftsSelected
+        self.starsSelected = starsSelected
         self.transactionsExpanded = transactionsExpanded
         self.moreTransactionsDisplayed = moreTransactionsDisplayed
     }
@@ -1096,6 +1228,9 @@ private struct ChannelStatsControllerState: Equatable {
         if lhs.giftsSelected != rhs.giftsSelected {
             return false
         }
+        if lhs.starsSelected != rhs.starsSelected {
+            return false
+        }
         if lhs.transactionsExpanded != rhs.transactionsExpanded {
             return false
         }
@@ -1106,27 +1241,31 @@ private struct ChannelStatsControllerState: Equatable {
     }
     
     func withUpdatedSection(_ section: ChannelStatsSection) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
+        return ChannelStatsControllerState(section: section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, starsSelected: self.starsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
     }
     
     func withUpdatedBoostersExpanded(_ boostersExpanded: Bool) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: self.section, boostersExpanded: boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, starsSelected: self.starsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
     }
     
     func withUpdatedMoreBoostersDisplayed(_ moreBoostersDisplayed: Int32) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: moreBoostersDisplayed, giftsSelected: self.giftsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: moreBoostersDisplayed, giftsSelected: self.giftsSelected, starsSelected: self.starsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
     }
     
     func withUpdatedGiftsSelected(_ giftsSelected: Bool) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: giftsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: giftsSelected, starsSelected: self.starsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
+    }
+    
+    func withUpdatedStarsSelected(_ starsSelected: Bool) -> ChannelStatsControllerState {
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, starsSelected: starsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
     }
     
     func withUpdatedTransactionsExpanded(_ transactionsExpanded: Bool) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, transactionsExpanded: transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, starsSelected: self.starsSelected, transactionsExpanded: transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
     }
     
     func withUpdatedMoreTransactionsDisplayed(_ moreTransactionsDisplayed: Int32) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: moreTransactionsDisplayed)
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, starsSelected: self.starsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: moreTransactionsDisplayed)
     }
 }
 
@@ -1135,7 +1274,7 @@ private func statsEntries(
     data: ChannelStats,
     peer: EnginePeer?,
     messages: [Message]?,
-    stories: PeerStoryListContext.State?,
+    stories: StoryListContext.State?,
     interactions: [ChannelStatsPostInteractions.PostId: ChannelStatsPostInteractions]?
 ) -> [StatsEntry] {
     var entries: [StatsEntry] = []
@@ -1217,8 +1356,8 @@ private func statsEntries(
         }
         if let stories {
             for story in stories.items {
-                if let _ = interactions[.story(peerId: peer.id, id: story.id)] {
-                    posts.append(.story(peer, story))
+                if let _ = interactions[.story(peerId: peer.id, id: story.storyItem.id)] {
+                    posts.append(.story(peer, story.storyItem))
                 }
             }
         }
@@ -1373,13 +1512,12 @@ private func monetizationEntries(
     data: RevenueStats,
     boostData: ChannelBoostStatus?,
     transactionsInfo: RevenueStatsTransactionsContext.State,
+    starsData: StarsRevenueStats?,
+    starsTransactionsInfo: StarsTransactionsContext.State,
     adsRestricted: Bool,
-    animatedEmojis: [String: [StickerPackItem]],
     premiumConfiguration: PremiumConfiguration,
     monetizationConfiguration: MonetizationConfiguration
 ) -> [StatsEntry] {
-    let diamond = animatedEmojis["💎"]?.first?.file
-    
     var entries: [StatsEntry] = []
     entries.append(.adsHeader(presentationData.theme, presentationData.strings.Monetization_Header))
     
@@ -1389,19 +1527,24 @@ private func monetizationEntries(
     }
     
     if !data.revenueGraph.isEmpty {
-        entries.append(.adsRevenueTitle(presentationData.theme, presentationData.strings.Monetization_AdRevenueTitle))
-        entries.append(.adsRevenueGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.revenueGraph, .currency, data.usdRate))
+        entries.append(.adsTonRevenueTitle(presentationData.theme, presentationData.strings.Monetization_AdRevenueTitle))
+        entries.append(.adsTonRevenueGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.revenueGraph, .currency, data.usdRate))
+    }
+    
+    if let starsData, !starsData.revenueGraph.isEmpty {
+        entries.append(.adsStarsRevenueTitle(presentationData.theme, presentationData.strings.Monetization_StarsRevenueTitle))
+        entries.append(.adsStarsRevenueGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, starsData.revenueGraph, .stars, starsData.usdRate))
     }
         
     entries.append(.adsProceedsTitle(presentationData.theme, presentationData.strings.Monetization_OverviewTitle))
-    entries.append(.adsProceedsOverview(presentationData.theme, data, diamond))
+    entries.append(.adsProceedsOverview(presentationData.theme, data, starsData))
     
     var isCreator = false
     if let peer, case let .channel(channel) = peer, channel.flags.contains(.isCreator) {
         isCreator = true
     }
-    entries.append(.adsBalanceTitle(presentationData.theme, presentationData.strings.Monetization_BalanceTitle))
-    entries.append(.adsBalance(presentationData.theme, data, isCreator && data.balances.availableBalance > 0, monetizationConfiguration.withdrawalAvailable, diamond))
+    entries.append(.adsTonBalanceTitle(presentationData.theme, presentationData.strings.Monetization_TonBalanceTitle))
+    entries.append(.adsTonBalance(presentationData.theme, data, isCreator && data.balances.availableBalance > 0, monetizationConfiguration.withdrawalAvailable))
 
     if isCreator {
         let withdrawalInfoText: String
@@ -1412,11 +1555,35 @@ private func monetizationEntries(
         } else {
             withdrawalInfoText = presentationData.strings.Monetization_Balance_ComingLaterInfo
         }
-        entries.append(.adsBalanceInfo(presentationData.theme, withdrawalInfoText))
+        entries.append(.adsTonBalanceInfo(presentationData.theme, withdrawalInfoText))
     }
-
-    if !transactionsInfo.transactions.isEmpty {
-        entries.append(.adsTransactionsTitle(presentationData.theme, presentationData.strings.Monetization_TransactionsTitle))
+    
+    if let starsData, starsData.balances.overallRevenue > 0 {
+        entries.append(.adsStarsBalanceTitle(presentationData.theme, presentationData.strings.Monetization_StarsBalanceTitle))
+        entries.append(.adsStarsBalance(presentationData.theme, starsData, isCreator && starsData.balances.availableBalance > 0, starsData.balances.withdrawEnabled, starsData.balances.nextWithdrawalTimestamp))
+        entries.append(.adsStarsBalanceInfo(presentationData.theme, presentationData.strings.Monetization_Balance_StarsInfo))
+    }
+    
+    var addedTransactionsTabs = false
+    if !transactionsInfo.transactions.isEmpty && !starsTransactionsInfo.transactions.isEmpty {
+        addedTransactionsTabs = true
+        entries.append(.adsTransactionsTabs(presentationData.theme, presentationData.strings.Monetization_TonTransactions, presentationData.strings.Monetization_StarsTransactions, state.starsSelected))
+    }
+    
+    var displayTonTransactions = false
+    if !transactionsInfo.transactions.isEmpty && (starsTransactionsInfo.transactions.isEmpty || !state.starsSelected) {
+        displayTonTransactions = true
+    }
+    
+    var displayStarsTransactions = false
+    if !starsTransactionsInfo.transactions.isEmpty && (transactionsInfo.transactions.isEmpty || state.starsSelected) {
+        displayStarsTransactions = true
+    }
+    
+    if displayTonTransactions {
+        if !addedTransactionsTabs {
+            entries.append(.adsTransactionsTitle(presentationData.theme, presentationData.strings.Monetization_TonTransactions.uppercased()))
+        }
         
         var transactions = transactionsInfo.transactions
         var limit: Int32
@@ -1438,9 +1605,40 @@ private func monetizationEntries(
             if !state.transactionsExpanded {
                 moreCount = min(20, transactionsInfo.count - Int32(transactions.count))
             } else {
-                moreCount = min(500, transactionsInfo.count - Int32(transactions.count))
+                moreCount = min(50, transactionsInfo.count - Int32(transactions.count))
             }
-            entries.append(.adsTransactionsExpand(presentationData.theme, presentationData.strings.Monetization_Transaction_ShowMoreTransactions(moreCount)))
+            entries.append(.adsTransactionsExpand(presentationData.theme, presentationData.strings.Monetization_Transaction_ShowMoreTransactions(moreCount), false))
+        }
+    }
+    
+    if displayStarsTransactions {
+        if !addedTransactionsTabs {
+            entries.append(.adsTransactionsTitle(presentationData.theme, presentationData.strings.Monetization_StarsTransactions.uppercased()))
+        }
+        
+        var transactions = starsTransactionsInfo.transactions
+        var limit: Int32
+        if state.transactionsExpanded {
+            limit = 25 + state.moreTransactionsDisplayed
+        } else {
+            limit = initialTransactionsDisplayedLimit
+        }
+        transactions = Array(transactions.prefix(Int(limit)))
+        
+        var i: Int32 = 0
+        for transaction in transactions {
+            entries.append(.adsStarsTransaction(i, presentationData.theme, transaction))
+            i += 1
+        }
+        
+        if starsTransactionsInfo.canLoadMore || starsTransactionsInfo.transactions.count > transactions.count {
+            let moreCount: Int32
+            if !state.transactionsExpanded {
+                moreCount = min(20, Int32(starsTransactionsInfo.transactions.count - transactions.count))
+            } else {
+                moreCount = min(50, Int32(starsTransactionsInfo.transactions.count - transactions.count))
+            }
+            entries.append(.adsTransactionsExpand(presentationData.theme, presentationData.strings.Monetization_Transaction_ShowMoreTransactions(moreCount), true))
         }
     }
     
@@ -1463,17 +1661,18 @@ private func channelStatsControllerEntries(
     peer: EnginePeer?,
     data: ChannelStats?,
     messages: [Message]?,
-    stories: PeerStoryListContext.State?,
-    interactions: [ChannelStatsPostInteractions.PostId: ChannelStatsPostInteractions]?, 
+    stories: StoryListContext.State?,
+    interactions: [ChannelStatsPostInteractions.PostId: ChannelStatsPostInteractions]?,
     boostData: ChannelBoostStatus?,
     boostersState: ChannelBoostersContext.State?,
     giftsState: ChannelBoostersContext.State?,
     giveawayAvailable: Bool,
     isGroup: Bool,
     boostsOnly: Bool,
-    animatedEmojis: [String: [StickerPackItem]],
     revenueState: RevenueStats?,
     revenueTransactions: RevenueStatsTransactionsContext.State,
+    starsState: StarsRevenueStats?,
+    starsTransactions: StarsTransactionsContext.State,
     adsRestricted: Bool,
     premiumConfiguration: PremiumConfiguration,
     monetizationConfiguration: MonetizationConfiguration
@@ -1512,8 +1711,9 @@ private func channelStatsControllerEntries(
                 data: revenueState,
                 boostData: boostData,
                 transactionsInfo: revenueTransactions,
+                starsData: starsState,
+                starsTransactionsInfo: starsTransactions,
                 adsRestricted: adsRestricted,
-                animatedEmojis: animatedEmojis,
                 premiumConfiguration: premiumConfiguration,
                 monetizationConfiguration: monetizationConfiguration
             )
@@ -1523,8 +1723,8 @@ private func channelStatsControllerEntries(
 }
 
 public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, section: ChannelStatsSection = .stats, boostStatus: ChannelBoostStatus? = nil, boostStatusUpdated: ((ChannelBoostStatus) -> Void)? = nil) -> ViewController {
-    let statePromise = ValuePromise(ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false, transactionsExpanded: false, moreTransactionsDisplayed: 0), ignoreRepeated: true)
-    let stateValue = Atomic(value: ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false, transactionsExpanded: false, moreTransactionsDisplayed: 0))
+    let statePromise = ValuePromise(ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false, starsSelected: false, transactionsExpanded: false, moreTransactionsDisplayed: 0), ignoreRepeated: true)
+    let stateValue = Atomic(value: ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false, starsSelected: false, transactionsExpanded: false, moreTransactionsDisplayed: 0))
     let updateState: ((ChannelStatsControllerState) -> ChannelStatsControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
@@ -1543,7 +1743,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let withdrawalDisposable = MetaDisposable()
     actionsDisposable.add(withdrawalDisposable)
     
-    let storiesPromise = Promise<PeerStoryListContext.State?>()
+    let storiesPromise = Promise<StoryListContext.State?>()
             
     let statsContext = ChannelStatsContext(postbox: context.account.postbox, network: context.account.network, peerId: peerId)
     let dataSignal: Signal<ChannelStats?, NoError> = statsContext.state
@@ -1583,7 +1783,13 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let revenueState = Promise<RevenueStatsContextState?>()
     revenueState.set(.single(nil) |> then(revenueContext.state |> map(Optional.init)))
     
+    let starsContext = context.engine.payments.peerStarsRevenueContext(peerId: peerId)
+    let starsState = Promise<StarsRevenueStatsContextState?>()
+    starsState.set(.single(nil) |> then(starsContext.state |> map(Optional.init)))
+    
     let revenueTransactions = RevenueStatsTransactionsContext(account: context.account, peerId: peerId)
+    let starsTransactions = context.engine.payments.peerStarsTransactionsContext(subject: .peer(peerId), mode: .all)
+    starsTransactions.loadMore()
     
     var dismissAllTooltipsImpl: (() -> Void)?
     var presentImpl: ((ViewController) -> Void)?
@@ -1592,8 +1798,12 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     var navigateToChatImpl: ((EnginePeer) -> Void)?
     var navigateToMessageImpl: ((EngineMessage.Id) -> Void)?
     var openBoostImpl: ((Bool) -> Void)?
-    var openTransactionImpl: ((RevenueStatsTransactionsContext.State.Transaction) -> Void)?
-    var requestWithdrawImpl: (() -> Void)?
+    var openTonTransactionImpl: ((RevenueStatsTransactionsContext.State.Transaction) -> Void)?
+    var openStarsTransactionImpl: ((StarsContext.State.Transaction) -> Void)?
+    var requestTonWithdrawImpl: (() -> Void)?
+    var requestStarsWithdrawImpl: (() -> Void)?
+    var showTimeoutTooltipImpl: ((Int32) -> Void)?
+    var buyAdsImpl: (() -> Void)?
     var updateStatusBarImpl: ((StatusBarStyle) -> Void)?
     var dismissInputImpl: (() -> Void)?
     
@@ -1716,8 +1926,20 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     updateGiftsSelected: { selected in
         updateState { $0.withUpdatedGiftsSelected(selected).withUpdatedBoostersExpanded(false) }
     },
-    requestWithdraw: {
-        requestWithdrawImpl?()
+    updateStarsSelected: { selected in
+        updateState { $0.withUpdatedStarsSelected(selected).withUpdatedTransactionsExpanded(false) }
+    },
+    requestTonWithdraw: {
+        requestTonWithdrawImpl?()
+    },
+    requestStarsWithdraw: {
+        requestStarsWithdrawImpl?()
+    },
+    showTimeoutTooltip: { timestamp in
+        showTimeoutTooltipImpl?(timestamp)
+    },
+    buyAds: {
+        buyAdsImpl?()
     },
     openMonetizationIntro: {
         let controller = MonetizationIntroScreen(context: context, openMore: {})
@@ -1727,10 +1949,13 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.Monetization_BalanceInfo_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
     },
-    openTransaction: { transaction in
-        openTransactionImpl?(transaction)
+    openTonTransaction: { transaction in
+        openTonTransactionImpl?(transaction)
     },
-    expandTransactions: {
+    openStarsTransaction: { transaction in
+        openStarsTransactionImpl?(transaction)
+    },
+    expandTransactions: { stars in
         updateState { state in
             if state.transactionsExpanded {
                 return state.withUpdatedMoreTransactionsDisplayed(state.moreTransactionsDisplayed + 50)
@@ -1738,7 +1963,11 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 return state.withUpdatedTransactionsExpanded(true)
             }
         }
-        revenueTransactions.loadMore()
+        if stars {
+            starsTransactions.loadMore()
+        } else {
+            revenueTransactions.loadMore()
+        }
     },
     updateCpmEnabled: { value in
         let _ = context.engine.peers.updateChannelRestrictAdMessages(peerId: peerId, restricted: value).start()
@@ -1802,12 +2031,13 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         giftsContext.state,
         revenueState.get(),
         revenueTransactions.state,
+        starsState.get(),
+        starsTransactions.state,
         peerData,
-        longLoadingSignal,
-        context.animatedEmojiStickers
+        longLoadingSignal
     )
     |> deliverOnMainQueue
-    |> map { presentationData, state, peer, data, messageView, stories, boostData, boostersState, giftsState, revenueState, revenueTransactions, peerData, longLoading, animatedEmojiStickers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, peer, data, messageView, stories, boostData, boostersState, giftsState, revenueState, revenueTransactions, starsState, starsTransactions, peerData, longLoading -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let (adsRestricted, canViewRevenue) = peerData
         
         var isGroup = false
@@ -1900,7 +2130,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelStatsControllerEntries(presentationData: presentationData, state: state, peer: peer, data: data, messages: messages, stories: stories, interactions: interactions, boostData: boostData, boostersState: boostersState, giftsState: giftsState, giveawayAvailable: premiumConfiguration.giveawayGiftsPurchaseAvailable, isGroup: isGroup, boostsOnly: boostsOnly, animatedEmojis: animatedEmojiStickers, revenueState: revenueState?.stats, revenueTransactions: revenueTransactions, adsRestricted: adsRestricted, premiumConfiguration: premiumConfiguration, monetizationConfiguration: monetizationConfiguration), style: .blocks, emptyStateItem: emptyStateItem, headerItem: headerItem, crossfadeState: previous == nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelStatsControllerEntries(presentationData: presentationData, state: state, peer: peer, data: data, messages: messages, stories: stories, interactions: interactions, boostData: boostData, boostersState: boostersState, giftsState: giftsState, giveawayAvailable: premiumConfiguration.giveawayGiftsPurchaseAvailable, isGroup: isGroup, boostsOnly: boostsOnly, revenueState: revenueState?.stats, revenueTransactions: revenueTransactions, starsState: starsState?.stats, starsTransactions: starsTransactions, adsRestricted: adsRestricted, premiumConfiguration: premiumConfiguration, monetizationConfiguration: monetizationConfiguration), style: .blocks, emptyStateItem: emptyStateItem, headerItem: headerItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
@@ -1909,6 +2139,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         let _ = statsContext.state
         let _ = storyList.state
         let _ = revenueContext.state
+        let _ = starsContext.state
     }
     
     let controller = ItemListController(context: context, state: signal)
@@ -2024,7 +2255,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         
         var items: [ContextMenuItem] = []
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ViewInChannel, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { [weak controller] c, _ in
-            c.dismiss(completion: {
+            c?.dismiss(completion: {
                 let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> deliverOnMainQueue).start(next: { peer in
                     guard let peer = peer else {
@@ -2122,7 +2353,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
             })
         }
     }
-    requestWithdrawImpl = {
+    requestTonWithdrawImpl = {
         withdrawalDisposable.set((context.engine.peers.checkChannelRevenueWithdrawalAvailability()
         |> deliverOnMainQueue).start(error: { error in
             let controller = revenueWithdrawalController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, initialError: error, present: { c, _ in
@@ -2134,7 +2365,102 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
             presentImpl?(controller)
         }))
     }
-    openTransactionImpl = { transaction in
+    requestStarsWithdrawImpl = {
+        withdrawalDisposable.set((context.engine.peers.checkStarsRevenueWithdrawalAvailability()
+        |> deliverOnMainQueue).start(error: { error in
+            switch error {
+            case .serverProvided:
+                return
+            case .requestPassword:
+                let _ = (starsContext.state
+                |> take(1)
+                |> deliverOnMainQueue).startStandalone(next: { state in
+                    guard let stats = state.stats else {
+                        return
+                    }
+                    let controller = context.sharedContext.makeStarsWithdrawalScreen(context: context, stats: stats, completion: { amount in
+                        let controller = confirmStarsRevenueWithdrawalController(context: context, peerId: peerId, amount: amount, present: { c, a in
+                            presentImpl?(c)
+                        }, completion: { url in
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                            
+                            Queue.mainQueue().after(2.0) {
+                                starsContext.reload()
+                                starsTransactions.reload()
+                            }
+                        })
+                        presentImpl?(controller)
+                    })
+                    pushImpl?(controller)
+                })
+            default:
+                let controller = starsRevenueWithdrawalController(context: context, peerId: peerId, amount: 0, initialError: error, present: { c, a in
+                    presentImpl?(c)
+                }, completion: { _ in
+                    
+                })
+                presentImpl?(controller)
+            }
+        }))
+    }
+    var tooltipScreen: UndoOverlayController?
+    var timer: Foundation.Timer?
+    showTimeoutTooltipImpl = { cooldownUntilTimestamp in
+        let remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+    
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let content: UndoOverlayContent = .universal(
+            animation: "anim_clock",
+            scale: 0.058,
+            colors: [:],
+            title: nil,
+            text: presentationData.strings.Stars_Withdraw_Withdraw_ErrorTimeout(stringForRemainingTime(remainingCooldownSeconds)).string,
+            customUndoText: nil,
+            timeout: nil
+        )
+        let controller = UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in
+            return true
+        })
+        tooltipScreen = controller
+        presentImpl?(controller)
+        
+        if remainingCooldownSeconds < 3600 {
+            if timer == nil {
+                timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { _ in
+                    if let tooltipScreen {
+                        let remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+                        let content: UndoOverlayContent = .universal(
+                            animation: "anim_clock",
+                            scale: 0.058,
+                            colors: [:],
+                            title: nil,
+                            text: presentationData.strings.Stars_Withdraw_Withdraw_ErrorTimeout(stringForRemainingTime(remainingCooldownSeconds)).string,
+                            customUndoText: nil,
+                            timeout: nil
+                        )
+                        tooltipScreen.content = content
+                    } else {
+                        if let currentTimer = timer {
+                            timer = nil
+                            currentTimer.invalidate()
+                        }
+                    }
+                })
+            }
+        }
+    }
+    buyAdsImpl = {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let _ = (context.engine.peers.requestStarsRevenueAdsAccountlUrl(peerId: peerId)
+        |> deliverOnMainQueue).startStandalone(next: { url in
+            guard let url else {
+                return
+            }
+            context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+        })
+    }
+    openTonTransactionImpl = { transaction in
         let _ = (peer.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { peer in
@@ -2144,6 +2470,16 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
             pushImpl?(TransactionInfoScreen(context: context, peer: peer, transaction: transaction, openExplorer: { url in
                 context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
             }))
+        })
+    }
+    openStarsTransactionImpl = { transaction in
+        let _ = (peer.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { peer in
+            guard let peer else {
+                return
+            }
+            pushImpl?(context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction, peer: peer))
         })
     }
     updateStatusBarImpl = { [weak controller] style in

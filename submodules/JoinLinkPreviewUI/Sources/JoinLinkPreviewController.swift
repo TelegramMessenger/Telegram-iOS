@@ -8,8 +8,8 @@ import TelegramPresentationData
 import AccountContext
 import AlertUI
 import PresentationDataUtils
-import PeerInfoUI
 import UndoUI
+import OldChannelsController
 
 public final class JoinLinkPreviewController: ViewController {
     private var controllerNode: JoinLinkPreviewControllerNode {

@@ -914,7 +914,7 @@ public func chatMessagePhotoThumbnail(account: Account, userLocation: MediaResou
             
             var blurredThumbnailImage: CGImage?
             if let thumbnailImage = thumbnailImage {
-                if thumbnailIsBlurred {
+                if thumbnailIsBlurred || blurred {
                     let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
                     let thumbnailContextSize = thumbnailSize.aspectFitted(blurred ? CGSize(width: 50.0, height: 50.0) : CGSize(width: 150.0, height: 150.0))
                     if let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) {
@@ -925,6 +925,10 @@ public func chatMessagePhotoThumbnail(account: Account, userLocation: MediaResou
                         imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                         
                         if blurred {
+                            if !thumbnailIsBlurred {
+                                telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                            }
                             imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                             adjustSaturationInContext(context: thumbnailContext, saturation: 1.7)
                         }
@@ -2799,14 +2803,14 @@ public func chatWebFileImage(account: Account, file: TelegramMediaWebFile) -> Si
                         
                         c.setBlendMode(.normal)
                     }
-                } else {
-                    context.withFlippedContext { c in
-                        c.setBlendMode(.copy)
-                        c.setFillColor((arguments.emptyColor ?? UIColor.white).cgColor)
-                        c.fill(arguments.drawingRect)
-                        
-                        c.setBlendMode(.normal)
-                    }
+                }
+            } else {
+                context.withFlippedContext { c in
+                    c.setBlendMode(.copy)
+                    c.setFillColor((arguments.emptyColor ?? UIColor.white).cgColor)
+                    c.fill(arguments.drawingRect)
+                    
+                    c.setBlendMode(.normal)
                 }
             }
             

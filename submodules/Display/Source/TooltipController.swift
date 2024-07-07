@@ -94,6 +94,11 @@ public final class TooltipControllerPresentationArguments {
 }
 
 open class TooltipController: ViewController, StandalonePresentableController {
+    public enum Alignment {
+        case center
+        case natural
+    }
+    
     private var controllerNode: TooltipControllerNode {
         return self.displayNode as! TooltipControllerNode
     }
@@ -101,6 +106,7 @@ open class TooltipController: ViewController, StandalonePresentableController {
     public private(set) var content: TooltipControllerContent
     private let baseFontSize: CGFloat
     private let balancedTextLayout: Bool
+    private let alignment: Alignment
     private let isBlurred: Bool
     
     open func updateContent(_ content: TooltipControllerContent, animated: Bool, extendTimer: Bool, arrowOnBottom: Bool = true) {
@@ -132,10 +138,11 @@ open class TooltipController: ViewController, StandalonePresentableController {
     
     public var dismissed: ((Bool) -> Void)?
     
-    public init(content: TooltipControllerContent, baseFontSize: CGFloat, balancedTextLayout: Bool = false, isBlurred: Bool = false, timeout: Double = 2.0, dismissByTapOutside: Bool = false, dismissByTapOutsideSource: Bool = false, dismissImmediatelyOnLayoutUpdate: Bool = false, arrowOnBottom: Bool = true, padding: CGFloat = 8.0, innerPadding: UIEdgeInsets = UIEdgeInsets()) {
+    public init(content: TooltipControllerContent, baseFontSize: CGFloat, balancedTextLayout: Bool = false, alignment: Alignment = .center, isBlurred: Bool = false, timeout: Double = 2.0, dismissByTapOutside: Bool = false, dismissByTapOutsideSource: Bool = false, dismissImmediatelyOnLayoutUpdate: Bool = false, arrowOnBottom: Bool = true, padding: CGFloat = 8.0, innerPadding: UIEdgeInsets = UIEdgeInsets()) {
         self.content = content
         self.baseFontSize = baseFontSize
         self.balancedTextLayout = balancedTextLayout
+        self.alignment = alignment
         self.isBlurred = isBlurred
         self.timeout = timeout
         self.dismissByTapOutside = dismissByTapOutside
@@ -159,7 +166,7 @@ open class TooltipController: ViewController, StandalonePresentableController {
     }
     
     override open func loadDisplayNode() {
-        self.displayNode = TooltipControllerNode(content: self.content, baseFontSize: self.baseFontSize, balancedTextLayout: self.balancedTextLayout, isBlurred: self.isBlurred, dismiss: { [weak self] tappedInside in
+        self.displayNode = TooltipControllerNode(content: self.content, baseFontSize: self.baseFontSize, balancedTextLayout: self.balancedTextLayout, alignment: self.alignment, isBlurred: self.isBlurred, dismiss: { [weak self] tappedInside in
             self?.dismiss(tappedInside: tappedInside)
         }, dismissByTapOutside: self.dismissByTapOutside, dismissByTapOutsideSource: self.dismissByTapOutsideSource)
         self.controllerNode.padding = self.padding

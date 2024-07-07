@@ -564,7 +564,7 @@ public final class StoryPeerListComponent: Component {
             }
         }
                 
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             guard let component = self.component, let itemLayout = self.itemLayout else {
                 return
             }
@@ -604,9 +604,9 @@ public final class StoryPeerListComponent: Component {
                     self.titleIconView = titleIconView
                 }
                 
-                var titleIconTransition: Transition
+                var titleIconTransition: ComponentTransition
                 if animateStatusTransition {
-                    titleIconTransition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                    titleIconTransition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                 } else {
                     titleIconTransition = .immediate
                 }
@@ -1479,7 +1479,7 @@ public final class StoryPeerListComponent: Component {
             return result
         }
         
-        func update(component: StoryPeerListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: StoryPeerListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             var transition = transition
             transition.animation = .none
             
@@ -1681,7 +1681,7 @@ public final class StoryPeerListComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

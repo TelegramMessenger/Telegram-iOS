@@ -318,7 +318,7 @@ final class CountriesMultiselectionScreenComponent: Component {
             }
         }
                         
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             guard let component = self.component, let environment = self.environment, let itemLayout = self.itemLayout else {
                 return
             }
@@ -443,7 +443,7 @@ final class CountriesMultiselectionScreenComponent: Component {
                                     return
                                 }
                                 let update = {
-                                    let transition = Transition(animation: .curve(duration: 0.35, curve: .spring))
+                                    let transition = ComponentTransition(animation: .curve(duration: 0.35, curve: .spring))
                                     self.state?.updated(transition: transition)
                                     
                                     if self.searchStateContext != nil {
@@ -526,7 +526,7 @@ final class CountriesMultiselectionScreenComponent: Component {
                 self.visibleSectionHeaders.removeValue(forKey: id)
             }
             
-            let fadeTransition = Transition.easeInOut(duration: 0.25)
+            let fadeTransition = ComponentTransition.easeInOut(duration: 0.25)
             if let searchStateContext = self.searchStateContext, case let .countriesSearch(query) = searchStateContext.subject, let value = searchStateContext.stateValue, value.sections.isEmpty {
                 let sideInset: CGFloat = 44.0
                 let emptyAnimationHeight = 148.0
@@ -624,7 +624,7 @@ final class CountriesMultiselectionScreenComponent: Component {
             }
         }
         
-        func update(component: CountriesMultiselectionScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: CountriesMultiselectionScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             guard !self.isDismissed else {
                 return availableSize
             }
@@ -740,7 +740,7 @@ final class CountriesMultiselectionScreenComponent: Component {
                         if let countryId = tokenId.base as? String {
                             self.selectedCountries.removeAll(where: { $0 == countryId })
                         }
-                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
+                        self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.35, curve: .spring)))
                     }
                 )),
                 environment: {},
@@ -759,7 +759,7 @@ final class CountriesMultiselectionScreenComponent: Component {
                         }
                         self.searchStateContext = searchStateContext
                         if applyState {
-                            self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(contentReloaded: true)))
+                            self.state?.updated(transition: ComponentTransition(animation: .none).withUserData(AnimationHint(contentReloaded: true)))
                         }
                     })
                     applyState = true
@@ -995,7 +995,7 @@ final class CountriesMultiselectionScreenComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

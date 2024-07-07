@@ -83,14 +83,16 @@ public final class TextNodeBlockQuoteData: NSObject {
     public let secondaryColor: UIColor?
     public let tertiaryColor: UIColor?
     public let backgroundColor: UIColor
+    public let isCollapsible: Bool
     
-    public init(kind: Kind, title: NSAttributedString?, color: UIColor, secondaryColor: UIColor?, tertiaryColor: UIColor?, backgroundColor: UIColor) {
+    public init(kind: Kind, title: NSAttributedString?, color: UIColor, secondaryColor: UIColor?, tertiaryColor: UIColor?, backgroundColor: UIColor, isCollapsible: Bool) {
         self.kind = kind
         self.title = title
         self.color = color
         self.secondaryColor = secondaryColor
         self.tertiaryColor = tertiaryColor
         self.backgroundColor = backgroundColor
+        self.isCollapsible = isCollapsible
         
         super.init()
     }
@@ -1167,7 +1169,13 @@ private func addAttachment(attachment: UIImage, line: TextNodeLine, ascent: CGFl
     line.attachments.append(TextNodeAttachment(range: NSMakeRange(startIndex, endIndex - startIndex), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), attachment: attachment))
 }
 
-open class TextNode: ASDisplayNode {
+public protocol TextNodeProtocol: ASDisplayNode {
+    var currentText: NSAttributedString? { get }
+    func textRangeRects(in range: NSRange) -> (rects: [CGRect], start: TextRangeRectEdge, end: TextRangeRectEdge)?
+    func attributesAtPoint(_ point: CGPoint, orNearest: Bool) -> (Int, [NSAttributedString.Key: Any])?
+}
+
+open class TextNode: ASDisplayNode, TextNodeProtocol {
     public struct RenderContentTypes: OptionSet {
         public var rawValue: Int
         
@@ -1195,6 +1203,14 @@ open class TextNode: ASDisplayNode {
     
     public internal(set) var cachedLayout: TextNodeLayout?
     public var renderContentTypes: RenderContentTypes = .all
+    
+    public var currentText: NSAttributedString? {
+        return self.cachedLayout?.attributedString
+    }
+    
+    public func textRangeRects(in range: NSRange) -> (rects: [CGRect], start: TextRangeRectEdge, end: TextRangeRectEdge)? {
+        return self.cachedLayout?.rangeRects(in: range)
+    }
     
     override public init() {
         super.init()

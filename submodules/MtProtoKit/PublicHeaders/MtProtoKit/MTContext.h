@@ -99,6 +99,8 @@
 - (void)removeChangeListener:(id<MTContextChangeListener> _Nonnull)changeListener;
 
 - (void)setDiscoverBackupAddressListSignal:(MTSignal * _Nonnull)signal;
+- (void)setExternalRequestVerification:(MTSignal * _Nonnull (^ _Nonnull)(NSString * _Nonnull))externalRequestVerification;
+- (MTSignal * _Nullable)performExternalRequestVerificationWithNonce:(NSString * _Nonnull)nonce;
 
 - (NSTimeInterval)globalTime;
 - (NSTimeInterval)globalTimeDifference;

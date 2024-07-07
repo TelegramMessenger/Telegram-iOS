@@ -19,6 +19,7 @@
 #import <pthread.h>
 #import <os/lock.h>
 #import <libkern/OSAtomic.h>
+#import <stdatomic.h>
 
 #pragma mark IPv6 Support
 //Reachability fully support IPv6.  For full details, see ReadMe.md.
@@ -117,7 +118,7 @@ static void PrintReachabilityFlags(SCNetworkReachabilityFlags flags, const char*
 
 @end
 
-static int32_t nextKey = 1;
+static _Atomic int32_t nextKey = 1;
 static ReachabilityAtomic *contexts() {
     static ReachabilityAtomic *instance = nil;
     static dispatch_once_t onceToken;
@@ -135,7 +136,7 @@ static void withContext(int32_t key, void (^f)(LegacyReachability *)) {
 }
 
 static int32_t addContext(LegacyReachability *context) {
-    int32_t key = OSAtomicIncrement32(&nextKey);
+    int32_t key = atomic_fetch_add_explicit(&nextKey, 1, memory_order_relaxed);
     [contexts() modify:^id(NSMutableDictionary *dict) {
         NSMutableDictionary *updatedDict = [[NSMutableDictionary alloc] initWithDictionary:dict];
         updatedDict[@(key)] = context;

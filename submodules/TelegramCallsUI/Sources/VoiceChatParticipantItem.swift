@@ -17,6 +17,7 @@ import AudioBlob
 import PeerInfoAvatarListNode
 import ComponentFlow
 import EmojiStatusComponent
+import VoiceChatActionButton
 
 final class VoiceChatParticipantItem: ListViewItem {
     enum ParticipantText: Equatable {

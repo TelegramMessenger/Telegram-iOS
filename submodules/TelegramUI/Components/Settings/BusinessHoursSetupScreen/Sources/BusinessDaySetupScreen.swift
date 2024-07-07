@@ -144,7 +144,7 @@ final class BusinessDaySetupScreenComponent: Component {
         }
         
         var scrolledUp = true
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             let navigationRevealOffsetY: CGFloat = 0.0
             
             let navigationAlphaDistance: CGFloat = 16.0
@@ -233,7 +233,7 @@ final class BusinessDaySetupScreenComponent: Component {
             }
         }
         
-        func update(component: BusinessDaySetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: BusinessDaySetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -483,7 +483,7 @@ final class BusinessDaySetupScreenComponent: Component {
                     
                     if let rangeSectionView = rangeSection.view {
                         if !transition.animation.isImmediate {
-                            Transition.easeInOut(duration: 0.2).setAlpha(view: rangeSectionView, alpha: 0.0, completion: { [weak rangeSectionView] _ in
+                            ComponentTransition.easeInOut(duration: 0.2).setAlpha(view: rangeSectionView, alpha: 0.0, completion: { [weak rangeSectionView] _ in
                                 rangeSectionView?.removeFromSuperview()
                             })
                             transition.setScale(view: rangeSectionView, scale: 0.001)
@@ -531,7 +531,7 @@ final class BusinessDaySetupScreenComponent: Component {
                             leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
                                 name: "Item List/AddTimeIcon",
                                 tintColor: environment.theme.list.itemAccentColor
-                            )))),
+                            ))), false),
                             accessory: nil,
                             action: { [weak self] _ in
                                 guard let self else {
@@ -616,7 +616,7 @@ final class BusinessDaySetupScreenComponent: Component {
         return View()
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

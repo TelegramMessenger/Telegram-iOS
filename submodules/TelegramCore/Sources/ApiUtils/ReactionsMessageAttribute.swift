@@ -94,7 +94,28 @@ public func mergedMessageReactionsAndPeers(accountPeerId: EnginePeer.Id, account
         }
     }
     
-    return (attribute.reactions, recentPeers)
+    #if DEBUG
+    var reactions = attribute.reactions
+    if "".isEmpty {
+        if let index = reactions.firstIndex(where: {
+            if case .custom(MessageReaction.starsReactionId) = $0.value {
+                return true
+            } else {
+                return false
+            }
+        }) {
+            let value = reactions[index]
+            reactions.remove(at: index)
+            reactions.insert(value, at: 0)
+        } else {
+            reactions.insert(MessageReaction(value: .custom(MessageReaction.starsReactionId), count: 1000000, chosenOrder: nil), at: 0)
+        }
+    }
+    #else
+    let reactions = attribute.reactions
+    #endif
+    
+    return (reactions, recentPeers)
 }
 
 private func mergeReactions(reactions: [MessageReaction], recentPeers: [ReactionsMessageAttribute.RecentPeer], pending: [PendingReactionsMessageAttribute.PendingReaction], accountPeerId: PeerId) -> ([MessageReaction], [ReactionsMessageAttribute.RecentPeer]) {

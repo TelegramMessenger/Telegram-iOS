@@ -779,6 +779,8 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                 insets.top = -9.0
                 imageSpacing = 4.0
                 titleSpacing = 5.0
+            case .hashTagSearch:
+                break
             }
         }
         
@@ -838,6 +840,9 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                     }
                     
                     self.businessLink = link
+                case .hashTagSearch:
+                    titleString = ""
+                    strings = []
                 }
             } else {
                 titleString = interfaceState.strings.Conversation_CloudStorageInfo_Title
@@ -899,12 +904,12 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                                 linkTextButton.layer.removeAnimation(forKey: "transform.scale")
                                 
                                 if animateScale {
-                                    let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                                    let transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                                     transition.setScale(layer: linkTextButton.layer, scale: topScale)
                                 }
                             } else {
                                 if animateScale {
-                                    let transition = Transition(animation: .none)
+                                    let transition = ComponentTransition(animation: .none)
                                     transition.setScale(layer: linkTextButton.layer, scale: 1.0)
                                     
                                     linkTextButton.layer.animateScale(from: topScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak linkTextButton] _ in
@@ -1464,12 +1469,12 @@ private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
                     self.layer.removeAnimation(forKey: "transform.scale")
                     
                     if animateScale {
-                        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                        let transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                         transition.setScale(layer: self.layer, scale: topScale)
                     }
                 } else {
                     if animateScale {
-                        let transition = Transition(animation: .none)
+                        let transition = ComponentTransition(animation: .none)
                         transition.setScale(layer: self.layer, scale: 1.0)
                         
                         self.layer.animateScale(from: topScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in

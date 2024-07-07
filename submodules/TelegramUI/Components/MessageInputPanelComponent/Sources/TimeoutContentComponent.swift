@@ -59,7 +59,7 @@ public final class TimeoutContentComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: TimeoutContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: TimeoutContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let previousComponent = self.component
             self.component = component
             self.state = state
@@ -120,7 +120,7 @@ public final class TimeoutContentComponent: Component {
             self.foreground.bounds = CGRect(origin: .zero, size: size)
             self.foreground.center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
             
-            let foregroundTransition: Transition = updated ? .easeInOut(duration: 0.2) : transition
+            let foregroundTransition: ComponentTransition = updated ? .easeInOut(duration: 0.2) : transition
             foregroundTransition.setScale(view: self.foreground, scale: component.isSelected ? 1.0 : 0.001)
             
             return size
@@ -131,7 +131,7 @@ public final class TimeoutContentComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

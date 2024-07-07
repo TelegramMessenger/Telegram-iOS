@@ -91,6 +91,8 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
     
     private var isUpdating: Bool = false
     
+    private var alwaysShowTotalMessagesCount = false
+    
     private var currentLayout: Layout?
     
     private var tagMessageCount: (tag: MemoryBuffer, count: Int?, disposable: Disposable?)?
@@ -103,7 +105,9 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    init(theme: PresentationTheme) {
+    init(theme: PresentationTheme, alwaysShowTotalMessagesCount: Bool) {
+        self.alwaysShowTotalMessagesCount = alwaysShowTotalMessagesCount
+        
         super.init()
     }
     
@@ -118,7 +122,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             return currentLayout.height
         }
 
-        let height = self.update(params: params, transition: Transition(transition))
+        let height = self.update(params: params, transition: ComponentTransition(transition))
         self.currentLayout = Layout(params: params, height: height)
 
         return height
@@ -129,7 +133,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
         self.tagMessageCount = (tag, count, nil)
     }
     
-    private func update(transition: Transition) {
+    private func update(transition: ComponentTransition) {
         if self.isUpdating {
             return
         }
@@ -138,7 +142,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
         }
     }
 
-    private func update(params: Params, transition: Transition) -> CGFloat {
+    private func update(params: Params, transition: ComponentTransition) -> CGFloat {
         self.isUpdating = true
         defer {
             self.isUpdating = false
@@ -224,7 +228,15 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             if let currentId = results.currentId, let index = results.messageIndices.firstIndex(where: { $0.id == currentId }) {
                 canChangeListMode = true
                 
-                if params.interfaceState.displayHistoryFilterAsList {
+                if self.alwaysShowTotalMessagesCount {
+                    let value = presentationStringsFormattedNumber(Int32(displayTotalCount), params.interfaceState.dateTimeFormat.groupingSeparator)
+                    let suffix = params.interfaceState.strings.Chat_BottomSearchPanel_MessageCount(Int32(displayTotalCount))
+                    resultsTextString = [AnimatedTextComponent.Item(
+                        id: "text",
+                        isUnbreakable: true,
+                        content: .text(params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(value, suffix).string)
+                    )]
+                } else if params.interfaceState.displayHistoryFilterAsList {
                     resultsTextString = extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(
                         ".",
                         "."
@@ -332,36 +344,41 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             }
         }
         
-        var nextLeftX: CGFloat = 12.0
+        var nextLeftX: CGFloat = 16.0
         
-        let calendarButtonSize = self.calendarButton.update(
-            transition: .immediate,
-            component: AnyComponent(PlainButtonComponent(
-                content: AnyComponent(BundleIconComponent(
-                    name: "Chat/Input/Search/Calendar",
-                    tintColor: params.interfaceState.theme.rootController.navigationBar.accentTextColor
-                )),
-                effectAlignment: .center,
-                minSize: CGSize(width: 1.0, height: size.height),
-                contentInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
-                action: { [weak self] in
-                    guard let self else {
-                        return
+        if !self.alwaysShowTotalMessagesCount {
+            nextLeftX = 12.0
+            let calendarButtonSize = self.calendarButton.update(
+                transition: .immediate,
+                component: AnyComponent(PlainButtonComponent(
+                    content: AnyComponent(BundleIconComponent(
+                        name: "Chat/Input/Search/Calendar",
+                        tintColor: params.interfaceState.theme.rootController.navigationBar.accentTextColor
+                    )),
+                    effectAlignment: .center,
+                    minSize: CGSize(width: 1.0, height: size.height),
+                    contentInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.interfaceInteraction?.openCalendarSearch()
                     }
-                    self.interfaceInteraction?.openCalendarSearch()
+                )),
+                environment: {},
+                containerSize: size
+            )
+            let calendarButtonFrame = CGRect(origin: CGPoint(x: nextLeftX, y: floor((size.height - calendarButtonSize.height) * 0.5)), size: calendarButtonSize)
+            if let calendarButtonView = self.calendarButton.view {
+                if calendarButtonView.superview == nil {
+                    self.view.addSubview(calendarButtonView)
                 }
-            )),
-            environment: {},
-            containerSize: size
-        )
-        let calendarButtonFrame = CGRect(origin: CGPoint(x: nextLeftX, y: floor((size.height - calendarButtonSize.height) * 0.5)), size: calendarButtonSize)
-        if let calendarButtonView = self.calendarButton.view {
-            if calendarButtonView.superview == nil {
-                self.view.addSubview(calendarButtonView)
+                transition.setFrame(view: calendarButtonView, frame: calendarButtonFrame)
             }
-            transition.setFrame(view: calendarButtonView, frame: calendarButtonFrame)
+            nextLeftX += calendarButtonSize.width + 8.0
+        } else if let calendarButtonView = self.calendarButton.view {
+            calendarButtonView.removeFromSuperview()
         }
-        nextLeftX += calendarButtonSize.width + 8.0
         
         if displaySearchMembers {
             let membersButton: ComponentView<Empty>
@@ -432,12 +449,26 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
                 self.resultsText = resultsText
             }
             
+            if self.alwaysShowTotalMessagesCount {
+                resultsTextTransition = .immediate
+            }
+            
             let resultsTextSize = resultsText.update(
                 transition: resultsTextTransition,
-                component: AnyComponent(AnimatedTextComponent(
-                    font: Font.regular(15.0),
-                    color: params.interfaceState.theme.rootController.navigationBar.secondaryTextColor,
-                    items: resultsTextString
+                component: AnyComponent(PlainButtonComponent(
+                    content: AnyComponent(AnimatedTextComponent(
+                        font: Font.regular(15.0),
+                        color: (params.interfaceState.displayHistoryFilterAsList && canChangeListMode) ? params.interfaceState.theme.rootController.navigationBar.accentTextColor : params.interfaceState.theme.rootController.navigationBar.secondaryTextColor,
+                        items: resultsTextString
+                    )),
+                    effectAlignment: .center,
+                    action: { [weak self] in
+                        guard let self, let params = self.currentLayout?.params else {
+                            return
+                        }
+                        self.interfaceInteraction?.updateDisplayHistoryFilterAsList(!params.interfaceState.displayHistoryFilterAsList)
+                    },
+                    isEnabled: params.interfaceState.displayHistoryFilterAsList && canChangeListMode
                 )),
                 environment: {},
                 containerSize: CGSize(width: 200.0, height: 100.0)

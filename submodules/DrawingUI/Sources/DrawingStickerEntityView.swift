@@ -681,7 +681,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
     func onDeselection() {
         
     }
-    
+        
     func innerLayoutSubview(boundingSize: CGSize) -> CGSize {
         return boundingSize
     }
@@ -753,7 +753,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
     }
     
     override func updateSelectionView() {
-        guard let selectionView = self.selectionView as? DrawingStickerEntititySelectionView else {
+        guard let selectionView = self.selectionView as? DrawingStickerEntitySelectionView else {
             return
         }
         self.pushIdentityTransformForMeasurement()
@@ -776,7 +776,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
         if let selectionView = self.selectionView {
             return selectionView
         }
-        let selectionView = DrawingStickerEntititySelectionView()
+        let selectionView = DrawingStickerEntitySelectionView()
         selectionView.entityView = self
         return selectionView
     }
@@ -822,7 +822,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
     }
 }
 
-final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
+final class DrawingStickerEntitySelectionView: DrawingEntitySelectionView {
     private let border = SimpleShapeLayer()
     private let leftHandle = SimpleShapeLayer()
     private let rightHandle = SimpleShapeLayer()
@@ -1085,7 +1085,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
             let aspectRatio = entity.baseSize.width / entity.baseSize.height
             
             let width: CGFloat
-            let height: CGFloat
+            var height: CGFloat
             
             if entity.baseSize.width > entity.baseSize.height {
                 width = self.bounds.width - inset * 2.0
@@ -1327,8 +1327,6 @@ private extension UIBezierPath {
     }
 }
 
-
-
 extension UIImageView {
     func setDrawingAnimatedImage(data: Data) {
         DispatchQueue.global().async {
@@ -1354,48 +1352,3 @@ extension UIImageView {
         self.animationRepeatCount = 0
     }
 }
-
-//private func prerenderEntityTransformations(entity: DrawingEntity, image: UIImage, colorSpace: CGColorSpace) -> UIImage {
-//    let imageSize = image.size
-//    
-//    let angle: CGFloat
-//    var scale: CGFloat
-//    let position: CGPoint
-//    
-//    if let entity = entity as? DrawingStickerEntity {
-//        angle = -entity.rotation
-//        scale = entity.scale
-//        position = entity.position
-//    } else {
-//        fatalError()
-//    }
-//
-//    let rotatedSize = CGSize(
-//        width: abs(imageSize.width * cos(angle)) + abs(imageSize.height * sin(angle)),
-//        height: abs(imageSize.width * sin(angle)) + abs(imageSize.height * cos(angle))
-//    )
-//    let newSize = CGSize(width: rotatedSize.width * scale, height: rotatedSize.height * scale)
-//
-//    let newImage = generateImage(newSize, contextGenerator: { size, context in
-//        context.setAllowsAntialiasing(true)
-//        context.setShouldAntialias(true)
-//        context.interpolationQuality = .high
-//        context.clear(CGRect(origin: .zero, size: size))
-//        context.translateBy(x: newSize.width * 0.5, y: newSize.height * 0.5)
-//        context.rotate(by: angle)
-//        context.scaleBy(x: scale, y: scale)
-//        let drawRect = CGRect(
-//            x: -imageSize.width * 0.5,
-//            y: -imageSize.height * 0.5,
-//            width: imageSize.width,
-//            height: imageSize.height
-//        )
-//        if let cgImage = image.cgImage {
-//            context.draw(cgImage, in: drawRect)
-//        }
-//    }, scale: 1.0)!
-//    
-//    let _ = position
-//    
-//    return newImage
-//}

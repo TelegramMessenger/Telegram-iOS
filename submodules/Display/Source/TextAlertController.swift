@@ -9,6 +9,7 @@ public enum TextAlertActionType {
     case genericAction
     case defaultAction
     case destructiveAction
+    case defaultDestructiveAction
 }
 
 public struct TextAlertAction {
@@ -25,7 +26,11 @@ public struct TextAlertAction {
 
 public final class TextAlertContentActionNode: HighlightableButtonNode {
     private var theme: AlertControllerTheme
-    let action: TextAlertAction
+    public var action: TextAlertAction {
+        didSet {
+            self.updateTitle()
+        }
+    }
     
     private let backgroundNode: ASDisplayNode
     
@@ -110,11 +115,11 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
         switch self.action.type {
             case .defaultAction, .genericAction:
                 color = self.actionEnabled ? self.theme.accentColor : self.theme.disabledColor
-            case .destructiveAction:
+            case .destructiveAction, .defaultDestructiveAction:
                 color = self.actionEnabled ? self.theme.destructiveColor : self.theme.disabledColor
         }
         switch self.action.type {
-            case .defaultAction:
+            case .defaultAction, .defaultDestructiveAction:
                 font = Font.semibold(theme.baseFontSize)
             case .destructiveAction, .genericAction:
                 break

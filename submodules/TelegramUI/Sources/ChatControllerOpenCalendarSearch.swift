@@ -128,7 +128,7 @@ extension ChatControllerImpl {
                     })))
                 }
 
-                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: .message(id: .timestamp(timestamp), highlight: nil, timecode: nil), botStart: nil, mode: .standard(.previewing))
+                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: .message(id: .timestamp(timestamp), highlight: nil, timecode: nil), botStart: nil, mode: .standard(.previewing), params: nil)
                 chatController.canReadHistory.set(false)
                 
                 strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
@@ -176,7 +176,8 @@ extension ChatControllerImpl {
             }), in: .current)
         }
 
-        self.push(calendarScreen)
+        self.effectiveNavigationController?.pushViewController(calendarScreen)
+        
         dismissCalendarScreen = { [weak calendarScreen] in
             calendarScreen?.dismiss(completion: nil)
         }

@@ -22,14 +22,14 @@ public final class UndoPanelContainerComponent: Component {
         
         private var nextPanel: UndoPanelComponent?
         
-        public func update(component: UndoPanelContainerComponent, availableSize: CGSize, state: EmptyComponentState, transition: Transition) -> CGSize {
+        public func update(component: UndoPanelContainerComponent, availableSize: CGSize, state: EmptyComponentState, transition: ComponentTransition) -> CGSize {
             component.push.connect { [weak self, weak state] panel in
                 guard let strongSelf = self, let state = state else {
                     return
                 }
                 
                 strongSelf.nextPanel = panel
-                state.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                state.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
             }
             
             var animateTopPanelIn = false
@@ -77,7 +77,7 @@ public final class UndoPanelContainerComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, transition: transition)
     }
 }

@@ -46,7 +46,7 @@ private final class AvatarComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: AvatarComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: AvatarComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -68,7 +68,7 @@ private final class AvatarComponent: Component {
         return View(frame: CGRect())
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -151,7 +151,7 @@ final class StoryPreviewComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: StoryPreviewComponent, availableSize: CGSize, state: State, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: StoryPreviewComponent, availableSize: CGSize, state: State, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -319,7 +319,7 @@ final class StoryPreviewComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

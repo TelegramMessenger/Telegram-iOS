@@ -169,6 +169,56 @@ public extension Api {
     }
 }
 public extension Api {
+    enum FactCheck: TypeConstructorDescription {
+        case factCheck(flags: Int32, country: String?, text: Api.TextWithEntities?, hash: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .factCheck(let flags, let country, let text, let hash):
+                    if boxed {
+                        buffer.appendInt32(-1197736753)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(country!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {text!.serialize(buffer, true)}
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .factCheck(let flags, let country, let text, let hash):
+                return ("factCheck", [("flags", flags as Any), ("country", country as Any), ("text", text as Any), ("hash", hash as Any)])
+    }
+    }
+    
+        public static func parse_factCheck(_ reader: BufferReader) -> FactCheck? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_2 = parseString(reader) }
+            var _3: Api.TextWithEntities?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            } }
+            var _4: Int64?
+            _4 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.FactCheck.factCheck(flags: _1!, country: _2, text: _3, hash: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum FileHash: TypeConstructorDescription {
         case fileHash(offset: Int64, limit: Int32, hash: Buffer)
     
@@ -423,6 +473,50 @@ public extension Api {
     }
 }
 public extension Api {
+    indirect enum FoundStory: TypeConstructorDescription {
+        case foundStory(peer: Api.Peer, story: Api.StoryItem)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .foundStory(let peer, let story):
+                    if boxed {
+                        buffer.appendInt32(-394605632)
+                    }
+                    peer.serialize(buffer, true)
+                    story.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .foundStory(let peer, let story):
+                return ("foundStory", [("peer", peer as Any), ("story", story as Any)])
+    }
+    }
+    
+        public static func parse_foundStory(_ reader: BufferReader) -> FoundStory? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Api.StoryItem?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.StoryItem
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.FoundStory.foundStory(peer: _1!, story: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum Game: TypeConstructorDescription {
         case game(flags: Int32, id: Int64, accessHash: Int64, shortName: String, title: String, description: String, photo: Api.Photo, document: Api.Document?)
     
@@ -550,6 +644,58 @@ public extension Api {
         }
         public static func parse_geoPointEmpty(_ reader: BufferReader) -> GeoPoint? {
             return Api.GeoPoint.geoPointEmpty
+        }
+    
+    }
+}
+public extension Api {
+    enum GeoPointAddress: TypeConstructorDescription {
+        case geoPointAddress(flags: Int32, countryIso2: String, state: String?, city: String?, street: String?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .geoPointAddress(let flags, let countryIso2, let state, let city, let street):
+                    if boxed {
+                        buffer.appendInt32(-565420653)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(countryIso2, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(state!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(city!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(street!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .geoPointAddress(let flags, let countryIso2, let state, let city, let street):
+                return ("geoPointAddress", [("flags", flags as Any), ("countryIso2", countryIso2 as Any), ("state", state as Any), ("city", city as Any), ("street", street as Any)])
+    }
+    }
+    
+        public static func parse_geoPointAddress(_ reader: BufferReader) -> GeoPointAddress? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
+            var _4: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = parseString(reader) }
+            var _5: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_5 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.GeoPointAddress.geoPointAddress(flags: _1!, countryIso2: _2!, state: _3, city: _4, street: _5)
+            }
+            else {
+                return nil
+            }
         }
     
     }
@@ -1164,122 +1310,6 @@ public extension Api {
         }
         public static func parse_inlineQueryPeerTypeSameBotPM(_ reader: BufferReader) -> InlineQueryPeerType? {
             return Api.InlineQueryPeerType.inlineQueryPeerTypeSameBotPM
-        }
-    
-    }
-}
-public extension Api {
-    enum InputAppEvent: TypeConstructorDescription {
-        case inputAppEvent(time: Double, type: String, peer: Int64, data: Api.JSONValue)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputAppEvent(let time, let type, let peer, let data):
-                    if boxed {
-                        buffer.appendInt32(488313413)
-                    }
-                    serializeDouble(time, buffer: buffer, boxed: false)
-                    serializeString(type, buffer: buffer, boxed: false)
-                    serializeInt64(peer, buffer: buffer, boxed: false)
-                    data.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputAppEvent(let time, let type, let peer, let data):
-                return ("inputAppEvent", [("time", time as Any), ("type", type as Any), ("peer", peer as Any), ("data", data as Any)])
-    }
-    }
-    
-        public static func parse_inputAppEvent(_ reader: BufferReader) -> InputAppEvent? {
-            var _1: Double?
-            _1 = reader.readDouble()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: Api.JSONValue?
-            if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.JSONValue
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputAppEvent.inputAppEvent(time: _1!, type: _2!, peer: _3!, data: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    indirect enum InputBotApp: TypeConstructorDescription {
-        case inputBotAppID(id: Int64, accessHash: Int64)
-        case inputBotAppShortName(botId: Api.InputUser, shortName: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputBotAppID(let id, let accessHash):
-                    if boxed {
-                        buffer.appendInt32(-1457472134)
-                    }
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    break
-                case .inputBotAppShortName(let botId, let shortName):
-                    if boxed {
-                        buffer.appendInt32(-1869872121)
-                    }
-                    botId.serialize(buffer, true)
-                    serializeString(shortName, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputBotAppID(let id, let accessHash):
-                return ("inputBotAppID", [("id", id as Any), ("accessHash", accessHash as Any)])
-                case .inputBotAppShortName(let botId, let shortName):
-                return ("inputBotAppShortName", [("botId", botId as Any), ("shortName", shortName as Any)])
-    }
-    }
-    
-        public static func parse_inputBotAppID(_ reader: BufferReader) -> InputBotApp? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputBotApp.inputBotAppID(id: _1!, accessHash: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputBotAppShortName(_ reader: BufferReader) -> InputBotApp? {
-            var _1: Api.InputUser?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputUser
-            }
-            var _2: String?
-            _2 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputBotApp.inputBotAppShortName(botId: _1!, shortName: _2!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

@@ -106,7 +106,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                 if highlighted {
                     self.containerButton.alpha = 0.7
                 } else {
-                    Transition.easeInOut(duration: 0.25).setAlpha(view: self.containerButton, alpha: 1.0)
+                    ComponentTransition.easeInOut(duration: 0.25).setAlpha(view: self.containerButton, alpha: 1.0)
                 }
             }
         }
@@ -119,7 +119,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
             self.action()
         }
         
-        func update(theme: PresentationTheme, strings: PresentationStrings, height: CGFloat, isUnlock: Bool, transition: Transition) -> CGSize {
+        func update(theme: PresentationTheme, strings: PresentationStrings, height: CGFloat, isUnlock: Bool, transition: ComponentTransition) -> CGSize {
             let titleIconSpacing: CGFloat = 0.0
             
             let titleIconSize = self.titleIcon.update(
@@ -308,7 +308,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
             return super.hitTest(mappedPoint, with: event)
         }
         
-        func update(item: Item, isSelected: Bool, isLocked: Bool, theme: PresentationTheme, height: CGFloat, transition: Transition) -> CGSize {
+        func update(item: Item, isSelected: Bool, isLocked: Bool, theme: PresentationTheme, height: CGFloat, transition: ComponentTransition) -> CGSize {
             let spacing: CGFloat = 3.0
             
             let contentsAlpha: CGFloat = isLocked ? 0.6 : 1.0
@@ -680,7 +680,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                             return
                         }
                         
-                        c.dismiss(completion: { [weak self] in
+                        c?.dismiss(completion: { [weak self] in
                             guard let self, let item = self.items.first(where: { $0.reaction == reaction }) else {
                                 return
                             }

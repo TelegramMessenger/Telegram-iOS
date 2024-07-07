@@ -391,6 +391,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         private final class ItemNode: HighlightTrackingButtonNode {
             let context: AccountContext
             let displayReadTimestamps: Bool
+            let displayReactionIcon: Bool
             let availableReactions: AvailableReactions?
             let animationCache: AnimationCache
             let animationRenderer: MultiAnimationRenderer
@@ -411,10 +412,11 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             
             private var item: EngineMessageReactionListContext.Item?
             
-            init(context: AccountContext, displayReadTimestamps: Bool, availableReactions: AvailableReactions?, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, action: @escaping () -> Void) {
+            init(context: AccountContext, displayReadTimestamps: Bool, displayReactionIcon: Bool, availableReactions: AvailableReactions?, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, action: @escaping () -> Void) {
                 self.action = action
                 self.context = context
                 self.displayReadTimestamps = displayReadTimestamps
+                self.displayReactionIcon = displayReactionIcon
                 self.availableReactions = availableReactions
                 self.animationCache = animationCache
                 self.animationRenderer = animationRenderer
@@ -548,7 +550,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 
                 let reaction: MessageReaction.Reaction? = item.reaction
                 
-                if reaction != self.item?.reaction {
+                if self.displayReactionIcon, reaction != self.item?.reaction {
                     if let reaction = reaction {
                         switch reaction {
                         case .builtin:
@@ -802,6 +804,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         
         private let context: AccountContext
         private let displayReadTimestamps: Bool
+        private let displayReactionIcons: Bool
         private let availableReactions: AvailableReactions?
         private let animationCache: AnimationCache
         private let animationRenderer: MultiAnimationRenderer
@@ -833,6 +836,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         init(
             context: AccountContext,
             displayReadTimestamps: Bool,
+            displayReactionIcons: Bool,
             availableReactions: AvailableReactions?,
             animationCache: AnimationCache,
             animationRenderer: MultiAnimationRenderer,
@@ -845,6 +849,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         ) {
             self.context = context
             self.displayReadTimestamps = displayReadTimestamps
+            self.displayReactionIcons = displayReactionIcons
             self.availableReactions = availableReactions
             self.animationCache = animationCache
             self.animationRenderer = animationRenderer
@@ -955,7 +960,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                         } else {
                             let openPeer = self.openPeer
                             let peer = item.peer
-                            itemNode = ItemNode(context: self.context, displayReadTimestamps: self.displayReadTimestamps, availableReactions: self.availableReactions, animationCache: self.animationCache, animationRenderer: self.animationRenderer, action: {
+                            itemNode = ItemNode(context: self.context, displayReadTimestamps: self.displayReadTimestamps, displayReactionIcon: self.displayReactionIcons, availableReactions: self.availableReactions, animationCache: self.animationCache, animationRenderer: self.animationRenderer, action: {
                                 openPeer(peer, item.reaction != nil)
                             })
                             self.itemNodes[index] = itemNode
@@ -1104,6 +1109,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
     final class ItemsNode: ASDisplayNode, ContextControllerItemsNode, ASGestureRecognizerDelegate {
         private let context: AccountContext
         private let displayReadTimestamps: Bool
+        private let displayReactionIcons: Bool
         private let availableReactions: AvailableReactions?
         private let animationCache: AnimationCache
         private let animationRenderer: MultiAnimationRenderer
@@ -1148,6 +1154,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         ) {
             self.context = context
             self.displayReadTimestamps = displayReadTimestamps
+            self.displayReactionIcons = reaction == nil
             self.availableReactions = availableReactions
             self.animationCache = animationCache
             self.animationRenderer = animationRenderer
@@ -1158,9 +1165,6 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             
             self.requestUpdate = requestUpdate
             self.requestUpdateApparentHeight = requestUpdateApparentHeight
-            
-            //var requestUpdateTab: ((ReactionsTabNode, ContainedViewLayoutTransition) -> Void)?
-            //var requestUpdateTabApparentHeight: ((ReactionsTabNode, ContainedViewLayoutTransition) -> Void)?
             
             if let back = back {
                 self.backButtonNode = BackButtonNode()
@@ -1218,44 +1222,8 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 strongSelf.tabListNode?.scrollToTabReaction = ReactionTabListNode.ScrollToTabReaction(value: reaction)
                 strongSelf.currentTabIndex = tabIndex
                 
-                /*let currentTabNode = ReactionsTabNode(
-                    context: context,
-                    availableReactions: availableReactions,
-                    message: message,
-                    reaction: reaction,
-                    readStats: nil,
-                    requestUpdate: { tab, transition in
-                        requestUpdateTab?(tab, transition)
-                    },
-                    requestUpdateApparentHeight: { tab, transition in
-                        requestUpdateTabApparentHeight?(tab, transition)
-                    },
-                    openPeer: { id in
-                        openPeer(id)
-                    }
-                )
-                strongSelf.currentTabNode = currentTabNode
-                strongSelf.addSubnode(currentTabNode)*/
                 strongSelf.requestUpdate(.animated(duration: 0.45, curve: .spring))
             }
-            
-            /*requestUpdateTab = { [weak self] tab, transition in
-                guard let strongSelf = self else {
-                    return
-                }
-                if strongSelf.visibleTabNodes.contains(where: { $0.value === tab }) {
-                    strongSelf.requestUpdate(transition)
-                }
-            }
-            
-            requestUpdateTabApparentHeight = { [weak self] tab, transition in
-                guard let strongSelf = self else {
-                    return
-                }
-                if strongSelf.visibleTabNodes.contains(where: { $0.value === tab }) {
-                    strongSelf.requestUpdateApparentHeight(transition)
-                }
-            }*/
             
             let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] point in
                 guard let strongSelf = self else {
@@ -1371,6 +1339,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     tabNode = ReactionsTabNode(
                         context: self.context,
                         displayReadTimestamps: self.displayReadTimestamps,
+                        displayReactionIcons: self.displayReactionIcons,
                         availableReactions: self.availableReactions,
                         animationCache: self.animationCache,
                         animationRenderer: self.animationRenderer,

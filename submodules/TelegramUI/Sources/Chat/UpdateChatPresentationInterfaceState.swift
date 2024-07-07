@@ -223,6 +223,8 @@ func updateChatPresentationInterfaceStateImpl(
     var canHaveUrlPreview = true
     if case let .customChatContents(customChatContents) = updatedChatPresentationInterfaceState.subject {
         switch customChatContents.kind {
+        case .hashTagSearch:
+            break
         case .quickReplyMessageInput:
             break
         case .businessLinkSetup:
@@ -572,15 +574,7 @@ func updateChatPresentationInterfaceStateImpl(
             controller.updateVisibility()
         }
     }
- 
-    if let currentMenuWebAppController = selfController.currentMenuWebAppController, !selfController.presentationInterfaceState.showWebView {
-        selfController.currentMenuWebAppController = nil
-        if let currentMenuWebAppController = currentMenuWebAppController as? AttachmentController {
-            currentMenuWebAppController.ensureUnfocused = false
-        }
-        currentMenuWebAppController.dismiss(animated: true, completion: nil)
-    }
-    
+     
     selfController.presentationInterfaceStatePromise.set(selfController.presentationInterfaceState)
     
     if case .tag = selfController.chatDisplayNode.historyNode.tag {

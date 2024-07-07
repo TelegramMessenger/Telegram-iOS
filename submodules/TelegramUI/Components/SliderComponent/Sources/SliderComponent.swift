@@ -12,6 +12,8 @@ public final class SliderComponent: Component {
     public let markPositions: Bool
     public let trackBackgroundColor: UIColor
     public let trackForegroundColor: UIColor
+    public let knobSize: CGFloat?
+    public let knobColor: UIColor?
     public let valueUpdated: (Int) -> Void
     public let isTrackingUpdated: ((Bool) -> Void)?
     
@@ -21,6 +23,8 @@ public final class SliderComponent: Component {
         markPositions: Bool,
         trackBackgroundColor: UIColor,
         trackForegroundColor: UIColor,
+        knobSize: CGFloat? = nil,
+        knobColor: UIColor? = nil,
         valueUpdated: @escaping (Int) -> Void,
         isTrackingUpdated: ((Bool) -> Void)? = nil
     ) {
@@ -29,6 +33,8 @@ public final class SliderComponent: Component {
         self.markPositions = markPositions
         self.trackBackgroundColor = trackBackgroundColor
         self.trackForegroundColor = trackForegroundColor
+        self.knobSize = knobSize
+        self.knobColor = knobColor
         self.valueUpdated = valueUpdated
         self.isTrackingUpdated = isTrackingUpdated
     }
@@ -49,6 +55,12 @@ public final class SliderComponent: Component {
         if lhs.trackForegroundColor != rhs.trackForegroundColor {
             return false
         }
+        if lhs.knobSize != rhs.knobSize {
+            return false
+        }
+        if lhs.knobColor != rhs.knobColor {
+            return false
+        }
         return true
     }
     
@@ -66,7 +78,7 @@ public final class SliderComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
                 
-        func update(component: SliderComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: SliderComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -94,8 +106,12 @@ public final class SliderComponent: Component {
             } else {
                 sliderView = TGPhotoEditorSliderView()
                 sliderView.enablePanHandling = true
-                sliderView.trackCornerRadius = 2.0
-                sliderView.lineSize = 4.0
+                if let knobSize = component.knobSize {
+                    sliderView.lineSize = knobSize + 4.0
+                } else {
+                    sliderView.lineSize = 4.0
+                }
+                sliderView.trackCornerRadius = sliderView.lineSize * 0.5
                 sliderView.dotSize = 5.0
                 sliderView.minimumValue = 0.0
                 sliderView.startValue = 0.0
@@ -110,12 +126,25 @@ public final class SliderComponent: Component {
                 sliderView.backColor = component.trackBackgroundColor
                 sliderView.startColor = component.trackBackgroundColor
                 sliderView.trackColor = component.trackForegroundColor
-                sliderView.knobImage = generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.setShadow(offset: CGSize(width: 0.0, height: -3.0), blur: 12.0, color: UIColor(white: 0.0, alpha: 0.25).cgColor)
-                    context.setFillColor(UIColor.white.cgColor)
-                    context.fillEllipse(in: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0)))
-                })
+                if let knobSize = component.knobSize {
+                    sliderView.knobImage = generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setShadow(offset: CGSize(width: 0.0, height: -3.0), blur: 12.0, color: UIColor(white: 0.0, alpha: 0.25).cgColor)
+                        if let knobColor = component.knobColor {
+                            context.setFillColor(knobColor.cgColor)
+                        } else {
+                            context.setFillColor(UIColor.white.cgColor)
+                        }
+                        context.fillEllipse(in: CGRect(origin: CGPoint(x: floor((size.width - knobSize) * 0.5), y: floor((size.width - knobSize) * 0.5)), size: CGSize(width: knobSize, height: knobSize)))
+                    })
+                } else {
+                    sliderView.knobImage = generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setShadow(offset: CGSize(width: 0.0, height: -3.0), blur: 12.0, color: UIColor(white: 0.0, alpha: 0.25).cgColor)
+                        context.setFillColor(UIColor.white.cgColor)
+                        context.fillEllipse(in: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0)))
+                    })
+                }
                 
                 sliderView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size)
                 sliderView.hitTestEdgeInsets = UIEdgeInsets(top: -sliderView.frame.minX, left: 0.0, bottom: 0.0, right: -sliderView.frame.minX)
@@ -153,7 +182,7 @@ public final class SliderComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

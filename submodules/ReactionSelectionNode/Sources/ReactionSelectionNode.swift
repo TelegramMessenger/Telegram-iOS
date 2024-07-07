@@ -14,6 +14,7 @@ import AnimationCache
 import MultiAnimationRenderer
 import ShimmerEffect
 import GenerateStickerPlaceholderImage
+import EntityKeyboard
 
 private func generateBubbleImage(foreground: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
@@ -52,13 +53,33 @@ protocol ReactionItemNode: ASDisplayNode {
     func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition)
 }
 
-private let lockedBackgroundImage: UIImage = generateFilledCircleImage(diameter: 12.0, color: .white)!.withRenderingMode(.alwaysTemplate)
+private let lockedBackgroundImage: UIImage = generateFilledCircleImage(diameter: 16.0, color: .white)!.withRenderingMode(.alwaysTemplate)
 private let lockedBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/PanelBadgeLock"), color: .white)
+
+private final class StarsReactionEffectLayer: SimpleLayer {
+    override init() {
+        super.init()
+        
+        self.backgroundColor = UIColor.lightGray.withAlphaComponent(0.2).cgColor
+    }
+    
+    override init(layer: Any) {
+        super.init(layer: layer)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func update(size: CGSize) {
+    }
+}
 
 public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     let context: AccountContext
     let theme: PresentationTheme
     let item: ReactionItem
+    let icon: EmojiPagerContentComponent.Item.Icon
     private let loopIdle: Bool
     private let isLocked: Bool
     private let hasAppearAnimation: Bool
@@ -66,6 +87,8 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     
     let selectionTintView: UIView?
     let selectionView: UIView?
+    
+    private var starsEffectLayer: StarsReactionEffectLayer?
     
     private var animateInAnimationNode: AnimatedStickerNode?
     private var staticAnimationPlaceholderView: UIImageView?
@@ -102,10 +125,11 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         return self.staticAnimationNode.currentFrameImage != nil
     }
     
-    public init(context: AccountContext, theme: PresentationTheme, item: ReactionItem, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, loopIdle: Bool, isLocked: Bool, hasAppearAnimation: Bool = true, useDirectRendering: Bool = false) {
+    public init(context: AccountContext, theme: PresentationTheme, item: ReactionItem, icon: EmojiPagerContentComponent.Item.Icon, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, loopIdle: Bool, isLocked: Bool, hasAppearAnimation: Bool = true, useDirectRendering: Bool = false) {
         self.context = context
         self.theme = theme
         self.item = item
+        self.icon = icon
         self.loopIdle = loopIdle
         self.isLocked = isLocked
         self.hasAppearAnimation = hasAppearAnimation
@@ -125,6 +149,18 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         }
         
         super.init()
+        
+        if case .custom(MessageReaction.starsReactionId) = item.reaction.rawValue {
+            let starsEffectLayer = StarsReactionEffectLayer()
+            self.starsEffectLayer = starsEffectLayer
+            self.layer.addSublayer(starsEffectLayer)
+        }
+        
+        if item.stillAnimation.isCustomTemplateEmoji {
+            if let animationNode = self.staticAnimationNode as? DefaultAnimatedStickerNodeImpl {
+                animationNode.dynamicColor = theme.chat.inputPanel.panelControlAccentColor
+            }
+        }
         
         if let animateInAnimationNode = self.animateInAnimationNode {
             self.addSubnode(animateInAnimationNode)
@@ -222,6 +258,11 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     
     public func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
         let intrinsicSize = size
+        
+        if let starsEffectLayer = self.starsEffectLayer {
+            transition.updateFrame(layer: starsEffectLayer, frame: CGRect(origin: CGPoint(), size: size))
+            starsEffectLayer.update(size: size)
+        }
         
         let animationSize = self.item.stillAnimation.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         var animationDisplaySize = animationSize.aspectFitted(intrinsicSize)
@@ -469,11 +510,11 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         }
         
         if let lockBackgroundView = self.lockBackgroundView, let lockIconView = self.lockIconView, let iconImage = lockIconView.image {
-            let lockSize: CGFloat = 12.0
+            let lockSize: CGFloat = 16.0
             let iconBackgroundFrame = CGRect(origin: CGPoint(x: animationFrame.maxX - lockSize, y: animationFrame.maxY - lockSize), size: CGSize(width: lockSize, height: lockSize))
             transition.updateFrame(view: lockBackgroundView, frame: iconBackgroundFrame)
             
-            let iconFactor: CGFloat = 0.7
+            let iconFactor: CGFloat = 1.0
             let iconImageSize = CGSize(width: floor(iconImage.size.width * iconFactor), height: floor(iconImage.size.height * iconFactor))
             
             transition.updateFrame(view: lockIconView, frame: CGRect(origin: CGPoint(x: iconBackgroundFrame.minX + floorToScreenPixels((iconBackgroundFrame.width - iconImageSize.width) * 0.5), y: iconBackgroundFrame.minY + floorToScreenPixels((iconBackgroundFrame.height - iconImageSize.height) * 0.5)), size: iconImageSize))

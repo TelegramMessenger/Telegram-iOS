@@ -150,6 +150,18 @@ open class NavigationController: UINavigationController, ContainableController, 
     private var rootModalFrame: NavigationModalFrame?
     private var modalContainers: [NavigationModalContainer] = []
     private var overlayContainers: [NavigationOverlayContainer] = []
+    open var minimizedContainer: MinimizedContainer? {
+        didSet {
+            self.minimizedContainer?.navigationController = self
+            self.minimizedContainer?.willMaximize = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.isMaximizing = true
+                self.updateContainersNonReentrant(transition: .animated(duration: 0.4, curve: .spring))
+            }
+        }
+    }
     
     private var globalOverlayContainers: [NavigationOverlayContainer] = []
     private var globalOverlayBelowKeyboardContainerParent: GlobalOverlayContainerParent?
@@ -574,7 +586,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             
             modalStyleOverlayTransitionFactor = max(modalStyleOverlayTransitionFactor, overlayContainer.controller.modalStyleOverlayTransitionFactor)
             
-            if overlayContainer.isReady {
+            if overlayContainer.isReady && !overlayContainer.isRemoved {
                 let wasNotAdded = overlayContainer.supernode == nil
                 
                 if overlayWantsToBeBelowKeyboard {
@@ -734,7 +746,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                 modalStyleOverlayTransitionFactor = max(modalStyleOverlayTransitionFactor, lastController.modalStyleOverlayTransitionFactor)
                 topFlatModalHasProgress = modalStyleOverlayTransitionFactor > 0.0
             }
-            
+                        
             containerTransition.updateFrame(node: modalContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
             modalContainer.update(layout: modalContainer.isFlat ? globalOverlayLayout : layout, controllers: navigationLayout.modal[i].controllers, coveredByModalTransition: effectiveModalTransition, transition: containerTransition)
             
@@ -817,8 +829,33 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         
+        if self.isMaximizing && layout.size.width < layout.size.height {
+            modalStyleOverlayTransitionFactor = 1.0
+            topFlatModalHasProgress = true
+        }
+        
         layout.additionalInsets.left = max(layout.intrinsicInsets.left, additionalSideInsets.left)
         layout.additionalInsets.right = max(layout.intrinsicInsets.right, additionalSideInsets.right)
+        
+        var updatedSize = layout.size
+        var updatedIntrinsicInsets = layout.intrinsicInsets
+        if case .flat = navigationLayout.root, let minimizedContainer = self.minimizedContainer {
+            if minimizedContainer.supernode !== self.displayNode {
+                if let rootContainer = self.rootContainer, case let .flat(flatContainer) = rootContainer {
+                    if let rootModalFrame = self.rootModalFrame {
+                        self.displayNode.insertSubnode(minimizedContainer, aboveSubnode: rootModalFrame)
+                    } else {
+                        self.displayNode.insertSubnode(minimizedContainer, aboveSubnode: flatContainer)
+                    }
+                } else {
+                    self.displayNode.insertSubnode(minimizedContainer, at: 0)
+                }
+            }
+            if (layout.inputHeight ?? 0.0).isZero {
+                updatedSize.height -= minimizedContainer.collapsedHeight(layout: layout)
+                updatedIntrinsicInsets.bottom = 0.0
+            }
+        }
         
         switch navigationLayout.root {
         case let .flat(controllers):
@@ -832,8 +869,11 @@ open class NavigationController: UINavigationController, ContainableController, 
                         flatContainer.keyboardViewManager = nil
                         flatContainer.canHaveKeyboardFocus = false
                     }
-                    transition.updateFrame(node: flatContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
-                    flatContainer.update(layout: layout, canBeClosed: false, controllers: controllers, transition: transition)
+
+                    let updatedLayout = layout.withUpdatedSize(updatedSize).withUpdatedIntrinsicInsets(updatedIntrinsicInsets)
+                    transition.updateFrame(node: flatContainer, frame: CGRect(origin: CGPoint(), size: updatedSize))
+                    flatContainer.update(layout: updatedLayout, canBeClosed: false, controllers: controllers, transition: transition)
+                    flatContainer.minimizedContainer = self.minimizedContainer
                 case let .split(splitContainer):
                     let flatContainer = NavigationContainer(isFlat: self.isFlat, controllerRemoved: { [weak self] controller in
                         self?.controllerRemoved(controller)
@@ -890,8 +930,10 @@ open class NavigationController: UINavigationController, ContainableController, 
                     self.displayNode.insertSubnode(flatContainer, at: 0)
                 }
                 self.rootContainer = .flat(flatContainer)
-                flatContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
-                flatContainer.update(layout: layout, canBeClosed: false, controllers: controllers, transition: .immediate)
+                
+                let updatedLayout = layout.withUpdatedSize(updatedSize).withUpdatedIntrinsicInsets(updatedIntrinsicInsets)
+                flatContainer.frame = CGRect(origin: CGPoint(), size: updatedSize)
+                flatContainer.update(layout: updatedLayout, canBeClosed: false, controllers: controllers, transition: .immediate)
             }
         case let .split(masterControllers, detailControllers):
             if let rootContainer = self.rootContainer {
@@ -917,6 +959,11 @@ open class NavigationController: UINavigationController, ContainableController, 
                     splitContainer.update(layout: layout, masterControllers: masterControllers, detailControllers: detailControllers, detailsPlaceholderNode: self.detailsPlaceholderNode, transition: .immediate)
                     flatContainer.statusBarStyleUpdated = nil
                     flatContainer.removeFromSupernode()
+                    
+                    if let minimizedContainer = self.minimizedContainer {
+                        minimizedContainer.removeFromSupernode()
+                        self.minimizedContainer = nil
+                    }
                 case let .split(splitContainer):
                     if previousModalContainer == nil {
                         splitContainer.canHaveKeyboardFocus = true
@@ -1095,6 +1142,11 @@ open class NavigationController: UINavigationController, ContainableController, 
                 }
                 ContainedViewLayoutTransition.immediate.updateSublayerTransformScaleAndOffset(node: rootContainerNode, scale: 1.0, offset: CGPoint())
             }
+        }
+        
+        if let minimizedContainer = self.minimizedContainer {
+            minimizedContainer.frame = CGRect(origin: .zero, size: layout.size)
+            minimizedContainer.updateLayout(layout, transition: transition)
         }
         
         if self.inCallStatusBar != nil {
@@ -1288,7 +1340,9 @@ open class NavigationController: UINavigationController, ContainableController, 
         if let _ = self.inCallStatusBar {
             self.inCallNavigate?()
         } else if let rootContainer = self.rootContainer {
-            if let modalContainer = self.modalContainers.last {
+            if let minimizedContainer = self.minimizedContainer, minimizedContainer.isExpanded {
+                minimizedContainer.collapse()
+            } else if let modalContainer = self.modalContainers.last {
                 modalContainer.container.controllers.last?.scrollToTop?()
             } else {
                 switch rootContainer {
@@ -1522,6 +1576,69 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         self._viewControllersPromise.set(self.viewControllers)
     }
+        
+    public func minimizeViewController(_ viewController: ViewController, damping: CGFloat?, velocity: CGFloat? = nil, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, setupContainer: (MinimizedContainer?) -> MinimizedContainer?, animated: Bool) {
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .customSpring(damping: damping ?? 124.0, initialVelocity: velocity ?? 0.0)) : .immediate
+        
+        let minimizedContainer = setupContainer(self.minimizedContainer)
+        if self.minimizedContainer !== minimizedContainer {
+            minimizedContainer?.willMaximize = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.isMaximizing = true
+                self.updateContainersNonReentrant(transition: .animated(duration: 0.4, curve: .spring))
+            }
+            
+            self.minimizedContainer?.removeFromSupernode()
+            self.minimizedContainer = minimizedContainer
+            
+            self.updateContainersNonReentrant(transition: transition)
+        }
+        viewController.isMinimized = true
+        self.filterController(viewController, animated: true)
+        minimizedContainer?.addController(viewController, beforeMaximize: beforeMaximize, transition: transition)
+    }
+    
+    private var isMaximizing = false
+    public func maximizeViewController(_ viewController: ViewController, animated: Bool) {
+        guard let minimizedContainer = self.minimizedContainer else {
+            return
+        }
+        if animated {
+            self.isMaximizing = true
+            self.updateContainersNonReentrant(transition: .animated(duration: 0.4, curve: .spring))
+        }
+        minimizedContainer.maximizeController(viewController, animated: animated, completion: { [weak self] dismissed in
+            guard let self else {
+                return
+            }
+            var viewControllers = self.viewControllers
+            viewControllers.append(viewController)
+            self.setViewControllers(viewControllers, animated: false)
+            
+            viewController.isMinimized = false
+            
+            self.isMaximizing = false
+            
+            if dismissed, let minimizedContainer = self.minimizedContainer {
+                self.minimizedContainer = nil
+                minimizedContainer.removeFromSupernode()
+            }
+        })
+    }
+    
+    public func dismissMinimizedControllers(animated: Bool) {
+        guard let minimizedContainer = self.minimizedContainer else {
+            return
+        }
+        self.minimizedContainer = nil
+        
+        minimizedContainer.dismissAll(completion: { [weak minimizedContainer] in
+            minimizedContainer?.removeFromSupernode()
+        })
+        self.updateContainersNonReentrant(transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate)
+    }
     
     public var _keepModalDismissProgress = false
     public func presentOverlay(controller: ViewController, inGlobal: Bool = false, blockInteraction: Bool = false) {
@@ -1529,26 +1646,26 @@ open class NavigationController: UINavigationController, ContainableController, 
             guard let strongSelf = self else {
                 return
             }
-            if inGlobal {
-                for i in 0 ..< strongSelf.globalOverlayContainers.count {
-                    let overlayContainer = strongSelf.globalOverlayContainers[i]
-                    if overlayContainer.controller === controller {
-                        overlayContainer.removeFromSupernode()
-                        strongSelf.globalOverlayContainers.remove(at: i)
-                        strongSelf.internalGlobalOverlayControllersUpdated()
-                        break
-                    }
+            
+            for i in 0 ..< strongSelf.globalOverlayContainers.count {
+                let overlayContainer = strongSelf.globalOverlayContainers[i]
+                if overlayContainer.controller === controller {
+                    overlayContainer.isRemoved = true
+                    overlayContainer.removeFromSupernode()
+                    strongSelf.globalOverlayContainers.remove(at: i)
+                    strongSelf.internalGlobalOverlayControllersUpdated()
+                    break
                 }
-            } else {
-                for i in 0 ..< strongSelf.overlayContainers.count {
-                    let overlayContainer = strongSelf.overlayContainers[i]
-                    if overlayContainer.controller === controller {
-                        overlayContainer.removeFromSupernode()
-                        strongSelf.overlayContainers.remove(at: i)
-                        strongSelf._overlayControllersPromise.set(strongSelf.overlayContainers.map({ $0.controller }))
-                        strongSelf.internalOverlayControllersUpdated()
-                        break
-                    }
+            }
+            for i in 0 ..< strongSelf.overlayContainers.count {
+                let overlayContainer = strongSelf.overlayContainers[i]
+                if overlayContainer.controller === controller {
+                    overlayContainer.isRemoved = true
+                    overlayContainer.removeFromSupernode()
+                    strongSelf.overlayContainers.remove(at: i)
+                    strongSelf._overlayControllersPromise.set(strongSelf.overlayContainers.map({ $0.controller }))
+                    strongSelf.internalOverlayControllersUpdated()
+                    break
                 }
             }
 
@@ -1786,5 +1903,9 @@ open class NavigationController: UINavigationController, ContainableController, 
             return
         }
         transition.updateTransform(node: container, transform: CGAffineTransformMakeTranslation(offset, 0.0))
+        
+        if let minimizedContainer = self.minimizedContainer {
+            transition.updateTransform(node: minimizedContainer, transform: CGAffineTransformMakeTranslation(offset, 0.0))
+        }
     }
 }

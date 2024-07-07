@@ -47,6 +47,12 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
         if (force || fromFile.size == toFile.size || fromFile.resource.size == toFile.resource.size) && fromFile.mimeType == toFile.mimeType {
             copyOrMoveResourceData(from: fromFile.resource, to: toFile.resource, mediaBox: postbox.mediaBox)
         }
+    } else if let fromPaidContent = from as? TelegramMediaPaidContent, let toPaidContent = to as? TelegramMediaPaidContent {
+        for (fromMedia, toMedia) in zip(fromPaidContent.extendedMedia, toPaidContent.extendedMedia) {
+            if case let .full(fullFromMedia) = fromMedia, case let .full(fullToMedia) = toMedia {
+                applyMediaResourceChanges(from: fullFromMedia, to: fullToMedia, postbox: postbox, force: force)
+            }
+        }
     }
 }
 
@@ -96,7 +102,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var updatedTimestamp: Int32?
         if let apiMessage = apiMessage {
             switch apiMessage {
-                case let .message(_, _, _, _, _, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                case let .message(_, _, _, _, _, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                     updatedTimestamp = date
                 case .messageEmpty:
                     break

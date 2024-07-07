@@ -55,7 +55,7 @@ final class RatingView: OverlayMaskContainerView {
         self.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
     }
     
-    func update(text: String, constrainedWidth: CGFloat, transition: Transition) -> CGSize {
+    func update(text: String, constrainedWidth: CGFloat, transition: ComponentTransition) -> CGSize {
         let sideInset: CGFloat = 12.0
         let verticalInset: CGFloat = 6.0
         

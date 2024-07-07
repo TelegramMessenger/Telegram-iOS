@@ -43,7 +43,7 @@ public final class ConfettiView: UIView {
     
     private var localTime: Float = 0.0
     
-    override public init(frame: CGRect) {
+    public init(frame: CGRect, customImage: UIImage? = nil) {
         super.init(frame: frame)
         
         self.isUserInteractionEnabled = false
@@ -56,19 +56,25 @@ public final class ConfettiView: UIView {
         ] as [UInt32]).map(UIColor.init(rgb:))
         let imageSize = CGSize(width: 8.0, height: 8.0)
         var images: [(CGImage, CGSize)] = []
-        for imageType in 0 ..< 2 {
+        if let customImage {
             for color in colors {
-                if imageType == 0 {
-                    images.append((generateFilledCircleImage(diameter: imageSize.width, color: color)!.cgImage!, imageSize))
-                } else {
-                    let spriteSize = CGSize(width: 2.0, height: 6.0)
-                    images.append((generateImage(spriteSize, opaque: false, rotatedContext: { size, context in
-                        context.clear(CGRect(origin: CGPoint(), size: size))
-                        context.setFillColor(color.cgColor)
-                        context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.width)))
-                        context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: size.height - size.width), size: CGSize(width: size.width, height: size.width)))
-                        context.fill(CGRect(origin: CGPoint(x: 0.0, y: size.width / 2.0), size: CGSize(width: size.width, height: size.height - size.width)))
-                    })!.cgImage!, spriteSize))
+                images.append((generateTintedImage(image: customImage, color: color)!.cgImage!, customImage.size))
+            }
+        } else {
+            for imageType in 0 ..< 2 {
+                for color in colors {
+                    if imageType == 0 {
+                        images.append((generateFilledCircleImage(diameter: imageSize.width, color: color)!.cgImage!, imageSize))
+                    } else {
+                        let spriteSize = CGSize(width: 2.0, height: 6.0)
+                        images.append((generateImage(spriteSize, opaque: false, rotatedContext: { size, context in
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            context.setFillColor(color.cgColor)
+                            context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.width)))
+                            context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: size.height - size.width), size: CGSize(width: size.width, height: size.width)))
+                            context.fill(CGRect(origin: CGPoint(x: 0.0, y: size.width / 2.0), size: CGSize(width: size.width, height: size.height - size.width)))
+                        })!.cgImage!, spriteSize))
+                    }
                 }
             }
         }

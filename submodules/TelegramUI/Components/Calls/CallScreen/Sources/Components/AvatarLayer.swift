@@ -71,7 +71,7 @@ final class AvatarLayer: SimpleLayer {
         }
     }
     
-    func update(size: CGSize, isExpanded: Bool, cornerRadius: CGFloat, transition: Transition) {
+    func update(size: CGSize, isExpanded: Bool, cornerRadius: CGFloat, transition: ComponentTransition) {
         let params = Params(size: size, cornerRadius: cornerRadius, isExpanded: isExpanded)
         if self.params == params {
             return

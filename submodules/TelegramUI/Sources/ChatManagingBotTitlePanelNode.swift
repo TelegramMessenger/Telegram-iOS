@@ -90,7 +90,7 @@ private final class ChatManagingBotTitlePanelComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: ChatManagingBotTitlePanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ChatManagingBotTitlePanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             let topInset: CGFloat = 6.0
@@ -243,7 +243,7 @@ private final class ChatManagingBotTitlePanelComponent: Component {
         return View(frame: CGRect())
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -361,6 +361,7 @@ final class ChatManagingBotTitlePanelNode: ChatTitleAccessoryPanelNode {
                         },
                         sendFile: nil,
                         sendSticker: nil,
+                        sendEmoji: nil,
                         requestMessageActionUrlAuth: nil,
                         joinVoiceChat: nil,
                         present: { [weak chatController] c, a in
@@ -395,7 +396,7 @@ final class ChatManagingBotTitlePanelNode: ChatTitleAccessoryPanelNode {
 
         if let managingBot = interfaceState.contactStatus?.managingBot {
             let contentSize = self.content.update(
-                transition: Transition(transition),
+                transition: ComponentTransition(transition),
                 component: AnyComponent(ChatManagingBotTitlePanelComponent(
                     context: self.context,
                     theme: interfaceState.theme,

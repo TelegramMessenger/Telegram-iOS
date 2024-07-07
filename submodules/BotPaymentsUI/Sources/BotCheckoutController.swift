@@ -13,11 +13,11 @@ public final class BotCheckoutController: ViewController {
             case generic
         }
 
-        let form: BotPaymentForm
-        let validatedFormInfo: BotPaymentValidatedFormInfo?
-        let botPeer: EnginePeer?
+        public let form: BotPaymentForm
+        public let validatedFormInfo: BotPaymentValidatedFormInfo?
+        public let botPeer: EnginePeer?
 
-        private init(
+        public init(
             form: BotPaymentForm,
             validatedFormInfo: BotPaymentValidatedFormInfo?,
             botPeer: EnginePeer?
@@ -28,13 +28,22 @@ public final class BotCheckoutController: ViewController {
         }
 
         public static func fetch(context: AccountContext, source: BotPaymentInvoiceSource) -> Signal<InputData, FetchError> {
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let theme = context.sharedContext.currentPresentationData.with { $0 }.theme
             let themeParams: [String: Any] = [
-                "bg_color": Int32(bitPattern: presentationData.theme.list.plainBackgroundColor.argb),
-                "text_color": Int32(bitPattern: presentationData.theme.list.itemPrimaryTextColor.argb),
-                "link_color": Int32(bitPattern: presentationData.theme.list.itemAccentColor.argb),
-                "button_color": Int32(bitPattern: presentationData.theme.list.itemCheckColors.fillColor.argb),
-                "button_text_color": Int32(bitPattern: presentationData.theme.list.itemCheckColors.foregroundColor.argb)
+                "bg_color": Int32(bitPattern: theme.list.plainBackgroundColor.rgb),
+                "secondary_bg_color": Int32(bitPattern: theme.list.blocksBackgroundColor.rgb),
+                "text_color": Int32(bitPattern: theme.list.itemPrimaryTextColor.rgb),
+                "hint_color": Int32(bitPattern: theme.list.itemSecondaryTextColor.rgb),
+                "link_color": Int32(bitPattern: theme.list.itemAccentColor.rgb),
+                "button_color": Int32(bitPattern: theme.list.itemCheckColors.fillColor.rgb),
+                "button_text_color": Int32(bitPattern: theme.list.itemCheckColors.foregroundColor.rgb),
+                "header_bg_color": Int32(bitPattern: theme.rootController.navigationBar.opaqueBackgroundColor.rgb),
+                "accent_text_color": Int32(bitPattern: theme.list.itemAccentColor.rgb),
+                "section_bg_color": Int32(bitPattern: theme.list.itemBlocksBackgroundColor.rgb),
+                "section_header_text_color": Int32(bitPattern: theme.list.freeTextColor.rgb),
+                "subtitle_text_color": Int32(bitPattern: theme.list.itemSecondaryTextColor.rgb),
+                "destructive_text_color": Int32(bitPattern: theme.list.itemDestructiveColor.rgb),
+                "section_separator_color": Int32(bitPattern: theme.list.itemBlocksSeparatorColor.rgb)
             ]
 
             return context.engine.payments.fetchBotPaymentForm(source: source, themeParams: themeParams)

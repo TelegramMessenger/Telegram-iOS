@@ -39,6 +39,9 @@ swift_library(
         "//submodules/TextFormat:TextFormat",
         "//submodules/TelegramUI/Components/LegacyMessageInputPanel",
         "//submodules/TelegramUI/Components/LegacyMessageInputPanelInputView",
+        "//submodules/ReactionSelectionNode",
+        "//submodules/TelegramUI/Components/Chat/TopMessageReactions",
+        "//submodules/TelegramUI/Components/MinimizedContainer",
     ],
     visibility = [
         "//visibility:public",

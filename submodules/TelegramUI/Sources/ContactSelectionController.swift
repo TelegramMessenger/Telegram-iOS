@@ -12,6 +12,8 @@ import ContactListUI
 import SearchUI
 import AttachmentUI
 import SearchBarNode
+import ChatSendAudioMessageContextPreview
+import ChatSendMessageActionUI
 
 class ContactSelectionControllerImpl: ViewController, ContactSelectionController, PresentableController, AttachmentContainable {
     private let context: AccountContext
@@ -46,8 +48,8 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     
     fileprivate var caption: NSAttributedString?
     
-    private let _result = Promise<([ContactListPeer], ContactListAction, Bool, Int32?, NSAttributedString?)?>()
-    var result: Signal<([ContactListPeer], ContactListAction, Bool, Int32?, NSAttributedString?)?, NoError> {
+    private let _result = Promise<([ContactListPeer], ContactListAction, Bool, Int32?, NSAttributedString?, ChatSendMessageActionSheetController.SendParameters?)?>()
+    var result: Signal<([ContactListPeer], ContactListAction, Bool, Int32?, NSAttributedString?, ChatSendMessageActionSheetController.SendParameters?)?, NoError> {
         return self._result.get()
     }
     
@@ -86,6 +88,8 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     var cancelPanGesture: () -> Void = { }
     var isContainerPanning: () -> Bool = { return false }
     var isContainerExpanded: () -> Bool = { return false }
+    
+    var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)?
     
     init(_ params: ContactSelectionControllerParams) {
         self.context = params.context
@@ -144,6 +148,24 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         
         if params.multipleSelection {
             self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.beginSearch))
+        }
+        
+        self.getCurrentSendMessageContextMediaPreview = { [weak self] in
+            guard let self else {
+                return nil
+            }
+            
+            let selectedPeers = self.contactsNode.contactListNode.selectedPeers
+            if selectedPeers.isEmpty {
+                return nil
+            }
+            
+            return ChatSendContactMessageContextPreview(
+                context: self.context,
+                presentationData: self.presentationData,
+                wallpaperBackgroundNode: nil,
+                contactPeers: selectedPeers
+            )
         }
     }
     
@@ -235,10 +257,10 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
             }
         }
 
-        self.contactsNode.requestMultipleAction = { [weak self] silent, scheduleTime in
+        self.contactsNode.requestMultipleAction = { [weak self] silent, scheduleTime, parameters in
             if let strongSelf = self {
                 let selectedPeers = strongSelf.contactsNode.contactListNode.selectedPeers
-                strongSelf._result.set(.single((selectedPeers, .generic, silent, scheduleTime, strongSelf.caption)))
+                strongSelf._result.set(.single((selectedPeers, .generic, silent, scheduleTime, strongSelf.caption, parameters)))
                 if strongSelf.autoDismiss {
                     strongSelf.dismiss()
                 }
@@ -337,7 +359,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.confirmationDisposable.set((self.confirmation(peer) |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             if let strongSelf = self {
                 if value {
-                    strongSelf._result.set(.single(([peer], action, false, nil, nil)))
+                    strongSelf._result.set(.single(([peer], action, false, nil, nil, nil)))
                     if strongSelf.autoDismiss {
                         strongSelf.dismiss()
                     }
@@ -435,6 +457,17 @@ final class ContactsPickerContext: AttachmentMediaPickerContext {
         return .single(nil)
     }
     
+    var hasCaption: Bool {
+        return false
+    }
+    
+    var captionIsAboveMedia: Signal<Bool, NoError> {
+        return .single(false)
+    }
+    
+    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
+    }
+    
     public var loadingProgress: Signal<CGFloat?, NoError> {
         return .single(nil)
     }
@@ -451,13 +484,13 @@ final class ContactsPickerContext: AttachmentMediaPickerContext {
         self.controller?.caption = caption
     }
     
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
-        self.controller?.contactsNode.requestMultipleAction?(mode == .silently, mode == .whenOnline ? scheduleWhenOnlineTimestamp : nil)
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?) {
+        self.controller?.contactsNode.requestMultipleAction?(mode == .silently, mode == .whenOnline ? scheduleWhenOnlineTimestamp : nil, parameters)
     }
     
-    func schedule() {
+    func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?) {
         self.controller?.presentScheduleTimePicker ({ time in
-            self.controller?.contactsNode.requestMultipleAction?(false, time)
+            self.controller?.contactsNode.requestMultipleAction?(false, time, parameters)
         })
     }
     

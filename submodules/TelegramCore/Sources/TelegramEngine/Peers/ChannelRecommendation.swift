@@ -171,8 +171,15 @@ func _internal_recommendedChannels(account: Account, peerId: EnginePeer.Id?) -> 
     let key = PostboxViewKey.cachedItem(entryId(peerId: peerId))
     return account.postbox.combinedView(keys: [key])
     |> mapToSignal { views -> Signal<RecommendedChannels?, NoError> in
-        guard let cachedChannels = (views.views[key] as? CachedItemView)?.value?.get(CachedRecommendedChannels.self), !cachedChannels.peerIds.isEmpty else {
+        guard let cachedChannels = (views.views[key] as? CachedItemView)?.value?.get(CachedRecommendedChannels.self) else {
             return .single(nil)
+        }
+        if cachedChannels.peerIds.isEmpty {
+            if peerId != nil {
+                return .single(nil)
+            } else {
+                return .single(RecommendedChannels(channels: [], count: 0, isHidden: false))
+            }
         }
         return account.postbox.multiplePeersView(cachedChannels.peerIds)
         |> mapToSignal { view in

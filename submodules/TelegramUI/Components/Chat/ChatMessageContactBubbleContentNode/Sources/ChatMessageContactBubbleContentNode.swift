@@ -254,6 +254,8 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 let statusType: ChatMessageDateAndStatusType?
                 if case .customChatContents = item.associatedData.subject {
                     statusType = nil
+                } else if item.message.timestamp == 0 {
+                    statusType = nil
                 } else {
                     switch position {
                     case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
@@ -274,6 +276,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
+                let messageEffect = item.message.messageEffect(availableMessageEffects: item.associatedData.availableMessageEffects)
                 if let statusType = statusType {
                     var isReplyThread = false
                     if case .replyThread = item.chatLocation {
@@ -295,10 +298,11 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                         areReactionsTags: item.topMessage.areReactionsTags(accountPeerId: item.context.account.peerId),
+                        messageEffect: messageEffect,
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
                         hasAutoremove: item.message.isSelfExpiring,
-                        canViewReactionList: canViewMessageReactionList(message: item.topMessage, isInline: item.associatedData.isInline),
+                        canViewReactionList: canViewMessageReactionList(message: item.topMessage),
                         animationCache: item.controllerInteraction.presentationContext.animationCache,
                         animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                     ))
@@ -446,10 +450,17 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
                                 strongSelf.dateAndStatusNode.pressed = {
-                                    guard let strongSelf = self else {
+                                    guard let strongSelf = self, let item = strongSelf.item else {
                                         return
                                     }
                                     item.controllerInteraction.displayImportedMessageTooltip(strongSelf.dateAndStatusNode)
+                                }
+                            } else if messageEffect != nil {
+                                strongSelf.dateAndStatusNode.pressed = {
+                                    guard let strongSelf = self, let item = strongSelf.item else {
+                                        return
+                                    }
+                                    item.controllerInteraction.playMessageEffect(item.message)
                                 }
                             } else {
                                 strongSelf.dateAndStatusNode.pressed = nil
@@ -569,6 +580,13 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.dateAndStatusNode.isHidden {
             return self.dateAndStatusNode.reactionView(value: value)
+        }
+        return nil
+    }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        if !self.dateAndStatusNode.isHidden {
+            return self.dateAndStatusNode.messageEffectTargetView()
         }
         return nil
     }

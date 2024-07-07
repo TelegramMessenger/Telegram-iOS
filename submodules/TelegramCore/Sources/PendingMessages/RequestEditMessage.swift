@@ -27,15 +27,15 @@ public enum RequestEditMessageError {
     case invalidGrouping
 }
 
-func _internal_requestEditMessage(account: Account, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, inlineStickers: [MediaId: Media], webpagePreviewAttribute: WebpagePreviewMessageAttribute?, disableUrlPreview: Bool, scheduleTime: Int32?) -> Signal<RequestEditMessageResult, RequestEditMessageError> {
-    return requestEditMessage(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, stateManager: account.stateManager, transformOutgoingMessageMedia: account.transformOutgoingMessageMedia, messageMediaPreuploadManager: account.messageMediaPreuploadManager, mediaReferenceRevalidationContext: account.mediaReferenceRevalidationContext, messageId: messageId, text: text, media: media, entities: entities, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute, disableUrlPreview: disableUrlPreview, scheduleTime: scheduleTime)
+func _internal_requestEditMessage(account: Account, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, inlineStickers: [MediaId: Media], webpagePreviewAttribute: WebpagePreviewMessageAttribute?, disableUrlPreview: Bool, scheduleTime: Int32?, invertMediaAttribute: InvertMediaMessageAttribute?) -> Signal<RequestEditMessageResult, RequestEditMessageError> {
+    return requestEditMessage(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, stateManager: account.stateManager, transformOutgoingMessageMedia: account.transformOutgoingMessageMedia, messageMediaPreuploadManager: account.messageMediaPreuploadManager, mediaReferenceRevalidationContext: account.mediaReferenceRevalidationContext, messageId: messageId, text: text, media: media, entities: entities, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute, disableUrlPreview: disableUrlPreview, scheduleTime: scheduleTime, invertMediaAttribute: invertMediaAttribute)
 }
 
-func requestEditMessage(accountPeerId: PeerId, postbox: Postbox, network: Network, stateManager: AccountStateManager, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, messageMediaPreuploadManager: MessageMediaPreuploadManager, mediaReferenceRevalidationContext: MediaReferenceRevalidationContext, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, inlineStickers: [MediaId: Media], webpagePreviewAttribute: WebpagePreviewMessageAttribute?, disableUrlPreview: Bool, scheduleTime: Int32?) -> Signal<RequestEditMessageResult, RequestEditMessageError> {
-    return requestEditMessageInternal(accountPeerId: accountPeerId, postbox: postbox, network: network, stateManager: stateManager, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, mediaReferenceRevalidationContext: mediaReferenceRevalidationContext, messageId: messageId, text: text, media: media, entities: entities, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute, disableUrlPreview: disableUrlPreview, scheduleTime: scheduleTime, forceReupload: false)
+func requestEditMessage(accountPeerId: PeerId, postbox: Postbox, network: Network, stateManager: AccountStateManager, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, messageMediaPreuploadManager: MessageMediaPreuploadManager, mediaReferenceRevalidationContext: MediaReferenceRevalidationContext, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, inlineStickers: [MediaId: Media], webpagePreviewAttribute: WebpagePreviewMessageAttribute?, disableUrlPreview: Bool, scheduleTime: Int32?, invertMediaAttribute: InvertMediaMessageAttribute?) -> Signal<RequestEditMessageResult, RequestEditMessageError> {
+    return requestEditMessageInternal(accountPeerId: accountPeerId, postbox: postbox, network: network, stateManager: stateManager, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, mediaReferenceRevalidationContext: mediaReferenceRevalidationContext, messageId: messageId, text: text, media: media, entities: entities, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute, invertMediaAttribute: invertMediaAttribute, disableUrlPreview: disableUrlPreview, scheduleTime: scheduleTime, forceReupload: false)
     |> `catch` { error -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> in
         if case .invalidReference = error {
-            return requestEditMessageInternal(accountPeerId: accountPeerId, postbox: postbox, network: network, stateManager: stateManager, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, mediaReferenceRevalidationContext: mediaReferenceRevalidationContext, messageId: messageId, text: text, media: media, entities: entities, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute, disableUrlPreview: disableUrlPreview, scheduleTime: scheduleTime, forceReupload: true)
+            return requestEditMessageInternal(accountPeerId: accountPeerId, postbox: postbox, network: network, stateManager: stateManager, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, mediaReferenceRevalidationContext: mediaReferenceRevalidationContext, messageId: messageId, text: text, media: media, entities: entities, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute, invertMediaAttribute: invertMediaAttribute, disableUrlPreview: disableUrlPreview, scheduleTime: scheduleTime, forceReupload: true)
         } else {
             return .fail(error)
         }
@@ -50,11 +50,11 @@ func requestEditMessage(accountPeerId: PeerId, postbox: Postbox, network: Networ
     }
 }
 
-private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox, network: Network, stateManager: AccountStateManager, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, messageMediaPreuploadManager: MessageMediaPreuploadManager, mediaReferenceRevalidationContext: MediaReferenceRevalidationContext, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, inlineStickers: [MediaId: Media], webpagePreviewAttribute: WebpagePreviewMessageAttribute?, disableUrlPreview: Bool, scheduleTime: Int32?, forceReupload: Bool) -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> {
+private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox, network: Network, stateManager: AccountStateManager, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, messageMediaPreuploadManager: MessageMediaPreuploadManager, mediaReferenceRevalidationContext: MediaReferenceRevalidationContext, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, inlineStickers: [MediaId: Media], webpagePreviewAttribute: WebpagePreviewMessageAttribute?, invertMediaAttribute: InvertMediaMessageAttribute?, disableUrlPreview: Bool, scheduleTime: Int32?, forceReupload: Bool) -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> {
     let uploadedMedia: Signal<PendingMessageUploadedContentResult?, NoError>
     switch media {
     case .keep:
-        uploadedMedia = .single(.progress(0.0))
+        uploadedMedia = .single(.progress(PendingMessageUploadedContentProgress(progress: 0.0)))
         |> then(.single(nil))
     case let .update(media):
         let generateUploadSignal: (Bool) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>? = { forceReupload in
@@ -63,17 +63,20 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
             if let webpagePreviewAttribute = webpagePreviewAttribute {
                 attributes.append(webpagePreviewAttribute)
             }
+            if let invertMediaAttribute {
+                attributes.append(invertMediaAttribute)
+            }
             return mediaContentToUpload(accountPeerId: accountPeerId, network: network, postbox: postbox, auxiliaryMethods: stateManager.auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: mediaReferenceRevalidationContext, forceReupload: forceReupload, isGrouped: false, passFetchProgress: false, forceNoBigParts: false, peerId: messageId.peerId, media: augmentedMedia, text: "", autoremoveMessageAttribute: nil, autoclearMessageAttribute: nil, messageId: nil, attributes: attributes, mediaReference: nil)
         }
         if let uploadSignal = generateUploadSignal(forceReupload) {
-            uploadedMedia = .single(.progress(0.027))
+            uploadedMedia = .single(.progress(PendingMessageUploadedContentProgress(progress: 0.027)))
             |> then(uploadSignal)
             |> map { result -> PendingMessageUploadedContentResult? in
                 switch result {
-                    case let .progress(value):
-                        return .progress(max(value, 0.027))
-                    case let .content(content):
-                        return .content(content)
+                case let .progress(value):
+                    return .progress(PendingMessageUploadedContentProgress(progress: max(value.progress, 0.027)))
+                case let .content(content):
+                    return .content(content)
                 }
             }
             |> `catch` { _ -> Signal<PendingMessageUploadedContentResult?, NoError> in
@@ -89,10 +92,10 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
         var pendingMediaContent: PendingMessageUploadedContent?
         if let uploadedMediaResult = uploadedMediaResult {
             switch uploadedMediaResult {
-                case let .progress(value):
-                    return .single(.progress(value))
-                case let .content(content):
-                    pendingMediaContent = content.content
+            case let .progress(value):
+                return .single(.progress(value.progress))
+            case let .content(content):
+                pendingMediaContent = content.content
             }
         }
         return postbox.transaction { transaction -> (Peer?, Message?, SimpleDictionary<PeerId, Peer>) in
@@ -168,10 +171,8 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
                     flags |= Int32(1 << 15)
                 }
                 
-                if let webpagePreviewAttribute = webpagePreviewAttribute {
-                    if webpagePreviewAttribute.leadingPreview {
-                        flags |= Int32(1 << 16)
-                    }
+                if let _ = invertMediaAttribute {
+                    flags |= Int32(1 << 16)
                 }
                 
                 var quickReplyShortcutId: Int32?
@@ -235,7 +236,13 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
                                                 } else {
                                                     updatedFlags.remove(.Incoming)
                                                 }
-                                                return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags))
+                                                
+                                                var updatedMedia = message.media
+                                                if let previousPaidContent = previousMessage.media.first(where: { $0 is TelegramMediaPaidContent }) as? TelegramMediaPaidContent, case .full = previousPaidContent.extendedMedia.first {
+                                                    updatedMedia = previousMessage.media
+                                                }
+                                                
+                                                return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags).withUpdatedMedia(updatedMedia))
                                             })
                                         }
                                     default:

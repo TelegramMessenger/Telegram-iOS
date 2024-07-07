@@ -84,7 +84,7 @@ final class ChatbotSearchResultItemComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: ChatbotSearchResultItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ChatbotSearchResultItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -136,7 +136,7 @@ final class ChatbotSearchResultItemComponent: Component {
                     if let addButtonView = addButton.view {
                         if !transition.animation.isImmediate {
                             transition.setScale(view: addButtonView, scale: 0.001)
-                            Transition.easeInOut(duration: 0.2).setAlpha(view: addButtonView, alpha: 0.0, completion: { [weak addButtonView] _ in
+                            ComponentTransition.easeInOut(duration: 0.2).setAlpha(view: addButtonView, alpha: 0.0, completion: { [weak addButtonView] _ in
                                 addButtonView?.removeFromSuperview()
                             })
                         } else {
@@ -186,7 +186,7 @@ final class ChatbotSearchResultItemComponent: Component {
                     if let removeButtonView = removeButton.view {
                         if !transition.animation.isImmediate {
                             transition.setScale(view: removeButtonView, scale: 0.001)
-                            Transition.easeInOut(duration: 0.2).setAlpha(view: removeButtonView, alpha: 0.0, completion: { [weak removeButtonView] _ in
+                            ComponentTransition.easeInOut(duration: 0.2).setAlpha(view: removeButtonView, alpha: 0.0, completion: { [weak removeButtonView] _ in
                                 removeButtonView?.removeFromSuperview()
                             })
                         } else {
@@ -330,7 +330,7 @@ final class ChatbotSearchResultItemComponent: Component {
                         self.addSubview(addButtonView)
                         if !transition.animation.isImmediate {
                             transition.animateScale(view: addButtonView, from: 0.001, to: 1.0)
-                            Transition.easeInOut(duration: 0.2).animateAlpha(view: addButtonView, from: 0.0, to: 1.0)
+                            ComponentTransition.easeInOut(duration: 0.2).animateAlpha(view: addButtonView, from: 0.0, to: 1.0)
                         }
                     }
                     addButtonTransition.setFrame(view: addButtonView, frame: addButtonFrame)
@@ -346,7 +346,7 @@ final class ChatbotSearchResultItemComponent: Component {
                         self.addSubview(removeButtonView)
                         if !transition.animation.isImmediate {
                             transition.animateScale(view: removeButtonView, from: 0.001, to: 1.0)
-                            Transition.easeInOut(duration: 0.2).animateAlpha(view: removeButtonView, from: 0.0, to: 1.0)
+                            ComponentTransition.easeInOut(duration: 0.2).animateAlpha(view: removeButtonView, from: 0.0, to: 1.0)
                         }
                     }
                     removeButtonTransition.setFrame(view: removeButtonView, frame: removeButtonFrame)
@@ -396,7 +396,7 @@ final class ChatbotSearchResultItemComponent: Component {
         return View(frame: CGRect())
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

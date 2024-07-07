@@ -21,7 +21,7 @@ func makeCIColor(color: GColor) -> CIColor {
     #endif
 }
 
-extension GColor {
+public extension GColor {
     var redValue: CGFloat{ return makeCIColor(color: self).red }
     var greenValue: CGFloat{ return makeCIColor(color: self).green }
     var blueValue: CGFloat{ return makeCIColor(color: self).blue }

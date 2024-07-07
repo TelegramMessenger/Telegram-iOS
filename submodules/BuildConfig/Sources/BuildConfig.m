@@ -140,11 +140,16 @@ API_AVAILABLE(ios(10))
     return self;
 }
 
-- (NSData * _Nullable)bundleDataWithAppToken:(NSData * _Nullable)appToken signatureDict:(NSDictionary * _Nullable)signatureDict {
+- (NSData * _Nullable)bundleDataWithAppToken:(NSData * _Nullable)appToken tokenType:(NSString * _Nullable)tokenType tokenEnvironment:(NSString * _Nullable)tokenEnvironment signatureDict:(NSDictionary * _Nullable)signatureDict {
     NSMutableDictionary *dataDict = [[NSMutableDictionary alloc] initWithDictionary:_dataDict];
     if (appToken != nil) {
         dataDict[@"device_token"] = [appToken base64EncodedStringWithOptions:0];
-        dataDict[@"device_token_type"] = @"voip";
+        if (tokenType != nil) {
+            dataDict[@"device_token_type"] = tokenType;
+        }
+        if (tokenEnvironment != nil) {
+            dataDict[@"device_token_environment"] = tokenEnvironment;
+        }
     }
     float tzOffset = [[NSTimeZone systemTimeZone] secondsFromGMT];
     dataDict[@"tz_offset"] = @((int)tzOffset);

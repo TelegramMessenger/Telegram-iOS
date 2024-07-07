@@ -71,7 +71,7 @@ public enum ParsedInternalPeerUrlParameter {
     case channelMessage(Int32, Double?)
     case replyThread(Int32, Int32)
     case voiceChat(String?)
-    case appStart(String, String?)
+    case appStart(String, String?, Bool)
     case story(Int32)
     case boost
     case text(String)
@@ -588,16 +588,19 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                 } else if pathComponents.count == 2 {
                     let appName = pathComponents[1]
                     var startApp: String?
+                    var compact = false
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
                                 if queryItem.name == "startapp" {
                                     startApp = value
+                                } else if queryItem.name == "mode", value == "compact" {
+                                    compact = true
                                 }
                             }
                         }
                     }
-                    return .peer(.name(peerName), .appStart(appName, startApp))
+                    return .peer(.name(peerName), .appStart(appName, startApp, compact))
                 } else {
                     return nil
                 }
@@ -713,7 +716,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                         }
                                     }
                                 }
-                            case let .appStart(name, payload):
+                            case let .appStart(name, payload, compact):
                                 return .single(.progress) |> then(context.engine.messages.getBotApp(botId: peer.id, shortName: name, cached: false)
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<BotApp?, NoError> in
@@ -721,7 +724,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 }
                                 |> mapToSignal { botApp -> Signal<ResolveInternalUrlResult, NoError> in
                                     if let botApp {
-                                        return .single(.result(.peer(peer._asPeer(), .withBotApp(ChatControllerInitialBotAppStart(botApp: botApp, payload: payload, justInstalled: false)))))
+                                        return .single(.result(.peer(peer._asPeer(), .withBotApp(ChatControllerInitialBotAppStart(botApp: botApp, payload: payload, justInstalled: false, compact: compact)))))
                                     } else {
                                         return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
                                     }
@@ -1138,6 +1141,21 @@ public func parseAdUrl(sharedContext: SharedAccountContext, url: String) -> Pars
     return nil
 }
 
+public func parseFullInternalUrl(sharedContext: SharedAccountContext, url: String) -> ParsedInternalUrl? {
+    let schemes = ["http://", "https://", ""]
+    for basePath in baseTelegramMePaths {
+        for scheme in schemes {
+            let basePrefix = scheme + basePath + "/"
+            if url.lowercased().hasPrefix(basePrefix) {
+                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: String(url[basePrefix.endIndex...])) {
+                    return internalUrl
+                }
+            }
+        }
+    }
+    return nil
+}
+
 private struct UrlHandlingConfiguration {
     static var defaultValue: UrlHandlingConfiguration {
         return UrlHandlingConfiguration(domains: [], urlAuthDomains: [])
@@ -1204,7 +1222,11 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
                     var url = url
                     let lowercasedUrl = url.lowercased()
                     if (lowercasedUrl.hasPrefix(scheme) && (lowercasedUrl.hasSuffix(".\(basePath)") || lowercasedUrl.contains(".\(basePath)/") || lowercasedUrl.contains(".\(basePath)?"))) {
-                        url = basePrefix + String(url[scheme.endIndex...]).replacingOccurrences(of: ".\(basePath)/", with: "").replacingOccurrences(of: ".\(basePath)", with: "")
+                        let restUrl = String(url[scheme.endIndex...])
+                        if let slashRange = restUrl.range(of: "/"), let baseRange = restUrl.range(of: basePath), slashRange.lowerBound < baseRange.lowerBound {
+                        } else {
+                            url = basePrefix + restUrl.replacingOccurrences(of: ".\(basePath)/", with: "/").replacingOccurrences(of: ".\(basePath)", with: "")
+                        }
                     }
                     if url.lowercased().hasPrefix(basePrefix) {
                         if let internalUrl = parseInternalUrl(sharedContext: context.sharedContext, query: String(url[basePrefix.endIndex...])) {

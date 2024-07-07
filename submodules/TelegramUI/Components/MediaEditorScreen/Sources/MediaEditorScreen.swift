@@ -47,6 +47,7 @@ import StickerPeekUI
 import StickerPackEditTitleController
 import StickerPickerScreen
 import UIKitRuntimeUtils
+import ImageObjectSeparation
 
 private let playbackButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
@@ -441,7 +442,7 @@ final class MediaEditorScreenComponent: Component {
                     },
                     requestLayout: { [weak self] transition in
                         if let self {
-                            (self.environment?.controller() as? MediaEditorScreen)?.node.requestLayout(forceUpdate: true, transition: Transition(transition))
+                            (self.environment?.controller() as? MediaEditorScreen)?.node.requestLayout(forceUpdate: true, transition: ComponentTransition(transition))
                         }
                     }
                 )
@@ -555,7 +556,7 @@ final class MediaEditorScreenComponent: Component {
         func animateOut(to source: TransitionAnimationSource) {
             self.isDismissed = true
                         
-            let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+            let transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
             if let view = self.cancelButton.view {
                 transition.setAlpha(view: view, alpha: 0.0)
                 transition.setScale(view: view, scale: 0.1)
@@ -641,7 +642,7 @@ final class MediaEditorScreenComponent: Component {
             }
         }
         
-        func animateOutToTool(inPlace: Bool, transition: Transition) {
+        func animateOutToTool(inPlace: Bool, transition: ComponentTransition) {
             if let view = self.cancelButton.view {
                 view.alpha = 0.0
             }
@@ -670,7 +671,7 @@ final class MediaEditorScreenComponent: Component {
             }
         }
         
-        func animateInFromTool(inPlace: Bool, transition: Transition) {
+        func animateInFromTool(inPlace: Bool, transition: ComponentTransition) {
             if let view = self.cancelButton.view {
                 view.alpha = 1.0
             }
@@ -714,7 +715,7 @@ final class MediaEditorScreenComponent: Component {
             return inputText
         }
         
-        func update(component: MediaEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: MediaEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             guard !self.isDismissed else {
                 return availableSize
             }
@@ -1397,7 +1398,7 @@ final class MediaEditorScreenComponent: Component {
                 }
                 keyboardHeight = inputHeight
                 
-                let fadeTransition = Transition(animation: .curve(duration: 0.3, curve: .easeInOut))
+                let fadeTransition = ComponentTransition(animation: .curve(duration: 0.3, curve: .easeInOut))
                 if self.inputPanelExternalState.isEditing {
                     fadeTransition.setAlpha(view: self.fadeView, alpha: 1.0)
                 } else {
@@ -2008,7 +2009,7 @@ final class MediaEditorScreenComponent: Component {
                               
                 if let subject = controller.node.subject, case .empty = subject {
                     
-                } else if let canCutout = controller.node.canCutout {
+                } else if case let .known(canCutout, _, hasTransparency) = controller.node.stickerCutoutStatus {
                     if controller.node.isCutout || controller.node.stickerMaskDrawingView?.internalState.canUndo == true {
                         hasUndoButton = true
                     }
@@ -2020,7 +2021,7 @@ final class MediaEditorScreenComponent: Component {
                             hasRestoreButton = true
                         }
                     }
-                    if hasUndoButton || controller.node.hasTransparency {
+                    if hasUndoButton || hasTransparency {
                         hasOutlineButton = true
                     }
                 }
@@ -2395,7 +2396,7 @@ final class MediaEditorScreenComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -2409,6 +2410,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             case generic
             case addingToPack
             case editing
+            case businessIntro
         }
         
         case storyEditor
@@ -2537,11 +2539,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var isDismissed = false
         private var isDismissBySwipeSuppressed = false
         
-        fileprivate var canCutout: Bool?
-        fileprivate var hasTransparency = false
+        fileprivate var stickerCutoutStatus: MediaEditor.CutoutStatus = .unknown
+        private var stickerCutoutStatusDisposable: Disposable?
         fileprivate var isCutout = false
         
-        private (set) var hasAnyChanges = false
+        private(set) var hasAnyChanges = false
         
         private var playbackPositionDisposable: Disposable?
         
@@ -2807,6 +2809,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.appInForegroundDisposable?.dispose()
             self.playbackPositionDisposable?.dispose()
             self.availableReactionsDisposable?.dispose()
+            self.stickerCutoutStatusDisposable?.dispose()
         }
         
         private func setup(with subject: MediaEditorScreen.Subject) {
@@ -2939,15 +2942,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                     controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                 }
-            }           
-            mediaEditor.canCutoutUpdated = { [weak self] canCutout, hasTransparency in
+            }
+            self.stickerCutoutStatusDisposable = (mediaEditor.cutoutStatus
+            |> deliverOnMainQueue).start(next: { [weak self] cutoutStatus in
                 guard let self else {
                     return
                 }
-                self.canCutout = canCutout
-                self.hasTransparency = hasTransparency
+                self.stickerCutoutStatus = cutoutStatus
                 self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
-            }
+            })
             mediaEditor.maskUpdated = { [weak self] mask, apply in
                 guard let self else {
                     return
@@ -3036,7 +3039,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         messageFile = nil
                     }
                     
-                    let renderer = DrawingMessageRenderer(context: self.context, messages: messages)
+                    let renderer = DrawingMessageRenderer(context: self.context, messages: messages, parentView: self.view)
                     renderer.render(completion: { result in
                         if case .draft = subject, let existingEntityView = self.entitiesView.getView(where: { entityView in
                             if let stickerEntityView = entityView as? DrawingStickerEntityView, case .message = (stickerEntityView.entity as! DrawingStickerEntity).content {
@@ -3106,6 +3109,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if controller.isEmbeddedEditor == true {
                 mediaEditor.onFirstDisplay = { [weak self] in
                     if let self {
+                        if let transitionInView = self.transitionInView  {
+                            self.transitionInView = nil
+                            transitionInView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak transitionInView] _ in
+                                transitionInView?.removeFromSuperview()
+                            })
+                        }
+                        
                         if effectiveSubject.isPhoto {
                             self.previewContainerView.layer.allowsGroupOpacity = true
                             self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
@@ -3290,6 +3300,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let self {
                         if let location = entity as? DrawingLocationEntity {
                             self.presentLocationPicker(location)
+                        } else if let link = entity as? DrawingLinkEntity {
+                            self.addOrEditLink(link)
                         }
                     }
                 },
@@ -3762,6 +3774,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             if let transitionOut = controller.transitionOut(finished, isNew), let destinationView = transitionOut.destinationView {
                 var destinationTransitionView: UIView?
+                var destinationTransitionRect: CGRect = .zero
                 if !finished {
                     if let transitionIn = controller.transitionIn, case let .gallery(galleryTransitionIn) = transitionIn, let sourceImage = galleryTransitionIn.sourceImage, isNew != true {
                         let sourceSuperView = galleryTransitionIn.sourceView?.superview?.superview
@@ -3771,6 +3784,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         destinationTransitionOutView.frame = self.previewContainerView.convert(self.previewContainerView.bounds, to: sourceSuperView)
                         sourceSuperView?.addSubview(destinationTransitionOutView)
                         destinationTransitionView = destinationTransitionOutView
+                        destinationTransitionRect = galleryTransitionIn.sourceRect
                     }
                     if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                         view.animateOut(to: .gallery)
@@ -3850,7 +3864,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let destinationTransitionView {
                     self.previewContainerView.layer.allowsGroupOpacity = true
                     self.previewContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
-                    destinationTransitionView.layer.animateFrame(from: destinationTransitionView.frame, to: destinationView.convert(destinationView.bounds, to: destinationTransitionView.superview), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak destinationTransitionView] _ in
+                    destinationTransitionView.layer.animateFrame(from: destinationTransitionView.frame, to: destinationView.convert(destinationTransitionRect, to: destinationTransitionView.superview), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak destinationTransitionView] _ in
                         destinationTransitionView?.removeFromSuperview()
                     })
                 }
@@ -3892,7 +3906,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                     view.animateOut(to: .camera)
                 }
-                let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                let transition = ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut))
                 transition.setAlpha(view: self.previewContainerView, alpha: 0.0, completion: { _ in
                     completion()
                 })
@@ -3919,7 +3933,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         func animateOutToTool(tool: MediaEditorScreenComponent.DrawingScreenType, inPlace: Bool = false) {
             self.isDisplayingTool = tool
             
-            let transition: Transition = .easeInOut(duration: 0.2)
+            let transition: ComponentTransition = .easeInOut(duration: 0.2)
             if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                 view.animateOutToTool(inPlace: inPlace, transition: transition)
             }
@@ -3929,7 +3943,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         func animateInFromTool(inPlace: Bool = false) {
             self.isDisplayingTool = nil
             
-            let transition: Transition = .easeInOut(duration: 0.2)
+            let transition: ComponentTransition = .easeInOut(duration: 0.2)
             if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                 view.animateInFromTool(inPlace: inPlace, transition: transition)
             }
@@ -4161,73 +4175,74 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 },
                 completion: { [weak self] location, queryId, resultId, address, countryCode in
-                if let self  {
-                    let emojiFile: Signal<TelegramMediaFile?, NoError>
-                    if let countryCode {
-                        let flag = flagEmoji(countryCode: countryCode)
-                        emojiFile = self.staticEmojiPack.get()
-                        |> filter { result in
-                            if case .result = result {
-                                return true
-                            } else {
-                                return false
-                            }
-                        }
-                        |> take(1)
-                        |> map { result -> TelegramMediaFile? in
-                            if case let .result(_, items, _) = result, let match = items.first(where: { item in
-                                var displayText: String?
-                                for attribute in item.file.attributes {
-                                    if case let .CustomEmoji(_, _, alt, _) = attribute {
-                                        displayText = alt
-                                        break
-                                    }
-                                }
-                                if let displayText, displayText.hasPrefix(flag) {
+                    if let self  {
+                        let emojiFile: Signal<TelegramMediaFile?, NoError>
+                        if let countryCode {
+                            let flag = flagEmoji(countryCode: countryCode)
+                            emojiFile = self.staticEmojiPack.get()
+                            |> filter { result in
+                                if case .result = result {
                                     return true
                                 } else {
                                     return false
                                 }
-                            }) {
-                                return match.file
-                            } else {
-                                return nil
                             }
-                        }
-                    } else {
-                        emojiFile = .single(nil)
-                    }
-                    
-                    let _ = emojiFile.start(next: { [weak self] emojiFile in
-                        guard let self else {
-                            return
-                        }
-                        let title: String
-                        if let venueTitle = location.venue?.title {
-                            title = venueTitle
+                            |> take(1)
+                            |> map { result -> TelegramMediaFile? in
+                                if case let .result(_, items, _) = result, let match = items.first(where: { item in
+                                    var displayText: String?
+                                    for attribute in item.file.attributes {
+                                        if case let .CustomEmoji(_, _, alt, _) = attribute {
+                                            displayText = alt
+                                            break
+                                        }
+                                    }
+                                    if let displayText, displayText.hasPrefix(flag) {
+                                        return true
+                                    } else {
+                                        return false
+                                    }
+                                }) {
+                                    return match.file
+                                } else {
+                                    return nil
+                                }
+                            }
                         } else {
-                            title = address ?? "Location"
+                            emojiFile = .single(nil)
                         }
-                        let position = existingEntity?.position
-                        let scale = existingEntity?.scale ?? 1.0
-                        if let existingEntity {
-                            self.entitiesView.remove(uuid: existingEntity.uuid, animated: true)
-                        }
-                        self.interaction?.insertEntity(
-                            DrawingLocationEntity(
-                                title: title,
-                                style: existingEntity?.style ?? .white,
-                                location: location,
-                                icon: emojiFile,
-                                queryId: queryId,
-                                resultId: resultId
-                            ),
-                            scale: scale,
-                            position: position
-                        )
-                    })
+                        
+                        let _ = emojiFile.start(next: { [weak self] emojiFile in
+                            guard let self else {
+                                return
+                            }
+                            let title: String
+                            if let venueTitle = location.venue?.title {
+                                title = venueTitle
+                            } else {
+                                title = address ?? "Location"
+                            }
+                            let position = existingEntity?.position
+                            let scale = existingEntity?.scale ?? 1.0
+                            if let existingEntity {
+                                self.entitiesView.remove(uuid: existingEntity.uuid, animated: true)
+                            }
+                            self.interaction?.insertEntity(
+                                DrawingLocationEntity(
+                                    title: title,
+                                    style: existingEntity?.style ?? .white,
+                                    location: location,
+                                    icon: emojiFile,
+                                    queryId: queryId,
+                                    resultId: resultId
+                                ),
+                                scale: scale,
+                                position: position
+                            )
+                        })
+                    }
                 }
-            })
+            )
             locationController.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak locationController] transition in
                 if let self, let locationController {
                     let transitionFactor = locationController.modalStyleOverlayTransitionFactor
@@ -4465,6 +4480,69 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.controller?.present(contextController, in: .window(.root))
         }
         
+        func addOrEditLink(_ existingEntity: DrawingLinkEntity? = nil) {
+            guard let controller = self.controller else {
+                return
+            }
+            
+            if existingEntity == nil {
+                let maxLinkCount = self.context.userLimits.maxStoriesLinksCount
+                var currentLinkCount = 0
+                self.entitiesView.eachView { entityView in
+                    if entityView.entity is DrawingLinkEntity {
+                        currentLinkCount += 1
+                    }
+                }
+                if currentLinkCount >= maxLinkCount {
+                    controller.presentLinkLimitTooltip()
+                    return
+                }
+            }
+            
+            var link: CreateLinkScreen.Link?
+            if let existingEntity {
+                link = CreateLinkScreen.Link(
+                    url: existingEntity.url,
+                    name: existingEntity.name,
+                    webpage: existingEntity.webpage,
+                    positionBelowText: existingEntity.positionBelowText,
+                    largeMedia: existingEntity.largeMedia,
+                    isDark: existingEntity.style == .black
+                )
+            }
+                        
+            let linkController = CreateLinkScreen(context: controller.context, link: link, snapshotImage: self.mediaEditor?.resultImage, completion: { [weak self] result in
+                guard let self else {
+                    return
+                }
+                
+                let style: DrawingLinkEntity.Style
+                if let existingEntity {
+                    if ![.white, .black].contains(existingEntity.style), result.webpage != nil {
+                        style = .white
+                    } else {
+                        style = existingEntity.style
+                    }
+                } else {
+                    style = .white
+                }
+
+                let entity = DrawingLinkEntity(url: result.url, name: result.name, webpage: result.webpage, positionBelowText: result.positionBelowText, largeMedia: result.largeMedia, style: style)
+                entity.whiteImage = result.image
+                entity.blackImage = result.nightImage
+                                
+                if let existingEntity {
+                    self.entitiesView.remove(uuid: existingEntity.uuid, animated: true)
+                }
+                self.interaction?.insertEntity(
+                    entity,
+                    scale: existingEntity?.scale ?? 1.0,
+                    position: existingEntity?.position
+                )
+            })
+            controller.push(linkController)
+        }
+        
         func addReaction() {
             guard let controller = self.controller else {
                 return
@@ -4518,7 +4596,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             return result
         }
         
-        func requestUpdate(hasAppeared: Bool = false, transition: Transition = .immediate) {
+        func requestUpdate(hasAppeared: Bool = false, transition: ComponentTransition = .immediate) {
             if let layout = self.validLayout {
                 self.containerLayoutUpdated(layout: layout, hasAppeared: hasAppeared, transition: transition)
             }
@@ -4579,14 +4657,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var previousDrawingData: Data?
         private var previousDrawingEntities: [DrawingEntity]?
         
-        func requestLayout(forceUpdate: Bool, transition: Transition) {
+        func requestLayout(forceUpdate: Bool, transition: ComponentTransition) {
             guard let layout = self.validLayout else {
                 return
             }
             self.containerLayoutUpdated(layout: layout, forceUpdate: forceUpdate, hasAppeared: self.hasAppeared, transition: transition)
         }
                 
-        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, hasAppeared: Bool = false, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, hasAppeared: Bool = false, transition: ComponentTransition) {
             guard let controller = self.controller, !self.isDismissed else {
                 return
             }
@@ -4733,6 +4811,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     controller.addReaction = { [weak self, weak controller] in
                                         if let self {
                                             self.addReaction()
+                                            
+                                            self.stickerScreen = nil
+                                            controller?.dismiss(animated: true)
+                                        }
+                                    }
+                                    controller.addLink = { [weak self, weak controller] in
+                                        if let self {
+                                            self.addOrEditLink()
                                             
                                             self.stickerScreen = nil
                                             controller?.dismiss(animated: true)
@@ -4922,8 +5008,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 }
                             }
                         },
-                        cutoutUndo: { [weak self, weak controller] in
-                            if let self, let controller, let mediaEditor = self.mediaEditor, let stickerMaskDrawingView = self.stickerMaskDrawingView {
+                        cutoutUndo: { [weak self] in
+                            if let self, let mediaEditor = self.mediaEditor, let stickerMaskDrawingView = self.stickerMaskDrawingView {
                                 if self.entitiesView.hasSelection {
                                     self.entitiesView.selectEntity(nil)
                                 }
@@ -4934,12 +5020,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         mediaEditor.setSegmentationMask(drawingImage)
                                     }
                                     
-                                    if self.isDisplayingTool == .cutoutRestore && !stickerMaskDrawingView.internalState.canUndo && !controller.node.isCutout {
+                                    if self.isDisplayingTool == .cutoutRestore && !stickerMaskDrawingView.internalState.canUndo && !self.isCutout {
                                         self.cutoutScreen?.mode = .erase
                                         self.isDisplayingTool = .cutoutErase
                                         self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
                                     }
-                                } else if controller.node.isCutout {
+                                } else if self.isCutout {
                                     let action = { [weak self, weak mediaEditor] in
                                         guard let self, let mediaEditor else {
                                             return
@@ -5664,6 +5750,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             self?.node.presentGallery()
         })))
+        if self.context.isPremium {
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_Shortcut_Link, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, a in
+                a(.default)
+                
+                self?.node.addOrEditLink()
+            })))
+        }
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_Shortcut_Location, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LocationSmall"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] _, a in
@@ -5895,6 +5990,29 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             return false }
         )
         self.present(controller, in: .current)
+    }
+    
+    fileprivate func presentLinkLimitTooltip() {
+        self.hapticFeedback.impact(.light)
+        
+        self.dismissAllTooltips()
+        
+        let context = self.context
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let limit: Int32 = 3
+        
+        let value = presentationData.strings.Story_Editor_TooltipLinkLimitValue(limit)
+        let content: UndoOverlayContent = .info(
+            title: nil,
+            text: presentationData.strings.Story_Editor_TooltipReachedLinkLimitText(value).string,
+            timeout: nil,
+            customUndoText: nil
+        )
+        
+        let controller = UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: true, position: .top, animateInAsReplacement: false, action: { _ in
+            return true
+        })
+        self.present(controller, in: .window(.root))
     }
     
     func maybePresentDiscardAlert() {
@@ -6492,6 +6610,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         var file = stickerFile(resource: resource, thumbnailResource: thumbnailResource, size: Int64(0), dimensions: PixelDimensions(image.size), duration: self.preferredStickerDuration(), isVideo: isVideo)
         
         var menuItems: [ContextMenuItem] = []
+        var hasEmojiSelection = true
         if case let .stickerEditor(mode) = self.mode {
             switch mode {
             case .generic:
@@ -6558,7 +6677,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     contextItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
                     }, iconPosition: .left, action: { c, _ in
-                        c.popItems()
+                        c?.popItems()
                     })))
                     
                     contextItems.append(.separator)
@@ -6619,7 +6738,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         tipSignal: nil,
                         dismissed: nil
                     )
-                    c.pushItems(items: .single(items))
+                    c?.pushItems(items: .single(items))
                 })))
             case .editing:
                 menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_ReplaceSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
@@ -6660,6 +6779,24 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.uploadSticker(file, action: .upload)
                     })
                 })))
+            case .businessIntro:
+                hasEmojiSelection = false
+                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_SetAsIntroSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
+                    guard let self else {
+                        return
+                    }
+                    f(.default)
+                    
+                    let _ = (imagesReady.get()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.uploadSticker(file, action: .upload)
+                    })
+                })))
             }
         }
         
@@ -6680,14 +6817,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 theme: presentationData.theme,
                 strings: presentationData.strings,
                 item: .portal(portalView),
-                isCreating: true,
+                isCreating: hasEmojiSelection,
                 selectedEmoji: self.stickerSelectedEmoji,
                 selectedEmojiUpdated: { [weak self] selectedEmoji in
                     if let self {
                         self.stickerSelectedEmoji = selectedEmoji
                     }
                 },
-                recommendedEmoji: stickerRecommendedEmoji,
+                recommendedEmoji: self.stickerRecommendedEmoji,
                 menu: menuItems,
                 openPremiumIntro: {}
             ), 
@@ -6934,7 +7071,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             case .addToStickerPack, .createStickerPack:
                                 if let (packReference, packTitle) = packReferenceAndTitle, let navigationController = self.navigationController as? NavigationController {
                                     Queue.mainQueue().after(0.2) {
-                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker)
+                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker, actionPerformed: nil)
                                         (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                                         
                                         Queue.mainQueue().after(0.1) {
@@ -7199,7 +7336,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
 
-        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: Transition(transition))
+        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
     }
     
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
@@ -7510,7 +7647,7 @@ private final class ToolValueComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: ToolValueComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ToolValueComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let previousValue = self.component?.value
             self.component = component
             self.state = state
@@ -7577,7 +7714,7 @@ private final class ToolValueComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -7629,7 +7766,7 @@ public final class BlurredGradientComponent: Component {
         private var gradientBackground = SimpleLayer()
         private var gradientForeground = SimpleGradientLayer()
         
-        public func update(component: BlurredGradientComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        public func update(component: BlurredGradientComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             self.isUserInteractionEnabled = false
@@ -7675,7 +7812,7 @@ public final class BlurredGradientComponent: Component {
         return View(color: nil, enableBlur: true)
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

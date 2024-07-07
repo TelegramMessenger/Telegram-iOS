@@ -26,7 +26,21 @@ private let productIdentifiers = [
     
     "org.telegram.telegramPremium.threeMonths.code_x10",
     "org.telegram.telegramPremium.sixMonths.code_x10",
-    "org.telegram.telegramPremium.twelveMonths.code_x10"
+    "org.telegram.telegramPremium.twelveMonths.code_x10",
+    
+    "org.telegram.telegramStars.topup.x15",
+    "org.telegram.telegramStars.topup.x25",
+    "org.telegram.telegramStars.topup.x50",
+    "org.telegram.telegramStars.topup.x75",
+    "org.telegram.telegramStars.topup.x100",
+    "org.telegram.telegramStars.topup.x150",
+    "org.telegram.telegramStars.topup.x250",
+    "org.telegram.telegramStars.topup.x350",
+    "org.telegram.telegramStars.topup.x500",
+    "org.telegram.telegramStars.topup.x750",
+    "org.telegram.telegramStars.topup.x1000",
+    "org.telegram.telegramStars.topup.x1500",
+    "org.telegram.telegramStars.topup.x2500"
 ]
 
 private extension NSDecimalNumber {
@@ -170,6 +184,7 @@ public final class InAppPurchaseManager: NSObject {
         case notAllowed
         case cantMakePayments
         case assignFailed
+        case tryLater
     }
     
     public enum RestoreState {
@@ -205,6 +220,8 @@ public final class InAppPurchaseManager: NSObject {
     
     private let stateQueue = Queue()
     private var paymentContexts: [String: PaymentTransactionContext] = [:]
+    
+    private var finishedSuccessfulTransactions = Set<String>()
         
     private var onRestoreCompletion: ((RestoreState) -> Void)?
     
@@ -301,6 +318,12 @@ public final class InAppPurchaseManager: NSObject {
                                         mappedError = .network
                                     case .paymentNotAllowed, .clientInvalid:
                                         mappedError = .notAllowed
+                                    case .unknown:
+                                        if let _ = error.userInfo["tryLater"] {
+                                            mappedError = .tryLater
+                                        } else {
+                                            mappedError = .generic
+                                        }
                                     default:
                                         mappedError = .generic
                                 }
@@ -386,9 +409,15 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 let transactionState: TransactionState?
                 switch transaction.transactionState {
                     case .purchased:
-                        Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transaction \(transaction.transactionIdentifier ?? ""), original transaction \(transaction.original?.transactionIdentifier ?? "none") purchased")
-                        transactionState = .purchased(transactionId: transaction.transactionIdentifier)
-                        transactionsToAssign.append(transaction)
+                        if transaction.payment.productIdentifier.contains(".topup."), let transactionIdentifier = transaction.transactionIdentifier, self.finishedSuccessfulTransactions.contains(transactionIdentifier) {
+                            Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transaction \(transaction.transactionIdentifier ?? ""), original transaction \(transaction.original?.transactionIdentifier ?? "none") seems to be already reported, ask to try later")
+                            transactionState = .failed(error: SKError(SKError.Code.unknown, userInfo: ["tryLater": true]))
+                            queue.finishTransaction(transaction)
+                        } else {
+                            Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transaction \(transaction.transactionIdentifier ?? ""), original transaction \(transaction.original?.transactionIdentifier ?? "none") purchased")
+                            transactionState = .purchased(transactionId: transaction.transactionIdentifier)
+                            transactionsToAssign.append(transaction)
+                        }
                     case .restored:
                         Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transaction \(transaction.transactionIdentifier ?? ""), original transaction \(transaction.original?.transactionIdentifier ?? "") restroring")
                         let transactionIdentifier = transaction.transactionIdentifier
@@ -475,6 +504,12 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
 #if DEBUG
                 self.debugSaveReceipt(receiptData: receiptData)
 #endif
+                
+                for transaction in transactionsToAssign {
+                    if let transactionIdentifier = transaction.transactionIdentifier {
+                        self.finishedSuccessfulTransactions.insert(transactionIdentifier)
+                    }
+                }
                 
                 self.disposableSet.set(
                     (purpose
@@ -582,6 +617,7 @@ private final class PendingInAppPurchaseState: Codable {
             case prizeDescription
             case randomId
             case untilDate
+            case stars
         }
         
         enum PurposeType: Int32 {
@@ -591,6 +627,7 @@ private final class PendingInAppPurchaseState: Codable {
             case gift
             case giftCode
             case giveaway
+            case stars
         }
         
         case subscription
@@ -599,6 +636,7 @@ private final class PendingInAppPurchaseState: Codable {
         case gift(peerId: EnginePeer.Id)
         case giftCode(peerIds: [EnginePeer.Id], boostPeer: EnginePeer.Id?)
         case giveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32)
+        case stars(count: Int64)
         
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -631,6 +669,8 @@ private final class PendingInAppPurchaseState: Codable {
                     randomId: try container.decode(Int64.self, forKey: .randomId),
                     untilDate: try container.decode(Int32.self, forKey: .untilDate)
                 )
+            case .stars:
+                self = .stars(count: try container.decode(Int64.self, forKey: .stars))
             default:
                 throw DecodingError.generic
             }
@@ -663,6 +703,9 @@ private final class PendingInAppPurchaseState: Codable {
                 try container.encodeIfPresent(prizeDescription, forKey: .prizeDescription)
                 try container.encode(randomId, forKey: .randomId)
                 try container.encode(untilDate, forKey: .untilDate)
+            case let .stars(count):
+                try container.encode(PurposeType.stars.rawValue, forKey: .type)
+                try container.encode(count, forKey: .stars)
             }
         }
         
@@ -680,6 +723,8 @@ private final class PendingInAppPurchaseState: Codable {
                 self = .giftCode(peerIds: peerIds, boostPeer: boostPeer)
             case let .giveaway(boostPeer, additionalPeerIds, countries, onlyNewSubscribers, showWinners, prizeDescription, randomId, untilDate, _, _):
                 self = .giveaway(boostPeer: boostPeer, additionalPeerIds: additionalPeerIds, countries: countries, onlyNewSubscribers: onlyNewSubscribers, showWinners: showWinners, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate)
+            case let .stars(count, _, _):
+                self = .stars(count: count)
             }
         }
         
@@ -698,6 +743,8 @@ private final class PendingInAppPurchaseState: Codable {
                 return .giftCode(peerIds: peerIds, boostPeer: boostPeer, currency: currency, amount: amount)
             case let .giveaway(boostPeer, additionalPeerIds, countries, onlyNewSubscribers, showWinners, prizeDescription, randomId, untilDate):
                 return .giveaway(boostPeer: boostPeer, additionalPeerIds: additionalPeerIds, countries: countries, onlyNewSubscribers: onlyNewSubscribers, showWinners: showWinners, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount)
+            case let .stars(count):
+                return .stars(count: count, currency: currency, amount: amount)
             }
         }
     }

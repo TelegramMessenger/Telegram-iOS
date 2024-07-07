@@ -17,12 +17,33 @@
 #import <MtProtoKit/MTDropResponseContext.h>
 #import <MtProtoKit/MTApiEnvironment.h>
 #import <MtProtoKit/MTDatacenterAuthInfo.h>
+#import <MtProtoKit/MTSignal.h>
 #import "MTBuffer.h"
 
 #import "MTInternalMessageParser.h"
 #import "MTRpcResultMessage.h"
 #import <MtProtoKit/MTRpcError.h>
 #import "MTDropRpcResultMessage.h"
+
+@interface MTRequestVerificationData : NSObject
+
+@property (nonatomic, strong, readonly) NSString *nonce;
+@property (nonatomic, strong, readonly) NSString *secret;
+
+@end
+
+@implementation MTRequestVerificationData
+
+- (instancetype)initWithNonce:(NSString *)nonce secret:(NSString *)secret {
+    self = [super init];
+    if (self != nil) {
+        _nonce = nonce;
+        _secret = secret;
+    }
+    return self;
+}
+
+@end
 
 @interface MTRequestMessageService ()
 {
@@ -381,8 +402,8 @@
     }
 }
 
-- (NSData *)decorateRequestData:(MTRequest *)request initializeApi:(bool)initializeApi unresolvedDependencyOnRequestInternalId:(__autoreleasing id *)unresolvedDependencyOnRequestInternalId decoratedDebugDescription:(__autoreleasing NSString **)decoratedDebugDescription
-{    
+- (NSData *)decorateRequestData:(MTRequest *)request initializeApi:(bool)initializeApi requestVerificationData:(MTRequestVerificationData *)requestVerificationData unresolvedDependencyOnRequestInternalId:(__autoreleasing id *)unresolvedDependencyOnRequestInternalId decoratedDebugDescription:(__autoreleasing NSString **)decoratedDebugDescription
+{
     NSData *currentData = request.payload;
     
     NSString *debugDescription = @"";
@@ -397,8 +418,6 @@
         // invokeWithLayer
         [buffer appendInt32:(int32_t)0xda9b0d0d];
         [buffer appendInt32:(int32_t)[_serialization currentLayer]];
-        
-        //initConnection#c1cd5ea9 {X:Type} flags:# api_id:int device_model:string system_version:string app_version:string system_lang_code:string lang_pack:string lang_code:string proxy:flags.0?InputClientProxy query:!X = X;
 
         int32_t flags = 0;
         if (_apiEnvironment.socksProxySettings.secret != nil) {
@@ -482,6 +501,19 @@
         }
     }
     
+    if (requestVerificationData != nil) {
+        MTBuffer *buffer = [[MTBuffer alloc] init];
+        
+        [buffer appendInt32:(int32_t)0xdae54f8];
+        [buffer appendTLString:requestVerificationData.nonce];
+        [buffer appendTLString:requestVerificationData.secret];
+
+        [buffer appendBytes:currentData.bytes length:currentData.length];
+        currentData = buffer.data;
+        
+        debugDescription = [debugDescription stringByAppendingFormat:@", apnsSecret(%@, %@)", requestVerificationData.nonce, requestVerificationData.secret];
+    }
+    
     if (decoratedDebugDescription != nil) {
         *decoratedDebugDescription = debugDescription;
     }
@@ -510,6 +542,11 @@
             }
             if (request.errorContext.waitingForTokenExport) {
                 continue;
+            }
+            if (request.errorContext.pendingVerificationData != nil) {
+                if (!request.errorContext.pendingVerificationData.isResolved) {
+                    continue;
+                }
             }
 
             bool foundDependency = false;
@@ -542,7 +579,16 @@
                 messageSeqNo = request.requestContext.messageSeqNo;
             }
             
-            NSData *decoratedRequestData = [self decorateRequestData:request initializeApi:requestsWillInitializeApi unresolvedDependencyOnRequestInternalId:&autoreleasingUnresolvedDependencyOnRequestInternalId decoratedDebugDescription:&decoratedDebugDescription];
+            MTRequestVerificationData *requestVerificationData = nil;
+            if (request.errorContext != nil) {
+                if (request.errorContext.pendingVerificationData != nil) {
+                    if (request.errorContext.pendingVerificationData.isResolved) {
+                        requestVerificationData = [[MTRequestVerificationData alloc] initWithNonce:request.errorContext.pendingVerificationData.nonce secret:request.errorContext.pendingVerificationData.secret];
+                    }
+                }
+            }
+            
+            NSData *decoratedRequestData = [self decorateRequestData:request initializeApi:requestsWillInitializeApi requestVerificationData:requestVerificationData unresolvedDependencyOnRequestInternalId:&autoreleasingUnresolvedDependencyOnRequestInternalId decoratedDebugDescription:&decoratedDebugDescription];
             
             MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:decoratedRequestData metadata:request.metadata additionalDebugDescription:decoratedDebugDescription shortMetadata:request.shortMetadata messageId:messageId messageSeqNo:messageSeqNo];
             outgoingMessage.needsQuickAck = request.acknowledgementReceived != nil;
@@ -873,6 +919,34 @@
                                 
                                 authInfo = [authInfo withUpdatedAuthKeyAttributes:authKeyAttributes];
                                 [_context updateAuthInfoForDatacenterWithId:mtProto.datacenterId authInfo:authInfo selector:authInfoSelector];
+                            }];
+                            
+                            restartRequest = true;
+                        } else if (rpcError.errorCode == 403 && [rpcError.errorDescription rangeOfString:@"APNS_VERIFY_CHECK_"].location != NSNotFound) {
+                            if (request.errorContext == nil) {
+                                request.errorContext = [[MTRequestErrorContext alloc] init];
+                            }
+                            
+                            NSString *nonce = [rpcError.errorDescription substringFromIndex:[@"APNS_VERIFY_CHECK_" length]];
+                            request.errorContext.pendingVerificationData = [[MTRequestPendingVerificationData alloc] initWithNonce:nonce];
+                            
+                            __weak MTRequestMessageService *weakSelf = self;
+                            MTQueue *queue = _queue;
+                            id requestId = request.internalId;
+                            request.errorContext.pendingVerificationData.disposable = [[_context performExternalRequestVerificationWithNonce:nonce] startWithNext:^(id result) {
+                                [queue dispatchOnQueue:^{
+                                    __strong MTRequestMessageService *strongSelf = weakSelf;
+                                    if (!strongSelf) {
+                                        return;
+                                    }
+                                    for (MTRequest *request in strongSelf->_requests) {
+                                        if (request.internalId == requestId) {
+                                            request.errorContext.pendingVerificationData.secret = result;
+                                            request.errorContext.pendingVerificationData.isResolved = true;
+                                        }
+                                    }
+                                    [strongSelf->_mtProto requestTransportTransaction];
+                                }];
                             }];
                             
                             restartRequest = true;

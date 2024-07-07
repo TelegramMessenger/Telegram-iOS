@@ -22,6 +22,7 @@ import EntityKeyboard
 import PeerAllowedReactionsScreen
 import EmojiActionIconComponent
 import TextFieldComponent
+import CameraScreen
 
 final class BusinessIntroSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -161,6 +162,56 @@ final class BusinessIntroSetupScreenComponent: Component {
             return true
         }
         
+        func openStickerEditor() {
+            guard let component = self.component, let environment = self.environment, let controller = environment.controller() as? BusinessIntroSetupScreen else {
+                return
+            }
+            
+            let context = component.context
+            let navigationController = controller.navigationController as? NavigationController
+            
+            var dismissImpl: (() -> Void)?
+            let mainController = context.sharedContext.makeStickerMediaPickerScreen(
+                context: context,
+                getSourceRect: { return .zero },
+                completion: { result, transitionView, transitionRect, transitionImage, fromCamera, completion, cancelled in
+                    let editorController = context.sharedContext.makeStickerEditorScreen(
+                        context: context,
+                        source: result,
+                        intro: true,
+                        transitionArguments: transitionView.flatMap { ($0, transitionRect, transitionImage) },
+                        completion: { [weak self] file, emoji, commit in
+                            dismissImpl?()
+                            
+                            guard let self else {
+                                return
+                            }
+                           
+                            self.stickerFile = file
+                            if !self.isUpdating {
+                                self.state?.updated(transition: .spring(duration: 0.4))
+                            }
+                            
+                            commit()
+                        },
+                        cancelled: cancelled
+                    )
+                    navigationController?.pushViewController(editorController)
+                },
+                dismissed: {}
+            )
+            dismissImpl = { [weak mainController] in
+                if let mainController, let navigationController = mainController.navigationController {
+                    var viewControllers = navigationController.viewControllers
+                    viewControllers = viewControllers.filter { c in
+                        return !(c is CameraScreen) && c !== mainController
+                    }
+                    navigationController.setViewControllers(viewControllers, animated: false)
+                }
+            }
+            navigationController?.pushViewController(mainController)
+        }
+        
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
                 self.updateScrolling(transition: .immediate)
@@ -168,7 +219,7 @@ final class BusinessIntroSetupScreenComponent: Component {
         }
         
         private var scrolledUp = true
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             let navigationRevealOffsetY: CGFloat = 0.0
             
             let navigationAlphaDistance: CGFloat = 16.0
@@ -204,7 +255,7 @@ final class BusinessIntroSetupScreenComponent: Component {
             }
         }
         
-        func update(component: BusinessIntroSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: BusinessIntroSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -229,6 +280,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                     hasSearch: true,
                     hasTrending: false,
                     forceHasPremium: true,
+                    hasAdd: true,
                     searchIsPlaceholderOnly: false,
                     subject: .greetingStickers
                 )
@@ -245,6 +297,13 @@ final class BusinessIntroSetupScreenComponent: Component {
                                 return
                             }
                             guard let itemFile = item.itemFile else {
+                                if case .icon(.add) = item.content {
+                                    self.openStickerEditor()
+                                    self.displayStickerInput = false
+                                    if !self.isUpdating {
+                                        self.state?.updated(transition: .spring(duration: 0.4))
+                                    }
+                                }
                                 return
                             }
                             
@@ -631,7 +690,7 @@ final class BusinessIntroSetupScreenComponent: Component {
             self.component = component
             self.state = state
             
-            let alphaTransition: Transition
+            let alphaTransition: ComponentTransition
             if !transition.animation.isImmediate {
                 alphaTransition = .easeInOut(duration: 0.25)
             } else {
@@ -1097,7 +1156,7 @@ final class BusinessIntroSetupScreenComponent: Component {
         return View()
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

@@ -230,6 +230,10 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     
     private var navigationBarOrigin: CGFloat = 0.0
     
+    public var minimizedTopEdgeOffset: CGFloat?
+    public var minimizedBounds: CGRect?
+    open var isMinimized: Bool = false
+    
     open var interactiveNavivationGestureEdgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth? {
         return nil
     }
@@ -346,6 +350,23 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         } else*/ if let scrollToTopView = self.scrollToTopView {
             scrollToTopView.removeFromSuperview()
             self.scrollToTopView = nil
+        }
+    }
+    
+    public var titleSignal: Signal<String?, NoError> {
+        return Signal { [weak self] subscriber in
+            guard let self else {
+                return EmptyDisposable
+            }
+            subscriber.putNext(self.navigationItem.title)
+            let listenerIndex = self.navigationItem.addSetTitleListener { title, _ in
+                subscriber.putNext(title)
+            }
+            return ActionDisposable { [weak self] in
+                if let self {
+                    self.navigationItem.removeSetTitleListener(listenerIndex)
+                }
+            }
         }
     }
     

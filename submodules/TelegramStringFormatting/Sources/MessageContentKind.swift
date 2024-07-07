@@ -29,6 +29,7 @@ public enum MessageContentKindKey {
     case invoice
     case story
     case giveaway
+    case paidContent
 }
 
 public enum MessageContentKind: Equatable {
@@ -384,6 +385,25 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         if let message, message.text.isEmpty, case let .Loaded(content) = webpage.content {
             return .text(NSAttributedString(string: content.displayUrl))
         } else {
+            return nil
+        }
+    case let .paidContent(paidContent):
+        switch paidContent.extendedMedia.first {
+        case let .preview(_, _, videoDuration):
+            if let _ = videoDuration {
+                return .video
+            } else {
+                return .image
+            }
+        case let .full(media):
+            if media is TelegramMediaImage {
+                return .image
+            } else if media is TelegramMediaFile {
+                return .video
+            } else {
+                return nil
+            }
+        default:
             return nil
         }
     default:

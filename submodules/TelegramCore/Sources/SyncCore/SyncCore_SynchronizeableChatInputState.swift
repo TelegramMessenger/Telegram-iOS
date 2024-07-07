@@ -7,13 +7,15 @@ public struct SynchronizeableChatInputState: Codable, Equatable {
     public let entities: [MessageTextEntity]
     public let timestamp: Int32
     public let textSelection: Range<Int>?
+    public let messageEffectId: Int64?
     
-    public init(replySubject: EngineMessageReplySubject?, text: String, entities: [MessageTextEntity], timestamp: Int32, textSelection: Range<Int>?) {
+    public init(replySubject: EngineMessageReplySubject?, text: String, entities: [MessageTextEntity], timestamp: Int32, textSelection: Range<Int>?, messageEffectId: Int64?) {
         self.replySubject = replySubject
         self.text = text
         self.entities = entities
         self.timestamp = timestamp
         self.textSelection = textSelection
+        self.messageEffectId = messageEffectId
     }
     
     public init(from decoder: Decoder) throws {
@@ -32,6 +34,7 @@ public struct SynchronizeableChatInputState: Codable, Equatable {
             }
         }
         self.textSelection = nil
+        self.messageEffectId = try container.decodeIfPresent(Int64.self, forKey: "messageEffectId")
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -41,6 +44,7 @@ public struct SynchronizeableChatInputState: Codable, Equatable {
         try container.encode(self.entities, forKey: "e")
         try container.encode(self.timestamp, forKey: "s")
         try container.encodeIfPresent(self.replySubject, forKey: "rep")
+        try container.encodeIfPresent(self.messageEffectId, forKey: "messageEffectId")
     }
     
     public static func ==(lhs: SynchronizeableChatInputState, rhs: SynchronizeableChatInputState) -> Bool {
@@ -57,6 +61,9 @@ public struct SynchronizeableChatInputState: Codable, Equatable {
             return false
         }
         if lhs.textSelection != rhs.textSelection {
+            return false
+        }
+        if lhs.messageEffectId != rhs.messageEffectId {
             return false
         }
         return true

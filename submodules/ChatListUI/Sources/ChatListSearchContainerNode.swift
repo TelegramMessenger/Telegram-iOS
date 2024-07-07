@@ -200,8 +200,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }, openResolved: { [weak self] resolved in
                 context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peerId, navigation in
                     
-                }, sendFile: nil,
+                },
+                sendFile: nil,
                 sendSticker: nil,
+                sendEmoji: nil,
                 requestMessageActionUrlAuth: nil,
                 joinVoiceChat: nil,
                 present: { c, a in
@@ -1024,7 +1026,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 }
                 
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                    c.dismiss(completion: { [weak self] in
+                    c?.dismiss(completion: { [weak self] in
                         self?.openMessage(EnginePeer(message.peers[message.id.peerId]!), nil, message.id, false)
                     })
                 })))
@@ -1034,7 +1036,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         items.append(.separator)
                     }
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuSelect, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                        c.dismiss(completion: {
+                        c?.dismiss(completion: {
                             if let strongSelf = self {
                                 strongSelf.dismissInput()
                                 
@@ -1085,7 +1087,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             
             if let linkForCopying = linkForCopying {
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuCopyLink, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                    c.dismiss(completion: {})
+                    c?.dismiss(completion: {})
                     UIPasteboard.general.string = linkForCopying
                     
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -1095,7 +1097,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             
             if !message._asMessage().isCopyProtected() {
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                    c.dismiss(completion: { [weak self] in
+                    c?.dismiss(completion: { [weak self] in
                         if let strongSelf = self {
                             strongSelf.forwardMessages(messageIds: Set([message.id]))
                         }
@@ -1103,14 +1105,14 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 })))
             }
             items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                c.dismiss(completion: { [weak self] in
+                c?.dismiss(completion: { [weak self] in
                     self?.openMessage(EnginePeer(message.peers[message.id.peerId]!), message.threadId, message.id, false)
                 })
             })))
             
             items.append(.separator)
             items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuSelect, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                c.dismiss(completion: {
+                c?.dismiss(completion: {
                     if let strongSelf = self {
                         strongSelf.dismissInput()
                         
@@ -1149,7 +1151,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         var items: [ContextMenuItem] = []
                         
                         items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, f in
-                            c.dismiss(completion: {
+                            c?.dismiss(completion: {
                                 self?.openMessage(EnginePeer(message.peers[message.id.peerId]!), message.threadId, message.id, false)
                             })
                         })))
@@ -1158,7 +1160,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             
                         } else {
                             items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, f in
-                                c.dismiss(completion: {
+                                c?.dismiss(completion: {
                                     if let strongSelf = self {
                                         strongSelf.forwardMessages(messageIds: [message.id])
                                     }
@@ -1338,7 +1340,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             self.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: messages.values.filter { messageIds.contains($0.id) })
             
             let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: true, selectForumThreads: true))
-            peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, peerMap, messageText, mode, forwardOptions in
+            peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, peerMap, messageText, mode, forwardOptions, _ in
                 guard let strongSelf = self, let strongController = peerSelectionController else {
                     return
                 }
@@ -1542,7 +1544,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                                         proceed(chatController)
                                     })
                                 } else {
-                                    proceed(strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(.default)))
+                                    proceed(strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil))
                                 }
 
                                 strongSelf.updateState { state in

@@ -94,7 +94,7 @@ class ChartVisibilityView: UIView {
         }
     }
     
-    private (set) var selectedItems: [Bool] = []
+    private(set) var selectedItems: [Bool] = []
     var isExpanded: Bool = true {
         didSet {
             invalidateIntrinsicContentSize()

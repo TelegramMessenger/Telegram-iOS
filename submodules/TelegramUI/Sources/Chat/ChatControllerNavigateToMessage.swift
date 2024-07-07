@@ -29,7 +29,7 @@ extension ChatControllerImpl {
             guard let self else {
                 return
             }
-            self.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: fromId.peerId == id.peerId)
+            self.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: fromId.peerId == id.peerId && !params.forceNew, forceNew: params.forceNew)
         }
         
         let _ = (self.context.engine.data.get(
@@ -72,6 +72,7 @@ extension ChatControllerImpl {
         scrollPosition: ListViewScrollPosition = .center(.bottom),
         rememberInStack: Bool = true,
         forceInCurrentChat: Bool = false,
+        forceNew: Bool = false,
         dropStack: Bool = false,
         animated: Bool = true,
         completion: (() -> Void)? = nil,
@@ -84,8 +85,10 @@ extension ChatControllerImpl {
         }
         var fromIndex: MessageIndex?
         
+        var fromMessage: Message?
         if let fromId = fromId, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(fromId) {
             fromIndex = message.index
+            fromMessage = message
         } else {
             if let message = self.chatDisplayNode.historyNode.anchorMessageInCurrentHistoryView() {
                 fromIndex = message.index
@@ -104,14 +107,20 @@ extension ChatControllerImpl {
         if case let .peer(peerId) = self.chatLocation, messageLocation.peerId == peerId, !isPinnedMessages, !isScheduledMessages {
             forceInCurrentChat = true
         }
-        if case .customChatContents = self.chatLocation {
+        if case .customChatContents = self.chatLocation, !forceNew {
             forceInCurrentChat = true
         }
         
-        if isPinnedMessages, let messageId = messageLocation.messageId {
+        if isPinnedMessages || forceNew, let messageId = messageLocation.messageId {
+            let peerSignal: Signal<EnginePeer?, NoError>
+            if forceNew, let fromMessage, let peer = fromMessage.peers[fromMessage.id.peerId] {
+                peerSignal = .single(EnginePeer(peer))
+            } else {
+                peerSignal = self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
+            }
             let _ = (combineLatest(
-                self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId)),
-                self.context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .local)
+                peerSignal,
+                self.context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: forceNew ? .cloud(skipLocal: false) : .local)
                 |> `catch` { _ in
                     return .single(.result([]))
                 }

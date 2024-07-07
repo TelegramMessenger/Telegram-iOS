@@ -57,7 +57,7 @@ public func presentPeerReportOptions(
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
             }, iconPosition: .left, action: { (c, _) in
-                c.popItems()
+                c?.popItems()
             })))
             items.append(.separator)
         }

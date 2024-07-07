@@ -152,11 +152,11 @@ private final class PeerListItemComponent: Component {
                 }
                 self.isExtractedToContextMenu = value
                 
-                let mappedTransition: Transition
+                let mappedTransition: ComponentTransition
                 if value {
-                    mappedTransition = Transition(transition)
+                    mappedTransition = ComponentTransition(transition)
                 } else {
-                    mappedTransition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                    mappedTransition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                 }
                 self.state?.updated(transition: mappedTransition)
             }
@@ -211,7 +211,7 @@ private final class PeerListItemComponent: Component {
             component.action(peer)
         }
         
-        func update(component: PeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: PeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let themeUpdated = self.component?.theme !== component.theme
             
             var hasSelectionUpdated = false
@@ -372,7 +372,7 @@ private final class PeerListItemComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -549,7 +549,7 @@ final class StoragePeerListPanelComponent: Component {
             cancelContextGestures(view: scrollView)
         }
         
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             guard let component = self.component, let environment = self.environment, let items = component.items, let itemLayout = self.itemLayout else {
                 return
             }
@@ -635,7 +635,7 @@ final class StoragePeerListPanelComponent: Component {
             }
         }
         
-        func update(component: StoragePeerListPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StorageUsagePanelEnvironment>, transition: Transition) -> CGSize {
+        func update(component: StoragePeerListPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StorageUsagePanelEnvironment>, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             let environment = environment[StorageUsagePanelEnvironment.self].value
@@ -699,7 +699,7 @@ final class StoragePeerListPanelComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StorageUsagePanelEnvironment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StorageUsagePanelEnvironment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

@@ -34,6 +34,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let automaticDownloadPeerType: MediaAutoDownloadPeerType
     public let automaticDownloadPeerId: EnginePeer.Id?
     public let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
+    public let preferredStoryHighQuality: Bool
     public let isRecentActions: Bool
     public let subject: ChatControllerSubject?
     public let contactsPeerIds: Set<EnginePeer.Id>
@@ -44,6 +45,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let currentlyPlayingMessageId: EngineMessage.Index?
     public let isCopyProtectionEnabled: Bool
     public let availableReactions: AvailableReactions?
+    public let availableMessageEffects: AvailableMessageEffects?
     public let savedMessageTags: SavedMessageTags?
     public let defaultReaction: MessageReaction.Reaction?
     public let isPremium: Bool
@@ -65,6 +67,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         automaticDownloadPeerType: MediaAutoDownloadPeerType,
         automaticDownloadPeerId: EnginePeer.Id?,
         automaticDownloadNetworkType: MediaAutoDownloadNetworkType,
+        preferredStoryHighQuality: Bool = false,
         isRecentActions: Bool = false,
         subject: ChatControllerSubject? = nil,
         contactsPeerIds: Set<EnginePeer.Id> = Set(),
@@ -75,6 +78,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         currentlyPlayingMessageId: EngineMessage.Index? = nil,
         isCopyProtectionEnabled: Bool = false,
         availableReactions: AvailableReactions?,
+        availableMessageEffects: AvailableMessageEffects?,
         savedMessageTags: SavedMessageTags?,
         defaultReaction: MessageReaction.Reaction?,
         isPremium: Bool,
@@ -95,6 +99,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadPeerId = automaticDownloadPeerId
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
+        self.preferredStoryHighQuality = preferredStoryHighQuality
         self.isRecentActions = isRecentActions
         self.subject = subject
         self.contactsPeerIds = contactsPeerIds
@@ -105,6 +110,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.currentlyPlayingMessageId = currentlyPlayingMessageId
         self.isCopyProtectionEnabled = isCopyProtectionEnabled
         self.availableReactions = availableReactions
+        self.availableMessageEffects = availableMessageEffects
         self.savedMessageTags = savedMessageTags
         self.defaultReaction = defaultReaction
         self.isPremium = isPremium
@@ -131,6 +137,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.automaticDownloadNetworkType != rhs.automaticDownloadNetworkType {
+            return false
+        }
+        if lhs.preferredStoryHighQuality != rhs.preferredStoryHighQuality {
             return false
         }
         if lhs.isRecentActions != rhs.isRecentActions {
@@ -224,6 +233,7 @@ public extension ChatMessageItemAssociatedData {
 
 public enum ChatControllerInteractionLongTapAction {
     case url(String)
+    case phone(String)
     case mention(String)
     case peerMention(EnginePeer.Id, String)
     case command(String)
@@ -285,20 +295,24 @@ public struct ChatControllerInitialBotAppStart {
     public let botApp: BotApp
     public let payload: String?
     public let justInstalled: Bool
+    public let compact: Bool
     
-    public init(botApp: BotApp, payload: String?, justInstalled: Bool) {
+    public init(botApp: BotApp, payload: String?, justInstalled: Bool, compact: Bool) {
         self.botApp = botApp
         self.payload = payload
         self.justInstalled = justInstalled
+        self.compact = compact
     }
 }
 
 public enum ChatControllerInteractionNavigateToPeer {
     public struct InfoParams {
         public let switchToRecommendedChannels: Bool
+        public let ignoreInSavedMessages: Bool
         
-        public init(switchToRecommendedChannels: Bool) {
+        public init(switchToRecommendedChannels: Bool = false, ignoreInSavedMessages: Bool = false) {
             self.switchToRecommendedChannels = switchToRecommendedChannels
+            self.ignoreInSavedMessages = ignoreInSavedMessages
         }
     }
     
@@ -397,8 +411,9 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
     case strikethrough
     case underline
     case spoiler
-    case quote
+    case quote(isCollapsed: Bool)
     case codeBlock(language: String?)
+    case collapsedQuote(text: ChatTextInputStateText)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
@@ -427,9 +442,11 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
         case 8:
             self = .spoiler
         case 9:
-            self = .quote
+            self = .quote(isCollapsed: try container.decodeIfPresent(Bool.self, forKey: "isCollapsed") ?? false)
         case 10:
             self = .codeBlock(language: try container.decodeIfPresent(String.self, forKey: "l"))
+        case 11:
+            self = .collapsedQuote(text: try container.decode(ChatTextInputStateText.self, forKey: "text"))
         default:
             assertionFailure()
             self = .bold
@@ -461,11 +478,15 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
             try container.encode(7 as Int32, forKey: "t")
         case .spoiler:
             try container.encode(8 as Int32, forKey: "t")
-        case .quote:
+        case let .quote(isCollapsed):
             try container.encode(9 as Int32, forKey: "t")
+            try container.encode(isCollapsed, forKey: "isCollapsed")
         case let .codeBlock(language):
             try container.encode(10 as Int32, forKey: "t")
             try container.encodeIfPresent(language, forKey: "l")
+        case let .collapsedQuote(text):
+            try container.encode(11 as Int32, forKey: "t")
+            try container.encode(text, forKey: "text")
         }
     }
 }
@@ -518,6 +539,7 @@ public struct ChatTextInputStateText: Codable, Equatable {
     
     public init(attributedText: NSAttributedString) {
         self.text = attributedText.string
+        
         var parsedAttributes: [ChatTextInputStateTextAttribute] = []
         attributedText.enumerateAttributes(in: NSRange(location: 0, length: attributedText.length), options: [], using: { attributes, range, _ in
             for (key, value) in attributes {
@@ -539,14 +561,22 @@ public struct ChatTextInputStateText: Codable, Equatable {
                     parsedAttributes.append(ChatTextInputStateTextAttribute(type: .underline, range: range.location ..< (range.location + range.length)))
                 } else if key == ChatTextInputAttributes.spoiler {
                     parsedAttributes.append(ChatTextInputStateTextAttribute(type: .spoiler, range: range.location ..< (range.location + range.length)))
-                } else if key == ChatTextInputAttributes.block, let value = value as? ChatTextInputTextQuoteAttribute {
-                    switch value.kind {
-                    case .quote:
-                        parsedAttributes.append(ChatTextInputStateTextAttribute(type: .quote, range: range.location ..< (range.location + range.length)))
-                    case let .code(language):
-                        parsedAttributes.append(ChatTextInputStateTextAttribute(type: .codeBlock(language: language), range: range.location ..< (range.location + range.length)))
-                    }
                 }
+            }
+        })
+        attributedText.enumerateAttribute(ChatTextInputAttributes.block, in: NSRange(location: 0, length: attributedText.length), options: [], using: { value, range, _ in
+            if let value = value as? ChatTextInputTextQuoteAttribute {
+                switch value.kind {
+                case .quote:
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .quote(isCollapsed: value.isCollapsed), range: range.location ..< (range.location + range.length)))
+                case let .code(language):
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .codeBlock(language: language), range: range.location ..< (range.location + range.length)))
+                }
+            }
+        })
+        attributedText.enumerateAttribute(ChatTextInputAttributes.collapsedBlock, in: NSRange(location: 0, length: attributedText.length), options: [], using: { value, range, _ in
+            if let value = value as? NSAttributedString {
+                parsedAttributes.append(ChatTextInputStateTextAttribute(type: .collapsedQuote(text: ChatTextInputStateText(attributedText: value)), range: range.location ..< (range.location + range.length)))
             }
         })
         self.attributes = parsedAttributes
@@ -590,10 +620,12 @@ public struct ChatTextInputStateText: Codable, Equatable {
                 result.addAttribute(ChatTextInputAttributes.underline, value: true as NSNumber, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             case .spoiler:
                 result.addAttribute(ChatTextInputAttributes.spoiler, value: true as NSNumber, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
-            case .quote:
-                result.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+            case let .quote(isCollapsed):
+                result.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: isCollapsed), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             case let .codeBlock(language):
-                result.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: language)), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+                result.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: language), isCollapsed: false), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+            case let .collapsedQuote(text):
+                result.addAttribute(ChatTextInputAttributes.collapsedBlock, value: text.attributedText(), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             }
         }
         return result
@@ -707,9 +739,11 @@ public enum ChatControllerSubject: Equatable {
         
         public struct Link: Equatable {
             public var options: Signal<LinkOptions, NoError>
+            public var isCentered: Bool
             
-            public init(options: Signal<LinkOptions, NoError>) {
+            public init(options: Signal<LinkOptions, NoError>, isCentered: Bool) {
                 self.options = options
+                self.isCentered = isCentered
             }
             
             public static func ==(lhs: Link, rhs: Link) -> Bool {
@@ -968,6 +1002,7 @@ public protocol ChatController: ViewController {
     var chatLocation: ChatLocation { get }
     var canReadHistory: ValuePromise<Bool> { get }
     var parentController: ViewController? { get set }
+    var customNavigationController: NavigationController? { get set }
     
     var purposefulAction: (() -> Void)? { get set }
     
@@ -982,7 +1017,11 @@ public protocol ChatController: ViewController {
     
     var visibleContextController: ViewController? { get }
     
+    var searching: ValuePromise<Bool> { get }
+    
     var alwaysShowSearchResultsAsList: Bool { get set }
+    var includeSavedPeersInSearchResults: Bool { get set }
+    var showListEmptyResults: Bool { get set }
     
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
     func beginMessageSearch(_ query: String)
@@ -1003,6 +1042,8 @@ public protocol ChatController: ViewController {
     func performScrollToTop() -> Bool
     func transferScrollingVelocity(_ velocity: CGFloat)
     func updateIsScrollingLockedAtTop(isScrollingLockedAtTop: Bool)
+    
+    func playShakeAnimation()
 }
 
 public protocol ChatMessagePreviewItemNode: AnyObject {
@@ -1030,9 +1071,13 @@ public enum FileMediaResourceMediaStatus: Equatable {
 }
 
 public protocol ChatMessageItemNodeProtocol: ListViewItemNode {
+    func makeProgress() -> Promise<Bool>?
     func targetReactionView(value: MessageReaction.Reaction) -> UIView?
     func targetForStoryTransition(id: StoryId) -> UIView?
     func contentFrame() -> CGRect
+    func matchesMessage(id: MessageId) -> Bool
+    func cancelInsertionAnimations()
+    func messages() -> [Message]
 }
 
 public final class ChatControllerNavigationData: CustomViewControllerNavigationData {
@@ -1095,6 +1140,7 @@ public enum ChatQuickReplyShortcutType {
 public enum ChatCustomContentsKind: Equatable {
     case quickReplyMessageInput(shortcut: String, shortcutType: ChatQuickReplyShortcutType)
     case businessLinkSetup(link: TelegramBusinessChatLinks.Link)
+    case hashTagSearch(publicPosts: Bool)
 }
 
 public protocol ChatCustomContentsProtocol: AnyObject {
@@ -1108,6 +1154,11 @@ public protocol ChatCustomContentsProtocol: AnyObject {
     
     func quickReplyUpdateShortcut(value: String)
     func businessLinkUpdate(message: String, entities: [MessageTextEntity], title: String?)
+    
+    func loadMore()
+    
+    func hashtagSearchUpdate(query: String)
+    var hashtagSearchResultsUpdate: ((SearchMessagesResult, SearchMessagesState)) -> Void { get set }
 }
 
 public enum ChatHistoryListDisplayHeaders {

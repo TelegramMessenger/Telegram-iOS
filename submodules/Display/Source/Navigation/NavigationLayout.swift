@@ -73,6 +73,7 @@ func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewL
             rootControllers.append(controller)
         }
     }
+    
     let rootLayout: RootNavigationLayout
     switch mode {
     case .single:

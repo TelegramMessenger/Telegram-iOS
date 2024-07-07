@@ -47,6 +47,7 @@ swift_library(
         "//submodules/rlottie:RLottieBinding",
         "//submodules/lottie-ios:Lottie",
         "//submodules/TelegramUI/Components/Utils/GenerateStickerPlaceholderImage",
+        "//submodules/TelegramUIPreferences",
     ],
     visibility = [
         "//visibility:public",

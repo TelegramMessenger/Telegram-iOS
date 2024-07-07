@@ -401,31 +401,31 @@ open class ASButtonNode: ASControlNode {
         if self.laysOutHorizontally {
             switch self.contentHorizontalAlignment {
             case .left:
-                titleOrigin = CGPoint(x: contentRect.minX, y: contentRect.minY + floor((contentRect.height - self.calculatedTitleSize.height) / 2.0))
-                highlightedTitleOrigin = CGPoint(x: contentRect.minX, y: contentRect.minY + floor((contentRect.height - self.calculatedHighlightedTitleSize.height) / 2.0))
-                disabledTitleOrigin = CGPoint(x: contentRect.minX, y: contentRect.minY + floor((contentRect.height - self.calculatedDisabledTitleSize.height) / 2.0))
-                imageOrigin = CGPoint(x: titleOrigin.x + self.calculatedTitleSize.width + self.contentSpacing, y: contentRect.minY + floor((contentRect.height - imageSize.height) / 2.0))
+                titleOrigin = CGPoint(x: contentRect.minX, y: contentRect.minY + floorToScreenPixels((contentRect.height - self.calculatedTitleSize.height) / 2.0))
+                highlightedTitleOrigin = CGPoint(x: contentRect.minX, y: contentRect.minY + floorToScreenPixels((contentRect.height - self.calculatedHighlightedTitleSize.height) / 2.0))
+                disabledTitleOrigin = CGPoint(x: contentRect.minX, y: contentRect.minY + floorToScreenPixels((contentRect.height - self.calculatedDisabledTitleSize.height) / 2.0))
+                imageOrigin = CGPoint(x: titleOrigin.x + self.calculatedTitleSize.width + self.contentSpacing, y: contentRect.minY + floorToScreenPixels((contentRect.height - imageSize.height) / 2.0))
             case .right:
-                titleOrigin = CGPoint(x: contentRect.maxX - self.calculatedTitleSize.width, y: contentRect.minY + floor((contentRect.height - self.calculatedTitleSize.height) / 2.0))
-                highlightedTitleOrigin = CGPoint(x: contentRect.maxX - self.calculatedHighlightedTitleSize.width, y: contentRect.minY + floor((contentRect.height - self.calculatedHighlightedTitleSize.height) / 2.0))
-                disabledTitleOrigin = CGPoint(x: contentRect.maxX - self.calculatedDisabledTitleSize.width, y: contentRect.minY + floor((contentRect.height - self.calculatedDisabledTitleSize.height) / 2.0))
-                imageOrigin = CGPoint(x: titleOrigin.x - self.contentSpacing - imageSize.width, y: contentRect.minY + floor((contentRect.height - imageSize.height) / 2.0))
+                titleOrigin = CGPoint(x: contentRect.maxX - self.calculatedTitleSize.width, y: contentRect.minY + floorToScreenPixels((contentRect.height - self.calculatedTitleSize.height) / 2.0))
+                highlightedTitleOrigin = CGPoint(x: contentRect.maxX - self.calculatedHighlightedTitleSize.width, y: contentRect.minY + floorToScreenPixels((contentRect.height - self.calculatedHighlightedTitleSize.height) / 2.0))
+                disabledTitleOrigin = CGPoint(x: contentRect.maxX - self.calculatedDisabledTitleSize.width, y: contentRect.minY + floorToScreenPixels((contentRect.height - self.calculatedDisabledTitleSize.height) / 2.0))
+                imageOrigin = CGPoint(x: titleOrigin.x - self.contentSpacing - imageSize.width, y: contentRect.minY + floorToScreenPixels((contentRect.height - imageSize.height) / 2.0))
             default:
-                titleOrigin = CGPoint(x: contentRect.minX + floor((contentRect.width - self.calculatedTitleSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - self.calculatedTitleSize.height) / 2.0))
-                highlightedTitleOrigin = CGPoint(x: contentRect.minX + floor((contentRect.width - self.calculatedHighlightedTitleSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - self.calculatedHighlightedTitleSize.height) / 2.0))
-                disabledTitleOrigin = CGPoint(x: floor((contentRect.width - self.calculatedDisabledTitleSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - self.calculatedDisabledTitleSize.height) / 2.0))
-                imageOrigin = CGPoint(x: floor((contentRect.width - imageSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - imageSize.height) / 2.0))
+                titleOrigin = CGPoint(x: contentRect.minX + floorToScreenPixels((contentRect.width - self.calculatedTitleSize.width) / 2.0), y: contentRect.minY + floorToScreenPixels((contentRect.height - self.calculatedTitleSize.height) / 2.0))
+                highlightedTitleOrigin = CGPoint(x: contentRect.minX + floorToScreenPixels((contentRect.width - self.calculatedHighlightedTitleSize.width) / 2.0), y: contentRect.minY + floorToScreenPixels((contentRect.height - self.calculatedHighlightedTitleSize.height) / 2.0))
+                disabledTitleOrigin = CGPoint(x: floorToScreenPixels((contentRect.width - self.calculatedDisabledTitleSize.width) / 2.0), y: contentRect.minY + floorToScreenPixels((contentRect.height - self.calculatedDisabledTitleSize.height) / 2.0))
+                imageOrigin = CGPoint(x: floorToScreenPixels((contentRect.width - imageSize.width) / 2.0), y: contentRect.minY + floorToScreenPixels((contentRect.height - imageSize.height) / 2.0))
             }
         } else {
             var contentHeight: CGFloat = self.calculatedTitleSize.height
             if !imageSize.height.isZero {
                 contentHeight += self.contentSpacing + imageSize.height
             }
-            let contentY = contentRect.minY + floor((contentRect.height - contentHeight) / 2.0)
-            titleOrigin = CGPoint(x: contentRect.minX + floor((contentRect.width - self.calculatedTitleSize.width) / 2.0), y: contentY + contentHeight - self.calculatedTitleSize.height)
-            highlightedTitleOrigin = CGPoint(x: contentRect.minX + floor((contentRect.width - self.calculatedHighlightedTitleSize.width) / 2.0), y: contentY + contentHeight - self.calculatedHighlightedTitleSize.height)
-            disabledTitleOrigin = CGPoint(x: contentRect.minX + floor((contentRect.width - self.calculatedDisabledTitleSize.width) / 2.0), y: contentY + contentHeight - self.calculatedDisabledTitleSize.height)
-            imageOrigin = CGPoint(x: floor((contentRect.width - imageSize.width) / 2.0), y: contentY)
+            let contentY = contentRect.minY + floorToScreenPixels((contentRect.height - contentHeight) / 2.0)
+            titleOrigin = CGPoint(x: contentRect.minX + floorToScreenPixels((contentRect.width - self.calculatedTitleSize.width) / 2.0), y: contentY + contentHeight - self.calculatedTitleSize.height)
+            highlightedTitleOrigin = CGPoint(x: contentRect.minX + floorToScreenPixels((contentRect.width - self.calculatedHighlightedTitleSize.width) / 2.0), y: contentY + contentHeight - self.calculatedHighlightedTitleSize.height)
+            disabledTitleOrigin = CGPoint(x: contentRect.minX + floorToScreenPixels((contentRect.width - self.calculatedDisabledTitleSize.width) / 2.0), y: contentY + contentHeight - self.calculatedDisabledTitleSize.height)
+            imageOrigin = CGPoint(x: floorToScreenPixels((contentRect.width - imageSize.width) / 2.0), y: contentY)
         }
         
         self.titleNode.frame = CGRect(origin: titleOrigin, size: self.calculatedTitleSize)

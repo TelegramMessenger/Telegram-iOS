@@ -36,7 +36,7 @@ extension SentAuthorizationCodeType {
                 self = .emailSetupRequired(appleSignInAllowed: (flags & (1 << 0)) != 0)
             case let .sentCodeTypeFragmentSms(url, length):
                 self = .fragment(url: url, length: length)
-            case let .sentCodeTypeFirebaseSms(_, _, _, pushTimeout, length):
+            case let .sentCodeTypeFirebaseSms(_, _, _, _, _, pushTimeout, length):
                 self = .firebase(pushTimeout: pushTimeout, length: length)
             case let .sentCodeTypeSmsWord(_, beginning):
                 self = .word(startsWith: beginning)

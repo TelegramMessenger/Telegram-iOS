@@ -552,7 +552,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         transition.updateAlpha(node: self.regularContentNode, alpha: (state.isEditing || self.customNavigationContentNode != nil) ? 0.0 : 1.0)
-        transition.updateAlpha(node: self.navigationButtonContainer, alpha: self.customNavigationContentNode != nil ? 0.0 : 1.0)
+        if self.navigationTransition == nil {
+            transition.updateAlpha(node: self.navigationButtonContainer, alpha: self.customNavigationContentNode != nil ? 0.0 : 1.0)
+        }
         
         self.editingContentNode.alpha = state.isEditing ? 1.0 : 0.0
         
@@ -793,7 +795,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             
             let iconSize = self.titleCredibilityIconView.update(
-                transition: Transition(navigationTransition),
+                transition: ComponentTransition(navigationTransition),
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.animationCache,
@@ -849,7 +851,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 containerSize: CGSize(width: 34.0, height: 34.0)
             )
             let expandedIconSize = self.titleExpandedCredibilityIconView.update(
-                transition: Transition(navigationTransition),
+                transition: ComponentTransition(navigationTransition),
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.animationCache,
@@ -901,7 +903,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             
             let iconSize = self.titleVerifiedIconView.update(
-                transition: Transition(navigationTransition),
+                transition: ComponentTransition(navigationTransition),
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.animationCache,
@@ -916,7 +918,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 containerSize: CGSize(width: 34.0, height: 34.0)
             )
             let expandedIconSize = self.titleExpandedVerifiedIconView.update(
-                transition: Transition(navigationTransition),
+                transition: ComponentTransition(navigationTransition),
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.animationCache,
@@ -2113,7 +2115,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         let backgroundCoverSize = self.backgroundCover.update(
-            transition: Transition(transition),
+            transition: ComponentTransition(transition),
             component: AnyComponent(PeerInfoCoverComponent(
                 context: self.context,
                 peer: peer.flatMap(EnginePeer.init),
@@ -2233,6 +2235,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if result.isDescendant(of: self.navigationButtonContainer.view) {
             return result
+        }
+        
+        if self.isSettings {
+            if self.subtitleNodeRawContainer.bounds.contains(self.view.convert(point, to: self.subtitleNodeRawContainer.view)) {
+                return self.subtitleNodeRawContainer.view
+            }
         }
         
         if let result = self.buttonsContainerNode.view.hitTest(self.view.convert(point, to: self.buttonsContainerNode.view), with: event) {

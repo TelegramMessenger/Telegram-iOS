@@ -229,7 +229,13 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
                     |> take(1)
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return Signal { subscriber in
-                            return context.engine.accountData.requestNextChangeAccountPhoneNumberVerification(phoneNumber: phoneNumber, phoneCodeHash: data.hash).start(next: { next in
+                            return context.engine.accountData.requestNextChangeAccountPhoneNumberVerification(
+                                phoneNumber: phoneNumber,
+                                phoneCodeHash: data.hash,
+                                apiId: context.sharedContext.networkArguments.apiId,
+                                apiHash: context.sharedContext.networkArguments.apiHash,
+                                firebaseSecretStream: context.sharedContext.firebaseSecretStream
+                            ).start(next: { next in
                                 currentDataPromise?.set(.single(next))
                             }, error: { error in
                                 

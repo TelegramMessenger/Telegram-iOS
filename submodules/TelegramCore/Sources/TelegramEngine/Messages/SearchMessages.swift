@@ -513,6 +513,38 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
     }
 }
 
+func _internal_searchHashtagPosts(account: Account, hashtag: String, state: SearchMessagesState?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
+    let remoteSearchResult = account.postbox.transaction { transaction -> (Int32, MessageIndex?, Api.InputPeer) in
+        var lowerBound: MessageIndex?
+        var peer: Peer?
+        if let state = state, let message = state.main.messages.last {
+            lowerBound = message.index
+            peer = message.peers[message.id.peerId]
+        }
+        if let lowerBound = lowerBound, let peer, let inputPeer = apiInputPeer(peer) {
+            return (state?.main.nextRate ?? 0, lowerBound, inputPeer)
+        } else {
+            return (0, lowerBound, .inputPeerEmpty)
+        }
+    }
+    |> mapToSignal { (nextRate, lowerBound, inputPeer) in
+        return account.network.request(Api.functions.channels.searchPosts(hashtag: hashtag, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
+        |> map { result -> (Api.messages.Messages?, Api.messages.Messages?) in
+            return (result, nil)
+        }
+        |> `catch` { _ -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
+            return .single((nil, nil))
+        }
+    }
+    return remoteSearchResult
+    |> mapToSignal { result, additionalResult -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> in
+        return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in
+            let updatedState = SearchMessagesState(main: mergedState(transaction: transaction, seedConfiguration: account.postbox.seedConfiguration, accountPeerId: account.peerId, state: state?.main, result: result) ?? SearchMessagesPeerState(messages: [], readStates: [:], threadInfo: [:], totalCount: 0, completed: true, nextRate: nil), additional: nil)
+            return (mergedResult(updatedState), updatedState)
+        }
+    }
+}
+
 func _internal_downloadMessage(accountPeerId: PeerId, postbox: Postbox, network: Network, messageId: MessageId) -> Signal<Message?, NoError> {
     return postbox.transaction { transaction -> Message? in
         return transaction.getMessage(messageId)

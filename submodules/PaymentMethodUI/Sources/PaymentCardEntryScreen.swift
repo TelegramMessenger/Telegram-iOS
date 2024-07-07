@@ -73,7 +73,7 @@ public final class ScrollComponent<ChildEnvironment: Equatable>: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: ScrollComponent<ChildEnvironment>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: Transition) -> CGSize {
+        func update(component: ScrollComponent<ChildEnvironment>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: ComponentTransition) -> CGSize {
             let contentSize = self.contentView.update(
                 transition: transition,
                 component: component.content,
@@ -96,7 +96,7 @@ public final class ScrollComponent<ChildEnvironment: Equatable>: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

@@ -6,8 +6,10 @@ import TelegramCore
 import TelegramPresentationData
 import ContextUI
 import ChatPresentationInterfaceState
+import ComponentFlow
+import AccountContext
 
-final class AttachmentTextInputActionButtonsNode: ASDisplayNode {
+final class AttachmentTextInputActionButtonsNode: ASDisplayNode, ChatSendMessageActionSheetControllerSourceSendButtonNode {
     private let strings: PresentationStrings
     
     let sendContainerNode: ASDisplayNode
@@ -16,6 +18,8 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode {
     var sendButtonHasApplyIcon = false
     var animatingSendButton = false
     let textNode: ImmediateTextNode
+    
+    private var theme: PresentationTheme
 
     var sendButtonLongPressed: ((ASDisplayNode, ContextGesture) -> Void)?
     
@@ -31,9 +35,8 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode {
     private var validLayout: CGSize?
     
     init(presentationInterfaceState: ChatPresentationInterfaceState, presentController: @escaping (ViewController) -> Void) {
-        let theme = presentationInterfaceState.theme
-        let strings = presentationInterfaceState.strings
-        self.strings = strings
+        self.theme = presentationInterfaceState.theme
+        self.strings = presentationInterfaceState.strings
                  
         self.sendContainerNode = ASDisplayNode()
         self.sendContainerNode.layer.allowsGroupOpacity = true
@@ -54,7 +57,7 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode {
         
         self.sendButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
-                if strongSelf.sendButtonHasApplyIcon || !strongSelf.sendButtonLongPressEnabled {
+                if !strongSelf.sendButtonLongPressEnabled {
                     if highlighted {
                         strongSelf.sendContainerNode.layer.removeAnimation(forKey: "opacity")
                         strongSelf.sendContainerNode.alpha = 0.4
@@ -64,9 +67,11 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode {
                     }
                 } else {
                     if highlighted {
-                        strongSelf.sendContainerNode.layer.animateScale(from: 1.0, to: 0.75, duration: 0.4, removeOnCompletion: false)
-                    } else if let presentationLayer = strongSelf.sendButton.layer.presentation() {
-                        strongSelf.sendContainerNode.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
+                        let transition: ComponentTransition = .easeInOut(duration: 0.4)
+                        transition.setScale(layer: strongSelf.sendContainerNode.layer, scale: 0.75)
+                    } else {
+                        let transition: ComponentTransition = .easeInOut(duration: 0.25)
+                        transition.setScale(layer: strongSelf.sendContainerNode.layer, scale: 1.0)
                     }
                 }
             }
@@ -90,7 +95,7 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode {
                 return
             }
             if !strongSelf.sendButtonHasApplyIcon {
-                strongSelf.sendButtonLongPressed?(strongSelf.sendContainerNode, recognizer)
+                strongSelf.sendButtonLongPressed?(strongSelf, recognizer)
             }
         }
         
@@ -112,7 +117,7 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode {
         self.validLayout = size
         
         let width: CGFloat
-        let textSize = self.textNode.updateLayout(CGSize(width: 100.0, height: size.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: 100.0, height: 100.0))
         if minimized {
             width = 44.0
         } else {
@@ -139,5 +144,17 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode {
         self.accessibilityTraits = .button
         self.accessibilityLabel = self.strings.MediaPicker_Send
         self.accessibilityHint = nil
+    }
+    
+    func makeCustomContents() -> UIView? {
+        if !self.textNode.alpha.isZero {
+            let textView = ImmediateTextView()
+            textView.attributedText = NSAttributedString(string: self.strings.MediaPicker_Send, font: Font.semibold(17.0), textColor: self.theme.chat.inputPanel.actionControlForegroundColor)
+            let textSize = textView.updateLayout(CGSize(width: 100.0, height: 100.0))
+            let _ = textSize
+            textView.frame = self.textNode.frame
+            return textView
+        }
+        return nil
     }
 }

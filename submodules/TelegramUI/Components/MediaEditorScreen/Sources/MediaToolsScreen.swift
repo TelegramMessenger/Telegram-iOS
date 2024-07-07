@@ -72,7 +72,7 @@ private final class ToolIconComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
                 
-        func update(component: ToolIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: ToolIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
                         
@@ -115,7 +115,7 @@ private final class ToolIconComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -333,7 +333,7 @@ private final class MediaToolsScreenComponent: Component {
             self.state?.updated()
         }
         
-        func update(component: MediaToolsScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: MediaToolsScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             self.environment = environment
             
@@ -576,7 +576,7 @@ private final class MediaToolsScreenComponent: Component {
             var needsHistogram = false
             let screenSize: CGSize
             let optionsSize: CGSize
-            let optionsTransition: Transition = sectionChanged ? .immediate : transition
+            let optionsTransition: ComponentTransition = sectionChanged ? .immediate : transition
             switch component.section {
             case .adjustments:
                 self.curvesState = nil
@@ -688,7 +688,7 @@ private final class MediaToolsScreenComponent: Component {
                         },
                         isTrackingUpdated: { [weak self] isTracking in
                             if let self {
-                                let transition: Transition
+                                let transition: ComponentTransition
                                 if isTracking {
                                     transition = .immediate
                                 } else {
@@ -746,7 +746,7 @@ private final class MediaToolsScreenComponent: Component {
                         },
                         isTrackingUpdated: { [weak self] isTracking in
                             if let self {
-                                let transition: Transition
+                                let transition: ComponentTransition
                                 if isTracking {
                                     transition = .immediate
                                 } else {
@@ -798,7 +798,7 @@ private final class MediaToolsScreenComponent: Component {
                         },
                         isTrackingUpdated: { [weak self] isTracking in
                             if let self {
-                                let transition: Transition
+                                let transition: ComponentTransition
                                 if isTracking {
                                     transition = .immediate
                                 } else {
@@ -833,7 +833,7 @@ private final class MediaToolsScreenComponent: Component {
                             },
                             isTrackingUpdated: { [weak self] isTracking in
                                 if let self {
-                                    let transition: Transition
+                                    let transition: ComponentTransition
                                     if isTracking {
                                         transition = .immediate
                                     } else {
@@ -948,7 +948,7 @@ private final class MediaToolsScreenComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -1003,7 +1003,7 @@ public final class MediaToolsScreen: ViewController {
             }
         }
         
-        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, animateOut: Bool = false, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, animateOut: Bool = false, transition: ComponentTransition) {
             guard let controller = self.controller else {
                 return
             }
@@ -1064,7 +1064,7 @@ public final class MediaToolsScreen: ViewController {
                                     }
                                 }
                                 if let layout = self.validLayout {
-                                    self.containerLayoutUpdated(layout: layout, transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                                    self.containerLayoutUpdated(layout: layout, transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
                                 }
                             }
                         }
@@ -1142,6 +1142,6 @@ public final class MediaToolsScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
 
-        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: Transition(transition))
+        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
     }
 }

@@ -68,7 +68,7 @@ public final class AnimatedTextComponent: Component {
             preconditionFailure()
         }
 
-        func update(component: AnimatedTextComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: AnimatedTextComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -123,7 +123,7 @@ public final class AnimatedTextComponent: Component {
                             color: component.color
                         )),
                         environment: {},
-                        containerSize: CGSize(width: 100.0, height: 100.0)
+                        containerSize: CGSize(width: availableSize.width, height: 100.0)
                     )
                     let characterFrame = CGRect(origin: CGPoint(x: size.width, y: 0.0), size: characterSize)
                     if let characterComponentView = characterView.view {
@@ -190,7 +190,7 @@ public final class AnimatedTextComponent: Component {
         return View(frame: CGRect())
     }
 
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

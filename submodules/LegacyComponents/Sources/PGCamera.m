@@ -765,6 +765,14 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
     }];
 }
 
+- (int32_t)maxMarkZoomValue {
+    return self.captureSession.maxMarkZoomValue;
+}
+
+- (int32_t)secondMarkZoomValue {
+    return self.captureSession.secondMarkZoomValue;
+}
+
 #pragma mark - Device Angle
 
 - (void)startDeviceAngleMeasuring

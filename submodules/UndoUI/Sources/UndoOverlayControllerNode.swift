@@ -380,6 +380,69 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = string
                 displayUndo = false
                 self.originalRemainingSeconds = 5
+            case let .starsSent(context, file, _, title, text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = nil
+            
+                let imageBoundingSize = CGSize(width: 34.0, height: 34.0)
+            
+                let emojiStatus = ComponentView<Empty>()
+                self.emojiStatus = emojiStatus
+                let _ = emojiStatus.update(
+                    transition: .immediate,
+                    component: AnyComponent(EmojiStatusComponent(
+                        context: context,
+                        animationCache: context.animationCache,
+                        animationRenderer: context.animationRenderer,
+                        content: .animation(
+                            content: .file(file: file),
+                            size: imageBoundingSize,
+                            placeholderColor: UIColor(white: 1.0, alpha: 0.1),
+                            themeColor: .white,
+                            loopMode: .count(1)
+                        ),
+                        isVisibleForAnimations: true,
+                        useSharedAnimation: false,
+                        action: nil
+                    )),
+                    environment: {},
+                    containerSize: imageBoundingSize
+                )
+        
+                self.stickerImageSize = imageBoundingSize
+                
+                if let text {
+                    let formattedString = text
+                    
+                    let string = NSMutableAttributedString(attributedString: NSAttributedString(string: formattedString, font: Font.regular(14.0), textColor: .white))
+                    let starRange = (string.string as NSString).range(of: "{star}")
+                    if starRange.location != NSNotFound {
+                        string.replaceCharacters(in: starRange, with: "")
+                        string.insert(NSAttributedString(string: ".", attributes: [
+                            .font: Font.regular(14.0),
+                            ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: MessageReaction.starsReactionId, file: file, custom: nil)
+                        ]), at: starRange.location)
+                    }
+                    
+                    self.textNode.attributedText = string
+                    self.textNode.arguments = TextNodeWithEntities.Arguments(
+                        context: context,
+                        cache: context.animationCache,
+                        renderer: context.animationRenderer,
+                        placeholderColor: UIColor(white: 1.0, alpha: 0.1),
+                        attemptSynchronous: false
+                    )
+                    self.textNode.visibility = true
+                }
+            
+                //TODO:localize
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+            
+                displayUndo = false
+                self.originalRemainingSeconds = 3
+                isUserInteractionEnabled = true
             case let .messagesUnpinned(title, text, undo, isHidden):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -1108,7 +1171,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
-                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let link = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: undoTextColor)
                 let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
                     return ("URL", contents)
                 }), textAlignment: .natural)
@@ -1232,7 +1295,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         switch content {
         case .removedChat:
             self.panelWrapperNode.addSubnode(self.timerTextNode)
-        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .copy, .mediaSaved, .paymentSent, .image, .inviteRequestSent, .notificationSoundAdded, .universal, .premiumPaywall, .peers, .messageTagged:
+        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .copy, .mediaSaved, .paymentSent, .starsSent, .image, .inviteRequestSent, .notificationSoundAdded, .universal, .premiumPaywall, .peers, .messageTagged:
             if self.textNode.tapAttributeAction != nil || displayUndo {
                 self.isUserInteractionEnabled = true
             } else {
@@ -1417,32 +1480,41 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     func updateContent(_ content: UndoOverlayContent) {
         self.content = content
         
+        var undoTextColor = self.presentationData.theme.list.itemAccentColor.withMultiplied(hue: 0.933, saturation: 0.61, brightness: 1.0)
+        
         switch content {
-            case let .image(image, title, text, _, _):
-                self.iconNode?.image = image
-                if let title = title {
-                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
-                } else {
-                    self.titleNode.attributedText = nil
-                }
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
-                self.renewWithCurrentContent()
-            case let .actionSucceeded(title, text, _, destructive):
-                var undoTextColor = self.presentationData.theme.list.itemAccentColor.withMultiplied(hue: 0.933, saturation: 0.61, brightness: 1.0)
-                if destructive {
-                    undoTextColor = UIColor(rgb: 0xff7b74)
-                }
-            
-                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
-                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
-                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
-                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
-                if let title {
-                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
-                }
-                self.textNode.attributedText = attributedText
-            default:
-                break
+        case let .info(title, text, _, _), let .universal(_, _, _, title, text, _, _):
+            let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+            let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+            let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+            let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
+            if let title {
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+            }
+            self.textNode.attributedText = attributedText
+        case let .image(image, title, text, _, _):
+            self.iconNode?.image = image
+            if let title = title {
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+            } else {
+                self.titleNode.attributedText = nil
+            }
+            self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+            self.renewWithCurrentContent()
+        case let .actionSucceeded(title, text, _, destructive):
+            if destructive {
+                undoTextColor = UIColor(rgb: 0xff7b74)
+            }
+            let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+            let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+            let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+            let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
+            if let title {
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+            }
+            self.textNode.attributedText = attributedText
+        default:
+            break
         }
         
         if let validLayout = self.validLayout {

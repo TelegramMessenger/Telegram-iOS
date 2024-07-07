@@ -175,7 +175,7 @@ public class PremiumLimitsListScreen: ViewController {
                 strongSelf.isPremium = isPremium
                 strongSelf.promoConfiguration = promoConfiguration
                 if !stickers.isEmpty {
-                    strongSelf.updated(transition: Transition(.immediate).withUserData(DemoAnimateInTransition()))
+                    strongSelf.updated(transition: ComponentTransition(.immediate).withUserData(DemoAnimateInTransition()))
                 }
             })
         }
@@ -265,7 +265,7 @@ public class PremiumLimitsListScreen: ViewController {
         }
                 
         private var dismissOffset: CGFloat?
-        func containerLayoutUpdated(layout: ContainerViewLayout, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, transition: ComponentTransition) {
             self.currentLayout = layout
             
             self.dim.frame = CGRect(origin: CGPoint(x: 0.0, y: -layout.size.height), size: CGSize(width: layout.size.width, height: layout.size.height * 3.0))
@@ -356,7 +356,7 @@ public class PremiumLimitsListScreen: ViewController {
         }
         
         private var indexPosition: CGFloat?
-        func updated(transition: Transition) {
+        func updated(transition: ComponentTransition) {
             guard let controller = self.controller else {
                 return
             }
@@ -821,6 +821,25 @@ public class PremiumLimitsListScreen: ViewController {
                                 )),
                                 title: strings.Premium_MessagePrivacy,
                                 text: strings.Premium_MessagePrivacyInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.messageEffects] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.messageEffects,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: videos["effects"],
+                                    decoration: .swirlStars
+                                )),
+                                title: strings.Premium_MessageEffects,
+                                text: strings.Premium_MessageEffectsInfo,
                                 textColor: textColor
                             )
                         )
@@ -1320,11 +1339,11 @@ public class PremiumLimitsListScreen: ViewController {
                             let initialVelocity: CGFloat = distance.isZero ? 0.0 : abs(velocity.y / distance)
                             let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
 
-                            self.containerLayoutUpdated(layout: layout, transition: Transition(transition))
+                            self.containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
                         } else {
                             self.isExpanded = true
                             
-                            self.containerLayoutUpdated(layout: layout, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
+                            self.containerLayoutUpdated(layout: layout, transition: ComponentTransition(.animated(duration: 0.3, curve: .easeInOut)))
                         }
                     } else if scrollView != nil, (velocity.y < -300.0 || offset < topInset / 2.0) {
                         if velocity.y > -2200.0 && velocity.y < -300.0, let listNode = listNode {
@@ -1337,7 +1356,7 @@ public class PremiumLimitsListScreen: ViewController {
                         let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
                         self.isExpanded = true
                        
-                        self.containerLayoutUpdated(layout: layout, transition: Transition(transition))
+                        self.containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
                     } else {
                         if let listNode = listNode {
                             listNode.scroller.setContentOffset(CGPoint(), animated: false)
@@ -1345,7 +1364,7 @@ public class PremiumLimitsListScreen: ViewController {
                             scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
                         }
                         
-                        self.containerLayoutUpdated(layout: layout, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
+                        self.containerLayoutUpdated(layout: layout, transition: ComponentTransition(.animated(duration: 0.3, curve: .easeInOut)))
                     }
                     
                     if !dismissing {
@@ -1358,7 +1377,7 @@ public class PremiumLimitsListScreen: ViewController {
                 case .cancelled:
                     self.panGestureArguments = nil
                     
-                    self.containerLayoutUpdated(layout: layout, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
+                    self.containerLayoutUpdated(layout: layout, transition: ComponentTransition(.animated(duration: 0.3, curve: .easeInOut)))
                 default:
                     break
             }
@@ -1383,7 +1402,7 @@ public class PremiumLimitsListScreen: ViewController {
             guard let layout = self.currentLayout else {
                 return
             }
-            self.containerLayoutUpdated(layout: layout, transition: Transition(transition))
+            self.containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
         }
     }
     
@@ -1471,7 +1490,7 @@ public class PremiumLimitsListScreen: ViewController {
         self.currentLayout = layout
         super.containerLayoutUpdated(layout, transition: transition)
                 
-        self.node.containerLayoutUpdated(layout: layout, transition: Transition(transition))
+        self.node.containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
     }
 }
 

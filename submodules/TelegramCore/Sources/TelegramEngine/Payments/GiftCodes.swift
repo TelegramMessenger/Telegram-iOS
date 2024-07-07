@@ -31,6 +31,7 @@ public struct PremiumGiftCodeOption: Codable, Equatable {
     public let storeQuantity: Int32
     public let currency: String
     public let amount: Int64
+    
     public init(users: Int32, months: Int32, storeProductId: String?, storeQuantity: Int32, currency: String, amount: Int64) {
         self.users = users
         self.months = months

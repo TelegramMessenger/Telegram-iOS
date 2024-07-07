@@ -24,6 +24,8 @@ import UndoUI
 import GalleryUI
 import PeerAvatarGalleryUI
 import Postbox
+import ShareController
+import ContextUI
 
 private enum DeviceContactInfoAction {
     case sendMessage
@@ -33,7 +35,7 @@ private enum DeviceContactInfoAction {
 }
 
 private final class DeviceContactInfoControllerArguments {
-    let context: AccountContext
+    let context: ShareControllerAccountContext
     let isPlain: Bool
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let updatePhone: (Int64, String) -> Void
@@ -50,7 +52,7 @@ private final class DeviceContactInfoControllerArguments {
     let updateShareViaException: (Bool) -> Void
     let openAvatar: (EnginePeer) -> Void
     
-    init(context: AccountContext, isPlain: Bool, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updatePhone: @escaping (Int64, String) -> Void, updatePhoneLabel: @escaping (Int64, String) -> Void, deletePhone: @escaping (Int64) -> Void, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, addPhoneNumber: @escaping () -> Void, performAction: @escaping (DeviceContactInfoAction) -> Void, toggleSelection: @escaping (DeviceContactInfoDataId) -> Void, callPhone: @escaping (String) -> Void, openUrl: @escaping (String) -> Void, openAddress: @escaping (DeviceContactAddressData) -> Void, displayCopyContextMenu: @escaping (DeviceContactInfoEntryTag, String) -> Void, updateShareViaException: @escaping (Bool) -> Void, openAvatar: @escaping (EnginePeer) -> Void) {
+    init(context: ShareControllerAccountContext, isPlain: Bool, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updatePhone: @escaping (Int64, String) -> Void, updatePhoneLabel: @escaping (Int64, String) -> Void, deletePhone: @escaping (Int64) -> Void, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, addPhoneNumber: @escaping () -> Void, performAction: @escaping (DeviceContactInfoAction) -> Void, toggleSelection: @escaping (DeviceContactInfoDataId) -> Void, callPhone: @escaping (String) -> Void, openUrl: @escaping (String) -> Void, openAddress: @escaping (DeviceContactAddressData) -> Void, displayCopyContextMenu: @escaping (DeviceContactInfoEntryTag, String) -> Void, updateShareViaException: @escaping (Bool) -> Void, openAvatar: @escaping (EnginePeer) -> Void) {
         self.context = context
         self.isPlain = isPlain
         self.updateEditingName = updateEditingName
@@ -404,7 +406,13 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
         let arguments = arguments as! DeviceContactInfoControllerArguments
         switch self {
             case let .info(_, _, _, dateTimeFormat, peer, state, jobSummary, _, hiddenAvatar):
-                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .contact, peer: peer, presence: nil, label: jobSummary, memberCount: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
+                let itemContext: ItemListAvatarAndNameInfoItem.ItemContext
+                if let context = arguments.context as? ShareControllerAppAccountContext {
+                    itemContext = .accountContext(context.context)
+                } else {
+                    itemContext = .other(accountPeerId: arguments.context.accountPeerId, postbox: arguments.context.stateManager.postbox, network: arguments.context.stateManager.network)
+                }
+                return ItemListAvatarAndNameInfoItem(itemContext: itemContext, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .contact, peer: peer, presence: nil, label: jobSummary, memberCount: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     if peer.smallProfileImage != nil {
@@ -625,7 +633,7 @@ private func filteredContactData(contactData: DeviceContactExtendedData, exclude
     return DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumbers: phoneNumbers), middleName: contactData.middleName, prefix: contactData.prefix, suffix: contactData.suffix, organization: includeJob ? contactData.organization : "", jobTitle: includeJob ? contactData.jobTitle : "", department: includeJob ? contactData.department : "", emailAddresses: emailAddresses, urls: urls, addresses: addresses, birthdayDate: includeBirthday ? contactData.birthdayDate : nil, socialProfiles: socialProfiles, instantMessagingProfiles: instantMessagingProfiles, note: includeNote ? contactData.note : "")
 }
 
-private func deviceContactInfoEntries(account: Account, engine: TelegramEngine, presentationData: PresentationData, peer: EnginePeer?, isShare: Bool, shareViaException: Bool, contactData: DeviceContactExtendedData, isContact: Bool, state: DeviceContactInfoState, selecting: Bool, editingPhoneNumbers: Bool, hiddenAvatar: TelegramMediaImageRepresentation?) -> [DeviceContactInfoEntry] {
+private func deviceContactInfoEntries(context: ShareControllerAccountContext, presentationData: PresentationData, peer: EnginePeer?, isShare: Bool, shareViaException: Bool, contactData: DeviceContactExtendedData, isContact: Bool, state: DeviceContactInfoState, selecting: Bool, editingPhoneNumbers: Bool, hiddenAvatar: TelegramMediaImageRepresentation?) -> [DeviceContactInfoEntry] {
     var entries: [DeviceContactInfoEntry] = []
     
     var editingName: ItemListAvatarAndNameInfoItemName?
@@ -738,16 +746,20 @@ private func deviceContactInfoEntries(account: Account, engine: TelegramEngine, 
     
     var addressIndex = 0
     for address in contactData.addresses {
-        let signal = geocodeLocation(address: address.asPostalAddress)
-        |> mapToSignal { coordinates -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
-            if let (latitude, longitude) = coordinates {
-                let resource = MapSnapshotMediaResource(latitude: latitude, longitude: longitude, width: 90, height: 90)
-                return chatMapSnapshotImage(engine: engine, resource: resource)
-            } else {
-                return .single({ _ in return nil })
+        let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
+        if let context = context as? ShareControllerAppAccountContext {
+            signal = geocodeLocation(address: address.asPostalAddress)
+            |> mapToSignal { coordinates -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
+                if let (latitude, longitude) = coordinates {
+                    let resource = MapSnapshotMediaResource(latitude: latitude, longitude: longitude, width: 90, height: 90)
+                    return chatMapSnapshotImage(engine: context.context.engine, resource: resource)
+                } else {
+                    return .single({ _ in return nil })
+                }
             }
+        } else {
+            signal = .single({ _ in return nil })
         }
-        
         entries.append(.address(entries.count, addressIndex, presentationData.theme, localizedGenericContactFieldLabel(label: address.label, strings: presentationData.strings), address, signal, selecting ? !state.excludedComponents.contains(.address(address)) : nil))
         addressIndex += 1
     }
@@ -828,7 +840,7 @@ private final class DeviceContactInfoController: ItemListController, MFMessageCo
     }
 }
 
-public func deviceContactInfoController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: DeviceContactInfoSubject, completed: (() -> Void)?, cancelled: (() -> Void)?) -> ViewController {
+public func deviceContactInfoController(context: ShareControllerAccountContext, environment: ShareControllerEnvironment, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: DeviceContactInfoSubject, completed: (() -> Void)?, cancelled: (() -> Void)?) -> ViewController {
     var initialState = DeviceContactInfoState()
     if case let .create(peer, contactData, _, _, _) = subject {
         var peerPhoneNumber: String?
@@ -876,7 +888,11 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
     
     var displayCopyContextMenuImpl: ((DeviceContactInfoEntryTag, String) -> Void)?
     
+    let presentationData = environment.presentationData
     let callImpl: (String) -> Void = { number in
+        guard let context = (context as? ShareControllerAppAccountContext)?.context else {
+            return
+        }
         let user: Signal<TelegramUser?, NoError>
         if let peer = subject.peer {
             user = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id))
@@ -890,10 +906,10 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
         } else {
             user = .single(nil)
         }
+        
         let _ = (user
         |> deliverOnMainQueue).start(next: { user in
             if let user = user, let phone = user.phone, formatPhoneNumber(phone) == formatPhoneNumber(number) {
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let controller = ActionSheetController(presentationData: presentationData)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
@@ -952,6 +968,9 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
             return state
         }
     }, updatePhoneLabel: { id, currentLabel in
+        guard let context = (context as? ShareControllerAppAccountContext)?.context else {
+            return
+        }
         pushControllerImpl?(phoneLabelController(context: context, currentLabel: currentLabel, completion: { value in
             updateState { state in
                 var state = state
@@ -1000,7 +1019,6 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
                 if subject.contactData.basicData.phoneNumbers.count == 1 {
                     inviteAction(subject.contactData.basicData.phoneNumbers[0].value)
                 } else {
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let controller = ActionSheetController(presentationData: presentationData)
                     let dismissAction: () -> Void = { [weak controller] in
                         controller?.dismissAnimated()
@@ -1020,7 +1038,7 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
                     presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }
             case .createContact:
-                pushControllerImpl?(deviceContactInfoController(context: context, subject: .create(peer: subject.peer, contactData: subject.contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
+                pushControllerImpl?(deviceContactInfoController(context: context, environment: environment, subject: .create(peer: subject.peer, contactData: subject.contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
                     dismissImpl?(false)
                 }), completed: nil, cancelled: nil))
             case .addToExisting:
@@ -1059,9 +1077,9 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
     })
     
     let hiddenAvatarPromise = Promise<TelegramMediaImageRepresentation?>(nil)
-    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let updatedPresentationData = updatedPresentationData?.signal ?? environment.updatedPresentationData
     let previousEditingPhoneIds = Atomic<Set<Int64>?>(value: nil)
-    let signal = combineLatest(presentationData, statePromise.get(), contactData, hiddenAvatarPromise.get())
+    let signal = combineLatest(updatedPresentationData, statePromise.get(), contactData, hiddenAvatarPromise.get())
     |> map { presentationData, state, peerAndContactData, hiddenAvatar -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var presentationData = presentationData
         let updatedTheme = presentationData.theme.withModalBlocksBackground()
@@ -1116,6 +1134,9 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
             
             rightNavigationButton = ItemListNavigationButton(content: .text(isShare ? presentationData.strings.Common_Done : presentationData.strings.Compose_Create), style: .bold, enabled: (isShare || !filteredPhoneNumbers.isEmpty) && composedContactData != nil, action: {
                 if let composedContactData = composedContactData {
+                    guard let context = (context as? ShareControllerAppAccountContext)?.context else {
+                        return
+                    }
                     var addToPrivacyExceptions = false
                     updateState { state in
                         var state = state
@@ -1129,7 +1150,7 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
                                 if share, filteredPhoneNumbers.count <= 1, let peer = peer {
                                     addContactDisposable.set((context.engine.contacts.addContactInteractively(peerId: peer.id, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "", addToPrivacyExceptions: shareViaException && addToPrivacyExceptions)
                                     |> deliverOnMainQueue).start(error: { _ in
-                                        presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                        presentControllerImpl?(textAlertController(context: context, updatedPresentationData: (environment.presentationData, updatedPresentationData), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }, completed: {
                                         let _ = (contactDataManager.createContactWithData(composedContactData)
                                         |> deliverOnMainQueue).start(next: { contactIdAndData in
@@ -1250,7 +1271,7 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
             focusItemTag = DeviceContactInfoEntryTag.editingPhone(insertedPhoneId)
         }
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: deviceContactInfoEntries(account: context.account, engine: context.engine, presentationData: presentationData, peer: peerAndContactData.0, isShare: isShare, shareViaException: shareViaException, contactData: peerAndContactData.2, isContact: peerAndContactData.1 != nil, state: state, selecting: selecting, editingPhoneNumbers: editingPhones, hiddenAvatar: hiddenAvatar), style: isShare ? .blocks : .plain, focusItemTag: focusItemTag)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: deviceContactInfoEntries(context: context, presentationData: presentationData, peer: peerAndContactData.0, isShare: isShare, shareViaException: shareViaException, contactData: peerAndContactData.2, isContact: peerAndContactData.1 != nil, state: state, selecting: selecting, editingPhoneNumbers: editingPhones, hiddenAvatar: hiddenAvatar), style: isShare ? .blocks : .plain, focusItemTag: focusItemTag)
         
         return (controllerState, (listState, arguments))
     }
@@ -1258,24 +1279,27 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
         actionsDisposable.dispose()
     }
     
-    let controller = DeviceContactInfoController(context: context, state: signal)
+    let controller = DeviceContactInfoController(presentationData: ItemListPresentationData(environment.presentationData), updatedPresentationData: environment.updatedPresentationData |> map { ItemListPresentationData($0) }, state: signal, tabBarItem: nil)
     controller.navigationPresentation = .modal
     addToExistingImpl = { [weak controller] in
-        guard let controller = controller else {
+        guard let controller, let accountContext = (context as? ShareControllerAppAccountContext)?.context else {
             return
         }
-        addContactToExisting(context: context, parentController: controller, contactData: subject.contactData, completion: { peer, contactId, contactData in
-            replaceControllerImpl?(deviceContactInfoController(context: context, subject: .vcard(peer?._asPeer(), contactId, contactData), completed: nil, cancelled: nil))
+        addContactToExisting(context: accountContext, parentController: controller, contactData: subject.contactData, completion: { peer, contactId, contactData in
+            replaceControllerImpl?(deviceContactInfoController(context: context, environment: environment, subject: .vcard(peer?._asPeer(), contactId, contactData), completed: nil, cancelled: nil))
         })
     }
     openChatImpl = { [weak controller] peerId in
+        guard let controller, let context = (context as? ShareControllerAppAccountContext)?.context else {
+            return
+        }
         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-        |> deliverOnMainQueue).start(next: { peer in
-            guard let peer = peer else {
+        |> deliverOnMainQueue).start(next: { [weak controller] peer in
+            guard let peer, let controller else {
                 return
             }
             
-            if let navigationController = (controller?.navigationController as? NavigationController) {
+            if let navigationController = (controller.navigationController as? NavigationController) {
                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
             }
         })
@@ -1301,7 +1325,7 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
         }
     }
     inviteImpl = { [weak controller] numbers in
-        controller?.inviteContact(presentationData: context.sharedContext.currentPresentationData.with { $0 }, numbers: numbers)
+        controller?.inviteContact(presentationData: environment.presentationData, numbers: numbers)
     }
     openAddressImpl = { [weak controller] address in
         guard let _ = controller else {
@@ -1309,7 +1333,7 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
         }
     }
     openUrlImpl = { [weak controller] url in
-        guard let controller = controller else {
+        guard let controller, let context = (context as? ShareControllerAppAccountContext)?.context else {
             return
         }
         context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: false, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: controller.navigationController as? NavigationController, dismissInput: { [weak controller] in
@@ -1319,7 +1343,7 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
     
     displayCopyContextMenuImpl = { [weak controller] tag, value in
         if let strongController = controller {
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let presentationData = environment.presentationData
             var resultItemNode: ListViewItemNode?
             let _ = strongController.frameForItemNode({ itemNode in
                 if let itemNode = itemNode as? ItemListTextWithLabelItemNode {
@@ -1350,6 +1374,9 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
         }
     }
     openAvatarImpl = { [weak controller] peer in
+        guard let context = (context as? ShareControllerAppAccountContext)?.context else {
+            return
+        }
         let avatarController = AvatarGalleryController(context: context, peer: peer, replaceRootController: { _, _ in
         })
         hiddenAvatarPromise.set(
@@ -1385,7 +1412,7 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
     (parentController.navigationController as? NavigationController)?.pushViewController(contactsController)
     let _ = (contactsController.result
     |> deliverOnMainQueue).start(next: { result in
-        if let (peers, _, _, _, _) = result, let peer = peers.first {
+        if let (peers, _, _, _, _, _) = result, let peer = peers.first {
             let dataSignal: Signal<(EnginePeer?, DeviceContactStableId?), NoError>
             switch peer {
                 case let .peer(contact, _, _):
@@ -1413,7 +1440,7 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
             let _ = (dataSignal
             |> deliverOnMainQueue).start(next: { peer, stableId in
                 guard let stableId = stableId else {
-                    parentController.present(deviceContactInfoController(context: context, subject: .create(peer: peer?._asPeer(), contactData: contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
+                    parentController.present(deviceContactInfoController(context: ShareControllerAppAccountContext(context: context), environment: ShareControllerAppEnvironment(sharedContext: context.sharedContext), subject: .create(peer: peer?._asPeer(), contactData: contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
                     }), completed: nil, cancelled: nil), in: .window(.root))
                     return
                 }
@@ -1459,7 +1486,7 @@ func addContactOptionsController(context: AccountContext, peer: EnginePeer?, con
     controller.setItemGroups([
         ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.Profile_CreateNewContact, action: { [weak controller] in
-                controller?.present(context.sharedContext.makeDeviceContactInfoController(context: context, subject: .create(peer: peer?._asPeer(), contactData: contactData, isSharing: peer != nil, shareViaException: false, completion: { _, _, _ in
+                controller?.present(context.sharedContext.makeDeviceContactInfoController(context: ShareControllerAppAccountContext(context: context), environment: ShareControllerAppEnvironment(sharedContext: context.sharedContext), subject: .create(peer: peer?._asPeer(), contactData: contactData, isSharing: peer != nil, shareViaException: false, completion: { _, _, _ in
                 }), completed: nil, cancelled: nil), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 dismissAction()
             }),
@@ -1475,4 +1502,33 @@ func addContactOptionsController(context: AccountContext, peer: EnginePeer?, con
         ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
     ])
     return controller
+}
+
+public func pushContactContextOptionsController(context: AccountContext, contextController: ContextControllerProtocol, presentationData: PresentationData, peer: EnginePeer?, contactData: DeviceContactExtendedData, parentController: ViewController, push: @escaping (ViewController) -> Void) {
+    var items: [ContextMenuItem] = []
+    items.append(
+        .action(ContextMenuActionItem(text: presentationData.strings.Common_Back, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor) }, iconPosition: .left, action: { c, _ in
+            c?.popItems()
+        }))
+    )
+    items.append(.separator)
+    items.append(
+        .action(ContextMenuActionItem(text: presentationData.strings.Chat_Context_Phone_CreateNewContact, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            f(.default)
+            
+            push(context.sharedContext.makeDeviceContactInfoController(context: ShareControllerAppAccountContext(context: context), environment: ShareControllerAppEnvironment(sharedContext: context.sharedContext), subject: .create(peer: peer?._asPeer(), contactData: contactData, isSharing: peer != nil, shareViaException: false, completion: { _, _, _ in
+            }), completed: nil, cancelled: nil))
+        }))
+    )
+    items.append(
+        .action(ContextMenuActionItem(text: presentationData.strings.Chat_Context_Phone_AddToExistingContact, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MoveToContacts"), color: theme.contextMenu.primaryColor) }, action: { [weak parentController] _, f in
+            f(.default)
+            guard let parentController else {
+                return
+            }
+            addContactToExisting(context: context, parentController: parentController, contactData: contactData, completion: { peer, contactId, contactData in
+            })
+        }))
+    )
+    contextController.pushItems(items: .single(ContextController.Items(content: .list(items))))
 }

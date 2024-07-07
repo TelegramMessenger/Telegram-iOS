@@ -17,6 +17,7 @@ import ChatMessageItemCommon
 import PollBubbleTimerNode
 import MergedAvatarsNode
 import TextNodeWithEntities
+import ShimmeringLinkNode
 
 private final class ChatMessagePollOptionRadioNodeParameters: NSObject {
     let timestamp: Double
@@ -387,7 +388,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     private(set) var radioNode: ChatMessagePollOptionRadioNode?
     private let percentageNode: ASDisplayNode
     private var percentageImage: UIImage?
-    private var titleNode: TextNodeWithEntities?
+    fileprivate var titleNode: TextNodeWithEntities?
     private let buttonNode: HighlightTrackingButtonNode
     let separatorNode: ASDisplayNode
     private let resultBarNode: ASImageNode
@@ -491,22 +492,29 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ maybeNode: ChatMessagePollOptionNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ poll: TelegramMediaPoll, _ option: TelegramMediaPollOption, _ optionResult: ChatMessagePollOptionResult?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessagePollOptionNode))) {
+    static func asyncLayout(_ maybeNode: ChatMessagePollOptionNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ poll: TelegramMediaPoll, _ option: TelegramMediaPollOption, _ translation: TranslationMessageAttribute.Additional?, _ optionResult: ChatMessagePollOptionResult?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessagePollOptionNode))) {
         let makeTitleLayout = TextNodeWithEntities.asyncLayout(maybeNode?.titleNode)
         let currentResult = maybeNode?.currentResult
         let currentSelection = maybeNode?.currentSelection
         let currentTheme = maybeNode?.theme
         
-        return { context, presentationData, message, poll, option, optionResult, constrainedWidth in
+        return { context, presentationData, message, poll, option, translation, optionResult, constrainedWidth in
             let leftInset: CGFloat = 50.0
             let rightInset: CGFloat = 12.0
             
             let incoming = message.effectivelyIncoming(context.account.peerId)
             
+            var optionText = option.text
+            var optionEntities = option.entities
+            if let translation {
+                optionText = translation.text
+                optionEntities = translation.entities
+            }
+            
             let optionTextColor: UIColor = incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor
             let optionAttributedText = stringWithAppliedEntities(
-                option.text,
-                entities: option.entities,
+                optionText,
+                entities: optionEntities,
                 baseColor: optionTextColor,
                 linkColor: optionTextColor,
                 baseFont: presentationData.messageFont,
@@ -626,6 +634,25 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     node.highlightedBackgroundNode.backgroundColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.highlight : presentationData.theme.theme.chat.message.outgoing.polls.highlight
                     
                     node.buttonNode.accessibilityLabel = option.text
+                    
+                    if animated {
+                        if let titleNode = node.titleNode, let cachedLayout = titleNode.textNode.cachedLayout {
+                            if !cachedLayout.areLinesEqual(to: titleLayout) {
+                                if let textContents = titleNode.textNode.contents {
+                                    let fadeNode = ASDisplayNode()
+                                    fadeNode.displaysAsynchronously = false
+                                    fadeNode.contents = textContents
+                                    fadeNode.frame = titleNode.textNode.frame
+                                    fadeNode.isLayerBacked = true
+                                    node.addSubnode(fadeNode)
+                                    fadeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak fadeNode] _ in
+                                        fadeNode?.removeFromSupernode()
+                                    })
+                                    titleNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                                }
+                            }
+                        }
+                    }
                     
                     let titleNode = titleApply(TextNodeWithEntities.Arguments(
                         context: context,
@@ -828,6 +855,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     private let buttonNode: HighlightableButtonNode
     private let statusNode: ChatMessageDateAndStatusNode
     private var optionNodes: [ChatMessagePollOptionNode] = []
+    private var shimmeringNodes: [ShimmeringLinkNode] = []
     
     private var poll: TelegramMediaPoll?
     
@@ -996,7 +1024,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         
-        var previousOptionNodeLayouts: [Data: (_ contet: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ poll: TelegramMediaPoll, _ option: TelegramMediaPollOption, _ optionResult: ChatMessagePollOptionResult?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessagePollOptionNode)))] = [:]
+        var previousOptionNodeLayouts: [Data: (_ contet: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ poll: TelegramMediaPoll, _ option: TelegramMediaPollOption, _ translation: TranslationMessageAttribute.Additional?, _ optionResult: ChatMessagePollOptionResult?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessagePollOptionNode)))] = [:]
         for optionNode in self.optionNodes {
             if let option = optionNode.option {
                 previousOptionNodeLayouts[option.opaqueIdentifier] = ChatMessagePollOptionNode.asyncLayout(optionNode)
@@ -1095,10 +1123,11 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                         areReactionsTags: item.topMessage.areReactionsTags(accountPeerId: item.context.account.peerId),
+                        messageEffect: item.topMessage.messageEffect(availableMessageEffects: item.associatedData.availableMessageEffects),
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                         hasAutoremove: item.message.isSelfExpiring,
-                        canViewReactionList: canViewMessageReactionList(message: item.topMessage, isInline: item.associatedData.isInline),
+                        canViewReactionList: canViewMessageReactionList(message: item.topMessage),
                         animationCache: item.controllerInteraction.presentationContext.animationCache,
                         animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                     ))
@@ -1114,25 +1143,39 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
 
                 let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
                 
-                let attributedText: NSAttributedString
-                if let poll {
-                    attributedText = stringWithAppliedEntities(
-                        poll.text,
-                        entities: poll.textEntities,
-                        baseColor: messageTheme.primaryTextColor,
-                        linkColor: messageTheme.linkTextColor,
-                        baseFont: item.presentationData.messageBoldFont,
-                        linkFont: item.presentationData.messageBoldFont,
-                        boldFont: item.presentationData.messageBoldFont,
-                        italicFont: item.presentationData.messageBoldFont,
-                        boldItalicFont: item.presentationData.messageBoldFont,
-                        fixedFont: item.presentationData.messageBoldFont,
-                        blockQuoteFont: item.presentationData.messageBoldFont,
-                        message: message
-                    )
-                } else {
-                    attributedText = NSAttributedString(string: "", font: item.presentationData.messageBoldFont, textColor: messageTheme.primaryTextColor)
+                
+                var pollTitleText = poll?.text ?? ""
+                var pollTitleEntities = poll?.textEntities ?? []
+                var pollOptions: [TranslationMessageAttribute.Additional] = []
+                
+                var isTranslating = false
+                if let poll, let translateToLanguage = item.associatedData.translateToLanguage, !poll.text.isEmpty && incoming {
+                    isTranslating = true
+                    for attribute in item.message.attributes {
+                        if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
+                            pollTitleText = attribute.text
+                            pollTitleEntities = attribute.entities
+                            pollOptions = attribute.additional
+                            isTranslating = false
+                            break
+                        }
+                    }
                 }
+                
+                let attributedText = stringWithAppliedEntities(
+                    pollTitleText,
+                    entities: pollTitleEntities,
+                    baseColor: messageTheme.primaryTextColor,
+                    linkColor: messageTheme.linkTextColor,
+                    baseFont: item.presentationData.messageBoldFont,
+                    linkFont: item.presentationData.messageBoldFont,
+                    boldFont: item.presentationData.messageBoldFont,
+                    italicFont: item.presentationData.messageBoldFont,
+                    boldItalicFont: item.presentationData.messageBoldFont,
+                    fixedFont: item.presentationData.messageBoldFont,
+                    blockQuoteFont: item.presentationData.messageBoldFont,
+                    message: message
+                )
                 
                 let textInsets = UIEdgeInsets(top: 2.0, left: 0.0, bottom: 5.0, right: 0.0)
                 
@@ -1269,7 +1312,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     for i in 0 ..< poll.options.count {
                         let option = poll.options[i]
                         
-                        let makeLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ poll: TelegramMediaPoll, _ option: TelegramMediaPollOption, _ optionResult: ChatMessagePollOptionResult?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessagePollOptionNode)))
+                        let makeLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ poll: TelegramMediaPoll, _ option: TelegramMediaPollOption, _ translation: TranslationMessageAttribute.Additional?, _ optionResult: ChatMessagePollOptionResult?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessagePollOptionNode)))
                         if let previous = previousOptionNodeLayouts[option.opaqueIdentifier] {
                             makeLayout = previous
                         } else {
@@ -1285,7 +1328,13 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         } else if isClosed {
                             optionResult = ChatMessagePollOptionResult(normalized: 0, percent: 0, count: 0)
                         }
-                        let result = makeLayout(item.context, item.presentationData, item.message, poll, option, optionResult, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
+                        
+                        var translation: TranslationMessageAttribute.Additional?
+                        if !pollOptions.isEmpty && i < pollOptions.count {
+                            translation = pollOptions[i]
+                        }
+                        
+                        let result = makeLayout(item.context, item.presentationData, item.message, poll, option, translation, optionResult, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
                         boundingSize.width = max(boundingSize.width, result.minimumWidth + layoutConstants.bubble.borderInset * 2.0)
                         pollOptionsFinalizeLayouts.append(result.1)
                     }
@@ -1351,6 +1400,26 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.item = item
                             strongSelf.poll = poll
                             
+                            let cachedLayout = strongSelf.textNode.textNode.cachedLayout
+                            if case .System = animation {
+                                if let cachedLayout = cachedLayout {
+                                    if !cachedLayout.areLinesEqual(to: textLayout) {
+                                        if let textContents = strongSelf.textNode.textNode.contents {
+                                            let fadeNode = ASDisplayNode()
+                                            fadeNode.displaysAsynchronously = false
+                                            fadeNode.contents = textContents
+                                            fadeNode.frame = strongSelf.textNode.textNode.frame
+                                            fadeNode.isLayerBacked = true
+                                            strongSelf.addSubnode(fadeNode)
+                                            fadeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak fadeNode] _ in
+                                                fadeNode?.removeFromSupernode()
+                                            })
+                                            strongSelf.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                                        }
+                                    }
+                                }
+                            }
+                            
                             let _ = textApply(TextNodeWithEntities.Arguments(
                                 context: item.context,
                                 cache: item.context.animationCache,
@@ -1371,6 +1440,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                     }
                                 }
                                 let optionNode = apply(animation.isAnimated, isRequesting, synchronousLoad)
+                                let optionNodeFrame = CGRect(origin: CGPoint(x: layoutConstants.bubble.borderInset, y: verticalOffset), size: size)
                                 if optionNode.supernode !== strongSelf {
                                     strongSelf.addSubnode(optionNode)
                                     let option = optionNode.option
@@ -1387,8 +1457,11 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                         }
                                         strongSelf.updateSelection()
                                     }
+                                    optionNode.frame = optionNodeFrame
+                                } else {
+                                    animation.animator.updateFrame(layer: optionNode.layer, frame: optionNodeFrame, completion: nil)
                                 }
-                                optionNode.frame = CGRect(origin: CGPoint(x: layoutConstants.bubble.borderInset, y: verticalOffset), size: size)
+                                
                                 verticalOffset += size.height
                                 updatedOptionNodes.append(optionNode)
                                 optionNode.isUserInteractionEnabled = canVote && item.controllerInteraction.pollActionState.pollMessageIdsInProgress[item.message.id] == nil
@@ -1410,7 +1483,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.textNode.textNode.frame = textFrame
                             }
                             let typeFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: textFrame.maxY + titleTypeSpacing), size: typeLayout.size)
-                            strongSelf.typeNode.frame = typeFrame
+                            animation.animator.updateFrame(layer: strongSelf.typeNode.layer, frame: typeFrame, completion: nil)
                             
                             let deadlineTimeout = poll?.deadlineTimeout
                             var displayDeadline = true
@@ -1536,7 +1609,8 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             let _ = votersApply()
                             let votersFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - votersLayout.size.width) / 2.0), y: verticalOffset + optionsVotersSpacing), size: votersLayout.size)
-                            strongSelf.votersNode.frame = votersFrame
+                            animation.animator.updateFrame(layer: strongSelf.votersNode.layer, frame: votersFrame, completion: nil)
+                            
                             if animation.isAnimated, let previousPoll = previousPoll, let poll = poll {
                                 if previousPoll.results.totalVoters == nil && poll.results.totalVoters != nil {
                                     strongSelf.votersNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
@@ -1571,10 +1645,52 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             strongSelf.updateSelection()
                             strongSelf.updatePollTooltipMessageState(animated: false)
+                            
+                            strongSelf.updateIsTranslating(isTranslating)
                         }
                     })
                 })
             })
+        }
+    }
+    
+    private func updateIsTranslating(_ isTranslating: Bool) {
+        guard let item = self.item else {
+            return
+        }
+        var rects: [[CGRect]] = []
+        let titleRects = (self.textNode.textNode.rangeRects(in: NSRange(location: 0, length: self.textNode.textNode.cachedLayout?.attributedString?.length ?? 0))?.rects ?? []).map { self.textNode.textNode.view.convert($0, to: self.view) }
+        rects.append(titleRects)
+        
+        for optionNode in self.optionNodes {
+            if let titleNode = optionNode.titleNode {
+                let optionRects = (titleNode.textNode.rangeRects(in: NSRange(location: 0, length: titleNode.textNode.cachedLayout?.attributedString?.length ?? 0))?.rects ?? []).map { titleNode.textNode.view.convert($0, to: self.view) }
+                rects.append(optionRects)
+            }
+        }
+        
+        if isTranslating, !rects.isEmpty {
+            if self.shimmeringNodes.isEmpty {
+                for rects in rects {
+                    let shimmeringNode = ShimmeringLinkNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.secondaryTextColor.withAlphaComponent(0.1) : item.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor.withAlphaComponent(0.1))
+                    shimmeringNode.updateRects(rects)
+                    shimmeringNode.frame = self.bounds
+                    shimmeringNode.updateLayout(self.bounds.size)
+                    shimmeringNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.shimmeringNodes.append(shimmeringNode)
+                    self.insertSubnode(shimmeringNode, belowSubnode: self.textNode.textNode)
+                }
+            }
+        } else if !self.shimmeringNodes.isEmpty {
+            let shimmeringNodes = self.shimmeringNodes
+            self.shimmeringNodes = []
+            
+            for shimmeringNode in shimmeringNodes {
+                shimmeringNode.alpha = 0.0
+                shimmeringNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak shimmeringNode] _ in
+                    shimmeringNode?.removeFromSupernode()
+                })
+            }
         }
     }
     
@@ -1783,6 +1899,13 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.statusNode.isHidden {
             return self.statusNode.reactionView(value: value)
+        }
+        return nil
+    }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        if !self.statusNode.isHidden {
+            return self.statusNode.messageEffectTargetView()
         }
         return nil
     }

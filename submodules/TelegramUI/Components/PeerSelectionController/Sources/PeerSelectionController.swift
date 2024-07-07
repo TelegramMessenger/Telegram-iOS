@@ -19,7 +19,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     private var customTitle: String?
     
     public var peerSelected: ((EnginePeer, Int64?) -> Void)?
-    public var multiplePeersSelected: (([EnginePeer], [EnginePeer.Id: EnginePeer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
+    public var multiplePeersSelected: (([EnginePeer], [EnginePeer.Id: EnginePeer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?, ChatSendMessageActionSheetController.SendParameters?) -> Void)?
     private let filter: ChatListNodePeersFilter
     private let forumPeerId: EnginePeer.Id?
     private let selectForumThreads: Bool
@@ -246,8 +246,8 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         
         self.peerSelectionNode.navigationBar = self.navigationBar
         
-        self.peerSelectionNode.requestSend = { [weak self] peers, peerMap, text, mode, forwardOptionsState in
-            self?.multiplePeersSelected?(peers, peerMap, text, mode, forwardOptionsState)
+        self.peerSelectionNode.requestSend = { [weak self] peers, peerMap, text, mode, forwardOptionsState, messageEffect in
+            self?.multiplePeersSelected?(peers, peerMap, text, mode, forwardOptionsState, messageEffect)
         }
         
         self.peerSelectionNode.requestDeactivateSearch = { [weak self] in

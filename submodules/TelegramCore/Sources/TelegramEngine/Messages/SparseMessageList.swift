@@ -192,7 +192,7 @@ public final class SparseMessageList {
             
             let location: ChatLocationInput = .peer(peerId: self.peerId, threadId: self.threadId)
             
-            self.topItemsDisposable.set((self.account.postbox.aroundMessageHistoryViewForLocation(location, anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: count, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: .tag(self.messageTag), appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: [])
+            self.topItemsDisposable.set((self.account.postbox.aroundMessageHistoryViewForLocation(location, anchor: .upperBound, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), count: count, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: .tag(self.messageTag), appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: [])
             |> deliverOn(self.queue)).start(next: { [weak self] view, updateType, _ in
                 guard let strongSelf = self else {
                     return

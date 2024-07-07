@@ -181,6 +181,7 @@ static MTDatacenterAuthInfoMapKeyStruct parseAuthInfoMapKeyInteger(NSNumber *key
     NSMutableArray<MTWeakContextChangeListener *> *_changeListeners;
     
     MTSignal *_discoverBackupAddressListSignal;
+    MTSignal * _Nonnull (^ _Nullable _externalRequestVerification)(NSString * _Nonnull);
     
     NSMutableDictionary *_discoverDatacenterAddressActions;
     NSMutableDictionary<NSNumber *, MTDatacenterAuthAction *> *_datacenterAuthActions;
@@ -524,6 +525,25 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
     [[MTContext contextQueue] dispatchOnQueue:^ {
         _discoverBackupAddressListSignal = signal;
     } synchronous:true];
+}
+
+- (void)setExternalRequestVerification:(MTSignal * _Nonnull (^ _Nonnull)(NSString * _Nonnull))externalRequestVerification {
+    [[MTContext contextQueue] dispatchOnQueue:^ {
+        _externalRequestVerification = externalRequestVerification;
+    } synchronous:true];
+}
+
+- (MTSignal * _Nullable)performExternalRequestVerificationWithNonce:(NSString * _Nonnull)nonce {
+    __block MTSignal * _Nonnull (^ _Nullable externalRequestVerification)(NSString * _Nonnull);
+    [[MTContext contextQueue] dispatchOnQueue:^ {
+        externalRequestVerification = _externalRequestVerification;
+    } synchronous:true];
+    
+    if (externalRequestVerification != nil) {
+        return externalRequestVerification(nonce);
+    } else {
+        return [MTSignal single:nil];
+    }
 }
 
 - (NSTimeInterval)globalTime
@@ -979,14 +999,16 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
     [[MTContext contextQueue] dispatchOnQueue:^
     {
         MTDatacenterAddress *overrideAddress = _apiEnvironment.datacenterAddressOverrides[@(datacenterId)];
+        bool isAddressOverride = false;
         if (overrideAddress != nil) {
+            isAddressOverride = true;
             [results addObject:[[MTTransportScheme alloc] initWithTransportClass:[MTTcpTransport class] address:overrideAddress media:false]];
         } else {
             [results addObjectsFromArray:[self _allTransportSchemesForDatacenterWithId:datacenterId]];
         }
         
         MTDatacenterAddressSet *addressSet = [self addressSetForDatacenterWithId:datacenterId];
-        if (addressSet != nil) {
+        if (addressSet != nil && !isAddressOverride) {
             MTTransportScheme *manualScheme = _datacenterManuallySelectedSchemeById[[[MTTransportSchemeKey alloc] initWithDatacenterId:datacenterId isProxy:isProxy isMedia:media]];
             if (manualScheme != nil) {
                 bool addressValid = false;
@@ -1351,6 +1373,9 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
         if (_apiEnvironment.networkSettings == nil || _apiEnvironment.networkSettings.reducedBackupDiscoveryTimeout) {
             delay = 5.0;
         }
+        #if DEBUG
+        delay = 1.0;
+        #endif
         [self _beginBackupAddressDiscoveryWithDelay:delay];
     }];
 }

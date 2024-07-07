@@ -1554,7 +1554,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 switch draft {
                     case .draftMessageEmpty:
                         inputState = nil
-                    case let .draftMessage(_, replyToMsgHeader, message, entities, media, date):
+                    case let .draftMessage(_, replyToMsgHeader, message, entities, media, date, messageEffectId):
                         let _ = media
                         var replySubject: EngineMessageReplySubject?
                         if let replyToMsgHeader = replyToMsgHeader {
@@ -1600,7 +1600,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                                 break
                             }
                         }
-                        inputState = SynchronizeableChatInputState(replySubject: replySubject, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date, textSelection: nil)
+                        inputState = SynchronizeableChatInputState(replySubject: replySubject, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date, textSelection: nil, messageEffectId: messageEffectId)
                 }
                 var threadId: Int64?
                 if let topMsgId = topMsgId {
@@ -1776,8 +1776,12 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updateNewAuthorization(isUnconfirmed: isUnconfirmed, hash: hash, date: date ?? 0, device: device ?? "", location: location ?? "")
             case let .updatePeerWallpaper(_, peer, wallpaper):
                 updatedState.updateWallpaper(peerId: peer.peerId, wallpaper: wallpaper.flatMap { TelegramWallpaper(apiWallpaper: $0) })
-            case let .updateBroadcastRevenueTransactions(balances):
-                updatedState.updateRevenueBalances(RevenueStats.Balances(apiRevenueBalances: balances))
+            case let .updateBroadcastRevenueTransactions(peer, balances):
+                updatedState.updateRevenueBalances(peerId: peer.peerId, balances: RevenueStats.Balances(apiRevenueBalances: balances))
+            case let .updateStarsBalance(balance):
+                updatedState.updateStarsBalance(peerId: accountPeerId, balance: balance)
+            case let .updateStarsRevenueStatus(peer, status):
+                updatedState.updateStarsRevenueStatus(peerId: peer.peerId, status: StarsRevenueStats.Balances(apiStarsRevenueStatus: status))
             default:
                 break
         }
@@ -3269,7 +3273,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddQuickReplyMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateWallpaper, .UpdateRevenueBalances:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateWallpaper, .UpdateRevenueBalances, .UpdateStarsBalance, .UpdateStarsRevenueStatus:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -3402,7 +3406,9 @@ func replayFinalState(
     var deletedMessageIds: [DeletedMessageId] = []
     var syncAttachMenuBots = false
     var updateConfig = false
-    var updatedRevenueBalances: RevenueStats.Balances?
+    var updatedRevenueBalances: [PeerId: RevenueStats.Balances] = [:]
+    var updatedStarsBalance: [PeerId: Int64] = [:]
+    var updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances] = [:]
     
     var holesFromPreviousStateMessageIds: [MessageId] = []
     var clearHolesFromPreviousStateForChannelMessagesWithPts: [PeerIdAndMessageNamespace: Int32] = [:]
@@ -3869,10 +3875,23 @@ func replayFinalState(
                         }
                     }
                     
+                    if let previousFactCheckAttribute = previousMessage.attributes.first(where: { $0 is FactCheckMessageAttribute }) as? FactCheckMessageAttribute, let updatedFactCheckAttribute = message.attributes.first(where: { $0 is FactCheckMessageAttribute }) as? FactCheckMessageAttribute {
+                        if case .Pending = updatedFactCheckAttribute.content, updatedFactCheckAttribute.hash == previousFactCheckAttribute.hash {
+                            updatedAttributes.removeAll(where: { $0 is FactCheckMessageAttribute })
+                            updatedAttributes.append(previousFactCheckAttribute)
+                        }
+                    }
+                    
                     if let message = locallyRenderedMessage(message: message, peers: peers) {
                         generatedEvent = reactionGeneratedEvent(previousMessage.reactionsAttribute, message.reactionsAttribute, message: message, transaction: transaction)
                     }
-                    return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags).withUpdatedAttributes(updatedAttributes))
+                    
+                    var updatedMedia = message.media
+                    if let previousPaidContent = previousMessage.media.first(where: { $0 is TelegramMediaPaidContent }) as? TelegramMediaPaidContent, case .full = previousPaidContent.extendedMedia.first {
+                        updatedMedia = previousMessage.media
+                    }
+                    
+                    return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags).withUpdatedAttributes(updatedAttributes).withUpdatedMedia(updatedMedia))
                 })
                 if let generatedEvent = generatedEvent {
                     addedReactionEvents.append(generatedEvent)
@@ -4620,41 +4639,25 @@ func replayFinalState(
                 transaction.updateMessage(messageId, update: { currentMessage in
                     var media = currentMessage.media
                     let invoice = media.first(where: { $0 is TelegramMediaInvoice }) as? TelegramMediaInvoice
-                    let currentExtendedMedia = invoice?.extendedMedia
+                    let paidContent = media.first(where: { $0 is TelegramMediaPaidContent }) as? TelegramMediaPaidContent
                     
                     var storeForwardInfo: StoreMessageForwardInfo?
                     if let forwardInfo = currentMessage.forwardInfo {
                         storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
                     }
                     
-                    let updatedExtendedMedia: TelegramExtendedMedia?
-                    switch apiExtendedMedia {
-                        case let .messageExtendedMediaPreview(_, width, height, thumb, videoDuration):
-                            var dimensions: PixelDimensions?
-                            if let width = width, let height = height {
-                                dimensions = PixelDimensions(width: width, height: height)
-                            }
-                            var immediateThumbnailData: Data?
-                            if let thumb = thumb, case let .photoStrippedSize(_, bytes) = thumb {
-                                immediateThumbnailData = bytes.makeData()
-                            }
-                            updatedExtendedMedia = .preview(dimensions: dimensions, immediateThumbnailData: immediateThumbnailData, videoDuration: videoDuration)
-                        case let .messageExtendedMedia(apiMedia):
-                            let (media, _, _, _, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
-                            if let media = media {
-                                updatedExtendedMedia = .full(media: media)
-                            } else {
-                                updatedExtendedMedia = currentExtendedMedia
-                            }
-                    }
+                    let updatedExtendedMedia = apiExtendedMedia.compactMap { TelegramExtendedMedia(apiExtendedMedia: $0, peerId: messageId.peerId) }
                     
-                    if let updatedExtendedMedia = updatedExtendedMedia, var invoice = invoice {
-                        if let currentExtendedMedia = currentExtendedMedia, case .full = currentExtendedMedia, case .preview = updatedExtendedMedia {
-                            
-                        } else   {
+                    if let first = updatedExtendedMedia.first, case .full = first {
+                        if var invoice = invoice {
                             media = media.filter { !($0 is TelegramMediaInvoice) }
-                            invoice = invoice.withUpdatedExtendedMedia(updatedExtendedMedia)
+                            invoice = invoice.withUpdatedExtendedMedia(first)
                             media.append(invoice)
+                        }
+                        if var paidContent = paidContent {
+                            media = media.filter { !($0 is TelegramMediaPaidContent) }
+                            paidContent = paidContent.withUpdatedExtendedMedia(updatedExtendedMedia)
+                            media.append(paidContent)
                         }
                     }
                     
@@ -4828,8 +4831,13 @@ func replayFinalState(
                 } else {
                     transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.NewSessionReviews, itemId: id.rawValue)
                 }
-            case let .UpdateRevenueBalances(balances):
-                updatedRevenueBalances = balances
+            case let .UpdateRevenueBalances(peerId, balances):
+                updatedRevenueBalances[peerId] = balances
+            case let .UpdateStarsBalance(peerId, balance):
+                updatedStarsBalance[peerId] = balance
+            case let .UpdateStarsRevenueStatus(peerId, status):
+                updatedStarsRevenueStatus[peerId] = status
+                
         }
     }
     
@@ -5324,5 +5332,5 @@ func replayFinalState(
         }
     }
     
-    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, addedReactionEvents: addedReactionEvents, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, deletedMessageIds: deletedMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedGroupCallParticipants: updatedGroupCallParticipants, storyUpdates: storyUpdates, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil, updatedIncomingThreadReadStates: updatedIncomingThreadReadStates, updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates, updateConfig: updateConfig, isPremiumUpdated: isPremiumUpdated, updatedRevenueBalances: updatedRevenueBalances)
+    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, addedReactionEvents: addedReactionEvents, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, deletedMessageIds: deletedMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedGroupCallParticipants: updatedGroupCallParticipants, storyUpdates: storyUpdates, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil, updatedIncomingThreadReadStates: updatedIncomingThreadReadStates, updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates, updateConfig: updateConfig, isPremiumUpdated: isPremiumUpdated, updatedRevenueBalances: updatedRevenueBalances, updatedStarsBalance: updatedStarsBalance, updatedStarsRevenueStatus: updatedStarsRevenueStatus)
 }

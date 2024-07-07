@@ -72,6 +72,8 @@ swift_library(
         "//submodules/ImageTransparency",
         "//submodules/FFMpegBinding",
         "//submodules/TelegramUI/Components/AnimationCache/ImageDCT",
+        "//submodules/FileMediaResourceStatus",
+        "//submodules/TelegramUI/Components/MediaEditor/ImageObjectSeparation",
     ],
     visibility = [
         "//visibility:public",

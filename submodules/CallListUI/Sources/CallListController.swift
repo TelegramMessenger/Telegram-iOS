@@ -389,7 +389,7 @@ public final class CallListController: TelegramBaseController {
         |> take(1)
         |> deliverOnMainQueue).startStrict(next: { [weak controller, weak self] result in
             controller?.dismissSearch()
-            if let strongSelf = self, let (contactPeers, action, _, _, _) = result, let contactPeer = contactPeers.first,  case let .peer(peer, _, _) = contactPeer {
+            if let strongSelf = self, let (contactPeers, action, _, _, _, _) = result, let contactPeer = contactPeers.first,  case let .peer(peer, _, _) = contactPeer {
                 strongSelf.call(peer.id, isVideo: action == .videoCall, began: {
                     if let strongSelf = self {
                         let _ = (strongSelf.context.sharedContext.hasOngoingCall.get()
@@ -493,7 +493,7 @@ public final class CallListController: TelegramBaseController {
         items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Calls_StartNewCall, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] c, f in
-            c.dismiss(completion: { [weak self] in
+            c?.dismiss(completion: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }

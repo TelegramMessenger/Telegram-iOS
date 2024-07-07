@@ -1093,7 +1093,7 @@ func _internal_uploadStoryImpl(
         |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
             switch result {
             case let .progress(progress):
-                return .single(.progress(progress))
+                return .single(.progress(progress.progress))
             case let .content(content):
                 return postbox.transaction { transaction -> Signal<StoryUploadResult, NoError> in
                     let privacyRules = apiInputPrivacyRules(privacy: privacy, transaction: transaction)
@@ -1278,7 +1278,7 @@ func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: Eng
     return contentSignal
     |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
         if let result = result, case let .progress(progress) = result {
-            return .single(.progress(progress))
+            return .single(.progress(progress.progress))
         }
         
         let inputMedia: Api.InputMedia?
@@ -2474,11 +2474,14 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
         return (updatedItemValue, inputPeer)
     }
     |> mapToSignal { storyItem, inputPeer -> Signal<Never, NoError> in
-        guard let storyItem = storyItem, let inputPeer = inputPeer else {
+        guard let inputPeer = inputPeer else {
             return .complete()
         }
         
-        account.stateManager.injectStoryUpdates(updates: [InternalStoryUpdate.added(peerId: peerId, item: storyItem)])
+        if let storyItem {
+            account.stateManager.injectStoryUpdates(updates: [InternalStoryUpdate.added(peerId: peerId, item: storyItem)])
+        }
+        account.stateManager.injectStoryUpdates(updates: [InternalStoryUpdate.updateMyReaction(peerId: peerId, id: id, reaction: reaction)])
         
         return account.network.request(Api.functions.stories.sendReaction(flags: 0, peer: inputPeer, storyId: id, reaction: reaction?.apiReaction ?? .reactionEmpty))
         |> map(Optional.init)

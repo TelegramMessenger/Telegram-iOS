@@ -19,6 +19,7 @@ import ComponentFlow
 import EmojiStatusComponent
 import WallpaperBackgroundNode
 import ChatControllerInteraction
+import AvatarNode
 
 private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat, outerRadius: CGFloat, innerRadius: CGFloat) -> (CGPoint, UIImage?) {
     enum CornerType {
@@ -184,7 +185,8 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
         public let context: AccountContext
         public let controllerInteraction: ChatControllerInteraction
         public let type: ChatMessageThreadInfoType
-        public let threadId: Int64
+        public let peer: EnginePeer?
+        public let threadId: Int64?
         public let parentMessage: Message
         public let constrainedSize: CGSize
         public let animationCache: AnimationCache?
@@ -196,7 +198,8 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
             context: AccountContext,
             controllerInteraction: ChatControllerInteraction,
             type: ChatMessageThreadInfoType,
-            threadId: Int64,
+            peer: EnginePeer?,
+            threadId: Int64?,
             parentMessage: Message,
             constrainedSize: CGSize,
             animationCache: AnimationCache?,
@@ -207,6 +210,7 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
             self.context = context
             self.controllerInteraction = controllerInteraction
             self.type = type
+            self.peer = peer
             self.threadId = threadId
             self.parentMessage = parentMessage
             self.constrainedSize = constrainedSize
@@ -239,6 +243,7 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
     private let contentBackgroundNode: ASImageNode
     private var textNode: TextNodeWithEntities?
     private let arrowNode: ASImageNode
+    private var avatarNode: AvatarNode?
     
     private var titleTopicIconView: ComponentHostView<Empty>?
     private var titleTopicIconComponent: EmojiStatusComponent?
@@ -322,6 +327,8 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
                 topicTitle = threadInfo.title
                 topicIconId = threadInfo.icon
                 topicIconColor = threadInfo.iconColor
+            } else if let peer = arguments.peer {
+                topicTitle = peer.displayTitle(strings: arguments.presentationData.strings, displayOrder: arguments.presentationData.nameDisplayOrder)
             }
             
             let backgroundColor: UIColor
@@ -362,7 +369,10 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
             let fillInset: CGFloat = 5.0
             let iconSize = CGSize(width: 22.0, height: 22.0)
             let insets = UIEdgeInsets(top: 2.0, left: 4.0, bottom: 2.0, right: 4.0)
-            let spacing: CGFloat = 4.0
+            var spacing: CGFloat = 4.0
+            if arguments.peer != nil {
+                spacing += 3.0
+            }
             
             let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: text, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: arguments.constrainedSize.width - insets.left - insets.right - iconSize.width - spacing, height: arguments.constrainedSize.height), alignment: .natural, cutout: nil, insets: .zero))
             
@@ -393,7 +403,11 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
                 }
                 
                 node.pressed = {
-                    arguments.controllerInteraction.navigateToThreadMessage(arguments.parentMessage.id.peerId, arguments.threadId, arguments.parentMessage.id)
+                    if let _ = arguments.peer {
+                        arguments.controllerInteraction.navigateToMessage(arguments.parentMessage.id, arguments.parentMessage.id, NavigateToMessageParams(timestamp: nil, quote: nil, forceNew: true))
+                    } else if let threadId = arguments.threadId {
+                        arguments.controllerInteraction.navigateToThreadMessage(arguments.parentMessage.id.peerId, threadId, arguments.parentMessage.id)
+                    }
                 }
                                 
                 if node.lineRects != lineRects {
@@ -471,57 +485,74 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
                     node.contentNode.addSubnode(textNode.textNode)
                 }
                 
-                let titleTopicIconView: ComponentHostView<Empty>
-                if let current = node.titleTopicIconView {
-                    titleTopicIconView = current
-                } else {
-                    titleTopicIconView = ComponentHostView<Empty>()
-                    node.titleTopicIconView = titleTopicIconView
-                    node.contentNode.view.addSubview(titleTopicIconView)
-                }
-                
-                let titleTopicIconContent: EmojiStatusComponent.Content
-                var containerSize: CGSize = CGSize(width: 22.0, height: 22.0)
-                var iconX: CGFloat = 0.0
-                if arguments.threadId == 1 {
-                    titleTopicIconContent = .image(image: generalThreadIcon)
-                    containerSize = CGSize(width: 18.0, height: 18.0)
-                    iconX = 3.0
-                } else if let fileId = topicIconId, fileId != 0 {
-                    titleTopicIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 36.0, height: 36.0), placeholderColor: arguments.presentationData.theme.theme.list.mediaPlaceholderColor, themeColor: arguments.presentationData.theme.theme.list.itemAccentColor, loopMode: .count(1))
-                } else {
-                    titleTopicIconContent = .topic(title: String(topicTitle.prefix(1)), color: topicIconColor, size: CGSize(width: 22.0, height: 22.0))
-                }
-                
-                if let animationCache = arguments.animationCache, let animationRenderer = arguments.animationRenderer {
-                    let titleTopicIconComponent = EmojiStatusComponent(
-                        context: arguments.context,
-                        animationCache: animationCache,
-                        animationRenderer: animationRenderer,
-                        content: titleTopicIconContent,
-                        isVisibleForAnimations: node.visibility,
-                        action: nil
-                    )
-                    node.titleTopicIconComponent = titleTopicIconComponent
-                    
-                    let iconSize = titleTopicIconView.update(
-                        transition: .immediate,
-                        component: AnyComponent(titleTopicIconComponent),
-                        environment: {},
-                        containerSize: containerSize
-                    )
-                    
-                    let iconY: CGFloat
-                    if let firstLineMidY = firstLineMidY {
-                        iconY = floorToScreenPixels(firstLineMidY - iconSize.height / 2.0)
+                if let peer = arguments.peer {
+                    let avatarNode: AvatarNode
+                    if let current = node.avatarNode {
+                        avatarNode = current
                     } else {
-                        iconY = 0.0
+                        avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 15.0))
+                        node.contentNode.addSubnode(avatarNode)
+                    }
+                    avatarNode.frame = CGRect(origin: CGPoint(x: -1.0, y: -3.0), size: CGSize(width: 26.0, height: 26.0))
+                    
+                    var overrideImage: AvatarNodeImageOverride?
+                    if peer.id.isReplies {
+                        overrideImage = .repliesIcon
+                    }
+                    avatarNode.setPeer(context: arguments.context, theme: arguments.presentationData.theme.theme, peer: peer, overrideImage: overrideImage)
+                } else {
+                    let titleTopicIconView: ComponentHostView<Empty>
+                    if let current = node.titleTopicIconView {
+                        titleTopicIconView = current
+                    } else {
+                        titleTopicIconView = ComponentHostView<Empty>()
+                        node.titleTopicIconView = titleTopicIconView
+                        node.contentNode.view.addSubview(titleTopicIconView)
                     }
                     
-                    titleTopicIconView.frame = CGRect(origin: CGPoint(x: insets.left + iconX, y: insets.top + iconY), size: iconSize)
+                    let titleTopicIconContent: EmojiStatusComponent.Content
+                    var containerSize: CGSize = CGSize(width: 22.0, height: 22.0)
+                    var iconX: CGFloat = 0.0
+                    if arguments.threadId == 1 {
+                        titleTopicIconContent = .image(image: generalThreadIcon)
+                        containerSize = CGSize(width: 18.0, height: 18.0)
+                        iconX = 3.0
+                    } else if let fileId = topicIconId, fileId != 0 {
+                        titleTopicIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 36.0, height: 36.0), placeholderColor: arguments.presentationData.theme.theme.list.mediaPlaceholderColor, themeColor: arguments.presentationData.theme.theme.list.itemAccentColor, loopMode: .count(1))
+                    } else {
+                        titleTopicIconContent = .topic(title: String(topicTitle.prefix(1)), color: topicIconColor, size: CGSize(width: 22.0, height: 22.0))
+                    }
+                    
+                    if let animationCache = arguments.animationCache, let animationRenderer = arguments.animationRenderer {
+                        let titleTopicIconComponent = EmojiStatusComponent(
+                            context: arguments.context,
+                            animationCache: animationCache,
+                            animationRenderer: animationRenderer,
+                            content: titleTopicIconContent,
+                            isVisibleForAnimations: node.visibility,
+                            action: nil
+                        )
+                        node.titleTopicIconComponent = titleTopicIconComponent
+                        
+                        let iconSize = titleTopicIconView.update(
+                            transition: .immediate,
+                            component: AnyComponent(titleTopicIconComponent),
+                            environment: {},
+                            containerSize: containerSize
+                        )
+                        
+                        let iconY: CGFloat
+                        if let firstLineMidY = firstLineMidY {
+                            iconY = floorToScreenPixels(firstLineMidY - iconSize.height / 2.0)
+                        } else {
+                            iconY = 0.0
+                        }
+                        
+                        titleTopicIconView.frame = CGRect(origin: CGPoint(x: insets.left + iconX, y: insets.top + iconY), size: iconSize)
+                    }
                 }
 
-                let textFrame = CGRect(origin: CGPoint(x: iconSize.width + 2.0 + insets.left, y: insets.top), size: textLayout.size)
+                let textFrame = CGRect(origin: CGPoint(x: iconSize.width + (spacing - 2.0) + insets.left, y: insets.top), size: textLayout.size)
                 textNode.textNode.frame = textFrame
                  
                 if let arrowIcon = arrowIcon, let firstLine = lineRects.first, let lastLine = lineRects.last {

@@ -108,6 +108,7 @@
 "PUSH_MESSAGE_NOTHEME" = "%1$@|disabled chat theme";
 "PUSH_MESSAGE_RECURRING_PAY" = "%1$@|You were charged %2$@";
 "CHAT_MESSAGE_RECURRING_PAY" = "%1$@|You were charged %2$@";
+"PUSH_MESSAGE_PAID_MEDIA" = "%1$@sent you a paid post for %2$@ stars";
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
 "PUSH_CHANNEL_MESSAGE_NOTEXT" = "%1$@|posted a message";
@@ -138,6 +139,7 @@
 "PUSH_CHANNEL_ALBUM" = "%1$@|posted an album";
 "PUSH_CHANNEL_MESSAGE_DOCS_TEXT_1" = "posted a file";
 "PUSH_CHANNEL_MESSAGE_DOCS_TEXT_any" = "posted %d files";
+"PUSH_CHANNEL_MESSAGE_PAID_MEDIA" = "%1$@ sent a paid post for %2$@ stars";
 
 "PUSH_CHAT_MESSAGE_TEXT" = "%2$@|%1$@:%3$@";
 "PUSH_CHAT_MESSAGE_NOTEXT" = "%2$@|%1$@ sent a message to the group";
@@ -183,6 +185,7 @@
 "PUSH_CHAT_MESSAGE_THEME" = "%1$@|set theme to %3$@ in the group %2$@";
 "PUSH_CHAT_MESSAGE_NOTHEME" = "%1$@|disabled theme in the group %2$@";
 "PUSH_CHAT_REQ_JOINED" = "%1$@ was accepted into the group %2$@";
+"PUSH_CHAT_MESSAGE_PAID_MEDIA" = "%1$@ sent a paid post to the group %2$@ for %3$@ stars";
 
 "PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@|pinned a message";
@@ -200,6 +203,7 @@
 "PUSH_PINNED_GAME" = "%1$@|pinned a game";
 "PUSH_PINNED_INVOICE" = "%1$@|pinned an invoice";
 "PUSH_PINNED_GIF" = "%1$@|pinned a GIF";
+"PUSH_PINNED_PAID_MEDIA" = "%1$@|pinned a paid post for %2$@";
 
 "PUSH_CONTACT_JOINED" = "%1$@|joined Telegram!";
 
@@ -252,6 +256,7 @@
 "PUSH_CHAT_REACT_GAME" = "%2$@|%1$@ %3$@ to your game";
 "PUSH_CHAT_REACT_INVOICE" = "%2$@|%1$@ %3$@ to your invoice";
 "PUSH_CHAT_REACT_GIF" = "%2$@|%1$@ %3$@ to your GIF";
+"PUSH_CHAT_REACT_PAID_MEDIA" = "%2$@|%1$@ %3$@ to your paid post";
 
 "PUSH_MESSAGE_SUGGEST_USERPIC" = "%1$@|suggested you new profile photo";
 
@@ -272,6 +277,7 @@
 "PUSH_REACT_HIDDEN" = "New reaction to your message";
 "PUSH_REACT_STORY" = "%1$@|%2$@ to your story";
 "PUSH_REACT_STORY_HIDDEN" = "New reaction to your story";
+
 
 "LOCAL_MESSAGE_FWDS" = "%1$@ forwarded you %2$d messages";
 "LOCAL_CHANNEL_MESSAGE_FWDS" = "%1$@ posted %2$d forwarded messages";
@@ -5630,6 +5636,7 @@ Sorry for the inconvenience.";
 "Conversation.ContextMenuOpenProfile" = "Open Profile";
 "Conversation.ContextMenuSendMessage" = "Send Message";
 "Conversation.ContextMenuMention" = "Mention";
+"Conversation.ContextMenuSearchMessages" = "Search Messages";
 
 "Conversation.ContextMenuOpenChannelProfile" = "Open Profile";
 "Conversation.ContextMenuOpenChannel" = "Open Channel";
@@ -7798,6 +7805,7 @@ Sorry for the inconvenience.";
 "Premium.Purchase.ErrorNetwork" = "Please check your internet connection and try again.";
 "Premium.Purchase.ErrorNotAllowed" = "The device is not not allowed to make the payment.";
 "Premium.Purchase.ErrorCantMakePayments" = "In-app purchases are not allowed on this device.";
+"Premium.Purchase.ErrorTryLater" = "An error occurred. Please try again.";
 
 "Premium.Restore.Success" = "Done";
 "Premium.Restore.ErrorUnknown" = "An error occurred. Please try again.";
@@ -10627,6 +10635,7 @@ Sorry for the inconvenience.";
 "MediaEditor.Shortcut.Location" = "Location";
 "MediaEditor.Shortcut.Reaction" = "Reaction";
 "MediaEditor.Shortcut.Audio" = "Audio";
+"MediaEditor.Shortcut.Link" = "Link";
 
 "BoostGift.AdditionalPrizes" = "Additional Prizes";
 "BoostGift.AdditionalPrizesPlaceholder" = "Enter Your Prize";
@@ -12047,6 +12056,7 @@ Sorry for the inconvenience.";
 "MediaEditor.CreateNewPack" = "New Sticker Set";
 "MediaEditor.ReplaceSticker" = "Replace Sticker";
 "MediaEditor.AddToStickerPack" = "Add to Sticker Set";
+"MediaEditor.SetAsIntroSticker" = "Set as Greeting Sticker";
 
 "MediaEditor.NewStickerPack.Title" = "New Sticker Set";
 "MediaEditor.NewStickerPack.Text" = "Choose a name for your sticker set.";
@@ -12158,6 +12168,7 @@ Sorry for the inconvenience.";
 "Chat.AdminActionSheet.BanFooterMultiple" = "Fully ban users";
 "Chat.AdminActionSheet.RestrictFooterMultiple" = "Partially restrict users";
 "Chat.AdminActionSheet.PermissionsSectionHeader" = "WHAT CAN THIS USER DO?";
+"Chat.AdminActionSheet.PermissionsSectionHeaderMultiple" = "WHAT CAN THESE USERS DO?";
 "Chat.AdminActionSheet.ActionButton" = "Proceed";
 
 "Chat.AdminAction.ToastMessagesDeletedTitleSingle" = "Message Deleted";
@@ -12178,7 +12189,292 @@ Sorry for the inconvenience.";
 
 "Chat.NavigationNoTopics" = "You have no unread topics";
 
-"Chat.NextSuggestedChannelSwipeProgress" = "Swipe up to go to the next channel";
+"Chat.NextSuggestedChannelSwipeProgress" = "Pull up to go to the next channel";
 "Chat.NextSuggestedChannelSwipeAction" = "Release to go to the next channel";
-"Chat.NextUnreadTopicSwipeProgress" = "Swipe up to go to the next topic";
+"Chat.NextUnreadTopicSwipeProgress" = "Pull up to go to the next topic";
 "Chat.NextUnreadTopicSwipeAction" = "Release to go to the next topic";
+
+"EmojiPacksSettings.ArchivedPacks" = "Archived Stickers";
+"EmojiPacksSettings.ArchivedPacks.Info" = "You can have up to 200 sticker sets installed.\nUnused stickers are archived when you add more.";
+
+"EmojiPacks.UnarchiveEmojiPacksConfirmation_1" = "Unarchive %@ Pack";
+"EmojiPacks.UnarchiveEmojiPacksConfirmation_any" = "Unarchive %@ Packs";
+
+"HashtagSearch.ThisChat" = "This Chat";
+"HashtagSearch.MyMessages" = "My Messages";
+"HashtagSearch.PublicPosts" = "Public Posts";
+"HashtagSearch.SearchPlaceholder" = "Hashtag search";
+
+"HashtagSearch.NoRecentQueries" = "Enter a hashtag to find messages\ncontaining it.";
+"HashtagSearch.ClearRecent" = "Clear History";
+
+"HashtagSearch.NoResults" = "No Results";
+"HashtagSearch.NoResultsQueryDescription" = "There were no results for %@.\nTry another hashtag.";
+"HashtagSearch.NoResultsQueryCashtagDescription" = "There were no results for %@.\nTry another cashtag.";
+
+"Chat.Context.Phone.AddToContacts" = "Add to Contacts";
+"Chat.Context.Phone.CreateNewContact" = "Create New Contact";
+"Chat.Context.Phone.AddToExistingContact" = "Add to Existing Contact";
+"Chat.Context.Phone.SendMessage" = "Send Message";
+"Chat.Context.Phone.TelegramVoiceCall" = "Telegram Voice Call";
+"Chat.Context.Phone.TelegramVideoCall" = "Telegram Video Call";
+"Chat.Context.Phone.InviteToTelegram" = "Invite to Telegram";
+"Chat.Context.Phone.CallViaCarrier" = "Call via Carrier";
+"Chat.Context.Phone.CopyNumber" = "Copy Number";
+"Chat.Context.Phone.NotOnTelegram" = "This number is not on Telegram.";
+"Chat.Context.Phone.ViewProfile" = "View Profile";
+
+"Chat.Context.Username.SendMessage" = "Send Message";
+"Chat.Context.Username.OpenGroup" = "Open Group";
+"Chat.Context.Username.OpenChannel" = "Open Channel";
+"Chat.Context.Username.Copy" = "Copy Username";
+"Chat.Context.Username.NotOnTelegram" = "This user doesn't exist on Telegram.";
+
+"Chat.Context.Hashtag.Search" = "Search";
+"Chat.Context.Hashtag.Copy" = "Copy Hashtag";
+
+"Chat.Context.Card.Copy" = "Copy Card Number";
+
+"Chat.Context.Command.Copy" = "Copy Command";
+
+"Chat.Context.Timecode.Copy" = "Copy Timecode";
+
+"Message.FactCheck" = "Fact Check";
+"Message.FactCheck.WhatIsThis" = "what's this?";
+
+"Conversation.FactCheck.InnerDescription" = "This clarification was provided by a fact checking agency assigned by the department of the government of your country (%@) responsible for combating misinformation.";
+"Conversation.FactCheck.Description" = "This clarification was provided by a fact checking agency assigned by the department of the government of your country (%@) responsible for combating misinformation.";
+
+"FactCheck.Title" = "Fact Check";
+"FactCheck.Placeholder" = "Add Fact Check";
+"FactCheck.Remove" = "Remove";
+
+"Conversation.ContextMenuAddFactCheck" = "Add Fact Check";
+"Conversation.ContextMenuEditFactCheck" = "Edit Fact Check";
+
+"Stars.Intro.Title" = "Telegram Stars";
+"Stars.Intro.Description" = "Buy Stars to unlock content and services in miniapps on Telegram.";
+"Stars.Intro.Balance" = "Balance";
+"Stars.Intro.YourBalance" = "your balance";
+"Stars.Intro.Buy" = "Buy More Stars";
+"Stars.Intro.AllTransactions" = "All Transactions";
+"Stars.Intro.Incoming" = "Incoming";
+"Stars.Intro.Outgoing" = "Outgoing";
+
+"Stars.Intro.Transaction.MediaPurchase" = "Media Purchase";
+"Stars.Intro.Transaction.AppleTopUp.Title" = "Stars Top-Up";
+"Stars.Intro.Transaction.AppleTopUp.Subtitle" = "via App Store";
+"Stars.Intro.Transaction.GoogleTopUp.Title" = "Stars Top-Up";
+"Stars.Intro.Transaction.GoogleTopUp.Subtitle" = "via Play Market";
+"Stars.Intro.Transaction.PremiumBotTopUp.Title" = "Stars Top-Up";
+"Stars.Intro.Transaction.PremiumBotTopUp.Subtitle" = "via Premium Bot";
+"Stars.Intro.Transaction.FragmentTopUp.Title" = "Stars Top-Up";
+"Stars.Intro.Transaction.FragmentTopUp.Subtitle" = "via Fragment";
+"Stars.Intro.Transaction.FragmentWithdrawal.Title" = "Withdrawal";
+"Stars.Intro.Transaction.FragmentWithdrawal.Subtitle" = "via Fragment";
+"Stars.Intro.Transaction.TelegramAds.Title" = "Withdrawal";
+"Stars.Intro.Transaction.TelegramAds.Subtitle" = "via Telegram Ads";
+"Stars.Intro.Transaction.Unsupported.Title" = "Unsupported";
+"Stars.Intro.Transaction.Refund" = "Refund";
+
+"Stars.Intro.PurchasedTitle" = "Stars Acquired";
+"Stars.Intro.PurchasedText" = "**%@** added to your balance.";
+"Stars.Intro.PurchasedText.Stars_1" = "%@ Star";
+"Stars.Intro.PurchasedText.Stars_any" = "%@ Stars";
+
+"Stars.Purchase.GetStars" = "Get Stars";
+"Stars.Purchase.GetStarsInfo" = "Choose how many Stars you would like to buy.";
+
+"Stars.Purchase.Balance" = "Balance";
+
+"Stars.Purchase.StarsNeeded_1" = "%@ Star Needed";
+"Stars.Purchase.StarsNeeded_any" = "%@ Stars Needed";
+"Stars.Purchase.StarsNeededInfo" = "Buy Stars to use them on **%@** and other miniapps.";
+"Stars.Purchase.StarsNeededUnlockInfo" = "Buy Stars to unlock media and use them on miniapps.";
+
+"Stars.Purchase.Stars_1" = "%@ Star";
+"Stars.Purchase.Stars_any" = "%@ Stars";
+"Stars.Purchase.ShowMore" = "Show More Options";
+"Stars.Purchase.Info" = "By proceeding and purchasing Stars, you agree with [Terms and Conditions]().";
+"Stars.Purchase.Terms_URL" = "https://telegram.org/tos";
+
+"Stars.Transaction.Via" = "Via";
+"Stars.Transaction.To" = "To";
+"Stars.Transaction.From" = "From";
+"Stars.Transaction.Media" = "Media";
+"Stars.Transaction.Id" = "Transaction ID";
+"Stars.Transaction.Date" = "Date";
+"Stars.Transaction.Terms" = "Review the [Terms of Service]() for Stars.";
+"Stars.Transaction.Terms_URL" = "https://telegram.org/tos";
+"Stars.Transaction.CopiedId" = "Transaction ID copied to clipboard.";
+
+"Stars.Transaction.MediaPurchase" = "Media Purchase";
+"Stars.Transaction.AppleTopUp.Title" = "Stars Top-Up";
+"Stars.Transaction.AppleTopUp.Subtitle" = "App Store";
+"Stars.Transaction.GoogleTopUp.Title" = "Stars Top-Up";
+"Stars.Transaction.GoogleTopUp.Subtitle" = "Play Market";
+"Stars.Transaction.PremiumBotTopUp.Title" = "Stars Top-Up";
+"Stars.Transaction.PremiumBotTopUp.Subtitle" = "Premium Bot";
+"Stars.Transaction.FragmentTopUp.Title" = "Stars Top-Up";
+"Stars.Transaction.FragmentTopUp.Subtitle" = "Fragment";
+"Stars.Transaction.FragmentWithdrawal.Title" = "Stars Withdrawal";
+"Stars.Transaction.FragmentWithdrawal.Subtitle" = "Fragment";
+"Stars.Transaction.TelegramAds.Title" = "Stars Withdrawal";
+"Stars.Transaction.TelegramAds.Subtitle" = "Telegram Ads";
+"Stars.Transaction.Unsupported.Title" = "Unsupported";
+"Stars.Transaction.Refund" = "Refund";
+
+"Stars.Transaction.Photos_1" = "%@ Photo";
+"Stars.Transaction.Photos_any" = "%@ Photos";
+"Stars.Transaction.Videos_1" = "%@ Video";
+"Stars.Transaction.Videos_any" = "%@ Videos";
+"Stars.Transaction.SinglePhoto" = "Photo";
+"Stars.Transaction.SingleVideo" = "Video";
+"Stars.Transaction.MediaAnd" = "%1$@ and %2$@";
+
+"Stars.Transfer.Title" = "Confirm Your Purchase";
+"Stars.Transfer.Info" = "Do you want to buy **%1$@** in **%2$@** for **%3$@**?";
+"Stars.Transfer.Info.Stars_1" = "%@ Star";
+"Stars.Transfer.Info.Stars_any" = "%@ Stars";
+"Stars.Transfer.Pay" = "Confirm and Pay";
+"Stars.Transfer.PurchasedTitle" = "Purchase Completed";
+"Stars.Transfer.PurchasedText" = "You acquired **%1$@** in **%2$@** for **%3$@**.";
+"Stars.Transfer.Purchased.Stars_1" = "%@ Star";
+"Stars.Transfer.Purchased.Stars_any" = "%@ Stars";
+"Stars.Transfer.UnlockedText" = "You unlocked media for **%1$@**.";
+"Stars.Transfer.UnlockInfo" = "Do you want to unlock %1$@ in **%2$@** for **%3$@**?";
+
+"Stars.Transfer.Balance" = "Balance";
+
+"Stars.Transfer.Unavailable" = "Sorry, no star purchases are available from your country.";
+
+"Stars.Transfer.Photos_1" = "%@ photo";
+"Stars.Transfer.Photos_any" = "%@ photos";
+"Stars.Transfer.Videos_1" = "%@ video";
+"Stars.Transfer.Videos_any" = "%@ videos";
+"Stars.Transfer.SinglePhoto" = "photo";
+"Stars.Transfer.SingleVideo" = "video";
+"Stars.Transfer.MediaAnd" = "%1$@ and %2$@";
+
+"Settings.Stars" = "Your Stars";
+
+"Chat.MessageEffectMenu.TitleAddEffect" = "Add an animated effect";
+"Chat.MessageEffectMenu.SectionMessageEffects" = "Message Effects";
+"Chat.SendMessageMenu.MoveCaptionUp" = "Move Caption Up";
+"Chat.SendMessageMenu.MoveCaptionDown" = "Move Caption Down";
+"Chat.SendMessageMenu.ToastPremiumRequired.Text" = "Subscribe to [Telegram Premium]() to add this animated effect.";
+
+"BusinessLink.AlertTextLimitText" = "The message text limit is 4096 characters";
+
+"Chat.SendMessageMenu.EditMessage" = "Edit Message";
+
+"Story.ViewLink" = "Open Link";
+
+"PeerInfo.Bot.Username" = "Username";
+"PeerInfo.Bot.Balance" = "Balance";
+"PeerInfo.Bot.Balance.Stars_1" = "%@ Star";
+"PeerInfo.Bot.Balance.Stars_any" = "%@ Stars";
+
+"HashtagSearch.StoriesFound_1" = "%@ Story Found";
+"HashtagSearch.StoriesFound_any" = "%@ Stories Found";
+"HashtagSearch.StoriesFoundInfo" = "View stories with %@";
+
+"Stars.BotRevenue.Title" = "Stars Balance";
+"Stars.BotRevenue.Revenue.Title" = "Stars Received";
+"Stars.BotRevenue.Proceeds.Title" = "Rewards Overview";
+"Stars.BotRevenue.Proceeds.Available" = "Available Balance";
+"Stars.BotRevenue.Proceeds.Current" = "Total Balance";
+"Stars.BotRevenue.Proceeds.Total" = "Lifetime Proceeds";
+"Stars.BotRevenue.Proceeds.Info" = "Stars from your total balance can be used for ads or withdrawn as rewards 21 days after they are earned.";
+
+"Stars.BotRevenue.Withdraw.Balance" = "Available Balance";
+"Stars.BotRevenue.Withdraw.Withdraw" = "Withdraw via Fragment";
+"Stars.BotRevenue.Withdraw.WithdrawShort" = "Withdraw";
+"Stars.BotRevenue.Withdraw.BuyAds" = "Buy Ads";
+"Stars.BotRevenue.Withdraw.Info" = "You can collect rewards for Stars using Fragment, or use Stars to advertise your bot. [Learn More >]()";
+"Stars.BotRevenue.Withdraw.Info_URL" = "https://telegram.org/tos/bot-developers#6-2-2-tpa-balance";
+
+"Stars.BotRevenue.Transactions.Title" = "Transaction History";
+
+"Stars.Withdraw.Title" = "Withdraw";
+"Stars.Withdraw.AmountTitle" = "ENTER AMOUNT TO WITHDRAW";
+"Stars.Withdraw.AmountPlaceholder" = "Stars Amount";
+"Stars.Withdraw.Withdraw" = "Withdraw";
+
+"Stars.Withdraw.Withdraw.ErrorMinimum" = "You cannot withdraw less than [%@]().";
+"Stars.Withdraw.Withdraw.ErrorMinimum.Stars_1" = "%@ Star";
+"Stars.Withdraw.Withdraw.ErrorMinimum.Stars_any" = "%@ Stars";
+
+"Stars.Withdraw.Withdraw.ErrorTimeout" = "Next withdrawal will be available in **%@**.";
+
+"Stars.PaidContent.Title" = "Paid Content";
+"Stars.PaidContent.AmountTitle" = "ENTER UNLOCK COST";
+"Stars.PaidContent.AmountPlaceholder" = "Stars to Unlock";
+"Stars.PaidContent.AmountInfo" = "Users will have to transfer this amount of Stars to your channel in order to view this media.\n[More about Stars >]()";
+"Stars.PaidContent.AmountInfo_URL" = "https://telegram.org/tos/stars";
+"Stars.PaidContent.Create" = "Make This Media Paid";
+
+"MediaEditor.AddLink" = "LINK";
+
+"MediaEditor.Link.CreateTitle" = "Create Link";
+"MediaEditor.Link.EditTitle" = "Edit Link";
+"MediaEditor.Link.LinkTo.Title" = "LINK TO";
+"MediaEditor.Link.LinkTo.Placeholder" = "https://somesite.com";
+"MediaEditor.Link.LinkName.Title" = "LINK NAME (OPTIONAL)";
+"MediaEditor.Link.LinkName.Placeholder" = "Enter a Name";
+
+"Story.Editor.TooltipLinkPremium" = "Subscribe to [Telegram Premium]() to add links.";
+
+"Story.Editor.TooltipLinkLimitValue_1" = "**%@** link";
+"Story.Editor.TooltipLinkLimitValue_any" = "**%@** links";
+"Story.Editor.TooltipReachedLinkLimitText" = "You can't add more than %@ to a story.";
+
+"VoiceChat.ToastMicrophoneIsMuted" = "Your microphone is muted.";
+
+"StoryGridScreen.TitleLocationSearch" = "Location";
+"StoryList.GridHeaderLocationSearch_1" = "1 STORY FROM THIS LOCATION";
+"StoryList.GridHeaderLocationSearch_any" = "%d STORIES FROM THIS LOCATION";
+
+"Chat.MessagesDeletedToast.Text_1" = "Message Deleted";
+"Chat.MessagesDeletedToast.Text_any" = "%d Messages Deleted";
+
+"Monetization.StarsRevenueTitle" = "REVENUE";
+
+"Monetization.TonBalanceTitle" = "TON BALANCE";
+"Monetization.StarsBalanceTitle" = "STARS BALANCE";
+
+"Monetization.TonTransactions" = "TON Transactions";
+"Monetization.StarsTransactions" = "Stars Transactions";
+
+"Monetization.BalanceStarsWithdraw" = "Withdraw via Fragment";
+"Monetization.BalanceStarsWithdrawShort" = "Withdraw";
+"Monetization.BalanceStarsBuyAds" = "Buy Ads";
+"Monetization.Balance.StarsInfo" = "You can collect rewards for Stars using Fragment, or use Stars to advertise your channel. [Learn More >]()";
+"Monetization.Balance.StarsInfo_URL" = "https://telegram.org";
+
+"Monetization.StarsProceeds.Title" = "Rewards Overview";
+"Monetization.StarsProceeds.Available" = "Available Balance";
+"Monetization.StarsProceeds.Current" = "Total Balance";
+"Monetization.StarsProceeds.Total" = "Lifetime Proceeds";
+
+"Premium.MessageEffects" = "Message Effects";
+"Premium.MessageEffectsInfo" = "Add over 500 animated effects to private messages.";
+
+"Chat.PaidMedia.UnlockMedia" = "Unlock for %@";
+"Chat.PaidMedia.Purchased" = "Purchased";
+
+"Attachment.SendWithoutGrouping" = "Send Without Grouping";
+"Attachment.Paid.EditPrice" = "Edit Price";
+"Attachment.Paid.EditPrice.Stars_1" = "%@ Star";
+"Attachment.Paid.EditPrice.Stars_any" = "%@ Stars";
+"Attachment.Paid.Create" = "Make This Content Paid";
+
+"WebApp.MinimizedTitleFormat" = "%1$@ & %2$@";
+"WebApp.MinimizedTitle.Others_1" = "%@ Other";
+"WebApp.MinimizedTitle.Others_any" = "%@ Others";
+
+"Stars.SendStars.Title" = "Send Stars";
+"Stars.SendStars.AmountTitle" = "ENTER AMOUNT";
+"Stars.SendStars.AmountPlaceholder" = "Stars Amount";
+"Stars.SendStars.AmountInfo" = "Send %@ or more to highlight your profile in the TOP 3 supporters of this message.";
+"Stars.SendStars.SendStars" = "Confirm and Send";

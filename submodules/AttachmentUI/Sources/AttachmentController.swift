@@ -14,6 +14,8 @@ import MediaResources
 import LegacyMessageInputPanel
 import LegacyMessageInputPanelInputView
 import AttachmentTextInputPanelNode
+import ChatSendMessageActionUI
+import MinimizedContainer
 
 public enum AttachmentButtonType: Equatable {
     case gallery
@@ -25,6 +27,29 @@ public enum AttachmentButtonType: Equatable {
     case app(AttachMenuBot)
     case gift
     case standalone
+    
+    public var key: String {
+        switch self {
+        case .gallery:
+            return "gallery"
+        case .file:
+            return "file"
+        case .location:
+            return "location"
+        case .quickReply:
+            return "quickReply"
+        case .contact:
+            return "contact"
+        case .poll:
+            return "poll"
+        case let .app(bot):
+            return "app_\(bot.shortName)"
+        case .gift:
+            return "gift"
+        case .standalone:
+            return "standalone"
+        }
+    }
     
     public static func ==(lhs: AttachmentButtonType, rhs: AttachmentButtonType) -> Bool {
         switch lhs {
@@ -97,6 +122,7 @@ public protocol AttachmentContainable: ViewController {
     var isContainerExpanded: () -> Bool { get set }
     var isPanGestureEnabled: (() -> Bool)? { get }
     var mediaPickerContext: AttachmentMediaPickerContext? { get }
+    var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)? { get }
     
     func isContainerPanningUpdated(_ panning: Bool)
     
@@ -105,6 +131,8 @@ public protocol AttachmentContainable: ViewController {
     
     func requestDismiss(completion: @escaping () -> Void)
     func shouldDismissImmediately() -> Bool
+    
+    func beforeMaximize(navigationController: NavigationController, completion: @escaping () -> Void)
 }
 
 public extension AttachmentContainable {
@@ -128,7 +156,15 @@ public extension AttachmentContainable {
          return true
     }
     
+    func beforeMaximize(navigationController: NavigationController, completion: @escaping () -> Void) {
+        completion()
+    }
+    
     var isPanGestureEnabled: (() -> Bool)? {
+        return nil
+    }
+    
+    var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)? {
         return nil
     }
 }
@@ -148,14 +184,18 @@ public protocol AttachmentMediaPickerContext {
     var selectionCount: Signal<Int, NoError> { get }
     var caption: Signal<NSAttributedString?, NoError> { get }
     
+    var hasCaption: Bool { get }
+    var captionIsAboveMedia: Signal<Bool, NoError> { get }
+    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void
+    
     var loadingProgress: Signal<CGFloat?, NoError> { get }
     var mainButtonState: Signal<AttachmentMainButtonState?, NoError> { get }
     
     func mainButtonAction()
     
     func setCaption(_ caption: NSAttributedString)
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode)
-    func schedule()
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?)
+    func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?)
 }
 
 private func generateShadowImage() -> UIImage? {
@@ -196,10 +236,11 @@ public class AttachmentController: ViewController {
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let chatLocation: ChatLocation?
     private let isScheduledMessages: Bool
-    private let buttons: [AttachmentButtonType]
+    private var buttons: [AttachmentButtonType]
     private let initialButton: AttachmentButtonType
     private let fromMenu: Bool
-    private let hasTextInput: Bool
+    private var hasTextInput: Bool
+    private let isFullSize: Bool
     private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
     public var animateAppearance: Bool = false
     
@@ -222,14 +263,14 @@ public class AttachmentController: ViewController {
         
     private final class Node: ASDisplayNode {
         private weak var controller: AttachmentController?
-        private let dim: ASDisplayNode
+        fileprivate let dim: ASDisplayNode
         private let shadowNode: ASImageNode
         fileprivate let container: AttachmentContainer
         private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
         let panel: AttachmentPanel
         
-        private var currentType: AttachmentButtonType?
-        private var currentControllers: [AttachmentContainable] = []
+        fileprivate var currentType: AttachmentButtonType?
+        fileprivate var currentControllers: [AttachmentContainable] = []
         
         private var validLayout: ContainerViewLayout?
         private var modalProgress: CGFloat = 0.0
@@ -243,7 +284,7 @@ public class AttachmentController: ViewController {
         
         private var selectionCount: Int = 0
         
-        fileprivate var mediaPickerContext: AttachmentMediaPickerContext? {
+        var mediaPickerContext: AttachmentMediaPickerContext? {
             didSet {
                 if let mediaPickerContext = self.mediaPickerContext {
                     self.captionDisposable.set((mediaPickerContext.caption
@@ -295,6 +336,8 @@ public class AttachmentController: ViewController {
                  
         private let wrapperNode: ASDisplayNode
         
+        private var isMinimizing = false
+        
         init(controller: AttachmentController, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
             self.controller = controller
             self.makeEntityInputView = makeEntityInputView
@@ -309,13 +352,15 @@ public class AttachmentController: ViewController {
             self.wrapperNode = ASDisplayNode()
             self.wrapperNode.clipsToBounds = true
             
-            self.container = AttachmentContainer()
+            self.container = AttachmentContainer(isFullSize: controller.isFullSize)
             self.container.canHaveKeyboardFocus = true
-            self.panel = AttachmentPanel(context: controller.context, chatLocation: controller.chatLocation, isScheduledMessages: controller.isScheduledMessages, updatedPresentationData: controller.updatedPresentationData, makeEntityInputView: makeEntityInputView)
+            self.panel = AttachmentPanel(controller: controller, context: controller.context, chatLocation: controller.chatLocation, isScheduledMessages: controller.isScheduledMessages, updatedPresentationData: controller.updatedPresentationData, makeEntityInputView: makeEntityInputView)
             self.panel.fromMenu = controller.fromMenu
             self.panel.isStandalone = controller.isStandalone
             
             super.init()
+            
+            self.clipsToBounds = false
             
             self.addSubnode(self.dim)
             self.addSubnode(self.shadowNode)
@@ -328,16 +373,21 @@ public class AttachmentController: ViewController {
                 }
             }
             
-            self.container.updateModalProgress = { [weak self] progress, transition in
+            self.container.updateModalProgress = { [weak self] progress, topInset, bounds, transition in
                 if let strongSelf = self, let layout = strongSelf.validLayout, !strongSelf.isDismissing {
                     var transition = transition
                     if strongSelf.container.supernode == nil {
                         transition = .animated(duration: 0.4, curve: .spring)
                     }
-                    strongSelf.controller?.updateModalStyleOverlayTransitionFactor(progress, transition: transition)
                     
                     strongSelf.modalProgress = progress
-                    strongSelf.containerLayoutUpdated(layout, transition: transition)
+                    strongSelf.controller?.minimizedTopEdgeOffset = topInset
+                    strongSelf.controller?.minimizedBounds = bounds
+                    
+                    if !strongSelf.isMinimizing {
+                        strongSelf.controller?.updateModalStyleOverlayTransitionFactor(progress, transition: transition)
+                        strongSelf.containerLayoutUpdated(layout, transition: transition)
+                    }
                 }
             }
             self.container.isReadyUpdated = { [weak self] in
@@ -346,10 +396,24 @@ public class AttachmentController: ViewController {
                 }
             }
             
-            self.container.interactivelyDismissed = { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.controller?.dismiss(animated: true)
+            self.container.interactivelyDismissed = { [weak self] velocity in
+                if let strongSelf = self, let layout = strongSelf.validLayout {
+                    if let controller = strongSelf.controller, controller.shouldMinimizeOnSwipe?(strongSelf.currentType) == true {
+                        var delta = layout.size.height
+                        if let minimizedTopEdgeOffset = controller.minimizedTopEdgeOffset {
+                            delta -= minimizedTopEdgeOffset
+                        }
+                        let damping: CGFloat = 180.0
+                        let initialVelocity: CGFloat = delta > 0.0 ? velocity / delta : 0.0
+
+                        strongSelf.minimize(damping: damping, initialVelocity: initialVelocity)
+                        
+                        return false
+                    } else {
+                        strongSelf.controller?.dismiss(animated: true)
+                    }
                 }
+                return true
             }
             
             self.container.isPanningUpdated = { [weak self] value in
@@ -417,17 +481,17 @@ public class AttachmentController: ViewController {
                 }
             }
             
-            self.panel.sendMessagePressed = { [weak self] mode in
+            self.panel.sendMessagePressed = { [weak self] mode, parameters in
                 if let strongSelf = self {
                     switch mode {
                     case .generic:
-                        strongSelf.mediaPickerContext?.send(mode: .generic, attachmentMode: .media)
+                        strongSelf.mediaPickerContext?.send(mode: .generic, attachmentMode: .media, parameters: parameters)
                     case .silent:
-                        strongSelf.mediaPickerContext?.send(mode: .silently, attachmentMode: .media)
+                        strongSelf.mediaPickerContext?.send(mode: .silently, attachmentMode: .media, parameters: parameters)
                     case .schedule:
-                        strongSelf.mediaPickerContext?.schedule()
+                        strongSelf.mediaPickerContext?.schedule(parameters: parameters)
                     case .whenOnline:
-                        strongSelf.mediaPickerContext?.send(mode: .whenOnline, attachmentMode: .media)
+                        strongSelf.mediaPickerContext?.send(mode: .whenOnline, attachmentMode: .media, parameters: parameters)
                     }
                 }
             }
@@ -454,6 +518,14 @@ public class AttachmentController: ViewController {
                 if let strongSelf = self {
                     strongSelf.controller?.presentInGlobalOverlay(c, with: nil)
                 }
+            }
+            
+            self.panel.getCurrentSendMessageContextMediaPreview = { [weak self] in
+                guard let self, let currentController = self.currentControllers.last else {
+                    return nil
+                }
+                
+                return currentController.getCurrentSendMessageContextMediaPreview?()
             }
         }
         
@@ -505,6 +577,39 @@ public class AttachmentController: ViewController {
             }
         }
         
+        fileprivate func minimize(damping: CGFloat? = nil, initialVelocity: CGFloat? = nil) {
+            guard let controller = self.controller, let navigationController = controller.navigationController as? NavigationController else {
+                return
+            }
+            navigationController.minimizeViewController(controller, damping: damping, velocity: initialVelocity, beforeMaximize: { navigationController, completion in
+                if let controller = controller.mainController as? AttachmentContainable {
+                    controller.beforeMaximize(navigationController: navigationController, completion: completion)
+                } else {
+                    completion()
+                }
+            }, setupContainer: { [weak self] current in
+                let minimizedContainer: MinimizedContainerImpl?
+                if let current = current as? MinimizedContainerImpl {
+                    minimizedContainer = current
+                } else if let context = self?.controller?.context {
+                    minimizedContainer = MinimizedContainerImpl(sharedContext: context.sharedContext)
+                } else {
+                    minimizedContainer = nil
+                }
+                return minimizedContainer
+            }, animated: true)
+            
+            self.dim.isHidden = true
+            
+            self.isMinimizing = true
+            self.container.update(isExpanded: true, force: true, transition: .immediate)
+            self.isMinimizing = false
+            
+            Queue.mainQueue().after(0.45, {
+                self.dim.isHidden = false
+            })
+        }
+        
         fileprivate func updateSelectionCount(_ count: Int, animated: Bool = true) {
             self.selectionCount = count
             if let layout = self.validLayout {
@@ -517,8 +622,12 @@ public class AttachmentController: ViewController {
                 return
             }
             if case .ended = recognizer.state {
-                if let controller = self.currentControllers.last {
-                    controller.requestDismiss(completion: { [weak self] in
+                if let lastController = self.currentControllers.last {
+                    if let controller = self.controller, controller.shouldMinimizeOnSwipe?(self.currentType) == true {
+                        self.minimize()
+                        return
+                    }
+                    lastController.requestDismiss(completion: { [weak self] in
                         self?.controller?.dismiss(animated: true)
                     })
                 } else {
@@ -691,7 +800,7 @@ public class AttachmentController: ViewController {
             } else {
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)
                 
-                let targetPosition = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+                let targetPosition = self.container.position
                 let startPosition = targetPosition.offsetBy(dx: 0.0, dy: layout.size.height)
                 
                 self.container.position = startPosition
@@ -780,7 +889,7 @@ public class AttachmentController: ViewController {
                 return
             }
             
-            transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(), size: layout.size))
+            transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(x: 0.0, y: -layout.size.height), size: CGSize(width: layout.size.width, height: layout.size.height * 2.0)))
                      
             let fromMenu = controller.fromMenu
             
@@ -853,7 +962,7 @@ public class AttachmentController: ViewController {
                 
                 self.wrapperNode.view.mask = nil
             }
-            
+                        
             var containerInsets = containerLayout.intrinsicInsets
             var hasPanel = false
             let previousHasButton = self.hasButton
@@ -871,7 +980,7 @@ public class AttachmentController: ViewController {
             if fromMenu && !hasButton, let inputContainerHeight = self.inputContainerHeight {
                panelHeight = inputContainerHeight
             }
-            if hasPanel || hasButton || (fromMenu && isCompact) {
+            if hasPanel || hasButton {
                 containerInsets.bottom = panelHeight
             }
             
@@ -964,7 +1073,9 @@ public class AttachmentController: ViewController {
     
     public var getSourceRect: (() -> CGRect?)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation?, isScheduledMessages: Bool = false, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
+    public var shouldMinimizeOnSwipe: ((AttachmentButtonType?) -> Bool)?
+    
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation?, isScheduledMessages: Bool = false, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, isFullSize: Bool = false, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.chatLocation = chatLocation
@@ -973,6 +1084,7 @@ public class AttachmentController: ViewController {
         self.initialButton = initialButton
         self.fromMenu = fromMenu
         self.hasTextInput = hasTextInput
+        self.isFullSize = isFullSize
         self.makeEntityInputView = makeEntityInputView
         
         super.init(navigationBarPresentationData: nil)
@@ -998,6 +1110,24 @@ public class AttachmentController: ViewController {
         return self.buttons.contains(.standalone)
     }
     
+    public func convertToStandalone() {
+        guard self.buttons != [.standalone] else {
+            return
+        }
+        if case let .app(bot) = self.node.currentType {
+            self.title = bot.peer.compactDisplayTitle
+        }
+        self.buttons = [.standalone]
+        self.hasTextInput = false
+        self.requestLayout(transition: .immediate)
+    }
+    
+    public func minimizeIfNeeded() {
+        if self.shouldMinimizeOnSwipe?(self.node.currentType) == true {
+            self.node.minimize()
+        }
+    }
+        
     public func updateSelectionCount(_ count: Int) {
         self.node.updateSelectionCount(count, animated: false)
     }
@@ -1048,6 +1178,12 @@ public class AttachmentController: ViewController {
         return false
     }
     
+    public override var isMinimized: Bool {
+        didSet {
+            self.mainController.isMinimized = self.isMinimized
+        }
+    }
+    
     private var validLayout: ContainerViewLayout?
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -1061,6 +1197,10 @@ public class AttachmentController: ViewController {
             }
         }
         self.node.containerLayoutUpdated(layout, transition: transition)
+    }
+    
+    public var mainController: ViewController {
+        return self.node.currentControllers.first!
     }
     
     public final class InputPanelTransition {

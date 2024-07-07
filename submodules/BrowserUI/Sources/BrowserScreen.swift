@@ -13,6 +13,7 @@ import BundleIconComponent
 import TelegramUIPreferences
 import OpenInExternalAppUI
 import MultilineTextComponent
+import MinimizedContainer
 
 private let settingsTag = GenericComponentViewTag()
 
@@ -291,6 +292,7 @@ public class BrowserScreen: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
+                strongSelf.controller?.title = state.title
                 strongSelf.contentState = state
                 strongSelf.requestLayout(transition: .immediate)
             }).strict()
@@ -318,7 +320,7 @@ public class BrowserScreen: ViewController {
                     }
                     self.controller?.present(shareController, in: .window(.root))
                 case .minimize:
-                    break
+                    self.minimize()
                 case .openIn:
                     self.context.sharedContext.applicationBindings.openUrl(url)
                 case .openSettings:
@@ -441,6 +443,25 @@ public class BrowserScreen: ViewController {
             self.requestLayout(transition: animated ? .easeInOut(duration: 0.2) : .immediate)
         }
         
+        func minimize() {
+            guard let controller = self.controller, let navigationController = controller.navigationController as? NavigationController else {
+                return
+            }
+            navigationController.minimizeViewController(controller, damping: nil, beforeMaximize: { _, completion in
+                completion()
+            }, setupContainer: { [weak self] current in
+                let minimizedContainer: MinimizedContainerImpl?
+                if let current = current as? MinimizedContainerImpl {
+                    minimizedContainer = current
+                } else if let context = self?.controller?.context {
+                    minimizedContainer = MinimizedContainerImpl(sharedContext: context.sharedContext)
+                } else {
+                    minimizedContainer = nil
+                }
+                return minimizedContainer
+            }, animated: true)
+        }
+        
         func openSettings() {
             guard let referenceView = self.componentHost.findTaggedView(tag: settingsTag) as? ReferenceButtonComponent.View else {
                 return
@@ -535,7 +556,8 @@ public class BrowserScreen: ViewController {
                             self.context.sharedContext.applicationBindings.openUrl(openInUrl)
                         }
                         action(.default)
-                    }))]
+                    }))
+                ]
                 
                 let contextController = ContextController(presentationData: self.presentationData, source: source, items: .single(ContextController.Items(content: .list(items))))
                 self.controller?.present(contextController, in: .window(.root))
@@ -600,13 +622,13 @@ public class BrowserScreen: ViewController {
             }
         }
         
-        func requestLayout(transition: Transition) {
+        func requestLayout(transition: ComponentTransition) {
             if let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
             }
         }
         
-        func containerLayoutUpdated(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ComponentTransition) {
             self.validLayout = (layout, navigationBarHeight)
             
             let environment = ViewControllerComponentContainer.Environment(
@@ -705,7 +727,7 @@ public class BrowserScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.height, transition: Transition(transition))
+        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.height, transition: ComponentTransition(transition))
     }
 }
 

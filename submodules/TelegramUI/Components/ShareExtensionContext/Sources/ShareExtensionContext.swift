@@ -385,6 +385,7 @@ public class ShareRootControllerImpl {
                 voipMaxLayer: 0,
                 voipVersions: [],
                 appData: .single(nil),
+                externalRequestVerificationStream: .never(),
                 autolockDeadine: .single(nil),
                 encryptionProvider: OpenSSLEncryptionProvider(),
                 deviceModelName: nil,
@@ -492,19 +493,13 @@ public class ShareRootControllerImpl {
                 
                 let displayShare: () -> Void = {
                     var cancelImpl: (() -> Void)?
-                    let _ = cancelImpl
                     
                     let beginShare: () -> Void = {
                         let requestUserInteraction: ([UnpreparedShareItemContent]) -> Signal<[PreparedShareItemContent], NoError> = { content in
                             return Signal { [weak self] subscriber in
                                 switch content[0] {
                                     case let .contact(data):
-                                        #if !DEBUG
-                                        //qwefqwfqwefw
-                                        #endif
-                                        let _ = data
-                                        let _ = self
-                                        /*let controller = deviceContactInfoController(context: context, subject: .filter(peer: nil, contactId: nil, contactData: data, completion: { peer, contactData in
+                                        let controller = deviceContactInfoController(context: context, environment: environment, subject: .filter(peer: nil, contactId: nil, contactData: data, completion: { peer, contactData in
                                             let phone = contactData.basicData.phoneNumbers[0].value
                                             if let vCardData = contactData.serializedVCard() {
                                                 subscriber.putNext([.media(.media(.standalone(media: TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: nil, vCardData: vCardData))))])
@@ -517,7 +512,7 @@ public class ShareRootControllerImpl {
                                         if let strongSelf = self, let window = strongSelf.mainWindow {
                                             controller.presentationArguments = ViewControllerPresentationArguments(presentationAnimation: .modalSheet)
                                             window.present(controller, on: .root)
-                                        }*/
+                                        }
                                         break
                                 }
                                 return EmptyDisposable

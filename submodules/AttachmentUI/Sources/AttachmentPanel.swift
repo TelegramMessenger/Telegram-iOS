@@ -21,6 +21,8 @@ import ShimmerEffect
 import TextFormat
 import LegacyMessageInputPanel
 import LegacyMessageInputPanelInputView
+import ReactionSelectionNode
+import TopMessageReactions
 
 private let buttonSize = CGSize(width: 88.0, height: 49.0)
 private let smallButtonWidth: CGFloat = 69.0
@@ -77,7 +79,7 @@ private final class IconComponent: Component {
             self.disposable?.dispose()
         }
         
-        func update(component: IconComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: IconComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             if self.component?.name != component.name || self.component?.fileReference?.media.fileId != component.fileReference?.media.fileId || self.component?.tintColor != component.tintColor {
                 if let fileReference = component.fileReference {
                     let previousName = self.component?.name ?? ""
@@ -115,7 +117,7 @@ private final class IconComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -681,9 +683,11 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
 }
 
 final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
+    private weak var controller: AttachmentController?
     private let context: AccountContext
     private let isScheduledMessages: Bool
     private var presentationData: PresentationData
+    private var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private var presentationDataDisposable: Disposable?
     
     private var iconDisposables: [MediaId: Disposable] = [:]
@@ -697,7 +701,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
     private let backgroundNode: NavigationBackgroundNode
     private let scrollNode: ASScrollNode
     private let separatorNode: ASDisplayNode
-    private var buttonViews: [Int: ComponentHostView<Empty>] = [:]
+    private var buttonViews: [AnyHashable: ComponentHostView<Empty>] = [:]
     
     private var textInputPanelNode: AttachmentTextInputPanelNode?
     private var progressNode: LoadingProgressNode?
@@ -726,15 +730,19 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
 
     var beganTextEditing: () -> Void = {}
     var textUpdated: (NSAttributedString) -> Void = { _ in }
-    var sendMessagePressed: (AttachmentTextInputPanelSendMode) -> Void = { _ in }
+    var sendMessagePressed: (AttachmentTextInputPanelSendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void = { _, _ in }
     var requestLayout: () -> Void = {}
     var present: (ViewController) -> Void = { _ in }
     var presentInGlobalOverlay: (ViewController) -> Void = { _ in }
     
+    var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)?
+    
     var mainButtonPressed: () -> Void = { }
     
-    init(context: AccountContext, chatLocation: ChatLocation?, isScheduledMessages: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
+    init(controller: AttachmentController, context: AccountContext, chatLocation: ChatLocation?, isScheduledMessages: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
+        self.controller = controller
         self.context = context
+        self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.isScheduledMessages = isScheduledMessages
         
@@ -926,9 +934,31 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
             if case .media = strongSelf.presentationInterfaceState.inputMode {
                 hasEntityKeyboard = true
             }
-            let _ = (strongSelf.context.account.viewTracker.peerView(peerId)
-            |> take(1)
-            |> deliverOnMainQueue).startStandalone(next: { [weak self] peerView in
+            
+            let effectItems: Signal<[ReactionItem]?, NoError>
+            if strongSelf.presentationInterfaceState.chatLocation.peerId != strongSelf.context.account.peerId && strongSelf.presentationInterfaceState.chatLocation.peerId?.namespace == Namespaces.Peer.CloudUser {
+                effectItems = effectMessageReactions(context: strongSelf.context)
+                |> map(Optional.init)
+            } else {
+                effectItems = .single(nil)
+            }
+            
+            let availableMessageEffects = strongSelf.context.availableMessageEffects |> take(1)
+            let hasPremium = strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId))
+            |> map { peer -> Bool in
+                guard case let .user(user) = peer else {
+                    return false
+                }
+                return user.isPremium
+            }
+            
+            let _ = (combineLatest(
+                strongSelf.context.account.viewTracker.peerView(peerId) |> take(1),
+                effectItems,
+                availableMessageEffects,
+                hasPremium
+            )
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] peerView, effectItems, availableMessageEffects, hasPremium in
                 guard let strongSelf = self, let peer = peerViewMainPeer(peerView) else {
                     return
                 }
@@ -943,21 +973,83 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                     sendWhenOnlineAvailable = false
                 }
                 
-                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputView: textInputNode.textView, attachment: true, canSendWhenOnline: sendWhenOnlineAvailable, completion: {
-                }, sendMessage: { [weak textInputPanelNode] mode in
-                    switch mode {
-                    case .generic:
-                        textInputPanelNode?.sendMessage(.generic)
-                    case .silently:
-                        textInputPanelNode?.sendMessage(.silent)
-                    case .whenOnline:
-                        textInputPanelNode?.sendMessage(.whenOnline)
+                let mediaPreview = strongSelf.getCurrentSendMessageContextMediaPreview?()
+                let isReady: Signal<Bool, NoError>
+                if let mediaPreview {
+                    isReady = mediaPreview.isReady
+                    |> filter { $0 }
+                    |> take(1)
+                    |> timeout(0.5, queue: .mainQueue(), alternate: .single(true))
+                } else {
+                    isReady = .single(true)
+                }
+                
+                var captionIsAboveMedia: Signal<Bool, NoError> = .single(false)
+                if let controller = strongSelf.controller, let mediaPickerContext = controller.mediaPickerContext {
+                    captionIsAboveMedia = mediaPickerContext.captionIsAboveMedia
+                }
+                
+                let _ = (combineLatest(
+                    isReady,
+                    captionIsAboveMedia |> take(1),
+                    ChatSendMessageContextScreen.initialData(context: strongSelf.context, currentMessageEffectId: nil)
+                )
+                |> deliverOnMainQueue).start(next: { [weak strongSelf] _, captionIsAboveMedia, initialData in
+                    guard let strongSelf else {
+                        return
                     }
-                }, schedule: { [weak textInputPanelNode] in
-                    textInputPanelNode?.sendMessage(.schedule)
+                    
+                    let controller = makeChatSendMessageActionSheetController(
+                        initialData: initialData,
+                        context: strongSelf.context,
+                        updatedPresentationData: strongSelf.updatedPresentationData,
+                        peerId: strongSelf.presentationInterfaceState.chatLocation.peerId,
+                        params: .sendMessage(SendMessageActionSheetControllerParams.SendMessage(
+                            isScheduledMessages: false,
+                            mediaPreview: mediaPreview,
+                            mediaCaptionIsAbove: (captionIsAboveMedia, { [weak strongSelf] value in
+                                guard let strongSelf, let controller = strongSelf.controller, let mediaPickerContext = controller.mediaPickerContext else {
+                                    return
+                                }
+                                mediaPickerContext.setCaptionIsAboveMedia(value)
+                            }),
+                            messageEffect: nil,
+                            attachment: true,
+                            canSendWhenOnline: sendWhenOnlineAvailable,
+                            forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
+                        )),
+                        hasEntityKeyboard: hasEntityKeyboard,
+                        gesture: gesture,
+                        sourceSendButton: node,
+                        textInputView: textInputNode.textView,
+                        emojiViewProvider: textInputPanelNode.emojiViewProvider,
+                        completion: {
+                        },
+                        sendMessage: { [weak textInputPanelNode] mode, messageEffect in
+                            switch mode {
+                            case .generic:
+                                textInputPanelNode?.sendMessage(.generic, messageEffect)
+                            case .silently:
+                                textInputPanelNode?.sendMessage(.silent, messageEffect)
+                            case .whenOnline:
+                                textInputPanelNode?.sendMessage(.whenOnline, messageEffect)
+                            }
+                        },
+                        schedule: { [weak textInputPanelNode] messageEffect in
+                            textInputPanelNode?.sendMessage(.schedule, messageEffect)
+                        },
+                        openPremiumPaywall: { [weak self] c in
+                            guard let self else {
+                                return
+                            }
+                            self.controller?.push(c)
+                        },
+                        reactionItems: effectItems,
+                        availableMessageEffects: availableMessageEffects,
+                        isPremium: hasPremium
+                    )
+                    strongSelf.presentInGlobalOverlay(controller)
                 })
-                controller.emojiViewProvider = textInputPanelNode.emojiViewProvider
-                strongSelf.presentInGlobalOverlay(controller)
             })
         }, openScheduledMessages: {
         }, openPeersNearby: {
@@ -1071,13 +1163,12 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
         self.updateViews(transition: .init(animation: .curve(duration: 0.2, curve: .spring)))
     }
     
-    func updateViews(transition: Transition) {
+    func updateViews(transition: ComponentTransition) {
         guard let layout = self.validLayout else {
             return
         }
         
         let visibleRect = self.scrollNode.bounds.insetBy(dx: -180.0, dy: 0.0)
-        var validButtons = Set<Int>()
         
         var distanceBetweenNodes = layout.size.width / CGFloat(self.buttons.count)
         let internalWidth = distanceBetweenNodes * CGFloat(self.buttons.count - 1)
@@ -1090,26 +1181,29 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
             leftNodeOriginX = layout.safeInsets.left + sideInset + buttonWidth / 2.0
         }
         
+        var validIds = Set<AnyHashable>()
+        
         for i in 0 ..< self.buttons.count {
             let originX = floor(leftNodeOriginX + CGFloat(i) * distanceBetweenNodes - buttonWidth / 2.0)
             let buttonFrame = CGRect(origin: CGPoint(x: originX, y: 0.0), size: CGSize(width: buttonWidth, height: buttonSize.height))
             if !visibleRect.intersects(buttonFrame) {
                 continue
             }
-            validButtons.insert(i)
+            
+            let type = self.buttons[i]
+            let _ = validIds.insert(type.key)
             
             var buttonTransition = transition
             let buttonView: ComponentHostView<Empty>
-            if let current = self.buttonViews[i] {
+            if let current = self.buttonViews[type.key] {
                 buttonView = current
             } else {
                 buttonTransition = .immediate
                 buttonView = ComponentHostView<Empty>()
-                self.buttonViews[i] = buttonView
+                self.buttonViews[type.key] = buttonView
                 self.scrollNode.view.addSubview(buttonView)
             }
             
-            let type = self.buttons[i]
             if case let .app(bot) = type {
                 for (name, file) in bot.icons {
                     if [.default, .iOSAnimated, .iOSSettingsStatic, .placeholder].contains(name) {
@@ -1193,6 +1287,16 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
             buttonView.accessibilityLabel = accessibilityTitle
             buttonView.accessibilityTraits = [.button]
         }
+        var removeIds: [AnyHashable] = []
+        for (id, itemView) in self.buttonViews {
+            if !validIds.contains(id) {
+                removeIds.append(id)
+                itemView.removeFromSuperview()
+            }
+        }
+        for id in removeIds {
+            self.buttonViews.removeValue(forKey: id)
+        }
     }
     
     private func updateScrollLayoutIfNeeded(force: Bool, transition: ContainedViewLayoutTransition) -> Bool {
@@ -1226,9 +1330,9 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                 }
             }, makeEntityInputView: self.makeEntityInputView)
             textInputPanelNode.interfaceInteraction = self.interfaceInteraction
-            textInputPanelNode.sendMessage = { [weak self] mode in
+            textInputPanelNode.sendMessage = { [weak self] mode, messageEffect in
                 if let strongSelf = self {
-                    strongSelf.sendMessagePressed(mode)
+                    strongSelf.sendMessagePressed(mode, messageEffect)
                 }
             }
             textInputPanelNode.focusUpdated = { [weak self] focus in

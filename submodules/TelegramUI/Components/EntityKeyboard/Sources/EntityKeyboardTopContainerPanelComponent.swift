@@ -9,13 +9,13 @@ import Postbox
 
 public final class EntityKeyboardTopContainerPanelEnvironment: Equatable {
     let isContentInFocus: Bool
-    let visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>
-    let isExpandedUpdated: (Bool, Transition) -> Void
+    let visibilityFractionUpdated: ActionSlot<(CGFloat, ComponentTransition)>
+    let isExpandedUpdated: (Bool, ComponentTransition) -> Void
     
     init(
         isContentInFocus: Bool,
-        visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>,
-        isExpandedUpdated: @escaping (Bool, Transition) -> Void
+        visibilityFractionUpdated: ActionSlot<(CGFloat, ComponentTransition)>,
+        isExpandedUpdated: @escaping (Bool, ComponentTransition) -> Void
     ) {
         self.isContentInFocus = isContentInFocus
         self.visibilityFractionUpdated = visibilityFractionUpdated
@@ -66,7 +66,7 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
     
     private final class PanelView {
         let view = ComponentHostView<EntityKeyboardTopContainerPanelEnvironment>()
-        let visibilityFractionUpdated = ActionSlot<(CGFloat, Transition)>()
+        let visibilityFractionUpdated = ActionSlot<(CGFloat, ComponentTransition)>()
         var isExpanded: Bool = false
     }
     
@@ -93,7 +93,7 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: EntityKeyboardTopContainerPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: EntityKeyboardTopContainerPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             let intrinsicHeight: CGFloat = 34.0
             let height = intrinsicHeight
             
@@ -245,7 +245,7 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
             return CGSize(width: availableSize.width, height: height)
         }
         
-        private func updateVisibilityFraction(value: CGFloat, transition: Transition) {
+        private func updateVisibilityFraction(value: CGFloat, transition: ComponentTransition) {
             if self.visibilityFraction == value {
                 return
             }
@@ -257,7 +257,7 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
             }
         }
         
-        private func panelIsExpandedUpdated(id: AnyHashable, isExpanded: Bool, transition: Transition) {
+        private func panelIsExpandedUpdated(id: AnyHashable, isExpanded: Bool, transition: ComponentTransition) {
             guard let panelView = self.panelViews[id] else {
                 return
             }
@@ -306,7 +306,7 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

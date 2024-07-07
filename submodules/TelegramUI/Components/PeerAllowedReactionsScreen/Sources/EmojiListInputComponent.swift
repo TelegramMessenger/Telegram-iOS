@@ -105,7 +105,7 @@ final class EmojiListInputComponent: Component {
         private var component: EmojiListInputComponent?
         private weak var state: EmptyComponentState?
         
-        private var itemLayers: [Int64: EmojiPagerContentComponent.View.ItemLayer] = [:]
+        private var itemLayers: [Int64: EmojiKeyboardItemLayer] = [:]
         private let trailingPlaceholder = ComponentView<Empty>()
         private let caretIndicator: CaretIndicatorView
         
@@ -164,7 +164,7 @@ final class EmojiListInputComponent: Component {
             }
         }
         
-        func update(component: EmojiListInputComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: EmojiListInputComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let verticalInset: CGFloat = 12.0
             let placeholderSpacing: CGFloat = 6.0
             
@@ -239,7 +239,7 @@ final class EmojiListInputComponent: Component {
                 
                 var itemTransition = transition
                 var animateIn = false
-                let itemLayer: EmojiPagerContentComponent.View.ItemLayer
+                let itemLayer: EmojiKeyboardItemLayer
                 if let current = self.itemLayers[itemKey] {
                     itemLayer = current
                 } else {
@@ -249,7 +249,7 @@ final class EmojiListInputComponent: Component {
                     let animationData = EntityKeyboardAnimationData(
                         file: item.file
                     )
-                    itemLayer = EmojiPagerContentComponent.View.ItemLayer(
+                    itemLayer = EmojiKeyboardItemLayer(
                         item: EmojiPagerContentComponent.Item(
                             animationData: animationData,
                             content: .animation(animationData),
@@ -339,7 +339,7 @@ final class EmojiListInputComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

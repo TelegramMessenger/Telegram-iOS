@@ -38,6 +38,7 @@ public struct ReverseGeocodedPlacemark {
     public let name: String?
     public let street: String?
     public let city: String?
+    public let state: String?
     public let country: String?
     public let countryCode: String?
     
@@ -79,12 +80,12 @@ public func reverseGeocodeLocation(latitude: Double, longitude: Double, locale: 
                 let countryCode = placemark.isoCountryCode
                 let result: ReverseGeocodedPlacemark
                 if placemark.thoroughfare == nil && placemark.locality == nil && placemark.country == nil {
-                    result = ReverseGeocodedPlacemark(name: placemark.name, street: placemark.name, city: nil, country: nil, countryCode: nil)
+                    result = ReverseGeocodedPlacemark(name: placemark.name, street: placemark.name, city: nil, state: nil, country: nil, countryCode: nil)
                 } else {
                     if placemark.thoroughfare == nil && placemark.locality == nil, let ocean = placemark.ocean {
-                        result = ReverseGeocodedPlacemark(name: ocean, street: nil, city: nil, country: countryName, countryCode: countryCode)
+                        result = ReverseGeocodedPlacemark(name: ocean, street: nil, city: nil, state: nil, country: countryName, countryCode: countryCode)
                     } else {
-                        result = ReverseGeocodedPlacemark(name: nil, street: placemark.thoroughfare, city: placemark.locality, country: countryName, countryCode: countryCode)
+                        result = ReverseGeocodedPlacemark(name: nil, street: placemark.thoroughfare, city: placemark.locality, state: placemark.administrativeArea, country: countryName, countryCode: countryCode)
                     }
                 }
                 subscriber.putNext(result)

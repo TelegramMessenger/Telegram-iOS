@@ -194,6 +194,22 @@ final class WebAppWebView: WKWebView {
         }
     }
     
+    func hideScrollIndicators() {
+        var hiddenViews: [UIView] = []
+        for view in self.scrollView.subviews.reversed() {
+            let minSize = min(view.frame.width, view.frame.height)
+            if minSize < 4.0 {
+                view.isHidden = true
+                hiddenViews.append(view)
+            }
+        }
+        Queue.mainQueue().after(2.0) {
+            for view in hiddenViews {
+                view.isHidden = false
+            }
+        }
+    }
+    
     func sendEvent(name: String, data: String?) {
         let script = "window.TelegramGameProxy.receiveEvent(\"\(name)\", \(data ?? "null"))"
         self.evaluateJavaScript(script, completionHandler: { _, _ in

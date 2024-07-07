@@ -469,7 +469,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer?, threadTit
                 
                 present(legacyController, nil)
                 
-                TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: NSAttributedString(), withItem: item, paint: false, adjustments: false, recipientName: recipientName, stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: [], immediate: false, appeared: {
+                TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, withItem: item, paint: false, adjustments: false, recipientName: recipientName, stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: [], immediate: false, appeared: {
                 }, completion: { result, editingContext in
                     let nativeGenerator = legacyAssetPickerItemGenerator()
                     var selectableResult: TGMediaSelectableItem?

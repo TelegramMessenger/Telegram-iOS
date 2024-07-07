@@ -69,7 +69,7 @@ private final class ChatBusinessLinkTitlePanelComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: ChatBusinessLinkTitlePanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ChatBusinessLinkTitlePanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             let size = CGSize(width: availableSize.width, height: 40.0)
@@ -140,7 +140,7 @@ private final class ChatBusinessLinkTitlePanelComponent: Component {
         return View(frame: CGRect())
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -194,6 +194,8 @@ final class ChatBusinessLinkTitlePanelNode: ChatTitleAccessoryPanelNode {
                 break
             case let .businessLinkSetup(link):
                 self.link = link
+            case .hashTagSearch:
+                break
             }
         default:
             break
@@ -208,7 +210,7 @@ final class ChatBusinessLinkTitlePanelNode: ChatTitleAccessoryPanelNode {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
 
         let contentSize = self.content.update(
-            transition: Transition(transition),
+            transition: ComponentTransition(transition),
             component: AnyComponent(ChatBusinessLinkTitlePanelComponent(
                 context: self.context,
                 theme: interfaceState.theme,

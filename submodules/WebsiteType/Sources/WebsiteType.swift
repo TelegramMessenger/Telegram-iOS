@@ -1,4 +1,5 @@
 import Foundation
+import Postbox
 import TelegramCore
 
 public enum WebsiteType {
@@ -35,3 +36,29 @@ public func instantPageType(of webpage: TelegramMediaWebpageLoadedContent) -> In
             return .generic
     }
 }
+
+public func defaultWebpageImageSizeIsSmall(webpage: TelegramMediaWebpageLoadedContent) -> Bool {
+    let type = websiteType(of: webpage.websiteName)
+    
+    let mainMedia: Media?
+    switch type {
+    case .instagram, .twitter:
+        mainMedia = webpage.story ?? webpage.image ?? webpage.file
+    default:
+        mainMedia = webpage.story ?? webpage.file ?? webpage.image
+    }
+    
+    if let image = mainMedia as? TelegramMediaImage {
+        if let type = webpage.type, (["photo", "video", "embed", "gif", "document", "telegram_album"] as [String]).contains(type) {
+        } else if let type = webpage.type, (["article"] as [String]).contains(type) {
+            return true
+        } else if let _ = largestImageRepresentation(image.representations)?.dimensions {
+            if webpage.instantPage == nil {
+                return true
+            }
+        }
+    }
+    
+    return false
+}
+

@@ -42,6 +42,9 @@ extension ChatControllerImpl {
                         filter.insert(.excludeChannels)
                         break
                     }
+                    if let _ = media as? TelegramMediaPaidContent {
+                        filter.insert(.excludeSecretChats)
+                    }
                 }
             }
             var attemptSelectionImpl: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?
@@ -90,7 +93,7 @@ extension ChatControllerImpl {
                     }), in: .current)
                 }
             }
-            controller.multiplePeersSelected = { [weak self, weak controller] peers, peerMap, messageText, mode, forwardOptions in
+            controller.multiplePeersSelected = { [weak self, weak controller] peers, peerMap, messageText, mode, forwardOptions, _ in
                 guard let strongSelf = self, let strongController = controller else {
                     return
                 }

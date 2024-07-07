@@ -25,7 +25,7 @@ import TextFormat
 import SliderContextItem
 
 public enum UniversalVideoGalleryItemContentInfo {
-    case message(Message)
+    case message(Message, Int?)
     case webPage(TelegramMediaWebpage, Media, ((@escaping () -> GalleryTransitionArguments?, NavigationController?, (ViewController, Any?) -> Void) -> Void)?)
 }
 
@@ -93,7 +93,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
         
         node.setupItem(self)
         
-        if self.displayInfoOnTop, case let .message(message) = self.contentInfo {
+        if self.displayInfoOnTop, case let .message(message, _) = self.contentInfo {
             node.titleContentView?.setMessage(message, presentationData: self.presentationData, accountPeerId: self.context.account.peerId)
         }
         
@@ -108,7 +108,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
             
             node.setupItem(self)
             
-            if self.displayInfoOnTop, case let .message(message) = self.contentInfo {
+            if self.displayInfoOnTop, case let .message(message, _) = self.contentInfo {
                 node.titleContentView?.setMessage(message, presentationData: self.presentationData, accountPeerId: self.context.account.peerId)
             }
         }
@@ -118,8 +118,19 @@ public class UniversalVideoGalleryItem: GalleryItem {
         guard let contentInfo = self.contentInfo else {
             return nil
         }
-        if case let .message(message) = contentInfo {
-            if let id = message.groupInfo?.stableId {
+        if case let .message(message, mediaIndex) = contentInfo {
+            if let paidContent = message.paidContent {
+                var mediaReference: AnyMediaReference?
+                let mediaIndex = mediaIndex ?? 0
+                if case let .full(fullMedia) = paidContent.extendedMedia[Int(mediaIndex)], let m = fullMedia as? TelegramMediaFile {
+                    mediaReference = .message(message: MessageReference(message), media: m)
+                }
+                if let mediaReference = mediaReference {
+                    if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, userLocation: .peer(message.id.peerId), mediaReference: mediaReference) {
+                        return (0, item)
+                    }
+                }
+            } else if let id = message.groupInfo?.stableId {
                 var mediaReference: AnyMediaReference?
                 for m in message.media {
                     if let m = m as? TelegramMediaImage {
@@ -1183,8 +1194,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             var mediaFileStatus: Signal<MediaResourceStatus?, NoError> = .single(nil)
             
             var hintSeekable = false
-            if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
-                if Namespaces.Message.allNonRegular.contains(message.id.namespace) {
+            if let contentInfo = item.contentInfo, case let .message(message, _) = contentInfo {
+                if message.paidContent != nil {
+                    disablePictureInPicture = true
+                } else if Namespaces.Message.allNonRegular.contains(message.id.namespace) || message.id.namespace == Namespaces.Message.Local {
                     disablePictureInPicture = true
                 } else {
                     let throttledSignal = videoNode.status
@@ -1432,7 +1445,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.hasPictureInPicture = false
             }
 
-            if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
+            if let contentInfo = item.contentInfo, case let .message(message, mediaIndex) = contentInfo {
                 var file: TelegramMediaFile?
                 for m in message.media {
                     if let m = m as? TelegramMediaFile, m.isVideo {
@@ -1440,6 +1453,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         break
                     } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content, let f = content.file, f.isVideo {
                         file = f
+                        break
+                    } else if let paidContent = message.paidContent {
+                        let mediaIndex = mediaIndex ?? 0
+                        let media = paidContent.extendedMedia[mediaIndex]
+                        if case let .full(fullMedia) = media, let m = fullMedia as? TelegramMediaFile {
+                            file = m
+                        }
                         break
                     }
                 }
@@ -1449,6 +1469,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     hasMoreButton = true
                 } else if let file = file, !file.isAnimated {
                     hasMoreButton = true
+                }
+                
+                if let _ = message.paidContent, message.id.namespace == Namespaces.Message.Local {
+                    hasMoreButton = false
                 }
                  
                 if hasMoreButton {
@@ -1506,7 +1530,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         if let contentInfo = item.contentInfo {
             switch contentInfo {
-                case let .message(message):
+                case let .message(message, _):
                     self.footerContentNode.setMessage(message, displayInfo: !item.displayInfoOnTop, peerIsCopyProtected: item.peerIsCopyProtected)
                 case let .webPage(webPage, media, _):
                     self.footerContentNode.setWebPage(webPage, media: media)
@@ -1558,7 +1582,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 isLocal = true
             }
             var isStreamable = false
-            if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
+            if let contentInfo = item.contentInfo, case let .message(message, _) = contentInfo {
                 isStreamable = isMediaStreamable(message: message, media: content.fileReference.media)
             } else {
                 isStreamable = isMediaStreamable(media: content.fileReference.media)
@@ -2131,7 +2155,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 
                 switch contentInfo {
-                    case let .message(message):
+                    case let .message(message, _):
                         let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(id: message.id.peerId), customTag: nil, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), playbackRate: playbackRate, replaceRootController: { controller, ready in
                             if let baseNavigationController = baseNavigationController {
                                 baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
@@ -2197,7 +2221,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     @objc func pictureInPictureButtonPressed() {
         var isNativePictureInPictureSupported = false
         switch self.item?.contentInfo {
-        case let .message(message):
+        case let .message(message, _):
             for media in message.media {
                 if let media = media as? TelegramMediaFile, media.isVideo {
                     if message.id.namespace == Namespaces.Message.Cloud {
@@ -2227,7 +2251,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
                 var hiddenMedia: (MessageId, Media)? = nil
                 switch item.contentInfo {
-                case let .message(message):
+                case let .message(message, _):
                     for media in message.media {
                         if let media = media as? TelegramMediaImage {
                             hiddenMedia = (message.id, media)
@@ -2255,7 +2279,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
 
                     switch contentInfo {
-                    case let .message(message):
+                    case let .message(message, _):
                         let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(id: message.id.peerId), customTag: nil, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), playbackRate: playbackRate, replaceRootController: { [weak baseNavigationController] controller, ready in
                             if let baseNavigationController = baseNavigationController {
                                 baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
@@ -2288,7 +2312,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 var expandImpl: (() -> Void)?
 
                 let shouldBeDismissed: Signal<Bool, NoError>
-                if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
+                if let contentInfo = item.contentInfo, case let .message(message, _) = contentInfo {
                     shouldBeDismissed = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: message.id))
                     |> map { message -> Bool in
                         if let _ = message {
@@ -2316,8 +2340,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
 
                     switch contentInfo {
-                        case let .message(message):
-                            let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(id: message.id.peerId), customTag: nil, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), playbackRate: playbackRate, replaceRootController: { controller, ready in
+                        case let .message(message, messageIndex):
+                            let source: GalleryControllerItemSource
+                            if let _ = message.paidContent {
+                                source = .standaloneMessage(message, messageIndex)
+                            } else {
+                                source = .peerMessagesAtId(messageId: message.id, chatLocation: .peer(id: message.id.peerId), customTag: nil, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil))
+                            }
+                        
+                            let gallery = GalleryController(context: context, source: source, playbackRate: playbackRate, replaceRootController: { controller, ready in
                                 if let baseNavigationController = baseNavigationController {
                                     baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
                                 }
@@ -2385,11 +2416,17 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         guard let item = self.item else {
             return nil
         }
-        if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
+        if let contentInfo = item.contentInfo, case let .message(message, mediaIndex) = contentInfo {
             var file: TelegramMediaFile?
             var isWebpage = false
             for m in message.media {
-                if let m = m as? TelegramMediaFile, m.isVideo {
+                if let paidContent = m as? TelegramMediaPaidContent {
+                    let media = paidContent.extendedMedia[mediaIndex ?? 0]
+                    if case let .full(fullMedia) = media, let fullMedia = fullMedia as? TelegramMediaFile, fullMedia.isVideo {
+                        file = fullMedia
+                    }
+                    break
+                } else if let m = m as? TelegramMediaFile, m.isVideo {
                     file = m
                     break
                 } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content {
@@ -2503,11 +2540,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 return optionsRateImage(rate: speedIconText, isLarge: false, color: theme.contextMenu.primaryColor)
             }, action: { c, _ in
                 guard let strongSelf = self else {
-                    c.dismiss(completion: nil)
+                    c?.dismiss(completion: nil)
                     return
                 }
 
-                c.setItems(strongSelf.contextMenuSpeedItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
+                c?.setItems(strongSelf.contextMenuSpeedItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
             })))
             
             items.append(.separator)
@@ -2573,7 +2610,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
             
-            if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile, !message.isCopyProtected() && !item.peerIsCopyProtected {
+            if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil {
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveVideo, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
                     f(.default)
 
@@ -2633,10 +2670,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
             }, iconPosition: .left, action: { c, _ in
                 guard let strongSelf = self else {
-                    c.dismiss(completion: nil)
+                    c?.dismiss(completion: nil)
                     return
                 }
-                c.setItems(strongSelf.contextMenuMainItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
+                c?.setItems(strongSelf.contextMenuMainItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
             })))
 
             let sliderValuePromise = ValuePromise<Double?>(nil)

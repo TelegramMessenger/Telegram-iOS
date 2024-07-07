@@ -66,13 +66,13 @@ final class ContentOverlayButton: HighlightTrackingButton, OverlayMaskContainerV
                 
                 if highlighted {
                     self.layer.removeAnimation(forKey: "sublayerTransform")
-                    let transition = Transition(animation: .curve(duration: 0.15, curve: .easeInOut))
+                    let transition = ComponentTransition(animation: .curve(duration: 0.15, curve: .easeInOut))
                     transition.setScale(layer: self.layer, scale: topScale)
                 } else {
                     let t = self.layer.presentation()?.transform ?? layer.transform
                     let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
                     
-                    let transition = Transition(animation: .none)
+                    let transition = ComponentTransition(animation: .none)
                     transition.setScale(layer: self.layer, scale: 1.0)
                     
                     self.layer.animateScale(from: currentScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] completed in
@@ -95,7 +95,7 @@ final class ContentOverlayButton: HighlightTrackingButton, OverlayMaskContainerV
         self.action?()
     }
     
-    func update(size: CGSize, image: UIImage?, isSelected: Bool, isDestructive: Bool, isEnabled: Bool, title: String, transition: Transition) {
+    func update(size: CGSize, image: UIImage?, isSelected: Bool, isDestructive: Bool, isEnabled: Bool, title: String, transition: ComponentTransition) {
         let contentParams = ContentParams(size: size, image: image, isSelected: isSelected, isDestructive: isDestructive, isEnabled: isEnabled)
         if self.contentParams != contentParams {
             self.contentParams = contentParams
@@ -110,7 +110,7 @@ final class ContentOverlayButton: HighlightTrackingButton, OverlayMaskContainerV
         self.textView.frame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) * 0.5), y: size.height + 4.0), size: textSize)
     }
     
-    private func updateContent(contentParams: ContentParams, transition: Transition) {
+    private func updateContent(contentParams: ContentParams, transition: ComponentTransition) {
         let image = generateImage(contentParams.size, rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             

@@ -93,7 +93,7 @@ final class PlayPauseIconComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: PlayPauseIconComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: PlayPauseIconComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             if self.component?.state != component.state {
                 self.component = component
                 
@@ -114,7 +114,7 @@ final class PlayPauseIconComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

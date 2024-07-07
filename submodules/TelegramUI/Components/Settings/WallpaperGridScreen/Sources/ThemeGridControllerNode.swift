@@ -825,7 +825,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         if let makeGalleryIconLayout, let galleryItem = self.galleryItem as? ItemListPeerActionItem {
             (galleryLayout, galleryApply) = makeGalleryIconLayout(galleryItem, params, ItemListNeighbors(top: isChannel ? .none : .sameSection(alwaysPlain: false), bottom: .sameSection(alwaysPlain: !hasCustomWallpaper)))
         } else if let makeGalleryLayout, let galleryItem = self.galleryItem as? ItemListActionItem {
-            (galleryLayout, galleryApply) = makeGalleryLayout(galleryItem, params, ItemListNeighbors(top: isChannel ? .none : .sameSection(alwaysPlain: false), bottom: .sameSection(alwaysPlain: false)))
+            (galleryLayout, galleryApply) = makeGalleryLayout(galleryItem, params, ItemListNeighbors(top: isChannel ? .none : .sameSection(alwaysPlain: false), bottom: .sameSection(alwaysPlain: true)))
         } else {
             fatalError()
         }

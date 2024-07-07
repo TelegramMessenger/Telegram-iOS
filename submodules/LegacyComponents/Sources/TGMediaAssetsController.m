@@ -942,6 +942,7 @@
     NSInteger num = 0;
     bool grouping = selectionContext.grouping;
     
+    NSNumber *price;
     bool hasAnyTimers = false;
     if (editingContext != nil || grouping)
     {
@@ -949,6 +950,9 @@
         {
             if ([editingContext timerForItem:asset] != nil) {
                 hasAnyTimers = true;
+            }
+            if (price == nil) {
+                price = [editingContext priceForItem:asset];
             }
             id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
             if ([adjustments isKindOfClass:[TGVideoEditAdjustments class]]) {
@@ -1057,6 +1061,9 @@
                         else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
                         
+                        if (price != nil)
+                            dict[@"price"] = price;
+                        
                         if (spoiler) {
                             dict[@"spoiler"] = @true;
                         }
@@ -1136,6 +1143,9 @@
                                     dict[@"timer"] = timer;
                                 else if (groupedId != nil && !hasAnyTimers)
                                     dict[@"groupedId"] = groupedId;
+                                
+                                if (price != nil)
+                                    dict[@"price"] = price;
                                 
                                 if (spoiler) {
                                     dict[@"spoiler"] = @true;
@@ -1217,6 +1227,9 @@
                             else if (groupedId != nil && !hasAnyTimers)
                                 dict[@"groupedId"] = groupedId;
                             
+                            if (price != nil)
+                                dict[@"price"] = price;
+                            
                             if (spoiler) {
                                 dict[@"spoiler"] = @true;
                             }
@@ -1260,6 +1273,9 @@
                         
                         if (groupedId != nil)
                             dict[@"groupedId"] = groupedId;
+                        
+                        if (price != nil)
+                            dict[@"price"] = price;
                         
                         if (spoiler) {
                             dict[@"spoiler"] = @true;
@@ -1333,6 +1349,9 @@
                             dict[@"timer"] = timer;
                         else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
+                        
+                        if (price != nil)
+                            dict[@"price"] = price;
                         
                         if (spoiler) {
                             dict[@"spoiler"] = @true;
@@ -1414,6 +1433,9 @@
                         dict[@"stickers"] = adjustments.paintingData.stickers;
                     if (timer != nil)
                         dict[@"timer"] = timer;
+                    
+                    if (price != nil)
+                        dict[@"price"] = price;
                     
                     if (spoiler) {
                         dict[@"spoiler"] = @true;

@@ -307,12 +307,12 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
     {
-        _interfaceView = [[TGCameraMainPhoneView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent videoModeByDefault:_intent == TGCameraControllerGenericVideoOnlyIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera];
+        _interfaceView = [[TGCameraMainPhoneView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent videoModeByDefault:_intent == TGCameraControllerGenericVideoOnlyIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera camera:_camera];
         [_interfaceView setInterfaceOrientation:interfaceOrientation animated:false];
     }
     else
     {
-        _interfaceView = [[TGCameraMainTabletView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent videoModeByDefault:_intent == TGCameraControllerGenericVideoOnlyIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera];
+        _interfaceView = [[TGCameraMainTabletView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent videoModeByDefault:_intent == TGCameraControllerGenericVideoOnlyIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera camera:_camera];
         [_interfaceView setInterfaceOrientation:interfaceOrientation animated:false];
         
         CGSize referenceSize = [self referenceViewSizeForOrientation:interfaceOrientation];
@@ -510,7 +510,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         strongSelf->_interfaceView.shutterReleased(true);
     };
     
-    _buttonHandler = [[PGCameraVolumeButtonHandler alloc] initWithUpButtonPressedBlock:buttonPressed upButtonReleasedBlock:buttonReleased downButtonPressedBlock:buttonPressed downButtonReleasedBlock:buttonReleased];
+    _buttonHandler = [[PGCameraVolumeButtonHandler alloc] initWithIsCameraSpecific:true eventView:self.view upButtonPressedBlock:buttonPressed upButtonReleasedBlock:buttonReleased downButtonPressedBlock:buttonPressed downButtonReleasedBlock:buttonReleased];
     
     [self _configureCamera];
 }
@@ -806,29 +806,29 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         }
     };
     
-    _camera.captureSession.crossfadeNeeded = ^{
-        __strong TGCameraController *strongSelf = weakSelf;
-        if (strongSelf != nil)
-        {
-            if (strongSelf->_crossfadingForZoom) {
-                return;
-            }
-            strongSelf->_crossfadingForZoom = true;
-            
-            [strongSelf->_camera captureNextFrameCompletion:^(UIImage *image)
-            {
-                TGDispatchOnMainThread(^
-                {
-                    [strongSelf->_previewView beginTransitionWithSnapshotImage:image animated:false];
-                    
-                    TGDispatchAfter(0.15, dispatch_get_main_queue(), ^{
-                        [strongSelf->_previewView endTransitionAnimated:true];
-                        strongSelf->_crossfadingForZoom = false;
-                    });
-                });
-            }];
-        };
-    };
+//    _camera.captureSession.crossfadeNeeded = ^{
+//        __strong TGCameraController *strongSelf = weakSelf;
+//        if (strongSelf != nil)
+//        {
+//            if (strongSelf->_crossfadingForZoom) {
+//                return;
+//            }
+//            strongSelf->_crossfadingForZoom = true;
+//            
+//            [strongSelf->_camera captureNextFrameCompletion:^(UIImage *image)
+//            {
+//                TGDispatchOnMainThread(^
+//                {
+//                    [strongSelf->_previewView beginTransitionWithSnapshotImage:image animated:false];
+//                    
+//                    TGDispatchAfter(0.15, dispatch_get_main_queue(), ^{
+//                        [strongSelf->_previewView endTransitionAnimated:true];
+//                        strongSelf->_crossfadingForZoom = false;
+//                    });
+//                });
+//            }];
+//        };
+//    };
 }
 
 #pragma mark - View Life Cycle

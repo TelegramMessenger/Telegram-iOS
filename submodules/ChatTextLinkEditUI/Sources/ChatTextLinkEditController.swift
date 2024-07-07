@@ -176,11 +176,13 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     }
     
     private var isEditing = false
+    private let allowEmpty: Bool
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], text: String, link: String?) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], text: String, link: String?, allowEmpty: Bool) {
         self.strings = strings
         self.text = text
         self.isEditing = link != nil
+        self.allowEmpty = allowEmpty
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 2
@@ -220,6 +222,9 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
             self.addSubnode(actionNode)
         }
         self.actionNodes.last?.actionEnabled = !(link ?? "").isEmpty
+        if allowEmpty {
+            self.actionNodes.last?.actionEnabled = true
+        }
         
         for separatorNode in self.actionVerticalSeparators {
             self.addSubnode(separatorNode)
@@ -235,7 +240,11 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         
         self.inputFieldNode.textChanged = { [weak self] text in
             if let strongSelf = self, let lastNode = strongSelf.actionNodes.last {
-                lastNode.actionEnabled = !text.isEmpty
+                if strongSelf.allowEmpty {
+                    lastNode.actionEnabled = true
+                } else {
+                    lastNode.actionEnabled = !text.isEmpty
+                }
             }
         }
         
@@ -402,7 +411,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     }
 }
 
-public func chatTextLinkEditController(sharedContext: SharedAccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, account: Account, text: String, link: String?, apply: @escaping (String?) -> Void) -> AlertController {
+public func chatTextLinkEditController(sharedContext: SharedAccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, account: Account, text: String, link: String?, allowEmpty: Bool = false, apply: @escaping (String?) -> Void) -> AlertController {
     let presentationData = updatedPresentationData?.initial ?? sharedContext.currentPresentationData.with { $0 }
     
     var dismissImpl: ((Bool) -> Void)?
@@ -415,7 +424,7 @@ public func chatTextLinkEditController(sharedContext: SharedAccountContext, upda
         applyImpl?()
     })]
     
-    let contentNode = ChatTextLinkEditAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, text: text, link: link)
+    let contentNode = ChatTextLinkEditAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, text: text, link: link, allowEmpty: allowEmpty)
     contentNode.complete = {
         applyImpl?()
     }
@@ -427,6 +436,9 @@ public func chatTextLinkEditController(sharedContext: SharedAccountContext, upda
         if !updatedLink.isEmpty && isValidUrl(updatedLink, validSchemes: ["http": true, "https": true, "tg": false, "ton": false]) {
             dismissImpl?(true)
             apply(updatedLink)
+        } else if allowEmpty && contentNode.link.isEmpty {
+            dismissImpl?(true)
+            apply("")
         } else {
             contentNode.animateError()
         }

@@ -306,7 +306,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
         }
         
         private var isUpdating = false
-        func update(component: PeerInfoStoryGridScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: PeerInfoStoryGridScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -455,12 +455,8 @@ final class PeerInfoStoryGridScreenComponent: Component {
             } else {
                 paneNode = PeerInfoStoryPaneNode(
                     context: component.context,
-                    peerId: component.peerId,
-                    chatLocation: .peer(id: component.peerId),
-                    contentType: .photoOrVideo,
+                    scope: .peer(id: component.peerId, isSaved: true, isArchived: component.scope == .archive),
                     captureProtected: false,
-                    isSaved: true,
-                    isArchive: component.scope == .archive,
                     isProfileEmbedded: false,
                     canManageStories: true,
                     navigationController: { [weak self] in
@@ -521,7 +517,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
                     self.selectedCount = selectedIds.count
                     
                     if applyState {
-                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                        self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                     }
                     (self.environment?.controller() as? PeerInfoStoryGridScreen)?.updateTitle()
                 })
@@ -552,7 +548,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
         return View()
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

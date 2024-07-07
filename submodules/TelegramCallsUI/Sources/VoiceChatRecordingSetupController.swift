@@ -8,6 +8,7 @@ import AccountContext
 import TelegramPresentationData
 import SolidRoundedButtonNode
 import PresentationDataUtils
+import VoiceChatActionButton
 
 private let accentColor: UIColor = UIColor(rgb: 0x007aff)
 

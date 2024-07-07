@@ -122,8 +122,8 @@ final class StickerPackEmojisItemNode: GridItemNode {
     
     private var boundsChangeTrackerLayer = SimpleLayer()
     
-    private var visibleItemLayers: [EmojiPagerContentComponent.View.ItemLayer.Key: EmojiPagerContentComponent.View.ItemLayer] = [:]
-    private var visibleItemPlaceholderViews: [EmojiPagerContentComponent.View.ItemLayer.Key: EmojiPagerContentComponent.View.ItemPlaceholderView] = [:]
+    private var visibleItemLayers: [EmojiKeyboardItemLayer.Key: EmojiKeyboardItemLayer] = [:]
+    private var visibleItemPlaceholderViews: [EmojiKeyboardItemLayer.Key: EmojiPagerContentComponent.View.ItemPlaceholderView] = [:]
     
     private let containerNode: ASDisplayNode
     private let titleNode: ImmediateTextNode
@@ -195,7 +195,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
     
     func targetItem(at point: CGPoint) -> (TelegramMediaFile, CALayer)? {
         if let (item, _) = self.item(atPoint: point), let file = item.itemFile {
-            let itemId = EmojiPagerContentComponent.View.ItemLayer.Key(
+            let itemId = EmojiKeyboardItemLayer.Key(
                 groupId: 0,
                 itemId: .animation(.file(file.fileId))
             )
@@ -237,7 +237,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
     private func item(atPoint point: CGPoint, extendedHitRange: Bool = false) -> (EmojiPagerContentComponent.Item, CGRect)? {
         let localPoint = point
         
-        var closestItem: (key: EmojiPagerContentComponent.View.ItemLayer.Key, distance: CGFloat)?
+        var closestItem: (key: EmojiKeyboardItemLayer.Key, distance: CGFloat)?
         
         for (key, itemLayer) in self.visibleItemLayers {
             if extendedHitRange {
@@ -308,7 +308,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
         let animationRenderer = item.animationRenderer
         let theme = item.theme
         let items = item.items
-        var validIds = Set<EmojiPagerContentComponent.View.ItemLayer.Key>()
+        var validIds = Set<EmojiKeyboardItemLayer.Key>()
         
         let itemLayout: ItemLayout
         if let current = self.itemLayout, current.width == self.size.width && current.itemsCount == items.count {
@@ -322,7 +322,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
         
         for index in 0 ..< items.count {
             let item = items[index]
-            let itemId = EmojiPagerContentComponent.View.ItemLayer.Key(
+            let itemId = EmojiKeyboardItemLayer.Key(
                 groupId: 0,
                 itemId: .animation(.file(item.file.fileId))
             )
@@ -334,7 +334,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
             
             var updateItemLayerPlaceholder = false
             var itemTransition = transition
-            let itemLayer: EmojiPagerContentComponent.View.ItemLayer
+            let itemLayer: EmojiKeyboardItemLayer
             if let current = self.visibleItemLayers[itemId] {
                 itemLayer = current
             } else {
@@ -342,7 +342,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
                 itemTransition = .immediate
                 
                 let animationData = EntityKeyboardAnimationData(file: item.file)
-                itemLayer = EmojiPagerContentComponent.View.ItemLayer(
+                itemLayer = EmojiKeyboardItemLayer(
                     item: EmojiPagerContentComponent.Item(
                         animationData: animationData,
                         content: .animation(animationData),

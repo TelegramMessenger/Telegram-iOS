@@ -30,6 +30,7 @@ import ChatListUI
 import StoryContainerScreen
 import ChatMessageNotificationItem
 import PhoneNumberFormat
+import AttachmentUI
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -168,6 +169,10 @@ final class AuthorizedApplicationContext {
         self.notificationController = NotificationContainerController(context: context)
         
         self.rootController = TelegramRootController(context: context)
+        self.rootController.minimizedContainer = self.sharedApplicationContext.minimizedContainer
+        self.rootController.minimizedContainerUpdated = { [weak self] minimizedContainer in
+            self?.sharedApplicationContext.minimizedContainer = minimizedContainer
+        }
         
         self.rootController.globalOverlayControllersUpdated = { [weak self] in
             guard let strongSelf = self else {
@@ -396,6 +401,15 @@ final class AuthorizedApplicationContext {
                                 return
                             }
                             
+                            if firstMessage.restrictionReason(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) != nil {
+                                return
+                            }
+                            if let chatPeer = firstMessage.peers[firstMessage.id.peerId] {
+                                if EnginePeer(chatPeer).restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) != nil {
+                                    return
+                                }
+                            }
+                            
                             if inAppNotificationSettings.displayPreviews {
                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                 strongSelf.notificationController.enqueue(ChatMessageNotificationItem(context: strongSelf.context, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, messages: messages, threadData: threadData, tapAction: {
@@ -421,6 +435,10 @@ final class AuthorizedApplicationContext {
                                             strongSelf.notificationController.removeItemsWithGroupingKey(firstMessage.id.peerId)
                                             
                                             return false
+                                        }
+                                        
+                                        if let topContoller = strongSelf.rootController.topViewController as? AttachmentController {
+                                            topContoller.minimizeIfNeeded()
                                         }
                                         
                                         for controller in strongSelf.rootController.viewControllers {

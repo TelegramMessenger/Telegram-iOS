@@ -11,6 +11,7 @@ import AvatarNode
 import TelegramCore
 import MultilineTextComponent
 import TelegramPresentationData
+import PremiumStarComponent
 
 private let sceneVersion: Int = 1
 
@@ -79,7 +80,7 @@ public final class BoostHeaderBackgroundComponent: Component {
             }
         }
         
-        func update(component: BoostHeaderBackgroundComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: BoostHeaderBackgroundComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height))
             if self.sceneView.superview == self {
                 self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
@@ -95,7 +96,7 @@ public final class BoostHeaderBackgroundComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

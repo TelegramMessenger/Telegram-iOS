@@ -52,7 +52,7 @@ public class InvisibleInkDustView: UIView {
     private var animColor: CGColor?
     private let enableAnimations: Bool
     
-    private weak var textNode: TextNode?
+    private weak var textNode: ASDisplayNode?
     private let textMaskNode: ASDisplayNode
     private let textSpotNode: ASImageNode
     
@@ -69,7 +69,7 @@ public class InvisibleInkDustView: UIView {
     public var isRevealed = false
     private var isExploding = false
     
-    public init(textNode: TextNode?, enableAnimations: Bool) {
+    public init(textNode: ASDisplayNode?, enableAnimations: Bool) {
         self.textNode = textNode
         self.enableAnimations = enableAnimations
         
@@ -368,7 +368,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     private var animColor: CGColor?
     private let enableAnimations: Bool
     
-    private weak var textNode: TextNode?
+    private weak var textNode: ASDisplayNode?
     private let textMaskNode: ASDisplayNode
     private let textSpotNode: ASImageNode
     
@@ -385,7 +385,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     public var isRevealed = false
     private var isExploding = false
     
-    public init(textNode: TextNode?, enableAnimations: Bool) {
+    public init(textNode: ASDisplayNode?, enableAnimations: Bool) {
         self.textNode = textNode
         self.enableAnimations = enableAnimations
         
@@ -474,7 +474,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     }
     
     public func update(revealed: Bool, animated: Bool = true) {
-        guard self.isRevealed != revealed, let textNode = self.textNode else {
+        guard self.isRevealed != revealed else {
             return
         }
         
@@ -483,11 +483,15 @@ public class InvisibleInkDustNode: ASDisplayNode {
         if revealed {
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .linear) : .immediate
             transition.updateAlpha(node: self, alpha: 0.0)
-            transition.updateAlpha(node: textNode, alpha: 1.0)
+            if let textNode = self.textNode {
+                transition.updateAlpha(node: textNode, alpha: 1.0)
+            }
         } else {
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .linear) : .immediate
             transition.updateAlpha(node: self, alpha: 1.0)
-            transition.updateAlpha(node: textNode, alpha: 0.0)
+            if let textNode = self.textNode {
+                transition.updateAlpha(node: textNode, alpha: 0.0)
+            }
             
             if self.isExploding {
                 self.isExploding = false
@@ -497,7 +501,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     }
     
     public func revealAtLocation(_ location: CGPoint) {
-        guard let (_, _, textColor, _, _) = self.currentParams, let textNode = self.textNode, !self.isRevealed else {
+        guard let (_, _, textColor, _, _) = self.currentParams, !self.isRevealed else {
             return
         }
         
@@ -507,7 +511,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
             self.isExploding = true
             
             self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
-            self.emitterLayer?.setValue(position, forKeyPath: "emitterBehaviors.fingerAttractor.position")
+            self.emitterLayer?.setValue(location, forKeyPath: "emitterBehaviors.fingerAttractor.position")
             
             let maskSize = self.emitterNode.frame.size
             Queue.concurrentDefaultQueue().async {
@@ -520,10 +524,15 @@ public class InvisibleInkDustNode: ASDisplayNode {
                 }
             }
             
-            Queue.mainQueue().after(0.1 * UIView.animationDurationFactor()) {
-                textNode.alpha = 1.0
+            Queue.mainQueue().after(0.1 * UIView.animationDurationFactor()) { [weak self] in
+                guard let self else {
+                    return
+                }
                 
-                textNode.view.mask = self.textMaskNode.view
+                if let textNode = self.textNode {
+                    textNode.alpha = 1.0
+                    textNode.view.mask = self.textMaskNode.view
+                }
                 self.textSpotNode.frame = CGRect(x: 0.0, y: 0.0, width: self.emitterMaskNode.frame.width * 3.0, height: self.emitterMaskNode.frame.height * 3.0)
                 
                 let xFactor = (location.x / self.emitterNode.frame.width - 0.5) * 2.0
@@ -539,8 +548,13 @@ public class InvisibleInkDustNode: ASDisplayNode {
                 
                 self.textSpotNode.layer.anchorPoint = CGPoint(x: location.x / self.emitterMaskNode.frame.width, y: location.y / self.emitterMaskNode.frame.height)
                 self.textSpotNode.position = location
-                self.textSpotNode.layer.animateScale(from: 0.3333, to: 10.5 + scaleAddition, duration: 0.55 + durationAddition, removeOnCompletion: false, completion: { _ in
-                    textNode.view.mask = nil
+                self.textSpotNode.layer.animateScale(from: 0.3333, to: 10.5 + scaleAddition, duration: 0.55 + durationAddition, removeOnCompletion: false, completion: { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    if let textNode = self.textNode {
+                        textNode.view.mask = nil
+                    }
                 })
                 self.textSpotNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                 
@@ -567,9 +581,34 @@ public class InvisibleInkDustNode: ASDisplayNode {
                 self.emitterMaskFillNode.layer.removeAllAnimations()
             }
         } else {
-            textNode.alpha = 1.0
-            textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+            if let textNode = self.textNode {
+                textNode.alpha = 1.0
+                textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+            }
             
+            self.staticNode?.alpha = 0.0
+            self.staticNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+        }
+    }
+    
+    public func revealWithoutMaskAtLocation(_ location: CGPoint) {
+        guard !self.isRevealed else {
+            return
+        }
+        
+        self.isRevealed = true
+        
+        if self.enableAnimations {
+            self.isExploding = true
+            
+            self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
+            self.emitterLayer?.setValue(location, forKeyPath: "emitterBehaviors.fingerAttractor.position")
+            
+            Queue.mainQueue().after(0.8 * UIView.animationDurationFactor()) {
+                self.isExploding = false
+                self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
+            }
+        } else {
             self.staticNode?.alpha = 0.0
             self.staticNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
         }

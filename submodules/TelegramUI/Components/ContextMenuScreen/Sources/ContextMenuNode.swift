@@ -175,12 +175,11 @@ final class ContextMenuNode: ASDisplayNode {
         
         let separatorColor = self.isDark ? UIColor(rgb: 0x8c8e8e) : UIColor(rgb: 0xDCE3DC)
         
-        let height: CGFloat = 54.0
+        var height: CGFloat = 54.0
         
-        let pageLeftSize = self.pageLeftNode.update(color: self.isDark ? .white : .black, separatorColor: separatorColor, height: height)
-        let pageRightSize = self.pageRightNode.update(color: self.isDark ? .white : .black, separatorColor: separatorColor, height: height)
-        
-        let maxPageWidth = layout.size.width - 20.0 - pageLeftSize.width - pageRightSize.width
+        let handleWidth: CGFloat = 33.0
+     
+        let maxPageWidth = layout.size.width - 20.0 - handleWidth * 2.0
         var absoluteActionOffsetX: CGFloat = 0.0
         
         var pages: [Page] = []
@@ -188,7 +187,8 @@ final class ContextMenuNode: ASDisplayNode {
             if i != 0 {
                 absoluteActionOffsetX += UIScreenPixel
             }
-            let actionSize = self.actionNodes[i].measure(CGSize(width: layout.size.width, height: height))
+            let actionSize = self.actionNodes[i].measure(CGSize(width: layout.size.width, height: 100.0))
+            height = max(height, actionSize.height)
             if pages.isEmpty || (pages[pages.count - 1].width + actionSize.width) > maxPageWidth {
                 pages.append(Page(range: i ..< (i + 1), width: actionSize.width, offsetX: absoluteActionOffsetX))
             } else {
@@ -211,6 +211,9 @@ final class ContextMenuNode: ASDisplayNode {
             separatorNode.frame = CGRect(origin: CGPoint(x: actionFrame.maxX, y: 0.0), size: CGSize(width: UIScreenPixel, height: height))
             separatorNode.isHidden = i == self.actionNodes.count - 1
         }
+        
+        let pageLeftSize = self.pageLeftNode.update(color: self.isDark ? .white : .black, separatorColor: separatorColor, height: height)
+        let pageRightSize = self.pageRightNode.update(color: self.isDark ? .white : .black, separatorColor: separatorColor, height: height)
         
         self.pageCount = pages.count
         

@@ -45,7 +45,15 @@ private final class UpdatedPeersNearbySubscriberContext {
 }
 
 private final class UpdatedRevenueBalancesSubscriberContext {
-    let subscribers = Bag<(RevenueStats.Balances) -> Void>()
+    let subscribers = Bag<([PeerId: RevenueStats.Balances]) -> Void>()
+}
+
+private final class UpdatedStarsBalanceSubscriberContext {
+    let subscribers = Bag<([PeerId: Int64]) -> Void>()
+}
+
+private final class UpdatedStarsRevenueStatusSubscriberContext {
+    let subscribers = Bag<([PeerId: StarsRevenueStats.Balances]) -> Void>()
 }
 
 public enum DeletedMessageId: Hashable {
@@ -282,6 +290,8 @@ public final class AccountStateManager {
         private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
         private var updatedPeersNearbyContext = UpdatedPeersNearbySubscriberContext()
         private var updatedRevenueBalancesContext = UpdatedRevenueBalancesSubscriberContext()
+        private var updatedStarsBalanceContext = UpdatedStarsBalanceSubscriberContext()
+        private var updatedStarsRevenueStatusContext = UpdatedStarsRevenueStatusSubscriberContext()
         
         private let delayNotificatonsUntil = Atomic<Int32?>(value: nil)
         private let appliedMaxMessageIdPromise = Promise<Int32?>(nil)
@@ -1027,8 +1037,14 @@ public final class AccountStateManager {
                             if let updatedPeersNearby = events.updatedPeersNearby {
                                 strongSelf.notifyUpdatedPeersNearby(updatedPeersNearby)
                             }
-                            if let updatedRevenueBalances = events.updatedRevenueBalances {
-                                strongSelf.notifyUpdatedRevenueBalances(updatedRevenueBalances)
+                            if !events.updatedRevenueBalances.isEmpty {
+                                strongSelf.notifyUpdatedRevenueBalances(events.updatedRevenueBalances)
+                            }
+                            if !events.updatedStarsBalance.isEmpty {
+                                strongSelf.notifyUpdatedStarsBalance(events.updatedStarsBalance)
+                            }
+                            if !events.updatedStarsRevenueStatus.isEmpty {
+                                strongSelf.notifyUpdatedStarsRevenueStatus(events.updatedStarsRevenueStatus)
                             }
                             if !events.updatedCalls.isEmpty {
                                 for call in events.updatedCalls {
@@ -1602,7 +1618,7 @@ public final class AccountStateManager {
             }
         }
         
-        public func updatedRevenueBalances() -> Signal<RevenueStats.Balances, NoError> {
+        public func updatedRevenueBalances() -> Signal<[PeerId: RevenueStats.Balances], NoError> {
             let queue = self.queue
             return Signal { [weak self] subscriber in
                 let disposable = MetaDisposable()
@@ -1623,9 +1639,63 @@ public final class AccountStateManager {
             }
         }
         
-        private func notifyUpdatedRevenueBalances(_ updatedRevenueBalances: RevenueStats.Balances) {
+        private func notifyUpdatedRevenueBalances(_ updatedRevenueBalances: [PeerId: RevenueStats.Balances]) {
             for subscriber in self.updatedRevenueBalancesContext.subscribers.copyItems() {
                 subscriber(updatedRevenueBalances)
+            }
+        }
+        
+        public func updatedStarsBalance() -> Signal<[PeerId: Int64], NoError> {
+            let queue = self.queue
+            return Signal { [weak self] subscriber in
+                let disposable = MetaDisposable()
+                queue.async {
+                    if let strongSelf = self {
+                        let index = strongSelf.updatedStarsBalanceContext.subscribers.add({ starsBalance in
+                            subscriber.putNext(starsBalance)
+                        })
+                        
+                        disposable.set(ActionDisposable {
+                            if let strongSelf = self {
+                                strongSelf.updatedStarsBalanceContext.subscribers.remove(index)
+                            }
+                        })
+                    }
+                }
+                return disposable
+            }
+        }
+        
+        private func notifyUpdatedStarsBalance(_ updatedStarsBalance: [PeerId: Int64]) {
+            for subscriber in self.updatedStarsBalanceContext.subscribers.copyItems() {
+                subscriber(updatedStarsBalance)
+            }
+        }
+        
+        public func updatedStarsRevenueStatus() -> Signal<[PeerId: StarsRevenueStats.Balances], NoError> {
+            let queue = self.queue
+            return Signal { [weak self] subscriber in
+                let disposable = MetaDisposable()
+                queue.async {
+                    if let strongSelf = self {
+                        let index = strongSelf.updatedStarsRevenueStatusContext.subscribers.add({ revenueBalances in
+                            subscriber.putNext(revenueBalances)
+                        })
+                        
+                        disposable.set(ActionDisposable {
+                            if let strongSelf = self {
+                                strongSelf.updatedStarsRevenueStatusContext.subscribers.remove(index)
+                            }
+                        })
+                    }
+                }
+                return disposable
+            }
+        }
+        
+        private func notifyUpdatedStarsRevenueStatus(_ updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances]) {
+            for subscriber in self.updatedStarsRevenueStatusContext.subscribers.copyItems() {
+                subscriber(updatedStarsRevenueStatus)
             }
         }
         
@@ -1916,9 +1986,21 @@ public final class AccountStateManager {
         }
     }
     
-    public func updatedRevenueBalances() -> Signal<RevenueStats.Balances, NoError> {
+    public func updatedRevenueBalances() -> Signal<[PeerId: RevenueStats.Balances], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.updatedRevenueBalances().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+
+    public func updatedStarsBalance() -> Signal<[PeerId: Int64], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.updatedStarsBalance().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    public func updatedStarsRevenueStatus() -> Signal<[PeerId: StarsRevenueStats.Balances], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.updatedStarsRevenueStatus().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
     }
     

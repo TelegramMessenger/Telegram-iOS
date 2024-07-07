@@ -7,6 +7,7 @@ import SceneKit
 import GZip
 import AppBundle
 import LegacyComponents
+import PremiumStarComponent
 
 private let sceneVersion: Int = 3
 
@@ -231,6 +232,9 @@ class PremiumCoinComponent: Component {
             self.sceneView.delegate = self
             
             let _ = self.sceneView.snapshot()
+//            self.didSetReady = true
+//            self._ready.set(.single(true))
+//            self.onReady()
         }
         
         private var didSetReady = false
@@ -491,7 +495,7 @@ class PremiumCoinComponent: Component {
             node.addAnimation(springAnimation, forKey: "rotate")
         }
         
-        func update(component: PremiumCoinComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: PremiumCoinComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
             if self.sceneView.superview == self {
                 self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
@@ -507,7 +511,7 @@ class PremiumCoinComponent: Component {
         return View(frame: CGRect(), isIntro: self.isIntro)
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

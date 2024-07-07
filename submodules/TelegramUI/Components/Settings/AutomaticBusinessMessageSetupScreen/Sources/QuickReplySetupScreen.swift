@@ -389,7 +389,7 @@ final class QuickReplySetupScreenComponent: Component {
             }
         }
         
-        func update(size: CGSize, insets: UIEdgeInsets, transition: Transition) {
+        func update(size: CGSize, insets: UIEdgeInsets, transition: ComponentTransition) {
             let (listViewDuration, listViewCurve) = listViewAnimationDurationAndCurve(transition: transition.containedViewLayoutTransition)
             self.transaction(
                 deleteIndices: [],
@@ -547,18 +547,18 @@ final class QuickReplySetupScreenComponent: Component {
         }
         
         func openQuickReplyChat(shortcut: String?, shortcutId: Int32?) {
-            guard let component = self.component, let environment = self.environment else {
+            guard let component = self.component, let environment = self.environment, let controller = self.environment?.controller() as? QuickReplySetupScreen else {
                 return
             }
-            
-            if case let .select(completion) = component.mode {
-                if let shortcutId {
-                    completion(shortcutId)
-                }
-                return
-            }
+        
+            self.contentListNode?.clearHighlightAnimated(true)
             
             if let shortcut {
+                if let shortcutId, case let .select(completion) = component.mode {
+                    completion(shortcutId)
+                    return
+                }
+                    
                 let shortcutType: ChatQuickReplyShortcutType
                 if shortcut == "hello" {
                     shortcutType = .greeting
@@ -578,10 +578,16 @@ final class QuickReplySetupScreenComponent: Component {
                     chatLocation: .customChatContents,
                     subject: .customChatContents(contents: contents),
                     botStart: nil,
-                    mode: .standard(.default)
+                    mode: .standard(.default),
+                    params: nil
                 )
                 chatController.navigationPresentation = .modal
-                self.environment?.controller()?.push(chatController)
+                
+                if controller.navigationController != nil {
+                    controller.push(chatController)
+                } else if let attachmentContainer = controller.parentController() {
+                    attachmentContainer.push(chatController)
+                }
             } else {
                 var completion: ((String?) -> Void)?
                 let alertController = quickReplyNameAlertController(
@@ -619,8 +625,6 @@ final class QuickReplySetupScreenComponent: Component {
                 }
                 self.environment?.controller()?.present(alertController, in: .window(.root))
             }
-            
-            self.contentListNode?.clearHighlightAnimated(true)
         }
         
         func openEditShortcut(id: Int32, currentValue: String) {
@@ -720,7 +724,7 @@ final class QuickReplySetupScreenComponent: Component {
             insets: UIEdgeInsets,
             statusBarHeight: CGFloat,
             isModal: Bool,
-            transition: Transition,
+            transition: ComponentTransition,
             deferScrollApplication: Bool
         ) -> CGFloat {
             var rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = []
@@ -846,7 +850,7 @@ final class QuickReplySetupScreenComponent: Component {
             }
         }
         
-        private func updateNavigationScrolling(navigationHeight: CGFloat, transition: Transition) {
+        private func updateNavigationScrolling(navigationHeight: CGFloat, transition: ComponentTransition) {
             var mainOffset: CGFloat
             if let shortcutMessageList = self.shortcutMessageList, !shortcutMessageList.items.isEmpty {
                 if let contentListNode = self.contentListNode {
@@ -885,7 +889,7 @@ final class QuickReplySetupScreenComponent: Component {
             }
         }
         
-        func update(component: QuickReplySetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: QuickReplySetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -916,7 +920,7 @@ final class QuickReplySetupScreenComponent: Component {
             self.component = component
             self.state = state
             
-            let alphaTransition: Transition = transition.animation.isImmediate ? transition : transition.withAnimation(.curve(duration: 0.25, curve: .easeInOut))
+            let alphaTransition: ComponentTransition = transition.animation.isImmediate ? transition : transition.withAnimation(.curve(duration: 0.25, curve: .easeInOut))
             let _ = alphaTransition
             
             if themeUpdated {
@@ -1172,13 +1176,8 @@ final class QuickReplySetupScreenComponent: Component {
             
             var entries: [ContentEntry] = []
             if let shortcutMessageList = self.shortcutMessageList, let accountPeer = self.accountPeer {
-                switch component.mode {
-                case .manage:
-                    if self.searchQuery.isEmpty {
-                        entries.append(.add)
-                    }
-                case .select:
-                    break
+                if self.searchQuery.isEmpty {
+                    entries.append(.add)
                 }
                 for item in shortcutMessageList.items {
                     if !self.searchQuery.isEmpty {
@@ -1273,7 +1272,7 @@ final class QuickReplySetupScreenComponent: Component {
         return View()
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

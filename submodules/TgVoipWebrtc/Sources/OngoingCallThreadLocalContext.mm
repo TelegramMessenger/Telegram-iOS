@@ -1669,6 +1669,8 @@ private:
     rtc::Thread *_currentAudioDeviceModuleThread;
     
     SharedCallAudioDevice * _audioDevice;
+    
+    void (^_onMutedSpeechActivityDetected)(bool);
 }
 
 @end
@@ -1691,6 +1693,7 @@ private:
     disableAudioInput:(bool)disableAudioInput
     preferX264:(bool)preferX264
     logPath:(NSString * _Nonnull)logPath
+onMutedSpeechActivityDetected:(void (^ _Nullable)(bool))onMutedSpeechActivityDetected
 audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice {
     self = [super init];
     if (self != nil) {
@@ -1702,6 +1705,8 @@ audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice {
         
         _networkStateUpdated = [networkStateUpdated copy];
         _videoCapturer = videoCapturer;
+        
+        _onMutedSpeechActivityDetected = [onMutedSpeechActivityDetected copy];
         
         _audioDevice = audioDevice;
         std::shared_ptr<tgcalls::ThreadLocalObject<tgcalls::SharedAudioDeviceModule>> audioDeviceModule;
@@ -1917,12 +1922,19 @@ audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice {
                 return std::make_shared<RequestMediaChannelDescriptionTaskImpl>(task);
             },
             .minOutgoingVideoBitrateKbit = minOutgoingVideoBitrateKbit,
-            .createAudioDeviceModule = [weakSelf, queue, disableAudioInput, audioDeviceModule](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<webrtc::AudioDeviceModule> {
+            .createAudioDeviceModule = [weakSelf, queue, disableAudioInput, audioDeviceModule, onMutedSpeechActivityDetected = _onMutedSpeechActivityDetected](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<webrtc::AudioDeviceModule> {
                 if (audioDeviceModule) {
                     return audioDeviceModule->getSyncAssumingSameThread()->audioDeviceModule();
                 } else {
                     rtc::Thread *audioDeviceModuleThread = rtc::Thread::Current();
                     auto resultModule = rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, disableAudioInput, disableAudioInput ? 2 : 1);
+                    if (resultModule) {
+                        resultModule->mutedSpeechDetectionChanged = ^(bool value) {
+                            if (onMutedSpeechActivityDetected) {
+                                onMutedSpeechActivityDetected(value);
+                            }
+                        };
+                    }
                     [queue dispatch:^{
                         __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
                         if (strongSelf) {
@@ -1932,6 +1944,14 @@ audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice {
                     }];
                     return resultModule;
                 }
+            },
+            .onMutedSpeechActivityDetected = [weakSelf, queue](bool value) {
+                [queue dispatch:^{
+                    __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
+                    if (strongSelf && strongSelf->_onMutedSpeechActivityDetected) {
+                        strongSelf->_onMutedSpeechActivityDetected(value);
+                    }
+                }];
             }
         }));
     }

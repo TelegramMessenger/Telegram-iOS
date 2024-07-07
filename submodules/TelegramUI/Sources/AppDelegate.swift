@@ -178,6 +178,7 @@ final class SharedApplicationContext {
     let notificationManager: SharedNotificationManager
     let wakeupManager: SharedWakeupManager
     let overlayMediaController: ViewController & OverlayMediaController
+    var minimizedContainer: MinimizedContainer?
     
     init(sharedContext: SharedAccountContextImpl, notificationManager: SharedNotificationManager, wakeupManager: SharedWakeupManager) {
         self.sharedContext = sharedContext
@@ -274,6 +275,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     private let firebaseSecretStream = Promise<[String: String]>([:])
     
+    private var firebaseRequestVerificationSecrets: [String: String] = [:] {
+        didSet {
+            if self.firebaseRequestVerificationSecrets != oldValue {
+                self.firebaseRequestVerificationSecretStream.set(.single(self.firebaseRequestVerificationSecrets))
+            }
+        }
+    }
+    private let firebaseRequestVerificationSecretStream = Promise<[String: String]>([:])
+    
     private var urlSessions: [URLSession] = []
     private func urlSession(identifier: String) -> URLSession {
         if let existingSession = self.urlSessions.first(where: { $0.configuration.identifier == identifier }) {
@@ -310,14 +320,18 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     
     private var alertActions: (primary: (() -> Void)?, other: (() -> Void)?)?
     
-    private let deviceToken = Promise<Data?>(nil)
+    private let voipDeviceToken = Promise<Data?>(nil)
+    private let regularDeviceToken = Promise<Data?>(nil)
         
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true
         
         let _ = voipTokenPromise.get().start(next: { token in
-            self.deviceToken.set(.single(token))
+            self.voipDeviceToken.set(.single(token))
+        })
+        let _ = notificationTokenPromise.get().start(next: { token in
+            self.regularDeviceToken.set(.single(token))
         })
         
         let launchStartTime = CFAbsoluteTimeGetCurrent()
@@ -483,15 +497,22 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManagerImpl.voipMaxLayer, voipVersions: PresentationCallManagerImpl.voipVersions(includeExperimental: true, includeReference: false).map { version, supportsVideo -> CallSessionManagerImplementationVersion in
             CallSessionManagerImplementationVersion(version: version, supportsVideo: supportsVideo)
-        }, appData: self.deviceToken.get()
+        }, appData: self.regularDeviceToken.get()
         |> map { token in
-            let data = buildConfig.bundleData(withAppToken: token, signatureDict: signatureDict)
+            let tokenEnvironment: String
+            #if DEBUG
+            tokenEnvironment = "sandbox"
+            #else
+            tokenEnvironment = "production"
+            #endif
+            
+            let data = buildConfig.bundleData(withAppToken: token, tokenType: "apns", tokenEnvironment: tokenEnvironment, signatureDict: signatureDict)
             if let data = data, let _ = String(data: data, encoding: .utf8) {
             } else {
                 Logger.shared.log("data", "can't deserialize")
             }
             return data
-        }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild, isICloudEnabled: buildConfig.isICloudEnabled)
+        }, externalRequestVerificationStream: self.firebaseRequestVerificationSecretStream.get(), autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild, isICloudEnabled: buildConfig.isICloudEnabled)
         
         guard let appGroupUrl = maybeAppGroupUrl else {
             self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
@@ -1895,6 +1916,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 firebaseSecrets[receipt] = secret
                 self.firebaseSecrets = firebaseSecrets
             }
+            
+            completionHandler(.newData)
+            return
+        }
+        
+        if let nonce = redactedPayload["verify_nonce"] as? String, let secret = redactedPayload["verify_secret"] as? String {
+            var firebaseRequestVerificationSecrets = self.firebaseRequestVerificationSecrets
+            firebaseRequestVerificationSecrets[nonce] = secret
+            self.firebaseRequestVerificationSecrets = firebaseRequestVerificationSecrets
             
             completionHandler(.newData)
             return

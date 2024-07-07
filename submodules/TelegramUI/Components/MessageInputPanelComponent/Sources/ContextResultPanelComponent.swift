@@ -159,13 +159,13 @@ final class ContextResultPanelComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func animateIn(transition: Transition) {
+        func animateIn(transition: ComponentTransition) {
             let offset = self.scrollView.contentOffset.y * -1.0 + 10.0
-            Transition.immediate.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: -offset))
+            ComponentTransition.immediate.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: -offset))
             transition.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: 0.0))
         }
         
-        func animateOut(transition: Transition, completion: @escaping () -> Void) {
+        func animateOut(transition: ComponentTransition, completion: @escaping () -> Void) {
             let offset = self.scrollView.contentOffset.y * -1.0 + 10.0
             self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
             transition.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: -offset), completion: { _ in
@@ -179,7 +179,7 @@ final class ContextResultPanelComponent: Component {
             }
         }
         
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             guard let component = self.component, let itemLayout = self.itemLayout else {
                 return
             }
@@ -273,7 +273,7 @@ final class ContextResultPanelComponent: Component {
             self.backgroundView.update(size: backgroundSize, cornerRadius: 11.0, transition: transition.containedViewLayoutTransition)
         }
         
-        func update(component: ContextResultPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ContextResultPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             var transition = transition
             let previousComponent = self.component
             self.component = component
@@ -352,7 +352,7 @@ final class ContextResultPanelComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

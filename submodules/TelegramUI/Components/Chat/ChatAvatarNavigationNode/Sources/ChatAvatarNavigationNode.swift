@@ -210,7 +210,7 @@ public final class ChatAvatarNavigationNode: ASDisplayNode {
             }
             
             let _ = avatarStoryView.update(
-                transition: Transition(transition),
+                transition: ComponentTransition(transition),
                 component: AnyComponent(AvatarStoryIndicatorComponent(
                     hasUnseen: storyData.hasUnseen,
                     hasUnseenCloseFriendsItems: storyData.hasUnseenCloseFriends,

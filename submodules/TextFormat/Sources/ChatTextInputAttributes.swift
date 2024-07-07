@@ -20,8 +20,9 @@ public struct ChatTextInputAttributes {
     public static let spoiler = NSAttributedString.Key(rawValue: "Attribute__Spoiler")
     public static let customEmoji = NSAttributedString.Key(rawValue: "Attribute__CustomEmoji")
     public static let block = NSAttributedString.Key(rawValue: "Attribute__Blockquote")
+    public static let collapsedBlock = NSAttributedString.Key(rawValue: "Attribute__CollapsedBlockquote")
     
-    public static let allAttributes = [ChatTextInputAttributes.bold, ChatTextInputAttributes.italic, ChatTextInputAttributes.monospace, ChatTextInputAttributes.strikethrough, ChatTextInputAttributes.underline, ChatTextInputAttributes.textMention, ChatTextInputAttributes.textUrl, ChatTextInputAttributes.spoiler, ChatTextInputAttributes.customEmoji, ChatTextInputAttributes.block]
+    public static let allAttributes = [ChatTextInputAttributes.bold, ChatTextInputAttributes.italic, ChatTextInputAttributes.monospace, ChatTextInputAttributes.strikethrough, ChatTextInputAttributes.underline, ChatTextInputAttributes.textMention, ChatTextInputAttributes.textUrl, ChatTextInputAttributes.spoiler, ChatTextInputAttributes.customEmoji, ChatTextInputAttributes.block, ChatTextInputAttributes.collapsedBlock]
 }
 
 public let originalTextAttributeKey = NSAttributedString.Key(rawValue: "Attribute__OriginalText")
@@ -35,6 +36,67 @@ public final class OriginalTextAttribute: NSObject {
     }
 }
 
+public final class ChatInputTextCollapsedQuoteAttributes: Equatable {
+    public let context: AnyObject
+    public let fontSize: CGFloat
+    public let textColor: UIColor
+    public let accentTextColor: UIColor
+    
+    public init(
+        context: AnyObject,
+        fontSize: CGFloat,
+        textColor: UIColor,
+        accentTextColor: UIColor
+    ) {
+        self.context = context
+        self.fontSize = fontSize
+        self.textColor = textColor
+        self.accentTextColor = accentTextColor
+    }
+    
+    public static func ==(lhs: ChatInputTextCollapsedQuoteAttributes, rhs: ChatInputTextCollapsedQuoteAttributes) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        if lhs.fontSize != rhs.fontSize {
+            return false
+        }
+        if !lhs.textColor.isEqual(rhs.textColor) {
+            return false
+        }
+        if !lhs.accentTextColor.isEqual(rhs.accentTextColor) {
+            return false
+        }
+        
+        return true
+    }
+}
+
+public protocol ChatInputTextCollapsedQuoteAttachment: NSTextAttachment {
+    var text: NSAttributedString { get }
+}
+
+public func expandedInputStateAttributedString(_ text: NSAttributedString) -> NSAttributedString {
+    let sourceString = NSMutableAttributedString(attributedString: text)
+    while true {
+        var found = false
+        let fullRange = NSRange(sourceString.string.startIndex ..< sourceString.string.endIndex, in: sourceString.string)
+        sourceString.enumerateAttribute(ChatTextInputAttributes.collapsedBlock, in: fullRange, options: [.longestEffectiveRangeNotRequired], using: { value, range, stop in
+            if let value = value as? NSAttributedString {
+                let updatedBlockString = NSMutableAttributedString(attributedString: value)
+                updatedBlockString.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: true), range: NSRange(location: 0, length: updatedBlockString.length))
+                sourceString.replaceCharacters(in: range, with: updatedBlockString)
+                stop.pointee = true
+                found = true
+            }
+        })
+        if !found {
+            break
+        }
+    }
+    return sourceString
+}
+
 public func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttributedString {
     let sourceString = NSMutableAttributedString(attributedString: text)
     while true {
@@ -43,6 +105,10 @@ public func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttrib
         sourceString.enumerateAttribute(NSAttributedString.Key.attachment, in: fullRange, options: [.longestEffectiveRangeNotRequired], using: { value, range, stop in
             if let value = value as? EmojiTextAttachment {
                 sourceString.replaceCharacters(in: range, with: NSAttributedString(string: value.text, attributes: [ChatTextInputAttributes.customEmoji: value.emoji]))
+                stop.pointee = true
+                found = true
+            } else if let value = value as? ChatInputTextCollapsedQuoteAttachment {
+                sourceString.replaceCharacters(in: range, with: NSAttributedString(string: " ", attributes: [ChatTextInputAttributes.collapsedBlock: value.text]))
                 stop.pointee = true
                 found = true
             }
@@ -57,7 +123,15 @@ public func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttrib
     
     sourceString.enumerateAttributes(in: fullRange, options: [], using: { attributes, range, _ in
         for (key, value) in attributes {
-            if ChatTextInputAttributes.allAttributes.contains(key) || key == NSAttributedString.Key.attachment {
+            var matchAttribute = false
+            if ChatTextInputAttributes.allAttributes.contains(key) {
+                matchAttribute = true
+            } else if key == NSAttributedString.Key.attachment {
+                if value is EmojiTextAttachment {
+                    matchAttribute = true
+                }
+            }
+            if matchAttribute {
                 result.addAttribute(key, value: value, range: range)
             }
         }
@@ -102,7 +176,52 @@ public struct ChatTextFontAttributes: OptionSet, Hashable, Sequence {
     }
 }
 
-public func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize: CGFloat, textColor: UIColor, accentTextColor: UIColor, writingDirection: NSWritingDirection?, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?) -> NSAttributedString {
+public func textAttributedStringForStateText(context: AnyObject, stateText: NSAttributedString, fontSize: CGFloat, textColor: UIColor, accentTextColor: UIColor, writingDirection: NSWritingDirection?, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, makeCollapsedQuoteAttachment: ((NSAttributedString, ChatInputTextCollapsedQuoteAttributes) -> ChatInputTextCollapsedQuoteAttachment)?) -> NSAttributedString {
+    let quoteAttributes = ChatInputTextCollapsedQuoteAttributes(
+        context: context,
+        fontSize: round(fontSize * 0.8235294117647058),
+        textColor: textColor,
+        accentTextColor: accentTextColor
+    )
+    
+    let stateText = NSMutableAttributedString(attributedString: stateText)
+    
+    /*while true {
+        var found = false
+        stateText.enumerateAttribute(ChatTextInputAttributes.block, in: NSRange(location: 0, length: stateText.length), options: [.longestEffectiveRangeNotRequired], using: { value, range, stop in
+            if let value = value as? ChatTextInputTextQuoteAttribute {
+                if value.isCollapsed, let makeCollapsedQuoteAttachment {
+                    found = true
+                    stop.pointee = true
+                    
+                    let quoteText = stateText.attributedSubstring(from: range)
+                    stateText.replaceCharacters(in: range, with: "")
+                    stateText.insert(NSAttributedString(attachment: makeCollapsedQuoteAttachment(quoteText, quoteAttributes)), at: range.lowerBound)
+                }
+            }
+        })
+        if !found {
+            break
+        }
+    }*/
+    while true {
+        var found = false
+        stateText.enumerateAttribute(ChatTextInputAttributes.collapsedBlock, in: NSRange(location: 0, length: stateText.length), options: [.longestEffectiveRangeNotRequired], using: { value, range, stop in
+            if let value = value as? NSAttributedString {
+                if let makeCollapsedQuoteAttachment {
+                    found = true
+                    stop.pointee = true
+                    
+                    stateText.replaceCharacters(in: range, with: "")
+                    stateText.insert(NSAttributedString(attachment: makeCollapsedQuoteAttachment(value, quoteAttributes)), at: range.lowerBound)
+                }
+            }
+        })
+        if !found {
+            break
+        }
+    }
+    
     let result = NSMutableAttributedString(string: stateText.string)
     let fullRange = NSRange(location: 0, length: result.length)
     
@@ -156,6 +275,8 @@ public func textAttributedStringForStateText(_ stateText: NSAttributedString, fo
                 case .code:
                     fontAttributes.insert(.monospace)
                 }
+                result.addAttribute(key, value: value, range: range)
+            } else if key == .attachment, value is ChatInputTextCollapsedQuoteAttachment {
                 result.addAttribute(key, value: value, range: range)
             }
         }
@@ -249,9 +370,11 @@ public final class ChatTextInputTextQuoteAttribute: NSObject {
     }
     
     public let kind: Kind
+    public let isCollapsed: Bool
     
-    public init(kind: Kind) {
+    public init(kind: Kind, isCollapsed: Bool) {
         self.kind = kind
+        self.isCollapsed = isCollapsed
         
         super.init()
     }
@@ -262,6 +385,9 @@ public final class ChatTextInputTextQuoteAttribute: NSObject {
         }
         
         if self.kind != other.kind {
+            return false
+        }
+        if self.isCollapsed != other.isCollapsed {
             return false
         }
         
@@ -281,6 +407,7 @@ public final class ChatTextInputTextCustomEmojiAttribute: NSObject, Codable {
     public enum Custom: Codable {
         case topic(id: Int64, info: EngineMessageHistoryThread.Info)
         case nameColors([UInt32])
+        case stars(tinted: Bool)
     }
     
     public let interactivelySelectedFromPackId: ItemCollectionId?
@@ -646,16 +773,16 @@ private func refreshBlockQuotes(text: NSString, initialAttributedText: NSAttribu
     if !quoteRangesEqual(quoteRanges, initialQuoteRanges) {
         attributedText.removeAttribute(ChatTextInputAttributes.block, range: fullRange)
         for (range, attribute) in quoteRanges {
-            attributedText.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: attribute.kind), range: range)
+            attributedText.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: attribute.kind, isCollapsed: attribute.isCollapsed), range: range)
         }
     }
 }
 
-public func refreshChatTextInputAttributes(_ textView: UITextView, theme: PresentationTheme, baseFontSize: CGFloat, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?) {
-    refreshChatTextInputAttributes(textView: textView, primaryTextColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, baseFontSize: baseFontSize, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
+public func refreshChatTextInputAttributes(context: AnyObject, textView: UITextView, theme: PresentationTheme, baseFontSize: CGFloat, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, makeCollapsedQuoteAttachment: ((NSAttributedString, ChatInputTextCollapsedQuoteAttributes) -> ChatInputTextCollapsedQuoteAttachment)?) {
+    refreshChatTextInputAttributes(context: context, textView: textView, primaryTextColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, baseFontSize: baseFontSize, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider, makeCollapsedQuoteAttachment: makeCollapsedQuoteAttachment)
 }
 
-public func refreshChatTextInputAttributes(textView: UITextView, primaryTextColor: UIColor, accentTextColor: UIColor, baseFontSize: CGFloat, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?) {
+public func refreshChatTextInputAttributes(context: AnyObject, textView: UITextView, primaryTextColor: UIColor, accentTextColor: UIColor, baseFontSize: CGFloat, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, makeCollapsedQuoteAttachment: ((NSAttributedString, ChatInputTextCollapsedQuoteAttributes) -> ChatInputTextCollapsedQuoteAttachment)?) {
     guard let initialAttributedText = textView.attributedText, initialAttributedText.length != 0 else {
         return
     }
@@ -672,21 +799,21 @@ public func refreshChatTextInputAttributes(textView: UITextView, primaryTextColo
     var attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(initialAttributedText))
     refreshTextMentions(text: text, initialAttributedText: initialAttributedText, attributedText: attributedText, fullRange: fullRange)
     
-    var resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: primaryTextColor, accentTextColor: accentTextColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
+    var resultAttributedText = textAttributedStringForStateText(context: context, stateText: attributedText, fontSize: baseFontSize, textColor: primaryTextColor, accentTextColor: accentTextColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider, makeCollapsedQuoteAttachment: makeCollapsedQuoteAttachment)
     
     text = resultAttributedText.string as NSString
     fullRange = NSRange(location: 0, length: text.length)
     attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(resultAttributedText))
     refreshTextUrls(text: text, initialAttributedText: resultAttributedText, attributedText: attributedText, fullRange: fullRange)
     
-    resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: primaryTextColor, accentTextColor: accentTextColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
+    resultAttributedText = textAttributedStringForStateText(context: context, stateText: attributedText, fontSize: baseFontSize, textColor: primaryTextColor, accentTextColor: accentTextColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider, makeCollapsedQuoteAttachment: makeCollapsedQuoteAttachment)
     
     text = resultAttributedText.string as NSString
     fullRange = NSRange(location: 0, length: text.length)
     attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(resultAttributedText))
     refreshBlockQuotes(text: text, initialAttributedText: resultAttributedText, attributedText: attributedText, fullRange: fullRange)
     
-    resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: primaryTextColor, accentTextColor: accentTextColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
+    resultAttributedText = textAttributedStringForStateText(context: context, stateText: attributedText, fontSize: baseFontSize, textColor: primaryTextColor, accentTextColor: accentTextColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider, makeCollapsedQuoteAttachment: makeCollapsedQuoteAttachment)
     
     if !resultAttributedText.isEqual(to: initialAttributedText) {
         fullRange = NSRange(location: 0, length: textView.textStorage.length)
@@ -745,13 +872,15 @@ public func refreshChatTextInputAttributes(textView: UITextView, primaryTextColo
                     textView.textStorage.addAttribute(key, value: value, range: range)
                     textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.clear, range: range)
                 } else if key == ChatTextInputAttributes.block, let value = value as? ChatTextInputTextQuoteAttribute {
-                    switch value.kind {
-                    case .quote:
-                        fontAttributes.insert(.blockQuote)
-                    case .code:
-                        fontAttributes.insert(.monospace)
+                    if !value.isCollapsed {
+                        switch value.kind {
+                        case .quote:
+                            fontAttributes.insert(.blockQuote)
+                        case .code:
+                            fontAttributes.insert(.monospace)
+                        }
+                        textView.textStorage.addAttribute(key, value: value, range: range)
                     }
-                    textView.textStorage.addAttribute(key, value: value, range: range)
                 }
             }
                 
@@ -794,7 +923,7 @@ public func refreshChatTextInputAttributes(textView: UITextView, primaryTextColo
     textView.textStorage.endEditing()
 }
 
-public func refreshGenericTextInputAttributes(_ textView: UITextView, theme: PresentationTheme, baseFontSize: CGFloat, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, spoilersRevealed: Bool = false) {
+public func refreshGenericTextInputAttributes(context: AnyObject, textView: UITextView, theme: PresentationTheme, baseFontSize: CGFloat, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, makeCollapsedQuoteAttachment: ((NSAttributedString, ChatInputTextCollapsedQuoteAttributes) -> ChatInputTextCollapsedQuoteAttachment)?, spoilersRevealed: Bool = false) {
     guard let initialAttributedText = textView.attributedText, initialAttributedText.length != 0 else {
         return
     }
@@ -807,14 +936,14 @@ public func refreshGenericTextInputAttributes(_ textView: UITextView, theme: Pre
     var text: NSString = initialAttributedText.string as NSString
     var fullRange = NSRange(location: 0, length: initialAttributedText.length)
     var attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(initialAttributedText))
-    var resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
+    var resultAttributedText = textAttributedStringForStateText(context: context, stateText: attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider, makeCollapsedQuoteAttachment: makeCollapsedQuoteAttachment)
     
     text = resultAttributedText.string as NSString
     fullRange = NSRange(location: 0, length: initialAttributedText.length)
     attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(resultAttributedText))
     refreshTextUrls(text: text, initialAttributedText: resultAttributedText, attributedText: attributedText, fullRange: fullRange)
     
-    resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
+    resultAttributedText = textAttributedStringForStateText(context: context, stateText: attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider, makeCollapsedQuoteAttachment: makeCollapsedQuoteAttachment)
     
     if !resultAttributedText.isEqual(to: initialAttributedText) {
         textView.textStorage.removeAttribute(NSAttributedString.Key.font, range: fullRange)
@@ -1067,7 +1196,7 @@ public func convertMarkdownToAttributes(_ text: NSAttributedString) -> NSAttribu
                         substring = substring.substring(with: NSRange(location: 0, length: substring.length - 1)) as NSString
                     }
                     
-                    result.append(NSAttributedString(string: substring as String, attributes: [ChatTextInputAttributes.block: ChatTextInputTextQuoteAttribute(kind: .code(language: language))]))
+                    result.append(NSAttributedString(string: substring as String, attributes: [ChatTextInputAttributes.block: ChatTextInputTextQuoteAttribute(kind: .code(language: language), isCollapsed: false)]))
                     offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 1).length, text.count), 6))
                 }
             }

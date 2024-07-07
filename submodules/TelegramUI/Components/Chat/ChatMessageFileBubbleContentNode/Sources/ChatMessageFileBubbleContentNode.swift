@@ -114,6 +114,8 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             let statusType: ChatMessageDateAndStatusType?
             if case .customChatContents = item.associatedData.subject {
                 statusType = nil
+            } else if item.message.timestamp == 0 {
+                statusType = nil
             } else {
                 switch preparePosition {
                 case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
@@ -246,6 +248,13 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
     override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.interactiveFileNode.dateAndStatusNode.isHidden {
             return self.interactiveFileNode.dateAndStatusNode.reactionView(value: value)
+        }
+        return nil
+    }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        if !self.interactiveFileNode.dateAndStatusNode.isHidden {
+            return self.interactiveFileNode.dateAndStatusNode.messageEffectTargetView()
         }
         return nil
     }

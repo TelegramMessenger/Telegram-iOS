@@ -4,6 +4,7 @@ import SceneKit
 import Display
 import AppBundle
 import SwiftSignalKit
+import PremiumStarComponent
 
 private let sceneVersion: Int = 1
 

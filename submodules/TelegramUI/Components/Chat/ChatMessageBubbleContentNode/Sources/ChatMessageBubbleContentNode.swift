@@ -118,7 +118,7 @@ public enum ChatMessageBubbleContentPosition {
 
 public enum ChatMessageBubblePreparePosition {
     case linear(top: ChatMessageBubbleRelativePosition, bottom: ChatMessageBubbleRelativePosition)
-    case mosaic(top: ChatMessageBubbleRelativePosition, bottom: ChatMessageBubbleRelativePosition)
+    case mosaic(top: ChatMessageBubbleRelativePosition, bottom: ChatMessageBubbleRelativePosition, index: Int?)
 }
 
 public struct ChatMessageBubbleContentTapAction {
@@ -141,6 +141,7 @@ public struct ChatMessageBubbleContentTapAction {
     public enum Content {
         case none
         case url(Url)
+        case phone(String)
         case textMention(String)
         case peerMention(peerId: PeerId, mention: String, openProfile: Bool)
         case botCommand(String)
@@ -158,14 +159,17 @@ public struct ChatMessageBubbleContentTapAction {
         case copy(String)
         case largeEmoji(String, String?, TelegramMediaFile)
         case customEmoji(TelegramMediaFile)
+        case custom(() -> Void)
     }
     
     public var content: Content
+    public var rects: [CGRect]?
     public var hasLongTapAction: Bool
     public var activate: (() -> Promise<Bool>?)?
     
-    public init(content: Content, hasLongTapAction: Bool = true, activate: (() -> Promise<Bool>?)? = nil) {
+    public init(content: Content, rects: [CGRect]? = nil, hasLongTapAction: Bool = true, activate: (() -> Promise<Bool>?)? = nil) {
         self.content = content
+        self.rects = rects
         self.hasLongTapAction = hasLongTapAction
         self.activate = activate
     }
@@ -203,6 +207,8 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
     open var supportsMosaic: Bool {
         return false
     }
+    
+    open var index: Int?
     
     public weak var itemNode: ChatMessageItemNodeProtocol?
     public weak var bubbleBackgroundNode: ChatMessageBackground?
@@ -292,6 +298,10 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
     }
     
     open func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
+        return nil
+    }
+    
+    open func messageEffectTargetView() -> UIView? {
         return nil
     }
     

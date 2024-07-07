@@ -20,6 +20,25 @@ private let tagImage: UIImage? = {
     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ReactionTagBackground"), color: .white)?.stretchableImage(withLeftCapWidth: 8, topCapHeight: 15)
 }()
 
+private final class StarsButtonEffectLayer: SimpleLayer {
+    override init() {
+        super.init()
+        
+        self.backgroundColor = UIColor.lightGray.withAlphaComponent(0.2).cgColor
+    }
+    
+    override init(layer: Any) {
+        super.init(layer: layer)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func update(size: CGSize) {
+    }
+}
+
 public final class ReactionIconView: PortalSourceView {
     private var animationLayer: InlineStickerItemLayer?
     
@@ -705,14 +724,27 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                 }
             }
             
-            let backgroundColors = ReactionButtonAsyncNode.ContainerButtonNode.Colors(
-                background: spec.component.chosenOrder != nil ? spec.component.colors.selectedBackground : spec.component.colors.deselectedBackground,
-                foreground: spec.component.chosenOrder != nil ? spec.component.colors.selectedForeground : spec.component.colors.deselectedForeground,
-                extractedBackground: spec.component.colors.extractedBackground,
-                extractedForeground: spec.component.colors.extractedForeground,
-                extractedSelectedForeground: spec.component.colors.extractedSelectedForeground,
-                isSelected: spec.component.chosenOrder != nil
-            )
+            let backgroundColors: ReactionButtonAsyncNode.ContainerButtonNode.Colors
+            
+            if case .custom(MessageReaction.starsReactionId) = spec.component.reaction.value {
+                backgroundColors = ReactionButtonAsyncNode.ContainerButtonNode.Colors(
+                    background: spec.component.chosenOrder != nil ? spec.component.colors.selectedStarsBackground : spec.component.colors.deselectedStarsBackground,
+                    foreground: spec.component.chosenOrder != nil ? spec.component.colors.selectedStarsForeground : spec.component.colors.deselectedStarsForeground,
+                    extractedBackground: spec.component.chosenOrder != nil ? spec.component.colors.selectedStarsBackground : spec.component.colors.deselectedStarsBackground,
+                    extractedForeground: spec.component.chosenOrder != nil ? spec.component.colors.selectedStarsForeground : spec.component.colors.deselectedStarsForeground,
+                    extractedSelectedForeground: spec.component.colors.extractedSelectedForeground,
+                    isSelected: spec.component.chosenOrder != nil
+                )
+            } else {
+                backgroundColors = ReactionButtonAsyncNode.ContainerButtonNode.Colors(
+                    background: spec.component.chosenOrder != nil ? spec.component.colors.selectedBackground : spec.component.colors.deselectedBackground,
+                    foreground: spec.component.chosenOrder != nil ? spec.component.colors.selectedForeground : spec.component.colors.deselectedForeground,
+                    extractedBackground: spec.component.colors.extractedBackground,
+                    extractedForeground: spec.component.colors.extractedForeground,
+                    extractedSelectedForeground: spec.component.colors.extractedSelectedForeground,
+                    isSelected: spec.component.chosenOrder != nil
+                )
+            }
             var backgroundCounter: ReactionButtonAsyncNode.ContainerButtonNode.Counter?
             if let counterLayout = counterLayout {
                 backgroundCounter = ReactionButtonAsyncNode.ContainerButtonNode.Counter(
@@ -743,6 +775,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
     
     public let containerView: ContextExtractedContentContainingView
     private let buttonNode: ContainerButtonNode
+    private var starsEffectLayer: StarsButtonEffectLayer?
     public var iconView: ReactionIconView?
     private var avatarsView: AnimatedAvatarSetView?
     
@@ -838,6 +871,29 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
         self.containerView.contentRect = CGRect(origin: CGPoint(), size: layout.size)
         animation.animator.updateFrame(layer: self.buttonNode.layer, frame: CGRect(origin: CGPoint(), size: layout.size), completion: nil)
         
+        if case .custom(MessageReaction.starsReactionId) = layout.spec.component.reaction.value {
+            let starsEffectLayer: StarsButtonEffectLayer
+            if let current = self.starsEffectLayer {
+                starsEffectLayer = current
+            } else {
+                starsEffectLayer = StarsButtonEffectLayer()
+                self.starsEffectLayer = starsEffectLayer
+                if let iconView = self.iconView {
+                    self.buttonNode.layer.insertSublayer(starsEffectLayer, below: iconView.layer)
+                } else {
+                    self.buttonNode.layer.insertSublayer(starsEffectLayer, at: 0)
+                }
+            }
+            let starsEffectLayerFrame = CGRect(origin: CGPoint(), size: layout.size)
+            animation.animator.updateFrame(layer: starsEffectLayer, frame: starsEffectLayerFrame, completion: nil)
+            starsEffectLayer.update(size: starsEffectLayerFrame.size)
+        } else {
+            if let starsEffectLayer = self.starsEffectLayer {
+                self.starsEffectLayer = nil
+                starsEffectLayer.removeFromSuperlayer()
+            }
+        }
+        
         self.buttonNode.update(layout: layout.backgroundLayout)
         
         if let iconView = self.iconView {
@@ -878,65 +934,6 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                     transition: animation.transition
                 )
             }
-            
-            /*if self.layout?.spec.component.reaction != layout.spec.component.reaction {
-                if let file = layout.spec.component.reaction.centerAnimation {
-                    
-                    if let image = ReactionImageCache.shared.get(reaction: layout.spec.component.reaction.value) {
-                        iconView.imageView.image = image
-                    } else {
-                        self.iconImageDisposable.set((reactionStaticImage(context: layout.spec.component.context, animation: file, pixelSize: CGSize(width: 32.0 * UIScreenScale, height: 32.0 * UIScreenScale), queue: sharedReactionStaticImage)
-                        |> filter { data in
-                            return data.isComplete
-                        }
-                        |> take(1)
-                        |> map { data -> UIImage? in
-                            if data.isComplete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                                if let image = UIImage(data: dataValue) {
-                                    return image.precomposed()
-                                } else {
-                                    print("Could not decode image")
-                                }
-                            } else {
-                                print("Incomplete data")
-                            }
-                            return nil
-                        }
-                        |> deliverOnMainQueue).start(next: { [weak self] image in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            
-                            if let image = image {
-                                strongSelf.iconView?.imageView.image = image
-                                ReactionImageCache.shared.put(reaction: layout.spec.component.reaction.value, image: image)
-                            }
-                        }))
-                    }
-                } else if let legacyIcon = layout.spec.component.reaction.legacyIcon {
-                    self.iconImageDisposable.set((layout.spec.component.context.account.postbox.mediaBox.resourceData(legacyIcon.resource)
-                    |> deliverOn(Queue.concurrentDefaultQueue())
-                    |> map { data -> UIImage? in
-                        if data.complete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                            if let image = WebP.convert(fromWebP: dataValue) {
-                                if #available(iOS 15.0, iOSApplicationExtension 15.0, *) {
-                                    return image.preparingForDisplay()
-                                } else {
-                                    return image.precomposed()
-                                }
-                            }
-                        }
-                        return nil
-                    }
-                    |> deliverOnMainQueue).start(next: { [weak self] image in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        
-                        strongSelf.iconView?.imageView.image = image
-                    }))
-                }
-            }*/
         }
         
         if !layout.spec.component.avatarPeers.isEmpty {
@@ -1041,6 +1038,10 @@ public final class ReactionButtonComponent: Equatable {
         public var selectedBackground: UInt32
         public var deselectedForeground: UInt32
         public var selectedForeground: UInt32
+        public var deselectedStarsBackground: UInt32
+        public var selectedStarsBackground: UInt32
+        public var deselectedStarsForeground: UInt32
+        public var selectedStarsForeground: UInt32
         public var extractedBackground: UInt32
         public var extractedForeground: UInt32
         public var extractedSelectedForeground: UInt32
@@ -1052,6 +1053,10 @@ public final class ReactionButtonComponent: Equatable {
             selectedBackground: UInt32,
             deselectedForeground: UInt32,
             selectedForeground: UInt32,
+            deselectedStarsBackground: UInt32,
+            selectedStarsBackground: UInt32,
+            deselectedStarsForeground: UInt32,
+            selectedStarsForeground: UInt32,
             extractedBackground: UInt32,
             extractedForeground: UInt32,
             extractedSelectedForeground: UInt32,
@@ -1062,6 +1067,10 @@ public final class ReactionButtonComponent: Equatable {
             self.selectedBackground = selectedBackground
             self.deselectedForeground = deselectedForeground
             self.selectedForeground = selectedForeground
+            self.deselectedStarsBackground = deselectedStarsBackground
+            self.selectedStarsBackground = selectedStarsBackground
+            self.deselectedStarsForeground = deselectedStarsForeground
+            self.selectedStarsForeground = selectedStarsForeground
             self.extractedBackground = extractedBackground
             self.extractedForeground = extractedForeground
             self.extractedSelectedForeground = extractedSelectedForeground
@@ -1243,8 +1252,7 @@ public final class ReactionButtonsAsyncLayoutContainer {
         var items: [Result.Item] = []
         var applyItems: [(key: MessageReaction.Reaction, size: CGSize, apply: (_ animation: ListViewItemUpdateAnimation, _ arguments: Arguments) -> ReactionNodePool.Item)] = []
         
-        var validIds = Set<MessageReaction.Reaction>()
-        for reaction in reactions.sorted(by: { lhs, rhs in
+        var reactions = reactions.sorted(by: { lhs, rhs in
             var lhsCount = lhs.count
             if lhs.chosenOrder != nil {
                 lhsCount -= 1
@@ -1268,7 +1276,22 @@ public final class ReactionButtonsAsyncLayoutContainer {
             }
             
             return false
+        })
+        
+        if let index = reactions.firstIndex(where: {
+            if case .custom(MessageReaction.starsReactionId) = $0.reaction.value {
+                return true
+            } else {
+                return false
+            }
         }) {
+            let value = reactions[index]
+            reactions.remove(at: index)
+            reactions.insert(value, at: 0)
+        }
+        
+        var validIds = Set<MessageReaction.Reaction>()
+        for reaction in reactions {
             validIds.insert(reaction.reaction.value)
             
             var avatarPeers = reaction.peers

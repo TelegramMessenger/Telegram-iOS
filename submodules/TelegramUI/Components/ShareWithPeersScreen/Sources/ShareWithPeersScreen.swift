@@ -296,6 +296,7 @@ final class ShareWithPeersScreenComponent: Component {
         private var visibleItems: [AnyHashable: ComponentView<Empty>] = [:]
         private var visibleSectionBackgrounds: [Int: UIView] = [:]
         private var visibleSectionFooters: [Int: ComponentView<Empty>] = [:]
+        private var itemSizes: [AnyHashable: CGSize] = [:]
         
         private var ignoreScrolling: Bool = false
         private var isDismissed: Bool = false
@@ -508,7 +509,7 @@ final class ShareWithPeersScreenComponent: Component {
                             }
                         }
                     } else {
-                        let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                        let transition = ComponentTransition(animation: .curve(duration: 0.3, curve: .spring))
                         self.state?.updated(transition: transition)
                         self.updateModalOverlayTransition(transition: transition)
                     }
@@ -672,6 +673,9 @@ final class ShareWithPeersScreenComponent: Component {
                     }
                     var groupPeerIds: [EnginePeer.Id] = []
                     for peer in peers {
+                        guard !peer.isDeleted else {
+                            continue
+                        }
                         if !existingPeerIds.contains(peer.id) {
                             self.selectedPeers.append(peer.id)
                             existingPeerIds.insert(peer.id)
@@ -682,7 +686,7 @@ final class ShareWithPeersScreenComponent: Component {
                 } else {
                     self.selectedPeers = self.selectedPeers.filter { !peerIds.contains($0) }
                 }
-                let transition = Transition(animation: .curve(duration: 0.35, curve: .spring))
+                let transition = ComponentTransition(animation: .curve(duration: 0.35, curve: .spring))
                 self.state?.updated(transition: transition)
             }
                         
@@ -804,7 +808,7 @@ final class ShareWithPeersScreenComponent: Component {
             })
         }
         
-        private func updateModalOverlayTransition(transition: Transition) {
+        private func updateModalOverlayTransition(transition: ComponentTransition) {
             guard let component = self.component, let environment = self.environment, let itemLayout = self.itemLayout, !self.isDismissed else {
                 return
             }
@@ -837,7 +841,7 @@ final class ShareWithPeersScreenComponent: Component {
             }
         }
         
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             guard let component = self.component, let environment = self.environment, let itemLayout = self.itemLayout else {
                 return
             }
@@ -978,7 +982,7 @@ final class ShareWithPeersScreenComponent: Component {
                                     if let self {
                                         self.selectedPeers = []
                                         self.selectedGroups = []
-                                        let transition = Transition(animation: .curve(duration: 0.35, curve: .spring))
+                                        let transition = ComponentTransition(animation: .curve(duration: 0.35, curve: .spring))
                                         self.state?.updated(transition: transition)
                                     }
                                 }
@@ -1022,13 +1026,13 @@ final class ShareWithPeersScreenComponent: Component {
                         }
                     }
                     for i in 0 ..< peers.count {
+                        let peer = peers[i]
+                        let itemId = AnyHashable(peer.id)
+                                                
                         let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: sectionOffset + section.insets.top + CGFloat(i) * section.itemHeight), size: CGSize(width: itemLayout.containerSize.width, height: section.itemHeight))
                         if !visibleBounds.intersects(itemFrame) {
                             continue
                         }
-                        
-                        let peer = peers[i]
-                        let itemId = AnyHashable(peer.id)
                         validIds.append(itemId)
                         
                         var itemTransition = transition
@@ -1050,13 +1054,13 @@ final class ShareWithPeersScreenComponent: Component {
                             if case let .channel(channel) = peer {
                                 if case .broadcast = channel.info {
                                     if let count = component.stateContext.stateValue?.participants[peer.id] {
-                                        subtitle = environment.strings.Conversation_StatusSubscribers(Int32(count))
+                                        subtitle = environment.strings.Conversation_StatusSubscribers(Int32(max(1, count)))
                                     } else {
                                         subtitle = environment.strings.Channel_Status
                                     }
                                 } else {
                                     if let count = component.stateContext.stateValue?.participants[peer.id] {
-                                        subtitle = environment.strings.Conversation_StatusMembers(Int32(count))
+                                        subtitle = environment.strings.Conversation_StatusMembers(Int32(max(1, count)))
                                     } else {
                                         subtitle = environment.strings.Group_Status
                                     }
@@ -1079,7 +1083,7 @@ final class ShareWithPeersScreenComponent: Component {
                             }
                         }
                         
-                        let _ = visibleItem.update(
+                        let itemSize = visibleItem.update(
                             transition: itemTransition,
                             component: AnyComponent(PeerListItemComponent(
                                 context: component.context,
@@ -1150,6 +1154,8 @@ final class ShareWithPeersScreenComponent: Component {
                             environment: {},
                             containerSize: itemFrame.size
                         )
+                        self.itemSizes[itemId] = itemSize
+                        
                         if let itemView = visibleItem.view {
                             if itemView.superview == nil {
                                 self.itemContainerView.addSubview(itemView)
@@ -1236,7 +1242,7 @@ final class ShareWithPeersScreenComponent: Component {
                                             controller.dismiss()
                                         }
                                     }
-                                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
+                                    self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.35, curve: .spring)))
                                 },
                                 secondaryAction: { [weak self] in
                                     guard let self, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
@@ -1389,13 +1395,13 @@ final class ShareWithPeersScreenComponent: Component {
                         
                         let subtitle: String?
                         if case let .legacyGroup(group) = peer {
-                            subtitle = environment.strings.Conversation_StatusMembers(Int32(group.participantCount))
+                            subtitle = environment.strings.Conversation_StatusMembers(Int32(max(1, group.participantCount)))
                         } else if case let .channel(channel) = peer {
                             if let count = stateValue.participants[peer.id] {
                                 if case .broadcast = channel.info {
-                                    subtitle = environment.strings.Conversation_StatusSubscribers(Int32(count))
+                                    subtitle = environment.strings.Conversation_StatusSubscribers(Int32(max(1, count)))
                                 } else {
-                                    subtitle = environment.strings.Conversation_StatusMembers(Int32(count))
+                                    subtitle = environment.strings.Conversation_StatusMembers(Int32(max(1, count)))
                                 }
                             } else {
                                 subtitle = nil
@@ -1433,7 +1439,7 @@ final class ShareWithPeersScreenComponent: Component {
                                         return
                                     }
                                     let update = {
-                                        let transition = Transition(animation: .curve(duration: 0.35, curve: .spring))
+                                        let transition = ComponentTransition(animation: .curve(duration: 0.35, curve: .spring))
                                         self.state?.updated(transition: transition)
                                         
                                         if self.searchStateContext != nil {
@@ -1560,7 +1566,7 @@ final class ShareWithPeersScreenComponent: Component {
                                         } else {
                                             self.selectedOptions.remove(optionId)
                                         }
-                                        let transition = Transition(animation: .curve(duration: 0.35, curve: .spring))
+                                        let transition = ComponentTransition(animation: .curve(duration: 0.35, curve: .spring))
                                         self.state?.updated(transition: transition)
                                         
                                         self.presentOptionsTooltip(optionId: optionId)
@@ -1696,7 +1702,7 @@ final class ShareWithPeersScreenComponent: Component {
                 self.visibleSectionFooters.removeValue(forKey: id)
             }
             
-            let fadeTransition = Transition.easeInOut(duration: 0.25)
+            let fadeTransition = ComponentTransition.easeInOut(duration: 0.25)
             
             var searchQuery: String?
             var searchResultsAreEmpty = false
@@ -1867,7 +1873,7 @@ final class ShareWithPeersScreenComponent: Component {
         }
         
         private var currentHasChannels: Bool?
-        func update(component: ShareWithPeersScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: ShareWithPeersScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             guard !self.isDismissed else {
                 return availableSize
             }
@@ -2074,7 +2080,7 @@ final class ShareWithPeersScreenComponent: Component {
                             if self.selectedCategories.isEmpty {
                                 self.selectedCategories.insert(.everyone)
                             }
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
+                            self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.35, curve: .spring)))
                         },
                         isFocusedUpdated: { [weak self] isFocused in
                             guard let self else {
@@ -2118,7 +2124,7 @@ final class ShareWithPeersScreenComponent: Component {
                             }
                             self.searchStateContext = searchStateContext
                             if applyState {
-                                self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(contentReloaded: true)))
+                                self.state?.updated(transition: ComponentTransition(animation: .none).withUserData(AnimationHint(contentReloaded: true)))
                             }
                         })
                         applyState = true
@@ -2822,7 +2828,7 @@ final class ShareWithPeersScreenComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

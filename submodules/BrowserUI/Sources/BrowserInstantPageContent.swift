@@ -873,7 +873,7 @@
 //final class BrowserInstantPageContent: UIView, BrowserContent {
 //    var onScrollingUpdate: (ContentScrollingUpdate) -> Void
 //    
-//    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ComponentFlow.Transition) {
+//    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ComponentFlow.ComponentTransition) {
 //        
 //    }
 //    

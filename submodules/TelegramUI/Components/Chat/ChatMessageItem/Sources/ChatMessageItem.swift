@@ -16,8 +16,12 @@ public enum ChatMessageItemContent: Sequence {
     case group(messages: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)])
     
     public func effectivelyIncoming(_ accountPeerId: PeerId, associatedData: ChatMessageItemAssociatedData? = nil) -> Bool {
-        if let subject = associatedData?.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
-            return false
+        if let subject = associatedData?.subject, case let .messageOptions(_, _, info) = subject {
+            if case .forward = info {
+                return false
+            } else if case let .link(link) = info {
+                return link.isCentered
+            }
         }
         switch self {
             case let .message(message, _, _, _, _):

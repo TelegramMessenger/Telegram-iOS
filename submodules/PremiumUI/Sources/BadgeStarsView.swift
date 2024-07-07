@@ -3,6 +3,7 @@ import UIKit
 import SceneKit
 import Display
 import AppBundle
+import PremiumStarComponent
 
 final class BadgeStarsView: UIView, PhoneDemoDecorationView {
     private let sceneView: SCNView

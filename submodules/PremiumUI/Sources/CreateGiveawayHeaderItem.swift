@@ -8,6 +8,7 @@ import ItemListUI
 import PresentationDataUtils
 import Markdown
 import ComponentFlow
+import PremiumStarComponent
 
 final class CreateGiveawayHeaderItem: ItemListControllerHeaderItem {
     let theme: PresentationTheme
@@ -195,7 +196,17 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
         
         self.backgroundNode.update(size: CGSize(width: layout.size.width, height: navigationBarHeight), transition: transition)
                
-        let component = AnyComponent(PremiumStarComponent(isIntro: true, isVisible: true, hasIdleAnimations: true))
+        let component = AnyComponent(PremiumStarComponent(
+            theme: self.item.theme,
+            isIntro: true,
+            isVisible: true,
+            hasIdleAnimations: true,
+            colors: [
+                UIColor(rgb: 0x6a94ff),
+                UIColor(rgb: 0x9472fd),
+                UIColor(rgb: 0xe26bd3)
+            ]
+        ))
         let containerSize = CGSize(width: min(414.0, layout.size.width), height: 220.0)
         
         if let hostView = self.hostView {

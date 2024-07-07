@@ -1,6 +1,6 @@
 import Foundation
 import UIKit
-import ChatMessageItemView
+import AccountContext
 import AsyncDisplayKit
 
 public protocol ChatMessageTransitionNodeDecorationItemNode: ASDisplayNode {
@@ -10,6 +10,6 @@ public protocol ChatMessageTransitionNodeDecorationItemNode: ASDisplayNode {
 public protocol ChatMessageTransitionNode: AnyObject {
     typealias DecorationItemNode = ChatMessageTransitionNodeDecorationItemNode
     
-    func add(decorationView: UIView, itemNode: ChatMessageItemView) -> DecorationItemNode
+    func add(decorationView: UIView, itemNode: ChatMessageItemNodeProtocol, aboveEverything: Bool) -> DecorationItemNode
     func remove(decorationNode: DecorationItemNode)
 }

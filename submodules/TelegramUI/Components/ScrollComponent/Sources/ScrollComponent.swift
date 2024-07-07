@@ -35,7 +35,7 @@ public final class ScrollComponent<ChildEnvironment: Equatable>: Component {
     let contentInsets: UIEdgeInsets
     let contentOffsetUpdated: (_ top: CGFloat, _ bottom: CGFloat) -> Void
     let contentOffsetWillCommit: (UnsafeMutablePointer<CGPoint>) -> Void
-    let resetScroll: ActionSlot<Void>
+    let resetScroll: ActionSlot<CGPoint?>
     
     public init(
         content: AnyComponent<(ChildEnvironment, ScrollChildEnvironment)>,
@@ -43,7 +43,7 @@ public final class ScrollComponent<ChildEnvironment: Equatable>: Component {
         contentInsets: UIEdgeInsets,
         contentOffsetUpdated: @escaping (_ top: CGFloat, _ bottom: CGFloat) -> Void,
         contentOffsetWillCommit:  @escaping (UnsafeMutablePointer<CGPoint>) -> Void,
-        resetScroll: ActionSlot<Void> = ActionSlot()
+        resetScroll: ActionSlot<CGPoint?> = ActionSlot()
     ) {
         self.content = content
         self.externalState = externalState
@@ -108,7 +108,7 @@ public final class ScrollComponent<ChildEnvironment: Equatable>: Component {
             fatalError("init(coder:) has not been implemented")
         }
                 
-        func update(component: ScrollComponent<ChildEnvironment>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: Transition) -> CGSize {
+        func update(component: ScrollComponent<ChildEnvironment>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: ComponentTransition) -> CGSize {
             let contentSize = self.contentView.update(
                 transition: transition,
                 component: component.content,
@@ -120,8 +120,8 @@ public final class ScrollComponent<ChildEnvironment: Equatable>: Component {
             )
             transition.setFrame(view: self.contentView, frame: CGRect(origin: .zero, size: contentSize), completion: nil)
             
-            component.resetScroll.connect { [weak self] _ in
-                self?.setContentOffset(.zero, animated: false)
+            component.resetScroll.connect { [weak self] point in
+                self?.setContentOffset(point ?? .zero, animated: point != nil)
             }
             
             if self.contentSize != contentSize {
@@ -144,7 +144,7 @@ public final class ScrollComponent<ChildEnvironment: Equatable>: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

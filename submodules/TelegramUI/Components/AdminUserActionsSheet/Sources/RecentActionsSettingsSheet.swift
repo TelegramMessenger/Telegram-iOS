@@ -87,7 +87,7 @@ private enum SettingsActionType: Hashable, CaseIterable {
     var eventFlags: AdminLogEventsFlags {
         switch self {
         case .groupInfo:
-            return [.info, .settings]
+            return [.info, .settings, .forums]
         case .inviteLinks:
             return [.invites]
         case .videoChats:
@@ -369,7 +369,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
             )
         }
         
-        private func updateScrolling(isFirstTime: Bool = false, transition: Transition) {
+        private func updateScrolling(isFirstTime: Bool = false, transition: ComponentTransition) {
             guard let environment = self.environment, let controller = environment.controller(), let itemLayout = self.itemLayout else {
                 return
             }
@@ -438,7 +438,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
             }
         }
         
-        func update(component: RecentActionsSettingsSheetComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: RecentActionsSettingsSheetComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -759,6 +759,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
                     context: component.context,
                     theme: environment.theme,
                     strings: environment.strings,
+                    baseFontSize: presentationData.listsFontSize.baseDisplaySize,
                     sideInset: 0.0,
                     title: peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
                     peer: peer,
@@ -774,7 +775,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
                             self.selectedAdmins.insert(peer.id)
                         }
                         
-                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .easeInOut)))
+                        self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.35, curve: .easeInOut)))
                     }
                 ))))
             }
@@ -791,7 +792,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
                     self.selectedAdmins.removeAll()
                 }
                 
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .easeInOut)))
+                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.35, curve: .easeInOut)))
             }
             adminsSectionItems.append(AnyComponentWithIdentity(id: adminsSectionItems.count, component: AnyComponent(ListActionItemComponent(
                 theme: environment.theme,
@@ -943,7 +944,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -1050,7 +1051,7 @@ private final class MediaSectionExpandIndicatorComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: MediaSectionExpandIndicatorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: MediaSectionExpandIndicatorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let titleArrowSpacing: CGFloat = 1.0
             
             if self.arrowView.image == nil {
@@ -1092,7 +1093,7 @@ private final class MediaSectionExpandIndicatorComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

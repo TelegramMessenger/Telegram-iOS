@@ -45,7 +45,7 @@ final class StickersCarouselComponent: Component {
         private var component: StickersCarouselComponent?
         private var node: StickersCarouselNode?
                 
-        public func update(component: StickersCarouselComponent, availableSize: CGSize, environment: Environment<DemoPageEnvironment>, transition: Transition) -> CGSize {
+        public func update(component: StickersCarouselComponent, availableSize: CGSize, environment: Environment<DemoPageEnvironment>, transition: ComponentTransition) -> CGSize {
             let isDisplaying = environment[DemoPageEnvironment.self].isDisplaying
             
             if self.node == nil && !component.stickers.isEmpty {
@@ -79,7 +79,7 @@ final class StickersCarouselComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<DemoPageEnvironment>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<DemoPageEnvironment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }

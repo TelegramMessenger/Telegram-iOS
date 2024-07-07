@@ -514,6 +514,9 @@ final class MetalVideoRenderingView: UIView, VideoRenderingView {
             }
         }
     }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    }
 }
 
 @available(iOS 13.0, *)

@@ -49,13 +49,32 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
         case let .CustomEmoji(_, fileId):
             string.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: nil), range: range)
         case let .Pre(language):
-            string.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: language)), range: range)
-        case .BlockQuote:
-            string.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote), range: range)
+            string.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: language), isCollapsed: false), range: range)
+        case let .BlockQuote(isCollapsed):
+            string.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: isCollapsed), range: range)
             default:
                 break
         }
     }
+    
+    while true {
+        var found = false
+        string.enumerateAttribute(ChatTextInputAttributes.block, in: NSRange(location: 0, length: string.length), using: { value, range, stop in
+            if let value = value as? ChatTextInputTextQuoteAttribute, value.isCollapsed {
+                found = true
+                let blockString = string.attributedSubstring(from: range)
+                string.replaceCharacters(in: range, with: "")
+                string.insert(NSAttributedString(string: " ", attributes: [
+                    ChatTextInputAttributes.collapsedBlock: blockString
+                ]), at: range.lowerBound)
+                stop.pointee = true
+            }
+        })
+        if !found {
+            break
+        }
+    }
+    
     return string
 }
 
@@ -219,12 +238,12 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                     if let language, !language.isEmpty {
                         title = NSAttributedString(string: language.capitalized, font: boldFont.withSize(round(boldFont.pointSize * 0.8235294117647058)), textColor: codeBlockTitleColor)
                     }
-                    string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(kind: .code(language: language), title: title, color: codeBlockAccentColor, secondaryColor: nil, tertiaryColor: nil, backgroundColor: codeBlockBackgroundColor), range: range)
+                    string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(kind: .code(language: language), title: title, color: codeBlockAccentColor, secondaryColor: nil, tertiaryColor: nil, backgroundColor: codeBlockBackgroundColor, isCollapsible: false), range: range)
                 }
-            case .BlockQuote:
+            case let .BlockQuote(isCollapsed):
                 addFontAttributes(range, .blockQuote)
                 
-                string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(kind: .quote, title: nil, color: baseQuoteTintColor, secondaryColor: baseQuoteSecondaryTintColor, tertiaryColor: baseQuoteTertiaryTintColor, backgroundColor: baseQuoteTintColor.withMultipliedAlpha(0.1)), range: range)
+                string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(kind: .quote, title: nil, color: baseQuoteTintColor, secondaryColor: baseQuoteSecondaryTintColor, tertiaryColor: baseQuoteTertiaryTintColor, backgroundColor: baseQuoteTintColor.withMultipliedAlpha(0.1), isCollapsible: isCollapsed), range: range)
             case .BankCard:
                 string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)
                 if underlineLinks && underlineAllLinks {

@@ -60,6 +60,7 @@ func openResolvedUrlImpl(
     openPeer: @escaping (EnginePeer, ChatControllerInteractionNavigateToPeer) -> Void,
     sendFile: ((FileMediaReference) -> Void)?,
     sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?,
+    sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?,
     requestMessageActionUrlAuth: ((MessageActionUrlSubject) -> Void)? = nil,
     joinVoiceChat: ((PeerId, String?, CachedChannelData.ActiveCall) -> Void)?,
     present: @escaping (ViewController, Any?) -> Void,
@@ -215,12 +216,12 @@ func openResolvedUrlImpl(
             }
         case let .replyThread(messageId):
             if let navigationController = navigationController {
-                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .always).startStandalone()
+                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .always).startStandalone()
             }
         case let .stickerPack(name, _):
             dismissInput()
 
-            let controller = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: .name(name), stickerPacks: [.name(name)], parentNavigationController: navigationController, sendSticker: sendSticker, actionPerformed: { actions in
+            let controller = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: .name(name), stickerPacks: [.name(name)], parentNavigationController: navigationController, sendSticker: sendSticker, sendEmoji: sendEmoji, actionPerformed: { actions in
                 if actions.count > 1, let first = actions.first {
                     if case .add = first.2 {
                         present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.EmojiPackActionInfo_AddedTitle, text: presentationData.strings.EmojiPackActionInfo_MultipleAddedText(Int32(actions.count)), undo: false, info: first.0, topItem: first.1.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
@@ -232,11 +233,11 @@ func openResolvedUrlImpl(
                     
                     switch action {
                     case .add:
-                        present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedTitle : presentationData.strings.StickerPackActionInfo_AddedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedText(info.title).string : presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
+                        present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedTitle : presentationData.strings.StickerPackActionInfo_AddedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedText(info.title).string : presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
                             return true
                         }), nil)
                     case let .remove(positionInList):
-                        present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string : presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { action in
+                        present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string : presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                             if case .undo = action {
                                 let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).startStandalone()
                             }
@@ -250,9 +251,46 @@ func openResolvedUrlImpl(
             navigationController?.pushViewController(InstantPageController(context: context, webPage: webpage, sourceLocation: InstantPageSourceLocation(userLocation: .other, peerType: .channel), anchor: anchor))
         case let .join(link):
             dismissInput()
-            present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
-                openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: peekData))
-            }, parentNavigationController: navigationController), nil)
+        
+            if let progress {
+                let progressSignal = Signal<Never, NoError> { subscriber in
+                    progress.set(.single(true))
+                    return ActionDisposable {
+                        Queue.mainQueue().async() {
+                            progress.set(.single(false))
+                        }
+                    }
+                }
+                |> runOn(Queue.mainQueue())
+                |> delay(0.1, queue: Queue.mainQueue())
+                let progressDisposable = progressSignal.startStrict()
+                
+                var signal = context.engine.peers.joinLinkInformation(link)
+                signal = signal
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        progressDisposable.dispose()
+                    }
+                }
+            
+                let _ = (signal
+                |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] resolvedState in
+                    switch resolvedState {
+                    case let .alreadyJoined(peer):
+                        openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                    case let .peek(peer, deadline):
+                        openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: ChatPeekTimeout(deadline: deadline, linkData: link)))
+                    default:
+                        present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
+                            openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: peekData))
+                        }, parentNavigationController: navigationController, resolvedState: resolvedState), nil)
+                    }
+                })
+            } else {
+                present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
+                    openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: peekData))
+                }, parentNavigationController: navigationController), nil)
+            }
         case let .localization(identifier):
             dismissInput()
             present(LanguageLinkPreviewController(context: context, identifier: identifier), nil)
@@ -782,25 +820,43 @@ func openResolvedUrlImpl(
                 if let navigationController = navigationController {
                     let inputData = Promise<BotCheckoutController.InputData?>()
                     inputData.set(BotCheckoutController.InputData.fetch(context: context, source: .slug(slug))
-                                  |> map(Optional.init)
-                                  |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
                         return .single(nil)
                     })
-                    let checkoutController = BotCheckoutController(context: context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
-                        /*strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .paymentSent(currencyValue: currencyValue, itemTitle: invoice.title), elevatedLayout: false, action: { action in
-                         guard let strongSelf = self, let receiptMessageId = receiptMessageId else {
-                         return false
-                         }
-                         
-                         if case .info = action {
-                         strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                         return true
-                         }
-                         return false
-                         }), in: .current)*/
-                    })
-                    checkoutController.navigationPresentation = .modal
-                    navigationController.pushViewController(checkoutController)
+                    if invoice.currency == "XTR", let starsContext = context.starsContext {
+                        let starsInputData = combineLatest(
+                            inputData.get(),
+                            starsContext.state
+                        )
+                        |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
+                            if let data, let state {
+                                return (state, data.form, data.botPeer)
+                            } else {
+                                return nil
+                            }
+                        }
+                        let _ = (starsInputData |> filter { $0 != nil } |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                            let controller = context.sharedContext.makeStarsTransferScreen(context: context, starsContext: starsContext, invoice: invoice, source: .slug(slug), extendedMedia: [], inputData: starsInputData, completion: { _ in })
+                            navigationController.pushViewController(controller)
+                        })
+                    } else {
+                        let checkoutController = BotCheckoutController(context: context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
+                            /*strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .paymentSent(currencyValue: currencyValue, itemTitle: invoice.title), elevatedLayout: false, action: { action in
+                             guard let strongSelf = self, let receiptMessageId = receiptMessageId else {
+                             return false
+                             }
+                             
+                             if case .info = action {
+                             strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                             return true
+                             }
+                             return false
+                             }), in: .current)*/
+                        })
+                        checkoutController.navigationPresentation = .modal
+                        navigationController.pushViewController(checkoutController)
+                    }
                 }
             } else {
                 present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Chat_ErrorInvoiceNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
@@ -1016,7 +1072,7 @@ func openResolvedUrlImpl(
                             },
                             openMessage: { messageId in
                                 let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
-                                         |> deliverOnMainQueue).startStandalone(next: { peer in
+                                |> deliverOnMainQueue).startStandalone(next: { peer in
                                     guard let peer else {
                                         return
                                     }

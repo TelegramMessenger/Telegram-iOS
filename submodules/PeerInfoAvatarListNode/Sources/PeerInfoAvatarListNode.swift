@@ -1504,7 +1504,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.updateItems(size: size, transition: transition, stripTransition: transition)
         
         if let storyParams = self.storyParams {
-            var indicatorTransition = Transition(transition)
+            var indicatorTransition = ComponentTransition(transition)
             let expandedStorySetIndicator: ComponentView<Empty>
             if let current = self.expandedStorySetIndicator {
                 expandedStorySetIndicator = current
@@ -1519,8 +1519,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 component: AnyComponent(StorySetIndicatorComponent(
                     context: self.context,
                     strings: self.context.sharedContext.currentPresentationData.with({ $0 }).strings,
-                    peer: storyParams.peer,
-                    items: storyParams.items,
+                    items: storyParams.items.map { StorySetIndicatorComponent.Item(storyItem: $0, peer: storyParams.peer) },
+                    displayAvatars: false,
                     hasUnseen: storyParams.hasUnseen,
                     hasUnseenPrivate: storyParams.hasUnseenPrivate,
                     totalCount: storyParams.count,

@@ -237,7 +237,7 @@ private final class StickerSelectionComponent: Component {
             self.state?.updated(transition: .easeInOut(duration: 0.2))
         }
         
-        func update(component: StickerSelectionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: StickerSelectionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.backgroundColor = component.backgroundColor
             let panelBackgroundColor = component.backgroundColor.withMultipliedAlpha(0.85)
             self.panelBackgroundView.updateColor(color: panelBackgroundColor, transition: .immediate)
@@ -421,7 +421,7 @@ private final class StickerSelectionComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -532,7 +532,7 @@ public class StickerPickerScreen: ViewController {
             self.containerView.addSubview(self.hostView)
             
             if controller.hasInteractiveStickers {
-                self.storyStickersContentView = StoryStickersContentView(frame: .zero)
+                self.storyStickersContentView = StoryStickersContentView(isPremium: context.isPremium)
                 self.storyStickersContentView?.locationAction = { [weak self] in
                     self?.controller?.presentLocationPicker()
                 }
@@ -542,8 +542,15 @@ public class StickerPickerScreen: ViewController {
                 self.storyStickersContentView?.reactionAction = { [weak self] in
                     self?.controller?.addReaction()
                 }
-                self.storyStickersContentView?.cameraAction = { [weak self] in
-                    self?.controller?.addCamera()
+                self.storyStickersContentView?.linkAction = { [weak self] in
+                    guard let self, let controller = self.controller else {
+                        return
+                    }
+                    if controller.context.isPremium {
+                        controller.addLink()
+                    } else {
+                        self.presentLinkPremiumSuggestion()
+                    }
                 }
             }
             
@@ -735,7 +742,7 @@ public class StickerPickerScreen: ViewController {
                 
                 let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [file.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                 
-                let gallery = GalleryController(context: context, source: .standaloneMessage(message), streamSingleVideo: true, replaceRootController: { _, _ in
+                let gallery = GalleryController(context: context, source: .standaloneMessage(message, nil), streamSingleVideo: true, replaceRootController: { _, _ in
                 }, baseNavigationController: nil)
                 gallery.setHintWillBePresentedInPreviewingContext(true)
                 
@@ -799,7 +806,7 @@ public class StickerPickerScreen: ViewController {
                                 controller.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { [weak controller] action in
                                     if case .info = action, let controller {
                                         let premiumController = context.sharedContext.makePremiumIntroController(context: context, source: .savedGifs, forceDark: controller.forceDark, dismissed: nil)
-                                        controller.push(premiumController)
+                                        controller.pushController(premiumController)
                                         return true
                                     }
                                     return false
@@ -1633,8 +1640,34 @@ public class StickerPickerScreen: ViewController {
                 self.controller?.updateModalStyleOverlayTransitionFactor(0.0, transition: positionTransition)
             }
         }
+        
+        func presentLinkPremiumSuggestion() {
+            guard let controller = self.controller else {
+                return
+            }
+            let tooltipController = UndoOverlayController(
+                presentationData: self.presentationData,
+                content: .linkCopied(
+                    text: self.presentationData.strings.Story_Editor_TooltipLinkPremium
+                ),
+                elevatedLayout: true,
+                position: .top,
+                animateInAsReplacement: false, action: { [weak controller] action in
+                    if case .info = action, let controller {
+                        let _ = controller.completion(nil)
+                        controller.dismiss(animated: true)
+                        
+                        let premiumController = controller.context.sharedContext.makePremiumIntroController(context: controller.context, source: .storiesLinks, forceDark: controller.forceDark, dismissed: nil)
+                        controller.pushController(premiumController)
+                        return true
+                    }
+                    return false
+                }
+            )
+            controller.present(tooltipController, in: .window(.root))
+        }
                 
-        func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ComponentTransition) {
             guard let controller = self.controller else {
                 return
             }
@@ -1727,11 +1760,11 @@ public class StickerPickerScreen: ViewController {
             transition.setFrame(view: self.containerView, frame: clipFrame)
                         
             if let content = self.content {
-                var stickersTransition: Transition = transition
+                var stickersTransition: ComponentTransition = transition
                 if let scheduledEmojiContentAnimationHint = self.scheduledEmojiContentAnimationHint {
                     self.scheduledEmojiContentAnimationHint = nil
                     let contentAnimation = scheduledEmojiContentAnimationHint
-                    stickersTransition = Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
+                    stickersTransition = ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
                 }
                 
                 var contentSize = self.hostView.update(
@@ -1953,18 +1986,18 @@ public class StickerPickerScreen: ViewController {
                             let initialVelocity: CGFloat = distance.isZero ? 0.0 : abs(velocity.y / distance)
                             let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
 
-                            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
+                            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(transition))
                         } else {
                             self.isExpanded = true
                             
-                            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
+                            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(.animated(duration: 0.3, curve: .easeInOut)))
                         }
                     } else if (velocity.y < -300.0 || offset < topInset / 2.0) {
                         let initialVelocity: CGFloat = offset.isZero ? 0.0 : abs(velocity.y / offset)
                         let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
                         self.isExpanded = true
                        
-                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
+                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(transition))
                     } else {
                         if let listNode = listNode {
                             listNode.scroller.setContentOffset(CGPoint(), animated: false)
@@ -1972,7 +2005,7 @@ public class StickerPickerScreen: ViewController {
                             scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
                         }
                         
-                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
+                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(.animated(duration: 0.3, curve: .easeInOut)))
                     }
                     
                     if !dismissing {
@@ -1985,7 +2018,7 @@ public class StickerPickerScreen: ViewController {
                 case .cancelled:
                     self.panGestureArguments = nil
                     
-                    self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
+                    self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(.animated(duration: 0.3, curve: .easeInOut)))
                 default:
                     break
             }
@@ -2000,7 +2033,7 @@ public class StickerPickerScreen: ViewController {
             guard let (layout, navigationHeight) = self.currentLayout else {
                 return
             }
-            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
+            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(transition))
         }
     }
     
@@ -2029,7 +2062,7 @@ public class StickerPickerScreen: ViewController {
     public var presentLocationPicker: () -> Void = { }
     public var presentAudioPicker: () -> Void = { }
     public var addReaction: () -> Void = { }
-    public var addCamera: () -> Void = { }
+    public var addLink: () -> Void = { }
     
     public init(context: AccountContext, inputData: Signal<StickerPickerInput, NoError>, forceDark: Bool = false, expanded: Bool = false, defaultToEmoji: Bool = false, hasEmoji: Bool = true, hasGifs: Bool = false, hasInteractiveStickers: Bool = true) {
         self.context = context
@@ -2099,7 +2132,7 @@ public class StickerPickerScreen: ViewController {
         
         let navigationHeight: CGFloat = 56.0
         
-        self.node.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
+        self.node.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(transition))
     }
 }
 
@@ -2168,7 +2201,7 @@ private final class InteractiveStickerButtonContent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: InteractiveStickerButtonContent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: InteractiveStickerButtonContent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.backgroundLayer.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.11).cgColor
             
             let iconSize = self.icon.update(
@@ -2229,7 +2262,7 @@ private final class InteractiveStickerButtonContent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -2271,7 +2304,7 @@ private final class InteractiveReactionButtonContent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: InteractiveReactionButtonContent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: InteractiveReactionButtonContent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let bounds = CGRect(origin: .zero, size: CGSize(width: 54.0, height: 54.0))
             let iconSize = self.icon.update(
                 transition: .immediate,
@@ -2299,7 +2332,7 @@ private final class InteractiveReactionButtonContent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -2344,7 +2377,7 @@ private final class RoundVideoButtonContent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: RoundVideoButtonContent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: RoundVideoButtonContent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.backgroundLayer.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.11).cgColor
             
             let bounds = CGRect(origin: .zero, size: CGSize(width: 54.0, height: 54.0))
@@ -2378,7 +2411,7 @@ private final class RoundVideoButtonContent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -2440,7 +2473,7 @@ final class ItemStack<ChildEnvironment: Equatable>: CombinedComponent {
                 
                 let remainingWidth = context.availableSize.width - itemsWidth - context.component.padding * 2.0
                 let spacing = remainingWidth / CGFloat(rowItemsCount - 1)
-                if spacing < context.component.minSpacing {
+                if spacing < context.component.minSpacing || currentGroup.count == 2 {
                     groups.append(currentGroup)
                     currentGroup = []
                 }
@@ -2493,24 +2526,58 @@ final class ItemStack<ChildEnvironment: Equatable>: CombinedComponent {
     }
 }
 
-
 final class StoryStickersContentView: UIView, EmojiCustomContentView {
     let tintContainerView = UIView()
 
     private let container = ComponentView<Empty>()
         
+    private let isPremium: Bool
+    
     var locationAction: () -> Void = {}
     var audioAction: () -> Void = {}
     var reactionAction: () -> Void = {}
-    var cameraAction: () -> Void = {}
+    var linkAction: () -> Void = {}
     
-    func update(theme: PresentationTheme, strings: PresentationStrings, useOpaqueTheme: Bool, availableSize: CGSize, transition: Transition) -> CGSize {
+    init(isPremium: Bool) {
+        self.isPremium = isPremium
+        
+        super.init(frame: .zero)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func update(theme: PresentationTheme, strings: PresentationStrings, useOpaqueTheme: Bool, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
         let padding: CGFloat = 22.0
         let size = self.container.update(
             transition: transition,
             component: AnyComponent(
                 ItemStack(
                     [
+                        AnyComponentWithIdentity(
+                            id: "link",
+                            component: AnyComponent(
+                                CameraButton(
+                                    content: AnyComponentWithIdentity(
+                                        id: "content",
+                                        component: AnyComponent(
+                                            InteractiveStickerButtonContent(
+                                                theme: theme,
+                                                title: strings.MediaEditor_AddLink,
+                                                iconName: self.isPremium ? "Media Editor/Link" : "Media Editor/LinkLocked",
+                                                useOpaqueTheme: useOpaqueTheme,
+                                                tintContainerView: self.tintContainerView
+                                            )
+                                        )
+                                    ),
+                                    action: { [weak self] in
+                                        if let self {
+                                            self.linkAction()
+                                        }
+                                    })
+                            )
+                        ),
                         AnyComponentWithIdentity(
                             id: "location",
                             component: AnyComponent(

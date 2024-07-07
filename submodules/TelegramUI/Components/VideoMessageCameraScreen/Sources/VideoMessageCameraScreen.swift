@@ -27,6 +27,8 @@ import LocalMediaResources
 import ImageCompression
 import LegacyMediaPickerUI
 import TelegramAudio
+import ChatSendMessageActionUI
+import ChatControllerInteraction
 
 struct CameraState: Equatable {
     enum Recording: Equatable {
@@ -553,6 +555,7 @@ public class VideoMessageCameraScreen: ViewController {
         fileprivate let containerView: UIView
         fileprivate let componentHost: ComponentView<ViewControllerComponentContainer.Environment>
         fileprivate let previewContainerView: UIView
+        fileprivate let previewContainerContentView: UIView
         private var previewSnapshotView: UIView?
         private var previewBlurView: BlurView
         
@@ -625,7 +628,10 @@ public class VideoMessageCameraScreen: ViewController {
             self.componentHost = ComponentView<ViewControllerComponentContainer.Environment>()
             
             self.previewContainerView = UIView()
-            self.previewContainerView.clipsToBounds = true
+            
+            self.previewContainerContentView = UIView()
+            self.previewContainerContentView.clipsToBounds = true
+            self.previewContainerView.addSubview(self.previewContainerContentView)
                         
             let isDualCameraEnabled = Camera.isDualCameraSupported(forRoundVideo: true)
             let isFrontPosition = "".isEmpty
@@ -666,13 +672,13 @@ public class VideoMessageCameraScreen: ViewController {
             
             self.containerView.addSubview(self.previewContainerView)
 
-            self.previewContainerView.addSubview(self.mainPreviewView)
+            self.previewContainerContentView.addSubview(self.mainPreviewView)
             if isDualCameraEnabled {
-                self.previewContainerView.addSubview(self.additionalPreviewView)
+                self.previewContainerContentView.addSubview(self.additionalPreviewView)
             }
-            self.previewContainerView.addSubview(self.progressView)
-            self.previewContainerView.addSubview(self.previewBlurView)
-            self.previewContainerView.addSubview(self.loadingView)
+            self.previewContainerContentView.addSubview(self.progressView)
+            self.previewContainerContentView.addSubview(self.previewBlurView)
+            self.previewContainerContentView.addSubview(self.loadingView)
             
             self.completion.connect { [weak self] result in
                 if let self {
@@ -837,7 +843,7 @@ public class VideoMessageCameraScreen: ViewController {
         
         private func animatePositionChange() {
             if let snapshotView = self.mainPreviewView.snapshotView(afterScreenUpdates: false) {
-                self.previewContainerView.insertSubview(snapshotView, belowSubview: self.progressView)
+                self.previewContainerContentView.insertSubview(snapshotView, belowSubview: self.progressView)
                 self.previewSnapshotView = snapshotView
                 
                 let action = { [weak self] in
@@ -872,7 +878,7 @@ public class VideoMessageCameraScreen: ViewController {
         func resumeCameraCapture() {
             if !self.mainPreviewView.isEnabled {
                 if let snapshotView = self.resultPreviewView?.snapshotView(afterScreenUpdates: false) {
-                    self.previewContainerView.insertSubview(snapshotView, belowSubview: self.previewBlurView)
+                    self.previewContainerContentView.insertSubview(snapshotView, belowSubview: self.previewBlurView)
                     self.previewSnapshotView = snapshotView
                 }
                 self.mainPreviewView.isEnabled = true
@@ -1074,13 +1080,13 @@ public class VideoMessageCameraScreen: ViewController {
             }, transition: .easeInOut(duration: 0.2))
         }
         
-        func requestUpdateLayout(transition: Transition) {
+        func requestUpdateLayout(transition: ComponentTransition) {
             if let layout = self.validLayout {
                 self.containerLayoutUpdated(layout: layout, forceUpdate: true, transition: transition)
             }
         }
 
-        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, transition: ComponentTransition) {
             guard let controller = self.controller else {
                 return
             }
@@ -1148,8 +1154,9 @@ public class VideoMessageCameraScreen: ViewController {
             }
             if !self.animatingIn {
                 transition.setFrame(view: self.previewContainerView, frame: previewFrame)
+                transition.setFrame(view: self.previewContainerContentView, frame: CGRect(origin: CGPoint(), size: previewFrame.size))
             }
-            transition.setCornerRadius(layer: self.previewContainerView.layer, cornerRadius: previewSide / 2.0)
+            transition.setCornerRadius(layer: self.previewContainerContentView.layer, cornerRadius: previewSide / 2.0)
                         
             let previewBounds = CGRect(origin: .zero, size: previewFrame.size)
            
@@ -1244,7 +1251,7 @@ public class VideoMessageCameraScreen: ViewController {
                             }, transition: .easeInOut(duration: 0.2))
                         }
                     }
-                    self.previewContainerView.addSubview(resultPreviewView)
+                    self.previewContainerContentView.addSubview(resultPreviewView)
                     
                     self.resultPreviewView = resultPreviewView
                     resultPreviewView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -1289,13 +1296,13 @@ public class VideoMessageCameraScreen: ViewController {
         return self.node.cameraState
     }
     
-    fileprivate func updateCameraState(_ f: (CameraState) -> CameraState, transition: Transition) {
+    fileprivate func updateCameraState(_ f: (CameraState) -> CameraState, transition: ComponentTransition) {
         self.node.cameraState = f(self.node.cameraState)
         self.node.requestUpdateLayout(transition: transition)
         self.durationValue.set(self.cameraState.duration)
     }
     
-    fileprivate func updatePreviewState(_ f: (PreviewState?) -> PreviewState?, transition: Transition) {
+    fileprivate func updatePreviewState(_ f: (PreviewState?) -> PreviewState?, transition: ComponentTransition) {
         self.node.previewState = f(self.node.previewState)
         self.node.requestUpdateLayout(transition: transition)
     }
@@ -1461,7 +1468,7 @@ public class VideoMessageCameraScreen: ViewController {
     fileprivate var didSend = false
     fileprivate var lastActionTimestamp: Double?
     fileprivate var isSendingImmediately = false
-    public func sendVideoRecording(silentPosting: Bool? = nil, scheduleTime: Int32? = nil) {
+    public func sendVideoRecording(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, messageEffect: ChatSendMessageEffect? = nil) {
         guard !self.didSend else {
             return
         }
@@ -1607,10 +1614,12 @@ public class VideoMessageCameraScreen: ViewController {
 
                 let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.FileName(fileName: "video.mp4"), .Video(duration: finalDuration, size: video.dimensions, flags: [.instantRoundVideo], preloadSize: nil)])
                 
-                
                 var attributes: [MessageAttribute] = []
                 if self.cameraState.isViewOnceEnabled {
                     attributes.append(AutoremoveTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil))
+                }
+                if let messageEffect {
+                    attributes.append(EffectMessageAttribute(id: messageEffect.id))
                 }
         
                 self.completion(.message(
@@ -1727,8 +1736,12 @@ public class VideoMessageCameraScreen: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
 
         if !self.isDismissed {
-            (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: Transition(transition))
+            (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
         }
+    }
+    
+    public func makeSendMessageContextPreview() -> ChatSendMessageContextScreenMediaPreview? {
+        return VideoMessageSendMessageContextPreview(node: self.node)
     }
 }
 
@@ -1795,5 +1808,86 @@ private class BlurView: UIVisualEffectView {
     override func didAddSubview(_ subview: UIView) {
         super.didAddSubview(subview)
         self.setup()
+    }
+}
+
+private final class VideoMessageSendMessageContextPreview: UIView, ChatSendMessageContextScreenMediaPreview {
+    var isReady: Signal<Bool, NoError> {
+        return .single(true)
+    }
+    
+    var view: UIView {
+        return self
+    }
+    
+    var globalClippingRect: CGRect? {
+        return nil
+    }
+    
+    var layoutType: ChatSendMessageContextScreenMediaPreviewLayoutType {
+        return .videoMessage
+    }
+    
+    private weak var previewContainerContentParentView: UIView?
+    private let previewContainerContentView: UIView
+    
+    init(node: VideoMessageCameraScreen.Node) {
+        self.previewContainerContentParentView = node.previewContainerView
+        self.previewContainerContentView = node.previewContainerContentView
+        
+        super.init(frame: CGRect())
+    }
+    
+    required init(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
+    func animateIn(transition: ComponentTransition) {
+        self.addSubview(self.previewContainerContentView)
+        
+        guard let previewContainerContentParentView = self.previewContainerContentParentView else {
+            return
+        }
+        
+        let fromFrame = previewContainerContentParentView.convert(CGRect(origin: CGPoint(), size: self.previewContainerContentView.bounds.size), to: self)
+        let toFrame = self.previewContainerContentView.frame
+        
+        transition.animatePosition(view: self.previewContainerContentView, from: CGPoint(x: fromFrame.midX - toFrame.midX, y: fromFrame.midY - toFrame.midY), to: CGPoint(), additive: true)
+    }
+    
+    func animateOut(transition: ComponentTransition) {
+        guard let previewContainerContentParentView = self.previewContainerContentParentView else {
+            return
+        }
+        
+        let toFrame = previewContainerContentParentView.convert(CGRect(origin: CGPoint(), size: self.previewContainerContentView.bounds.size), to: self)
+        
+        let previewContainerContentView = self.previewContainerContentView
+        transition.setPosition(view: self.previewContainerContentView, position: toFrame.center, completion: { [weak previewContainerContentParentView, weak previewContainerContentView] _ in
+            guard let previewContainerContentParentView, let previewContainerContentView else {
+                return
+            }
+            
+            previewContainerContentView.frame = CGRect(origin: CGPoint(), size: previewContainerContentView.bounds.size)
+            previewContainerContentParentView.addSubview(previewContainerContentView)
+        })
+    }
+    
+    func animateOutOnSend(transition: ComponentTransition) {
+        guard let previewContainerContentParentView = self.previewContainerContentParentView else {
+            return
+        }
+        
+        if let snapshotView = self.previewContainerContentView.snapshotView(afterScreenUpdates: false) {
+            self.addSubview(snapshotView)
+            transition.setAlpha(view: snapshotView, alpha: 0.0)
+        }
+        
+        self.previewContainerContentView.frame = CGRect(origin: CGPoint(), size: self.previewContainerContentView.bounds.size)
+        previewContainerContentParentView.addSubview(self.previewContainerContentView)
+    }
+    
+    func update(containerSize: CGSize, transition: ComponentTransition) -> CGSize {
+        return self.previewContainerContentView.bounds.size
     }
 }

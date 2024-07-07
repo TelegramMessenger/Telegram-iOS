@@ -211,7 +211,7 @@ public class MediaDustNode: ASDisplayNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tap(_:))))
     }
     
-    @objc private func tap(_ gestureRecognizer: UITapGestureRecognizer) {
+    public func tap(at location: CGPoint) {
         guard !self.isRevealed else {
             return
         }
@@ -223,13 +223,12 @@ public class MediaDustNode: ASDisplayNode {
         if self.enableAnimations {
             self.isExploding = true
             
-            let position = gestureRecognizer.location(in: self.view)
             self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
-            self.emitterLayer?.setValue(position, forKeyPath: "emitterBehaviors.fingerAttractor.position")
+            self.emitterLayer?.setValue(location, forKeyPath: "emitterBehaviors.fingerAttractor.position")
             
             let maskSize = self.emitterNode.frame.size
             Queue.concurrentDefaultQueue().async {
-                let emitterMaskImage = generateMaskImage(size: maskSize, position: position, inverse: true)
+                let emitterMaskImage = generateMaskImage(size: maskSize, position: location, inverse: true)
                 
                 Queue.mainQueue().async {
                     self.emitterSpotNode.image = emitterMaskImage
@@ -237,8 +236,8 @@ public class MediaDustNode: ASDisplayNode {
             }
             
             Queue.mainQueue().after(0.1 * UIView.animationDurationFactor()) {
-                let xFactor = (position.x / self.emitterNode.frame.width - 0.5) * 2.0
-                let yFactor = (position.y / self.emitterNode.frame.height - 0.5) * 2.0
+                let xFactor = (location.x / self.emitterNode.frame.width - 0.5) * 2.0
+                let yFactor = (location.y / self.emitterNode.frame.height - 0.5) * 2.0
                 let maxFactor = max(abs(xFactor), abs(yFactor))
                 
                 let scaleAddition = maxFactor * 4.0
@@ -247,8 +246,8 @@ public class MediaDustNode: ASDisplayNode {
                 self.supernode?.view.mask = self.emitterMaskNode.view
                 self.emitterSpotNode.frame = CGRect(x: 0.0, y: 0.0, width: self.emitterMaskNode.frame.width * 3.0, height: self.emitterMaskNode.frame.height * 3.0)
                 
-                self.emitterSpotNode.layer.anchorPoint = CGPoint(x: position.x / self.emitterMaskNode.frame.width, y: position.y / self.emitterMaskNode.frame.height)
-                self.emitterSpotNode.position = position
+                self.emitterSpotNode.layer.anchorPoint = CGPoint(x: location.x / self.emitterMaskNode.frame.width, y: location.y / self.emitterMaskNode.frame.height)
+                self.emitterSpotNode.position = location
                 self.emitterSpotNode.layer.animateScale(from: 0.3333, to: 10.5 + scaleAddition, duration: 0.45 + durationAddition, removeOnCompletion: false, completion: { [weak self] _ in
                     self?.revealed()
                     self?.alpha = 0.0
@@ -271,6 +270,11 @@ public class MediaDustNode: ASDisplayNode {
                 self?.revealed()
             })
         }
+    }
+    
+    @objc private func tap(_ gestureRecognizer: UITapGestureRecognizer) {
+        let location = gestureRecognizer.location(in: self.view)
+        self.tap(at: location)
     }
         
     private var didSetupAnimations = false

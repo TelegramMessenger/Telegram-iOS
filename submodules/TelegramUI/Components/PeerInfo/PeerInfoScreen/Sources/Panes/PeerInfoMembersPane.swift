@@ -141,7 +141,7 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     sortOrder: presentationData.nameSortOrder,
                     displayOrder: presentationData.nameDisplayOrder,
                     context: context,
-                    peerMode: .peer,
+                    peerMode: .memberList,
                     peer: .peer(peer: EnginePeer(member.peer), chatPeer: EnginePeer(member.peer)),
                     status: .presence(presence, presentationData.dateTimeFormat),
                     rightLabelText: label,
@@ -153,7 +153,7 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     actionIcon: .none,
                     index: nil,
                     header: nil,
-                    action: { _ in
+                    action: member.peer.id == context.account.peerId ? nil : { _ in
                         action(member, .open)
                     },
                     disabledAction: nil,
@@ -396,7 +396,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.GroupInfo_ActionPromote, icon: { _ in
                     return nil
                 }, action: { c, _ in
-                    c.dismiss(completion: {
+                    c?.dismiss(completion: {
                         action(member, .promote)
                     })
                 })))
@@ -406,7 +406,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.GroupInfo_ActionRestrict, icon: { _ in
                         return nil
                     }, action: { c, _ in
-                        c.dismiss(completion: {
+                        c?.dismiss(completion: {
                             action(member, .restrict)
                         })
                     })))
@@ -414,7 +414,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Delete, textColor: .destructive, icon: { _ in
                     return nil
                 }, action: { c, _ in
-                    c.dismiss(completion: {
+                    c?.dismiss(completion: {
                         action(member, .remove)
                     })
                 })))

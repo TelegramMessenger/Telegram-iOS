@@ -7,7 +7,6 @@ import ChatMessageItemCommon
 public func chatMessageBubbleImageContentCorners(relativeContentPosition position: ChatMessageBubbleContentPosition, normalRadius: CGFloat, mergedRadius: CGFloat, mergedWithAnotherContentRadius: CGFloat, layoutConstants: ChatMessageItemLayoutConstants, chatPresentationData: ChatPresentationData) -> ImageCorners {
     let topLeftCorner: ImageCorner
     let topRightCorner: ImageCorner
-    
     switch position {
         case let .linear(top, _):
             switch top {

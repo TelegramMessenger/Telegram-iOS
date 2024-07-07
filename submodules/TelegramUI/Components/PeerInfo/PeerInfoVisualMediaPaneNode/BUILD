@@ -43,6 +43,9 @@ swift_library(
         "//submodules/UndoUI",
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/TelegramUI/Components/MediaEditorScreen",
+        "//submodules/LocationUI",
+        "//submodules/Components/MultilineTextComponent",
     ],
     visibility = [
         "//visibility:public",

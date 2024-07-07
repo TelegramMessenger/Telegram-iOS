@@ -6,8 +6,23 @@ import MtProtoKit
 
 
 public struct PendingMessageStatus: Equatable {
+    public struct Progress: Equatable {
+        public let progress: Float
+        public let mediaProgress: [MediaId: Float]
+        
+        public init(progress: Float, mediaProgress: [MediaId: Float] = [:]) {
+            self.progress = progress
+            self.mediaProgress = mediaProgress
+        }
+        
+        init(_ contentProgress: PendingMessageUploadedContentProgress) {
+            self.progress = contentProgress.progress
+            self.mediaProgress = contentProgress.mediaProgress
+        }
+    }
+    
     public let isRunning: Bool
-    public let progress: Float
+    public let progress: Progress
 }
 
 private enum PendingMessageState {
@@ -364,7 +379,7 @@ public final class PendingMessageManager {
                 self.messageContexts[id] = messageContext
             }
             
-            let status = PendingMessageStatus(isRunning: false, progress: 0.0)
+            let status = PendingMessageStatus(isRunning: false, progress: PendingMessageStatus.Progress(progress: 0.0))
             if status != messageContext.status {
                 messageContext.status = status
                 for subscriber in messageContext.statusSubscribers.copyItems() {
@@ -618,7 +633,7 @@ public final class PendingMessageManager {
                 switch next {
                     case let .progress(progress):
                         if let current = strongSelf.messageContexts[messageId] {
-                            let status = PendingMessageStatus(isRunning: true, progress: progress)
+                            let status = PendingMessageStatus(isRunning: true, progress: PendingMessageStatus.Progress(progress: progress))
                             current.status = status
                             for subscriber in current.statusSubscribers.copyItems() {
                                 subscriber(current.status, current.error)
@@ -636,7 +651,7 @@ public final class PendingMessageManager {
     private func beginUploadingMessage(messageContext: PendingMessageContext, id: MessageId, threadId: Int64?, groupId: Int64?, uploadSignal: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>) {
         messageContext.state = .uploading(groupId: groupId)
         
-        let status = PendingMessageStatus(isRunning: true, progress: 0.0)
+        let status = PendingMessageStatus(isRunning: true, progress: PendingMessageStatus.Progress(progress: 0.0))
         messageContext.status = status
         for subscriber in messageContext.statusSubscribers.copyItems() {
             subscriber(messageContext.status, messageContext.error)
@@ -678,7 +693,7 @@ public final class PendingMessageManager {
                 switch next {
                     case let .progress(progress):
                         if let current = strongSelf.messageContexts[id] {
-                            let status = PendingMessageStatus(isRunning: true, progress: progress)
+                            let status = PendingMessageStatus(isRunning: true, progress: PendingMessageStatus.Progress(progress))
                             current.status = status
                             for subscriber in current.statusSubscribers.copyItems() {
                                 subscriber(current.status, current.error)
@@ -712,7 +727,7 @@ public final class PendingMessageManager {
             if case let .waitingForUploadToStart(groupId, uploadSignal) = context.state {
                 if self.canBeginUploadingMessage(id: contextId, type: context.contentType ?? .media) {
                     context.state = .uploading(groupId: groupId)
-                    let status = PendingMessageStatus(isRunning: true, progress: 0.0)
+                    let status = PendingMessageStatus(isRunning: true, progress: PendingMessageStatus.Progress(progress: 0.0))
                     context.status = status
                     for subscriber in context.statusSubscribers.copyItems() {
                         subscriber(context.status, context.error)
@@ -734,7 +749,7 @@ public final class PendingMessageManager {
                             switch next {
                                 case let .progress(progress):
                                     if let current = strongSelf.messageContexts[contextId] {
-                                        let status = PendingMessageStatus(isRunning: true, progress: progress)
+                                        let status = PendingMessageStatus(isRunning: true, progress: PendingMessageStatus.Progress(progress))
                                         current.status = status
                                         for subscriber in current.statusSubscribers.copyItems() {
                                             subscriber(context.status, context.error)
@@ -794,6 +809,7 @@ public final class PendingMessageManager {
                 var scheduleTime: Int32?
                 var sendAsPeerId: PeerId?
                 var quickReply: OutgoingQuickReplyMessageAttribute?
+                var messageEffect: EffectMessageAttribute?
                 
                 var flags: Int32 = 0
                 
@@ -824,6 +840,10 @@ public final class PendingMessageManager {
                         sendAsPeerId = attribute.peerId
                     } else if let attribute = attribute as? OutgoingQuickReplyMessageAttribute {
                         quickReply = attribute
+                    } else if let attribute = attribute as? EffectMessageAttribute {
+                        messageEffect = attribute
+                    } else if let _ = attribute as? InvertMediaMessageAttribute {
+                        flags |= Int32(1 << 16)
                     }
                 }
                                 
@@ -1016,7 +1036,13 @@ public final class PendingMessageManager {
                         flags |= 1 << 17
                     }
                     
-                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut))
+                    var messageEffectId: Int64?
+                    if let messageEffect {
+                        flags |= 1 << 18
+                        messageEffectId = messageEffect.id
+                    }
+                    
+                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId))
                 }
                 
                 return sendMessageRequest
@@ -1033,29 +1059,67 @@ public final class PendingMessageManager {
                 |> `catch` { error -> Signal<Void, NoError> in
                     return deferred {
                         if let strongSelf = self {
-                            if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_") {
-                                var allFoundAndValid = true
-                                for (message, _) in messages {
-                                    if let context = strongSelf.messageContexts[message.id] {
-                                        if context.forcedReuploadOnce {
-                                            allFoundAndValid = false
-                                            break
-                                        }
-                                    } else {
-                                        allFoundAndValid = false
-                                        break
+                            let errorText: String = error.errorDescription
+                            
+                            if errorText.hasPrefix("FILEREF_INVALID") || errorText.hasPrefix("FILE_REFERENCE_") {
+                                var selectiveIndices: [Int]?
+                                if errorText.hasPrefix("FILE_REFERENCE_") && errorText.hasSuffix("_EXPIRED") {
+                                    if let value = Int(errorText[errorText.index(errorText.startIndex, offsetBy: "FILE_REFERENCE_".count)..<errorText.index(errorText.endIndex, offsetBy: -"_EXPIRED".count)]) {
+                                        selectiveIndices = [value]
                                     }
                                 }
                                 
-                                if allFoundAndValid {
-                                    for (message, _) in messages {
+                                if let selectiveIndices {
+                                    var allFoundAndValid = true
+                                    for i in 0 ..< messages.count {
+                                        let message = messages[i].0
                                         if let context = strongSelf.messageContexts[message.id] {
-                                            context.forcedReuploadOnce = true
+                                            if selectiveIndices.contains(i) {
+                                                if context.forcedReuploadOnce {
+                                                    allFoundAndValid = false
+                                                    break
+                                                }
+                                            }
                                         }
                                     }
                                     
-                                    strongSelf.beginSendingMessages(messages.map({ $0.0.id }))
-                                    return .complete()
+                                    if allFoundAndValid {
+                                        for i in 0 ..< messages.count {
+                                            let message = messages[i].0
+                                            if selectiveIndices.contains(i) {
+                                                if let context = strongSelf.messageContexts[message.id] {
+                                                    context.forcedReuploadOnce = true
+                                                }
+                                            }
+                                        }
+                                        
+                                        strongSelf.beginSendingMessages(messages.map({ $0.0.id }))
+                                        return .complete()
+                                    }
+                                } else {
+                                    var allFoundAndValid = true
+                                    for (message, _) in messages {
+                                        if let context = strongSelf.messageContexts[message.id] {
+                                            if context.forcedReuploadOnce {
+                                                allFoundAndValid = false
+                                                break
+                                            }
+                                        } else {
+                                            allFoundAndValid = false
+                                            break
+                                        }
+                                    }
+                                    
+                                    if allFoundAndValid {
+                                        for (message, _) in messages {
+                                            if let context = strongSelf.messageContexts[message.id] {
+                                                context.forcedReuploadOnce = true
+                                            }
+                                        }
+                                        
+                                        strongSelf.beginSendingMessages(messages.map({ $0.0.id }))
+                                        return .complete()
+                                    }
                                 }
                             } else if let failureReason = sendMessageReasonForError(error.errorDescription), let message = messages.first?.0 {
                                 for (message, _) in messages {
@@ -1192,6 +1256,7 @@ public final class PendingMessageManager {
                 var sendAsPeerId: PeerId?
                 var bubbleUpEmojiOrStickersets = false
                 var quickReply: OutgoingQuickReplyMessageAttribute?
+                var messageEffect: EffectMessageAttribute?
                 
                 var flags: Int32 = 0
         
@@ -1228,6 +1293,8 @@ public final class PendingMessageManager {
                         sendAsPeerId = attribute.peerId
                     } else if let attribute = attribute as? OutgoingQuickReplyMessageAttribute {
                         quickReply = attribute
+                    } else if let attribute = attribute as? EffectMessageAttribute {
+                        messageEffect = attribute
                     }
                 }
                 
@@ -1310,11 +1377,13 @@ public final class PendingMessageManager {
                                 replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
                             }
                         }
-                    
                         if let attribute = message.webpagePreviewAttribute {
                             if attribute.leadingPreview {
                                 flags |= 1 << 16
                             }
+                        }
+                        if message.invertMedia {
+                            flags |= 1 << 16
                         }
                     
                         var quickReplyShortcut: Api.InputQuickReplyShortcut?
@@ -1327,7 +1396,13 @@ public final class PendingMessageManager {
                             flags |= 1 << 17
                         }
                     
-                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut), info: .acknowledgement, tag: dependencyTag)
+                        var messageEffectId: Int64?
+                        if let messageEffect {
+                            flags |= 1 << 18
+                            messageEffectId = messageEffect.id
+                        }
+                    
+                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId), info: .acknowledgement, tag: dependencyTag)
                     case let .media(inputMedia, text):
                         if bubbleUpEmojiOrStickersets {
                             flags |= Int32(1 << 15)
@@ -1391,6 +1466,9 @@ public final class PendingMessageManager {
                                 flags |= 1 << 16
                             }
                         }
+                        if message.invertMedia {
+                            flags |= 1 << 16
+                        }
                     
                         var quickReplyShortcut: Api.InputQuickReplyShortcut?
                         if let quickReply {
@@ -1401,8 +1479,14 @@ public final class PendingMessageManager {
                             }
                             flags |= 1 << 17
                         }
+                    
+                        var messageEffectId: Int64?
+                        if let messageEffect {
+                            flags |= 1 << 18
+                            messageEffectId = messageEffect.id
+                        }
                         
-                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId), tag: dependencyTag)
                         |> map(NetworkRequestResult.result)
                     case let .forward(sourceInfo):
                         var topMsgId: Int32?

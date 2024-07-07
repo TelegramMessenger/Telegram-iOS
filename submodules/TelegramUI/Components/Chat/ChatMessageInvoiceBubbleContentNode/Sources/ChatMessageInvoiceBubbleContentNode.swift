@@ -62,7 +62,7 @@ public final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContent
                 if let image = invoice.photo {
                     automaticDownloadSettings = MediaAutoDownloadSettings.defaultSettings
                     mediaAndFlags = ([image], [.preferMediaBeforeText])
-                } else {
+                } else if invoice.currency != "XTR" {
                     let invoiceLabel = item.presentationData.strings.Message_InvoiceLabel
                     var invoiceText = "\(formatCurrencyAmount(invoice.totalAmount, currency: invoice.currency)) "
                     invoiceText += invoiceLabel
@@ -142,6 +142,13 @@ public final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContent
     override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if let statusNode = self.contentNode.statusNode, !statusNode.isHidden {
             return statusNode.reactionView(value: value)
+        }
+        return nil
+    }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        if let statusNode = self.contentNode.statusNode, !statusNode.isHidden {
+            return statusNode.messageEffectTargetView()
         }
         return nil
     }

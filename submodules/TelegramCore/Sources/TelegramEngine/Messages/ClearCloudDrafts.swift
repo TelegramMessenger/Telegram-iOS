@@ -50,7 +50,7 @@ func _internal_clearCloudDraftsInteractively(postbox: Postbox, network: Network,
                                 innerFlags |= 1 << 0
                                 replyTo = .inputReplyToMessage(flags: innerFlags, replyToMsgId: 0, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
                             }
-                            signals.append(network.request(Api.functions.messages.saveDraft(flags: flags, replyTo: replyTo, peer: inputPeer, message: "", entities: nil, media: nil))
+                            signals.append(network.request(Api.functions.messages.saveDraft(flags: flags, replyTo: replyTo, peer: inputPeer, message: "", entities: nil, media: nil, effect: nil))
                             |> `catch` { _ -> Signal<Api.Bool, NoError> in
                                 return .single(.boolFalse)
                             }

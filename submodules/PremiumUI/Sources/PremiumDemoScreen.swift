@@ -20,29 +20,40 @@ import TelegramUIPreferences
 
 public final class PremiumGradientBackgroundComponent: Component {
     public let colors: [UIColor]
+    public let cornerRadius: CGFloat
+    public let topOverscroll: Bool
     
     public init(
-        colors: [UIColor]
+        colors: [UIColor],
+        cornerRadius: CGFloat = 10.0,
+        topOverscroll: Bool = false
     ) {
         self.colors = colors
+        self.cornerRadius = cornerRadius
+        self.topOverscroll = topOverscroll
     }
     
     public static func ==(lhs: PremiumGradientBackgroundComponent, rhs: PremiumGradientBackgroundComponent) -> Bool {
         if lhs.colors != rhs.colors {
             return false
         }
+        if lhs.cornerRadius != rhs.cornerRadius {
+            return false
+        }
+        if lhs.topOverscroll != rhs.topOverscroll {
+            return false
+        }
         return true
     }
     
     public final class View: UIView {
-        private let clipLayer: CALayer
+        private let clipLayer: CAReplicatorLayer
         private let gradientLayer: CAGradientLayer
         
         private var component: PremiumGradientBackgroundComponent?
         
         override init(frame: CGRect) {
-            self.clipLayer = CALayer()
-            self.clipLayer.cornerRadius = 10.0
+            self.clipLayer = CAReplicatorLayer()
             self.clipLayer.masksToBounds = true
             
             self.gradientLayer = CAGradientLayer()
@@ -58,24 +69,38 @@ public final class PremiumGradientBackgroundComponent: Component {
         }
         
         
-        func update(component: PremiumGradientBackgroundComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: PremiumGradientBackgroundComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.clipLayer.frame = CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: availableSize.height + 10.0))
             self.gradientLayer.frame = CGRect(origin: .zero, size: availableSize)
-        
+            
             var locations: [NSNumber] = []
             let delta = 1.0 / CGFloat(component.colors.count - 1)
             for i in 0 ..< component.colors.count {
                 locations.append((delta * CGFloat(i)) as NSNumber)
             }
+
             self.gradientLayer.locations = locations
             self.gradientLayer.colors = component.colors.reversed().map { $0.cgColor }
             self.gradientLayer.type = .radial
             self.gradientLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
             self.gradientLayer.endPoint = CGPoint(x: -2.0, y: 3.0)
+
+            self.clipLayer.cornerRadius = component.cornerRadius
             
             self.component = component
             
             self.setupGradientAnimations()
+            
+            if component.topOverscroll {
+                self.clipLayer.instanceCount = 2
+                var instanceTransform = CATransform3DIdentity
+                instanceTransform = CATransform3DTranslate(instanceTransform, 0.0, -availableSize.height * 1.5, 0.0)
+                instanceTransform = CATransform3DScale(instanceTransform, 1.0, -2.0, 1.0)
+                self.clipLayer.instanceTransform = instanceTransform
+                self.clipLayer.masksToBounds = false
+            } else {
+                self.clipLayer.masksToBounds = true
+            }
             
             return availableSize
         }
@@ -124,7 +149,7 @@ public final class PremiumGradientBackgroundComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -346,7 +371,7 @@ final class DemoPagerComponent: Component {
             self.ignoreContentOffsetChange = false
         }
         
-        func update(component: DemoPagerComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: DemoPagerComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             var validIds: [AnyHashable] = []
             
             component.nextAction?.connect { [weak self] in
@@ -448,7 +473,7 @@ final class DemoPagerComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -641,7 +666,7 @@ private final class DemoSheetContent: CombinedComponent {
                 strongSelf.isPremium = isPremium
                 strongSelf.promoConfiguration = promoConfiguration
                 if !reactions.isEmpty && !stickers.isEmpty {
-                    strongSelf.updated(transition: Transition(.immediate).withUserData(DemoAnimateInTransition()))
+                    strongSelf.updated(transition: ComponentTransition(.immediate).withUserData(DemoAnimateInTransition()))
                 }
             })
         }
@@ -1053,6 +1078,26 @@ private final class DemoSheetContent: CombinedComponent {
                     )
                 )
                 
+                availableItems[.messageEffects] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.messageEffects,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["effects"],
+                                    decoration: .swirlStars
+                                )),
+                                title: strings.Premium_MessageEffects,
+                                text: strings.Premium_MessageEffectsInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
                 let index: Int = 0
                 var items: [DemoPagerComponent.Item] = []
                 if let item = availableItems.first(where: { $0.value.content.id == component.subject as AnyHashable }) {
@@ -1082,7 +1127,7 @@ private final class DemoSheetContent: CombinedComponent {
                             id: "background",
                             component: AnyComponent(
                                 BlurredBackgroundComponent(
-                                    color:  UIColor(rgb: 0x888888, alpha: 0.1)
+                                    color: UIColor(rgb: 0x888888, alpha: 0.1)
                                 )
                             )
                         ),
@@ -1147,6 +1192,8 @@ private final class DemoSheetContent: CombinedComponent {
                 text = strings.Premium_MessagePrivacyInfo
             case .folderTags:
                 text = strings.Premium_FolderTagsStandaloneInfo
+            case .messageEffects:
+                text = strings.Premium_MessageEffectsInfo
             default:
                 text = ""
             }
@@ -1416,6 +1463,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case messagePrivacy
         case business
         case folderTags
+        case messageEffects
         
         case businessLocation
         case businessHours
@@ -1472,6 +1520,8 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
                 return .business
             case .folderTags:
                 return .folderTags
+            case .messageEffects:
+                return .messageEffects
             case .businessLocation:
                 return .businessLocation
             case .businessHours:

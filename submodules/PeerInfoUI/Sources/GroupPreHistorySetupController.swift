@@ -8,6 +8,7 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
+import OldChannelsController
 
 private final class GroupPreHistorySetupArguments {
     let toggle: (Bool) -> Void

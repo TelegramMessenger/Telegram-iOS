@@ -635,7 +635,7 @@ final class ContextSourceContainer: ASDisplayNode {
                 return TabSelectorComponent.Item(id: source.id, title: source.title)
             }
             let tabSelectorSize = tabSelector.update(
-                transition: Transition(transition),
+                transition: ComponentTransition(transition),
                 component: AnyComponent(TabSelectorComponent(
                     colors: TabSelectorComponent.Colors(
                         foreground: presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.8),
@@ -678,7 +678,7 @@ final class ContextSourceContainer: ASDisplayNode {
             }
             
             let closeButtonSize = closeButton.update(
-                transition: Transition(transition),
+                transition: ComponentTransition(transition),
                 component: AnyComponent(PlainButtonComponent(
                     content: AnyComponent(
                         CloseButtonComponent(

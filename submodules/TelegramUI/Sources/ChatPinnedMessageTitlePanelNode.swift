@@ -322,10 +322,15 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             messageUpdated = true
         }
         
+        var isStarsPayment = false
         if let message = interfaceState.pinnedMessage, !message.message.isRestricted(platform: "ios", contentSettings: self.context.currentContentSettings.with { $0 }) {
             for attribute in message.message.attributes {
                 if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), attribute.rows.count == 1, attribute.rows[0].buttons.count == 1 {
-                    actionTitle = attribute.rows[0].buttons[0].title
+                    let title = attribute.rows[0].buttons[0].title
+                    actionTitle = title
+                    if case .payment = attribute.rows[0].buttons[0].action, title.contains("⭐️") {
+                        isStarsPayment = true
+                    }
                 }
             }
         } else {
@@ -430,7 +435,20 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.actionButtonBackgroundNode.isHidden = false
             self.actionButtonTitleNode.isHidden = false
             
-            self.actionButtonTitleNode.attributedText = NSAttributedString(string: actionTitle, font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor:  interfaceState.theme.list.itemCheckColors.foregroundColor)
+            let attributedTitle: NSAttributedString
+            if isStarsPayment {
+                let updatedTitle = actionTitle.replacingOccurrences(of: "⭐️", with: " # ")
+                let buttonAttributedString = NSMutableAttributedString(string: updatedTitle, font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor:  interfaceState.theme.list.itemCheckColors.foregroundColor)
+                if let range = buttonAttributedString.string.range(of: "#"), let starImage = UIImage(bundleImageName: "Item List/PremiumIcon") {
+                    buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
+                    buttonAttributedString.addAttribute(.foregroundColor, value: interfaceState.theme.list.itemCheckColors.foregroundColor, range: NSRange(range, in: buttonAttributedString.string))
+                    buttonAttributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: buttonAttributedString.string))
+                }
+                attributedTitle = buttonAttributedString
+            } else {
+                attributedTitle = NSAttributedString(string: actionTitle, font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor:  interfaceState.theme.list.itemCheckColors.foregroundColor)
+            }
+            self.actionButtonTitleNode.attributedText = attributedTitle
             
             let actionButtonTitleSize = self.actionButtonTitleNode.updateLayout(CGSize(width: 150.0, height: .greatestFiniteMagnitude))
             let actionButtonSize = CGSize(width: max(actionButtonTitleSize.width + 20.0, 40.0), height: 28.0)
@@ -620,6 +638,28 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                             imageDimensions = dimensions.cgSize
                         }
                         break
+                    } else if let paidContent = media as? TelegramMediaPaidContent, let firstMedia = paidContent.extendedMedia.first {
+                        switch firstMedia {
+                        case let .preview(dimensions, immediateThumbnailData, _):
+                            let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                            if let dimensions {
+                                imageDimensions = dimensions.cgSize
+                            }
+                            updatedMediaReference = .standalone(media: thumbnailMedia)
+                        case let .full(fullMedia):
+                            updatedMediaReference = .message(message: MessageReference(message), media: fullMedia)
+                            if let image = fullMedia as? TelegramMediaImage {
+                                if let representation = largestRepresentationForPhoto(image) {
+                                    imageDimensions = representation.dimensions.cgSize
+                                }
+                                break
+                            } else if let file = fullMedia as? TelegramMediaFile {
+                                if let dimensions = file.dimensions {
+                                    imageDimensions = dimensions.cgSize
+                                }
+                                break
+                            }
+                        }
                     }
                 }
             }
@@ -663,7 +703,11 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             if mediaUpdated {
                 if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
                     if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
-                        updateImageSignal = chatMessagePhotoThumbnail(account: context.account, userLocation: .peer(message.id.peerId), photoReference: imageReference, blurred: hasSpoiler)
+                        if imageReference.media.representations.isEmpty {
+                            updateImageSignal = chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: imageReference, ignoreFullSize: true, synchronousLoad: true)
+                        } else {
+                            updateImageSignal = chatMessagePhotoThumbnail(account: context.account, userLocation: .peer(message.id.peerId), photoReference: imageReference, blurred: hasSpoiler)
+                        }
                     } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
                         if fileReference.media.isAnimatedSticker {
                             let dimensions = fileReference.media.dimensions ?? PixelDimensions(width: 512, height: 512)
@@ -911,7 +955,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                             controllerInteraction.activateSwitchInline(peerId, "@\(addressName) \(query)", peerTypes)
                         }
                     case .payment:
-                        controllerInteraction.openCheckoutOrReceipt(message.id)
+                        controllerInteraction.openCheckoutOrReceipt(message.id, nil)
                     case let .urlAuth(url, buttonId):
                         controllerInteraction.requestMessageActionUrlAuth(url, .message(id: message.id, buttonId: buttonId))
                     case .setupPoll:

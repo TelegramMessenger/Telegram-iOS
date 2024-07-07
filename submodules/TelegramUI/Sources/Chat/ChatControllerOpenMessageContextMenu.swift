@@ -71,6 +71,13 @@ extension ChatControllerImpl {
                 case .custom, .twoLists:
                     break
                 }
+                
+                var allowedReactions = allowedReactions
+                if allowedReactions != nil, case let .customChatContents(customChatContents) = self.presentationInterfaceState.subject {
+                    if case let .hashTagSearch(publicPosts) = customChatContents.kind, publicPosts {
+                        allowedReactions = nil
+                    }
+                }
 
                 var tip: ContextController.Tip?
                 
@@ -111,7 +118,7 @@ extension ChatControllerImpl {
                 actions.animationCache = self.controllerInteraction?.presentationContext.animationCache
                                                          
                 if canAddMessageReactions(message: topMessage), let allowedReactions = allowedReactions, !topReactions.isEmpty {
-                    actions.reactionItems = topReactions.map(ReactionContextItem.reaction)
+                    actions.reactionItems = topReactions.map { ReactionContextItem.reaction(item: $0, icon: .none) }
                     actions.selectedReactionItems = selectedReactions.reactions
                     if message.areReactionsTags(accountPeerId: self.context.account.peerId) {
                         if self.presentationInterfaceState.isPremium {
@@ -131,7 +138,7 @@ extension ChatControllerImpl {
                     if !actions.reactionItems.isEmpty {
                         let reactionItems: [EmojiComponentReactionItem] = actions.reactionItems.compactMap { item -> EmojiComponentReactionItem? in
                             switch item {
-                            case let .reaction(reaction):
+                            case let .reaction(reaction, _):
                                 return EmojiComponentReactionItem(reaction: reaction.reaction.rawValue, file: reaction.stillAnimation)
                             default:
                                 return nil

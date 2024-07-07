@@ -24,6 +24,10 @@ swift_library(
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/MultilineTextComponent",
+        "//submodules/Components/BundleIconComponent",
+        "//submodules/TelegramUI/Components/Stories/StorySetIndicatorComponent",
     ],
     visibility = [
         "//visibility:public",

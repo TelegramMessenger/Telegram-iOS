@@ -103,7 +103,7 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
     override func updateSelectionView() {
         super.updateSelectionView()
         
-        guard let selectionView = self.selectionView as? DrawingSimpleShapeEntititySelectionView else {
+        guard let selectionView = self.selectionView as? DrawingSimpleShapeEntitySelectionView else {
             return
         }
         
@@ -117,7 +117,7 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
         if let selectionView = self.selectionView {
             return selectionView
         }
-        let selectionView = DrawingSimpleShapeEntititySelectionView()
+        let selectionView = DrawingSimpleShapeEntitySelectionView()
         selectionView.entityView = self
         return selectionView
     }
@@ -136,7 +136,7 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
     }
 }
 
-final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView {
+final class DrawingSimpleShapeEntitySelectionView: DrawingEntitySelectionView {
     private let leftHandle = SimpleShapeLayer()
     private let topLeftHandle = SimpleShapeLayer()
     private let topHandle = SimpleShapeLayer()

@@ -9,7 +9,7 @@
 import Foundation
 #if os(macOS)
 import Cocoa
-typealias UIColor = NSColor
+public typealias UIColor = NSColor
 #else
 import UIKit
 #endif
@@ -26,7 +26,7 @@ class VerticalScalesRenderer: BaseChartRenderer {
     var axisXWidth: CGFloat = GView.oneDevicePixel
     
     var isRightAligned: Bool = false
-    var isCrypto: Bool = false
+    var drawCurrency:((CGContext, UIColor, CGPoint)->Void)?
     
     var horizontalLinesColor: GColor = .black {
         didSet {
@@ -122,45 +122,6 @@ class VerticalScalesRenderer: BaseChartRenderer {
             context.strokeLineSegments(between: lineSegments)
         }
         
-        func drawTonSymbol(context: CGContext, color: UIColor, at point: CGPoint) {
-            let width: CGFloat = 8.0
-            let height: CGFloat = 7.5
-            let cornerRadius: CGFloat = 0.5
-            
-            let topPoint = CGPoint(x: point.x + width / 2, y: point.y)
-            let bottomPoint = CGPoint(x: point.x + width / 2, y: point.y + height)
-            let leftTopPoint = CGPoint(x: point.x, y: point.y)
-            let rightTopPoint = CGPoint(x: point.x + width, y: point.y)
-            
-            context.saveGState()
-            
-            context.beginPath()
-            context.move(to: CGPoint(x: leftTopPoint.x + cornerRadius, y: leftTopPoint.y))
-            
-            context.addArc(tangent1End: leftTopPoint, tangent2End: bottomPoint, radius: cornerRadius)
-            context.addLine(to: CGPoint(x: bottomPoint.x, y: bottomPoint.y - cornerRadius + GView.oneDevicePixel))
-            
-            context.move(to: CGPoint(x: rightTopPoint.x - cornerRadius, y: rightTopPoint.y))
-            context.addArc(tangent1End: rightTopPoint, tangent2End: bottomPoint, radius: cornerRadius)
-            context.addLine(to: CGPoint(x: bottomPoint.x, y: bottomPoint.y - cornerRadius + GView.oneDevicePixel))
-                              
-            context.move(to: CGPoint(x: leftTopPoint.x + cornerRadius, y: leftTopPoint.y))
-            context.addLine(to: CGPoint(x: rightTopPoint.x - cornerRadius, y: rightTopPoint.y))
-            
-            context.move(to: topPoint)
-            context.addLine(to: CGPoint(x: bottomPoint.x, y: bottomPoint.y - 1.0))
-            
-            context.setLineWidth(1.0)
-            context.setLineCap(.round)
-            context.setFillColor(UIColor.clear.cgColor)
-            context.setStrokeColor(color.withAlphaComponent(1.0).cgColor)
-            
-            context.setAlpha(color.alphaValue)
-            context.strokePath()
-            
-            context.restoreGState()
-        }
-        
         func drawVerticalLabels(_ labels: [LinesChartLabel], attributes: [NSAttributedString.Key: Any]) {
             if isRightAligned {
                 for label in labels {
@@ -176,9 +137,9 @@ class VerticalScalesRenderer: BaseChartRenderer {
                     let textNode = LabelNode.layoutText(attributedString, bounds.size)
                     
                     var xOffset = 0.0
-                    if self.isCrypto {
+                    if let drawCurrency {
                         xOffset += 11.0
-                        drawTonSymbol(context: context, color: attributes[.foregroundColor] as? UIColor ?? .black, at: CGPoint(x: chartFrame.minX, y: y + 4.0))
+                        drawCurrency(context, attributes[.foregroundColor] as? UIColor ?? .black, CGPoint(x: chartFrame.minX, y: y + 4.0))
                     }
                     
                     textNode.1.draw(CGRect(origin: CGPoint(x: chartFrame.minX + xOffset, y: y), size: textNode.0.size), in: context, backingScaleFactor: deviceScale)

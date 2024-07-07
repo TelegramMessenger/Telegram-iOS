@@ -1014,6 +1014,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     func coveringInsetOffsetUpdated(transition: ContainedViewLayoutTransition) {
         self.coveringInsetOffsetUpdatedImpl?(transition)
     }
+    
+    func scrollingOffsetUpdated(transition: ContainedViewLayoutTransition) {
+    }
 
     func onBeginFastScrolling() {
         self.onBeginFastScrollingImpl?()
@@ -1192,7 +1195,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                 chatControllerInteraction.openInstantPage(message, data)
             },
             longTap: { action, message in
-                chatControllerInteraction.longTap(action, message)
+                chatControllerInteraction.longTap(action, ChatControllerInteraction.LongTapParams(message: message))
             },
             getHiddenMedia: {
                 return chatControllerInteraction.hiddenMedia

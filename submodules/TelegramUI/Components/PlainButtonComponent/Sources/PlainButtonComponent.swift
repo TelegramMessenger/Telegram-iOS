@@ -130,7 +130,7 @@ public final class PlainButtonComponent: Component {
                             self.contentContainer.alpha = 0.7
                         }
                         if animateScale {
-                            let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                            let transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                             transition.setScale(layer: self.contentContainer.layer, scale: topScale)
                         }
                     } else {
@@ -140,7 +140,7 @@ public final class PlainButtonComponent: Component {
                         }
                         
                         if animateScale {
-                            let transition = Transition(animation: .none)
+                            let transition = ComponentTransition(animation: .none)
                             transition.setScale(layer: self.contentContainer.layer, scale: 1.0)
                             
                             self.contentContainer.layer.animateScale(from: topScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
@@ -188,7 +188,7 @@ public final class PlainButtonComponent: Component {
             return nil
         }
 
-        func update(component: PlainButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: PlainButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.componentState = state
             
@@ -294,7 +294,7 @@ public final class PlainButtonComponent: Component {
         return View(frame: CGRect())
     }
 
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

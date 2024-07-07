@@ -147,7 +147,7 @@ private final class SheetContent: CombinedComponent {
                 showPeer = true
             case let .withdrawal(status, amount, date, provider, _, transactionUrl):
                 labelColor = theme.list.itemDestructiveColor
-                amountString = amountAttributedString(formatBalanceText(amount, decimalSeparator: dateTimeFormat.decimalSeparator), integralFont: integralFont, fractionalFont: fractionalFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
+                amountString = amountAttributedString(formatBalanceText(amount, decimalSeparator: dateTimeFormat.groupingSeparator), integralFont: integralFont, fractionalFont: fractionalFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
                 dateString = stringForFullDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat)
                 
                 switch status {

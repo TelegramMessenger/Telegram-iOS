@@ -161,8 +161,10 @@ func chatHistoryEntriesForView(
             }
         }
         
-        if skipViewOnceMedia, message.minAutoremoveOrClearTimeout != nil {
-            continue loop
+        if skipViewOnceMedia, let minAutoremoveOrClearTimeout = message.minAutoremoveOrClearTimeout {
+            if minAutoremoveOrClearTimeout <= 60 {
+                continue loop
+            }
         }
         
         var contentTypeHint: ChatMessageEntryContentType = .generic
@@ -229,7 +231,13 @@ func chatHistoryEntriesForView(
                 } else {
                     selection = .none
                 }
-                entries.append(.MessageEntry(message, presentationData, isRead, entry.location, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: message.index == associatedData.currentlyPlayingMessageId, isCentered: false, authorStoryStats: message.author.flatMap { view.peerStoryStats[$0.id] })))
+                
+                var isCentered = false
+                if case let .messageOptions(_, _, info) = associatedData.subject, case let .link(link) = info {
+                    isCentered = link.isCentered
+                }
+                
+                entries.append(.MessageEntry(message, presentationData, isRead, entry.location, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: message.index == associatedData.currentlyPlayingMessageId, isCentered: isCentered, authorStoryStats: message.author.flatMap { view.peerStoryStats[$0.id] })))
             }
         } else {
             let selection: ChatHistoryMessageSelection

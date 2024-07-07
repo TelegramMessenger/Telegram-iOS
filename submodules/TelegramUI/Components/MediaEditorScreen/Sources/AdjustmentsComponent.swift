@@ -88,7 +88,7 @@ final class AdjustmentSliderComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
                 
-        func update(component: AdjustmentSliderComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: AdjustmentSliderComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -104,7 +104,7 @@ final class AdjustmentSliderComponent: Component {
                             }
                         }
                         isTrackingUpdated(isTracking)
-                        let transition: Transition
+                        let transition: ComponentTransition
                         if isTracking {
                             transition = .immediate
                         } else {
@@ -219,7 +219,7 @@ final class AdjustmentSliderComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -276,7 +276,7 @@ final class AdjustmentsComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
                 
-        func update(component: AdjustmentsComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: AdjustmentsComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -289,7 +289,7 @@ final class AdjustmentsComponent: Component {
                         let tool = component.tools[i]
                         if tool.key != trackingTool && i < self.toolViews.count {
                             if let view = self.toolViews[i].view {
-                                let transition: Transition
+                                let transition: ComponentTransition
                                 if isTracking {
                                     transition = .immediate
                                 } else {
@@ -381,7 +381,7 @@ final class AdjustmentsComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -440,7 +440,7 @@ final class AdjustmentsScreenComponent: Component {
             }
         }
         
-        func update(component: AdjustmentsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: AdjustmentsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -452,7 +452,7 @@ final class AdjustmentsScreenComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

@@ -8,6 +8,7 @@ import ItemListUI
 import TextFormat
 import ObjCRuntimeUtils
 import TextInputMenu
+import AccountContext
 
 public enum CreatePollTextInputItemTextLimitMode {
     case characters
@@ -37,6 +38,7 @@ public struct ItemListMultilineInputInlineAction {
 }
 
 public class CreatePollTextInputItem: ListViewItem, ItemListItem {
+    let context: AccountContext
     let presentationData: ItemListPresentationData
     let text: NSAttributedString
     let placeholder: String
@@ -55,7 +57,8 @@ public class CreatePollTextInputItem: ListViewItem, ItemListItem {
     let inlineAction: ItemListMultilineInputInlineAction?
     public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, text: NSAttributedString, placeholder: String, maxLength: CreatePollTextInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, capitalization: Bool = true, autocorrection: Bool = true, returnKeyType: UIReturnKeyType = .default, minimalHeight: CGFloat? = nil, textUpdated: @escaping (NSAttributedString) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> Void)? = nil, updatedFocus: ((Bool) -> Void)? = nil, tag: ItemListItemTag? = nil, action: (() -> Void)? = nil, inlineAction: ItemListMultilineInputInlineAction? = nil) {
+    public init(context: AccountContext, presentationData: ItemListPresentationData, text: NSAttributedString, placeholder: String, maxLength: CreatePollTextInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, capitalization: Bool = true, autocorrection: Bool = true, returnKeyType: UIReturnKeyType = .default, minimalHeight: CGFloat? = nil, textUpdated: @escaping (NSAttributedString) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> Void)? = nil, updatedFocus: ((Bool) -> Void)? = nil, tag: ItemListItemTag? = nil, action: (() -> Void)? = nil, inlineAction: ItemListMultilineInputInlineAction? = nil) {
+        self.context = context
         self.presentationData = presentationData
         self.text = text
         self.placeholder = placeholder
@@ -228,7 +231,7 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
                 rightInset += inlineAction.icon.size.width + 8.0
             }
             
-            let itemText = textAttributedStringForStateText(item.text, fontSize: 17.0, textColor: item.presentationData.theme.chat.inputPanel.primaryTextColor, accentTextColor: item.presentationData.theme.chat.inputPanel.panelControlAccentColor, writingDirection: nil, spoilersRevealed: false, availableEmojis: Set(), emojiViewProvider: nil)
+            let itemText = textAttributedStringForStateText(context: item.context, stateText: item.text, fontSize: 17.0, textColor: item.presentationData.theme.chat.inputPanel.primaryTextColor, accentTextColor: item.presentationData.theme.chat.inputPanel.panelControlAccentColor, writingDirection: nil, spoilersRevealed: false, availableEmojis: Set(), emojiViewProvider: nil, makeCollapsedQuoteAttachment: nil)
             let measureText = NSMutableAttributedString(attributedString: itemText)
             let measureRawString = measureText.string
             if measureRawString.hasSuffix("\n") || measureRawString.isEmpty {
@@ -294,11 +297,11 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
                     if let currentText = strongSelf.textNode.attributedText {
                         if currentText.string != attributedText.string || updatedTheme != nil {
                             strongSelf.textNode.attributedText = attributedText
-                            refreshGenericTextInputAttributes(strongSelf.textNode.textView, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
+                            refreshGenericTextInputAttributes(context: item.context, textView: strongSelf.textNode.textView, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil, makeCollapsedQuoteAttachment: nil)
                         }
                     } else {
                         strongSelf.textNode.attributedText = attributedText
-                        refreshGenericTextInputAttributes(strongSelf.textNode.textView, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
+                        refreshGenericTextInputAttributes(context: item.context, textView: strongSelf.textNode.textView, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil, makeCollapsedQuoteAttachment: nil)
                     }
                     
                     if strongSelf.backgroundNode.supernode == nil {
@@ -557,14 +560,14 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
     @objc func formatAttributesQuote(_ sender: Any) {
         self.inputMenu.back()
         if let item = self.item {
-            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote))
+            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: false))
         }
     }
     
     @objc func formatAttributesCodeBlock(_ sender: Any) {
         self.inputMenu.back()
         if let item = self.item {
-            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: nil)))
+            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: nil), isCollapsed: false))
         }
     }
     
@@ -591,7 +594,7 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
     public func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
         if let item = self.item {
             if let _ = self.textNode.attributedText {
-                refreshGenericTextInputAttributes(editableTextNode.textView, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
+                refreshGenericTextInputAttributes(context: item.context, textView: editableTextNode.textView, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil, makeCollapsedQuoteAttachment: nil)
                 let updatedText = stateAttributedStringForText(self.textNode.attributedText!)
                 item.textUpdated(updatedText)
             } else {
@@ -621,7 +624,7 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
             }
             
             refreshChatTextInputTypingAttributes(editableTextNode.textView, theme: item.presentationData.theme, baseFontSize: 17.0)
-            refreshGenericTextInputAttributes(editableTextNode.textView, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
+            refreshGenericTextInputAttributes(context: item.context, textView: editableTextNode.textView, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil, makeCollapsedQuoteAttachment: nil)
         }
     }
     
@@ -672,7 +675,7 @@ private func chatTextInputAddFormattingAttribute(item: CreatePollTextInputItem, 
         textNode.selectedRange = nsRange
         
         refreshChatTextInputTypingAttributes(textNode.textView, theme: theme, baseFontSize: 17.0)
-        refreshGenericTextInputAttributes(textNode.textView, theme: theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
+        refreshGenericTextInputAttributes(context: item.context, textView: textNode.textView, theme: theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil, makeCollapsedQuoteAttachment: nil)
         
         let updatedText = stateAttributedStringForText(textNode.attributedText!)
         item.textUpdated(updatedText)

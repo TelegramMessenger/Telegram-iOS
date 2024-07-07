@@ -13,7 +13,8 @@ final class AlertControllerNode: ASDisplayNode {
     private let rightDimView: UIView
     
     private let containerNode: ASDisplayNode
-    private let effectNode: ASDisplayNode
+//    private let effectNode: ASDisplayNode
+    private let effectView: UIVisualEffectView
     private let backgroundNode: ASDisplayNode
     private let contentNode: AlertContentNode
     private let allowInputInset: Bool
@@ -51,9 +52,11 @@ final class AlertControllerNode: ASDisplayNode {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = theme.backgroundColor
         
-        self.effectNode = ASDisplayNode(viewBlock: {
-            return UIVisualEffectView(effect: UIBlurEffect(style: theme.backgroundType == .light ? .light : .dark))
-        })
+//        self.effectNode = ASDisplayNode(viewBlock: {
+//            return UIVisualEffectView(effect: UIBlurEffect(style: theme.backgroundType == .light ? .light : .dark))
+//        })
+        
+        self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: theme.backgroundType == .light ? .light : .dark))
         
         self.contentNode = contentNode
         
@@ -66,7 +69,8 @@ final class AlertControllerNode: ASDisplayNode {
         self.dimContainerView.addSubview(self.leftDimView)
         self.dimContainerView.addSubview(self.rightDimView)
         
-        self.containerNode.addSubnode(self.effectNode)
+        self.containerNode.view.addSubview(self.effectView)
+//        self.containerNode.addSubnode(self.effectNode)
         self.containerNode.addSubnode(self.backgroundNode)
         self.containerNode.addSubnode(self.contentNode)
         self.addSubnode(self.containerNode)
@@ -100,9 +104,7 @@ final class AlertControllerNode: ASDisplayNode {
     }
     
     func updateTheme(_ theme: AlertControllerTheme) {
-        if let effectView = self.effectNode.view as? UIVisualEffectView {
-            effectView.effect = UIBlurEffect(style: theme.backgroundType == .light ? .light : .dark)
-        }
+        self.effectView.effect = UIBlurEffect(style: theme.backgroundType == .light ? .light : .dark)
         self.backgroundNode.backgroundColor = theme.backgroundColor
         self.contentNode.updateTheme(theme)
     }
@@ -186,7 +188,10 @@ final class AlertControllerNode: ASDisplayNode {
         transition.updateFrame(view: self.rightDimView, frame: CGRect(origin: CGPoint(x: containerFrame.maxX, y: containerFrame.minY), size: CGSize(width: layout.size.width - containerFrame.maxX + outerEdge, height: containerFrame.height)))
         
         transition.updateFrame(node: self.containerNode, frame: containerFrame)
-        transition.updateFrame(node: self.effectNode, frame: CGRect(origin: CGPoint(), size: containerFrame.size))
+        transition.animateView {
+            self.effectView.frame = CGRect(origin: CGPoint(), size: containerFrame.size)
+        }
+//        transition.updateFrame(view: self.effectView, frame: CGRect(origin: CGPoint(), size: containerFrame.size))
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: containerFrame.size))
         transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: containerFrame.size))
     }
