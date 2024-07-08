@@ -288,13 +288,19 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                 500: 4,
                 1000: 5,
                 2500: 6,
+
                 25: 1,
                 50: 1,
                 100: 2,
                 150: 2,
                 350: 3,
                 750: 4,
-                1500: 5
+                1500: 5,
+                
+                5000: 6,
+                10000: 6,
+                25000: 7,
+                50000: 7
             ]
             
             let externalStateUpdated = context.component.stateUpdated
