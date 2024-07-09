@@ -44,7 +44,7 @@ private let productIdentifiers = [
     "org.telegram.telegramStars.topup.x5000",
     "org.telegram.telegramStars.topup.x10000",
     "org.telegram.telegramStars.topup.x25000",
-    "org.telegram.telegramStars.topup.x50000"
+    "org.telegram.telegramStars.topup.x35000"
 ]
 
 private extension NSDecimalNumber {
