@@ -6,5 +6,4 @@
 
 - (instancetype)initWithPersistentKey:(MTDatacenterAuthKey *)persistentKey ephemeralKey:(MTDatacenterAuthKey *)ephemeralKey completion:(void (^)(bool))completion;
 
--(void)complete;
 @end

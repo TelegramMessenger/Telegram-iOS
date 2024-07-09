@@ -168,8 +168,4 @@
     }
 }
 
--(void)complete {
-    _completion(true);
-}
-
 @end
