@@ -2155,7 +2155,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             for (NSInteger i = (NSInteger)_messageServices.count - 1; i >= 0; i--)
             {
                 MTBindKeyMessageService* messageService = (MTBindKeyMessageService *)_messageServices[(NSUInteger)i];
-                if ([messageService isKindOfClass:[MTBindKeyMessageService class]]) {
+                if ([messageService respondsToSelector:@selector(complete)]) {
                     [messageService complete];
                 }
             }
