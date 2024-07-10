@@ -25,6 +25,7 @@ public protocol MinimizableController: ViewController {
     var minimizedBounds: CGRect? { get }
     var isMinimized: Bool { get set }
     var isMinimizable: Bool { get }
+    var minimizedIcon: UIImage? { get }
     
     func makeContentSnapshotView() -> UIView?
     func shouldDismissImmediately() -> Bool
@@ -45,6 +46,10 @@ public extension MinimizableController {
     
     var isMinimizable: Bool {
         return false
+    }
+    
+    var minimizedIcon: UIImage? {
+        return nil
     }
     
     func makeContentSnapshotView() -> UIView? {
