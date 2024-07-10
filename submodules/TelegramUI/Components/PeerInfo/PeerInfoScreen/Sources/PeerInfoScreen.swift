@@ -5282,7 +5282,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             let context = self.context
             let peerId = self.peerId
-            let params = WebAppParameters(source: .settings, peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: bot.flags.contains(.hasSettings), fullSize: true)
+            let params = WebAppParameters(source: .settings, peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, botVerified: bot.peer.isVerified, url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: bot.flags.contains(.hasSettings), fullSize: true)
             
             var openUrlImpl: ((String, Bool, @escaping () -> Void) -> Void)?
             var presentImpl: ((ViewController, Any?) -> Void)?

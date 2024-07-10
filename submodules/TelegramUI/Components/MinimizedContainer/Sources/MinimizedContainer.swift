@@ -12,11 +12,11 @@ private let minimizedNavigationHeight: CGFloat = 44.0
 private let minimizedTopMargin: CGFloat = 3.0
 
 final class ScrollViewImpl: UIScrollView {
-    var passthrough = false
+    var shouldPassthrough: () -> Bool = { return false }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let result = super.hitTest(point, with: event)
-        if result === self && self.passthrough {
+        if result === self && self.shouldPassthrough() {
             return nil
         }
         return result
@@ -33,6 +33,13 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             self.id = id
             self.controller = controller
             self.beforeMaximize = beforeMaximize
+        }
+    }
+    
+    final class SnapshotContainerView: UIView {
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            self.removeFromSuperview()
+            return nil
         }
     }
     
@@ -54,7 +61,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         private let shadowNode: ASImageNode
         
         private var controllerView: UIView?
-        fileprivate let snapshotContainerView = UIView()
+        fileprivate let snapshotContainerView = SnapshotContainerView()
         fileprivate var snapshotView: UIView?
         fileprivate var blurredSnapshotView: UIView?
         
@@ -372,6 +379,12 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         self.scrollView.alwaysBounceVertical = true
         self.scrollView.showsVerticalScrollIndicator = false
         self.scrollView.showsHorizontalScrollIndicator = false
+        self.scrollView.shouldPassthrough = { [weak self] in
+            guard let self else {
+                return true
+            }
+            return !self.isExpanded
+        }
         
         let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
         panGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
@@ -648,6 +661,12 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 })
             ])
         ])
+        actionSheet.dismissed = { cancelled in
+            guard cancelled else {
+                return
+            }
+            completion(false)
+        }
         self.navigationController?.presentOverlay(controller: actionSheet, inGlobal: false, blockInteraction: false)
     }
     
@@ -926,7 +945,6 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         if self.scrollView.frame != bounds {
             self.scrollView.frame = bounds
         }
-        self.scrollView.passthrough = !self.isExpanded
         self.scrollView.isScrollEnabled = self.isExpanded
         self.expandedTapGestureRecoginzer?.isEnabled = self.isExpanded
         
@@ -1010,10 +1028,11 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                     
                     if let _ = itemNode.snapshotView {
                         let snapshotContainerView = itemNode.snapshotContainerView
+                        snapshotContainerView.isUserInteractionEnabled = true
                         snapshotContainerView.layer.allowsGroupOpacity = true
                         snapshotContainerView.center = CGPoint(x: itemNode.item.controller.displayNode.view.bounds.width / 2.0, y: snapshotContainerView.bounds.height / 2.0)
                         itemNode.item.controller.displayNode.view.addSubview(snapshotContainerView)
-                        Queue.mainQueue().after(0.15, {
+                        Queue.mainQueue().after(0.35, {
                             snapshotContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
                                 snapshotContainerView.removeFromSuperview()
                             })

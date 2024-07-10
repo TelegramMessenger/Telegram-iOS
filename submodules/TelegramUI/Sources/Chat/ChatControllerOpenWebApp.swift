@@ -24,12 +24,15 @@ public extension ChatControllerImpl {
         
         let botName: String
         let botAddress: String
+        let botVerified: Bool
         if case let .inline(bot) = source {
             botName = bot.compactDisplayTitle
             botAddress = bot.addressName ?? ""
+            botVerified = bot.isVerified
         } else {
             botName = EnginePeer(peer).displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)
             botAddress = peer.addressName ?? ""
+            botVerified = peer.isVerified
         }
         
         if source == .generic {
@@ -98,7 +101,7 @@ public extension ChatControllerImpl {
                 }
 
                 var presentImpl: ((ViewController, Any?) -> Void)?
-                let params = WebAppParameters(source: .menu, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: fullSize)
+                let params = WebAppParameters(source: .menu, peerId: peerId, botId: peerId, botName: botName, botVerified: botVerified, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: fullSize)
                 let controller = standaloneWebAppController(context: self.context, updatedPresentationData: self.updatedPresentationData, params: params, threadId: self.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                     ChatControllerImpl.botOpenUrl(context: context, peerId: peerId, controller: self, url: url, concealed: concealed, present: { c, a in
                         presentImpl?(c, a)
@@ -145,11 +148,13 @@ public extension ChatControllerImpl {
                 var botId = peerId
                 var botName = botName
                 var botAddress = ""
+                var botVerified = false
                 if case let .inline(bot) = source {
                     isInline = true
                     botId = bot.id
                     botName = bot.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)
                     botAddress = bot.addressName ?? ""
+                    botVerified = bot.isVerified
                 }
                 
                 self.messageActionCallbackDisposable.set(((self.context.engine.messages.requestSimpleWebView(botId: botId, url: url, source: isInline ? .inline : .generic, themeParams: generateWebAppThemeParams(self.presentationData.theme))
@@ -162,7 +167,7 @@ public extension ChatControllerImpl {
                     }
                     var presentImpl: ((ViewController, Any?) -> Void)?
                     let context = strongSelf.context
-                    let params = WebAppParameters(source: isInline ? .inline : .simple, peerId: peerId, botId: botId, botName: botName, url: result.url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: result.flags.contains(.fullSize))
+                    let params = WebAppParameters(source: isInline ? .inline : .simple, peerId: peerId, botId: botId, botName: botName, botVerified: botVerified, url: result.url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: result.flags.contains(.fullSize))
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                         ChatControllerImpl.botOpenUrl(context: context, peerId: peerId, controller: self, url: url, concealed: concealed, present: { c, a in
                             presentImpl?(c, a)
@@ -196,7 +201,7 @@ public extension ChatControllerImpl {
                     }
                     var presentImpl: ((ViewController, Any?) -> Void)?
                     let context = strongSelf.context
-                    let params = WebAppParameters(source: .button, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, forceHasSettings: false, fullSize: result.flags.contains(.fullSize))
+                    let params = WebAppParameters(source: .button, peerId: peerId, botId: peerId, botName: botName, botVerified: botVerified, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, forceHasSettings: false, fullSize: result.flags.contains(.fullSize))
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                         ChatControllerImpl.botOpenUrl(context: context, peerId: peerId, controller: self, url: url, concealed: concealed, present: { c, a in
                             presentImpl?(c, a)
@@ -401,7 +406,7 @@ public extension ChatControllerImpl {
                     return
                 }
                 let context = strongSelf.context
-                let params = WebAppParameters(source: .generic, peerId: peerId, botId: botPeer.id, botName: botApp.title, url: result.url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, forceHasSettings: botApp.flags.contains(.hasSettings), fullSize: result.flags.contains(.fullSize))
+                let params = WebAppParameters(source: .generic, peerId: peerId, botId: botPeer.id, botName: botApp.title, botVerified: botPeer.isVerified, url: result.url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, forceHasSettings: botApp.flags.contains(.hasSettings), fullSize: result.flags.contains(.fullSize))
                 var presentImpl: ((ViewController, Any?) -> Void)?
                 let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                     ChatControllerImpl.botOpenUrl(context: context, peerId: peerId, controller: self, url: url, concealed: concealed, present: { c, a in

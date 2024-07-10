@@ -12487,3 +12487,6 @@ Sorry for the inconvenience.";
 "ChatList.DeleteForMe" = "Delete for me";
 "ChatList.DeleteForAllWhenPossible" = "Delete from both sides where possible";
 "ChatList.DeleteForAll" = "Delete from both sides";
+
+"WebApp.Miniapp" = "miniapp";
+"WebApp.Share" = "Share";

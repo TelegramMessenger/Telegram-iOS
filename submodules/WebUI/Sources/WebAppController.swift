@@ -9,7 +9,6 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
 import AttachmentUI
-import CounterControllerTitleView
 import ContextUI
 import PresentationDataUtils
 import HexColor
@@ -26,6 +25,8 @@ import InstantPageUI
 import InstantPageCache
 import LocalAuth
 import OpenInExternalAppUI
+import ShareController
+import UndoUI
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -204,6 +205,7 @@ public struct WebAppParameters {
     let peerId: PeerId
     let botId: PeerId
     let botName: String
+    let botVerified: Bool
     let url: String?
     let queryId: Int64?
     let payload: String?
@@ -217,6 +219,7 @@ public struct WebAppParameters {
         peerId: PeerId,
         botId: PeerId,
         botName: String,
+        botVerified: Bool,
         url: String?,
         queryId: Int64?,
         payload: String?,
@@ -229,6 +232,7 @@ public struct WebAppParameters {
         self.peerId = peerId
         self.botId = botId
         self.botName = botName
+        self.botVerified = botVerified
         self.url = url
         self.queryId = queryId
         self.payload = payload
@@ -504,7 +508,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 guard let self, let parsedUrl = URL(string: result.url) else {
                                     return
                                 }
-                                self.controller?.titleView?.title = CounterControllerTitle(title: appStart.botApp.title, counter: self.presentationData.strings.Bot_GenericBotStatus)
+                                self.controller?.titleView?.title = WebAppTitle(title: appStart.botApp.title, counter: self.presentationData.strings.WebApp_Miniapp, isVerified: controller.botVerified)
                                 self.webView?.load(URLRequest(url: parsedUrl))
                             })
                         })
@@ -1839,7 +1843,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         return self.displayNode as! Node
     }
     
-    private var titleView: CounterControllerTitleView?
+    private var titleView: WebAppTitleView?
     fileprivate let cancelButtonNode: WebAppCancelButtonNode
     fileprivate let moreButtonNode: MoreButtonNode
     
@@ -1848,6 +1852,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let peerId: PeerId
     public let botId: PeerId
     private let botName: String
+    private let botVerified: Bool
     private let url: String?
     private let queryId: Int64?
     private let payload: String?
@@ -1874,6 +1879,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.peerId = params.peerId
         self.botId = params.botId
         self.botName = params.botName
+        self.botVerified = params.botVerified
         self.url = params.url
         self.queryId = params.queryId
         self.payload = params.payload
@@ -1910,8 +1916,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.navigationItem.rightBarButtonItem?.action = #selector(self.moreButtonPressed)
         self.navigationItem.rightBarButtonItem?.target = self
         
-        let titleView = CounterControllerTitleView(theme: self.presentationData.theme)
-        titleView.title = CounterControllerTitle(title: params.botName, counter: self.presentationData.strings.Bot_GenericBotStatus)
+        let titleView = WebAppTitleView(context: self.context, theme: self.presentationData.theme)
+        titleView.title = WebAppTitle(title: params.botName, counter: self.presentationData.strings.WebApp_Miniapp, isVerified: params.botVerified)
         self.navigationItem.titleView = titleView
         self.titleView = titleView
         
@@ -2020,9 +2026,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         let hasSettings = self.hasSettings
         
-        let items = context.engine.messages.attachMenuBots()
+        let items = combineLatest(queue: Queue.mainQueue(),
+            context.engine.messages.attachMenuBots(),
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.botId))
+        )
         |> take(1)
-        |> map { [weak self] attachMenuBots -> ContextController.Items in
+        |> map { [weak self] attachMenuBots, botPeer -> ContextController.Items in
             var items: [ContextMenuItem] = []
             
             let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId && !$0.flags.contains(.notActivated) })
@@ -2061,6 +2070,24 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(botPeer)))
                         }
                     })
+                })))
+            }
+            
+            if let addressName = botPeer?.addressName {
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_Share, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] c, _ in
+                    c?.dismiss(completion: nil)
+                    
+                    guard let self else {
+                        return
+                    }
+                    let shareController = ShareController(context: context, subject: .url("https://t.me/\(addressName)"))
+                    shareController.actionCompleted = { [weak self] in
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    }
+                    self.present(shareController, in: .window(.root))
                 })))
             }
             
@@ -2178,8 +2205,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     public var isMinimized: Bool = false {
         didSet {
-            if self.isMinimized != oldValue && self.isMinimized {
-                self.controllerNode.webView?.hideScrollIndicators()
+            if self.isMinimized != oldValue {
+                if self.isMinimized {
+                    self.controllerNode.webView?.hideScrollIndicators()
+                } else {
+                    self.requestLayout(transition: .immediate)
+                }
             }
         }
     }
