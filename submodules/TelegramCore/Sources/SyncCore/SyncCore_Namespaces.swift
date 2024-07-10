@@ -126,6 +126,7 @@ public struct Namespaces {
         public static let savedMessageTags: Int8 = 35
         public static let applicationIcons: Int8 = 36
         public static let availableMessageEffects: Int8 = 37
+        public static let cachedStarsRevenueStats: Int8 = 38
     }
     
     public struct UnorderedItemList {
