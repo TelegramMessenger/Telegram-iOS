@@ -1179,8 +1179,17 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 hasSavedMessageTags = .single(false)
             }
             
-            let starsRevenueStatsContextPromise = Promise<StarsRevenueStatsContext?>(nil)
-            let starsRevenueStatsStatePromise = Promise<StarsRevenueStats?>(nil)
+            let starsRevenueContextAndState = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> mapToSignal { peer -> Signal<(StarsRevenueStatsContext?, StarsRevenueStats?), NoError> in
+                guard let peer, case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) else {
+                    return .single((nil, nil))
+                }
+                let starsRevenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: peerId)
+                return starsRevenueStatsContext.state
+                |> map { state -> (StarsRevenueStatsContext?, StarsRevenueStats?) in
+                    return (starsRevenueStatsContext, state.stats)
+                }
+            }
             
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
@@ -1197,10 +1206,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 hasSavedMessageTags,
                 peerInfoPersonalChannel(context: context, peerId: peerId, isSettings: false),
                 privacySettings,
-                starsRevenueStatsContextPromise.get(),
-                starsRevenueStatsStatePromise.get()
+                starsRevenueContextAndState
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, personalChannel, privacySettings, currentStarsRevenueStatsContext, starsRevenueStatsState -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, personalChannel, privacySettings, starsRevenueContextAndState -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 if isMyProfile {
                     availablePanes?.insert(.stories, at: 0)
@@ -1266,14 +1274,6 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         enableQRLogin: false)
                 }
                 
-                if case .bot = kind, let user = peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
-                    if currentStarsRevenueStatsContext == nil {
-                        let starsRevenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: peerId)
-                        starsRevenueStatsContextPromise.set(.single(starsRevenueStatsContext))
-                        starsRevenueStatsStatePromise.set(starsRevenueStatsContext.state |> map { $0.stats })
-                    }
-                }
-                
                 return PeerInfoScreenData(
                     peer: peer,
                     chatPeer: peerView.peers[peerId],
@@ -1303,8 +1303,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     isPremiumRequiredForStoryPosting: false,
                     personalChannel: personalChannel,
                     starsState: nil,
-                    starsRevenueStatsState: starsRevenueStatsState,
-                    starsRevenueStatsContext: currentStarsRevenueStatsContext
+                    starsRevenueStatsState: starsRevenueContextAndState.1,
+                    starsRevenueStatsContext: starsRevenueContextAndState.0
                 )
             }
         case .channel:
