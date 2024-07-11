@@ -1007,7 +1007,7 @@ public extension Api {
         case inputInvoiceMessage(peer: Api.InputPeer, msgId: Int32)
         case inputInvoicePremiumGiftCode(purpose: Api.InputStorePaymentPurpose, option: Api.PremiumGiftCodeOption)
         case inputInvoiceSlug(slug: String)
-        case inputInvoiceStars(option: Api.StarsTopupOption)
+        case inputInvoiceStars(purpose: Api.InputStorePaymentPurpose)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1031,11 +1031,11 @@ public extension Api {
                     }
                     serializeString(slug, buffer: buffer, boxed: false)
                     break
-                case .inputInvoiceStars(let option):
+                case .inputInvoiceStars(let purpose):
                     if boxed {
-                        buffer.appendInt32(497236696)
+                        buffer.appendInt32(1710230755)
                     }
-                    option.serialize(buffer, true)
+                    purpose.serialize(buffer, true)
                     break
     }
     }
@@ -1048,8 +1048,8 @@ public extension Api {
                 return ("inputInvoicePremiumGiftCode", [("purpose", purpose as Any), ("option", option as Any)])
                 case .inputInvoiceSlug(let slug):
                 return ("inputInvoiceSlug", [("slug", slug as Any)])
-                case .inputInvoiceStars(let option):
-                return ("inputInvoiceStars", [("option", option as Any)])
+                case .inputInvoiceStars(let purpose):
+                return ("inputInvoiceStars", [("purpose", purpose as Any)])
     }
     }
     
@@ -1099,13 +1099,13 @@ public extension Api {
             }
         }
         public static func parse_inputInvoiceStars(_ reader: BufferReader) -> InputInvoice? {
-            var _1: Api.StarsTopupOption?
+            var _1: Api.InputStorePaymentPurpose?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.StarsTopupOption
+                _1 = Api.parse(reader, signature: signature) as? Api.InputStorePaymentPurpose
             }
             let _c1 = _1 != nil
             if _c1 {
-                return Api.InputInvoice.inputInvoiceStars(option: _1!)
+                return Api.InputInvoice.inputInvoiceStars(purpose: _1!)
             }
             else {
                 return nil

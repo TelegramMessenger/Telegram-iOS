@@ -102,6 +102,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .webViewData(text))
     case let .messageActionGiftPremium(_, currency, amount, months, cryptoCurrency, cryptoAmount):
         return TelegramMediaAction(action: .giftPremium(currency: currency, amount: amount, months: months, cryptoCurrency: cryptoCurrency, cryptoAmount: cryptoAmount))
+    case let .messageActionGiftStars(_, currency, amount, stars, cryptoCurrency, cryptoAmount, transactionId):
+        return TelegramMediaAction(action: .giftStars(currency: currency, amount: amount, count: stars, cryptoCurrency: cryptoCurrency, cryptoAmount: cryptoAmount, transactionId: transactionId))
     case let .messageActionTopicCreate(_, title, iconColor, iconEmojiId):
         return TelegramMediaAction(action: .topicCreated(title: title, iconColor: iconColor, iconFileId: iconEmojiId))
     case let .messageActionTopicEdit(flags, title, iconEmojiId, closed, hidden):
@@ -139,6 +141,13 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .giveawayResults(winners: winners, unclaimed: unclaimed))
     case let .messageActionBoostApply(boosts):
         return TelegramMediaAction(action: .boostsApplied(boosts: boosts))
+    case let .messageActionPaymentRefunded(_, peer, currency, totalAmount, payload, charge):
+        let transactionId: String
+        switch charge {
+        case let .paymentCharge(id, _):
+            transactionId = id
+        }
+        return TelegramMediaAction(action: .paymentRefunded(peerId: peer.peerId, currency: currency, totalAmount: totalAmount, payload: payload?.makeData(), transactionId: transactionId))
     }
 }
 

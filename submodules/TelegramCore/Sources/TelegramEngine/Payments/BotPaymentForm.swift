@@ -10,6 +10,7 @@ public enum BotPaymentInvoiceSource {
     case premiumGiveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64, option: PremiumGiftCodeOption)
     case giftCode(users: [PeerId], currency: String, amount: Int64, option: PremiumGiftCodeOption)
     case stars(option: StarsTopUpOption)
+    case starsGift(peerId: EnginePeer.Id, count: Int64, currency: String, amount: Int64)
 }
 
 public struct BotPaymentInvoiceFields: OptionSet {
@@ -307,9 +308,12 @@ func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInv
         if let _ = option.storeProductId {
             flags |= (1 << 0)
         }
-        return .inputInvoiceStars(
-            option: .starsTopupOption(flags: flags, stars: option.count, storeProduct: option.storeProductId, currency: option.currency, amount: option.amount)
-        )
+        return .inputInvoiceStars(purpose: .inputStorePaymentStarsTopup(stars: option.count, currency: option.currency, amount: option.amount))
+    case let .starsGift(peerId, count, currency, amount):
+        guard let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) else {
+            return nil
+        }
+        return .inputInvoiceStars(purpose: .inputStorePaymentStarsGift(userId: inputUser, stars: count, currency: currency, amount: amount))
     }
 }
 
@@ -608,9 +612,7 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                                                     receiptMessageId = id
                                                 }
                                             }
-                                        case .giftCode:
-                                            receiptMessageId = nil
-                                        case .stars:
+                                        case .giftCode, .stars, .starsGift:
                                             receiptMessageId = nil
                                         }
                                     }

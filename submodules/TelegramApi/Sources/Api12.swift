@@ -396,7 +396,8 @@ public extension Api {
         case inputStorePaymentPremiumGiftCode(flags: Int32, users: [Api.InputUser], boostPeer: Api.InputPeer?, currency: String, amount: Int64)
         case inputStorePaymentPremiumGiveaway(flags: Int32, boostPeer: Api.InputPeer, additionalPeers: [Api.InputPeer]?, countriesIso2: [String]?, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64)
         case inputStorePaymentPremiumSubscription(flags: Int32)
-        case inputStorePaymentStars(flags: Int32, stars: Int64, currency: String, amount: Int64)
+        case inputStorePaymentStarsGift(userId: Api.InputUser, stars: Int64, currency: String, amount: Int64)
+        case inputStorePaymentStarsTopup(stars: Int64, currency: String, amount: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -450,11 +451,19 @@ public extension Api {
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     break
-                case .inputStorePaymentStars(let flags, let stars, let currency, let amount):
+                case .inputStorePaymentStarsGift(let userId, let stars, let currency, let amount):
                     if boxed {
-                        buffer.appendInt32(1326377183)
+                        buffer.appendInt32(494149367)
                     }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    userId.serialize(buffer, true)
+                    serializeInt64(stars, buffer: buffer, boxed: false)
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(amount, buffer: buffer, boxed: false)
+                    break
+                case .inputStorePaymentStarsTopup(let stars, let currency, let amount):
+                    if boxed {
+                        buffer.appendInt32(-572715178)
+                    }
                     serializeInt64(stars, buffer: buffer, boxed: false)
                     serializeString(currency, buffer: buffer, boxed: false)
                     serializeInt64(amount, buffer: buffer, boxed: false)
@@ -472,8 +481,10 @@ public extension Api {
                 return ("inputStorePaymentPremiumGiveaway", [("flags", flags as Any), ("boostPeer", boostPeer as Any), ("additionalPeers", additionalPeers as Any), ("countriesIso2", countriesIso2 as Any), ("prizeDescription", prizeDescription as Any), ("randomId", randomId as Any), ("untilDate", untilDate as Any), ("currency", currency as Any), ("amount", amount as Any)])
                 case .inputStorePaymentPremiumSubscription(let flags):
                 return ("inputStorePaymentPremiumSubscription", [("flags", flags as Any)])
-                case .inputStorePaymentStars(let flags, let stars, let currency, let amount):
-                return ("inputStorePaymentStars", [("flags", flags as Any), ("stars", stars as Any), ("currency", currency as Any), ("amount", amount as Any)])
+                case .inputStorePaymentStarsGift(let userId, let stars, let currency, let amount):
+                return ("inputStorePaymentStarsGift", [("userId", userId as Any), ("stars", stars as Any), ("currency", currency as Any), ("amount", amount as Any)])
+                case .inputStorePaymentStarsTopup(let stars, let currency, let amount):
+                return ("inputStorePaymentStarsTopup", [("stars", stars as Any), ("currency", currency as Any), ("amount", amount as Any)])
     }
     }
     
@@ -575,9 +586,11 @@ public extension Api {
                 return nil
             }
         }
-        public static func parse_inputStorePaymentStars(_ reader: BufferReader) -> InputStorePaymentPurpose? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+        public static func parse_inputStorePaymentStarsGift(_ reader: BufferReader) -> InputStorePaymentPurpose? {
+            var _1: Api.InputUser?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputUser
+            }
             var _2: Int64?
             _2 = reader.readInt64()
             var _3: String?
@@ -589,7 +602,24 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputStorePaymentPurpose.inputStorePaymentStars(flags: _1!, stars: _2!, currency: _3!, amount: _4!)
+                return Api.InputStorePaymentPurpose.inputStorePaymentStarsGift(userId: _1!, stars: _2!, currency: _3!, amount: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputStorePaymentStarsTopup(_ reader: BufferReader) -> InputStorePaymentPurpose? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int64?
+            _3 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputStorePaymentPurpose.inputStorePaymentStarsTopup(stars: _1!, currency: _2!, amount: _3!)
             }
             else {
                 return nil
@@ -896,60 +926,6 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.InputWallPaper.inputWallPaperSlug(slug: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputWebDocument: TypeConstructorDescription {
-        case inputWebDocument(url: String, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputWebDocument(let url, let size, let mimeType, let attributes):
-                    if boxed {
-                        buffer.appendInt32(-1678949555)
-                    }
-                    serializeString(url, buffer: buffer, boxed: false)
-                    serializeInt32(size, buffer: buffer, boxed: false)
-                    serializeString(mimeType, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(attributes.count))
-                    for item in attributes {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputWebDocument(let url, let size, let mimeType, let attributes):
-                return ("inputWebDocument", [("url", url as Any), ("size", size as Any), ("mimeType", mimeType as Any), ("attributes", attributes as Any)])
-    }
-    }
-    
-        public static func parse_inputWebDocument(_ reader: BufferReader) -> InputWebDocument? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: [Api.DocumentAttribute]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DocumentAttribute.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputWebDocument.inputWebDocument(url: _1!, size: _2!, mimeType: _3!, attributes: _4!)
             }
             else {
                 return nil
