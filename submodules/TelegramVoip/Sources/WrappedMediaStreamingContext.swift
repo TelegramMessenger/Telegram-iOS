@@ -6,6 +6,8 @@ import Network
 import Postbox
 import FFMpegBinding
 
+
+@available(iOS 12.0, macOS 14.0, *)
 public final class WrappedMediaStreamingContext {
     private final class Impl {
         let queue: Queue
@@ -135,7 +137,7 @@ public final class WrappedMediaStreamingContext {
         }
     }
 }
-
+@available(iOS 12.0, macOS 14.0, *)
 public final class ExternalMediaStreamingContext {
     private final class Impl {
         let queue: Queue
@@ -321,7 +323,7 @@ public final class ExternalMediaStreamingContext {
         }
     }
 }
-
+@available(iOS 12.0, macOS 14.0, *)
 public final class SharedHLSServer {
     public static let shared: SharedHLSServer = {
         return SharedHLSServer()
@@ -351,7 +353,7 @@ public final class SharedHLSServer {
             self.streamingContext = streamingContext
         }
     }
-    
+    @available(iOS 12.0, macOS 14.0, *)
     private final class Impl {
         private let queue: Queue
         
