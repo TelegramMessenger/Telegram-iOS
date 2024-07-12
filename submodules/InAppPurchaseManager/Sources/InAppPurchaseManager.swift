@@ -729,6 +729,9 @@ private final class PendingInAppPurchaseState: Codable {
                 self = .giveaway(boostPeer: boostPeer, additionalPeerIds: additionalPeerIds, countries: countries, onlyNewSubscribers: onlyNewSubscribers, showWinners: showWinners, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate)
             case let .stars(count, _, _):
                 self = .stars(count: count)
+            case let .starsGift(_, count, _, _):
+                //TODO:localize
+                self = .stars(count: count)
             }
         }
         
