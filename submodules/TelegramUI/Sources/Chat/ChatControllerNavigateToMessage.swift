@@ -202,9 +202,9 @@ extension ChatControllerImpl {
                 }
                 var historyView: Signal<ChatHistoryViewUpdate, NoError>
                 
-                let subject: ChatControllerSubject = .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil)
+                let subject: ChatControllerSubject = .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil, setupReply: false)
                 
-                historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: nil), count: 50, highlight: true), id: 0), context: self.context, chatLocation: preloadChatLocation, subject: subject, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), fixedCombinedReadStates: nil, tag: nil, additionalData: [])
+                historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: nil), count: 50, highlight: true, setupReply: false), id: 0), context: self.context, chatLocation: preloadChatLocation, subject: subject, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), fixedCombinedReadStates: nil, tag: nil, additionalData: [])
                 
                 var signal: Signal<(MessageIndex?, Bool), NoError>
                 signal = historyView

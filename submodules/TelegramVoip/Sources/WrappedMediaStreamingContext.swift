@@ -235,7 +235,7 @@ public final class ExternalMediaStreamingContext {
                 playlistData.append("hls_stream\(quality)_\(index).ts\n")
             }
             
-            print("Player: updating playlist \(quality) \(minIndex) ... \(headIndex)")
+            //print("Player: updating playlist \(quality) \(minIndex) ... \(headIndex)")
             
             if quality == 0 {
                 self.playlistData.set(.single(playlistData))
@@ -393,6 +393,8 @@ public final class SharedHLSServer {
                 case let .failed(error):
                     Logger.shared.log("SharedHLSServer", "Server failed with error: \(error)")
                     self.listener?.cancel()
+                    
+                    self.listener?.start(queue: self.queue.queue)
                 default:
                     break
                 }

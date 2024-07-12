@@ -76,13 +76,15 @@
         ret = AVERROR(ENOMEM);
         goto end;
     }
+    
+    bool hasAudio = false;
 
     for (i = 0; i < input_format_context->nb_streams; i++) {
         AVStream *out_stream;
         AVStream *in_stream = input_format_context->streams[i];
         AVCodecParameters *in_codecpar = in_stream->codecpar;
 
-        if (in_codecpar->codec_type != AVMEDIA_TYPE_AUDIO && in_codecpar->codec_type != AVMEDIA_TYPE_VIDEO) {
+        if (/*in_codecpar->codec_type != AVMEDIA_TYPE_AUDIO && */in_codecpar->codec_type != AVMEDIA_TYPE_VIDEO) {
             streams_list[i] = -1;
             continue;
         }
@@ -110,6 +112,8 @@
                 ret = AVERROR_UNKNOWN;
                 goto end;
             }
+            
+            hasAudio = true;
 
             // Set the codec parameters for the AAC encoder
             aac_codec_context->sample_rate = in_codecpar->sample_rate;
@@ -156,20 +160,22 @@
         }
     }
 
-    // Set up the resampling context
-    swr_ctx = swr_alloc_set_opts(NULL,
-                                 aac_codec_context->channel_layout, aac_codec_context->sample_fmt, aac_codec_context->sample_rate,
-                                 opus_decoder_context->channel_layout, opus_decoder_context->sample_fmt, opus_decoder_context->sample_rate,
-                                 0, NULL);
-    if (!swr_ctx) {
-        fprintf(stderr, "Could not allocate resampler context\n");
-        ret = AVERROR(ENOMEM);
-        goto end;
-    }
-
-    if ((ret = swr_init(swr_ctx)) < 0) {
-        fprintf(stderr, "Failed to initialize the resampling context\n");
-        goto end;
+    if (hasAudio) {
+        // Set up the resampling context
+        swr_ctx = swr_alloc_set_opts(NULL,
+                                     aac_codec_context->channel_layout, aac_codec_context->sample_fmt, aac_codec_context->sample_rate,
+                                     opus_decoder_context->channel_layout, opus_decoder_context->sample_fmt, opus_decoder_context->sample_rate,
+                                     0, NULL);
+        if (!swr_ctx) {
+            fprintf(stderr, "Could not allocate resampler context\n");
+            ret = AVERROR(ENOMEM);
+            goto end;
+        }
+        
+        if ((ret = swr_init(swr_ctx)) < 0) {
+            fprintf(stderr, "Failed to initialize the resampling context\n");
+            goto end;
+        }
     }
 
     if (!(output_format_context->oformat->flags & AVFMT_NOFILE)) {

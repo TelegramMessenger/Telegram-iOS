@@ -806,116 +806,6 @@ private final class ProxyVideoView: UIView {
         
         self.id = Int64.random(in: Int64.min ... Int64.max)
         
-        /*if #available(iOS 13.0, *) {
-            do {
-                let server = try HTTPServer(port: NWEndpoint.Port(integerLiteral: 8012), tcpOptions: nil, queue: .main, handler: { request, response in
-                    if request.url == "/master.m3u8" {
-                        let _ = (call.externalMediaStream.get()
-                        |> take(1)
-                        |> mapToSignal { externalMediaStream in
-                            return externalMediaStream.masterPlaylistData()
-                        }
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { masterPlaylistData in
-                            response.send(masterPlaylistData.data(using: .utf8)!)
-                        })
-                    } else if request.url == "/hls_level_0.m3u8" {
-                        let _ = (call.externalMediaStream.get()
-                        |> take(1)
-                        |> mapToSignal { externalMediaStream in
-                            return externalMediaStream.playlistData(quality: 0)
-                        }
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { playlistData in
-                            response.send(playlistData.data(using: .utf8)!)
-                        })
-                    } else if request.url == "/hls_level_1.m3u8" {
-                        let _ = (call.externalMediaStream.get()
-                        |> take(1)
-                        |> mapToSignal { externalMediaStream in
-                            return externalMediaStream.playlistData(quality: 1)
-                        }
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { playlistData in
-                            response.send(playlistData.data(using: .utf8)!)
-                        })
-                    } else if request.url.hasPrefix("/hls_stream0_") && request.url.hasSuffix(".ts") {
-                        if let partIndex = Int(request.url[request.url.index(request.url.startIndex, offsetBy: "/hls_stream0_".count)..<request.url.index(request.url.endIndex, offsetBy: -".ts".count)]) {
-                            let _ = (call.externalMediaStream.get()
-                            |> take(1)
-                            |> mapToSignal { externalMediaStream in
-                                return externalMediaStream.partData(index: partIndex, quality: 0)
-                            }
-                            |> take(1)
-                            |> deliverOnMainQueue).start(next: { partData in
-                                guard let partData else {
-                                    return
-                                }
-                                
-                                let sourceTempFile = TempBox.shared.tempFile(fileName: "part.mp4")
-                                let tempFile = TempBox.shared.tempFile(fileName: "part.ts")
-                                defer {
-                                    TempBox.shared.dispose(sourceTempFile)
-                                    TempBox.shared.dispose(tempFile)
-                                }
-                                
-                                let _ = try? partData.write(to: URL(fileURLWithPath: sourceTempFile.path))
-                                
-                                let sourcePath = sourceTempFile.path
-                                FFMpegLiveMuxer.remux(sourcePath, to: tempFile.path, offsetSeconds: Double(partIndex))
-                                if let data = try? Data(contentsOf: URL(fileURLWithPath: tempFile.path)) {
-                                    response.send(data)
-                                } else {
-                                    let _ = try? response.send("Error")
-                                }
-                            })
-                        } else {
-                            try response.send("Error")
-                        }
-                    } else if request.url.hasPrefix("/hls_stream1_") && request.url.hasSuffix(".ts") {
-                        if let partIndex = Int(request.url[request.url.index(request.url.startIndex, offsetBy: "/hls_stream1_".count)..<request.url.index(request.url.endIndex, offsetBy: -".ts".count)]) {
-                            let _ = (call.externalMediaStream.get()
-                            |> take(1)
-                            |> mapToSignal { externalMediaStream in
-                                return externalMediaStream.partData(index: partIndex, quality: 1)
-                            }
-                            |> take(1)
-                            |> deliverOnMainQueue).start(next: { partData in
-                                guard let partData else {
-                                    return
-                                }
-                                
-                                let sourceTempFile = TempBox.shared.tempFile(fileName: "part.mp4")
-                                let tempFile = TempBox.shared.tempFile(fileName: "part.ts")
-                                defer {
-                                    TempBox.shared.dispose(sourceTempFile)
-                                    TempBox.shared.dispose(tempFile)
-                                }
-                                
-                                let _ = try? partData.write(to: URL(fileURLWithPath: sourceTempFile.path))
-                                
-                                let sourcePath = sourceTempFile.path
-                                FFMpegLiveMuxer.remux(sourcePath, to: tempFile.path, offsetSeconds: Double(partIndex))
-                                if let data = try? Data(contentsOf: URL(fileURLWithPath: tempFile.path)) {
-                                    response.send(data)
-                                } else {
-                                    let _ = try? response.send("Error")
-                                }
-                            })
-                        } else {
-                            try response.send("Error")
-                        }
-                    } else {
-                        try response.send("Error")
-                    }
-                })
-                self.server = server
-                server.resume()
-            } catch let e {
-                print("HTTPServer start error: \(e)")
-            }
-        }*/
-        
         let assetUrl = "http://127.0.0.1:\(SharedHLSServer.shared.port)/\(call.internalId)/master.m3u8"
         Logger.shared.log("MediaStreamVideoComponent", "Initializing HLS asset at \(assetUrl)")
         #if DEBUG
@@ -924,6 +814,7 @@ private final class ProxyVideoView: UIView {
         let asset = AVURLAsset(url: URL(string: assetUrl)!, options: [:])
         self.playerItem = AVPlayerItem(asset: asset)
         self.player = AVPlayer(playerItem: self.playerItem)
+        self.player.allowsExternalPlayback = true
         self.playerLayer = AVPlayerLayer(player: self.player)
         
         super.init(frame: CGRect())
