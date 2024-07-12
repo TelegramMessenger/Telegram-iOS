@@ -48,6 +48,7 @@ public final class StoryContentContextImpl: StoryContentContext {
             self.peerId = peerId
             
             self.currentFocusedId = initialFocusedId
+            self.storedFocusedId = self.currentFocusedId
             self.currentFocusedIdUpdatedPromise.set(.single(Void()))
             
             context.engine.account.viewTracker.refreshCanSendMessagesForPeerIds(peerIds: [peerId])
@@ -600,13 +601,14 @@ public final class StoryContentContextImpl: StoryContentContext {
         context: AccountContext,
         isHidden: Bool,
         focusedPeerId: EnginePeer.Id?,
+        focusedStoryId: Int32? = nil,
         singlePeer: Bool,
         fixedOrder: [EnginePeer.Id] = []
     ) {
         self.context = context
         self.isHidden = isHidden
         if let focusedPeerId {
-            self.focusedItem = (focusedPeerId, nil)
+            self.focusedItem = (focusedPeerId, focusedStoryId)
         }
         self.fixedSubscriptionOrder = fixedOrder
         
@@ -858,9 +860,11 @@ public final class StoryContentContextImpl: StoryContentContext {
                 }
                 
                 var centralIndex: Int?
-                if let (focusedPeerId, _) = self.focusedItem {
+                var centralStoryId: Int32?
+                if let (focusedPeerId, focusedStoryId) = self.focusedItem {
                     if let index = subscriptionItems.firstIndex(where: { $0.peer.id == focusedPeerId }) {
                         centralIndex = index
+                        centralStoryId = focusedStoryId
                     }
                 }
                 if centralIndex == nil {
@@ -874,7 +878,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                     if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: subscriptionItems[centralIndex].peer.id) {
                         centralPeerContext = existingContext
                     } else {
-                        centralPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex].peer.id, focusedId: nil, loadIds: loadIds)
+                        centralPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex].peer.id, focusedId: centralStoryId, loadIds: loadIds)
                     }
                     
                     var previousPeerContext: PeerContext?

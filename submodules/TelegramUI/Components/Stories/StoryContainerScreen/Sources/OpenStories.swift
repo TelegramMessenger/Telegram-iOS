@@ -163,6 +163,7 @@ public extension StoryContainerScreen {
     static func openPeerStoriesCustom(
         context: AccountContext,
         peerId: EnginePeer.Id,
+        focusOnId: Int32? = nil,
         isHidden: Bool,
         initialOrder: [EnginePeer.Id] = [],
         singlePeer: Bool,
@@ -173,7 +174,7 @@ public extension StoryContainerScreen {
         setProgress: @escaping (Signal<Never, NoError>) -> Void,
         completion: @escaping (StoryContainerScreen) -> Void = { _ in }
     ) {
-        let storyContent = StoryContentContextImpl(context: context, isHidden: isHidden, focusedPeerId: peerId, singlePeer: singlePeer, fixedOrder: initialOrder)
+        let storyContent = StoryContentContextImpl(context: context, isHidden: isHidden, focusedPeerId: peerId, focusedStoryId: focusOnId, singlePeer: singlePeer, fixedOrder: initialOrder)
         let signal = storyContent.state
         |> take(1)
         |> mapToSignal { state -> Signal<StoryContentContextState, NoError> in
