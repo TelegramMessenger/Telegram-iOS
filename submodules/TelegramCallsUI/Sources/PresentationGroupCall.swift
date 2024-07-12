@@ -276,6 +276,7 @@ private extension PresentationGroupCallState {
 private enum CurrentImpl {
     case call(OngoingGroupCallContext)
     case mediaStream(WrappedMediaStreamingContext)
+    case externalMediaStream(ExternalMediaStreamingContext)
 }
 
 private extension CurrentImpl {
@@ -283,7 +284,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             return callContext.joinPayload
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             let ssrcId = UInt32.random(in: 0 ..< UInt32(Int32.max - 1))
             let dict: [String: Any] = [
                 "fingerprints": [] as [Any],
@@ -303,7 +304,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             return callContext.networkState
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             return .single(OngoingGroupCallContext.NetworkState(isConnected: true, isTransitioningFromBroadcastToRtc: false))
         }
     }
@@ -312,7 +313,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             return callContext.audioLevels
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             return .single([])
         }
     }
@@ -321,7 +322,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             return callContext.isMuted
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             return .single(true)
         }
     }
@@ -330,7 +331,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             return callContext.isNoiseSuppressionEnabled
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             return .single(false)
         }
     }
@@ -339,7 +340,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.stop()
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -348,7 +349,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.setIsMuted(isMuted)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -357,7 +358,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.setIsNoiseSuppressionEnabled(isNoiseSuppressionEnabled)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -366,7 +367,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.requestVideo(capturer)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -375,7 +376,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.disableVideo()
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -384,7 +385,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.setVolume(ssrc: ssrc, volume: volume)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -393,7 +394,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.setRequestedVideoChannels(channels)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -402,17 +403,19 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.makeIncomingVideoView(endpointId: endpointId, requestClone: requestClone, completion: completion)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
 
-    func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
+    func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError>? {
         switch self {
         case let .call(callContext):
             return callContext.video(endpointId: endpointId)
         case let .mediaStream(mediaStreamContext):
             return mediaStreamContext.video()
+        case .externalMediaStream:
+            return .never()
         }
     }
 
@@ -420,7 +423,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.addExternalAudioData(data: data)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -429,7 +432,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.getStats(completion: completion)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -438,7 +441,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.setTone(tone: tone)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -647,6 +650,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var genericCallContext: CurrentImpl?
     private var currentConnectionMode: OngoingGroupCallContext.ConnectionMode = .none
     private var didInitializeConnectionMode: Bool = false
+    
+    let externalMediaStream = Promise<ExternalMediaStreamingContext>()
 
     private var screencastCallContext: OngoingGroupCallContext?
     private var screencastBufferServerContext: IpcGroupCallBufferAppContext?
@@ -1638,7 +1643,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 genericCallContext = current
             } else {
                 if self.isStream, self.accountContext.sharedContext.immediateExperimentalUISettings.liveStreamV2 {
-                    genericCallContext = .mediaStream(WrappedMediaStreamingContext(rejoinNeeded: { [weak self] in
+                    let externalMediaStream = ExternalMediaStreamingContext(id: self.internalId, rejoinNeeded: { [weak self] in
                         Queue.mainQueue().async {
                             guard let strongSelf = self else {
                                 return
@@ -1650,7 +1655,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 strongSelf.requestCall(movingFromBroadcastToRtc: false)
                             }
                         }
-                    }))
+                    })
+                    genericCallContext = .externalMediaStream(externalMediaStream)
+                    self.externalMediaStream.set(.single(externalMediaStream))
                 } else {
                     var outgoingAudioBitrateKbit: Int32?
                     let appConfiguration = self.accountContext.currentAppConfiguration.with({ $0 })
@@ -1796,6 +1803,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             case .broadcast:
                                 strongSelf.currentConnectionMode = .broadcast
                                 mediaStreamContext.setAudioStreamData(audioStreamData: OngoingGroupCallContext.AudioStreamData(engine: strongSelf.accountContext.engine, callId: callInfo.id, accessHash: callInfo.accessHash, isExternalStream: callInfo.isStream))
+                            }
+                        case let .externalMediaStream(externalMediaStream):
+                            switch joinCallResult.connectionMode {
+                            case .rtc:
+                                strongSelf.currentConnectionMode = .rtc
+                            case .broadcast:
+                                strongSelf.currentConnectionMode = .broadcast
+                                externalMediaStream.setAudioStreamData(audioStreamData: OngoingGroupCallContext.AudioStreamData(engine: strongSelf.accountContext.engine, callId: callInfo.id, accessHash: callInfo.accessHash, isExternalStream: callInfo.isStream))
                             }
                         }
                     }
@@ -3199,7 +3214,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 switch genericCallContext {
                 case let .call(callContext):
                     callContext.setConnectionMode(.none, keepBroadcastConnectedIfWasEnabled: movingFromBroadcastToRtc, isUnifiedBroadcast: false)
-                case .mediaStream:
+                case .mediaStream, .externalMediaStream:
                     assertionFailure()
                     break
                 }

@@ -25,6 +25,7 @@ swift_library(
         "//submodules/TelegramUI/Components/TextNodeWithEntities",
         "//submodules/TelegramUI/Components/AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer",
+        "//submodules/TelegramUI/Components/TextLoadingEffect",
         "//submodules/AvatarNode",
     ],
     visibility = [

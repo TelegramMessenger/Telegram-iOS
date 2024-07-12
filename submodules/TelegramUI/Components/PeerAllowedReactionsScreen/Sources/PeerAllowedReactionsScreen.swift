@@ -868,7 +868,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 }
                 contentHeight += reactionCountSectionSize.height
                 
-                if "".isEmpty {
+                if !"".isEmpty {
                     contentHeight += 32.0
                     
                     let paidReactionsSection: ComponentView<Empty>

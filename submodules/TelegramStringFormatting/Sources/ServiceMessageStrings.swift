@@ -994,6 +994,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case .unknown:
                 attributedString = nil
+            case .paymentRefunded, .giftStars:
+                attributedString = nil
             }
             
             break
