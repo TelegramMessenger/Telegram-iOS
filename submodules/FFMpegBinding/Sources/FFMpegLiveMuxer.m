@@ -55,7 +55,7 @@
         goto end;
     }
 
-    const AVCodec *opus_decoder = avcodec_find_decoder(AV_CODEC_ID_OPUS);
+    const AVCodec *opus_decoder = avcodec_find_decoder(AV_CODEC_ID_AAC);
     if (!opus_decoder) {
         fprintf(stderr, "Could not find Opus decoder\n");
         ret = AVERROR_UNKNOWN;

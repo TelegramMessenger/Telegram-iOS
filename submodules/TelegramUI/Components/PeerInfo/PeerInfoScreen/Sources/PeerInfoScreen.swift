@@ -1378,6 +1378,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             context.sharedContext.applicationBindings.openUrl(url)
                         }
                     }))
+                    
+                    currentPeerInfoSection = .peerInfoTrailing
                 } else if actionButton != nil {
                     //TODO:localize
                     items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: 800, text: "By launching this mini app, you agree to the [Terms of Service for Mini Apps](https://telegram.org/privacy).", linkAction: { action in
@@ -1385,9 +1387,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             context.sharedContext.applicationBindings.openUrl(url)
                         }
                     }))
-                }
-                
-                if actionButton != nil {
+                    
                     currentPeerInfoSection = .peerInfoTrailing
                 }
             }

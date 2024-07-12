@@ -553,6 +553,24 @@ final class MediaStreamVideoComponent: Component {
                     livePlayerView.frame = newVideoFrame
                     livePlayerView.layer.cornerRadius = videoCornerRadius
                     livePlayerView.update(size: newVideoFrame.size)
+                    
+                    var pictureInPictureController: AVPictureInPictureController? = nil
+                    if #available(iOS 15.0, *) {
+                        pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(playerLayer: livePlayerView.playerLayer))
+                        pictureInPictureController?.playerLayer.masksToBounds = false
+                        pictureInPictureController?.playerLayer.cornerRadius = 10
+                    } else if AVPictureInPictureController.isPictureInPictureSupported() {
+                        pictureInPictureController = AVPictureInPictureController.init(playerLayer: AVPlayerLayer(player: AVPlayer()))
+                    }
+                    
+                    pictureInPictureController?.delegate = self
+                    if #available(iOS 14.2, *) {
+                        pictureInPictureController?.canStartPictureInPictureAutomaticallyFromInline = true
+                    }
+                    if #available(iOS 14.0, *) {
+                        pictureInPictureController?.requiresLinearPlayback = true
+                    }
+                    self.pictureInPictureController = pictureInPictureController
                 }
                 if let livePlayerView = self.livePlayerView {
                     videoFrameUpdateTransition.setFrame(view: livePlayerView, frame: newVideoFrame, completion: nil)
@@ -792,14 +810,15 @@ private final class ProxyVideoView: UIView {
     private let id: Int64
     private let player: AVPlayer
     private let playerItem: AVPlayerItem
-    private let playerLayer: AVPlayerLayer
+    let playerLayer: AVPlayerLayer
     
     private var contextDisposable: Disposable?
     
     private var failureObserverId: AnyObject?
     private var errorObserverId: AnyObject?
+    private var rateObserver: NSKeyValueObservation?
     
-    private var server: AnyObject?
+    private var isActiveDisposable: Disposable?
     
     init(context: AccountContext, call: PresentationGroupCallImpl) {
         self.call = call
@@ -825,10 +844,30 @@ private final class ProxyVideoView: UIView {
         self.errorObserverId = NotificationCenter.default.addObserver(forName: AVPlayerItem.newErrorLogEntryNotification, object: playerItem, queue: .main, using: { notification in
             print("Player Error: \(notification.description)")
         })
+        self.rateObserver = self.player.observe(\.rate, changeHandler: { [weak self] _, change in
+            guard let self else {
+                return
+            }
+            print("Player rate: \(self.player.rate)")
+        })
         
         self.layer.addSublayer(self.playerLayer)
         
-        //self.contextDisposable = ResourceAdaptor.shared.addContext(id: self.id, context: context, fileReference: fileReference)
+        self.isActiveDisposable = (context.sharedContext.applicationBindings.applicationIsActive
+        |> distinctUntilChanged
+        |> deliverOnMainQueue).start(next: { [weak self] isActive in
+            guard let self else {
+                return
+            }
+            if isActive {
+                self.playerLayer.player = self.player
+                if self.player.rate == 0.0 {
+                    self.player.play()
+                }
+            } else {
+                self.playerLayer.player = nil
+            }
+        })
         
         self.player.play()
     }
@@ -845,6 +884,10 @@ private final class ProxyVideoView: UIView {
         if let errorObserverId = self.errorObserverId {
             NotificationCenter.default.removeObserver(errorObserverId)
         }
+        if let rateObserver = self.rateObserver {
+            rateObserver.invalidate()
+        }
+        self.isActiveDisposable?.dispose()
     }
     
     func update(size: CGSize) {
