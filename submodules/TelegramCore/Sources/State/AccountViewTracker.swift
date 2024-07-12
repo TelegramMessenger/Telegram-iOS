@@ -1896,6 +1896,7 @@ public final class AccountViewTracker {
                             addHole = true
                         }
                         pollingCompleted = context.isUpdated.get()
+                        //pollingCompleted = .single(true)
                     } else {
                         addHole = true
                         pollingCompleted = .single(true)

@@ -24,6 +24,7 @@ import WebsiteType
 import GalleryData
 import StoryContainerScreen
 import WallpaperGalleryScreen
+import FFMpegBinding
 
 func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
     var story: TelegramMediaStory?
@@ -126,6 +127,24 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
         })
         return true
     }
+    
+    #if DEBUG
+    for media in params.message.media {
+        if let file = media as? TelegramMediaFile, let fileName = file.fileName, (fileName.hasSuffix(".ts") || fileName.hasSuffix(".mp4s")) {
+            if let path = params.context.account.postbox.mediaBox.completedResourcePath(id: file.resource.id, pathExtension: nil) {
+                let outDir = NSTemporaryDirectory() + "test_remuxed"
+                let _ = try? FileManager.default.removeItem(atPath: outDir)
+                let _ = try? FileManager.default.createDirectory(atPath: outDir, withIntermediateDirectories: true)
+                for i in 0 ... 10 {
+                    FFMpegLiveMuxer.remux(path, to: outDir + "/hls_stream0_0000\(i).ts", offsetSeconds: Double(i * 10) - 1.400000)
+                }
+                print("Remuxed into: \(outDir)")
+                
+                return true
+            }
+        }
+    }
+    #endif
     
     if let mediaData = chatMessageGalleryControllerData(context: params.context, chatLocation: params.chatLocation, chatFilterTag: params.chatFilterTag, chatLocationContextHolder: params.chatLocationContextHolder, message: params.message, mediaIndex: params.mediaIndex, navigationController: params.navigationController, standalone: params.standalone, reverseMessageGalleryOrder: params.reverseMessageGalleryOrder, mode: params.mode, source: params.gallerySource, synchronousLoad: false, actionInteraction: params.actionInteraction) {
         switch mediaData {

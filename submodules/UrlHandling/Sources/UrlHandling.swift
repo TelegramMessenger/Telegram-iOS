@@ -134,6 +134,9 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                 if query.hasPrefix("ipfs/") {
                     return .externalUrl(url: "ipfs://" + String(query[query.index(query.startIndex, offsetBy: "ipfs/".count)...]))
                 }
+                if query.hasPrefix("ton/") {
+                    return .externalUrl(url: "ton://" + String(query[query.index(query.startIndex, offsetBy: "ton/".count)...]))
+                }
             }
             
             if pathComponents[0].hasPrefix("+") || pathComponents[0].hasPrefix("%20") {

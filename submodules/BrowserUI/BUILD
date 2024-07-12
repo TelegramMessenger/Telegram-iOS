@@ -27,6 +27,7 @@ swift_library(
         "//submodules/Components/BundleIconComponent:BundleIconComponent",
         "//submodules/Components/BlurredBackgroundComponent:BlurredBackgroundComponent",
         "//submodules/TelegramUI/Components/MinimizedContainer",
+        "//submodules/BrowserUI/TonutilsProxy",
     ],
     visibility = [
         "//visibility:public",

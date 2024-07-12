@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import AccountContext
 import WebKit
 import AppBundle
+import TonutilsProxy
 
 private final class IpfsSchemeHandler: NSObject, WKURLSchemeHandler {
     private final class PendingTask {
@@ -19,35 +20,81 @@ private final class IpfsSchemeHandler: NSObject, WKURLSchemeHandler {
         init(sourceTask: any WKURLSchemeTask) {
             self.sourceTask = sourceTask
             
-            var cleanUrl = sourceTask.request.url!.absoluteString
-            if let range = cleanUrl.range(of: "/ipfs/") {
-                cleanUrl = "ipfs://" + String(cleanUrl[range.upperBound...])
-            } else if let range = cleanUrl.range(of: "/ipns/") {
-                cleanUrl = "ipns://" + String(cleanUrl[range.upperBound...])
-            }
-            print("Load: \(cleanUrl)")
-            cleanUrl = cleanUrl.replacingOccurrences(of: "ipns://", with: "ipns/")
-            cleanUrl = cleanUrl.replacingOccurrences(of: "ipfs://", with: "ipfs/")
-            let mappedUrl = "https://cloudflare-ipfs.com/\(cleanUrl)"
-            let isCompleted = self.isCompleted
-            self.urlSessionTask = URLSession.shared.dataTask(with: URLRequest(url: URL(string: mappedUrl)!), completionHandler: { data, response, error in
-                if isCompleted.swap(true) {
+            if sourceTask.request.url?.scheme == "ton" {
+                var cleanUrl = sourceTask.request.url!.absoluteString
+                if cleanUrl.hasPrefix("ton://") {
+                    cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: "ton://".count)...])
+                }
+                
+                if cleanUrl == "foundation.ton" {
+                    guard let path = getAppBundle().path(forResource: "testsite.data", ofType: nil) else {
+                        return
+                    }
+                    guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+                        return
+                    }
+                    
+                    let response = URLResponse(url: sourceTask.request.url!, mimeType: "text/html", expectedContentLength: data.count, textEncodingName: "UTF-8")
+                    sourceTask.didReceive(response)
+                    sourceTask.didReceive(data)
+                    sourceTask.didFinish()
+                    
                     return
                 }
                 
-                if let error {
-                    sourceTask.didFailWithError(error)
-                } else {
-                    if let response {
-                        sourceTask.didReceive(response)
+                let mappedUrl = "http://ton.x1337.dev:8080"
+                let isCompleted = self.isCompleted
+                var request = URLRequest(url: URL(string: mappedUrl)!)
+                request.httpBody = cleanUrl.data(using: .utf8)
+                self.urlSessionTask = URLSession.shared.dataTask(with: request, completionHandler: { data, response, error in
+                    if isCompleted.swap(true) {
+                        return
                     }
-                    if let data {
-                        sourceTask.didReceive(data)
+                    
+                    if let error {
+                        sourceTask.didFailWithError(error)
+                    } else {
+                        if let response {
+                            sourceTask.didReceive(response)
+                        }
+                        if let data {
+                            sourceTask.didReceive(data)
+                        }
+                        sourceTask.didFinish()
                     }
-                    sourceTask.didFinish()
+                })
+                self.urlSessionTask?.resume()
+            } else {
+                var cleanUrl = sourceTask.request.url!.absoluteString
+                if let range = cleanUrl.range(of: "/ipfs/") {
+                    cleanUrl = "ipfs://" + String(cleanUrl[range.upperBound...])
+                } else if let range = cleanUrl.range(of: "/ipns/") {
+                    cleanUrl = "ipns://" + String(cleanUrl[range.upperBound...])
                 }
-            })
-            self.urlSessionTask?.resume()
+                
+                cleanUrl = cleanUrl.replacingOccurrences(of: "ipns://", with: "ipns/")
+                cleanUrl = cleanUrl.replacingOccurrences(of: "ipfs://", with: "ipfs/")
+                let mappedUrl = "https://cloudflare-ipfs.com/\(cleanUrl)"
+                let isCompleted = self.isCompleted
+                self.urlSessionTask = URLSession.shared.dataTask(with: URLRequest(url: URL(string: mappedUrl)!), completionHandler: { data, response, error in
+                    if isCompleted.swap(true) {
+                        return
+                    }
+                    
+                    if let error {
+                        sourceTask.didFailWithError(error)
+                    } else {
+                        if let response {
+                            sourceTask.didReceive(response)
+                        }
+                        if let data {
+                            sourceTask.didReceive(data)
+                        }
+                        sourceTask.didFinish()
+                    }
+                })
+                self.urlSessionTask?.resume()
+            }
         }
         
         func cancel() {
@@ -80,6 +127,40 @@ private final class IpfsSchemeHandler: NSObject, WKURLSchemeHandler {
     }
 }
 
+@available (iOS 13.0, *)
+@MainActor
+private final class SharedTonProxy {
+    static let shared = SharedTonProxy()
+    
+    private(set) var params: (host: String, port: UInt16)?
+    
+    init() {
+        let port = UInt16(1234)
+        Task.detached(operation: { @MainActor [weak self] in
+            do {
+                let parameters = try await TonutilsProxy.shared.start(port)
+                
+                guard let self else {
+                    return
+                }
+                self.params = (parameters.host, parameters.port)
+            } catch {
+                print("\(error)")
+            }
+        })
+    }
+    
+    deinit {
+        Task.detached(operation: {
+            do {
+                try await TonutilsProxy.shared.stop()
+            } catch {
+                print("\(error)")
+            }
+        })
+    }
+}
+
 final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
     private let webView: WKWebView
     
@@ -96,8 +177,14 @@ final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
         let configuration = WKWebViewConfiguration()
         
         if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
-            configuration.setURLSchemeHandler(IpfsSchemeHandler(), forURLScheme: "ipns")
+            if #available (iOS 13.0, *) {
+                if let params = SharedTonProxy.shared.params {
+                    configuration.setURLSchemeHandler(TonutilsURLSchemeHandler(address: params.host, port: params.port))
+                }
+            }
+            /*configuration.setURLSchemeHandler(IpfsSchemeHandler(), forURLScheme: "ipns")
             configuration.setURLSchemeHandler(IpfsSchemeHandler(), forURLScheme: "ipfs")
+            configuration.setURLSchemeHandler(IpfsSchemeHandler(), forURLScheme: "ton")*/
         }
         
         self.webView = WKWebView(frame: CGRect(), configuration: configuration)
