@@ -109,11 +109,6 @@ def decrypt_codesigning_directory_recursively(source_base_path, destination_base
                 source_path=source_path,
                 destination_path=destination_path
             ))
-            '''os.system('openssl aes-256-cbc -md md5 -k "{password}" -in "{source_path}" -out "{destination_path}" -a -d 2>/dev/null'.format(
-                password=password,
-                source_path=source_path,
-                destination_path=destination_path
-            ))'''
         elif os.path.isdir(source_path):
             os.makedirs(destination_path, exist_ok=True)
             decrypt_codesigning_directory_recursively(source_path, destination_path, password)
