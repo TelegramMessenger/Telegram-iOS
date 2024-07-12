@@ -17,6 +17,7 @@ let package = Package(
         // .package(url: /* package url */, from: "1.0.0"),
         .package(name: "TgVoipWebrtc", path: "../../../tgcalls"),
         .package(name: "SSignalKit", path: "../SSignalKit"),
+        .package(name: "FFMpegBinding", path: "../FFMpegBinding"),
         .package(name: "TelegramCore", path: "../TelegramCore")
 
     ],
@@ -28,6 +29,7 @@ let package = Package(
             dependencies: [
                 .product(name: "TgVoipWebrtc", package: "TgVoipWebrtc", condition: nil),
                 .product(name: "SwiftSignalKit", package: "SSignalKit", condition: nil),
+                .product(name: "FFMpegBinding", package: "FFMpegBinding", condition: nil),
                 .product(name: "TelegramCore", package: "TelegramCore", condition: nil),
             ],
             path: "Sources",
