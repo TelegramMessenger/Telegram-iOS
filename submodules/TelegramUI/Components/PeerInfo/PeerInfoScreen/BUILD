@@ -143,9 +143,11 @@ swift_library(
         "//submodules/TelegramUI/Components/TextLoadingEffect",
         "//submodules/TelegramUI/Components/Settings/BirthdayPickerScreen",
         "//submodules/TelegramUI/Components/Settings/PeerSelectionScreen",
+        "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/ConfettiEffect",
         "//submodules/ContactsPeerItem",
         "//submodules/TelegramUI/Components/PeerManagement/OldChannelsController",
+        "//submodules/UrlHandling",
     ],
     visibility = [
         "//visibility:public",
