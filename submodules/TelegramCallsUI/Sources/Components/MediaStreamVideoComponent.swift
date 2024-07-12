@@ -6,11 +6,11 @@ import AVKit
 import MultilineTextComponent
 import Display
 import ShimmerEffect
-
 import TelegramCore
 import SwiftSignalKit
 import AvatarNode
 import Postbox
+import TelegramVoip
 
 final class MediaStreamVideoComponent: Component {
     let call: PresentationGroupCallImpl
@@ -157,6 +157,8 @@ final class MediaStreamVideoComponent: Component {
         private var lastPresentation: UIView?
         private var pipTrackDisplayLink: CADisplayLink?
         
+        private var livePlayerView: ProxyVideoView?
+        
         override init(frame: CGRect) {
             self.blurTintView = UIView()
             self.blurTintView.backgroundColor = UIColor(white: 0.0, alpha: 0.55)
@@ -211,7 +213,7 @@ final class MediaStreamVideoComponent: Component {
                 let needsFadeInAnimation = hadVideo
                 
                 if loadingBlurView.superview == nil {
-                    addSubview(loadingBlurView)
+                    //addSubview(loadingBlurView)
                     if needsFadeInAnimation {
                         let anim = CABasicAnimation(keyPath: "opacity")
                         anim.duration = 0.5
@@ -542,6 +544,21 @@ final class MediaStreamVideoComponent: Component {
                     videoFrameUpdateTransition.setFrame(layer: self.videoBlurGradientMask, frame: videoBlurView.bounds)
                     videoFrameUpdateTransition.setFrame(layer: self.videoBlurSolidMask, frame: self.videoBlurGradientMask.bounds)
                 }
+                
+                if self.livePlayerView == nil {
+                    let livePlayerView = ProxyVideoView(context: component.call.accountContext, call: component.call)
+                    self.livePlayerView = livePlayerView
+                    livePlayerView.layer.masksToBounds = true
+                    self.addSubview(livePlayerView)
+                    livePlayerView.frame = newVideoFrame
+                    livePlayerView.layer.cornerRadius = videoCornerRadius
+                    livePlayerView.update(size: newVideoFrame.size)
+                }
+                if let livePlayerView = self.livePlayerView {
+                    videoFrameUpdateTransition.setFrame(view: livePlayerView, frame: newVideoFrame, completion: nil)
+                    videoFrameUpdateTransition.setCornerRadius(layer: livePlayerView.layer, cornerRadius: videoCornerRadius)
+                    livePlayerView.update(size: newVideoFrame.size)
+                }
             } else {
                 videoSize = CGSize(width: 16 / 9 * 100.0, height: 100.0).aspectFitted(.init(width: availableSize.width - videoInset * 2, height: availableSize.height))
             }
@@ -601,7 +618,7 @@ final class MediaStreamVideoComponent: Component {
                     }
                 }
                 
-                if self.noSignalTimeout {
+                if self.noSignalTimeout, !"".isEmpty {
                     var noSignalTransition = transition
                     let noSignalView: ComponentHostView<Empty>
                     if let current = self.noSignalView {
@@ -769,3 +786,178 @@ private final class CustomIntensityVisualEffectView: UIVisualEffectView {
         animator.stopAnimation(true)
     }
 }
+
+private final class ProxyVideoView: UIView {
+    private let call: PresentationGroupCallImpl
+    private let id: Int64
+    private let player: AVPlayer
+    private let playerItem: AVPlayerItem
+    private let playerLayer: AVPlayerLayer
+    
+    private var contextDisposable: Disposable?
+    
+    private var failureObserverId: AnyObject?
+    private var errorObserverId: AnyObject?
+    
+    private var server: AnyObject?
+    
+    init(context: AccountContext, call: PresentationGroupCallImpl) {
+        self.call = call
+        
+        self.id = Int64.random(in: Int64.min ... Int64.max)
+        
+        /*if #available(iOS 13.0, *) {
+            do {
+                let server = try HTTPServer(port: NWEndpoint.Port(integerLiteral: 8012), tcpOptions: nil, queue: .main, handler: { request, response in
+                    if request.url == "/master.m3u8" {
+                        let _ = (call.externalMediaStream.get()
+                        |> take(1)
+                        |> mapToSignal { externalMediaStream in
+                            return externalMediaStream.masterPlaylistData()
+                        }
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { masterPlaylistData in
+                            response.send(masterPlaylistData.data(using: .utf8)!)
+                        })
+                    } else if request.url == "/hls_level_0.m3u8" {
+                        let _ = (call.externalMediaStream.get()
+                        |> take(1)
+                        |> mapToSignal { externalMediaStream in
+                            return externalMediaStream.playlistData(quality: 0)
+                        }
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { playlistData in
+                            response.send(playlistData.data(using: .utf8)!)
+                        })
+                    } else if request.url == "/hls_level_1.m3u8" {
+                        let _ = (call.externalMediaStream.get()
+                        |> take(1)
+                        |> mapToSignal { externalMediaStream in
+                            return externalMediaStream.playlistData(quality: 1)
+                        }
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { playlistData in
+                            response.send(playlistData.data(using: .utf8)!)
+                        })
+                    } else if request.url.hasPrefix("/hls_stream0_") && request.url.hasSuffix(".ts") {
+                        if let partIndex = Int(request.url[request.url.index(request.url.startIndex, offsetBy: "/hls_stream0_".count)..<request.url.index(request.url.endIndex, offsetBy: -".ts".count)]) {
+                            let _ = (call.externalMediaStream.get()
+                            |> take(1)
+                            |> mapToSignal { externalMediaStream in
+                                return externalMediaStream.partData(index: partIndex, quality: 0)
+                            }
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { partData in
+                                guard let partData else {
+                                    return
+                                }
+                                
+                                let sourceTempFile = TempBox.shared.tempFile(fileName: "part.mp4")
+                                let tempFile = TempBox.shared.tempFile(fileName: "part.ts")
+                                defer {
+                                    TempBox.shared.dispose(sourceTempFile)
+                                    TempBox.shared.dispose(tempFile)
+                                }
+                                
+                                let _ = try? partData.write(to: URL(fileURLWithPath: sourceTempFile.path))
+                                
+                                let sourcePath = sourceTempFile.path
+                                FFMpegLiveMuxer.remux(sourcePath, to: tempFile.path, offsetSeconds: Double(partIndex))
+                                if let data = try? Data(contentsOf: URL(fileURLWithPath: tempFile.path)) {
+                                    response.send(data)
+                                } else {
+                                    let _ = try? response.send("Error")
+                                }
+                            })
+                        } else {
+                            try response.send("Error")
+                        }
+                    } else if request.url.hasPrefix("/hls_stream1_") && request.url.hasSuffix(".ts") {
+                        if let partIndex = Int(request.url[request.url.index(request.url.startIndex, offsetBy: "/hls_stream1_".count)..<request.url.index(request.url.endIndex, offsetBy: -".ts".count)]) {
+                            let _ = (call.externalMediaStream.get()
+                            |> take(1)
+                            |> mapToSignal { externalMediaStream in
+                                return externalMediaStream.partData(index: partIndex, quality: 1)
+                            }
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { partData in
+                                guard let partData else {
+                                    return
+                                }
+                                
+                                let sourceTempFile = TempBox.shared.tempFile(fileName: "part.mp4")
+                                let tempFile = TempBox.shared.tempFile(fileName: "part.ts")
+                                defer {
+                                    TempBox.shared.dispose(sourceTempFile)
+                                    TempBox.shared.dispose(tempFile)
+                                }
+                                
+                                let _ = try? partData.write(to: URL(fileURLWithPath: sourceTempFile.path))
+                                
+                                let sourcePath = sourceTempFile.path
+                                FFMpegLiveMuxer.remux(sourcePath, to: tempFile.path, offsetSeconds: Double(partIndex))
+                                if let data = try? Data(contentsOf: URL(fileURLWithPath: tempFile.path)) {
+                                    response.send(data)
+                                } else {
+                                    let _ = try? response.send("Error")
+                                }
+                            })
+                        } else {
+                            try response.send("Error")
+                        }
+                    } else {
+                        try response.send("Error")
+                    }
+                })
+                self.server = server
+                server.resume()
+            } catch let e {
+                print("HTTPServer start error: \(e)")
+            }
+        }*/
+        
+        let assetUrl = "http://127.0.0.1:\(SharedHLSServer.shared.port)/\(call.internalId)/master.m3u8"
+        Logger.shared.log("MediaStreamVideoComponent", "Initializing HLS asset at \(assetUrl)")
+        #if DEBUG
+        print("Initializing HLS asset at \(assetUrl)")
+        #endif
+        let asset = AVURLAsset(url: URL(string: assetUrl)!, options: [:])
+        self.playerItem = AVPlayerItem(asset: asset)
+        self.player = AVPlayer(playerItem: self.playerItem)
+        self.playerLayer = AVPlayerLayer(player: self.player)
+        
+        super.init(frame: CGRect())
+        
+        self.failureObserverId = NotificationCenter.default.addObserver(forName: AVPlayerItem.failedToPlayToEndTimeNotification, object: playerItem, queue: .main, using: { notification in
+            print("Player Error: \(notification.description)")
+        })
+        self.errorObserverId = NotificationCenter.default.addObserver(forName: AVPlayerItem.newErrorLogEntryNotification, object: playerItem, queue: .main, using: { notification in
+            print("Player Error: \(notification.description)")
+        })
+        
+        self.layer.addSublayer(self.playerLayer)
+        
+        //self.contextDisposable = ResourceAdaptor.shared.addContext(id: self.id, context: context, fileReference: fileReference)
+        
+        self.player.play()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.contextDisposable?.dispose()
+        if let failureObserverId = self.failureObserverId {
+            NotificationCenter.default.removeObserver(failureObserverId)
+        }
+        if let errorObserverId = self.errorObserverId {
+            NotificationCenter.default.removeObserver(errorObserverId)
+        }
+    }
+    
+    func update(size: CGSize) {
+        self.playerLayer.frame = CGRect(origin: CGPoint(), size: size)
+    }
+}
+
