@@ -76,6 +76,10 @@ public extension TelegramEngine {
             return _internal_searchMessages(account: self.account, location: location, query: query, state: state, centerId: centerId, limit: limit)
         }
         
+        public func getSearchMessageCount(location: SearchMessagesLocation, query: String) -> Signal<Int?, NoError> {
+            return _internal_getSearchMessageCount(account: self.account, location: location, query: query)
+        }
+        
         public func searchHashtagPosts(hashtag: String, state: SearchMessagesState?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
             return _internal_searchHashtagPosts(account: self.account, hashtag: hashtag, state: state, limit: limit)
         }

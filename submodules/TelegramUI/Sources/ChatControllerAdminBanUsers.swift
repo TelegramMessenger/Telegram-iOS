@@ -125,6 +125,14 @@ extension ChatControllerImpl {
             return
         }
         
+        var deleteAllMessageCount: Signal<Int?, NoError> = .single(nil)
+        if authors.count == 1 {
+            deleteAllMessageCount = self.context.engine.messages.searchMessages(location: .peer(peerId: peerId, fromId: authors[0].id, tags: nil, reactions: nil, threadId: self.chatLocation.threadId, minDate: nil, maxDate: nil), query: "", state: nil)
+            |> map { result, _ -> Int? in
+                return Int(result.totalCount)
+            }
+        }
+        
         var signal = combineLatest(authors.map { author in
             self.context.engine.peers.fetchChannelParticipant(peerId: peerId, participantId: author.id)
             |> map { result -> (Peer, ChannelParticipant?) in
@@ -161,8 +169,8 @@ extension ChatControllerImpl {
             disposables.set(nil)
         }
         
-        disposables.set((signal
-        |> deliverOnMainQueue).startStrict(next: { [weak self] authorsAndParticipants in
+        disposables.set((combineLatest(signal, deleteAllMessageCount)
+        |> deliverOnMainQueue).startStrict(next: { [weak self] authorsAndParticipants, deleteAllMessageCount in
             guard let self else {
                 return
             }
@@ -212,6 +220,7 @@ extension ChatControllerImpl {
                     chatPeer: chatPeer,
                     peers: renderedParticipants,
                     messageCount: messageIds.count,
+                    deleteAllMessageCount: deleteAllMessageCount,
                     completion: { [weak self] result in
                         guard let self else {
                             return
@@ -259,8 +268,16 @@ extension ChatControllerImpl {
             disposables.set(nil)
         }
         
-        disposables.set((signal
-        |> deliverOnMainQueue).startStrict(next: { [weak self] maybeParticipant in
+        var deleteAllMessageCount: Signal<Int?, NoError> = .single(nil)
+        do {
+            deleteAllMessageCount = self.context.engine.messages.getSearchMessageCount(location: .peer(peerId: peerId, fromId: author.id, tags: nil, reactions: nil, threadId: self.chatLocation.threadId, minDate: nil, maxDate: nil), query: "")
+            |> map { result -> Int? in
+                return result
+            }
+        }
+        
+        disposables.set((combineLatest(signal, deleteAllMessageCount)
+        |> deliverOnMainQueue).startStrict(next: { [weak self] maybeParticipant, deleteAllMessageCount in
             guard let self else {
                 return
             }
@@ -310,6 +327,7 @@ extension ChatControllerImpl {
                         peer: authorPeer._asPeer()
                     )],
                     messageCount: messageIds.count,
+                    deleteAllMessageCount: deleteAllMessageCount,
                     completion: { [weak self] result in
                         guard let self else {
                             return
