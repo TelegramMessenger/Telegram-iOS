@@ -17,14 +17,30 @@ import ContextUI
 import Pasteboard
 import SaveToCameraRoll
 import ShareController
+import SafariServices
+import LocationUI
+import OpenInExternalAppUI
+import GalleryUI
 
-private final class InstantPageContainerNode: ASDisplayNode, UIScrollViewDelegate {
+final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDelegate {
     private let context: AccountContext
-    private let webPage: TelegramMediaWebpage
     private let presentationData: PresentationData
     private let theme: InstantPageTheme
     private let sourceLocation: InstantPageSourceLocation
     
+    private var webPage: TelegramMediaWebpage?
+    
+    let uuid: UUID
+    
+    var currentState: BrowserContentState {
+        return self._state
+    }
+    private var _state: BrowserContentState
+    private let statePromise: Promise<BrowserContentState>
+    var state: Signal<BrowserContentState, NoError> {
+        return self.statePromise.get()
+    }
+        
     private var initialAnchor: String?
     private var pendingAnchor: String?
     private var initialState: InstantPageStoredState?
@@ -48,26 +64,47 @@ private final class InstantPageContainerNode: ASDisplayNode, UIScrollViewDelegat
     
     var currentAccessibilityAreas: [AccessibilityAreaNode] = []
     
+    var pushContent: (BrowserScreen.Subject) -> Void = { _ in }
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
-    var openMedia: (InstantPageMedia) -> Void = { _ in }
-    var longPressMedia: (InstantPageMedia) -> Void = { _ in }
+    var minimize: () -> Void = { }
+    
     var openPeer: (EnginePeer) -> Void = { _ in }
-    var openUrl: (InstantPageUrlItem) -> Void = { _ in }
-    var activatePinchPreview: ((PinchSourceContainerNode) -> Void)?
-    var pinchPreviewFinished: ((InstantPageNode) -> Void)?
     
     var present: (ViewController, Any?) -> Void = { _, _ in }
+    var presentInGlobalOverlay: (ViewController) -> Void = { _ in }
+    var push: (ViewController) -> Void = { _ in }
+    var getNavigationController: () -> NavigationController? = { return nil }
     
+    private var webpageDisposable: Disposable?
+    private let hiddenMediaDisposable = MetaDisposable()
+    private let loadWebpageDisposable = MetaDisposable()
+    private let resolveUrlDisposable = MetaDisposable()
     private let updateLayoutDisposable = MetaDisposable()
+    
+    private let loadProgress = ValuePromise<CGFloat>(1.0, ignoreRepeated: true)
+    private let readingProgress = ValuePromise<CGFloat>(1.0, ignoreRepeated: true)
 
     private var containerLayout: (size: CGSize, insets: UIEdgeInsets)?
+    private var setupScrollOffsetOnLayout = false
     
-    init(context: AccountContext, webPage: TelegramMediaWebpage, sourceLocation: InstantPageSourceLocation) {
+    init(context: AccountContext, webPage: TelegramMediaWebpage, anchor: String?, url: String, sourceLocation: InstantPageSourceLocation) {
         self.context = context
         self.webPage = webPage
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.theme = instantPageThemeForType(.light, settings: .defaultSettings)
         self.sourceLocation = sourceLocation
+        
+        self.uuid = UUID()
+        
+        let title: String
+        if case let .Loaded(content) = webPage.content {
+            title = content.title ?? ""
+        } else {
+            title = ""
+        }
+        
+        self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.0, readingProgress: 0.0, contentType: .instantPage)
+        self.statePromise = Promise<BrowserContentState>(self._state)
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.backgroundColor = self.theme.pageBackgroundColor
@@ -75,7 +112,18 @@ private final class InstantPageContainerNode: ASDisplayNode, UIScrollViewDelegat
         self.scrollNodeFooter = ASDisplayNode()
         self.scrollNodeFooter.backgroundColor = self.theme.panelBackgroundColor
         
-        super.init()
+        super.init(frame: .zero)
+        
+        self.statePromise.set(.single(self._state)
+        |> then(
+            combineLatest(
+                self.loadProgress.get(),
+                self.readingProgress.get()
+            )
+            |> map { estimatedProgress, readingProgress in
+                return BrowserContentState(title: title, url: url, estimatedProgress: estimatedProgress, readingProgress: readingProgress, contentType: .instantPage)
+            }
+        ))
         
         self.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.scrollNodeFooter)
@@ -101,9 +149,21 @@ private final class InstantPageContainerNode: ASDisplayNode, UIScrollViewDelegat
             }
         }
         self.scrollNode.view.addGestureRecognizer(recognizer)
+        
+        self.webpageDisposable = (actualizedWebpage(account: context.account, webpage: webPage) |> deliverOnMainQueue).start(next: { [weak self] result in
+            guard let self else {
+                return
+            }
+            self.webPage = result
+            self.updateWebPage(result, anchor: self.initialAnchor)
+        })
     }
     
     deinit {
+        self.webpageDisposable?.dispose()
+        self.hiddenMediaDisposable.dispose()
+        self.loadWebpageDisposable.dispose()
+        self.resolveUrlDisposable.dispose()
         self.updateLayoutDisposable.dispose()
     }
     
@@ -184,25 +244,160 @@ private final class InstantPageContainerNode: ASDisplayNode, UIScrollViewDelegat
         }
     }
     
+    private func updateWebPage(_ webPage: TelegramMediaWebpage?, anchor: String?, state: InstantPageStoredState? = nil) {
+        if self.webPage != webPage {
+            if self.webPage != nil && self.currentLayout != nil {
+                if let snaphotView = self.scrollNode.view.snapshotView(afterScreenUpdates: false) {
+                    self.scrollNode.view.superview?.insertSubview(snaphotView, aboveSubview: self.scrollNode.view)
+                    snaphotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snaphotView] _ in
+                        snaphotView?.removeFromSuperview()
+                    })
+                }
+            }
+            
+            self.setupScrollOffsetOnLayout = self.webPage == nil
+            self.webPage = webPage
+            if let anchor = anchor {
+                self.initialAnchor = anchor.removingPercentEncoding
+            } else if let state = state {
+                self.initialState = state
+                if !state.details.isEmpty {
+                    var storedExpandedDetails: [Int: Bool] = [:]
+                    for state in state.details {
+                        storedExpandedDetails[Int(clamping: state.index)] = state.expanded
+                    }
+                    self.currentExpandedDetails = storedExpandedDetails
+                }
+            }
+            self.currentLayout = nil
+            self.updatePageLayout()
+            
+            self.scrollNode.frame = CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0)
+            self.requestLayout(transition: .immediate)
+            
+            if let webPage = webPage, case let .Loaded(content) = webPage.content, let instantPage = content.instantPage, instantPage.isComplete {
+                self.loadProgress.set(1.0)
+                
+                if let anchor = self.pendingAnchor {
+                    self.pendingAnchor = nil
+                    self.scrollToAnchor(anchor)
+                }
+            }
+        }
+    }
+    
+    private func requestLayout(transition: ContainedViewLayoutTransition) {
+        guard let (size, insets) = self.containerLayout else {
+            return
+        }
+        self.updateLayout(size: size, insets: insets, transition: transition)
+    }
+    
+    func reload() {
+    }
+    
+    func stop() {
+    }
+    
+    func navigateBack() {
+        
+    }
+    
+    func navigateForward() {
+        
+    }
+    
+    func navigateTo(historyItem: BrowserContentState.HistoryItem) {
+        
+    }
+    
+    func setFontSize(_ fontSize: CGFloat) {
+        
+    }
+    
+    func setForceSerif(_ force: Bool) {
+        
+    }
+    
+    func setSearch(_ query: String?, completion: ((Int) -> Void)?) {
+        
+    }
+    
+    func scrollToPreviousSearchResult(completion: ((Int, Int) -> Void)?) {
+        
+    }
+    
+    func scrollToNextSearchResult(completion: ((Int, Int) -> Void)?) {
+        
+    }
+    
+    func scrollToTop() {
+        let scrollView = self.scrollNode.view
+        scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: true)
+    }
+    
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ComponentTransition) {
+        self.updateLayout(size: size, insets: insets, transition: transition.containedViewLayoutTransition)
+    }
+    
     func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (size, insets)
-                
+        
+        var updateVisibleItems = false
+        let resetContentOffset = self.scrollNode.bounds.size.width.isZero || self.setupScrollOffsetOnLayout || !(self.initialAnchor ?? "").isEmpty
+        
         var scrollInsets = insets
         scrollInsets.top = 0.0
         if self.scrollNode.view.contentInset != insets {
             self.scrollNode.view.contentInset = scrollInsets
             self.scrollNode.view.scrollIndicatorInsets = scrollInsets
         }
-        self.scrollNode.frame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top))
         
-        if self.currentLayout?.contentSize.width != size.width {
-            self.updatePageLayout()
+        let scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top))
+        let scrollFrameUpdated = self.scrollNode.bounds.size != scrollFrame.size
+        if scrollFrameUpdated {
+            let widthUpdated = self.scrollNode.bounds.size.width != scrollFrame.width
+            self.scrollNode.frame = scrollFrame
+            if widthUpdated {
+                self.updatePageLayout()
+            }
+            updateVisibleItems = true
+        }
+        
+        if resetContentOffset {
+            var didSetScrollOffset = false
+            var contentOffset = CGPoint(x: 0.0, y: -self.scrollNode.view.contentInset.top)
+            if let state = self.initialState {
+                didSetScrollOffset = true
+                contentOffset = CGPoint(x: 0.0, y: CGFloat(state.contentOffset))
+            }
+            else if let anchor = self.initialAnchor, !anchor.isEmpty {
+                self.initialAnchor = nil
+                if let items = self.currentLayout?.items {
+                    didSetScrollOffset = true
+                    if let (item, lineOffset, _, _) = self.findAnchorItem(anchor, items: items) {
+                        contentOffset = CGPoint(x: 0.0, y: item.frame.minY + lineOffset - self.scrollNode.view.contentInset.top)
+                    }
+                }
+            } else {
+                didSetScrollOffset = true
+            }
+            self.scrollNode.view.contentOffset = contentOffset
+            if didSetScrollOffset {
+                //update scroll event
+                if self.currentLayout != nil {
+                    self.setupScrollOffsetOnLayout = false
+                }
+            }
+        }
+        
+        if updateVisibleItems {
             self.updateVisibleItems(visibleBounds: self.scrollNode.view.bounds)
         }
     }
     
     private func updatePageLayout() {
-        guard let (size, insets) = self.containerLayout else {
+        guard let (size, insets) = self.containerLayout, let webPage = self.webPage else {
             return
         }
         
@@ -355,32 +550,9 @@ private final class InstantPageContainerNode: ASDisplayNode, UIScrollViewDelegat
                     }, longPressMedia: { [weak self] media in
                         self?.longPressMedia(media)
                     }, activatePinchPreview: { [weak self] sourceNode in
-                        let _ = self
-//                        guard let strongSelf = self, let controller = strongSelf.controller else {
-//                            return
-//                        }
-//                        let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
-//                            guard let strongSelf = self else {
-//                                return CGRect()
-//                            }
-//
-//                            let localRect = CGRect(origin: CGPoint(x: 0.0, y: strongSelf.navigationBar.frame.maxY), size: CGSize(width: strongSelf.bounds.width, height: strongSelf.bounds.height - strongSelf.navigationBar.frame.maxY))
-//                            return strongSelf.view.convert(localRect, to: nil)
-//                        })
-//                        controller.window?.presentInGlobalOverlay(pinchController)
+                        self?.activatePinchPreview(sourceNode: sourceNode)
                     }, pinchPreviewFinished: { [weak self] itemNode in
-                        let _ = self
-//                        guard let strongSelf = self else {
-//                            return
-//                        }
-//                        for (_, listItemNode) in strongSelf.visibleItemsWithNodes {
-//                            if let listItemNode = listItemNode as? InstantPagePeerReferenceNode {
-//                                if listItemNode.frame.intersects(itemNode.frame) && listItemNode.frame.maxY <= itemNode.frame.maxY + 2.0 {
-//                                    listItemNode.layer.animateAlpha(from: 0.0, to: listItemNode.alpha, duration: 0.25)
-//                                    break
-//                                }
-//                            }
-//                        }
+                        self?.pinchPreviewFinished(itemNode: itemNode)
                     }, openPeer: { [weak self] peerId in
                         self?.openPeer(peerId)
                     }, openUrl: { [weak self] url in
@@ -547,6 +719,13 @@ private final class InstantPageContainerNode: ASDisplayNode, UIScrollViewDelegat
             ))
         }
         self.previousScrollingOffset = ScrollingOffsetState(value: scrollView.contentOffset.y, isDraggingOrDecelerating: isInteracting)
+        
+        var readingProgress: CGFloat = 0.0
+        if !scrollView.contentSize.height.isZero {
+            let value = (scrollView.contentOffset.y + scrollView.contentInset.top) / (scrollView.contentSize.height - scrollView.bounds.size.height + scrollView.contentInset.top)
+            readingProgress = max(0.0, min(1.0, value))
+        }
+        self.readingProgress.set(readingProgress)
     }
     
     private func scrollableContentOffset(item: InstantPageScrollableItem) -> CGPoint {
@@ -645,6 +824,230 @@ private final class InstantPageContainerNode: ASDisplayNode, UIScrollViewDelegat
         return nil
     }
     
+    private func openUrl(_ url: InstantPageUrlItem) {
+        var baseUrl = url.url
+        var anchor: String?
+        if let anchorRange = url.url.range(of: "#") {
+            anchor = String(baseUrl[anchorRange.upperBound...]).removingPercentEncoding
+            baseUrl = String(baseUrl[..<anchorRange.lowerBound])
+        }
+
+        if let webPage = self.webPage, case let .Loaded(content) = webPage.content, let page = content.instantPage, page.url == baseUrl, let anchor = anchor {
+            self.scrollToAnchor(anchor)
+            return
+        }
+        
+        self.loadProgress.set(0.0)
+        self.loadProgress.set(0.02)
+    
+        self.loadWebpageDisposable.set(nil)
+        self.resolveUrlDisposable.set((self.context.sharedContext.resolveUrl(context: self.context, peerId: nil, url: url.url, skipUrlAuth: true)
+        |> deliverOnMainQueue).start(next: { [weak self] result in
+            if let strongSelf = self {
+                strongSelf.loadProgress.set(0.07)
+                switch result {
+                    case let .externalUrl(externalUrl):
+                        if let webpageId = url.webpageId {
+                            var anchor: String?
+                            if let anchorRange = externalUrl.range(of: "#") {
+                                anchor = String(externalUrl[anchorRange.upperBound...])
+                            }
+                            strongSelf.loadWebpageDisposable.set((webpagePreviewWithProgress(account: strongSelf.context.account, urls: [externalUrl], webpageId: webpageId)
+                            |> deliverOnMainQueue).start(next: { result in
+                                if let strongSelf = self {
+                                    switch result {
+                                        case let .result(webpageResult):
+                                            if let webpageResult = webpageResult, case .Loaded = webpageResult.webpage.content {
+                                                strongSelf.loadProgress.set(1.0)
+                                                strongSelf.pushContent(.instantPage(webPage: webpageResult.webpage, anchor: anchor, sourceLocation: strongSelf.sourceLocation))
+                                            }
+                                            break
+                                        case let .progress(progress):
+                                            strongSelf.loadProgress.set(CGFloat(0.07 + progress * (1.0 - 0.07)))
+                                    }
+                                }
+                            }))
+                        } else {
+                            strongSelf.loadProgress.set(1.0)
+                            strongSelf.pushContent(.webPage(url: externalUrl))
+                        }
+                    case let .instantView(webpage, anchor):
+                        strongSelf.loadProgress.set(1.0)
+                        strongSelf.pushContent(.instantPage(webPage: webpage, anchor: anchor, sourceLocation: strongSelf.sourceLocation))
+                    default:
+                        strongSelf.loadProgress.set(1.0)
+                        strongSelf.minimize()
+                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), forceExternal: false, openPeer: { peer, navigation in
+                            switch navigation {
+                                case let .chat(_, subject, peekData):
+                                    if let navigationController = strongSelf.getNavigationController() {
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), subject: subject, peekData: peekData))
+                                    }
+                                case let .withBotStartPayload(botStart):
+                                    if let navigationController = strongSelf.getNavigationController() {
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), botStart: botStart, keepStack: .always))
+                                    }
+                                case let .withAttachBot(attachBotStart):
+                                    if let navigationController = strongSelf.getNavigationController() {
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), attachBotStart: attachBotStart))
+                                    }
+                                case let .withBotApp(botAppStart):
+                                    if let navigationController = strongSelf.getNavigationController() {
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), botAppStart: botAppStart))
+                                    }
+                                case .info:
+                                    let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id))
+                                    |> deliverOnMainQueue).start(next: { peer in
+                                        if let strongSelf = self, let peer = peer {
+                                            if let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                                                strongSelf.getNavigationController()?.pushViewController(controller)
+                                            }
+                                        }
+                                    })
+                                default:
+                                    break
+                            }
+                        },
+                        sendFile: nil,
+                        sendSticker: nil,
+                        sendEmoji: nil,
+                        requestMessageActionUrlAuth: nil,
+                        joinVoiceChat: nil,
+                        present: { c, a in
+                            self?.present(c, a)
+                        }, dismissInput: { [weak self] in
+                            self?.endEditing(true)
+                        }, contentContext: nil, progress: nil, completion: nil)
+                }
+            }
+        }))
+    }
+    
+    private func openUrlIn(_ url: InstantPageUrlItem) {
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        let actionSheet = OpenInActionSheetController(context: self.context, item: .url(url: url.url), openUrl: { [weak self] url in
+            if let self {
+                self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+            }
+        })
+        self.present(actionSheet, nil)
+    }
+        
+    private func openMedia(_ media: InstantPageMedia) {
+        guard let items = self.currentLayout?.items, let webPage = self.webPage else {
+            return
+        }
+        
+        func mediasFromItems(_ items: [InstantPageItem]) -> [InstantPageMedia] {
+            var medias: [InstantPageMedia] = []
+            for item in items {
+                if let detailsItem = item as? InstantPageDetailsItem {
+                    medias.append(contentsOf: mediasFromItems(detailsItem.items))
+                } else {
+                    if let item = item as? InstantPageImageItem, item.interactive {
+                        medias.append(contentsOf: item.medias)
+                    } else if let item = item as? InstantPagePlayableVideoItem, item.interactive {
+                        medias.append(contentsOf: item.medias)
+                    }
+                }
+            }
+            return medias
+        }
+        
+        if case let .geo(map) = media.media {
+            let controllerParams = LocationViewParams(sendLiveLocation: { _ in
+            }, stopLiveLocation: { _ in
+            }, openUrl: { _ in }, openPeer: { _ in
+            }, showAll: false)
+            
+            let peer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+            let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peer, text: "", attributes: [], media: [map], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+            
+            let controller = LocationViewController(context: self.context, subject: EngineMessage(message), params: controllerParams)
+            self.push(controller)
+            return
+        }
+        
+        if case let .file(file) = media.media, (file.isVoice || file.isMusic) {
+            var medias: [InstantPageMedia] = []
+            var initialIndex = 0
+            for item in items {
+                for itemMedia in item.medias {
+                    if case let .file(itemFile) = itemMedia.media, (itemFile.isVoice || itemFile.isMusic) {
+                        if itemMedia.index == media.index {
+                            initialIndex = medias.count
+                        }
+                        medias.append(itemMedia)
+                    }
+                }
+            }
+            self.context.sharedContext.mediaManager.setPlaylist((self.context.account, InstantPageMediaPlaylist(webPage: webPage, items: medias, initialItemIndex: initialIndex)), type: file.isVoice ? .voice : .music, control: .playback(.play))
+            return
+        }
+        
+        var fromPlayingVideo = false
+        
+        var entries: [InstantPageGalleryEntry] = []
+        if case let .webpage(webPage) = media.media {
+            entries.append(InstantPageGalleryEntry(index: 0, pageId: webPage.webpageId, media: media, caption: nil, credit: nil, location: nil))
+        } else if case let .file(file) = media.media, file.isAnimated {
+            fromPlayingVideo = true
+            entries.append(InstantPageGalleryEntry(index: Int32(media.index), pageId: webPage.webpageId, media: media, caption: media.caption, credit: media.credit, location: nil))
+        } else {
+            fromPlayingVideo = true
+            var medias: [InstantPageMedia] = mediasFromItems(items)
+            medias = medias.filter { item in
+                switch item.media {
+                case .image, .file:
+                    return true
+                default:
+                    return false
+                }
+            }
+            
+            for media in medias {
+                entries.append(InstantPageGalleryEntry(index: Int32(media.index), pageId: webPage.webpageId, media: media, caption: media.caption, credit: media.credit, location: InstantPageGalleryEntryLocation(position: Int32(entries.count), totalCount: Int32(medias.count))))
+            }
+        }
+        
+        var centralIndex: Int?
+        for i in 0 ..< entries.count {
+            if entries[i].media == media {
+                centralIndex = i
+                break
+            }
+        }
+        
+        if let centralIndex = centralIndex {
+            let controller = InstantPageGalleryController(context: self.context, userLocation: self.sourceLocation.userLocation, webPage: webPage, entries: entries, centralIndex: centralIndex, fromPlayingVideo: fromPlayingVideo, replaceRootController: { _, _ in
+            }, baseNavigationController: self.getNavigationController())
+            self.hiddenMediaDisposable.set((controller.hiddenMedia |> deliverOnMainQueue).start(next: { [weak self] entry in
+                if let strongSelf = self {
+                    for (_, itemNode) in strongSelf.visibleItemsWithNodes {
+                        itemNode.updateHiddenMedia(media: entry?.media)
+                    }
+                }
+            }))
+            controller.openUrl = { [weak self] url in
+                self?.openUrl(url)
+            }
+            self.present(controller, InstantPageGalleryControllerPresentationArguments(transitionArguments: { [weak self] entry -> GalleryTransitionArguments? in
+                if let strongSelf = self {
+                    for (_, itemNode) in strongSelf.visibleItemsWithNodes {
+                        if let transitionNode = itemNode.transitionNode(media: entry.media) {
+                            return GalleryTransitionArguments(transitionNode: transitionNode, addToTransitionSurface: { view in
+                                if let strongSelf = self {
+                                    strongSelf.scrollNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.scrollNode.view)
+                                }
+                            })
+                        }
+                    }
+                }
+                return nil
+            }))
+        }
+    }
+    
     private func longPressMedia(_ media: InstantPageMedia) {
         let controller = makeContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: { [weak self] in
             if let self, let image = media.media._asMedia() as? TelegramMediaImage {
@@ -657,74 +1060,94 @@ private final class InstantPageContainerNode: ASDisplayNode, UIScrollViewDelegat
                 let _ = saveToCameraRoll(context: self.context, postbox: self.context.account.postbox, userLocation: self.sourceLocation.userLocation, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuShare, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuShare), action: { [weak self] in
-            if let self, let image = media.media._asMedia() as? TelegramMediaImage {
-                self.present(ShareController(context: self.context, subject: .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.media(media: .webPage(webPage: WebpageReference(self.webPage), media: image), resource: $0.resource)) }))), nil)
+            if let self, let webPage = self.webPage, let image = media.media._asMedia() as? TelegramMediaImage {
+                self.present(ShareController(context: self.context, subject: .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.media(media: .webPage(webPage: WebpageReference(webPage), media: image), resource: $0.resource)) }))), nil)
             }
         })], catchTapsOutside: true)
         self.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
-            if let self {
-                for (_, itemNode) in self.visibleItemsWithNodes {
-                    if let (node, _, _) = itemNode.transitionNode(media: media) {
-                        return (self.scrollNode, node.convert(node.bounds, to: self.scrollNode), self, self.bounds)
-                    }
-                }
+            if let _ = self {
+//                for (_, itemNode) in self.visibleItemsWithNodes {
+//                    if let (node, _, _) = itemNode.transitionNode(media: media) {
+//                        return (self.scrollNode, node.convert(node.bounds, to: self.scrollNode), self, self.bounds)
+//                    }
+//                }
             }
             return nil
         }))
     }
     
+    private func activatePinchPreview(sourceNode: PinchSourceContainerNode) {
+        let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: { [weak self] in
+            guard let self else {
+                return CGRect()
+            }
+            let localRect = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: self.bounds.width, height: self.bounds.height))
+            return self.convert(localRect, to: nil)
+        })
+        self.presentInGlobalOverlay(pinchController)
+    }
+    
+    private func pinchPreviewFinished(itemNode: ASDisplayNode) {
+        for (_, listItemNode) in self.visibleItemsWithNodes {
+            if let listItemNode = listItemNode as? InstantPagePeerReferenceNode {
+                if listItemNode.frame.intersects(itemNode.frame) && listItemNode.frame.maxY <= itemNode.frame.maxY + 2.0 {
+                    listItemNode.layer.animateAlpha(from: 0.0, to: listItemNode.alpha, duration: 0.25)
+                    break
+                }
+            }
+        }
+    }
+    
     @objc private func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
             case .ended:
-                if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
-                            break
-//                            if let url = self.urlForTapLocation(location) {
-//                                self.openUrl(url)
-//                            }
+                            if let url = self.urlForTapLocation(location) {
+                                self.openUrl(url)
+                            }
                         case .longTap:
-                            break
-//                            if let theme = self.theme, let url = self.urlForTapLocation(location) {
-//                                let canOpenIn = availableOpenInOptions(context: self.context, item: .url(url: url.url)).count > 1
-//                                let openText = canOpenIn ? self.strings.Conversation_FileOpenIn : self.strings.Conversation_LinkDialogOpen
-//                                let actionSheet = ActionSheetController(instantPageTheme: theme)
-//                                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-//                                    ActionSheetTextItem(title: url.url),
-//                                    ActionSheetButtonItem(title: openText, color: .accent, action: { [weak self, weak actionSheet] in
-//                                        actionSheet?.dismissAnimated()
-//                                        if let strongSelf = self {
-//                                            if canOpenIn {
-//                                                strongSelf.openUrlIn(url)
-//                                            } else {
-//                                                strongSelf.openUrl(url)
-//                                            }
-//                                        }
-//                                    }),
-//                                    ActionSheetButtonItem(title: self.strings.ShareMenu_CopyShareLink, color: .accent, action: { [weak actionSheet] in
-//                                        actionSheet?.dismissAnimated()
-//                                        UIPasteboard.general.string = url.url
-//                                    }),
-//                                    ActionSheetButtonItem(title: self.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
-//                                        actionSheet?.dismissAnimated()
-//                                        if let link = URL(string: url.url) {
-//                                            let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
-//                                        }
-//                                    })
-//                                ]), ActionSheetItemGroup(items: [
-//                                    ActionSheetButtonItem(title: self.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-//                                        actionSheet?.dismissAnimated()
-//                                    })
-//                                ])])
-//                                self.present(actionSheet, nil)
-//                            } else if let (item, parentOffset) = self.textItemAtLocation(location) {
-//                                let textFrame = item.frame
-//                                var itemRects = item.lineRects()
-//                                for i in 0 ..< itemRects.count {
-//                                    itemRects[i] = itemRects[i].offsetBy(dx: parentOffset.x + textFrame.minX, dy: parentOffset.y + textFrame.minY).insetBy(dx: -2.0, dy: -2.0)
-//                                }
-//                                self.updateTextSelectionRects(itemRects, text: item.plainText())
-//                            }
+                            if let url = self.urlForTapLocation(location) {
+                                let canOpenIn = availableOpenInOptions(context: self.context, item: .url(url: url.url)).count > 1
+                                let openText = canOpenIn ? self.presentationData.strings.Conversation_FileOpenIn : self.presentationData.strings.Conversation_LinkDialogOpen
+                                let actionSheet = ActionSheetController(instantPageTheme: self.theme)
+                                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                                    ActionSheetTextItem(title: url.url),
+                                    ActionSheetButtonItem(title: openText, color: .accent, action: { [weak self, weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                        if let strongSelf = self {
+                                            if canOpenIn {
+                                                strongSelf.openUrlIn(url)
+                                            } else {
+                                                strongSelf.openUrl(url)
+                                            }
+                                        }
+                                    }),
+                                    ActionSheetButtonItem(title: self.presentationData.strings.ShareMenu_CopyShareLink, color: .accent, action: { [weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                        UIPasteboard.general.string = url.url
+                                    }),
+                                    ActionSheetButtonItem(title: self.presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                        if let link = URL(string: url.url) {
+                                            let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
+                                        }
+                                    })
+                                ]), ActionSheetItemGroup(items: [
+                                    ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                    })
+                                ])])
+                                self.present(actionSheet, nil)
+                            } else if let (item, parentOffset) = self.textItemAtLocation(location) {
+                                let textFrame = item.frame
+                                var itemRects = item.lineRects()
+                                for i in 0 ..< itemRects.count {
+                                    itemRects[i] = itemRects[i].offsetBy(dx: parentOffset.x + textFrame.minX, dy: parentOffset.y + textFrame.minY).insetBy(dx: -2.0, dy: -2.0)
+                                }
+                                self.updateTextSelectionRects(itemRects, text: item.plainText())
+                            }
                         default:
                             break
                     }
@@ -917,7 +1340,7 @@ private final class InstantPageContainerNode: ASDisplayNode, UIScrollViewDelegat
                     }
                     self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: targetY), animated: true)
                 }
-            } else if case let .Loaded(content) = self.webPage.content, let instantPage = content.instantPage, !instantPage.isComplete {
+            } else if case let .Loaded(content) = self.webPage?.content, let instantPage = content.instantPage, !instantPage.isComplete {
 //                self.loadProgress.set(0.5)
                 self.pendingAnchor = anchor
             }
@@ -950,91 +1373,5 @@ private final class InstantPageContainerNode: ASDisplayNode, UIScrollViewDelegat
             self.currentExpandedDetails = currentExpandedDetails
         }
         self.updateVisibleItems(visibleBounds: self.scrollNode.view.bounds, animated: animated)
-    }
-}
-
-final class BrowserInstantPageContent: UIView, BrowserContent {
-    var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
-    
-    private var _state: BrowserContentState
-    private let statePromise: Promise<BrowserContentState>
-    
-    private let webPage: TelegramMediaWebpage
-    private var initialized = false
-    
-    private let instantPageNode: InstantPageContainerNode
-    
-    var state: Signal<BrowserContentState, NoError> {
-        return self.statePromise.get()
-    }
-    
-    init(context: AccountContext, webPage: TelegramMediaWebpage, url: String, sourceLocation: InstantPageSourceLocation) {
-        self.webPage = webPage
-        
-        let title: String
-        if case let .Loaded(content) = webPage.content {
-            title = content.title ?? ""
-        } else {
-            title = ""
-        }
-        
-        self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.0, contentType: .instantPage)
-        self.statePromise = Promise<BrowserContentState>(self._state)
-        
-        self.instantPageNode = InstantPageContainerNode(context: context, webPage: webPage, sourceLocation: sourceLocation)
-        
-        super.init(frame: .zero)
-        
-        self.addSubnode(self.instantPageNode)
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    func reload() {
-    }
-    
-    func stop() {
-    }
-    
-    func navigateBack() {
-        
-    }
-    
-    func navigateForward() {
-        
-    }
-    
-    func setFontSize(_ fontSize: CGFloat) {
-        
-    }
-    
-    func setForceSerif(_ force: Bool) {
-        
-    }
-    
-    func setSearch(_ query: String?, completion: ((Int) -> Void)?) {
-        
-    }
-    
-    func scrollToPreviousSearchResult(completion: ((Int, Int) -> Void)?) {
-        
-    }
-    
-    func scrollToNextSearchResult(completion: ((Int, Int) -> Void)?) {
-        
-    }
-    
-    func scrollToTop() {
-        let scrollView = self.instantPageNode.scrollNode.view
-        scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: true)
-    }
-    
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ComponentTransition) {
-//        let layout = ContainerViewLayout(size: size, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: .portrait), deviceMetrics: .iPhoneX, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: insets.bottom, right: 0.0), safeInsets: UIEdgeInsets(top: 0.0, left: insets.left, bottom: 0.0, right: insets.right), additionalInsets: .zero, statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
-        self.instantPageNode.updateLayout(size: size, insets: insets, transition: transition.containedViewLayoutTransition)
-        self.instantPageNode.frame = CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height)
-        //transition.updateFrame(view: self.webView, frame: CGRect(origin: CGPoint(x: 0.0, y: 56.0), size: CGSize(width: size.width, height: size.height - 56.0)))
     }
 }

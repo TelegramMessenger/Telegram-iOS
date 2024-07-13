@@ -3,6 +3,7 @@ import Display
 import TelegramPresentationData
 import EncryptionKeyVisualization
 import TelegramCore
+import AccountContext
 
 final class PeerInfoScreenDisclosureEncryptionKeyItem: PeerInfoScreenItem {
     let id: AnyHashable
@@ -71,7 +72,7 @@ private final class PeerInfoScreenDisclosureEncryptionKeyItemNode: PeerInfoScree
         self.addSubnode(self.maskNode)
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenDisclosureEncryptionKeyItem else {
             return 10.0
         }

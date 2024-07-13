@@ -478,12 +478,19 @@ private final class SheetContent: CombinedComponent {
                         state?.buy(requestTopUp: { [weak controller] completion in
                             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: accountContext.currentAppConfiguration.with { $0 })
                             if !premiumConfiguration.isPremiumDisabled {
+                                let purpose: StarsPurchasePurpose
+                                if isMedia {
+                                    purpose = .unlockMedia(requiredStars: invoice.totalAmount)
+                                } else if let peerId = state?.botPeer?.id {
+                                    purpose = .transfer(peerId: peerId, requiredStars: invoice.totalAmount)
+                                } else {
+                                    purpose = .generic
+                                }
                                 let purchaseController = accountContext.sharedContext.makeStarsPurchaseScreen(
                                     context: accountContext,
                                     starsContext: starsContext,
                                     options: state?.options ?? [],
-                                    peerId: isMedia ? nil : state?.botPeer?.id,
-                                    requiredStars: invoice.totalAmount,
+                                    purpose: purpose,
                                     completion: { [weak starsContext] stars in
                                         starsContext?.add(balance: stars)
                                         Queue.mainQueue().after(0.1) {

@@ -241,7 +241,10 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             
             if let snapshotView = self.snapshotView {
                 var snapshotFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - snapshotView.bounds.size.width) / 2.0), y: 0.0), size: snapshotView.bounds.size)
-                
+                if self.item.controller.minimizedTopEdgeOffset == nil && isExpanded {
+                    snapshotFrame = snapshotFrame.offsetBy(dx: 0.0, dy: -12.0)
+                }
+                    
                 var requiresBlur = false
                 var blurFrame = snapshotFrame
                 if snapshotView.frame.width * 1.1 < size.width {
@@ -1018,6 +1021,14 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                     transition.updateBounds(node: itemNode, bounds: CGRect(origin: .zero, size: layout.size))
                 }
                 transition.updateTransform(node: itemNode, transform: CATransform3DIdentity)
+                
+                if let _ = itemNode.snapshotView {
+                    if itemNode.item.controller.minimizedTopEdgeOffset == nil, let snapshotView = itemNode.snapshotView, snapshotView.frame.origin.y == -12.0 {
+                        let snapshotFrame = snapshotView.frame.offsetBy(dx: 0.0, dy: 12.0)
+                        transition.updateFrame(view: snapshotView, frame: snapshotFrame)
+                    }
+                }
+                
                 transition.updatePosition(node: itemNode, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0 + topInset + self.scrollView.contentOffset.y), completion: { _ in
                     self.isApplyingTransition = false
                     if self.currentTransition == currentTransition {

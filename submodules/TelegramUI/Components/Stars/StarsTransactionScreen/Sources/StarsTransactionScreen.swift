@@ -22,6 +22,7 @@ import TelegramStringFormatting
 import UndoUI
 import StarsImageComponent
 import GalleryUI
+import StarsAvatarComponent
 
 private final class StarsTransactionSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -73,6 +74,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         var peerMap: [EnginePeer.Id: EnginePeer] = [:]
         
         var cachedCloseImage: (UIImage, PresentationTheme)?
+        var cachedChevronImage: (UIImage, PresentationTheme)?
         
         var inProgress = false
         
@@ -89,6 +91,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 }
             case let .receipt(receipt):
                 peerIds.append(receipt.botPaymentId)
+            case let .gift(message):
+                peerIds.append(message.id.peerId)
             }
             
             self.disposable = (context.engine.data.get(
@@ -186,87 +190,110 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let media: [AnyMediaReference]
             let photo: TelegramMediaWebFile?
             let isRefund: Bool
+            let isGift: Bool
             
             var delayedCloseOnOpenPeer = true
             switch subject {
             case let .transaction(transaction, parentPeer):
-                switch transaction.peer {
-                case let .peer(peer):
+                if transaction.flags.contains(.isGift) {
+                    titleText = "Received Gift"
+                    descriptionText = "Use Stars to unlock content and services on Telegram. [See Examples >]()"
+                    count = transaction.count
+                    transactionId = transaction.id
+                    via = nil
+                    messageId = nil
+                    date = transaction.date
+                    if case let .peer(peer) = transaction.peer {
+                        toPeer = peer
+                    } else {
+                        toPeer = nil
+                    }
+                    transactionPeer = transaction.peer
+                    media = []
+                    photo = nil
+                    isRefund = false
+                    isGift = true
+                    delayedCloseOnOpenPeer = false
+                } else {
+                    switch transaction.peer {
+                    case let .peer(peer):
+                        if !transaction.media.isEmpty {
+                            titleText = strings.Stars_Transaction_MediaPurchase
+                        } else {
+                            titleText = transaction.title ?? peer.compactDisplayTitle
+                        }
+                        via = nil
+                    case .appStore:
+                        titleText = strings.Stars_Transaction_AppleTopUp_Title
+                        via = strings.Stars_Transaction_AppleTopUp_Subtitle
+                    case .playMarket:
+                        titleText = strings.Stars_Transaction_GoogleTopUp_Title
+                        via = strings.Stars_Transaction_GoogleTopUp_Subtitle
+                    case .premiumBot:
+                        titleText = strings.Stars_Transaction_PremiumBotTopUp_Title
+                        via = strings.Stars_Transaction_PremiumBotTopUp_Subtitle
+                    case .fragment:
+                        if parentPeer.id == component.context.account.peerId {
+                            titleText = strings.Stars_Transaction_FragmentTopUp_Title
+                            via = strings.Stars_Transaction_FragmentTopUp_Subtitle
+                        } else {
+                            titleText = strings.Stars_Transaction_FragmentWithdrawal_Title
+                            via = strings.Stars_Transaction_FragmentWithdrawal_Subtitle
+                        }
+                    case .ads:
+                        titleText = strings.Stars_Transaction_TelegramAds_Title
+                        via = strings.Stars_Transaction_TelegramAds_Subtitle
+                    case .unsupported:
+                        titleText = strings.Stars_Transaction_Unsupported_Title
+                        via = nil
+                    }
                     if !transaction.media.isEmpty {
-                        titleText = strings.Stars_Transaction_MediaPurchase
+                        var description: String = ""
+                        var photoCount: Int32 = 0
+                        var videoCount: Int32 = 0
+                        for media in transaction.media {
+                            if let _ = media as? TelegramMediaFile {
+                                videoCount += 1
+                            } else {
+                                photoCount += 1
+                            }
+                        }
+                        if photoCount > 0 && videoCount > 0 {
+                            description += strings.Stars_Transaction_MediaAnd(strings.Stars_Transaction_Photos(photoCount), strings.Stars_Transaction_Videos(videoCount)).string
+                        } else if photoCount > 0 {
+                            if photoCount > 1 {
+                                description += strings.Stars_Transaction_Photos(photoCount)
+                            } else {
+                                description += strings.Stars_Transaction_SinglePhoto
+                            }
+                        } else if videoCount > 0 {
+                            if videoCount > 1 {
+                                description += strings.Stars_Transaction_Videos(videoCount)
+                            } else {
+                                description += strings.Stars_Transaction_SingleVideo
+                            }
+                        }
+                        descriptionText = description
                     } else {
-                        titleText = transaction.title ?? peer.compactDisplayTitle
+                        descriptionText = transaction.description ?? ""
                     }
-                    via = nil
-                case .appStore:
-                    titleText = strings.Stars_Transaction_AppleTopUp_Title
-                    via = strings.Stars_Transaction_AppleTopUp_Subtitle
-                case .playMarket:
-                    titleText = strings.Stars_Transaction_GoogleTopUp_Title
-                    via = strings.Stars_Transaction_GoogleTopUp_Subtitle
-                case .premiumBot:
-                    titleText = strings.Stars_Transaction_PremiumBotTopUp_Title
-                    via = strings.Stars_Transaction_PremiumBotTopUp_Subtitle
-                case .fragment:
-                    if parentPeer.id == component.context.account.peerId {
-                        titleText = strings.Stars_Transaction_FragmentTopUp_Title
-                        via = strings.Stars_Transaction_FragmentTopUp_Subtitle
+                    
+                    messageId = transaction.paidMessageId
+                    
+                    count = transaction.count
+                    transactionId = transaction.id
+                    date = transaction.date
+                    if case let .peer(peer) = transaction.peer {
+                        toPeer = peer
                     } else {
-                        titleText = strings.Stars_Transaction_FragmentWithdrawal_Title
-                        via = strings.Stars_Transaction_FragmentWithdrawal_Subtitle
+                        toPeer = nil
                     }
-                case .ads:
-                    titleText = strings.Stars_Transaction_TelegramAds_Title
-                    via = strings.Stars_Transaction_TelegramAds_Subtitle
-                case .unsupported:
-                    titleText = strings.Stars_Transaction_Unsupported_Title
-                    via = nil
+                    transactionPeer = transaction.peer
+                    media = transaction.media.map { AnyMediaReference.starsTransaction(transaction: StarsTransactionReference(peerId: parentPeer.id, id: transaction.id, isRefund: transaction.flags.contains(.isRefund)), media: $0) }
+                    photo = transaction.photo
+                    isGift = false
+                    isRefund = transaction.flags.contains(.isRefund)
                 }
-                if !transaction.media.isEmpty {
-                    var description: String = ""
-                    var photoCount: Int32 = 0
-                    var videoCount: Int32 = 0
-                    for media in transaction.media {
-                        if let _ = media as? TelegramMediaFile {
-                            videoCount += 1
-                        } else {
-                            photoCount += 1
-                        }
-                    }
-                    if photoCount > 0 && videoCount > 0 {
-                        description += strings.Stars_Transaction_MediaAnd(strings.Stars_Transaction_Photos(photoCount), strings.Stars_Transaction_Videos(videoCount)).string
-                    } else if photoCount > 0 {
-                        if photoCount > 1 {
-                            description += strings.Stars_Transaction_Photos(photoCount)
-                        } else {
-                            description += strings.Stars_Transaction_SinglePhoto
-                        }
-                    } else if videoCount > 0 {
-                        if videoCount > 1 {
-                            description += strings.Stars_Transaction_Videos(videoCount)
-                        } else {
-                            description += strings.Stars_Transaction_SingleVideo
-                        }
-                    }
-                    descriptionText = description
-                } else {
-                    descriptionText = transaction.description ?? ""
-                }
-                
-                messageId = transaction.paidMessageId
-
-                count = transaction.count
-                transactionId = transaction.id
-                date = transaction.date
-                if case let .peer(peer) = transaction.peer {
-                    toPeer = peer
-                } else {
-                    toPeer = nil
-                }
-                transactionPeer = transaction.peer
-                media = transaction.media.map { AnyMediaReference.starsTransaction(transaction: StarsTransactionReference(peerId: parentPeer.id, id: transaction.id, isRefund: transaction.flags.contains(.isRefund)), media: $0) }
-                photo = transaction.photo
-                isRefund = transaction.flags.contains(.isRefund)
             case let .receipt(receipt):
                 titleText = receipt.invoiceMedia.title
                 descriptionText = receipt.invoiceMedia.description
@@ -284,6 +311,28 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 media = []
                 photo = receipt.invoiceMedia.photo
                 isRefund = false
+                isGift = false
+                delayedCloseOnOpenPeer = false
+            case let .gift(message):
+                let incoming = message.flags.contains(.Incoming)
+                titleText = incoming ? "Received Gift" : "Sent Gift"
+                let peerName = state.peerMap[message.id.peerId]?.compactDisplayTitle ?? ""
+                descriptionText = incoming ? "Use Stars to unlock content and services on Telegram. [See Examples >]()" : "With Stars, \(peerName) will be able to unlock content and services on Telegram.\n[See Examples >]()"
+                if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .giftStars(_, _, countValue, _, _, _) = action.action {
+                    count = !incoming ? -countValue : countValue
+                    transactionId = nil
+                } else {
+                    fatalError()
+                }
+                via = nil
+                messageId = nil
+                date = message.timestamp
+                toPeer = state.peerMap[message.id.peerId]
+                transactionPeer = nil
+                media = []
+                photo = nil
+                isRefund = false
+                isGift = true
                 delayedCloseOnOpenPeer = false
             }
             
@@ -312,7 +361,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             )
             
             let imageSubject: StarsImageComponent.Subject
-            if !media.isEmpty {
+            if isGift {
+                imageSubject = .gift
+            } else if !media.isEmpty {
                 imageSubject = .media(media)
             } else if let photo {
                 imageSubject = .photo(photo)
@@ -373,12 +424,14 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                             content: AnyComponent(
                                 PeerCellComponent(
                                     context: component.context,
-                                    textColor: tableLinkColor,
+                                    theme: theme,
                                     peer: toPeer
                                 )
                             ),
                             action: {
-                                if delayedCloseOnOpenPeer {
+                                if toPeer.id.namespace == Namespaces.Peer.CloudUser && toPeer.id.id._internalGetInt64Value() == 777000 {
+                                    
+                                } else if delayedCloseOnOpenPeer {
                                     component.openPeer(toPeer)
                                     Queue.mainQueue().after(1.0, {
                                         component.cancel(false)
@@ -539,14 +592,21 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             originY += star.size.height - 23.0
             
             if !descriptionText.isEmpty {
+                if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
+                    state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
+                }
+                
+                let textFont = Font.regular(15.0)
+                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
+                })
+                let attributedString = parseMarkdownIntoAttributedString(descriptionText, attributes: markdownAttributes, textAlignment: .center).mutableCopy() as! NSMutableAttributedString
+                if let range = attributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
+                    attributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: attributedString.string))
+                }
                 let description = description.update(
                     component: MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: descriptionText,
-                            font: Font.regular(15.0),
-                            textColor: theme.actionSheet.primaryTextColor,
-                            paragraphAlignment: .center
-                        )),
+                        text: .plain(attributedString),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 3
                     ),
@@ -768,6 +828,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
     public enum Subject: Equatable {
         case transaction(StarsContext.State.Transaction, EnginePeer)
         case receipt(BotPaymentReceipt)
+        case gift(EngineMessage)
     }
     
     private let context: AccountContext
@@ -1166,12 +1227,12 @@ private final class TableComponent: CombinedComponent {
 
 private final class PeerCellComponent: Component {
     let context: AccountContext
-    let textColor: UIColor
-    let peer: EnginePeer?
+    let theme: PresentationTheme
+    let peer: EnginePeer
 
-    init(context: AccountContext, textColor: UIColor, peer: EnginePeer?) {
+    init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer) {
         self.context = context
-        self.textColor = textColor
+        self.theme = theme
         self.peer = peer
     }
 
@@ -1179,7 +1240,7 @@ private final class PeerCellComponent: Component {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.textColor !== rhs.textColor {
+        if lhs.theme !== rhs.theme {
             return false
         }
         if lhs.peer != rhs.peer {
@@ -1189,18 +1250,14 @@ private final class PeerCellComponent: Component {
     }
 
     final class View: UIView {
-        private let avatarNode: AvatarNode
+        private let avatar = ComponentView<Empty>()
         private let text = ComponentView<Empty>()
                 
         private var component: PeerCellComponent?
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
-            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 13.0))
-            
             super.init(frame: frame)
-            
-            self.addSubnode(self.avatarNode)
         }
         
         required init?(coder: NSCoder) {
@@ -1211,21 +1268,33 @@ private final class PeerCellComponent: Component {
             self.component = component
             self.state = state
                                     
-            self.avatarNode.setPeer(
-                context: component.context,
-                theme: component.context.sharedContext.currentPresentationData.with({ $0 }).theme,
-                peer: component.peer,
-                synchronousLoad: true
-            )
-            
             let avatarSize = CGSize(width: 22.0, height: 22.0)
             let spacing: CGFloat = 6.0
+            
+            let peerName: String
+            let peer: StarsContext.State.Transaction.Peer
+            if component.peer.id.namespace == Namespaces.Peer.CloudUser && component.peer.id.id._internalGetInt64Value() == 777000 {
+                peerName = "Unknown User"
+                peer = .fragment
+            } else {
+                peerName = component.peer.compactDisplayTitle
+                peer = .peer(component.peer)
+            }
+            
+            let avatarNaturalSize = self.avatar.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    StarsAvatarComponent(context: component.context, theme: component.theme, peer: peer, photo: nil, media: [], backgroundColor: .clear)
+                ),
+                environment: {},
+                containerSize: CGSize(width: 40.0, height: 40.0)
+            )
             
             let textSize = self.text.update(
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: component.peer?.compactDisplayTitle ?? "", font: Font.regular(15.0), textColor: component.textColor, paragraphAlignment: .left))
+                        text: .plain(NSAttributedString(string: peerName, font: Font.regular(15.0), textColor: component.theme.list.itemAccentColor, paragraphAlignment: .left))
                     )
                 ),
                 environment: {},
@@ -1235,7 +1304,15 @@ private final class PeerCellComponent: Component {
             let size = CGSize(width: avatarSize.width + textSize.width + spacing, height: textSize.height)
             
             let avatarFrame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((size.height - avatarSize.height) / 2.0)), size: avatarSize)
-            self.avatarNode.frame = avatarFrame
+            
+            if let view = self.avatar.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                }
+                let scale = avatarSize.width / avatarNaturalSize.width
+                view.transform = CGAffineTransform(scaleX: scale, y: scale)
+                view.frame = avatarFrame
+            }
             
             if let view = self.text.view {
                 if view.superview == nil {

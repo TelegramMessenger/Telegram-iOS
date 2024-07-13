@@ -126,7 +126,7 @@ protocol PeerInfoScreenItem: AnyObject {
 class PeerInfoScreenItemNode: ASDisplayNode, AccessibilityFocusableNode {
     var bringToFrontForHighlight: (() -> Void)?
     
-    func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         preconditionFailure()
     }
     
@@ -165,7 +165,7 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
         self.addSubnode(self.bottomSeparatorNode)
     }
     
-    func update(width: CGFloat, safeInsets: UIEdgeInsets, hasCorners: Bool, presentationData: PresentationData, items: [PeerInfoScreenItem], transition: ContainedViewLayoutTransition) -> CGFloat {
+    func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, hasCorners: Bool, presentationData: PresentationData, items: [PeerInfoScreenItem], transition: ContainedViewLayoutTransition) -> CGFloat {
         self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
         self.topSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
@@ -217,7 +217,7 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
                 bottomItem = items[i + 1]
             }
             
-            let itemHeight = itemNode.update(width: width, safeInsets: safeInsets, presentationData: presentationData, item: item, topItem: topItem, bottomItem: bottomItem, hasCorners: hasCorners, transition: itemTransition)
+            let itemHeight = itemNode.update(context: context, width: width, safeInsets: safeInsets, presentationData: presentationData, item: item, topItem: topItem, bottomItem: bottomItem, hasCorners: hasCorners, transition: itemTransition)
             let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: width, height: itemHeight))
             itemTransition.updateFrame(node: itemNode, frame: itemFrame)
             if wasAdded {
@@ -561,7 +561,7 @@ private final class PeerInfoInteraction {
     let editingToggleMessageSignatures: (Bool) -> Void
     let openParticipantsSection: (PeerInfoParticipantsSection) -> Void
     let openRecentActions: () -> Void
-    let openStats: (Bool) -> Void
+    let openStats: (ChannelStatsSection) -> Void
     let editingOpenPreHistorySetup: () -> Void
     let editingOpenAutoremoveMesages: () -> Void
     let openPermissions: () -> Void
@@ -629,7 +629,7 @@ private final class PeerInfoInteraction {
         editingToggleMessageSignatures: @escaping (Bool) -> Void,
         openParticipantsSection: @escaping (PeerInfoParticipantsSection) -> Void,
         openRecentActions: @escaping () -> Void,
-        openStats: @escaping (Bool) -> Void,
+        openStats: @escaping (ChannelStatsSection) -> Void,
         editingOpenPreHistorySetup: @escaping () -> Void,
         editingOpenAutoremoveMesages: @escaping () -> Void,
         openPermissions: @escaping () -> Void,
@@ -1444,6 +1444,31 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }))
                     items[.peerInfo]!.append(PeerInfoScreenCommentItem(id: 8, text: presentationData.strings.Bot_AddToChatInfo))
                 }
+                
+                if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
+                    let starsBalance = data.starsRevenueStatsState?.balances.availableBalance ?? 0
+                    let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? 0
+                    
+                    if overallStarsBalance > 0 {
+                        var string = ""
+                        if overallStarsBalance > 0 {
+                            string.append("*\(starsBalance)")
+                        }
+                        let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                        if let range = attributedString.string.range(of: "*") {
+                            attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
+                            attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
+                        }
+                        
+                        items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: 9, label: .attributedText(attributedString), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.balance, action: {
+                            interaction.editingOpenStars()
+                        }))
+                    }
+                    
+                    items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: 10, label: .none, text: presentationData.strings.Bot_Settings, icon: UIImage(bundleImageName: "Chat/Info/SettingsIcon"), action: {
+                        interaction.openEditing()
+                    }))
+                }
             }
         }
     } else if let channel = data.peer as? TelegramChannel {
@@ -1455,7 +1480,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         let ItemAdmins = 6
         let ItemMembers = 7
         let ItemMemberRequests = 8
-        let ItemEdit = 9
+        let ItemBalance = 9
+        let ItemEdit = 10
         
         if let _ = data.threadData {
             let mainUsername: String
@@ -1609,6 +1635,40 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                                 }))
                             }
                             
+                            if cachedData.flags.contains(.canViewRevenue) || cachedData.flags.contains(.canViewStarsRevenue) {
+                                let revenueBalance = data.revenueStatsState?.balances.availableBalance ?? 0
+                                let starsBalance = data.starsRevenueStatsState?.balances.availableBalance ?? 0
+                                
+                                let overallRevenueBalance = data.revenueStatsState?.balances.overallRevenue ?? 0
+                                let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? 0
+                                
+                                if overallRevenueBalance > 0 || overallStarsBalance > 0 {
+                                    var string = ""
+                                    if overallRevenueBalance > 0 {
+                                        string.append("#\(revenueBalance)")
+                                    }
+                                    if overallStarsBalance > 0 {
+                                        if !string.isEmpty {
+                                            string.append(" ")
+                                        }
+                                        string.append("*\(starsBalance)")
+                                    }
+                                    let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                                    if let range = attributedString.string.range(of: "#") {
+                                        attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .ton), range: NSRange(range, in: attributedString.string))
+                                        attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
+                                    }
+                                    if let range = attributedString.string.range(of: "*") {
+                                        attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
+                                        attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
+                                    }
+                                    
+                                    items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemBalance, label: .attributedText(attributedString), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.balance, action: {
+                                        interaction.openStats(.monetization)
+                                    }))
+                                }
+                            }
+                            
                             items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemEdit, label: .none, text: presentationData.strings.Channel_Info_Settings, icon: UIImage(bundleImageName: "Chat/Info/SettingsIcon"), action: {
                                 interaction.openEditing()
                             }))
@@ -1721,7 +1781,6 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             let ItemInfo = 3
             let ItemDelete = 4
             let ItemUsername = 5
-            let ItemStars = 6
             
             let ItemIntro = 7
             let ItemCommands = 8
@@ -1732,13 +1791,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text("@\(user.addressName ?? "")"), text: presentationData.strings.PeerInfo_Bot_Username, icon: PresentationResourcesSettings.bot, action: {
                     interaction.editingOpenPublicLinkSetup()
                 }))
-                
-                if let starsRevenueStats = data.starsRevenueStatsState, starsRevenueStats.balances.overallRevenue > 0 {
-                    items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStars, label: .text(presentationData.strings.PeerInfo_Bot_Balance_Stars(Int32(starsRevenueStats.balances.currentBalance))), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.stars, action: {
-                        interaction.editingOpenStars()
-                    }))
-                }
-                
+                                
                 items[.peerSettings]!.append(PeerInfoScreenActionItem(id: ItemIntro, text: presentationData.strings.PeerInfo_Bot_EditIntro, icon: UIImage(bundleImageName: "Peer Info/BotIntro"), action: {
                     interaction.openPeerMention("botfather", .withBotStartPayload(ChatControllerInitialBotStart(payload: "\(user.addressName ?? "")-intro", behavior: .interactive)))
                 }))
@@ -1959,7 +2012,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 
                 if let cachedData = data.cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats) {
                     items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStats, label: .none, text: presentationData.strings.Channel_Info_Stats, icon: UIImage(bundleImageName: "Chat/Info/StatsIcon"), action: {
-                        interaction.openStats(false)
+                        interaction.openStats(.stats)
                     }))
                 }
                 
@@ -2649,8 +2702,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             openRecentActions: { [weak self] in
                 self?.openRecentActions()
             },
-            openStats: { [weak self] boosts in
-                self?.openStats(boosts: boosts)
+            openStats: { [weak self] section in
+                self?.openStats(section: section)
             },
             editingOpenPreHistorySetup: { [weak self] in
                 self?.editingOpenPreHistorySetup()
@@ -6132,7 +6185,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             }, action: { [weak self] _, f in
                                 f(.dismissWithoutContent)
                                 
-                                self?.openStats()
+                                self?.openStats(section: .stats)
                             })))
                         }
                         if cachedData.flags.contains(.translationHidden) {
@@ -7820,7 +7873,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.controller?.push(PeerInfoStoryGridScreen(context: self.context, peerId: self.peerId, scope: .archive))
     }
     
-    private func openStats(boosts: Bool = false, boostStatus: ChannelBoostStatus? = nil) {
+    private func openStats(section: ChannelStatsSection, boostStatus: ChannelBoostStatus? = nil) {
         guard let controller = self.controller, let data = self.data, let peer = data.peer else {
             return
         }
@@ -7830,7 +7883,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         if let channel = peer as? TelegramChannel, case .group = channel.info {
             statsController = groupStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id)
         } else {
-            statsController = channelStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, section: boosts ? .boosts : .stats, boostStatus: boostStatus)
+            statsController = channelStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, section: section, boostStatus: boostStatus)
         }
         controller.push(statsController)
     }
@@ -9732,7 +9785,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         }
                         let controller = self.context.sharedContext.makePremiumBoostLevelsController(context: self.context, peerId: peer.id, subject: .stories, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: false, openStats: { [weak self] in
                             if let self {
-                                self.openStats(boosts: true, boostStatus: boostStatus)
+                                self.openStats(section: .boosts, boostStatus: boostStatus)
                             }
                         })
                         navigationController.pushViewController(controller)
@@ -11132,7 +11185,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         contentHeight -= 16.0
                     }
                 }
-                let sectionHeight = sectionNode.update(width: sectionWidth, safeInsets: UIEdgeInsets(), hasCorners: !insets.left.isZero, presentationData: self.presentationData, items: sectionItems, transition: transition)
+                let sectionHeight = sectionNode.update(context: self.context, width: sectionWidth, safeInsets: UIEdgeInsets(), hasCorners: !insets.left.isZero, presentationData: self.presentationData, items: sectionItems, transition: transition)
                 let sectionFrame = CGRect(origin: CGPoint(x: insets.left, y: contentHeight), size: CGSize(width: sectionWidth, height: sectionHeight))
                 if additive {
                     transition.updateFrameAdditive(node: sectionNode, frame: sectionFrame)
@@ -11191,9 +11244,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     self.editingSections[sectionId] = sectionNode
                     self.scrollNode.addSubnode(sectionNode)
                 }
-                 
+                
                 let sectionWidth = layout.size.width - insets.left - insets.right
-                let sectionHeight = sectionNode.update(width: sectionWidth, safeInsets: UIEdgeInsets(), hasCorners: !insets.left.isZero, presentationData: self.presentationData, items: sectionItems, transition: transition)
+                let sectionHeight = sectionNode.update(context: self.context, width: sectionWidth, safeInsets: UIEdgeInsets(), hasCorners: !insets.left.isZero, presentationData: self.presentationData, items: sectionItems, transition: transition)
                 let sectionFrame = CGRect(origin: CGPoint(x: insets.left, y: contentHeight), size: CGSize(width: sectionWidth, height: sectionHeight))
                 
                 if wasAdded {

@@ -22,6 +22,8 @@ swift_library(
         "//submodules/AvatarNode",
         "//submodules/AccountContext",
         "//submodules/InvisibleInkDustNode",
+        "//submodules/AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode",
     ],
     visibility = [
         "//visibility:public",

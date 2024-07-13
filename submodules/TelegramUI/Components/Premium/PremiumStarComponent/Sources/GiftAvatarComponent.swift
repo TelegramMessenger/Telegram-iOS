@@ -22,42 +22,42 @@ public final class GiftAvatarComponent: Component {
     let theme: PresentationTheme
     let peers: [EnginePeer]
     let photo: TelegramMediaWebFile?
-    let starsPeer: StarsContext.State.Transaction.Peer?
     let isVisible: Bool
     let hasIdleAnimations: Bool
     let hasScaleAnimation: Bool
     let avatarSize: CGFloat
     let color: UIColor?
     let offset: CGFloat?
+    var hasLargeParticles: Bool
         
     public init(
         context: AccountContext,
         theme: PresentationTheme,
         peers: [EnginePeer],
         photo: TelegramMediaWebFile? = nil,
-        starsPeer: StarsContext.State.Transaction.Peer? = nil,
         isVisible: Bool,
         hasIdleAnimations: Bool,
         hasScaleAnimation: Bool = true,
         avatarSize: CGFloat = 100.0,
         color: UIColor? = nil,
-        offset: CGFloat? = nil
+        offset: CGFloat? = nil,
+        hasLargeParticles: Bool = false
     ) {
         self.context = context
         self.theme = theme
         self.peers = peers
         self.photo = photo
-        self.starsPeer = starsPeer
         self.isVisible = isVisible
         self.hasIdleAnimations = hasIdleAnimations
         self.hasScaleAnimation = hasScaleAnimation
         self.avatarSize = avatarSize
         self.color = color
         self.offset = offset
+        self.hasLargeParticles = hasLargeParticles
     }
     
     public static func ==(lhs: GiftAvatarComponent, rhs: GiftAvatarComponent) -> Bool {
-        return lhs.peers == rhs.peers && lhs.photo == rhs.photo && lhs.theme === rhs.theme && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations && lhs.hasScaleAnimation == rhs.hasScaleAnimation && lhs.avatarSize == rhs.avatarSize && lhs.offset == rhs.offset
+        return lhs.peers == rhs.peers && lhs.photo == rhs.photo && lhs.theme === rhs.theme && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations && lhs.hasScaleAnimation == rhs.hasScaleAnimation && lhs.avatarSize == rhs.avatarSize && lhs.offset == rhs.offset && lhs.hasLargeParticles == rhs.hasLargeParticles
     }
     
     public final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
@@ -142,7 +142,7 @@ public final class GiftAvatarComponent: Component {
         
         private var didSetup = false
         private func setup() {
-            guard let scene = loadCompressedScene(name: "gift", version: sceneVersion), !self.didSetup else {
+            guard let scene = loadCompressedScene(name: "gift2", version: sceneVersion), !self.didSetup else {
                 return
             }
             
@@ -152,6 +152,21 @@ public final class GiftAvatarComponent: Component {
             self.sceneView.delegate = self
             
             if let color = self.component?.color {
+//                let names: [String] = [
+//                    "particles_left",
+//                    "particles_right",
+//                    "particles_left_bottom",
+//                    "particles_right_bottom",
+//                    "particles_center"
+//                ]
+//                
+//                for name in names {
+//                    if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
+//                        particleSystem.particleColor = color
+//                        particleSystem.particleColorVariation = SCNVector4Make(0, 0, 0, 0)
+//                    }
+//                }
+                
                 let names: [String] = [
                     "particles_left",
                     "particles_right",
@@ -160,10 +175,59 @@ public final class GiftAvatarComponent: Component {
                     "particles_center"
                 ]
                 
+                let starNames: [String] = [
+                    "coins_left",
+                    "coins_right"
+                ]
+                
+                let particleColor = color
+                for name in starNames {
+                    if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
+                        particleSystem.particleIntensity = 1.0
+                        particleSystem.particleIntensityVariation = 0.05
+                        particleSystem.particleColor = particleColor
+                        particleSystem.particleColorVariation = SCNVector4Make(0.07, 0.0, 0.1, 0.0)
+                        node.isHidden = false
+                        
+                        if let propertyControllers = particleSystem.propertyControllers, let sizeController = propertyControllers[.size], let colorController = propertyControllers[.color] {
+                            let animation = CAKeyframeAnimation()
+                            if let existing = colorController.animation as? CAKeyframeAnimation {
+                                animation.keyTimes = existing.keyTimes
+                                animation.values = existing.values?.compactMap { ($0 as? UIColor)?.alpha } ?? []
+                            } else {
+                                animation.values = [ 0.0, 1.0, 1.0, 0.0 ]
+                            }
+                            let opacityController = SCNParticlePropertyController(animation: animation)
+                            particleSystem.propertyControllers = [
+                                .size: sizeController,
+                                .opacity: opacityController
+                            ]
+                        }
+                    }
+                }
+                
                 for name in names {
                     if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
-                        particleSystem.particleColor = color
-                        particleSystem.particleColorVariation = SCNVector4Make(0, 0, 0, 0)
+                        particleSystem.particleIntensity = min(1.0, 2.0 * particleSystem.particleIntensity)
+                        particleSystem.particleIntensityVariation = 0.05
+                        particleSystem.particleColor = particleColor
+                        particleSystem.particleColorVariation = SCNVector4Make(0.1, 0.0, 0.12, 0.0)
+                       
+                                                
+                        if let propertyControllers = particleSystem.propertyControllers, let sizeController = propertyControllers[.size], let colorController = propertyControllers[.color] {
+                            let animation = CAKeyframeAnimation()
+                            if let existing = colorController.animation as? CAKeyframeAnimation {
+                                animation.keyTimes = existing.keyTimes
+                                animation.values = existing.values?.compactMap { ($0 as? UIColor)?.alpha } ?? []
+                            } else {
+                                animation.values = [ 0.0, 1.0, 1.0, 0.0 ]
+                            }
+                            let opacityController = SCNParticlePropertyController(animation: animation)
+                            particleSystem.propertyControllers = [
+                                .size: sizeController,
+                                .opacity: opacityController
+                            ]
+                        }
                     }
                 }
 
@@ -187,9 +251,7 @@ public final class GiftAvatarComponent: Component {
             }
         }
         
-        private func onReady() {
-            self.setupScaleAnimation()
-            
+        private func onReady() {            
             self.playAppearanceAnimation(explode: true)
             
             self.previousInteractionTimestamp = CACurrentMediaTime()
@@ -203,23 +265,7 @@ public final class GiftAvatarComponent: Component {
             }, queue: Queue.mainQueue())
             self.timer?.start()
         }
-        
-        private func setupScaleAnimation() {
-            guard self.component?.hasScaleAnimation == true else {
-                return
-            }
-            
-            let animation = CABasicAnimation(keyPath: "transform.scale")
-            animation.duration = 2.0
-            animation.fromValue = 1.0
-            animation.toValue = 1.15
-            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            animation.autoreverses = true
-            animation.repeatCount = .infinity
-
-            self.avatarNode.view.layer.add(animation, forKey: "scale")
-        }
-        
+                
         private func playAppearanceAnimation(velocity: CGFloat? = nil, smallAngle: Bool = false, mirror: Bool = false, explode: Bool = false) {
             guard let scene = self.sceneView.scene else {
                 return
@@ -319,6 +365,10 @@ public final class GiftAvatarComponent: Component {
             
             self.hasIdleAnimations = component.hasIdleAnimations
             
+            if let _ = component.color {
+                self.sceneView.backgroundColor = component.theme.list.blocksBackgroundColor
+            }
+            
             if let photo = component.photo {
                 let imageNode: TransformImageNode
                 if let current = self.imageNode {
@@ -339,86 +389,6 @@ public final class GiftAvatarComponent: Component {
                 imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: imageSize.width / 2.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
                 
                 self.avatarNode.isHidden = true
-            } else if let starsPeer = component.starsPeer {
-                let iconBackgroundView: UIImageView
-                let iconView: UIImageView
-                if let currentBackground = self.iconBackgroundView, let current = self.iconView {
-                    iconBackgroundView = currentBackground
-                    iconView = current
-                } else {
-                    iconBackgroundView = UIImageView()
-                    iconView = UIImageView()
-                    
-                    self.addSubview(iconBackgroundView)
-                    self.addSubview(iconView)
-                    
-                    self.iconBackgroundView = iconBackgroundView
-                    self.iconView = iconView
-                    
-                    let size = CGSize(width: component.avatarSize, height: component.avatarSize)
-                    var iconInset: CGFloat = 9.0
-                    var iconOffset: CGFloat = 0.0
-                    
-                    switch starsPeer {
-                    case .appStore:
-                        iconBackgroundView.image = generateGradientFilledCircleImage(
-                            diameter: size.width,
-                            colors: [
-                                UIColor(rgb: 0x2a9ef1).cgColor,
-                                UIColor(rgb: 0x72d5fd).cgColor
-                            ],
-                            direction: .mirroredDiagonal
-                        )
-                        iconView.image = UIImage(bundleImageName: "Premium/Stars/Apple")
-                    case .playMarket:
-                        iconBackgroundView.image = generateGradientFilledCircleImage(
-                            diameter: size.width,
-                            colors: [
-                                UIColor(rgb: 0x54cb68).cgColor,
-                                UIColor(rgb: 0xa0de7e).cgColor
-                            ],
-                            direction: .mirroredDiagonal
-                        )
-                        iconView.image = UIImage(bundleImageName: "Premium/Stars/Google")
-                    case .fragment:
-                        iconBackgroundView.image = generateFilledCircleImage(diameter: size.width, color: UIColor(rgb: 0x1b1f24))
-                        iconView.image = UIImage(bundleImageName: "Premium/Stars/Fragment")
-                        iconOffset = 5.0
-                    case .ads:
-                        iconBackgroundView.image = generateFilledCircleImage(diameter: size.width, color: UIColor(rgb: 0x1b1f24))
-                        iconView.image = UIImage(bundleImageName: "Premium/Stars/Fragment")
-                        iconOffset = 5.0
-                    case .premiumBot:
-                        iconInset = 15.0
-                        iconBackgroundView.image = generateGradientFilledCircleImage(
-                            diameter: size.width,
-                            colors: [
-                                UIColor(rgb: 0x6b93ff).cgColor,
-                                UIColor(rgb: 0x6b93ff).cgColor,
-                                UIColor(rgb: 0x8d77ff).cgColor,
-                                UIColor(rgb: 0xb56eec).cgColor,
-                                UIColor(rgb: 0xb56eec).cgColor
-                            ],
-                            direction: .mirroredDiagonal
-                        )
-                        iconView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon"), color: .white)
-                    case .peer, .unsupported:
-                        iconInset = 15.0
-                        iconBackgroundView.image = generateGradientFilledCircleImage(
-                            diameter: size.width,
-                            colors: [
-                                UIColor(rgb: 0xb1b1b1).cgColor,
-                                UIColor(rgb: 0xcdcdcd).cgColor
-                            ],
-                            direction: .mirroredDiagonal
-                        )
-                        iconView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon"), color: .white)
-                    }
-                    
-                    let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - size.width) / 2.0), y: 113.0 - size.height / 2.0), size: size)
-                    iconBackgroundView.frame = imageFrame
-                    iconView.frame = imageFrame.insetBy(dx: iconInset, dy: iconInset).offsetBy(dx: 0.0, dy: iconOffset)
-                }
             } else if component.peers.count > 1 {
                 let avatarSize = CGSize(width: 60.0, height: 60.0)
                 

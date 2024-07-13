@@ -146,6 +146,7 @@ swift_library(
         "//submodules/ConfettiEffect",
         "//submodules/ContactsPeerItem",
         "//submodules/TelegramUI/Components/PeerManagement/OldChannelsController",
+        "//submodules/TelegramUI/Components/TextNodeWithEntities",
     ],
     visibility = [
         "//visibility:public",

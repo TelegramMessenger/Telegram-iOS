@@ -552,6 +552,9 @@ public class StickerPickerScreen: ViewController {
                         self.presentLinkPremiumSuggestion()
                     }
                 }
+                self.storyStickersContentView?.weatherAction = { [weak self] in
+                    self?.controller?.addWeather()
+                }
             }
             
             let gifItems: Signal<EntityKeyboardGifContent?, NoError>
@@ -2063,6 +2066,7 @@ public class StickerPickerScreen: ViewController {
     public var presentAudioPicker: () -> Void = { }
     public var addReaction: () -> Void = { }
     public var addLink: () -> Void = { }
+    public var addWeather: () -> Void = { }
     
     public init(context: AccountContext, inputData: Signal<StickerPickerInput, NoError>, forceDark: Bool = false, expanded: Bool = false, defaultToEmoji: Bool = false, hasEmoji: Bool = true, hasGifs: Bool = false, hasInteractiveStickers: Bool = true) {
         self.context = context
@@ -2204,16 +2208,30 @@ private final class InteractiveStickerButtonContent: Component {
         func update(component: InteractiveStickerButtonContent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.backgroundLayer.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.11).cgColor
             
-            let iconSize = self.icon.update(
-                transition: .immediate,
-                component: AnyComponent(BundleIconComponent(
-                    name: component.iconName,
-                    tintColor: .white,
-                    maxSize: CGSize(width: 20.0, height: 20.0)
-                )),
-                environment: {},
-                containerSize: availableSize
-            )
+            let iconSize: CGSize
+            if component.iconName == "Sun" {
+                iconSize = self.icon.update(
+                    transition: .immediate,
+                    component: AnyComponent(Text(
+                        text: "☀️",
+                        font: Font.with(size: 23.0, design: .camera),
+                        color: .white
+                    )),
+                    environment: {},
+                    containerSize: availableSize
+                )
+            } else {
+                iconSize = self.icon.update(
+                    transition: .immediate,
+                    component: AnyComponent(BundleIconComponent(
+                        name: component.iconName,
+                        tintColor: .white,
+                        maxSize: CGSize(width: 20.0, height: 20.0)
+                    )),
+                    environment: {},
+                    containerSize: availableSize
+                )
+            }
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(Text(
@@ -2473,7 +2491,7 @@ final class ItemStack<ChildEnvironment: Equatable>: CombinedComponent {
                 
                 let remainingWidth = context.availableSize.width - itemsWidth - context.component.padding * 2.0
                 let spacing = remainingWidth / CGFloat(rowItemsCount - 1)
-                if spacing < context.component.minSpacing || currentGroup.count == 2 {
+                if spacing < context.component.minSpacing || currentGroup.count == 3 {
                     groups.append(currentGroup)
                     currentGroup = []
                 }
@@ -2537,6 +2555,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
     var audioAction: () -> Void = {}
     var reactionAction: () -> Void = {}
     var linkAction: () -> Void = {}
+    var weatherAction: () -> Void = {}
     
     init(isPremium: Bool) {
         self.isPremium = isPremium
@@ -2597,6 +2616,29 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
                                     action: { [weak self] in
                                         if let self {
                                             self.locationAction()
+                                        }
+                                    })
+                            )
+                        ),
+                        AnyComponentWithIdentity(
+                            id: "weather",
+                            component: AnyComponent(
+                                CameraButton(
+                                    content: AnyComponentWithIdentity(
+                                        id: "weather",
+                                        component: AnyComponent(
+                                            InteractiveStickerButtonContent(
+                                                theme: theme,
+                                                title: "35°C",
+                                                iconName: "Sun",
+                                                useOpaqueTheme: useOpaqueTheme,
+                                                tintContainerView: self.tintContainerView
+                                            )
+                                        )
+                                    ),
+                                    action: { [weak self] in
+                                        if let self {
+                                            self.weatherAction()
                                         }
                                     })
                             )

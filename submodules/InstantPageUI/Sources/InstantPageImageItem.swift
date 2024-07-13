@@ -27,7 +27,7 @@ public final class InstantPageImageItem: InstantPageItem {
         return [self.media]
     }
     
-    let interactive: Bool
+    public let interactive: Bool
     let roundCorners: Bool
     let fit: Bool
     

@@ -32,6 +32,8 @@ extension PremiumGiftSource {
             return "attach"
         case .settings:
             return "settings"
+        case .stars:
+            return ""
         case .chatList:
             return "chats"
         case .channelBoost:
@@ -241,7 +243,6 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                         }
                         names.append("**\(context.component.peers[i].compactDisplayTitle)**")
                     }
-                    descriptionString = strings.Premium_Gift_MultipleDescription(names, "").string
                 } else {
                     for i in 0 ..< min(3, context.component.peers.count) {
                         if i == 0 {

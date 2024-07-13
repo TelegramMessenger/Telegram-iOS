@@ -12490,3 +12490,15 @@ Sorry for the inconvenience.";
 
 "WebApp.Miniapp" = "miniapp";
 "WebApp.Share" = "Share";
+
+"Stars.Purchase.GiftStars" = "Gift Stars";
+"Stars.Purchase.GiftInfo" = "With Stars, **%1$@** will be able to unlock content and services on Telegram. [See Examples >]()";
+"Notification.StarsGift.Sent" = "%1$@ sent you a gift for %2$@";
+"Notification.StarsGift.SentYou" = "You sent a gift for %@";
+
+"Notification.StarsGift.Title_1" = "%@ Star";
+"Notification.StarsGift.Title_any" = "%@ Stars";
+"Notification.StarsGift.Subtitle" = "Use Stars to unlock content and services on Telegram.";
+"Notification.StarsGift.SubtitleYou" = "With Stars, %@ will be able to unlock content and services on Telegram.";
+
+"Bot.Settings" = "Bot Settings";

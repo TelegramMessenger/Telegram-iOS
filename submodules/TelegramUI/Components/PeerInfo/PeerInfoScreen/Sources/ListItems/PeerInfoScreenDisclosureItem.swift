@@ -2,6 +2,8 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import TextNodeWithEntities
+import AccountContext
 
 final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
     enum Label {
@@ -12,6 +14,7 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
         
         case none
         case text(String)
+        case attributedText(NSAttributedString)
         case coloredText(String, LabelColor)
         case badge(String, UIColor)
         case semitransparentBadge(String, UIColor)
@@ -22,6 +25,8 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
             switch self {
             case .none, .image:
                 return ""
+            case let .attributedText(text):
+                return text.string
             case let .text(text), let .coloredText(text, _), let .badge(text, _), let .semitransparentBadge(text, _), let .titleBadge(text, _):
                 return text
             }
@@ -29,7 +34,7 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
         
         var badgeColor: UIColor? {
             switch self {
-            case .none, .text, .coloredText, .image:
+            case .none, .text, .coloredText, .image, .attributedText:
                 return nil
             case let .badge(_, color), let .semitransparentBadge(_, color), let .titleBadge(_, color):
                 return color
@@ -69,7 +74,7 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
     private let maskNode: ASImageNode
     private let iconNode: ASImageNode
     private let labelBadgeNode: ASImageNode
-    private let labelNode: ImmediateTextNode
+    private let labelNode: ImmediateTextNodeWithEntities
     private var additionalLabelNode: ImmediateTextNode?
     private var additionalLabelBadgeNode: ASImageNode?
     private let textNode: ImmediateTextNode
@@ -97,7 +102,7 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         self.labelBadgeNode.displaysAsynchronously = false
         self.labelBadgeNode.isLayerBacked = true
         
-        self.labelNode = ImmediateTextNode()
+        self.labelNode = ImmediateTextNodeWithEntities()
         self.labelNode.displaysAsynchronously = false
         self.labelNode.isUserInteractionEnabled = false
         
@@ -135,7 +140,7 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         self.iconDisposable.dispose()
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenDisclosureItem else {
             return 10.0
         }
@@ -177,8 +182,20 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
             labelColorValue = presentationData.theme.list.itemSecondaryTextColor
             labelFont = titleFont
         }
-        self.labelNode.attributedText = NSAttributedString(string: item.label.text, font: labelFont, textColor: labelColorValue)
         
+        self.labelNode.arguments = TextNodeWithEntities.Arguments(
+            context: context,
+            cache: context.animationCache,
+            renderer: context.animationRenderer,
+            placeholderColor: .clear,
+            attemptSynchronous: true
+        )
+        
+        if case let .attributedText(text) = item.label {
+            self.labelNode.attributedText = text
+        } else {
+            self.labelNode.attributedText = NSAttributedString(string: item.label.text, font: labelFont, textColor: labelColorValue)
+        }
         self.textNode.maximumNumberOfLines = 1
         self.textNode.attributedText = NSAttributedString(string: item.text, font: titleFont, textColor: textColorValue)
         

@@ -88,15 +88,17 @@ public final class SliderComponent: Component {
             if let isTrackingUpdated = component.isTrackingUpdated {
                 internalIsTrackingUpdated = { [weak self] isTracking in
                     if let self {
-                        if isTracking {
-                            self.sliderView?.bordered = true
-                        } else {
-                            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: { [weak self] in
-                                self?.sliderView?.bordered = false
-                            })
+                        if !"".isEmpty {
+                            if isTracking {
+                                self.sliderView?.bordered = true
+                            } else {
+                                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: { [weak self] in
+                                    self?.sliderView?.bordered = false
+                                })
+                            }
                         }
-                        isTrackingUpdated(isTracking)
                     }
+                    isTrackingUpdated(isTracking)
                 }
             }
                         

@@ -189,6 +189,7 @@ public final class LocationMapNode: ASDisplayNode, MKMapViewDelegateTarget {
     
     public static let defaultMapSpan = MKCoordinateSpan(latitudeDelta: 0.016, longitudeDelta: 0.016)
     public static let viewMapSpan = MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
+    public static let globalMapSpan = MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
     
     class ProximityCircleRenderer: MKCircleRenderer {
         override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {

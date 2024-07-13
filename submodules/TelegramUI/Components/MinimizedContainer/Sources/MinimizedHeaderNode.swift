@@ -25,11 +25,14 @@ final class MinimizedHeaderNode: ASDisplayNode {
     var theme: NavigationControllerTheme {
         didSet {
             self.backgroundView.backgroundColor = self.theme.navigationBar.opaqueBackgroundColor
+            self.progressView.backgroundColor = self.theme.navigationBar.primaryTextColor.withAlphaComponent(0.06)
+            self.iconView.tintColor = self.theme.navigationBar.primaryTextColor
         }
     }
     let strings: PresentationStrings
     
     private let backgroundView = UIView()
+    private let progressView = UIView()
     private var iconView = UIImageView()
     private let titleLabel = ComponentView<Empty>()
     private let closeButton = ComponentView<Empty>()
@@ -46,6 +49,12 @@ final class MinimizedHeaderNode: ASDisplayNode {
                     self.icon = icon
                 } else {
                     self.icon = nil
+                }
+                
+                if self.controllers.count == 1, let progress = self.controllers.first?.minimizedProgress {
+                    self.progress = progress
+                } else {
+                    self.progress = nil
                 }
                 
                 if newValue.count != self.controllers.count {
@@ -93,6 +102,14 @@ final class MinimizedHeaderNode: ASDisplayNode {
         }
     }
     
+    var progress: Float? {
+        didSet {
+            if let (size, insets, isExpanded) = self.validLayout {
+                self.update(size: size, insets: insets, isExpanded: isExpanded, transition: .immediate)
+            }
+        }
+    }
+    
     var title: String? {
         didSet {
             if let (size, insets, isExpanded) = self.validLayout {
@@ -111,20 +128,25 @@ final class MinimizedHeaderNode: ASDisplayNode {
         self.strings = strings
         
         self.backgroundView.clipsToBounds = true
-        self.backgroundView.backgroundColor = theme.navigationBar.opaqueBackgroundColor
+        self.backgroundView.backgroundColor = self.theme.navigationBar.opaqueBackgroundColor
         self.backgroundView.layer.cornerRadius = 10.0
         if #available(iOS 11.0, *) {
             self.backgroundView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
         }
         
+        self.progressView.backgroundColor = self.theme.navigationBar.primaryTextColor.withAlphaComponent(0.06)
+        
+        self.iconView.contentMode = .scaleAspectFit
         self.iconView.clipsToBounds = true
         self.iconView.layer.cornerRadius = 2.5
+        self.iconView.tintColor = self.theme.navigationBar.primaryTextColor
                                 
         super.init()
         
         self.clipsToBounds = true
         
         self.view.addSubview(self.backgroundView)
+        self.backgroundView.addSubview(self.progressView)
         self.backgroundView.addSubview(self.iconView)
                 
         applySmoothRoundedCorners(self.backgroundView.layer)
@@ -149,9 +171,9 @@ final class MinimizedHeaderNode: ASDisplayNode {
     
     func update(size: CGSize, insets: UIEdgeInsets, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, insets, isExpanded)
-                
+                        
         let headerHeight: CGFloat = 44.0
-        let titleSpacing: CGFloat = 4.0
+        let titleSpacing: CGFloat = 6.0
         var titleSideInset: CGFloat = 56.0
         if !isExpanded {
             titleSideInset += insets.left
@@ -177,7 +199,7 @@ final class MinimizedHeaderNode: ASDisplayNode {
         }
         
         let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - totalWidth) / 2.0), y: floorToScreenPixels((headerHeight - iconSize.height) / 2.0)), size: iconSize)
-        transition.updateFrame(view: self.iconView, frame: iconFrame)
+        self.iconView.frame = iconFrame
         
         let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - totalWidth) / 2.0) + totalWidth - titleSize.width, y: floorToScreenPixels((headerHeight - titleSize.height) / 2.0)), size: titleSize)
         if let view = self.titleLabel.view {
@@ -220,5 +242,10 @@ final class MinimizedHeaderNode: ASDisplayNode {
         }
         
         transition.updateFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: CGSize(width: size.width, height: 243.0)))
+        
+        transition.updateAlpha(layer: self.progressView.layer, alpha: isExpanded && self.progress != nil ? 1.0 : 0.0)
+        if let progress = self.progress {
+            self.progressView.frame = CGRect(origin: .zero, size: CGSize(width: size.width * CGFloat(progress), height: 243.0))
+        }
     }
 }

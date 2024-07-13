@@ -173,6 +173,10 @@ public extension AttachmentContainable {
         return nil
     }
     
+    var minimizedProgress: Float? {
+        return nil
+    }
+    
     var isPanGestureEnabled: (() -> Bool)? {
         return nil
     }
@@ -336,7 +340,9 @@ public class AttachmentController: ViewController, MinimizableController {
     
     public private(set) var minimizedTopEdgeOffset: CGFloat?
     public private(set) var minimizedBounds: CGRect?
-    public private(set) var minimizedIcon: UIImage?
+    public var minimizedIcon: UIImage? {
+        return self.mainController.minimizedIcon
+    }
         
     private final class Node: ASDisplayNode {
         private weak var controller: AttachmentController?
