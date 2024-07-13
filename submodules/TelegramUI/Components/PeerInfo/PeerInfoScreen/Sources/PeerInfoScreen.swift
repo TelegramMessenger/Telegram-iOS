@@ -1475,8 +1475,33 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         interaction.openEncryptionKey()
                     }))
                 }
+                                
+                let starsBalance = data.starsRevenueStatsState?.balances.currentBalance ?? 0
+                let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? 0
                 
-                if user.botInfo != nil {
+                if overallStarsBalance > 0 {
+                    var string = ""
+                    if overallStarsBalance > 0 {
+                        string.append("*\(presentationStringsFormattedNumber(Int32(starsBalance), presentationData.dateTimeFormat.groupingSeparator))")
+                    }
+                    let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                    if let range = attributedString.string.range(of: "*") {
+                        attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
+                        attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
+                    }
+                    
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenDisclosureItem(id: 9, label: .attributedText(attributedString), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.balance, action: {
+                        interaction.editingOpenStars()
+                    }))
+                }
+                   
+                if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenDisclosureItem(id: 10, label: .none, text: presentationData.strings.Bot_Settings, icon: UIImage(bundleImageName: "Chat/Info/SettingsIcon"), action: {
+                        interaction.openEditing()
+                    }))
+                }
+                
+                if let botInfo = user.botInfo, !botInfo.flags.contains(.canEdit) {
                     items[currentPeerInfoSection]!.append(PeerInfoScreenActionItem(id: 6, text: presentationData.strings.ReportPeer_Report, action: {
                         interaction.openReport(.default)
                     }))
@@ -1487,31 +1512,6 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         interaction.openAddBotToGroup()
                     }))
                     items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: 8, text: presentationData.strings.Bot_AddToChatInfo))
-                }
-                
-                if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
-                    let starsBalance = data.starsRevenueStatsState?.balances.availableBalance ?? 0
-                    let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? 0
-                    
-                    if overallStarsBalance > 0 {
-                        var string = ""
-                        if overallStarsBalance > 0 {
-                            string.append("*\(starsBalance)")
-                        }
-                        let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
-                        if let range = attributedString.string.range(of: "*") {
-                            attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
-                            attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
-                        }
-                        
-                        items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: 9, label: .attributedText(attributedString), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.balance, action: {
-                            interaction.editingOpenStars()
-                        }))
-                    }
-                    
-                    items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: 10, label: .none, text: presentationData.strings.Bot_Settings, icon: UIImage(bundleImageName: "Chat/Info/SettingsIcon"), action: {
-                        interaction.openEditing()
-                    }))
                 }
             }
         }
@@ -1680,8 +1680,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             }
                             
                             if cachedData.flags.contains(.canViewRevenue) || cachedData.flags.contains(.canViewStarsRevenue) {
-                                let revenueBalance = data.revenueStatsState?.balances.availableBalance ?? 0
-                                let starsBalance = data.starsRevenueStatsState?.balances.availableBalance ?? 0
+                                let revenueBalance = data.revenueStatsState?.balances.currentBalance ?? 0
+                                let starsBalance = data.starsRevenueStatsState?.balances.currentBalance ?? 0
                                 
                                 let overallRevenueBalance = data.revenueStatsState?.balances.overallRevenue ?? 0
                                 let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? 0
@@ -1695,7 +1695,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                                         if !string.isEmpty {
                                             string.append(" ")
                                         }
-                                        string.append("*\(starsBalance)")
+                                        string.append("*\(presentationStringsFormattedNumber(Int32(starsBalance), presentationData.dateTimeFormat.groupingSeparator))")
                                     }
                                     let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
                                     if let range = attributedString.string.range(of: "#") {
