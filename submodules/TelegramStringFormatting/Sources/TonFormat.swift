@@ -3,19 +3,19 @@ import UIKit
 
 let walletAddressLength: Int = 48
 
-func formatAddress(_ address: String) -> String {
+public func formatTonAddress(_ address: String) -> String {
     var address = address
     address.insert("\n", at: address.index(address.startIndex, offsetBy: address.count / 2))
     return address
 }
 
-func formatUsdValue(_ value: Int64, divide: Bool = true, rate: Double) -> String {
+public func formatTonUsdValue(_ value: Int64, divide: Bool = true, rate: Double) -> String {
     let normalizedValue: Double = divide ? Double(value) / 1000000000 : Double(value)
     let formattedValue = String(format: "%0.2f", normalizedValue * rate)
     return "$\(formattedValue)"
 }
 
-func formatBalanceText(_ value: Int64, decimalSeparator: String, showPlus: Bool = false) -> String {
+public func formatTonAmountText(_ value: Int64, decimalSeparator: String, showPlus: Bool = false) -> String {
     var balanceText = "\(abs(value))"
     while balanceText.count < 10 {
         balanceText.insert("0", at: balanceText.startIndex)
@@ -48,7 +48,7 @@ func formatBalanceText(_ value: Int64, decimalSeparator: String, showPlus: Bool 
 }
 
 private let invalidAddressCharacters = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_=").inverted
-func isValidAddress(_ address: String, exactLength: Bool = false) -> Bool {
+public func isValidTonAddress(_ address: String, exactLength: Bool = false) -> Bool {
     if address.count > walletAddressLength || address.rangeOfCharacter(from: invalidAddressCharacters) != nil {
         return false
     }
@@ -59,7 +59,7 @@ func isValidAddress(_ address: String, exactLength: Bool = false) -> Bool {
 }
 
 private let amountDelimeterCharacters = CharacterSet(charactersIn: "0123456789-+").inverted
-func amountAttributedString(_ string: String, integralFont: UIFont, fractionalFont: UIFont, color: UIColor) -> NSAttributedString {
+public func tonAmountAttributedString(_ string: String, integralFont: UIFont, fractionalFont: UIFont, color: UIColor) -> NSAttributedString {
     let result = NSMutableAttributedString()
     if let range = string.rangeOfCharacter(from: amountDelimeterCharacters) {
         let integralPart = String(string[..<range.lowerBound])
@@ -71,3 +71,4 @@ func amountAttributedString(_ string: String, integralFont: UIFont, fractionalFo
     }
     return result
 }
+

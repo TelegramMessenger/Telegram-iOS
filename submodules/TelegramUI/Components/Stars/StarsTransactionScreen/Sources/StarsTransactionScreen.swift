@@ -362,7 +362,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             
             let imageSubject: StarsImageComponent.Subject
             if isGift {
-                imageSubject = .gift
+                imageSubject = .gift(count)
             } else if !media.isEmpty {
                 imageSubject = .media(media)
             } else if let photo {

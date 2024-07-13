@@ -1689,7 +1689,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                                 if overallRevenueBalance > 0 || overallStarsBalance > 0 {
                                     var string = ""
                                     if overallRevenueBalance > 0 {
-                                        string.append("#\(revenueBalance)")
+                                        string.append("#\(formatTonAmountText(revenueBalance, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))")
                                     }
                                     if overallStarsBalance > 0 {
                                         if !string.isEmpty {

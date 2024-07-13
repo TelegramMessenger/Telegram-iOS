@@ -288,7 +288,7 @@ public final class StarsImageComponent: Component {
                     return false
                 }
             case let .gift(lhsCount):
-                if case let .gift = rhs(rhsCount) {
+                if case let .gift(rhsCount) = rhs, lhsCount == rhsCount {
                     return true
                 } else {
                     return false

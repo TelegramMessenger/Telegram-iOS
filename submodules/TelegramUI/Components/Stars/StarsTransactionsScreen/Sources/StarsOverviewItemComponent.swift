@@ -80,7 +80,7 @@ final class StarsOverviewItemComponent: Component {
             }
             
             let valueString = presentationStringsFormattedNumber(Int32(component.value), component.dateTimeFormat.groupingSeparator)
-            let usdValueString = formatUsdValue(component.value, rate: component.rate)
+            let usdValueString = formatStarsUsdValue(component.value, rate: component.rate)
             
             let valueSize = self.value.update(
                 transition: .immediate,

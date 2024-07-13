@@ -12493,6 +12493,21 @@ Sorry for the inconvenience.";
 
 "Stars.Purchase.GiftStars" = "Gift Stars";
 "Stars.Purchase.GiftInfo" = "With Stars, **%1$@** will be able to unlock content and services on Telegram. [See Examples >]()";
+
+"Stars.Purchase.SubscriptionInfo" = "Buy Stars to subscribe for **%@**.";
+"Stars.Purchase.SubscriptionRenewInfo" = "Buy Stars to keep your subscription for **%@**.";
+
+"InviteLink.Create.Subscription" = "Require Monthly Fee";
+"InviteLink.Create.Subscription.Placeholder" = "Stars amount per month";
+"InviteLink.Create.Subscription.PerMonth" = "%@ / month";
+"InviteLink.Create.Subscription.Info" = "Charge a subscription fee from people joining your channel via this link. [Learn More >]()";
+"InviteLink.Create.Subscription.EditInfo" = "If you need to change the subscription fee, create a new invite link with a different price.";
+
+"InviteLink.Create.RequestApprovalUnavailableInfo" = "You can't enable admin approval for links that require a monthly fee.";
+
+"InviteLink.Subscription.Fee" = "Subscription Fee";
+"InviteLink.Subscription.Info" = "You get approximately %@ monthly";
+
 "Notification.StarsGift.Sent" = "%1$@ sent you a gift for %2$@";
 "Notification.StarsGift.SentYou" = "You sent a gift for %@";
 
@@ -12502,3 +12517,5 @@ Sorry for the inconvenience.";
 "Notification.StarsGift.SubtitleYou" = "With Stars, %@ will be able to unlock content and services on Telegram.";
 
 "Bot.Settings" = "Bot Settings";
+
+"Browser.OpenInNewTap" = "";
