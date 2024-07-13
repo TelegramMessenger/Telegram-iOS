@@ -257,10 +257,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     if let value = URL(string: "ipfs:/" + parsedUrl.path) {
                         parsedUrl = value
                     }
-                }
-            } else if let scheme = parsedUrl.scheme, scheme == "https", parsedUrl.host == "t.me", parsedUrl.path.hasPrefix("/ipfs/") {
-                if let value = URL(string: "ipfs://" + String(parsedUrl.path[parsedUrl.path.index(parsedUrl.path.startIndex, offsetBy: "/ipfs/".count)...])) {
-                    parsedUrl = value
+                } else if parsedUrl.host == "ton" {
+                    if let value = URL(string: "ton:/" + parsedUrl.path) {
+                        parsedUrl = value
+                    }
                 }
             }
         }
@@ -1009,7 +1009,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             isInternetUrl = true
         }
         if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
-            if parsedUrl.scheme == "ipfs" || parsedUrl.scheme == "ipns" {
+            if parsedUrl.scheme == "ipfs" || parsedUrl.scheme == "ipns" || parsedUrl.scheme == "ton" {
                 isInternetUrl = true
             }
         }

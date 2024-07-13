@@ -370,6 +370,7 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         super.didLoad()
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        self.view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:))))
     }
     
     override public func animateIn() {
@@ -491,9 +492,9 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         }
     }
     
-    /*@objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state {
-            self.interfaceInteraction?.navigateToMessage(self.messageId, false, true, .generic)
+    @objc func longPressGesture(_ recognizer: UILongPressGestureRecognizer) {
+        if case .began = recognizer.state {
+            self.interfaceInteraction?.navigateToMessage(self.messageId, false, true, ChatLoadingMessageSubject.generic)
         }
-    }*/
+    }
 }

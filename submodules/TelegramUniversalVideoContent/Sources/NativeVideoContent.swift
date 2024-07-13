@@ -251,6 +251,10 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         }
         
         if displayImage {
+            if captureProtected {
+                setLayerDisableScreenshots(self.imageNode.layer, captureProtected)
+            }
+            
             self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, userLocation: userLocation, videoReference: fileReference, imageReference: imageReference, onlyFullSize: onlyFullSizeThumbnail, useLargeThumbnail: useLargeThumbnail, autoFetchFullSizeThumbnail: autoFetchFullSizeThumbnail || fileReference.media.isInstantVideo) |> map { [weak self] getSize, getData in
                 Queue.mainQueue().async {
                     if let strongSelf = self, strongSelf.dimensions == nil {

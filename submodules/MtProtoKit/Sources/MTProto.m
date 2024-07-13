@@ -55,7 +55,7 @@
 
 #import <MtProtoKit/MTSignal.h>
 #import <MtProtoKit/MTQueue.h>
-
+#import <MtProtoKit/MTBindKeyMessageService.h>
 typedef enum {
     MTProtoStateAwaitingDatacenterScheme = 1,
     MTProtoStateAwaitingDatacenterAuthorization = 2,
@@ -885,7 +885,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 
 - (MTDatacenterAuthKey *)getAuthKeyForCurrentScheme:(MTTransportScheme *)scheme createIfNeeded:(bool)createIfNeeded authInfoSelector:(MTDatacenterAuthInfoSelector *)authInfoSelector {
     if (_useExplicitAuthKey) {
-        MTDatacenterAuthInfoSelector selector = MTDatacenterAuthInfoSelectorEphemeralMain;
+        MTDatacenterAuthInfoSelector selector = scheme.media ? MTDatacenterAuthInfoSelectorEphemeralMedia : MTDatacenterAuthInfoSelectorEphemeralMain;
         if (authInfoSelector != nil) {
             *authInfoSelector = selector;
         }
@@ -2151,6 +2151,15 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     }
     
     if (_useExplicitAuthKey != nil) {
+        if (scheme.media) {
+            for (NSInteger i = (NSInteger)_messageServices.count - 1; i >= 0; i--)
+            {
+                MTBindKeyMessageService* messageService = (MTBindKeyMessageService *)_messageServices[(NSUInteger)i];
+                if ([messageService respondsToSelector:@selector(complete)]) {
+                    [messageService complete];
+                }
+            }
+        }
     } else if (_cdn) {
         _validAuthInfo = nil;
         

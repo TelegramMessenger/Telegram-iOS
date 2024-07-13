@@ -4749,25 +4749,31 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 if let forwardInfoNode = self.forwardInfoNode, forwardInfoNode.frame.contains(location) {
                     if let item = self.item, let forwardInfo = item.message.forwardInfo {
-                        let performAction: () -> Void = {
+                        let performAction: () -> Void = { [weak forwardInfoNode] in
                             if let sourceMessageId = forwardInfo.sourceMessageId {
                                 if let channel = forwardInfo.author as? TelegramChannel, channel.addressName == nil {
                                     if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
                                     } else if case .member = channel.participationStatus {
                                     } else if !item.message.id.peerId.isReplies {
-                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, false, forwardInfoNode, nil)
+                                        if let forwardInfoNode {
+                                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, false, forwardInfoNode, nil)
+                                        }
                                         return
                                     }
                                 }
-                                item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId, NavigateToMessageParams(timestamp: nil, quote: nil))
+                                if let forwardInfoNode {
+                                    item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId, NavigateToMessageParams(timestamp: nil, quote: nil, progress: forwardInfoNode.makeActivate()?()))
+                                }
                             } else if let peer = forwardInfo.source ?? forwardInfo.author {
                                 item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info(nil) : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                             } else if let _ = forwardInfo.authorSignature {
-                                var subRect: CGRect?
-                                if let textNode = forwardInfoNode.nameNode {
-                                    subRect = textNode.frame
+                                if let forwardInfoNode {
+                                    var subRect: CGRect?
+                                    if let textNode = forwardInfoNode.nameNode {
+                                        subRect = textNode.frame
+                                    }
+                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, false, forwardInfoNode, subRect)
                                 }
-                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, false, forwardInfoNode, subRect)
                             }
                         }
                         

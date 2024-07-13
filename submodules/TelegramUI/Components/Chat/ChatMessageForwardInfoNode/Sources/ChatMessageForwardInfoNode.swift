@@ -8,6 +8,8 @@ import TelegramPresentationData
 import LocalizedPeerData
 import AccountContext
 import AvatarNode
+import TextLoadingEffect
+import SwiftSignalKit
 
 public enum ChatMessageForwardInfoType: Equatable {
     case bubble(incoming: Bool)
@@ -85,12 +87,20 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
     private var highlightColor: UIColor?
     private var linkHighlightingNode: LinkHighlightingNode?
     
+    private var hasLinkProgress: Bool = false
+    private var linkProgressView: TextLoadingEffectView?
+    private var linkProgressDisposable: Disposable?
+    
     private var previousPeer: Peer?
     
     public var openPsa: ((String, ASDisplayNode) -> Void)?
     
     override public init() {
         super.init()
+    }
+    
+    deinit {
+        self.linkProgressDisposable?.dispose()
     }
     
     public func hasAction(at point: CGPoint) -> Bool {
@@ -172,7 +182,6 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
         
         if isHighlighted, !initialRects.isEmpty, let highlightColor = self.highlightColor {
             let rects = initialRects
-            
             let linkHighlightingNode: LinkHighlightingNode
             if let current = self.linkHighlightingNode {
                 linkHighlightingNode = current
@@ -188,6 +197,85 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
             linkHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak linkHighlightingNode] _ in
                 linkHighlightingNode?.removeFromSupernode()
             })
+        }
+    }
+    
+    public func makeActivate() -> (() -> Promise<Bool>?)? {
+        return { [weak self] in
+            guard let self else {
+                return nil
+            }
+            
+            let promise = Promise<Bool>()
+            self.linkProgressDisposable?.dispose()
+            
+            if self.hasLinkProgress {
+                self.hasLinkProgress = false
+                self.updateLinkProgressState()
+            }
+            
+            self.linkProgressDisposable = (promise.get() |> deliverOnMainQueue).startStrict(next: { [weak self] value in
+                guard let self else {
+                    return
+                }
+                if self.hasLinkProgress != value {
+                    self.hasLinkProgress = value
+                    self.updateLinkProgressState()
+                }
+            })
+            
+            return promise
+        }
+    }
+    
+    private func updateLinkProgressState() {
+        guard let highlightColor = self.highlightColor else {
+            return
+        }
+        
+        if self.hasLinkProgress, let titleNode = self.titleNode, let nameNode = self.nameNode {
+            var initialRects: [CGRect] = []
+            let addRects: (TextNode, CGPoint, CGFloat) -> Void = { textNode, offset, additionalWidth in
+                guard let cachedLayout = textNode.cachedLayout else {
+                    return
+                }
+                for rect in cachedLayout.linesRects() {
+                    var rect = rect
+                    rect.size.width += rect.origin.x + additionalWidth
+                    rect.origin.x = 0.0
+                    initialRects.append(rect.offsetBy(dx: offset.x, dy: offset.y))
+                }
+            }
+            
+            let offsetY: CGFloat = -12.0
+            if let titleNode = self.titleNode {
+                addRects(titleNode, CGPoint(x: titleNode.frame.minX, y: offsetY + titleNode.frame.minY), 0.0)
+                
+                if let nameNode = self.nameNode {
+                    addRects(nameNode, CGPoint(x: titleNode.frame.minX, y: offsetY + nameNode.frame.minY), nameNode.frame.minX - titleNode.frame.minX)
+                }
+            }
+            
+            let linkProgressView: TextLoadingEffectView
+            if let current = self.linkProgressView {
+                linkProgressView = current
+            } else {
+                linkProgressView = TextLoadingEffectView(frame: CGRect())
+                self.linkProgressView = linkProgressView
+                self.view.addSubview(linkProgressView)
+            }
+            linkProgressView.frame = titleNode.frame
+            
+            let progressColor: UIColor = highlightColor
+            
+            linkProgressView.update(color: progressColor, size: CGRectUnion(titleNode.frame, nameNode.frame).size, rects: initialRects)
+        } else {
+            if let linkProgressView = self.linkProgressView {
+                self.linkProgressView = nil
+                linkProgressView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak linkProgressView] _ in
+                    linkProgressView?.removeFromSuperview()
+                })
+            }
         }
     }
     
