@@ -245,6 +245,8 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         self.view.endEditing(true)
     }
     
+    private var isDraggingHeader = false
+    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if self.ignoreScrolling || self.isDismissed {
             return
@@ -253,6 +255,9 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         progress = max(0.0, min(1.0, progress))
         self.dismissProgress = progress
         self.applyDismissProgress(transition: .immediate, completion: {})
+        
+        let location = scrollView.panGestureRecognizer.location(in: scrollView).offsetBy(dx: 0.0, dy: -self.container.frame.minY)
+        self.isDraggingHeader = location.y < 66.0
     }
     
     private func applyDismissProgress(transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
@@ -277,10 +282,20 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         let transition: ContainedViewLayoutTransition
         let dismissProgress: CGFloat
         if (velocity.y < -0.5 || progress >= 0.5) && self.checkInteractiveDismissWithControllers() {
-            dismissProgress = 1.0
-            targetOffset = 0.0
-            transition = .animated(duration: duration, curve: .easeInOut)
-            self.isDismissed = true
+            if self.isDraggingHeader, let controller = self.container.controllers.last as? MinimizableController {
+                dismissProgress = 0.0
+                targetOffset = 0.0
+                transition = .immediate
+                
+                let topEdgeOffset = self.container.view.convert(self.container.bounds, to: self.view).minY
+                controller.requestMinimize(topEdgeOffset: topEdgeOffset, initialVelocity: velocity.y)
+                self.dim.removeFromSupernode()
+            } else {
+                dismissProgress = 1.0
+                targetOffset = 0.0
+                transition = .animated(duration: duration, curve: .easeInOut)
+                self.isDismissed = true
+            }
         } else {
             dismissProgress = 0.0
             targetOffset = self.bounds.height

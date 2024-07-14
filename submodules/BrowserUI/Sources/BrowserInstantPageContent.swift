@@ -311,14 +311,10 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         
     }
     
-    func setFontSize(_ fontSize: CGFloat) {
+    func updateFontState(_ state: BrowserPresentationState.FontState) {
         
     }
-    
-    func setForceSerif(_ force: Bool) {
         
-    }
-    
     func setSearch(_ query: String?, completion: ((Int) -> Void)?) {
         
     }

@@ -170,12 +170,26 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.faviconDisposable.dispose()
     }
     
-    func setFontSize(_ fontSize: CGFloat) {
-        let js = "document.getElementsByTagName('body')[0].style.webkitTextSizeAdjust='\(Int(fontSize * 100.0))%'"
+    var currentFontState = BrowserPresentationState.FontState(size: 100, isSerif: false)
+    func updateFontState(_ state: BrowserPresentationState.FontState) {
+        self.updateFontState(state, force: false)
+    }
+    func updateFontState(_ state: BrowserPresentationState.FontState, force: Bool) {
+        if self.currentFontState.size != state.size || (force && self.currentFontState.size != 100) {
+            self.setFontSize(state.size)
+        }
+        if self.currentFontState.isSerif != state.isSerif || (force && self.currentFontState.isSerif) {
+            self.setFontSerif(state.isSerif)
+        }
+        self.currentFontState = state
+    }
+    
+    private func setFontSize(_ fontSize: Int32) {
+        let js = "document.getElementsByTagName('body')[0].style.webkitTextSizeAdjust='\(fontSize)%'"
         self.webView.evaluateJavaScript(js, completionHandler: nil)
     }
     
-    func setForceSerif(_ force: Bool) {
+    private func setFontSerif(_ force: Bool) {
         let js: String
         if force {
             js = "document.getElementsByTagName(\'body\')[0].style.fontFamily = 'Georgia, serif';"
@@ -388,13 +402,16 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
     }
     
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        self.updateFontState(self.currentFontState, force: true)
+    }
+    
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         self.updateState {
             $0
                 .withUpdatedBackList(webView.backForwardList.backList.map { BrowserContentState.HistoryItem(webItem: $0) })
                 .withUpdatedForwardList(webView.backForwardList.forwardList.map { BrowserContentState.HistoryItem(webItem: $0) })
-        }
-        
+        }      
         self.parseFavicon()
     }
     

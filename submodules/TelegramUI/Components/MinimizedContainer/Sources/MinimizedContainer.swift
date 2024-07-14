@@ -28,11 +28,18 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         let id: AnyHashable
         let controller: MinimizableController
         let beforeMaximize: (NavigationController, @escaping () -> Void) -> Void
+        let topEdgeOffset: CGFloat?
         
-        init(id: AnyHashable, controller: MinimizableController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void) {
+        init(
+            id: AnyHashable,
+            controller: MinimizableController,
+            beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void,
+            topEdgeOffset: CGFloat?
+        ) {
             self.id = id
             self.controller = controller
             self.beforeMaximize = beforeMaximize
+            self.topEdgeOffset = topEdgeOffset
         }
     }
     
@@ -538,11 +545,12 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         return result
     }
     
-    public func addController(_ viewController: MinimizableController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, transition: ContainedViewLayoutTransition) {
+    public func addController(_ viewController: MinimizableController, topEdgeOffset: CGFloat?, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, transition: ContainedViewLayoutTransition) {
         let item = Item(
             id: AnyHashable(Int64.random(in: Int64.min ... Int64.max)),
             controller: viewController,
-            beforeMaximize: beforeMaximize
+            beforeMaximize: beforeMaximize,
+            topEdgeOffset: topEdgeOffset
         )
         self.items.append(item)
         
@@ -986,14 +994,19 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 itemNode.animateIn()
                 
                 var initialOffset = insets.top
-                if let minimizedTopEdgeOffset = itemNode.item.controller.minimizedTopEdgeOffset {
-                    initialOffset += minimizedTopEdgeOffset
-                }
-                if layout.size.width < layout.size.height {
-                    initialOffset += 10.0
-                }
-                if let minimizedBounds = itemNode.item.controller.minimizedBounds {
-                    initialOffset += -minimizedBounds.minY
+                if let topEdgeOffset = itemNode.item.topEdgeOffset {
+                    initialOffset += topEdgeOffset
+                    dimView.removeFromSuperview()
+                } else {
+                    if let minimizedTopEdgeOffset = itemNode.item.controller.minimizedTopEdgeOffset {
+                        initialOffset += minimizedTopEdgeOffset
+                    }
+                    if layout.size.width < layout.size.height {
+                        initialOffset += 10.0
+                    }
+                    if let minimizedBounds = itemNode.item.controller.minimizedBounds {
+                        initialOffset += -minimizedBounds.minY
+                    }
                 }
                 
                 transition.animatePosition(node: itemNode, from: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0 + initialOffset), completion: { _ in
@@ -1075,6 +1088,14 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                             
                             itemNode.animateOut()
                             transition.updateTransform(node: itemNode, transform: CATransform3DIdentity)
+                            
+                            if let _ = itemNode.snapshotView {
+                                if itemNode.item.controller.minimizedTopEdgeOffset == nil, let snapshotView = itemNode.snapshotView, snapshotView.frame.origin.y == -12.0 {
+                                    let snapshotFrame = snapshotView.frame.offsetBy(dx: 0.0, dy: 12.0)
+                                    transition.updateFrame(view: snapshotView, frame: snapshotFrame)
+                                }
+                            }
+                            
                             transition.updatePosition(node: itemNode, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0 + topInset + self.scrollView.contentOffset.y), completion: { _ in
                                 self.isApplyingTransition = false
                                 if self.currentTransition == currentTransition {

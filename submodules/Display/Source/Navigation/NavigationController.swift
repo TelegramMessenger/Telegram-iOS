@@ -1593,7 +1593,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         self._viewControllersPromise.set(self.viewControllers)
     }
         
-    public func minimizeViewController(_ viewController: MinimizableController, damping: CGFloat? = nil, velocity: CGFloat? = nil, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, setupContainer: (MinimizedContainer?) -> MinimizedContainer?, animated: Bool) {
+    public func minimizeViewController(_ viewController: MinimizableController, topEdgeOffset: CGFloat? = nil, damping: CGFloat? = nil, velocity: CGFloat? = nil, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, setupContainer: (MinimizedContainer?) -> MinimizedContainer?, animated: Bool) {
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .customSpring(damping: damping ?? 124.0, initialVelocity: velocity ?? 0.0)) : .immediate
         
         let minimizedContainer = setupContainer(self.minimizedContainer)
@@ -1605,7 +1605,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         viewController.isMinimized = true
         self.filterController(viewController, animated: true)
-        minimizedContainer?.addController(viewController, beforeMaximize: beforeMaximize, transition: transition)
+        minimizedContainer?.addController(viewController, topEdgeOffset: topEdgeOffset, beforeMaximize: beforeMaximize, transition: transition)
     }
     
     private var isMaximizing = false
