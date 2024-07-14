@@ -5,6 +5,7 @@ import ComponentFlow
 import BlurredBackgroundComponent
 import BundleIconComponent
 import TelegramPresentationData
+import ContextReferenceButtonComponent
 
 final class BrowserToolbarComponent: CombinedComponent {
     let backgroundColor: UIColor
@@ -123,17 +124,20 @@ final class NavigationToolbarContentComponent: CombinedComponent {
     let canGoBack: Bool
     let canGoForward: Bool
     let performAction: ActionSlot<BrowserScreen.Action>
+    let performHoldAction: (UIView, ContextGesture?, BrowserScreen.Action) -> Void
     
     init(
         textColor: UIColor,
         canGoBack: Bool,
         canGoForward: Bool,
-        performAction: ActionSlot<BrowserScreen.Action>
+        performAction: ActionSlot<BrowserScreen.Action>,
+        performHoldAction: @escaping (UIView, ContextGesture?, BrowserScreen.Action) -> Void
     ) {
         self.textColor = textColor
         self.canGoBack = canGoBack
         self.canGoForward = canGoForward
         self.performAction = performAction
+        self.performHoldAction = performHoldAction
     }
     
     static func ==(lhs: NavigationToolbarContentComponent, rhs: NavigationToolbarContentComponent) -> Bool {
@@ -150,32 +154,41 @@ final class NavigationToolbarContentComponent: CombinedComponent {
     }
     
     static var body: Body {
-        let back = Child(Button.self)
-        let forward = Child(Button.self)
+        let back = Child(ContextReferenceButtonComponent.self)
+        let forward = Child(ContextReferenceButtonComponent.self)
         let share = Child(Button.self)
         let openIn = Child(Button.self)
         
         return { context in
             let availableSize = context.availableSize
             let performAction = context.component.performAction
+            let performHoldAction = context.component.performHoldAction
             
             let sideInset: CGFloat = 5.0
             let buttonSize = CGSize(width: 50.0, height: availableSize.height)
             let spacing = (availableSize.width - buttonSize.width * 4.0 - sideInset * 2.0) / 3.0
             
+            let canGoBack = context.component.canGoBack
             let back = back.update(
-                component: Button(
+                component: ContextReferenceButtonComponent(
                     content: AnyComponent(
                         BundleIconComponent(
                             name: "Instant View/Back",
-                            tintColor: context.component.textColor
+                            tintColor: canGoBack ? context.component.textColor : context.component.textColor.withAlphaComponent(0.4)
                         )
                     ),
-                    isEnabled: context.component.canGoBack,
-                    action: {
-                        performAction.invoke(.navigateBack)
+                    minSize: buttonSize,
+                    action: { view, gesture in
+                        guard canGoBack else {
+                            return
+                        }
+                        if let gesture {
+                            performHoldAction(view, gesture, .navigateBack)
+                        } else {
+                            performAction.invoke(.navigateBack)
+                        }
                     }
-                ).minSize(buttonSize),
+                ),
                 availableSize: buttonSize,
                 transition: .easeInOut(duration: 0.2)
             )
@@ -183,19 +196,27 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                 .position(CGPoint(x: sideInset + back.size.width / 2.0, y: availableSize.height / 2.0))
             )
             
+            let canGoForward = context.component.canGoForward
             let forward = forward.update(
-                component: Button(
+                component: ContextReferenceButtonComponent(
                     content: AnyComponent(
                         BundleIconComponent(
                             name: "Instant View/Forward",
-                            tintColor: context.component.textColor
+                            tintColor: canGoForward ? context.component.textColor : context.component.textColor.withAlphaComponent(0.4)
                         )
                     ),
-                    isEnabled: context.component.canGoForward,
-                    action: {
-                        performAction.invoke(.navigateForward)
+                    minSize: buttonSize,
+                    action: { view, gesture in
+                        guard canGoForward else {
+                            return
+                        }
+                        if let gesture {
+                            performHoldAction(view, gesture, .navigateForward)
+                        } else {
+                            performAction.invoke(.navigateForward)
+                        }
                     }
-                ).minSize(buttonSize),
+                ),
                 availableSize: buttonSize,
                 transition: .easeInOut(duration: 0.2)
             )

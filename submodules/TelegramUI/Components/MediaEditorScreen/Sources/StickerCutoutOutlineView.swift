@@ -4,14 +4,6 @@ import Display
 import CoreImage
 import MediaEditor
 
-func createEmitterBehavior(type: String) -> NSObject {
-    let selector = ["behaviorWith", "Type:"].joined(separator: "")
-    let behaviorClass = NSClassFromString(["CA", "Emitter", "Behavior"].joined(separator: "")) as! NSObject.Type
-    let behaviorWithType = behaviorClass.method(for: NSSelectorFromString(selector))!
-    let castedBehaviorWithType = unsafeBitCast(behaviorWithType, to:(@convention(c)(Any?, Selector, Any?) -> NSObject).self)
-    return castedBehaviorWithType(behaviorClass, NSSelectorFromString(selector), type)
-}
-
 private var previousBeginTime: Int = 3
 
 final class StickerCutoutOutlineView: UIView {
@@ -81,7 +73,7 @@ final class StickerCutoutOutlineView: UIView {
         
         let lineEmitterCell = CAEmitterCell()
         lineEmitterCell.beginTime = CACurrentMediaTime()
-        let lineAlphaBehavior = createEmitterBehavior(type: "valueOverLife")
+        let lineAlphaBehavior = CAEmitterCell.createEmitterBehavior(type: "valueOverLife")
         lineAlphaBehavior.setValue("color.alpha", forKey: "keyPath")
         lineAlphaBehavior.setValue([0.0, 0.5, 0.8, 0.5, 0.0], forKey: "values")
         lineEmitterCell.setValue([lineAlphaBehavior], forKey: "emitterBehaviors")
@@ -107,7 +99,7 @@ final class StickerCutoutOutlineView: UIView {
         
         let glowEmitterCell = CAEmitterCell()
         glowEmitterCell.beginTime = CACurrentMediaTime()
-        let glowAlphaBehavior = createEmitterBehavior(type: "valueOverLife")
+        let glowAlphaBehavior = CAEmitterCell.createEmitterBehavior(type: "valueOverLife")
         glowAlphaBehavior.setValue("color.alpha", forKey: "keyPath")
         glowAlphaBehavior.setValue([0.0, 0.32, 0.4, 0.2, 0.0], forKey: "values")
         glowEmitterCell.setValue([glowAlphaBehavior], forKey: "emitterBehaviors")

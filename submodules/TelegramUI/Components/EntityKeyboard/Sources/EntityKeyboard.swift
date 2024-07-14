@@ -692,7 +692,7 @@ public final class EntityKeyboardComponent: Component {
                         deleteBackwards?()
                         AudioServicesPlaySystemSound(1155)
                     }
-                ).withHoldAction({
+                ).withHoldAction({ _ in
                     deleteBackwards?()
                     AudioServicesPlaySystemSound(1155)
                 }).minSize(CGSize(width: 38.0, height: 38.0)))))

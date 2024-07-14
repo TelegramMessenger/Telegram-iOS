@@ -175,6 +175,10 @@ final class WebAppWebView: WKWebView {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        print()
+    }
+    
     override func didMoveToSuperview() {
         super.didMoveToSuperview()
         

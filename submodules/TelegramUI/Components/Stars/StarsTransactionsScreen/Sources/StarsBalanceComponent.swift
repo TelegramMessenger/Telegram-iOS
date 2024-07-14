@@ -23,6 +23,7 @@ final class StarsBalanceComponent: Component {
     let actionCooldownUntilTimestamp: Int32?
     let action: () -> Void
     let buyAds: (() -> Void)?
+    let additionalAction: AnyComponent<Empty>?
     
     init(
         theme: PresentationTheme,
@@ -35,7 +36,8 @@ final class StarsBalanceComponent: Component {
         actionIsEnabled: Bool,
         actionCooldownUntilTimestamp: Int32? = nil,
         action: @escaping () -> Void,
-        buyAds: (() -> Void)?
+        buyAds: (() -> Void)?,
+        additionalAction: AnyComponent<Empty>? = nil
     ) {
         self.theme = theme
         self.strings = strings
@@ -48,6 +50,7 @@ final class StarsBalanceComponent: Component {
         self.actionCooldownUntilTimestamp = actionCooldownUntilTimestamp
         self.action = action
         self.buyAds = buyAds
+        self.additionalAction = additionalAction
     }
     
     static func ==(lhs: StarsBalanceComponent, rhs: StarsBalanceComponent) -> Bool {
@@ -87,6 +90,8 @@ final class StarsBalanceComponent: Component {
         private let subtitle = ComponentView<Empty>()
         private var button = ComponentView<Empty>()
         private var buyAdsButton = ComponentView<Empty>()
+        
+        private var additionalButton = ComponentView<Empty>()
         
         private var component: StarsBalanceComponent?
         private weak var state: EmptyComponentState?
@@ -163,7 +168,7 @@ final class StarsBalanceComponent: Component {
         
             let subtitleText: String
             if let rate = component.rate {
-                subtitleText = "≈\(formatUsdValue(component.count, rate: rate))"
+                subtitleText = "≈\(formatStarsUsdValue(component.count, rate: rate))"
             } else {
                 subtitleText = component.strings.Stars_Intro_YourBalance
             }
@@ -275,9 +280,29 @@ final class StarsBalanceComponent: Component {
                     }
                 }
                 
-                
                 contentHeight += buttonSize.height
             }
+            
+            if let additionalAction = component.additionalAction {
+                contentHeight += 18.0
+                
+                let buttonSize = self.additionalButton.update(
+                    transition: transition,
+                    component: additionalAction,
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width, height: 50.0)
+                )
+                if let buttonView = self.additionalButton.view {
+                    if buttonView.superview == nil {
+                        self.addSubview(buttonView)
+                    }
+                    let buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - buttonSize.width) / 2.0), y: contentHeight), size: buttonSize)
+                    buttonView.frame = buttonFrame
+                }
+                contentHeight += buttonSize.height
+                contentHeight += 2.0
+            }
+            
             contentHeight += sideInset
             
             return CGSize(width: availableSize.width, height: contentHeight)

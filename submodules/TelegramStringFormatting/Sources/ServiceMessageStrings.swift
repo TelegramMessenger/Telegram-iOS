@@ -745,6 +745,23 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributes[1] = boldAttributes
                     attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_Sent(compactAuthorName, price)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }
+            case let .giftStars(currency, amount, count, _, _, _):
+                let _ = count
+                let price = formatCurrencyAmount(amount, currency: currency)
+                if message.author?.id == accountPeerId {
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_SentYou(price)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                } else {
+                    //TODO:localize
+                    var authorName = compactAuthorName
+                    var peerIds: [(Int, EnginePeer.Id?)] = [(0, message.author?.id)]
+                    if message.id.peerId.namespace == Namespaces.Peer.CloudUser && message.id.peerId.id._internalGetInt64Value() == 777000 {
+                        authorName = "Unknown user"
+                        peerIds = []
+                    }
+                    var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
+                    attributes[1] = boldAttributes
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Sent(authorName, price)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                }
             case let .topicCreated(title, iconColor, iconFileId):
                 if forForumOverview {
                     let maybeFileId = iconFileId ?? 0
@@ -992,6 +1009,39 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                     }
                 }
+            case let .paymentRefunded(peerId, currency, totalAmount, _, _):
+                //TODO:localize
+                let patternString: String
+                if peerId == message.id.peerId {
+                    patternString = "You received a refund of {amount}"
+                } else {
+                    patternString = "You received a refund of {amount} from {name}"
+                }
+                
+                let mutableString = NSMutableAttributedString()
+                mutableString.append(NSAttributedString(string: patternString, font: titleFont, textColor: primaryTextColor))
+                
+                var range = NSRange(location: NSNotFound, length: 0)
+                range = (mutableString.string as NSString).range(of: "{amount}")
+                if range.location != NSNotFound {
+                    if currency == "XTR" {
+                        let amountAttributedString = NSMutableAttributedString(string: "#\(totalAmount)", font: titleBoldFont, textColor: primaryTextColor)
+                        if let range = amountAttributedString.string.range(of: "#") {
+                            amountAttributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: true)), range: NSRange(range, in: amountAttributedString.string))
+                            amountAttributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: amountAttributedString.string))
+                        }
+                        mutableString.replaceCharacters(in: range, with: amountAttributedString)
+                    } else {
+                        mutableString.replaceCharacters(in: range, with: NSAttributedString(string: formatCurrencyAmount(totalAmount, currency: currency), font: titleBoldFont, textColor: primaryTextColor))
+                    }
+                }
+                range = (mutableString.string as NSString).range(of: "{name}")
+                if range.location != NSNotFound {
+                    let peerName = message.peers[peerId].flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
+                    mutableString.replaceCharacters(in: range, with: NSAttributedString(string: peerName, font: titleBoldFont, textColor: primaryTextColor))
+                    mutableString.addAttribute(NSAttributedString.Key(TelegramTextAttributes.PeerMention), value: TelegramPeerMention(peerId: peerId, mention: ""), range: NSMakeRange(range.location, (peerName as NSString).length))
+                }
+                attributedString = mutableString
             case .unknown:
                 attributedString = nil
             }

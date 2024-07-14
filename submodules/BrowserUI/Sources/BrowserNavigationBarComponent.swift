@@ -219,7 +219,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             let maxCenterInset = max(centerLeftInset, centerRightInset)
             
             if !leftItemList.isEmpty || !rightItemList.isEmpty {
-                availableWidth -= 20.0
+                availableWidth -= 28.0
             }
             
             let centerItem = context.component.centerItem.flatMap { item in

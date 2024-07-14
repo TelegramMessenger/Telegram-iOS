@@ -1150,7 +1150,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     detailText = stringForMediumCompactDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
                 }
             
-                let label = amountAttributedString(formatBalanceText(transaction.amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, showPlus: true), integralFont: font, fractionalFont: smallLabelFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
+                let label = tonAmountAttributedString(formatTonAmountText(transaction.amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, showPlus: true), integralFont: font, fractionalFont: smallLabelFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
             
                 label.insert(NSAttributedString(string: " $ ", font: font, textColor: labelColor), at: 1)
                 if let range = label.string.range(of: "$"), let icon = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonMedium"), color: labelColor) {
@@ -2038,9 +2038,10 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     peer.set(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
     
     let peerData = context.engine.data.get(
-         TelegramEngine.EngineData.Item.Peer.AdsRestricted(id: peerId),
-         TelegramEngine.EngineData.Item.Peer.CanViewRevenue(id: peerId),
-         TelegramEngine.EngineData.Item.Peer.CanViewStarsRevenue(id: peerId)
+        TelegramEngine.EngineData.Item.Peer.CanViewStats(id: peerId),
+        TelegramEngine.EngineData.Item.Peer.AdsRestricted(id: peerId),
+        TelegramEngine.EngineData.Item.Peer.CanViewRevenue(id: peerId),
+        TelegramEngine.EngineData.Item.Peer.CanViewStarsRevenue(id: peerId)
     )
     
     let longLoadingSignal: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(2.0, queue: Queue.mainQueue()))
@@ -2066,7 +2067,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     )
     |> deliverOnMainQueue
     |> map { presentationData, state, peer, data, messageView, stories, boostData, boostersState, giftsState, revenueState, revenueTransactions, starsState, starsTransactions, peerData, longLoading -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let (adsRestricted, canViewRevenue, canViewStarsRevenue) = peerData
+        let (canViewStats, adsRestricted, canViewRevenue, canViewStarsRevenue) = peerData
         
         var isGroup = false
         if let peer, case let .channel(channel) = peer, case .group = channel.info {
@@ -2149,7 +2150,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 index = 2
             }
             var tabs: [String] = []
-            tabs.append(presentationData.strings.Stats_Statistics)
+            if canViewStats {
+                tabs.append(presentationData.strings.Stats_Statistics)
+            }
             tabs.append(presentationData.strings.Stats_Boosts)
             if canViewRevenue || canViewStarsRevenue {
                 tabs.append(presentationData.strings.Stats_Monetization)

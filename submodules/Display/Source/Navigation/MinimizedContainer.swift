@@ -26,6 +26,7 @@ public protocol MinimizableController: ViewController {
     var isMinimized: Bool { get set }
     var isMinimizable: Bool { get }
     var minimizedIcon: UIImage? { get }
+    var minimizedProgress: Float? { get }
     
     func makeContentSnapshotView() -> UIView?
     func shouldDismissImmediately() -> Bool
@@ -49,6 +50,10 @@ public extension MinimizableController {
     }
     
     var minimizedIcon: UIImage? {
+        return nil
+    }
+    
+    var minimizedProgress: Float? {
         return nil
     }
     

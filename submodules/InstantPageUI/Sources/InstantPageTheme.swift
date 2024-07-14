@@ -327,7 +327,7 @@ extension ActionSheetControllerTheme {
     }
 }
 
-extension ActionSheetController {
+public extension ActionSheetController {
     convenience init(instantPageTheme: InstantPageTheme) {
         self.init(theme: ActionSheetControllerTheme(instantPageTheme: instantPageTheme), allowInputInset: false)
     }

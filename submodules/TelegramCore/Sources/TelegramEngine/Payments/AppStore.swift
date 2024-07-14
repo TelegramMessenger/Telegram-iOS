@@ -18,6 +18,7 @@ public enum AppStoreTransactionPurpose {
     case giftCode(peerIds: [EnginePeer.Id], boostPeer: EnginePeer.Id?, currency: String, amount: Int64)
     case giveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64)
     case stars(count: Int64, currency: String, amount: Int64)
+    case starsGift(peerId: EnginePeer.Id, count: Int64, currency: String, amount: Int64)
 }
 
 private func apiInputStorePaymentPurpose(account: Account, purpose: AppStoreTransactionPurpose) -> Signal<Api.InputStorePaymentPurpose, NoError> {
@@ -91,7 +92,15 @@ private func apiInputStorePaymentPurpose(account: Account, purpose: AppStoreTran
         }
         |> switchToLatest
     case let .stars(count, currency, amount):
-        return .single(.inputStorePaymentStars(flags: 0, stars: count, currency: currency, amount: amount))
+        return .single(.inputStorePaymentStarsTopup(stars: count, currency: currency, amount: amount))
+    case let .starsGift(peerId, count, currency, amount):
+        return  account.postbox.loadedPeerWithId(peerId)
+        |> mapToSignal { peer -> Signal<Api.InputStorePaymentPurpose, NoError> in
+            guard let inputUser = apiInputUser(peer) else {
+                return .complete()
+            }
+            return .single(.inputStorePaymentStarsGift(userId: inputUser, stars: count, currency: currency, amount: amount))
+        }
     }
 }
 

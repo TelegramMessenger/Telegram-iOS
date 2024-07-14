@@ -161,7 +161,15 @@ extension ChatControllerImpl {
                 self.window?.presentInGlobalOverlay(controller)
             })
         } else {
-            if self.context.sharedContext.applicationBindings.appBuildType == .internal, case .custom(MessageReaction.starsReactionId) = value {
+            var debug = false
+            #if DEBUG
+            debug = true
+            #endif
+            if self.context.sharedContext.applicationBindings.appBuildType == .internal {
+                debug = true
+            }
+                
+            if debug, case .custom(MessageReaction.starsReactionId) = value {
                 let _ = (ChatSendStarsScreen.initialData(context: self.context, peerId: message.id.peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] initialData in
                     guard let self, let initialData else {

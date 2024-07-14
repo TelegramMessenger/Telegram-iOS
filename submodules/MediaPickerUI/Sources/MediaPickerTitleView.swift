@@ -36,6 +36,35 @@ final class MediaPickerTitleView: UIView {
         }
     }
     
+    public func updateTitle(title: String, isEnabled: Bool, animated: Bool) {
+        if animated {
+            if self.title != title {
+                if let snapshotView = self.titleNode.view.snapshotContentTree() {
+                    snapshotView.frame = self.titleNode.frame
+                    self.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                        snapshotView.removeFromSuperview()
+                    })
+                    self.titleNode.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            }
+            if self.isEnabled != isEnabled {
+                if let snapshotView = self.arrowNode.view.snapshotContentTree() {
+                    snapshotView.frame = self.arrowNode.frame
+                    self.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                        snapshotView.removeFromSuperview()
+                    })
+                    self.arrowNode.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+        self.title = title
+        self.isEnabled = isEnabled
+    }
+    
     public var isHighlighted: Bool = false {
         didSet {
             self.alpha = self.isHighlighted ? 0.5 : 1.0
@@ -45,7 +74,7 @@ final class MediaPickerTitleView: UIView {
     public var segmentsHidden = true {
         didSet {
             if self.segmentsHidden != oldValue {
-                let transition = ContainedViewLayoutTransition.animated(duration: 0.21, curve: .easeInOut)
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
                 transition.updateAlpha(node: self.titleNode, alpha: self.segmentsHidden ? 1.0 : 0.0)
                 transition.updateAlpha(node: self.arrowNode, alpha: self.segmentsHidden ? 1.0 : 0.0)
                 transition.updateAlpha(node: self.segmentedControlNode, alpha: self.segmentsHidden ? 0.0 : 1.0)

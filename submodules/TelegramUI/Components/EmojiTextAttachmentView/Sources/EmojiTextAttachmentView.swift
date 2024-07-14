@@ -438,6 +438,8 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 if tinted {
                     self.updateTintColor()
                 }
+            case .ton:
+                self.updateTon()
             }
         } else if let file = file {
             self.updateFile(file: file, attemptSynchronousLoad: attemptSynchronousLoad)
@@ -621,6 +623,10 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     
     private func updateStars(tinted: Bool) {
         self.contents = tinted ? tintedStarImage?.cgImage : starImage?.cgImage
+    }
+    
+    private func updateTon() {
+        self.contents = tonImage?.cgImage
     }
     
     private func updateFile(file: TelegramMediaFile, attemptSynchronousLoad: Bool) {
@@ -899,7 +905,17 @@ private let starImage: UIImage? = {
         context.clear(CGRect(origin: .zero, size: size))
         
         if let image = UIImage(bundleImageName: "Premium/Stars/StarLarge"), let cgImage = image.cgImage {
-            context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 2.0, dy: 2.0), byTiling: false)
+            context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 4.0, dy: 4.0), byTiling: false)
+        }
+    })?.withRenderingMode(.alwaysTemplate)
+}()
+
+private let tonImage: UIImage? = {
+    generateImage(CGSize(width: 32.0, height: 32.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        
+        if let image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonBig"), color: UIColor(rgb: 0x007aff)), let cgImage = image.cgImage {
+            context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 4.0, dy: 4.0), byTiling: false)
         }
     })?.withRenderingMode(.alwaysTemplate)
 }()

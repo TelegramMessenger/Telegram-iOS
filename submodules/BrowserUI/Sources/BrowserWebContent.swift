@@ -1,14 +1,20 @@
 import Foundation
 import UIKit
+import Display
 import ComponentFlow
 import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import PresentationDataUtils
 import AccountContext
 import WebKit
 import AppBundle
+import PromptUI
+import SafariServices
+import ShareController
+import UndoUI
 
 private final class IpfsSchemeHandler: NSObject, WKURLSchemeHandler {
     private final class PendingTask {
@@ -80,19 +86,36 @@ private final class IpfsSchemeHandler: NSObject, WKURLSchemeHandler {
     }
 }
 
-final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
+final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
+    private let context: AccountContext
+    
     private let webView: WKWebView
+    
+    let uuid: UUID
     
     private var _state: BrowserContentState
     private let statePromise: Promise<BrowserContentState>
     
+    var currentState: BrowserContentState {
+        return self._state
+    }
     var state: Signal<BrowserContentState, NoError> {
         return self.statePromise.get()
     }
     
+    private let faviconDisposable = MetaDisposable()
+    
+    var pushContent: (BrowserScreen.Subject) -> Void = { _ in }
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
+    var minimize: () -> Void = { }
+    var present: (ViewController, Any?) -> Void = { _, _ in }
+    var presentInGlobalOverlay: (ViewController) -> Void = { _ in }
+    var getNavigationController: () -> NavigationController? = { return nil }
     
     init(context: AccountContext, url: String) {
+        self.context = context
+        self.uuid = UUID()
+        
         let configuration = WKWebViewConfiguration()
         
         if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
@@ -101,7 +124,7 @@ final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
         }
         
         self.webView = WKWebView(frame: CGRect(), configuration: configuration)
-        self.webView.allowsLinkPreview = false
+        self.webView.allowsLinkPreview = true
         
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.webView.scrollView.contentInsetAdjustmentBehavior = .never
@@ -115,13 +138,15 @@ final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
             title = parsedUrl.host ?? ""
         }
         
-        self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.0, contentType: .webPage)
+        self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.0, readingProgress: 0.0, contentType: .webPage)
         self.statePromise = Promise<BrowserContentState>(self._state)
         
         super.init(frame: .zero)
         
         self.webView.allowsBackForwardNavigationGestures = true
         self.webView.scrollView.delegate = self
+        self.webView.navigationDelegate = self
+        self.webView.uiDelegate = self
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.title), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.url), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: [], context: nil)
@@ -141,6 +166,8 @@ final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
         self.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress))
         self.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.canGoBack))
         self.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.canGoForward))
+        
+        self.faviconDisposable.dispose()
     }
     
     func setFontSize(_ fontSize: CGFloat) {
@@ -262,6 +289,12 @@ final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
         self.webView.goForward()
     }
     
+    func navigateTo(historyItem: BrowserContentState.HistoryItem) {
+        if let webItem = historyItem.webItem {
+            self.webView.go(to: webItem)
+        }
+    }
+    
     func scrollToTop() {
         self.webView.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.webView.scrollView.contentInset.top), animated: true)
     }
@@ -277,25 +310,25 @@ final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
         transition.setFrame(view: self.webView, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top)))
     }
     
+    private func updateState(_ f: (BrowserContentState) -> BrowserContentState) {
+        let updated = f(self._state)
+        self._state = updated
+        self.statePromise.set(.single(self._state))
+    }
+    
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
-        let updateState: ((BrowserContentState) -> BrowserContentState) -> Void = { f in
-            let updated = f(self._state)
-            self._state = updated
-            self.statePromise.set(.single(self._state))
-        }
-        
         if keyPath == "title" {
-            updateState { $0.withUpdatedTitle(self.webView.title ?? "") }
+            self.updateState { $0.withUpdatedTitle(self.webView.title ?? "") }
         } else if keyPath == "URL" {
-            updateState { $0.withUpdatedUrl(self.webView.url?.absoluteString ?? "") }
+            self.updateState { $0.withUpdatedUrl(self.webView.url?.absoluteString ?? "") }
             self.didSetupSearch = false
         }  else if keyPath == "estimatedProgress" {
-            updateState { $0.withUpdatedEstimatedProgress(self.webView.estimatedProgress) }
+            self.updateState { $0.withUpdatedEstimatedProgress(self.webView.estimatedProgress) }
         } else if keyPath == "canGoBack" {
-            updateState { $0.withUpdatedCanGoBack(self.webView.canGoBack) }
+            self.updateState { $0.withUpdatedCanGoBack(self.webView.canGoBack) }
             self.webView.disablesInteractiveTransitionGestureRecognizer = self.webView.canGoBack
         }  else if keyPath == "canGoForward" {
-            updateState { $0.withUpdatedCanGoForward(self.webView.canGoForward) }
+            self.updateState { $0.withUpdatedCanGoForward(self.webView.canGoForward) }
         }
     }
     
@@ -344,5 +377,234 @@ final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
             ))
         }
         self.previousScrollingOffset = ScrollingOffsetState(value: scrollView.contentOffset.y, isDraggingOrDecelerating: isInteracting)
+        
+        var readingProgress: CGFloat = 0.0
+        if !scrollView.contentSize.height.isZero {
+            let value = (scrollView.contentOffset.y + scrollView.contentInset.top) / (scrollView.contentSize.height - scrollView.bounds.size.height + scrollView.contentInset.top)
+            readingProgress = max(0.0, min(1.0, value))
+        }
+        self.updateState {
+            $0.withUpdatedReadingProgress(readingProgress)
+        }
+    }
+    
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        self.updateState {
+            $0
+                .withUpdatedBackList(webView.backForwardList.backList.map { BrowserContentState.HistoryItem(webItem: $0) })
+                .withUpdatedForwardList(webView.backForwardList.forwardList.map { BrowserContentState.HistoryItem(webItem: $0) })
+        }
+        
+        self.parseFavicon()
+    }
+    
+    @available(iOSApplicationExtension 15.0, iOS 15.0, *)
+    func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+        decisionHandler(.prompt)
+    }
+    
+    func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        var completed = false
+        let alertController = textAlertController(context: self.context, updatedPresentationData: nil, title: nil, text: message, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+            if !completed {
+                completed = true
+                completionHandler()
+            }
+        })])
+        alertController.dismissed = { byOutsideTap in
+            if byOutsideTap {
+                if !completed {
+                    completed = true
+                    completionHandler()
+                }
+            }
+        }
+        self.present(alertController, nil)
+    }
+
+    func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        var completed = false
+        let alertController = textAlertController(context: self.context, updatedPresentationData: nil, title: nil, text: message, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+            if !completed {
+                completed = true
+                completionHandler(false)
+            }
+        }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+            if !completed {
+                completed = true
+                completionHandler(true)
+            }
+        })])
+        alertController.dismissed = { byOutsideTap in
+            if byOutsideTap {
+                if !completed {
+                    completed = true
+                    completionHandler(false)
+                }
+            }
+        }
+        self.present(alertController, nil)
+    }
+
+    func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
+        var completed = false
+        let promptController = promptController(sharedContext: self.context.sharedContext, updatedPresentationData: nil, text: prompt, value: defaultText, apply: { value in
+            if !completed {
+                completed = true
+                if let value = value {
+                    completionHandler(value)
+                } else {
+                    completionHandler(nil)
+                }
+            }
+        })
+        promptController.dismissed = { byOutsideTap in
+            if byOutsideTap {
+                if !completed {
+                    completed = true
+                    completionHandler(nil)
+                }
+            }
+        }
+        self.present(promptController, nil)
+    }
+    
+    @available(iOS 13.0, *)
+    func webView(_ webView: WKWebView, contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo, completionHandler: @escaping (UIContextMenuConfiguration?) -> Void) {
+        guard let url = elementInfo.linkURL else {
+            completionHandler(nil)
+            return
+        }
+        //TODO:localize
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        let configuration = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            return UIMenu(title: "", children: [
+                UIAction(title: "Open", image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Browser"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
+                    self?.open(url: url.absoluteString, new: false)
+                }),
+                UIAction(title: "Open in New Tab", image: generateTintedImage(image: UIImage(bundleImageName: "Instant View/NewTab"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
+                    self?.open(url: url.absoluteString, new: true)
+                }),
+                UIAction(title: "Add to Reading List", image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReadingList"), color: presentationData.theme.contextMenu.primaryColor), handler: { _ in
+                    let _ = try? SSReadingList.default()?.addItem(with: url, title: nil, previewText: nil)
+                }),
+                UIAction(title: "Copy Link", image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
+                    UIPasteboard.general.string = url.absoluteString
+                    self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                }),
+                UIAction(title: "Share", image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
+                    self?.share(url: url.absoluteString)
+                })
+            ])
+        }
+        completionHandler(configuration)
+    }
+    
+    private func open(url: String, new: Bool) {
+        let subject: BrowserScreen.Subject = .webPage(url: url)
+        if new, let navigationController = self.getNavigationController() {
+            self.minimize()
+            let controller = BrowserScreen(context: self.context, subject: subject)
+            navigationController.pushViewController(controller)
+        } else {
+            self.pushContent(subject)
+        }
+    }
+    
+    private func share(url: String) {
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        let shareController = ShareController(context: self.context, subject: .url(url))
+        shareController.actionCompleted = { [weak self] in
+            self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+        }
+        self.present(shareController, nil)
+    }
+    
+    private func parseFavicon() {
+        struct Favicon: Equatable, Hashable {
+            let url: String
+            let dimensions: PixelDimensions?
+            
+            func hash(into hasher: inout Hasher) {
+                hasher.combine(self.url)
+                if let dimensions = self.dimensions {
+                    hasher.combine(dimensions.width)
+                    hasher.combine(dimensions.height)
+                }
+            }
+        }
+        
+        let js = """
+            var favicons = [];
+            var nodeList = document.getElementsByTagName('link');
+            for (var i = 0; i < nodeList.length; i++)
+            {
+                if((nodeList[i].getAttribute('rel') == 'icon')||(nodeList[i].getAttribute('rel') == 'shortcut icon'))
+                {
+                    const node = nodeList[i];
+                    favicons.push({
+                        url: node.getAttribute('href'),
+                        sizes: node.getAttribute('sizes')
+                    });
+                }
+            }
+            favicons;
+        """
+        self.webView.evaluateJavaScript(js, completionHandler: { [weak self] jsResult, _ in
+            guard let self, let favicons = jsResult as? [Any] else {
+                return
+            }
+            var result = Set<Favicon>();
+            for favicon in favicons {
+                if let faviconDict = favicon as? [String: Any], let urlString = faviconDict["url"] as? String {
+                    if let url = URL(string: urlString, relativeTo: self.webView.url) {
+                        let sizesString = faviconDict["sizes"] as? String;
+                        let sizeStrings = sizesString?.components(separatedBy: "x") ?? []
+                        if (sizeStrings.count == 2) {
+                            let width = Int(sizeStrings[0])
+                            let height = Int(sizeStrings[1])
+                            let dimensions: PixelDimensions?
+                            if let width, let height {
+                                dimensions = PixelDimensions(width: Int32(width), height: Int32(height))
+                            } else {
+                                dimensions = nil
+                            }
+                            result.insert(Favicon(url: url.absoluteString, dimensions: dimensions))
+                        } else {
+                            result.insert(Favicon(url: url.absoluteString, dimensions: nil))
+                        }
+                    }
+                }
+            }
+            
+            if result.isEmpty, let webViewUrl = self.webView.url {
+                let schemeAndHostUrl = webViewUrl.deletingPathExtension()
+                let url = schemeAndHostUrl.appendingPathComponent("favicon.ico")
+                result.insert(Favicon(url: url.absoluteString, dimensions: nil))
+            }
+            
+            var largestIcon = result.first(where: { $0.url.lowercased().contains(".svg") })
+            if largestIcon == nil {
+                largestIcon = result.first
+                for icon in result {
+                    let maxSize = largestIcon?.dimensions?.width ?? 0
+                    if let width = icon.dimensions?.width, width > maxSize {
+                        largestIcon = icon
+                    }
+                }
+            }
+                                                
+            if let favicon = largestIcon {
+                self.faviconDisposable.set((fetchFavicon(context: self.context, url: favicon.url, size: CGSize(width: 20.0, height: 20.0))
+                |> deliverOnMainQueue).startStrict(next: { [weak self] favicon in
+                    guard let self else {
+                        return
+                    }
+                    self.updateState { $0.withUpdatedFavicon(favicon) }
+                }))
+            }
+        })
     }
 }

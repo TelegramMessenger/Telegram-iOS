@@ -16,7 +16,7 @@ public final class InstantPagePlayableVideoItem: InstantPageItem {
         return [self.media]
     }
     
-    let interactive: Bool
+    public let interactive: Bool
     
     public let wantsNode: Bool = true
     public let separatesTiles: Bool = false

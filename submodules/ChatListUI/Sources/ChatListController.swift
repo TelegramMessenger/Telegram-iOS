@@ -3991,6 +3991,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             StoryContainerScreen.openPeerStoriesCustom(
                 context: self.context,
                 peerId: peerId,
+                focusOnId: storyId,
                 isHidden: false,
                 singlePeer: true,
                 parentController: self,

@@ -4155,6 +4155,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
             
             if !self.didSetupStaticEmojiPack {
+                self.didSetupStaticEmojiPack = true
                 self.staticEmojiPack.set(self.context.engine.stickers.loadedStickerPack(reference: .name("staticemoji"), forceActualized: false))
             }
                         
@@ -4212,7 +4213,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             emojiFile = .single(nil)
                         }
                         
-                        let _ = emojiFile.start(next: { [weak self] emojiFile in
+                        let _ = (emojiFile
+                        |> deliverOnMainQueue).start(next: { [weak self] emojiFile in
                             guard let self else {
                                 return
                             }
@@ -4570,6 +4572,63 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.mediaEditor?.play()
         }
         
+        func addWeather() {
+            if !self.didSetupStaticEmojiPack {
+                self.didSetupStaticEmojiPack = true
+                self.staticEmojiPack.set(self.context.engine.stickers.loadedStickerPack(reference: .name("staticemoji"), forceActualized: false))
+            }
+            
+            let emojiFile: Signal<TelegramMediaFile?, NoError>
+            let emoji = "☀️".strippedEmoji
+            
+            emojiFile = self.context.animatedEmojiStickers
+            |> take(1)
+            |> map { result -> TelegramMediaFile? in
+                if let file = result[emoji]?.first {
+                    return file.file
+                } else {
+                    return nil
+                }
+                
+//                if case let .result(_, items, _) = result, let match = items.first(where: { item in
+//                    var displayText: String?
+//                    for attribute in item.file.attributes {
+//                        if case let .Sticker(alt, _, _) = attribute {
+//                            displayText = alt
+//                            break
+//                        }
+//                    }
+//                    if let displayText, displayText.hasPrefix(emoji) {
+//                        return true
+//                    } else {
+//                        return false
+//                    }
+//                }) {
+//                    return match.file
+//                } else {
+//                    return nil
+//                }
+            }
+
+            
+            let _ = (emojiFile
+            |> deliverOnMainQueue).start(next: { [weak self] emojiFile in
+                guard let self else {
+                    return
+                }
+                let scale = 1.0
+                self.interaction?.insertEntity(
+                    DrawingWeatherEntity(
+                        temperature: "35°C",
+                        style: .white,
+                        icon: emojiFile
+                    ),
+                    scale: scale,
+                    position: nil
+                )
+            })
+        }
+        
         func updateModalTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
             guard let layout = self.validLayout, case .compact = layout.metrics.widthClass else {
                 return
@@ -4819,6 +4878,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     controller.addLink = { [weak self, weak controller] in
                                         if let self {
                                             self.addOrEditLink()
+                                            
+                                            self.stickerScreen = nil
+                                            controller?.dismiss(animated: true)
+                                        }
+                                    }
+                                    controller.addWeather = { [weak self, weak controller] in
+                                        if let self {
+                                            self.addWeather()
                                             
                                             self.stickerScreen = nil
                                             controller?.dismiss(animated: true)

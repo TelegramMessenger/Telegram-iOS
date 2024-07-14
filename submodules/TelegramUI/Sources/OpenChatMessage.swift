@@ -375,9 +375,8 @@ func openChatInstantPageImpl(context: AccountContext, message: Message, sourcePe
         let sourceLocation = InstantPageSourceLocation(userLocation: .peer(message.id.peerId), peerType: sourcePeerType ?? .channel)
         
         let pageController: ViewController
-        if !"".isEmpty, context.sharedContext.immediateExperimentalUISettings.browserExperiment {
-            let _ = anchor
-            pageController = BrowserScreen(context: context, subject: .instantPage(webPage: webpage, sourceLocation: sourceLocation))
+        if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
+            pageController = BrowserScreen(context: context, subject: .instantPage(webPage: webpage, anchor: anchor, sourceLocation: sourceLocation))
         } else {
             pageController = InstantPageController(context: context, webPage: webpage, sourceLocation: sourceLocation, anchor: anchor)
         }

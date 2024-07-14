@@ -171,4 +171,34 @@ public final class TextLoadingEffectView: UIView {
             self.updateAnimations(size: maskFrame.size)
         }
     }
+    
+    public func update(color: UIColor, size: CGSize, rects: [CGRect]) {
+        let rectsSet: [CGRect] = rects
+        
+        let maskFrame = CGRect(origin: CGPoint(), size: size).insetBy(dx: -4.0, dy: -4.0)
+        
+        self.maskContentsView.backgroundColor = color.withAlphaComponent(0.1)
+        self.maskBorderContentsView.backgroundColor = color.withAlphaComponent(0.12)
+        
+        self.backgroundView.tintColor = color
+        self.borderBackgroundView.tintColor = color
+        
+        self.maskContentsView.frame = maskFrame
+        self.maskBorderContentsView.frame = maskFrame
+        
+        self.maskHighlightNode.updateRects(rectsSet)
+        self.maskHighlightNode.frame = CGRect(origin: CGPoint(x: -maskFrame.minX, y: -maskFrame.minY), size: CGSize())
+        
+        self.maskBorderHighlightNode.updateRects(rectsSet)
+        self.maskBorderHighlightNode.frame = CGRect(origin: CGPoint(x: -maskFrame.minX, y: -maskFrame.minY), size: CGSize())
+        
+        if self.size != maskFrame.size {
+            self.size = maskFrame.size
+            
+            self.backgroundView.frame = CGRect(origin: CGPoint(x: -self.gradientWidth, y: 0.0), size: CGSize(width: self.gradientWidth, height: maskFrame.height))
+            self.borderBackgroundView.frame = CGRect(origin: CGPoint(x: -self.gradientWidth, y: 0.0), size: CGSize(width: self.gradientWidth, height: maskFrame.height))
+            
+            self.updateAnimations(size: maskFrame.size)
+        }
+    }
 }

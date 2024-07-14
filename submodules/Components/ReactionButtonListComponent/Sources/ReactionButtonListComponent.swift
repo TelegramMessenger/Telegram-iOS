@@ -21,10 +21,12 @@ private let tagImage: UIImage? = {
 }()
 
 private final class StarsButtonEffectLayer: SimpleLayer {
+    let emitterLayer = CAEmitterLayer()
+    
     override init() {
         super.init()
         
-        self.backgroundColor = UIColor.lightGray.withAlphaComponent(0.2).cgColor
+        self.addSublayer(self.emitterLayer)
     }
     
     override init(layer: Any) {
@@ -35,7 +37,45 @@ private final class StarsButtonEffectLayer: SimpleLayer {
         fatalError("init(coder:) has not been implemented")
     }
     
+    private func setup() {
+        let color = UIColor(rgb: 0xffbe27)
+        
+        let emitter = CAEmitterCell()
+        emitter.name = "emitter"
+        emitter.contents = UIImage(bundleImageName: "Premium/Stars/Particle")?.cgImage
+        emitter.birthRate = 25.0
+        emitter.lifetime = 2.0
+        emitter.velocity = 12.0
+        emitter.velocityRange = 3
+        emitter.scale = 0.1
+        emitter.scaleRange = 0.08
+        emitter.alphaRange = 0.1
+        emitter.emissionRange = .pi * 2.0
+        emitter.setValue(3.0, forKey: "mass")
+        emitter.setValue(2.0, forKey: "massRange")
+        
+        let staticColors: [Any] = [
+            color.withAlphaComponent(0.0).cgColor,
+            color.cgColor,
+            color.cgColor,
+            color.withAlphaComponent(0.0).cgColor
+        ]
+        let staticColorBehavior = CAEmitterCell.createEmitterBehavior(type: "colorOverLife")
+        staticColorBehavior.setValue(staticColors, forKey: "colors")
+        emitter.setValue([staticColorBehavior], forKey: "emitterBehaviors")
+        
+        self.emitterLayer.emitterCells = [emitter]
+    }
+    
     func update(size: CGSize) {
+        if self.emitterLayer.emitterCells == nil {
+            self.setup()
+        }
+        self.emitterLayer.emitterShape = .circle
+        self.emitterLayer.emitterSize = CGSize(width: size.width * 0.7, height: size.height * 0.7)
+        self.emitterLayer.emitterMode = .surface
+        self.emitterLayer.frame = CGRect(origin: .zero, size: size)
+        self.emitterLayer.emitterPosition = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
     }
 }
 
