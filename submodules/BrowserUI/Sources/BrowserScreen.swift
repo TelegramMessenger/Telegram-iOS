@@ -17,6 +17,7 @@ import MultilineTextComponent
 import MinimizedContainer
 import InstantPageUI
 import NavigationStackComponent
+import LottieComponent
 
 private let settingsTag = GenericComponentViewTag()
 
@@ -125,9 +126,12 @@ private final class BrowserScreenComponent: CombinedComponent {
                         component: AnyComponent(
                             ReferenceButtonComponent(
                                 content: AnyComponent(
-                                    BundleIconComponent(
-                                        name: "Instant View/Settings",
-                                        tintColor: environment.theme.rootController.navigationBar.primaryTextColor
+                                    LottieComponent(
+                                        content: LottieComponent.AppBundleContent(
+                                            name: "anim_moredots"
+                                        ),
+                                        color: environment.theme.rootController.navigationBar.primaryTextColor,
+                                        size: CGSize(width: 30.0, height: 30.0)
                                     )
                                 ),
                                 tag: settingsTag,
@@ -150,7 +154,6 @@ private final class BrowserScreenComponent: CombinedComponent {
                                             tintColor: environment.theme.rootController.navigationBar.primaryTextColor
                                         )
                                     ),
-                                    tag: settingsTag,
                                     action: {
                                         performAction.invoke(isLoading ? .stop : .reload)
                                     }
@@ -614,6 +617,10 @@ public class BrowserScreen: ViewController, MinimizableController {
         func openSettings() {
             guard let referenceView = self.componentHost.findTaggedView(tag: settingsTag) as? ReferenceButtonComponent.View else {
                 return
+            }
+            
+            if let animationComponentView = referenceView.componentView.view as? LottieComponent.View {
+                animationComponentView.playOnce()
             }
 
             self.view.endEditing(true)

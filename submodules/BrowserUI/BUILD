@@ -38,6 +38,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ContextReferenceButtonComponent",
         "//submodules/Svg",
         "//submodules/PromptUI",
+        "//submodules/TelegramUI/Components/LottieComponent",
     ],
     visibility = [
         "//visibility:public",

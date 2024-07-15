@@ -389,7 +389,17 @@ final class StarsTransactionsListPanelComponent: Component {
                     let wasEmpty = self.items.isEmpty
                     let hadLocalTransactions = self.items.contains(where: { $0.flags.contains(.isLocal) })
                     
-                    self.items = status.transactions
+                    var existingIds = Set<String>()
+                    var filteredItems: [StarsContext.State.Transaction] = []
+                    for transaction in status.transactions {
+                        let id = transaction.extendedId
+                        if !existingIds.contains(id) {
+                            existingIds.insert(id)
+                            filteredItems.append(transaction)
+                        }
+                    }
+                    
+                    self.items = filteredItems
                     if !status.isLoading {
                         self.currentLoadMoreId = nil
                     }

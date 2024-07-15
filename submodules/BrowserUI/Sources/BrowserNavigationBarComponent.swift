@@ -369,7 +369,7 @@ final class ReferenceButtonComponent: Component {
     final class View: HighlightTrackingButton, ComponentTaggedView {
         private let sourceView: ContextControllerSourceView
         let referenceNode: ContextReferenceContentNode
-        private let componentView: ComponentView<Empty>
+        let componentView: ComponentView<Empty>
         
         private var component: ReferenceButtonComponent?
         
