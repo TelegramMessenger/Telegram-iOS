@@ -15,6 +15,8 @@ import PromptUI
 import SafariServices
 import ShareController
 import UndoUI
+import LottieComponent
+import MultilineTextComponent
 
 private final class IpfsSchemeHandler: NSObject, WKURLSchemeHandler {
     private final class PendingTask {
@@ -88,8 +90,12 @@ private final class IpfsSchemeHandler: NSObject, WKURLSchemeHandler {
 
 final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
     private let context: AccountContext
+    private var presentationData: PresentationData
     
     private let webView: WKWebView
+    
+    private let errorView: ComponentHostView<Empty>
+    private var currentError: Error?
     
     let uuid: UUID
     
@@ -112,9 +118,10 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     var presentInGlobalOverlay: (ViewController) -> Void = { _ in }
     var getNavigationController: () -> NavigationController? = { return nil }
     
-    init(context: AccountContext, url: String) {
+    init(context: AccountContext, presentationData: PresentationData, url: String) {
         self.context = context
         self.uuid = UUID()
+        self.presentationData = presentationData
         
         let configuration = WKWebViewConfiguration()
         
@@ -126,7 +133,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView = WKWebView(frame: CGRect(), configuration: configuration)
         self.webView.allowsLinkPreview = true
         
-        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
+        if #available(iOS 11.0, *) {
             self.webView.scrollView.contentInsetAdjustmentBehavior = .never
         }
         
@@ -137,6 +144,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             
             title = parsedUrl.host ?? ""
         }
+        
+        self.errorView = ComponentHostView()
         
         self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.0, readingProgress: 0.0, contentType: .webPage)
         self.statePromise = Promise<BrowserContentState>(self._state)
@@ -152,7 +161,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.canGoBack), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.canGoForward), options: [], context: nil)
-        
+        if #available(iOS 15.0, *) {
+            self.webView.underPageBackgroundColor = presentationData.theme.list.plainBackgroundColor
+        }
         self.addSubview(self.webView)
     }
     
@@ -168,6 +179,16 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.canGoForward))
         
         self.faviconDisposable.dispose()
+    }
+    
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        if #available(iOS 15.0, *) {
+            self.webView.underPageBackgroundColor = presentationData.theme.list.plainBackgroundColor
+        }
+        if let (size, insets) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, transition: .immediate)
+        }
     }
     
     var currentFontState = BrowserPresentationState.FontState(size: 100, isSerif: false)
@@ -313,15 +334,42 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.webView.scrollView.contentInset.top), animated: true)
     }
     
+    private var validLayout: (CGSize, UIEdgeInsets)?
     func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ComponentTransition) {
+        self.validLayout = (size, insets)
+                
         var scrollInsets = insets
+        scrollInsets.left = 0.0
+        scrollInsets.right = 0.0
         scrollInsets.top = 0.0
         if self.webView.scrollView.contentInset != insets {
             self.webView.scrollView.contentInset = scrollInsets
             self.webView.scrollView.scrollIndicatorInsets = scrollInsets
         }
         self.previousScrollingOffset = ScrollingOffsetState(value: self.webView.scrollView.contentOffset.y, isDraggingOrDecelerating: self.webView.scrollView.isDragging || self.webView.scrollView.isDecelerating)
-        transition.setFrame(view: self.webView, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top)))
+        transition.setFrame(view: self.webView, frame: CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top)))
+        
+        if let error = self.currentError {
+            let errorSize = self.errorView.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    ErrorComponent(
+                        theme: self.presentationData.theme,
+                        title: self.presentationData.strings.Browser_ErrorTitle,
+                        text: error.localizedDescription
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: size.width - insets.left - insets.right - 72.0, height: size.height)
+            )
+            if self.errorView.superview == nil {
+                self.addSubview(self.errorView)
+                self.errorView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+            }
+            self.errorView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - errorSize.width) / 2.0), y: insets.top + floorToScreenPixels((size.height - insets.top - insets.bottom - errorSize.height) / 2.0)), size: errorSize)
+        } else if self.errorView.superview != nil {
+            self.errorView.removeFromSuperview()
+        }
     }
     
     private func updateState(_ f: (BrowserContentState) -> BrowserContentState) {
@@ -403,6 +451,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        self.currentError = nil
         self.updateFontState(self.currentFontState, force: true)
     }
     
@@ -411,8 +460,22 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             $0
                 .withUpdatedBackList(webView.backForwardList.backList.map { BrowserContentState.HistoryItem(webItem: $0) })
                 .withUpdatedForwardList(webView.backForwardList.forwardList.map { BrowserContentState.HistoryItem(webItem: $0) })
-        }      
+        }
         self.parseFavicon()
+    }
+    
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        self.currentError = error
+        if let (size, insets) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, transition: .immediate)
+        }
+    }
+    
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        self.currentError = error
+        if let (size, insets) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, transition: .immediate)
+        }
     }
     
     @available(iOSApplicationExtension 15.0, iOS 15.0, *)
@@ -494,24 +557,23 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             completionHandler(nil)
             return
         }
-        //TODO:localize
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let configuration = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
             return UIMenu(title: "", children: [
-                UIAction(title: "Open", image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Browser"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
+                UIAction(title: presentationData.strings.Browser_ContextMenu_Open, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Browser"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
                     self?.open(url: url.absoluteString, new: false)
                 }),
-                UIAction(title: "Open in New Tab", image: generateTintedImage(image: UIImage(bundleImageName: "Instant View/NewTab"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
+                UIAction(title: presentationData.strings.Browser_ContextMenu_OpenInNewTab, image: generateTintedImage(image: UIImage(bundleImageName: "Instant View/NewTab"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
                     self?.open(url: url.absoluteString, new: true)
                 }),
-                UIAction(title: "Add to Reading List", image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReadingList"), color: presentationData.theme.contextMenu.primaryColor), handler: { _ in
+                UIAction(title: presentationData.strings.Browser_ContextMenu_AddToReadingList, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReadingList"), color: presentationData.theme.contextMenu.primaryColor), handler: { _ in
                     let _ = try? SSReadingList.default()?.addItem(with: url, title: nil, previewText: nil)
                 }),
-                UIAction(title: "Copy Link", image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
+                UIAction(title: presentationData.strings.Browser_ContextMenu_CopyLink, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
                     UIPasteboard.general.string = url.absoluteString
                     self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                 }),
-                UIAction(title: "Share", image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
+                UIAction(title: presentationData.strings.Browser_ContextMenu_Share, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
                     self?.share(url: url.absoluteString)
                 })
             ])
@@ -623,5 +685,99 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                 }))
             }
         })
+    }
+}
+
+private final class ErrorComponent: CombinedComponent {
+    let theme: PresentationTheme
+    let title: String
+    let text: String
+  
+    init(
+        theme: PresentationTheme,
+        title: String,
+        text: String
+    ) {
+        self.theme = theme
+        self.title = title
+        self.text = text
+    }
+    
+    static func ==(lhs: ErrorComponent, rhs: ErrorComponent) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        return true
+    }
+    
+    static var body: Body {
+        let animation = Child(LottieComponent.self)
+        let title = Child(MultilineTextComponent.self)
+        let text = Child(MultilineTextComponent.self)
+
+        return { context in
+            var contentHeight: CGFloat = 0.0
+            let animationSize = 148.0
+            let animationSpacing: CGFloat = 8.0
+            let textSpacing: CGFloat = 8.0
+            
+            let animation = animation.update(
+                component: LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
+                ),
+                environment: {},
+                availableSize: CGSize(width: animationSize, height: animationSize),
+                transition: .immediate
+            )
+            context.add(animation
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + animation.size.height / 2.0))
+            )
+            contentHeight += animation.size.height + animationSpacing
+            
+            let title = title.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: context.component.title,
+                        font: Font.semibold(17.0),
+                        textColor: context.component.theme.list.itemSecondaryTextColor
+                    )),
+                    horizontalAlignment: .center
+                ),
+                environment: {},
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
+            context.add(title
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight +  title.size.height / 2.0))
+            )
+            contentHeight += title.size.height + textSpacing
+            
+            let text = text.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: context.component.text,
+                        font: Font.regular(15.0),
+                        textColor: context.component.theme.list.itemSecondaryTextColor
+                    )),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 0
+                ),
+                environment: {},
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
+            context.add(text
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + text.size.height / 2.0))
+            )
+            contentHeight += text.size.height
+
+            return CGSize(width: context.availableSize.width, height: contentHeight)
+        }
     }
 }

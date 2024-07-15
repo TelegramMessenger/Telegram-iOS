@@ -4,6 +4,7 @@ import Display
 import ComponentFlow
 import SwiftSignalKit
 import WebKit
+import TelegramPresentationData
 
 final class BrowserContentState: Equatable {
     enum ContentType: Equatable {
@@ -162,6 +163,7 @@ protocol BrowserContent: UIView {
     func navigateForward()
     func navigateTo(historyItem: BrowserContentState.HistoryItem)
     
+    func updatePresentationData(_ presentationData: PresentationData)
     func updateFontState(_ state: BrowserPresentationState.FontState)
     
     func setSearch(_ query: String?, completion: ((Int) -> Void)?)

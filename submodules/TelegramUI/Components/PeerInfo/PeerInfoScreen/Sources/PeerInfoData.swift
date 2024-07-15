@@ -1186,7 +1186,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             
             let starsRevenueContextAndState = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             |> mapToSignal { peer -> Signal<(StarsRevenueStatsContext?, StarsRevenueStats?), NoError> in
-                guard let peer, case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) || context.sharedContext.applicationBindings.appBuildType == .internal else {
+                guard let peer, case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) || context.sharedContext.applicationBindings.appBuildType == .public else {
                     return .single((nil, nil))
                 }
                 let starsRevenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: peerId)

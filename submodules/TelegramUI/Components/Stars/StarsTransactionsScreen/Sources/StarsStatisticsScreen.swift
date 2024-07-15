@@ -193,6 +193,10 @@ final class StarsStatisticsScreenComponent: Component {
         deinit {
             self.stateDisposable?.dispose()
         }
+        
+        func scrollToTop() {
+            self.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.scrollView.contentInset.top), animated: true)
+        }
                         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
@@ -783,6 +787,13 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
         }
         
         self.transactionsContext.loadMore()
+        
+        self.scrollToTop = { [weak self] in
+            guard let self, let componentView = self.node.hostView.componentView as? StarsStatisticsScreenComponent.View else {
+                return
+            }
+            componentView.scrollToTop()
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
