@@ -26,7 +26,7 @@ private enum WebBrowserSettingsSection: Int32 {
 
 private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
     case browserHeader(PresentationTheme, String)
-    case browser(PresentationTheme, String, OpenInApplication, String?, Bool, Int32)
+    case browser(PresentationTheme, String, OpenInApplication?, String?, Bool, Int32)
     
     var section: ItemListSectionId {
         switch self {
@@ -71,7 +71,7 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
             case let .browserHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .browser(_, title, application, identifier, selected, _):
-                return WebBrowserItem(engine: arguments.context.engine, presentationData: presentationData, title: title, application: application, checked: selected, sectionId: self.section) {
+                return WebBrowserItem(context: arguments.context, presentationData: presentationData, title: title, application: application, checked: selected, sectionId: self.section) {
                     arguments.updateDefaultBrowser(identifier)
                 }
         }
@@ -84,9 +84,10 @@ private func webBrowserSettingsControllerEntries(context: AccountContext, presen
     let options = availableOpenInOptions(context: context, item: .url(url: "http://telegram.org"))
     
     entries.append(.browserHeader(presentationData.theme, presentationData.strings.WebBrowser_DefaultBrowser))
-    entries.append(.browser(presentationData.theme, presentationData.strings.WebBrowser_InAppSafari, .safari, nil, selectedBrowser == nil, 0))
+    entries.append(.browser(presentationData.theme, presentationData.strings.WebBrowser_Telegram, nil, nil, selectedBrowser == nil, 0))
+    entries.append(.browser(presentationData.theme, presentationData.strings.WebBrowser_InAppSafari, .safari, "inApp", selectedBrowser == "inApp", 1))
     
-    var index: Int32 = 1
+    var index: Int32 = 2
     for option in options {
         entries.append(.browser(presentationData.theme, option.title, option.application, option.identifier, option.identifier == selectedBrowser, index))
         index += 1
