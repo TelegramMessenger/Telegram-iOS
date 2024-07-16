@@ -847,7 +847,12 @@ private final class CameraScreenComponent: CombinedComponent {
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
                     .scale(1.5 - component.cameraState.flashTintSize * 0.5)
                     .appear(.default(alpha: true))
-                    .disappear(.default(alpha: true))
+                    .disappear(ComponentTransition.Disappear({ view, transition, completion in
+                        view.superview?.sendSubviewToBack(view)
+                        transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                            completion()
+                        })
+                    }))
                 )
                 
                 if !state.isTakingPhoto {

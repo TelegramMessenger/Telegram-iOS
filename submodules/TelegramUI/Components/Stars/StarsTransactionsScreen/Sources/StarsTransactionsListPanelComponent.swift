@@ -220,10 +220,6 @@ final class StarsTransactionsListPanelComponent: Component {
                             if item.flags.contains(.isGift) {
                                 //TODO:localize
                                 itemSubtitle = "Received Gift"
-                                if peer.id.namespace == Namespaces.Peer.CloudUser && peer.id.id._internalGetInt64Value() == 777000 {
-                                    itemTitle = "Unknown User"
-                                    itemPeer = .fragment
-                                }
                             } else {
                                 itemSubtitle = nil
                             }
@@ -236,8 +232,14 @@ final class StarsTransactionsListPanelComponent: Component {
                         itemSubtitle = environment.strings.Stars_Intro_Transaction_GoogleTopUp_Subtitle
                     case .fragment:
                         if component.isAccount {
-                            itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
-                            itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
+                            if item.flags.contains(.isGift) {
+                                itemTitle = "Unknown User"
+                                itemSubtitle = "Received Gift"
+                                itemPeer = .fragment
+                            } else {
+                                itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
+                                itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
+                            }
                         } else {
                             itemTitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Title
                             itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Subtitle
