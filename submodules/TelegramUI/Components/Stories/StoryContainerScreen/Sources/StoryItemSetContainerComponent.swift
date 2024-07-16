@@ -1657,6 +1657,7 @@ public final class StoryItemSetContainerComponent: Component {
                         var isChannel = false
                         var canShare = true
                         var displayFooter = false
+                        var displayFooterViews = true
                         if case let .channel(channel) = component.slice.effectivePeer {
                             isChannel = true
                             if channel.addressName == nil {
@@ -1678,6 +1679,9 @@ public final class StoryItemSetContainerComponent: Component {
                             displayFooter = true
                         } else if component.slice.item.storyItem.isPending {
                             displayFooter = true
+                        } else if case let .user(user) = component.slice.peer, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
+                            displayFooter = true
+                            displayFooterViews = false
                         }
                         if component.slice.item.storyItem.isForwardingDisabled {
                             canShare = false
@@ -1749,6 +1753,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     canViewChannelStats: component.slice.additionalPeerData.canViewStats,
                                     canShare: canShare,
                                     externalViews: nil,
+                                    displayViews: displayFooterViews,
                                     expandFraction: footerExpandFraction,
                                     expandViewStats: { [weak self] in
                                         guard let self, let component = self.component else {
@@ -1771,42 +1776,11 @@ public final class StoryItemSetContainerComponent: Component {
                                         }
                                     },
                                     deleteAction: { [weak self] in
-                                        guard let self, let component = self.component else {
+                                        guard let self else {
                                             return
                                         }
                                         
-                                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                                        let actionSheet = ActionSheetController(presentationData: presentationData)
-                                        
-                                        actionSheet.setItemGroups([
-                                            ActionSheetItemGroup(items: [
-                                                ActionSheetButtonItem(title: component.strings.Story_ContextDeleteStory, color: .destructive, action: { [weak self, weak actionSheet] in
-                                                    actionSheet?.dismissAnimated()
-                                                    
-                                                    guard let self, let component = self.component else {
-                                                        return
-                                                    }
-                                                    component.delete()
-                                                })
-                                            ]),
-                                            ActionSheetItemGroup(items: [
-                                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                                    actionSheet?.dismissAnimated()
-                                                })
-                                            ])
-                                        ])
-                                        
-                                        actionSheet.dismissed = { [weak self] _ in
-                                            guard let self else {
-                                                return
-                                            }
-                                            self.sendMessageContext.actionSheet = nil
-                                            self.updateIsProgressPaused()
-                                        }
-                                        self.sendMessageContext.actionSheet = actionSheet
-                                        self.updateIsProgressPaused()
-                                        
-                                        component.presentController(actionSheet, nil)
+                                        self.performDeleteAction()
                                     },
                                     moreAction: { [weak self] sourceView, gesture in
                                         guard let self else {
@@ -2774,6 +2748,9 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             } else {
                 showMessageInputPanel = component.slice.effectivePeer.id != component.context.account.peerId
+            }
+            if case let .user(user) = component.slice.peer, let _ = user.botInfo {
+                showMessageInputPanel = false
             }
             
             var isUnsupported = false
@@ -3771,36 +3748,40 @@ public final class StoryItemSetContainerComponent: Component {
                 headerRightOffset -= 51.0
             }
             
-            let moreButtonSize = self.moreButton.update(
-                transition: transition,
-                component: AnyComponent(PlainButtonComponent(
-                    content: AnyComponent(LottieComponent(
-                        content: LottieComponent.AppBundleContent(
-                            name: "anim_story_more"
-                        ),
-                        color: .white,
-                        startingPosition: .end,
-                        size: CGSize(width: 30.0, height: 30.0)
+            var moreButtonSize: CGSize?
+            if case let .user(user) = component.slice.peer, let botInfo = user.botInfo, !botInfo.flags.contains(.canEdit) {
+            } else {
+                moreButtonSize = self.moreButton.update(
+                    transition: transition,
+                    component: AnyComponent(PlainButtonComponent(
+                        content: AnyComponent(LottieComponent(
+                            content: LottieComponent.AppBundleContent(
+                                name: "anim_story_more"
+                            ),
+                            color: .white,
+                            startingPosition: .end,
+                            size: CGSize(width: 30.0, height: 30.0)
+                        )),
+                        effectAlignment: .center,
+                        minSize: CGSize(width: 33.0, height: 64.0),
+                        action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            guard let moreButtonView = self.moreButton.view else {
+                                return
+                            }
+                            if let animationView = (moreButtonView as? PlainButtonComponent.View)?.contentView as? LottieComponent.View {
+                                animationView.playOnce()
+                            }
+                            self.performMoreAction(sourceView: moreButtonView, gesture: nil)
+                        }
                     )),
-                    effectAlignment: .center,
-                    minSize: CGSize(width: 33.0, height: 64.0),
-                    action: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        guard let moreButtonView = self.moreButton.view else {
-                            return
-                        }
-                        if let animationView = (moreButtonView as? PlainButtonComponent.View)?.contentView as? LottieComponent.View {
-                            animationView.playOnce()
-                        }
-                        self.performMoreAction(sourceView: moreButtonView, gesture: nil)
-                    }
-                )),
-                environment: {},
-                containerSize: CGSize(width: 33.0, height: 64.0)
-            )
-            if let moreButtonView = self.moreButton.view {
+                    environment: {},
+                    containerSize: CGSize(width: 33.0, height: 64.0)
+                )
+            }
+            if let moreButtonSize, let moreButtonView = self.moreButton.view {
                 if moreButtonView.superview == nil {
                     self.controlsClippingView.addSubview(moreButtonView)
                 }
@@ -5650,6 +5631,53 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
+        private func performDeleteAction() {
+            guard let component = self.component else {
+                return
+            }
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+            let actionSheet = ActionSheetController(presentationData: presentationData)
+            
+            let deleteTitle: String
+            if case let .user(user) = component.slice.peer, user.botInfo != nil {
+                //TODO:localize
+                deleteTitle = "Delete Preview"
+            } else {
+                deleteTitle = component.strings.Story_ContextDeleteStory
+            }
+            
+            actionSheet.setItemGroups([
+                ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: deleteTitle, color: .destructive, action: { [weak self, weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.delete()
+                    })
+                ]),
+                ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])
+            ])
+            
+            actionSheet.dismissed = { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.sendMessageContext.actionSheet = nil
+                self.updateIsProgressPaused()
+            }
+            self.sendMessageContext.actionSheet = actionSheet
+            self.updateIsProgressPaused()
+            
+            component.presentController(actionSheet, nil)
+        }
+        
         private func performLikeAction() {
             guard let component = self.component else {
                 return
@@ -6526,346 +6554,384 @@ public final class StoryItemSetContainerComponent: Component {
                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                 var items: [ContextMenuItem] = []
                 
-                if case .file = component.slice.item.storyItem.media {
-                    var speedValue: String = presentationData.strings.PlaybackSpeed_Normal
-                    var speedIconText: String = "1x"
-                    var didSetSpeedValue = false
-                    for (text, iconText, speed) in speedList(strings: presentationData.strings) {
-                        if abs(speed - baseRate) < 0.01 {
-                            speedValue = text
-                            speedIconText = iconText
-                            didSetSpeedValue = true
-                            break
-                        }
-                    }
-                    if !didSetSpeedValue && baseRate != 1.0 {
-                        speedValue = String(format: "%.1fx", baseRate)
-                        speedIconText = speedValue
-                    }
-                    
-                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.PlaybackSpeed_Title, textLayout: .secondLineWithValue(speedValue), icon: { theme in
-                        return optionsRateImage(rate: speedIconText, isLarge: false, color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] c, _ in
-                        guard let self else {
-                            c?.dismiss(completion: nil)
-                            return
-                        }
-
-                        c?.pushItems(items: self.contextMenuSpeedItems(value: baseRatePromise) |> map { ContextController.Items(content: .list($0)) })
-                    })))
-                    items.append(.separator)
-                }
-                
-                let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: component.slice.effectivePeer._asPeer(), peerSettings: settings._asNotificationSettings(), topSearchPeers: topSearchPeers)
-                
-                if !component.slice.effectivePeer.isService && isContact {
-                    items.append(.action(ContextMenuActionItem(text: isMuted ? component.strings.StoryFeed_ContextNotifyOn : component.strings.StoryFeed_ContextNotifyOff, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: component.slice.additionalPeerData.isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, a in
-                        a(.default)
-                        
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        
-                        let _ = component.context.engine.peers.togglePeerStoriesMuted(peerId: component.slice.effectivePeer.id).startStandalone()
-                        
-                        let iconColor = UIColor.white
-                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                        if isMuted {
-                            self.component?.presentController(UndoOverlayController(
-                                presentationData: presentationData,
-                                content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: [
-                                    "Middle.Group 1.Fill 1": iconColor,
-                                    "Top.Group 1.Fill 1": iconColor,
-                                    "Bottom.Group 1.Fill 1": iconColor,
-                                    "EXAMPLE.Group 1.Fill 1": iconColor,
-                                    "Line.Group 1.Stroke 1": iconColor
-                                ], title: nil, text: component.strings.StoryFeed_TooltipNotifyOn(component.slice.effectivePeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
-                                elevatedLayout: false,
-                                animateInAsReplacement: false,
-                                blurred: true,
-                                action: { _ in return false }
-                            ), nil)
-                        } else {
-                            self.component?.presentController(UndoOverlayController(
-                                presentationData: presentationData,
-                                content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
-                                    "Middle.Group 1.Fill 1": iconColor,
-                                    "Top.Group 1.Fill 1": iconColor,
-                                    "Bottom.Group 1.Fill 1": iconColor,
-                                    "EXAMPLE.Group 1.Fill 1": iconColor,
-                                    "Line.Group 1.Stroke 1": iconColor
-                                ], title: nil, text: component.strings.StoryFeed_TooltipNotifyOff(component.slice.effectivePeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
-                                elevatedLayout: false,
-                                animateInAsReplacement: false,
-                                blurred: true,
-                                action: { _ in return false }
-                            ), nil)
-                        }
-                    })))
-                }
-                
-                if !component.slice.effectivePeer.isService && component.slice.item.storyItem.isPublic && (component.slice.effectivePeer.addressName != nil || !component.slice.effectivePeer._asPeer().usernames.isEmpty) {
-                    items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_CopyLink, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, a in
-                        a(.default)
-                        
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        
-                        let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.effectivePeer.id, id: component.slice.item.storyItem.id)
-                        |> deliverOnMainQueue).startStandalone(next: { [weak self] link in
+                if case let .user(user) = component.slice.peer, let botInfo = user.botInfo {
+                    if botInfo.flags.contains(.canEdit) {
+                        //TODO:localize
+                        items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
                             guard let self, let component = self.component else {
                                 return
                             }
-                            if let link {
-                                UIPasteboard.general.string = link
-                                
-                                component.presentController(UndoOverlayController(
+                            
+                            let _ = component
+                        })))
+                        items.append(.action(ContextMenuActionItem(text: "Edit Preview", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            
+                            let _ = component
+                        })))
+                        items.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.destructiveColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
+                            guard let self else {
+                                return
+                            }
+                            self.performDeleteAction()
+                        })))
+                    }
+                } else {
+                    if case .file = component.slice.item.storyItem.media {
+                        var speedValue: String = presentationData.strings.PlaybackSpeed_Normal
+                        var speedIconText: String = "1x"
+                        var didSetSpeedValue = false
+                        for (text, iconText, speed) in speedList(strings: presentationData.strings) {
+                            if abs(speed - baseRate) < 0.01 {
+                                speedValue = text
+                                speedIconText = iconText
+                                didSetSpeedValue = true
+                                break
+                            }
+                        }
+                        if !didSetSpeedValue && baseRate != 1.0 {
+                            speedValue = String(format: "%.1fx", baseRate)
+                            speedIconText = speedValue
+                        }
+                        
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.PlaybackSpeed_Title, textLayout: .secondLineWithValue(speedValue), icon: { theme in
+                            return optionsRateImage(rate: speedIconText, isLarge: false, color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] c, _ in
+                            guard let self else {
+                                c?.dismiss(completion: nil)
+                                return
+                            }
+                            
+                            c?.pushItems(items: self.contextMenuSpeedItems(value: baseRatePromise) |> map { ContextController.Items(content: .list($0)) })
+                        })))
+                        items.append(.separator)
+                    }
+                    
+                    let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: component.slice.effectivePeer._asPeer(), peerSettings: settings._asNotificationSettings(), topSearchPeers: topSearchPeers)
+                    
+                    if !component.slice.effectivePeer.isService && isContact {
+                        items.append(.action(ContextMenuActionItem(text: isMuted ? component.strings.StoryFeed_ContextNotifyOn : component.strings.StoryFeed_ContextNotifyOff, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: component.slice.additionalPeerData.isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            
+                            let _ = component.context.engine.peers.togglePeerStoriesMuted(peerId: component.slice.effectivePeer.id).startStandalone()
+                            
+                            let iconColor = UIColor.white
+                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                            if isMuted {
+                                self.component?.presentController(UndoOverlayController(
                                     presentationData: presentationData,
-                                    content: .linkCopied(text: component.strings.Story_ToastLinkCopied),
+                                    content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: [
+                                        "Middle.Group 1.Fill 1": iconColor,
+                                        "Top.Group 1.Fill 1": iconColor,
+                                        "Bottom.Group 1.Fill 1": iconColor,
+                                        "EXAMPLE.Group 1.Fill 1": iconColor,
+                                        "Line.Group 1.Stroke 1": iconColor
+                                    ], title: nil, text: component.strings.StoryFeed_TooltipNotifyOn(component.slice.effectivePeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
+                                    elevatedLayout: false,
+                                    animateInAsReplacement: false,
+                                    blurred: true,
+                                    action: { _ in return false }
+                                ), nil)
+                            } else {
+                                self.component?.presentController(UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
+                                        "Middle.Group 1.Fill 1": iconColor,
+                                        "Top.Group 1.Fill 1": iconColor,
+                                        "Bottom.Group 1.Fill 1": iconColor,
+                                        "EXAMPLE.Group 1.Fill 1": iconColor,
+                                        "Line.Group 1.Stroke 1": iconColor
+                                    ], title: nil, text: component.strings.StoryFeed_TooltipNotifyOff(component.slice.effectivePeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
                                     elevatedLayout: false,
                                     animateInAsReplacement: false,
                                     blurred: true,
                                     action: { _ in return false }
                                 ), nil)
                             }
-                        })
-                    })))
-                }
-                
-                if !component.slice.item.storyItem.isMy, case let .file(file) = component.slice.item.storyItem.media, file.isVideo {
-                    let isHq = component.slice.additionalPeerData.preferHighQualityStories
-                    items.append(.action(ContextMenuActionItem(text: isHq ? component.strings.Story_ContextMenuSD : component.strings.Story_ContextMenuHD, icon: { theme in
-                        if isHq {
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/QualitySd"), color: theme.contextMenu.primaryColor)
-                        } else {
-                            return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/QualityHd" : "Chat/Context Menu/QualityHdLocked"), color: theme.contextMenu.primaryColor)
-                        }
-                    }, action: { [weak self] _, a in
-                        a(.default)
-                        
-                        guard let self, let component = self.component, let controller = component.controller() else {
-                            return
-                        }
-                        
-                        if !component.slice.additionalPeerData.preferHighQualityStories && !accountUser.isPremium {
-                            self.presentQualityUpgradeScreen()
-                            
-                            return
-                        }
-                        
-                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                        let title: String
-                        let text: String
-                        if component.slice.additionalPeerData.preferHighQualityStories {
-                            title = component.strings.Story_ToastQualitySD_Title
-                            text = component.strings.Story_ToastQualitySD_Text
-                        } else {
-                            title = component.strings.Story_ToastQualityHD_Title
-                            text = component.strings.Story_ToastQualityHD_Text
-                        }
-                        controller.present(UndoOverlayController(
-                            presentationData: presentationData,
-                            content: .info(title: title, text: text, timeout: nil, customUndoText: nil),
-                            elevatedLayout: false,
-                            animateInAsReplacement: false,
-                            blurred: true,
-                            action: { _ in return false }
-                        ), in: .current)
-                        
-                        let _ = updateMediaDownloadSettingsInteractively(accountManager: component.context.sharedContext.accountManager, { settings in
-                            var settings = settings
-                            settings.highQualityStories = !isHq
-                            return settings
-                        }).startStandalone()
-                    })))
-                }
-                
-                var isHidden = false
-                if case let .user(user) = component.slice.effectivePeer, let storiesHidden = user.storiesHidden {
-                    isHidden = storiesHidden
-                } else if case let .channel(channel) = component.slice.effectivePeer, let storiesHidden = channel.storiesHidden {
-                    isHidden = storiesHidden
-                }
-                
-                var canArchive = false
-                if isHidden {
-                    canArchive = true
-                } else {
-                    if case .user = component.slice.effectivePeer, !component.slice.effectivePeer.isService {
-                        canArchive = true
-                    } else if case .channel = component.slice.effectivePeer {
-                        canArchive = true
+                        })))
                     }
-                }
-                
-                if canArchive {
-                    items.append(.action(ContextMenuActionItem(text: isHidden ? component.strings.StoryFeed_ContextUnarchive : component.strings.StoryFeed_ContextArchive, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: isHidden ? "Chat/Context Menu/Unarchive" : "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, a in
-                        a(.default)
-                        
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        
-                        let _ = component.context.engine.peers.updatePeerStoriesHidden(id: component.slice.effectivePeer.id, isHidden: !isHidden)
-                        
-                        let text = !isHidden ? component.strings.StoryFeed_TooltipArchive(component.slice.effectivePeer.compactDisplayTitle).string : component.strings.StoryFeed_TooltipUnarchive(component.slice.effectivePeer.compactDisplayTitle).string
-                        let tooltipScreen = TooltipScreen(
-                            context: component.context,
-                            account: component.context.account,
-                            sharedContext: component.context.sharedContext,
-                            text: .markdown(text: text),
-                            style: .customBlur(UIColor(rgb: 0x1c1c1c), 0.0),
-                            icon: .peer(peer: component.slice.effectivePeer, isStory: true),
-                            action: TooltipScreen.Action(
-                                title: component.strings.Undo_Undo,
-                                action: {
-                                    component.context.engine.peers.updatePeerStoriesHidden(id: component.slice.effectivePeer.id, isHidden: isHidden)
-                                }
-                            ),
-                            location: .bottom,
-                            shouldDismissOnTouch: { _, _ in return .dismiss(consume: false) }
-                        )
-                        tooltipScreen.willBecomeDismissed = { [weak self] _ in
-                            guard let self else {
-                                return
-                            }
-                            self.sendMessageContext.tooltipScreen = nil
-                            self.updateIsProgressPaused()
-                        }
-                        self.sendMessageContext.tooltipScreen?.dismiss()
-                        self.sendMessageContext.tooltipScreen = tooltipScreen
-                        self.updateIsProgressPaused()
-                        component.controller()?.present(tooltipScreen, in: .current)
-                    })))
-                }
-                
-                if !component.slice.item.storyItem.isForwardingDisabled {
-                    let saveText: String = component.strings.Story_Context_SaveToGallery
-                    items.append(.action(ContextMenuActionItem(text: saveText, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Download" : "Chat/Context Menu/DownloadLocked"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, a in
-                        a(.default)
-                        
-                        guard let self else {
-                            return
-                        }
-                        
-                        if accountUser.isPremium {
-                            self.requestSave()
-                        } else {
-                            self.presentSaveUpgradeScreen()
-                        }
-                    })))
-                }
-                
-                if case .user = component.slice.effectivePeer {
-                    items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextStealthMode, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, a in
-                        a(.default)
-                        
-                        guard let self else {
-                            return
-                        }
-                        if accountUser.isPremium {
-                            self.sendMessageContext.requestStealthMode(view: self)
-                        } else {
-                            self.presentStealthModeUpgradeScreen()
-                        }
-                    })))
-                }
-                
-                if component.slice.additionalPeerData.canViewStats {
-                    items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_ViewStats, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, a in
-                        a(.default)
-                        
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
-                        let statsController = component.context.sharedContext.makeStoryStatsController(
-                            context: component.context,
-                            updatedPresentationData: (presentationData, .single(presentationData)),
-                            peerId: component.slice.effectivePeer.id,
-                            storyId: component.slice.item.storyItem.id,
-                            storyItem: component.slice.item.storyItem,
-                            fromStory: true
-                        )
-                        component.controller()?.push(statsController)
-                    })))
-                }
-                
-                if !component.slice.item.storyItem.text.isEmpty {
-                    let (canTranslate, _) = canTranslateText(context: component.context, text: component.slice.item.storyItem.text, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: false, ignoredLanguages: translationSettings.ignoredLanguages)
-                    if canTranslate {
-                        items.append(.action(ContextMenuActionItem(text: component.strings.Conversation_ContextMenuTranslate, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.actionSheet.primaryTextColor)
-                        }, action: { [weak self] _, f in
-                            f(.default)
+                    
+                    if !component.slice.effectivePeer.isService && component.slice.item.storyItem.isPublic && (component.slice.effectivePeer.addressName != nil || !component.slice.effectivePeer._asPeer().usernames.isEmpty) {
+                        items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_CopyLink, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
                             
                             guard let self, let component = self.component else {
                                 return
                             }
-                            self.sendMessageContext.performTranslateTextAction(view: self, text: component.slice.item.storyItem.text, entities: component.slice.item.storyItem.entities)
+                            
+                            let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.effectivePeer.id, id: component.slice.item.storyItem.id)
+                                     |> deliverOnMainQueue).startStandalone(next: { [weak self] link in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                if let link {
+                                    UIPasteboard.general.string = link
+                                    
+                                    component.presentController(UndoOverlayController(
+                                        presentationData: presentationData,
+                                        content: .linkCopied(text: component.strings.Story_ToastLinkCopied),
+                                        elevatedLayout: false,
+                                        animateInAsReplacement: false,
+                                        blurred: true,
+                                        action: { _ in return false }
+                                    ), nil)
+                                }
+                            })
                         })))
                     }
-                }
-                
-                if !component.slice.effectivePeer.isService {
-                    items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_Report, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] c, a in
-                        guard let self, let component = self.component, let controller = component.controller() else {
-                            return
+                    
+                    if !component.slice.item.storyItem.isMy, case let .file(file) = component.slice.item.storyItem.media, file.isVideo {
+                        let isHq = component.slice.additionalPeerData.preferHighQualityStories
+                        items.append(.action(ContextMenuActionItem(text: isHq ? component.strings.Story_ContextMenuSD : component.strings.Story_ContextMenuHD, icon: { theme in
+                            if isHq {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/QualitySd"), color: theme.contextMenu.primaryColor)
+                            } else {
+                                return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/QualityHd" : "Chat/Context Menu/QualityHdLocked"), color: theme.contextMenu.primaryColor)
+                            }
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
+                            guard let self, let component = self.component, let controller = component.controller() else {
+                                return
+                            }
+                            
+                            if !component.slice.additionalPeerData.preferHighQualityStories && !accountUser.isPremium {
+                                self.presentQualityUpgradeScreen()
+                                
+                                return
+                            }
+                            
+                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                            let title: String
+                            let text: String
+                            if component.slice.additionalPeerData.preferHighQualityStories {
+                                title = component.strings.Story_ToastQualitySD_Title
+                                text = component.strings.Story_ToastQualitySD_Text
+                            } else {
+                                title = component.strings.Story_ToastQualityHD_Title
+                                text = component.strings.Story_ToastQualityHD_Text
+                            }
+                            controller.present(UndoOverlayController(
+                                presentationData: presentationData,
+                                content: .info(title: title, text: text, timeout: nil, customUndoText: nil),
+                                elevatedLayout: false,
+                                animateInAsReplacement: false,
+                                blurred: true,
+                                action: { _ in return false }
+                            ), in: .current)
+                            
+                            let _ = updateMediaDownloadSettingsInteractively(accountManager: component.context.sharedContext.accountManager, { settings in
+                                var settings = settings
+                                settings.highQualityStories = !isHq
+                                return settings
+                            }).startStandalone()
+                        })))
+                    }
+                    
+                    var isHidden = false
+                    if case let .user(user) = component.slice.effectivePeer, let storiesHidden = user.storiesHidden {
+                        isHidden = storiesHidden
+                    } else if case let .channel(channel) = component.slice.effectivePeer, let storiesHidden = channel.storiesHidden {
+                        isHidden = storiesHidden
+                    }
+                    
+                    var canArchive = false
+                    if isHidden {
+                        canArchive = true
+                    } else {
+                        if case .user = component.slice.effectivePeer, !component.slice.effectivePeer.isService {
+                            canArchive = true
+                        } else if case .channel = component.slice.effectivePeer {
+                            canArchive = true
                         }
-                        
-                        let options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .illegalDrugs, .personalDetails, .other]
-                        presentPeerReportOptions(
-                            context: component.context,
-                            parent: controller,
-                            contextController: c,
-                            backAction: { _ in },
-                            subject: .story(component.slice.effectivePeer.id, component.slice.item.storyItem.id),
-                            options: options,
-                            passthrough: true,
-                            forceTheme: defaultDarkPresentationTheme,
-                            isDetailedReportingVisible: { [weak self] isReporting in
+                    }
+                    
+                    if canArchive {
+                        items.append(.action(ContextMenuActionItem(text: isHidden ? component.strings.StoryFeed_ContextUnarchive : component.strings.StoryFeed_ContextArchive, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: isHidden ? "Chat/Context Menu/Unarchive" : "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            
+                            let _ = component.context.engine.peers.updatePeerStoriesHidden(id: component.slice.effectivePeer.id, isHidden: !isHidden)
+                            
+                            let text = !isHidden ? component.strings.StoryFeed_TooltipArchive(component.slice.effectivePeer.compactDisplayTitle).string : component.strings.StoryFeed_TooltipUnarchive(component.slice.effectivePeer.compactDisplayTitle).string
+                            let tooltipScreen = TooltipScreen(
+                                context: component.context,
+                                account: component.context.account,
+                                sharedContext: component.context.sharedContext,
+                                text: .markdown(text: text),
+                                style: .customBlur(UIColor(rgb: 0x1c1c1c), 0.0),
+                                icon: .peer(peer: component.slice.effectivePeer, isStory: true),
+                                action: TooltipScreen.Action(
+                                    title: component.strings.Undo_Undo,
+                                    action: {
+                                        component.context.engine.peers.updatePeerStoriesHidden(id: component.slice.effectivePeer.id, isHidden: isHidden)
+                                    }
+                                ),
+                                location: .bottom,
+                                shouldDismissOnTouch: { _, _ in return .dismiss(consume: false) }
+                            )
+                            tooltipScreen.willBecomeDismissed = { [weak self] _ in
                                 guard let self else {
                                     return
                                 }
-                                self.isReporting = isReporting
+                                self.sendMessageContext.tooltipScreen = nil
                                 self.updateIsProgressPaused()
-                            },
-                            completion: { [weak self] reason, _ in
-                                guard let self, let component = self.component, let controller = component.controller(), let reason else {
+                            }
+                            self.sendMessageContext.tooltipScreen?.dismiss()
+                            self.sendMessageContext.tooltipScreen = tooltipScreen
+                            self.updateIsProgressPaused()
+                            component.controller()?.present(tooltipScreen, in: .current)
+                        })))
+                    }
+                    
+                    if !component.slice.item.storyItem.isForwardingDisabled {
+                        let saveText: String = component.strings.Story_Context_SaveToGallery
+                        items.append(.action(ContextMenuActionItem(text: saveText, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Download" : "Chat/Context Menu/DownloadLocked"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
+                            guard let self else {
+                                return
+                            }
+                            
+                            if accountUser.isPremium {
+                                self.requestSave()
+                            } else {
+                                self.presentSaveUpgradeScreen()
+                            }
+                        })))
+                    }
+                    
+                    if case .user = component.slice.effectivePeer {
+                        items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextStealthMode, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
+                            guard let self else {
+                                return
+                            }
+                            if accountUser.isPremium {
+                                self.sendMessageContext.requestStealthMode(view: self)
+                            } else {
+                                self.presentStealthModeUpgradeScreen()
+                            }
+                        })))
+                    }
+                    
+                    if component.slice.additionalPeerData.canViewStats {
+                        items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_ViewStats, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+                            let statsController = component.context.sharedContext.makeStoryStatsController(
+                                context: component.context,
+                                updatedPresentationData: (presentationData, .single(presentationData)),
+                                peerId: component.slice.effectivePeer.id,
+                                storyId: component.slice.item.storyItem.id,
+                                storyItem: component.slice.item.storyItem,
+                                fromStory: true
+                            )
+                            component.controller()?.push(statsController)
+                        })))
+                    }
+                    
+                    if !component.slice.item.storyItem.text.isEmpty {
+                        let (canTranslate, _) = canTranslateText(context: component.context, text: component.slice.item.storyItem.text, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: false, ignoredLanguages: translationSettings.ignoredLanguages)
+                        if canTranslate {
+                            items.append(.action(ContextMenuActionItem(text: component.strings.Conversation_ContextMenuTranslate, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { [weak self] _, f in
+                                f(.default)
+                                
+                                guard let self, let component = self.component else {
                                     return
                                 }
-                                let _ = component.context.engine.peers.reportPeerStory(peerId: component.slice.effectivePeer.id, storyId: component.slice.item.storyItem.id, reason: reason, message: "").startStandalone()
-                                controller.present(
-                                    UndoOverlayController(
-                                        presentationData: presentationData,
-                                        content: .emoji(
-                                            name: "PoliceCar",
-                                            text: presentationData.strings.Report_Succeed
-                                        ),
-                                        elevatedLayout: false,
-                                        blurred: true,
-                                        action: { _ in return false }
-                                    )
-                                    , in: .current
-                                )
+                                self.sendMessageContext.performTranslateTextAction(view: self, text: component.slice.item.storyItem.text, entities: component.slice.item.storyItem.entities)
+                            })))
+                        }
+                    }
+                    
+                    if !component.slice.effectivePeer.isService {
+                        items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_Report, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] c, a in
+                            guard let self, let component = self.component, let controller = component.controller() else {
+                                return
                             }
-                        )
-                    })))
+                            
+                            let options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .illegalDrugs, .personalDetails, .other]
+                            presentPeerReportOptions(
+                                context: component.context,
+                                parent: controller,
+                                contextController: c,
+                                backAction: { _ in },
+                                subject: .story(component.slice.effectivePeer.id, component.slice.item.storyItem.id),
+                                options: options,
+                                passthrough: true,
+                                forceTheme: defaultDarkPresentationTheme,
+                                isDetailedReportingVisible: { [weak self] isReporting in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.isReporting = isReporting
+                                    self.updateIsProgressPaused()
+                                },
+                                completion: { [weak self] reason, _ in
+                                    guard let self, let component = self.component, let controller = component.controller(), let reason else {
+                                        return
+                                    }
+                                    let _ = component.context.engine.peers.reportPeerStory(peerId: component.slice.effectivePeer.id, storyId: component.slice.item.storyItem.id, reason: reason, message: "").startStandalone()
+                                    controller.present(
+                                        UndoOverlayController(
+                                            presentationData: presentationData,
+                                            content: .emoji(
+                                                name: "PoliceCar",
+                                                text: presentationData.strings.Report_Succeed
+                                            ),
+                                            elevatedLayout: false,
+                                            blurred: true,
+                                            action: { _ in return false }
+                                        )
+                                        , in: .current
+                                    )
+                                }
+                            )
+                        })))
+                    }
                 }
                 
                 let (tip, tipSignal) = self.getLinkedStickerPacks()

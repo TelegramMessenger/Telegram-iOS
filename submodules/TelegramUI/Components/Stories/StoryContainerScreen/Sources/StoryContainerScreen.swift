@@ -1654,7 +1654,13 @@ private final class StoryContainerScreenComponent: Component {
                                             environment.controller()?.dismiss()
                                         }
                                         
-                                        let _ = component.context.engine.messages.deleteStories(peerId: slice.peer.id, ids: [slice.item.storyItem.id]).start()
+                                        if case let .user(user) = slice.peer, user.botInfo != nil {
+                                            if let id = slice.item.storyItem.media.id {
+                                                let _ = component.context.engine.messages.deleteBotPreviews(peerId: slice.peer.id, ids: [id]).startStandalone()
+                                            }
+                                        } else {
+                                            let _ = component.context.engine.messages.deleteStories(peerId: slice.peer.id, ids: [slice.item.storyItem.id]).startStandalone()
+                                        }
                                     }
                                 },
                                 markAsSeen: { [weak self] id in

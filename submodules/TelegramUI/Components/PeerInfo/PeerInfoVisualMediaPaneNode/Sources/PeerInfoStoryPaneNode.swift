@@ -3781,6 +3781,19 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         let levels = self.itemGrid.availableZoomLevels()
         return (levels.decrement.flatMap(ZoomLevel.init), levels.increment.flatMap(ZoomLevel.init))
     }
+    
+    public func canAddMoreBotPreviews() -> Bool {
+        guard let items = self.items else {
+            return false
+        }
+        
+        var maxCount = 10
+        if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["appConfig.bot_preview_medias_max"] as? Double {
+            maxCount = Int(value)
+        }
+        
+        return items.count < maxCount
+    }
 }
 
 private class MediaListSelectionRecognizer: UIPanGestureRecognizer {
