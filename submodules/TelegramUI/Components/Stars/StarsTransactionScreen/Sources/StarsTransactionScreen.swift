@@ -140,6 +140,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         let refundBackgound = Child(RoundedRectangle.self)
         let refundText = Child(MultilineTextComponent.self)
         
+        let spaceRegex = try? NSRegularExpression(pattern: "\\[(.*?)\\]", options: [])
+        
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let controller = environment.controller
@@ -176,11 +178,13 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             
             let titleText: String
             let amountText: String
-            let descriptionText: String
+            var descriptionText: String
             let additionalText: String
             let buttonText: String
             
             let count: Int64
+            var countIsGeneric = false
+            var countOnTop = false
             let transactionId: String?
             let date: Int32
             let via: String?
@@ -199,6 +203,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     titleText = "Received Gift"
                     descriptionText = "Use Stars to unlock content and services on Telegram. [See Examples >]()"
                     count = transaction.count
+                    countOnTop = true
                     transactionId = transaction.id
                     via = nil
                     messageId = nil
@@ -317,9 +322,13 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 let incoming = message.flags.contains(.Incoming)
                 titleText = incoming ? "Received Gift" : "Sent Gift"
                 let peerName = state.peerMap[message.id.peerId]?.compactDisplayTitle ?? ""
-                descriptionText = incoming ? "Use Stars to unlock content and services on Telegram. [See Examples >]()" : "With Stars, \(peerName) will be able to unlock content and services on Telegram.\n[See Examples >]()"
+                descriptionText = incoming ? "Use Stars to unlock content and services on Telegram. [See Examples >]()" : "With Stars, \(peerName) will be able to unlock content and services on Telegram. [See Examples >]()"
                 if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .giftStars(_, _, countValue, _, _, _) = action.action {
-                    count = !incoming ? -countValue : countValue
+                    count = countValue
+                    if !incoming {
+                        countIsGeneric = true
+                    }
+                    countOnTop = true
                     transactionId = nil
                 } else {
                     fatalError()
@@ -327,7 +336,11 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 via = nil
                 messageId = nil
                 date = message.timestamp
-                toPeer = state.peerMap[message.id.peerId]
+                if message.id.peerId.id._internalGetInt64Value() == 777000 {
+                    toPeer = nil
+                } else {
+                    toPeer = state.peerMap[message.id.peerId]
+                }
                 transactionPeer = nil
                 media = []
                 photo = nil
@@ -335,12 +348,31 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 isGift = true
                 delayedCloseOnOpenPeer = false
             }
+            if let spaceRegex {
+                let nsRange = NSRange(descriptionText.startIndex..., in: descriptionText)
+                let matches = spaceRegex.matches(in: descriptionText, options: [], range: nsRange)
+                var modifiedString = descriptionText
+                
+                for match in matches.reversed() {
+                    let matchRange = Range(match.range, in: descriptionText)!
+                    let matchedSubstring = String(descriptionText[matchRange])
+                    let replacedSubstring = matchedSubstring.replacingOccurrences(of: " ", with: "\u{00A0}")
+                    modifiedString.replaceSubrange(matchRange, with: replacedSubstring)
+                }
+                descriptionText = modifiedString
+            }
             
             let formattedAmount = presentationStringsFormattedNumber(abs(Int32(count)), dateTimeFormat.groupingSeparator)
-            if count < 0 {
+            let countColor: UIColor
+            if countIsGeneric {
+                amountText = "\(formattedAmount)"
+                countColor = theme.list.itemPrimaryTextColor
+            } else if count < 0 {
                 amountText = "- \(formattedAmount)"
+                countColor = theme.list.itemDestructiveColor
             } else {
                 amountText = "+ \(formattedAmount)"
+                countColor = theme.list.itemDisclosureActions.constructive.fillColor
             }
             additionalText = strings.Stars_Transaction_Terms
             buttonText = strings.Common_OK
@@ -389,7 +421,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 transition: .immediate
             )
             
-            let amountAttributedText = NSMutableAttributedString(string: amountText, font: Font.semibold(17.0), textColor: amountText.hasPrefix("-") ? theme.list.itemDestructiveColor : theme.list.itemDisclosureActions.constructive.fillColor)
+            let amountAttributedText = NSMutableAttributedString(string: amountText, font: Font.semibold(17.0), textColor: countColor)
             let amount = amount.update(
                 component: BalancedTextComponent(
                     text: .plain(amountAttributedText),
@@ -415,10 +447,33 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let tableLinkColor = theme.list.itemAccentColor
             var tableItems: [TableComponent.Item] = []
                         
-            if let toPeer {
+            if isGift, toPeer == nil {
+                tableItems.append(.init(
+                    id: "from",
+                    title: strings.Stars_Transaction_From,
+                    component: AnyComponent(
+                        Button(
+                            content: AnyComponent(
+                                PeerCellComponent(
+                                    context: component.context,
+                                    theme: theme,
+                                    peer: nil
+                                )
+                            ),
+                            action: {
+                                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_Transaction_FragmentUnknown_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                                Queue.mainQueue().after(1.0, {
+                                    component.cancel(false)
+                                })
+                            }
+                        )
+                    )
+                ))
+            } else if let toPeer {
                 tableItems.append(.init(
                     id: "to",
-                    title: count < 0 ? strings.Stars_Transaction_To : strings.Stars_Transaction_From,
+                    title: count < 0 || countIsGeneric ? strings.Stars_Transaction_To : strings.Stars_Transaction_From,
                     component: AnyComponent(
                         Button(
                             content: AnyComponent(
@@ -430,7 +485,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                             ),
                             action: {
                                 if toPeer.id.namespace == Namespaces.Peer.CloudUser && toPeer.id.id._internalGetInt64Value() == 777000 {
-                                    
+                                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                    component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_Transaction_FragmentUnknown_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
                                 } else if delayedCloseOnOpenPeer {
                                     component.openPeer(toPeer)
                                     Queue.mainQueue().after(1.0, {
@@ -591,12 +647,14 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var originY: CGFloat = 0.0
             originY += star.size.height - 23.0
             
+            var descriptionSize: CGSize = .zero
             if !descriptionText.isEmpty {
                 if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
                     state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
                 }
                 
                 let textFont = Font.regular(15.0)
+                let textColor = countOnTop ? theme.list.itemPrimaryTextColor : textColor
                 let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
                     return (TelegramTextAttributes.URL, contents)
                 })
@@ -608,13 +666,19 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     component: MultilineTextComponent(
                         text: .plain(attributedString),
                         horizontalAlignment: .center,
-                        maximumNumberOfLines: 3
+                        maximumNumberOfLines: 5,
+                        lineSpacing: 0.2
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
                     transition: .immediate
                 )
+                descriptionSize = description.size
+                var descriptionOrigin = originY
+                if countOnTop {
+                    descriptionOrigin += amount.size.height + 13.0
+                }
                 context.add(description
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + description.size.height / 2.0))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: descriptionOrigin + description.size.height / 2.0))
                 )
                 originY += description.size.height + 10.0
             }
@@ -653,14 +717,20 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 )
             }
             
+            var amountOrigin = originY
+            if countOnTop {
+                amountOrigin -= descriptionSize.height + 10.0
+                originY += amount.size.height + 26.0
+            } else {
+                originY += amount.size.height + 20.0
+            }
             context.add(amount
-                .position(CGPoint(x: amountOriginX + amount.size.width / 2.0, y: originY + amount.size.height / 2.0))
+                .position(CGPoint(x: amountOriginX + amount.size.width / 2.0, y: amountOrigin + amount.size.height / 2.0))
             )
             context.add(amountStar
-                .position(CGPoint(x: amountOriginX + amount.size.width + amountSpacing + amountStar.size.width / 2.0, y: originY + amountStar.size.height / 2.0))
+                .position(CGPoint(x: amountOriginX + amount.size.width + amountSpacing + amountStar.size.width / 2.0, y: amountOrigin + amountStar.size.height / 2.0))
             )
             
-            originY += amount.size.height + 20.0
                         
             context.add(table
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + table.size.height / 2.0))
@@ -1228,9 +1298,9 @@ private final class TableComponent: CombinedComponent {
 private final class PeerCellComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
-    let peer: EnginePeer
+    let peer: EnginePeer?
 
-    init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer) {
+    init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer?) {
         self.context = context
         self.theme = theme
         self.peer = peer
@@ -1273,12 +1343,12 @@ private final class PeerCellComponent: Component {
             
             let peerName: String
             let peer: StarsContext.State.Transaction.Peer
-            if component.peer.id.namespace == Namespaces.Peer.CloudUser && component.peer.id.id._internalGetInt64Value() == 777000 {
+            if let peerValue = component.peer {
+                peerName = peerValue.compactDisplayTitle
+                peer = .peer(peerValue)
+            } else {
                 peerName = "Unknown User"
                 peer = .fragment
-            } else {
-                peerName = component.peer.compactDisplayTitle
-                peer = .peer(component.peer)
             }
             
             let avatarNaturalSize = self.avatar.update(

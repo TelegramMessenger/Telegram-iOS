@@ -2808,15 +2808,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return nil
             }
             if let componentView = self.chatListHeaderView() {
-                let peerId: EnginePeer.Id
+                let peerId: EnginePeer.Id?
                 switch target {
                 case .myStories:
                     peerId = self.context.account.peerId
                 case let .peer(id):
                     peerId = id
+                case .botPreview:
+                    peerId = nil
                 }
                 
-                if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
+                if let peerId, let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
                     return StoryCameraTransitionOut(
                         destinationView: transitionView,
                         destinationRect: transitionView.bounds,
@@ -5994,15 +5996,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return nil
                 }
                 if let componentView = self.chatListHeaderView() {
-                    let peerId: EnginePeer.Id
+                    let peerId: EnginePeer.Id?
                     switch target {
                     case .myStories:
                         peerId = self.context.account.peerId
                     case let .peer(id):
                         peerId = id
+                    case .botPreview:
+                        peerId = nil
                     }
                     
-                    if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
+                    if let peerId, let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
                         return StoryCameraTransitionOut(
                             destinationView: transitionView,
                             destinationRect: transitionView.bounds,

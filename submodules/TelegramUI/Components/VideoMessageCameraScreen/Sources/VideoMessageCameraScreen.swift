@@ -29,6 +29,7 @@ import LegacyMediaPickerUI
 import TelegramAudio
 import ChatSendMessageActionUI
 import ChatControllerInteraction
+import LottieComponent
 
 struct CameraState: Equatable {
     enum Recording: Equatable {
@@ -68,7 +69,7 @@ struct CameraState: Equatable {
     }
     
     func updatedFlashMode(_ flashMode: Camera.FlashMode) -> CameraState {
-        return CameraState(position: self.position, flashMode: flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, flashTintSize: self.flashTintSize, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled, isViewOnceEnabled: self.isViewOnceEnabled)
+        return CameraState(position: self.position, flashMode: flashMode, flashModeDidChange: self.flashMode != flashMode, flashTint: self.flashTint, flashTintSize: self.flashTintSize, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled, isViewOnceEnabled: self.isViewOnceEnabled)
     }
     
     func updatedFlashTint(_ flashTint: FlashTint) -> CameraState {
@@ -473,6 +474,8 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
         let recordMoreButton = Child(PlainButtonComponent.self)
         
         let muteIcon = Child(ZStack<Empty>.self)
+        
+        let flashAction = ActionSlot<Void>()
                         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
@@ -524,7 +527,12 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                         .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
                         .scale(1.5 - component.cameraState.flashTintSize * 0.5)
                         .appear(.default(alpha: true))
-                        .disappear(.default(alpha: true))
+                        .disappear(ComponentTransition.Disappear({ view, transition, completion in
+                            view.superview?.sendSubviewToBack(view)
+                            transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                                completion()
+                            })
+                        }))
                     )
                 }
                 
@@ -557,23 +565,53 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                     .disappear(.default(scale: true, alpha: true))
                 )
                 
+                let flashContentComponent: AnyComponentWithIdentity<Empty>
+                if "".isEmpty {
+                    let flashIconName: String
+                    switch component.cameraState.flashMode {
+                    case .off:
+                        flashIconName = "roundFlash_off"
+                    case .on:
+                        flashIconName = "roundFlash_on"
+                    default:
+                        flashIconName = "roundFlash_off"
+                    }
+                    
+                    flashContentComponent = AnyComponentWithIdentity(
+                        id: "animatedIcon",
+                        component: AnyComponent(
+                            LottieComponent(
+                                content: LottieComponent.AppBundleContent(name: flashIconName),
+                                color: environment.theme.list.itemAccentColor,
+                                startingPosition: !component.cameraState.flashModeDidChange ? .end : .begin,
+                                size: CGSize(width: 40.0, height: 40.0),
+                                loop: false,
+                                playOnce: flashAction
+                            )
+                        )
+                    )
+                } else {
+                    flashContentComponent = AnyComponentWithIdentity(
+                        id: "staticIcon",
+                        component: AnyComponent(
+                            Image(
+                                image: state.image(.flash, theme: environment.theme),
+                                tintColor: environment.theme.list.itemAccentColor,
+                                size: CGSize(width: 30.0, height: 30.0)
+                            )
+                        )
+                    )
+                }
+                
                 let flashButton = flashButton.update(
                     component: CameraButton(
-                        content: AnyComponentWithIdentity(
-                            id: "flash",
-                            component: AnyComponent(
-                                Image(
-                                    image: state.image(.flash, theme: environment.theme),
-                                    tintColor: environment.theme.list.itemAccentColor,
-                                    size: CGSize(width: 30.0, height: 30.0)
-                                )
-                            )
-                        ),
+                        content: flashContentComponent,
                         minSize: CGSize(width: 44.0, height: 44.0),
                         isExclusive: false,
                         action: { [weak state] in
                             if let state {
                                 state.toggleFlashMode()
+                                flashAction.invoke(Void())
                             }
                         }
                     ),
@@ -581,7 +619,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(flashButton
-                    .position(CGPoint(x: flipButton.size.width + 8.0 + flashButton.size.width / 2.0 + 8.0, y: availableSize.height - flashButton.size.height / 2.0 - 8.0))
+                    .position(CGPoint(x: flipButton.size.width + 8.0 + flashButton.size.width / 2.0 + 11.0, y: availableSize.height - flashButton.size.height / 2.0 - 8.0))
                     .appear(.default(scale: true, alpha: true))
                     .disappear(.default(scale: true, alpha: true))
                 )

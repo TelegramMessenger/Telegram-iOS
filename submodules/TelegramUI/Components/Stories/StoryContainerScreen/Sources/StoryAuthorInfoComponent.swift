@@ -128,21 +128,30 @@ final class StoryAuthorInfoComponent: Component {
                 subtitleTruncationType = .middle
             } else if let author = component.author {
                 let authorName = author.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                let timeString = stringForStoryActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, preciseTime: true, relativeTimestamp: component.timestamp, relativeTo: timestamp, short: true)
                 let combinedString = NSMutableAttributedString()
                 combinedString.append(NSAttributedString(string: authorName, font: Font.medium(11.0), textColor: titleColor))
-                if timeString.count < 6 {
-                    combinedString.append(NSAttributedString(string: " • \(timeString)", font: Font.regular(11.0), textColor: subtitleColor))
+                if component.timestamp != 0 {
+                    let timeString = stringForStoryActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, preciseTime: true, relativeTimestamp: component.timestamp, relativeTo: timestamp, short: true)
+                    if timeString.count < 6 {
+                        combinedString.append(NSAttributedString(string: " • \(timeString)", font: Font.regular(11.0), textColor: subtitleColor))
+                    }
                 }
                 if component.isEdited {
                     combinedString.append(NSAttributedString(string: " • \(component.strings.Story_HeaderEdited)", font: Font.regular(11.0), textColor: subtitleColor))
                 }
                 subtitle = combinedString
                 subtitleTruncationType = .middle
-            } else {
+            } else if component.timestamp != 0 {
                 var subtitleString = stringForStoryActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, preciseTime: true, relativeTimestamp: component.timestamp, relativeTo: timestamp)
                 if component.isEdited {
                     subtitleString.append(" • ")
+                    subtitleString.append(component.strings.Story_HeaderEdited)
+                }
+                subtitle = NSAttributedString(string: subtitleString, font: Font.regular(11.0), textColor: subtitleColor)
+                subtitleTruncationType = .end
+            } else {
+                var subtitleString = ""
+                if component.isEdited {
                     subtitleString.append(component.strings.Story_HeaderEdited)
                 }
                 subtitle = NSAttributedString(string: subtitleString, font: Font.regular(11.0), textColor: subtitleColor)
@@ -170,7 +179,10 @@ final class StoryAuthorInfoComponent: Component {
                 containerSize: CGSize(width: availableSize.width - leftInset, height: availableSize.height)
             )
             
-            let contentHeight: CGFloat = titleSize.height + spacing + subtitleSize.height
+            var contentHeight: CGFloat = titleSize.height
+            if subtitle.length != 0 {
+                contentHeight += spacing + subtitleSize.height
+            }
             let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: 2.0 + floor((availableSize.height - contentHeight) * 0.5)), size: titleSize)
             
             var subtitleOffset: CGFloat = 0.0

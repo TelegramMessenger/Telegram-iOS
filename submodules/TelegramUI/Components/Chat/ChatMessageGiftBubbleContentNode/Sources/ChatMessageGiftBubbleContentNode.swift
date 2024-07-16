@@ -255,7 +255,13 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             months = monthsValue
                             text = item.presentationData.strings.Notification_PremiumGift_Subtitle(item.presentationData.strings.Notification_PremiumGift_Months(months)).string
                         case let .giftStars(_, _, count, _, _, _):
-                            months = 6
+                            if count <= 1000 {
+                                months = 3
+                            } else if count < 2500 {
+                                months = 6
+                            } else {
+                                months = 12
+                            }
                             var peerName = ""
                             if let peer = item.message.peers[item.message.id.peerId] {
                                 peerName = EnginePeer(peer).compactDisplayTitle

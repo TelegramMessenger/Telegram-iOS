@@ -917,8 +917,10 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         let defaultWebBrowser: String
         if let option = options.first(where: { $0.identifier == webBrowserSettings.defaultWebBrowser }) {
             defaultWebBrowser = option.title
-        } else {
+        } else if webBrowserSettings.defaultWebBrowser == "inApp" {
             defaultWebBrowser = presentationData.strings.WebBrowser_InAppSafari
+        } else {
+            defaultWebBrowser = presentationData.strings.WebBrowser_Telegram
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)

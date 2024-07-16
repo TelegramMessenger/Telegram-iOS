@@ -3186,6 +3186,7 @@ private class SelectedButtonNode: HighlightableButtonNode {
     
     var theme: PresentationTheme {
         didSet {
+            self.icon.image = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/SelectedIcon"), color: self.theme.list.itemCheckColors.foregroundColor)
             self.background.image = generateStretchableFilledCircleImage(radius: 21.0 / 2.0, color: self.theme.list.itemCheckColors.fillColor)
             let _ = self.update(count: self.count)
         }
@@ -3202,7 +3203,7 @@ private class SelectedButtonNode: HighlightableButtonNode {
         self.icon.displaysAsynchronously = false
         self.label.displaysAsynchronously = false
         
-        self.icon.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
+        self.icon.image = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/SelectedIcon"), color: self.theme.list.itemCheckColors.foregroundColor)
         self.background.image = generateStretchableFilledCircleImage(radius: 21.0 / 2.0, color: self.theme.list.itemCheckColors.fillColor)
         
         self.addSubnode(self.background)
@@ -3229,8 +3230,8 @@ private class SelectedButtonNode: HighlightableButtonNode {
         let size = CGSize(width: textSize.width + 28.0, height: diameter)
         
         if let _ = self.icon.image {
-            let iconSize = CGSize(width: 22.0, height: 22.0)
-            let iconFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+            let iconSize = CGSize(width: 14.0, height: 11.0)
+            let iconFrame = CGRect(origin: CGPoint(x: 5.0, y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
             self.icon.frame = iconFrame
         }
         

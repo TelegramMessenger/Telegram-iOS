@@ -24,8 +24,8 @@ import GalleryUI
 
 final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDelegate {
     private let context: AccountContext
-    private let presentationData: PresentationData
-    private let theme: InstantPageTheme
+    private var presentationData: PresentationData
+    private var theme: InstantPageTheme
     private let sourceLocation: InstantPageSourceLocation
     
     private var webPage: TelegramMediaWebpage?
@@ -87,11 +87,11 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     private var containerLayout: (size: CGSize, insets: UIEdgeInsets)?
     private var setupScrollOffsetOnLayout = false
     
-    init(context: AccountContext, webPage: TelegramMediaWebpage, anchor: String?, url: String, sourceLocation: InstantPageSourceLocation) {
+    init(context: AccountContext, presentationData: PresentationData, webPage: TelegramMediaWebpage, anchor: String?, url: String, sourceLocation: InstantPageSourceLocation) {
         self.context = context
         self.webPage = webPage
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.theme = instantPageThemeForType(.light, settings: .defaultSettings)
+        self.presentationData = presentationData
+        self.theme = instantPageThemeForType(presentationData.theme.overallDarkAppearance ? .dark : .light, settings: .defaultSettings)
         self.sourceLocation = sourceLocation
         
         self.uuid = UUID()
@@ -169,6 +169,13 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
+        self.theme = instantPageThemeForType(presentationData.theme.overallDarkAppearance ? .dark : .light, settings: .defaultSettings)
+        self.updatePageLayout()
     }
     
     func tapActionAtPoint(_ point: CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction {
@@ -311,14 +318,10 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         
     }
     
-    func setFontSize(_ fontSize: CGFloat) {
+    func updateFontState(_ state: BrowserPresentationState.FontState) {
         
     }
-    
-    func setForceSerif(_ force: Bool) {
         
-    }
-    
     func setSearch(_ query: String?, completion: ((Int) -> Void)?) {
         
     }
@@ -960,7 +963,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
             }, openUrl: { _ in }, openPeer: { _ in
             }, showAll: false)
             
-            let peer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+            let peer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil)
             let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peer, text: "", attributes: [], media: [map], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
             
             let controller = LocationViewController(context: self.context, subject: EngineMessage(message), params: controllerParams)

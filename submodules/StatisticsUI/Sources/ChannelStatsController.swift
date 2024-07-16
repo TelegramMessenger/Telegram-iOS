@@ -1555,7 +1555,17 @@ private func monetizationEntries(
         
     entries.append(.adsProceedsTitle(presentationData.theme, presentationData.strings.Monetization_StarsProceeds_Title))
     entries.append(.adsProceedsOverview(presentationData.theme, canViewRevenue ? data : nil, canViewStarsRevenue ? starsData : nil))
-    entries.append(.adsProceedsInfo(presentationData.theme, presentationData.strings.Monetization_StarsProceeds_Info))
+    
+    
+    let proceedsInfo: String
+    if canViewStarsRevenue && canViewRevenue {
+        proceedsInfo = presentationData.strings.Monetization_Proceeds_TonAndStars_Info
+    } else if canViewStarsRevenue {
+        proceedsInfo = presentationData.strings.Monetization_Proceeds_Stars_Info
+    } else {
+        proceedsInfo = presentationData.strings.Monetization_Proceeds_Ton_Info
+    }
+    entries.append(.adsProceedsInfo(presentationData.theme, proceedsInfo))
     
     var isCreator = false
     if let peer, case let .channel(channel) = peer, channel.flags.contains(.isCreator) {

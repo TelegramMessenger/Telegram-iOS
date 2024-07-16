@@ -17,6 +17,7 @@ import MultilineTextComponent
 import MinimizedContainer
 import InstantPageUI
 import NavigationStackComponent
+import LottieComponent
 
 private let settingsTag = GenericComponentViewTag()
 
@@ -125,9 +126,12 @@ private final class BrowserScreenComponent: CombinedComponent {
                         component: AnyComponent(
                             ReferenceButtonComponent(
                                 content: AnyComponent(
-                                    BundleIconComponent(
-                                        name: "Instant View/Settings",
-                                        tintColor: environment.theme.rootController.navigationBar.primaryTextColor
+                                    LottieComponent(
+                                        content: LottieComponent.AppBundleContent(
+                                            name: "anim_moredots"
+                                        ),
+                                        color: environment.theme.rootController.navigationBar.primaryTextColor,
+                                        size: CGSize(width: 30.0, height: 30.0)
                                     )
                                 ),
                                 tag: settingsTag,
@@ -150,7 +154,6 @@ private final class BrowserScreenComponent: CombinedComponent {
                                             tintColor: environment.theme.rootController.navigationBar.primaryTextColor
                                         )
                                     ),
-                                    tag: settingsTag,
                                     action: {
                                         performAction.invoke(isLoading ? .stop : .reload)
                                     }
@@ -248,8 +251,11 @@ private final class BrowserScreenComponent: CombinedComponent {
 }
 
 struct BrowserPresentationState: Equatable {
-    var fontSize: Int32
-    var fontIsSerif: Bool
+    struct FontState: Equatable {
+        var size: Int32
+        var isSerif: Bool
+    }
+    var fontState: FontState
     var isSearching: Bool
     var searchResultIndex: Int
     var searchResultCount: Int
@@ -295,6 +301,7 @@ public class BrowserScreen: ViewController, MinimizableController {
         fileprivate let componentHost = ComponentView<ViewControllerComponentContainer.Environment>()
         
         private var presentationData: PresentationData
+        private var presentationDataDisposable: Disposable?
         private var validLayout: (ContainerViewLayout, CGFloat)?
         
         init(controller: BrowserScreen) {
@@ -302,7 +309,10 @@ public class BrowserScreen: ViewController, MinimizableController {
             self.controller = controller
             self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             
-            self.presentationState = BrowserPresentationState(fontSize: 100, fontIsSerif: false, isSearching: false, searchResultIndex: 0, searchResultCount: 0, searchQueryIsEmpty: true)
+            self.presentationState = BrowserPresentationState(
+                fontState: BrowserPresentationState.FontState(size: 100, isSerif: false),
+                isSearching: false, searchResultIndex: 0, searchResultCount: 0, searchQueryIsEmpty: true
+            )
                                                 
             super.init()
             
@@ -381,66 +391,79 @@ public class BrowserScreen: ViewController, MinimizableController {
                 case .decreaseFontSize:
                     self.updatePresentationState({ state in
                         var updatedState = state
-                        switch state.fontSize {
+                        switch state.fontState.size {
                         case 150:
-                            updatedState.fontSize = 125
+                            updatedState.fontState.size = 125
                         case 125:
-                            updatedState.fontSize = 115
+                            updatedState.fontState.size = 115
                         case 115:
-                            updatedState.fontSize = 100
+                            updatedState.fontState.size = 100
                         case 100:
-                            updatedState.fontSize = 85
+                            updatedState.fontState.size = 85
                         case 85:
-                            updatedState.fontSize = 75
+                            updatedState.fontState.size = 75
                         case 75:
-                            updatedState.fontSize = 50
+                            updatedState.fontState.size = 50
                         default:
-                            updatedState.fontSize = 50
+                            updatedState.fontState.size = 50
                         }
                         return updatedState
                     })
-                    content.setFontSize(CGFloat(self.presentationState.fontSize) / 100.0)
+                    content.updateFontState(self.presentationState.fontState)
                 case .increaseFontSize:
                     self.updatePresentationState({ state in
                         var updatedState = state
-                        switch state.fontSize {
+                        switch state.fontState.size {
                         case 125:
-                            updatedState.fontSize = 150
+                            updatedState.fontState.size = 150
                         case 115:
-                            updatedState.fontSize = 125
+                            updatedState.fontState.size = 125
                         case 100:
-                            updatedState.fontSize = 115
+                            updatedState.fontState.size = 115
                         case 85:
-                            updatedState.fontSize = 100
+                            updatedState.fontState.size = 100
                         case 75:
-                            updatedState.fontSize = 85
+                            updatedState.fontState.size = 85
                         case 50:
-                            updatedState.fontSize = 75
+                            updatedState.fontState.size = 75
                         default:
-                            updatedState.fontSize = 150
+                            updatedState.fontState.size = 150
                         }
                         return updatedState
                     })
-                    content.setFontSize(CGFloat(self.presentationState.fontSize) / 100.0)
+                    content.updateFontState(self.presentationState.fontState)
                 case .resetFontSize:
                     self.updatePresentationState({ state in
                         var updatedState = state
-                        updatedState.fontSize = 100
+                        updatedState.fontState.size = 100
                         return updatedState
                     })
-                    content.setFontSize(CGFloat(self.presentationState.fontSize) / 100.0)
+                    content.updateFontState(self.presentationState.fontState)
                 case let .updateFontIsSerif(value):
                     self.updatePresentationState({ state in
                         var updatedState = state
-                        updatedState.fontIsSerif = value
+                        updatedState.fontState.isSerif = value
                         return updatedState
                     })
-                    content.setForceSerif(value)
+                    content.updateFontState(self.presentationState.fontState)
                 }
             }
+            
+            self.presentationDataDisposable = (controller.context.sharedContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                guard let self else {
+                    return
+                }
+                self.presentationData = presentationData
+                for content in self.content {
+                    content.updatePresentationData(presentationData)
+                }
+                self.requestLayout(transition: .immediate)
+            })
         }
         
         deinit {
+            self.presentationDataDisposable?.dispose()
             self.contentStateDisposable.dispose()
         }
         
@@ -460,9 +483,9 @@ public class BrowserScreen: ViewController, MinimizableController {
             let browserContent: BrowserContent
             switch content {
             case let .webPage(url):
-                browserContent = BrowserWebContent(context: self.context, url: url)
+                browserContent = BrowserWebContent(context: self.context, presentationData: self.presentationData, url: url)
             case let .instantPage(webPage, anchor, sourceLocation):
-                let instantPageContent = BrowserInstantPageContent(context: self.context, webPage: webPage, anchor: anchor, url: webPage.content.url ?? "", sourceLocation: sourceLocation)
+                let instantPageContent = BrowserInstantPageContent(context: self.context, presentationData: self.presentationData, webPage: webPage, anchor: anchor, url: webPage.content.url ?? "", sourceLocation: sourceLocation)
                 instantPageContent.openPeer = { [weak self] peer in
                     guard let self else {
                         return
@@ -560,14 +583,15 @@ public class BrowserScreen: ViewController, MinimizableController {
                 self.controller?.title = state.title
                 self.contentState = state
                 
-                let transition: ComponentTransition
-                if let previousState, previousState.withUpdatedReadingProgress(state.readingProgress) == state {
-                    transition = .immediate
-                } else {
-                    transition = .easeInOut(duration: 0.25)
+                if !self.isUpdating {
+                    let transition: ComponentTransition
+                    if let previousState, previousState.withUpdatedReadingProgress(state.readingProgress) == state {
+                        transition = .immediate
+                    } else {
+                        transition = .easeInOut(duration: 0.25)
+                    }
+                    self.requestLayout(transition: transition)
                 }
-                
-                self.requestLayout(transition: transition)
             }))
                         
             content.onScrollingUpdate = { [weak self] update in
@@ -575,11 +599,11 @@ public class BrowserScreen: ViewController, MinimizableController {
             }
         }
         
-        func minimize() {
+        func minimize(topEdgeOffset: CGFloat? = nil, damping: CGFloat? = nil, initialVelocity: CGFloat? = nil) {
             guard let controller = self.controller, let navigationController = controller.navigationController as? NavigationController else {
                 return
             }
-            navigationController.minimizeViewController(controller, damping: nil, beforeMaximize: { _, completion in
+            navigationController.minimizeViewController(controller, topEdgeOffset: topEdgeOffset, damping: damping, velocity: initialVelocity, beforeMaximize: { _, completion in
                 completion()
             }, setupContainer: { [weak self] current in
                 let minimizedContainer: MinimizedContainerImpl?
@@ -597,6 +621,10 @@ public class BrowserScreen: ViewController, MinimizableController {
         func openSettings() {
             guard let referenceView = self.componentHost.findTaggedView(tag: settingsTag) as? ReferenceButtonComponent.View else {
                 return
+            }
+            
+            if let animationComponentView = referenceView.componentView.view as? LottieComponent.View {
+                animationComponentView.playOnce()
             }
 
             self.view.endEditing(true)
@@ -626,20 +654,20 @@ public class BrowserScreen: ViewController, MinimizableController {
                 
                 let performAction = self.performAction
                 
-                let forceIsSerif = self.presentationState.fontIsSerif
+                let forceIsSerif = self.presentationState.fontState.isSerif
                 let fontItem = BrowserFontSizeContextMenuItem(
-                    value: self.presentationState.fontSize,
+                    value: self.presentationState.fontState.size,
                     decrease: { [weak self] in
                         performAction.invoke(.decreaseFontSize)
                         if let self {
-                            return self.presentationState.fontSize
+                            return self.presentationState.fontState.size
                         } else {
                             return 100
                         }
                     }, increase: { [weak self] in
                         performAction.invoke(.increaseFontSize)
                         if let self {
-                            return self.presentationState.fontSize
+                            return self.presentationState.fontState.size
                         } else {
                             return 100
                         }
@@ -799,13 +827,19 @@ public class BrowserScreen: ViewController, MinimizableController {
             self.controller?.present(contextController, in: .window(.root))
         }
         
+        private var isUpdating = false
         func requestLayout(transition: ComponentTransition) {
-            if let (layout, navigationBarHeight) = self.validLayout {
+            if !self.isUpdating, let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
             }
         }
         
         func containerLayoutUpdated(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ComponentTransition) {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
             self.validLayout = (layout, navigationBarHeight)
             
             let environment = ViewControllerComponentContainer.Environment(
@@ -951,6 +985,10 @@ public class BrowserScreen: ViewController, MinimizableController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.node.containerLayoutUpdated(layout: layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.height, transition: ComponentTransition(transition))
+    }
+    
+    public func requestMinimize(topEdgeOffset: CGFloat?, initialVelocity: CGFloat?) {
+        self.node.minimize(topEdgeOffset: topEdgeOffset, damping: 180.0, initialVelocity: initialVelocity)
     }
     
     public var isMinimized = false

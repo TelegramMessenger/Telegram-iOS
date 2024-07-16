@@ -197,6 +197,22 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                     editableBotInfo = .single(nil)
                 }
                 
+                let botPreview: Signal<CachedUserData.BotPreview?, NoError>
+                if let user = maybePeer as? TelegramUser, let _ = user.botInfo {
+                    botPreview = network.request(Api.functions.bots.getPreviewMedias(bot: inputUser))
+                    |> `catch` { _ -> Signal<[Api.MessageMedia], NoError> in
+                        return .single([])
+                    }
+                    |> map { result -> CachedUserData.BotPreview? in
+                        return CachedUserData.BotPreview(media: result.compactMap { item -> Media? in
+                            let value = textMediaAndExpirationTimerFromApiMedia(item, user.id)
+                            return value.media
+                        })
+                    }
+                } else {
+                    botPreview = .single(nil)
+                }
+                
                 var additionalConnectedBots: Signal<Api.account.ConnectedBots?, NoError> = .single(nil)
                 if rawPeerId == accountPeerId {
                     additionalConnectedBots = network.request(Api.functions.account.getConnectedBots())
@@ -210,9 +226,10 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                     network.request(Api.functions.users.getFullUser(id: inputUser))
                     |> retryRequest,
                     editableBotInfo,
+                    botPreview,
                     additionalConnectedBots
                 )
-                |> mapToSignal { result, editableBotInfo, additionalConnectedBots -> Signal<Bool, NoError> in
+                |> mapToSignal { result, editableBotInfo, botPreview, additionalConnectedBots -> Signal<Bool, NoError> in
                     return postbox.transaction { transaction -> Bool in
                         switch result {
                         case let .userFull(fullUser, chats, users):
@@ -401,6 +418,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             .withUpdatedBusinessIntro(mappedBusinessIntro)
                                             .withUpdatedBirthday(mappedBirthday)
                                             .withUpdatedPersonalChannel(personalChannel)
+                                            .withUpdatedBotPreview(botPreview)
                                 }
                             })
                         }

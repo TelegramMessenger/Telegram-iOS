@@ -14,6 +14,12 @@ public struct Namespaces {
         public static let allScheduled: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal])
         public static let allQuickReply: Set<Int32> = Set([Namespaces.Message.QuickReplyCloud, Namespaces.Message.QuickReplyLocal])
         public static let allNonRegular: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal, Namespaces.Message.QuickReplyCloud, Namespaces.Message.QuickReplyLocal])
+        public static let allLocal: [Int32] = [
+            Namespaces.Message.Local,
+            Namespaces.Message.SecretIncoming,
+            Namespaces.Message.ScheduledLocal,
+            Namespaces.Message.QuickReplyLocal
+        ]
     }
     
     public struct Media {
@@ -128,6 +134,7 @@ public struct Namespaces {
         public static let availableMessageEffects: Int8 = 37
         public static let cachedStarsRevenueStats: Int8 = 38
         public static let cachedRevenueStats: Int8 = 39
+        public static let recommendedApps: Int8 = 40
     }
     
     public struct UnorderedItemList {

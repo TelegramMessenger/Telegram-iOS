@@ -4,6 +4,7 @@ import Display
 import ComponentFlow
 import SwiftSignalKit
 import WebKit
+import TelegramPresentationData
 
 final class BrowserContentState: Equatable {
     enum ContentType: Equatable {
@@ -28,7 +29,7 @@ final class BrowserContentState: Equatable {
             self.url = webItem.url.absoluteString
             self.title = webItem.title ?? ""
             self.uuid = nil
-            self.webItem = nil
+            self.webItem = webItem
         }
     }
     
@@ -162,8 +163,8 @@ protocol BrowserContent: UIView {
     func navigateForward()
     func navigateTo(historyItem: BrowserContentState.HistoryItem)
     
-    func setFontSize(_ fontSize: CGFloat)
-    func setForceSerif(_ force: Bool)
+    func updatePresentationData(_ presentationData: PresentationData)
+    func updateFontState(_ state: BrowserPresentationState.FontState)
     
     func setSearch(_ query: String?, completion: ((Int) -> Void)?)
     func scrollToPreviousSearchResult(completion: ((Int, Int) -> Void)?)

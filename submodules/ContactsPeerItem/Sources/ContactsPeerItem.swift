@@ -868,7 +868,11 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         break
                     case let .presence(presence, dateTimeFormat):
                         if case let .peer(peer, _) = item.peer, let peer, case let .user(user) = peer, user.botInfo != nil {
-                            statusAttributedString = NSAttributedString(string: item.presentationData.strings.Bot_GenericBotStatus, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                            if let subscriberCount = user.subscriberCount {
+                                statusAttributedString = NSAttributedString(string: item.presentationData.strings.Conversation_StatusBotSubscribers(subscriberCount), font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                            } else {
+                                statusAttributedString = NSAttributedString(string: item.presentationData.strings.Bot_GenericBotStatus, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                            }
                         } else {
                             userPresence = presence
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970

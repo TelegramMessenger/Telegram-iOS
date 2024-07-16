@@ -63,6 +63,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/WebsiteType",
         "//submodules/UrlEscaping",
+        "//submodules/DeviceLocationManager",
     ],
     visibility = [
         "//visibility:public",

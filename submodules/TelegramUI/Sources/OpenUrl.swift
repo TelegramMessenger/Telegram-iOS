@@ -251,16 +251,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             |> deliverOnMainQueue).startStandalone(next: handleResolvedUrl)
         }
         
-        if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
-            if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == context.sharedContext.applicationBindings.appSpecificScheme) {
-                if parsedUrl.host == "ipfs" {
-                    if let value = URL(string: "ipfs:/" + parsedUrl.path) {
-                        parsedUrl = value
-                    }
-                } else if parsedUrl.host == "ton" {
-                    if let value = URL(string: "ton:/" + parsedUrl.path) {
-                        parsedUrl = value
-                    }
+        if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == context.sharedContext.applicationBindings.appSpecificScheme) {
+            if parsedUrl.host == "tonsite" {
+                if let value = URL(string: "tonsite:/" + parsedUrl.path) {
+                    parsedUrl = value
                 }
             }
         }
@@ -743,6 +737,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var appName: String?
                         var startApp: String?
                         var text: String?
+                        var profile: Bool = false
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -785,6 +780,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                     startGroup = ""
                                 } else if queryItem.name == "startchannel" {
                                     startChannel = ""
+                                } else if queryItem.name == "profile" {
+                                    profile = true
                                 }
                             }
                         }
@@ -863,6 +860,13 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 result += "?text=\(text)"
                             }
                             convertedUrl = result
+                        }
+                        if profile, let current = convertedUrl {
+                            if current.contains("?") {
+                                convertedUrl = current + "&profile"
+                            } else {
+                                convertedUrl = current + "?profile"
+                            }
                         }
                     }
                 } else if parsedUrl.host == "hostOverride" {
@@ -1008,10 +1012,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
         if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
             isInternetUrl = true
         }
-        if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
-            if parsedUrl.scheme == "ipfs" || parsedUrl.scheme == "ipns" || parsedUrl.scheme == "ton" {
-                isInternetUrl = true
-            }
+        if parsedUrl.scheme == "tonsite" {
+            isInternetUrl = true
         }
         
         if isInternetUrl {
@@ -1044,8 +1046,19 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 
                 let _ = (settings
                 |> deliverOnMainQueue).startStandalone(next: { settings in
-                    if settings.defaultWebBrowser == nil {
-                        if isCompact && context.sharedContext.immediateExperimentalUISettings.browserExperiment {
+                    if let defaultWebBrowser = settings.defaultWebBrowser, defaultWebBrowser != "inApp" {
+                        let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))
+                        if let option = openInOptions.first(where: { $0.identifier == settings.defaultWebBrowser }) {
+                            if case let .openUrl(url) = option.action() {
+                                context.sharedContext.applicationBindings.openUrl(url)
+                            } else {
+                                context.sharedContext.applicationBindings.openUrl(url)
+                            }
+                        } else {
+                            context.sharedContext.applicationBindings.openUrl(url)
+                        }
+                    } else {
+                        if settings.defaultWebBrowser == nil && isCompact {
                             let controller = BrowserScreen(context: context, subject: .webPage(url: parsedUrl.absoluteString))
                             navigationController?.pushViewController(controller)
                         } else {
@@ -1057,17 +1070,6 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             } else {
                                 context.sharedContext.applicationBindings.openUrl(parsedUrl.absoluteString)
                             }
-                        }
-                    } else {
-                        let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))
-                        if let option = openInOptions.first(where: { $0.identifier == settings.defaultWebBrowser }) {
-                            if case let .openUrl(url) = option.action() {
-                                context.sharedContext.applicationBindings.openUrl(url)
-                            } else {
-                                context.sharedContext.applicationBindings.openUrl(url)
-                            }
-                        } else {
-                            context.sharedContext.applicationBindings.openUrl(url)
                         }
                     }
                 })

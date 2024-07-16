@@ -714,6 +714,7 @@ public enum ChatListSearchFilter: Equatable {
     case chats
     case topics
     case channels
+    case apps
     case media
     case downloads
     case links
@@ -731,18 +732,20 @@ public enum ChatListSearchFilter: Equatable {
             return 1
         case .channels:
             return 2
-        case .media:
+        case .apps:
             return 3
-        case .downloads:
+        case .media:
             return 4
-        case .links:
+        case .downloads:
             return 5
-        case .files:
+        case .links:
             return 6
-        case .music:
+        case .files:
             return 7
-        case .voice:
+        case .music:
             return 8
+        case .voice:
+            return 9
         case let .peer(peerId, _, _, _):
             return peerId.id._internalGetInt64Value()
         case let .date(_, date, _):
@@ -850,7 +853,7 @@ public protocol MediaEditorScreenResult {
 
 public protocol TelegramRootControllerInterface: NavigationController {
     @discardableResult
-    func openStoryCamera(customTarget: EnginePeer.Id?, transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator?
+    func openStoryCamera(customTarget: Stories.PendingTarget?, transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator?
     func proceedWithStoryUpload(target: Stories.PendingTarget, result: MediaEditorScreenResult, existingMedia: EngineMedia?, forwardInfo: Stories.PendingForwardInfo?, externalState: MediaEditorTransitionOutExternalState, commit: @escaping (@escaping () -> Void) -> Void)
     
     func getContactsController() -> ViewController?

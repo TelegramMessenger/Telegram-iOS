@@ -2066,3 +2066,147 @@ public func _internal_pollPeerStories(postbox: Postbox, network: Network, accoun
         }
     }
 }
+
+public final class BotPreviewStoryListContext: StoryListContext {
+    private final class Impl {
+        private let queue: Queue
+        private let account: Account
+        private let engine: TelegramEngine
+        private let peerId: EnginePeer.Id
+        private let isArchived: Bool
+        
+        private let statePromise = Promise<State>()
+        private var stateValue: State {
+            didSet {
+                self.statePromise.set(.single(self.stateValue))
+            }
+        }
+        var state: Signal<State, NoError> {
+            return self.statePromise.get()
+        }
+        
+        private var isLoadingMore: Bool = false
+        private var requestDisposable: Disposable?
+        
+        private var updatesDisposable: Disposable?
+        
+        private var completionCallbacksByToken: [AnyHashable: [() -> Void]] = [:]
+        
+        private var nextId: Int32 = 1
+        private var idMapping: [MediaId: Int32] = [:]
+        
+        init(queue: Queue, account: Account, engine: TelegramEngine, peerId: EnginePeer.Id) {
+            self.queue = queue
+            self.account = account
+            self.engine = engine
+            self.peerId = peerId
+            
+            let isArchived = false
+            
+            self.isArchived = isArchived
+            
+            self.stateValue = State(peerReference: nil, items: [], pinnedIds: Set(), totalCount: 0, loadMoreToken: AnyHashable(0 as Int), isCached: true, hasCache: false, allEntityFiles: [:], isLoading: false)
+            
+            self.requestDisposable = (engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                TelegramEngine.EngineData.Item.Peer.BotPreview(id: peerId)
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] peer, botPreview in
+                guard let self else {
+                    return
+                }
+                
+                var items: [State.Item] = []
+                
+                if let botPreview {
+                    for media in botPreview.media {
+                        guard let mediaId = media.id else {
+                            continue
+                        }
+                        
+                        let id: Int32
+                        if let current = self.idMapping[mediaId] {
+                            id = current
+                        } else {
+                            id = self.nextId
+                            self.nextId += 1
+                            self.idMapping[mediaId] = id
+                        }
+                        
+                        items.append(State.Item(
+                            id: StoryId(peerId: peerId, id: id),
+                            storyItem: EngineStoryItem(
+                                id: id,
+                                timestamp: 0,
+                                expirationTimestamp: Int32.max,
+                                media: EngineMedia(media),
+                                alternativeMedia: nil,
+                                mediaAreas: [],
+                                text: "",
+                                entities: [],
+                                views: nil,
+                                privacy: nil,
+                                isPinned: false,
+                                isExpired: false,
+                                isPublic: false,
+                                isPending: false,
+                                isCloseFriends: false,
+                                isContacts: false,
+                                isSelectedContacts: false,
+                                isForwardingDisabled: false,
+                                isEdited: false,
+                                isMy: false,
+                                myReaction: nil,
+                                forwardInfo: nil,
+                                author: nil
+                            ),
+                            peer: nil
+                        ))
+                    }
+                }
+                
+                self.stateValue = State(
+                    peerReference: (peer?._asPeer()).flatMap(PeerReference.init),
+                    items: items,
+                    pinnedIds: Set(),
+                    totalCount: items.count,
+                    loadMoreToken: nil,
+                    isCached: botPreview != nil,
+                    hasCache: botPreview != nil,
+                    allEntityFiles: [:],
+                    isLoading: botPreview == nil
+                )
+            })
+        }
+        
+        deinit {
+            self.requestDisposable?.dispose()
+        }
+        
+        func loadMore(completion: (() -> Void)?) {
+        }
+    }
+    
+    public var state: Signal<State, NoError> {
+        return impl.signalWith { impl, subscriber in
+            return impl.state.start(next: subscriber.putNext)
+        }
+    }
+    
+    private let queue: Queue
+    private let impl: QueueLocalObject<Impl>
+    
+    public init(account: Account, engine: TelegramEngine, peerId: EnginePeer.Id) {
+        let queue = Queue.mainQueue()
+        self.queue = queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return Impl(queue: queue, account: account, engine: engine, peerId: peerId)
+        })
+    }
+    
+    public func loadMore(completion: (() -> Void)? = nil) {
+        self.impl.with { impl in
+            impl.loadMore(completion : completion)
+        }
+    }
+}

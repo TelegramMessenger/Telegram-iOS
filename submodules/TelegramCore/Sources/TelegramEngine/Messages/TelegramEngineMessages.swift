@@ -1369,6 +1369,10 @@ public extension TelegramEngine {
             return _internal_getStoryById(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, peerId: peerId, id: id)
         }
         
+        public func deleteBotPreviews(peerId: EnginePeer.Id, ids: [MediaId]) -> Signal<Never, NoError> {
+            return _internal_deleteBotPreviews(account: self.account, peerId: peerId, ids: ids)
+        }
+        
         public func synchronouslyIsMessageDeletedInteractively(ids: [EngineMessage.Id]) -> [EngineMessage.Id] {
             return self.account.stateManager.synchronouslyIsMessageDeletedInteractively(ids: ids)
         }

@@ -3626,6 +3626,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             guard let self else {
                 return
             }
+            
             self.headerNode.navigationButtonContainer.performAction?(.postStory, nil, nil)
         }
 
@@ -9783,92 +9784,100 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private func openPostStory(sourceFrame: CGRect?) {
         self.postingAvailabilityDisposable?.dispose()
         
-        let canPostStatus: Signal<StoriesUploadAvailability, NoError>
-        #if DEBUG && false
-        canPostStatus = .single(StoriesUploadAvailability.premiumRequired)
-        #else
-        canPostStatus = self.context.engine.messages.checkStoriesUploadAvailability(target: .peer(self.peerId))
-        #endif
-        
-        self.postingAvailabilityDisposable = (canPostStatus
-        |> deliverOnMainQueue).startStrict(next: { [weak self] status in
-            guard let self else {
+        if let data = self.data, let user = data.peer as? TelegramUser, let botInfo = user.botInfo {
+            if !botInfo.flags.contains(.canEdit) {
                 return
             }
-            switch status {
-            case .available:
-                var cameraTransitionIn: StoryCameraTransitionIn?
-                if let rightButton = self.headerNode.navigationButtonContainer.rightButtonNodes[.postStory] {
-                    cameraTransitionIn = StoryCameraTransitionIn(
-                        sourceView: rightButton.view,
-                        sourceRect: rightButton.view.bounds,
-                        sourceCornerRadius: rightButton.view.bounds.height * 0.5
-                    )
-                }
-                
-                if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                    let coordinator = rootController.openStoryCamera(customTarget: self.peerId, transitionIn: cameraTransitionIn, transitionedIn: {}, transitionOut: self.storyCameraTransitionOut())
-                    coordinator?.animateIn()
-                }
-            case .channelBoostRequired:
-                self.postingAvailabilityDisposable?.dispose()
-                
-                self.postingAvailabilityDisposable = combineLatest(
-                    queue: Queue.mainQueue(),
-                    self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)),
-                    self.context.engine.peers.getChannelBoostStatus(peerId: self.peerId),
-                    self.context.engine.peers.getMyBoostStatus()
-                ).startStrict(next: { [weak self] peer, boostStatus, myBoostStatus in
-                    guard let self, let peer, let boostStatus, let myBoostStatus else {
-                        return
-                    }
-                    
-                    if let navigationController = self.controller?.navigationController as? NavigationController {
-                        if let previousController = navigationController.viewControllers.last as? ShareWithPeersScreen {
-                            previousController.dismiss()
-                        }
-                        let controller = self.context.sharedContext.makePremiumBoostLevelsController(context: self.context, peerId: peer.id, subject: .stories, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: false, openStats: { [weak self] in
-                            if let self {
-                                self.openStats(section: .boosts, boostStatus: boostStatus)
-                            }
-                        })
-                        navigationController.pushViewController(controller)
-                    }
-                    
-                    self.hapticFeedback.impact(.light)
-                }).strict()
-            case .premiumRequired, .monthlyLimit, .weeklyLimit, .expiringLimit:
-                if let sourceFrame {
-                    let context = self.context
-                    let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.maxY), size: CGSize())
-                    
-                    let text: String
-                    text = self.presentationData.strings.StoryFeed_TooltipPremiumPostingLimited
-                    
-                    let tooltipController = TooltipScreen(
-                        context: context,
-                        account: context.account,
-                        sharedContext: context.sharedContext,
-                        text: .markdown(text: text),
-                        style: .customBlur(UIColor(rgb: 0x2a2a2a), 2.0),
-                        icon: .none,
-                        location: .point(location, .top),
-                        shouldDismissOnTouch: { [weak self] point, containerFrame in
-                            if containerFrame.contains(point) {
-                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: false, dismissed: nil)
-                                self?.controller?.push(controller)
-                                return .dismiss(consume: true)
-                            } else {
-                                return .dismiss(consume: false)
-                            }
-                        }
-                    )
-                    self.controller?.present(tooltipController, in: .current)
-                }
-            default:
-                break
+            let cameraTransitionIn: StoryCameraTransitionIn? = nil
+            
+            if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                let coordinator = rootController.openStoryCamera(customTarget: .botPreview(self.peerId), transitionIn: cameraTransitionIn, transitionedIn: {}, transitionOut: self.storyCameraTransitionOut())
+                coordinator?.animateIn()
             }
-        }).strict()
+        } else {
+            let canPostStatus: Signal<StoriesUploadAvailability, NoError>
+            canPostStatus = self.context.engine.messages.checkStoriesUploadAvailability(target: .peer(self.peerId))
+            
+            self.postingAvailabilityDisposable = (canPostStatus
+            |> deliverOnMainQueue).startStrict(next: { [weak self] status in
+                guard let self else {
+                    return
+                }
+                switch status {
+                case .available:
+                    var cameraTransitionIn: StoryCameraTransitionIn?
+                    if let rightButton = self.headerNode.navigationButtonContainer.rightButtonNodes[.postStory] {
+                        cameraTransitionIn = StoryCameraTransitionIn(
+                            sourceView: rightButton.view,
+                            sourceRect: rightButton.view.bounds,
+                            sourceCornerRadius: rightButton.view.bounds.height * 0.5
+                        )
+                    }
+                    
+                    if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                        let coordinator = rootController.openStoryCamera(customTarget: self.peerId == self.context.account.peerId ? nil : .peer(self.peerId), transitionIn: cameraTransitionIn, transitionedIn: {}, transitionOut: self.storyCameraTransitionOut())
+                        coordinator?.animateIn()
+                    }
+                case .channelBoostRequired:
+                    self.postingAvailabilityDisposable?.dispose()
+                    
+                    self.postingAvailabilityDisposable = combineLatest(
+                        queue: Queue.mainQueue(),
+                        self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)),
+                        self.context.engine.peers.getChannelBoostStatus(peerId: self.peerId),
+                        self.context.engine.peers.getMyBoostStatus()
+                    ).startStrict(next: { [weak self] peer, boostStatus, myBoostStatus in
+                        guard let self, let peer, let boostStatus, let myBoostStatus else {
+                            return
+                        }
+                        
+                        if let navigationController = self.controller?.navigationController as? NavigationController {
+                            if let previousController = navigationController.viewControllers.last as? ShareWithPeersScreen {
+                                previousController.dismiss()
+                            }
+                            let controller = self.context.sharedContext.makePremiumBoostLevelsController(context: self.context, peerId: peer.id, subject: .stories, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: false, openStats: { [weak self] in
+                                if let self {
+                                    self.openStats(section: .boosts, boostStatus: boostStatus)
+                                }
+                            })
+                            navigationController.pushViewController(controller)
+                        }
+                        
+                        self.hapticFeedback.impact(.light)
+                    }).strict()
+                case .premiumRequired, .monthlyLimit, .weeklyLimit, .expiringLimit:
+                    if let sourceFrame {
+                        let context = self.context
+                        let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.maxY), size: CGSize())
+                        
+                        let text: String
+                        text = self.presentationData.strings.StoryFeed_TooltipPremiumPostingLimited
+                        
+                        let tooltipController = TooltipScreen(
+                            context: context,
+                            account: context.account,
+                            sharedContext: context.sharedContext,
+                            text: .markdown(text: text),
+                            style: .customBlur(UIColor(rgb: 0x2a2a2a), 2.0),
+                            icon: .none,
+                            location: .point(location, .top),
+                            shouldDismissOnTouch: { [weak self] point, containerFrame in
+                                if containerFrame.contains(point) {
+                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: false, dismissed: nil)
+                                    self?.controller?.push(controller)
+                                    return .dismiss(consume: true)
+                                } else {
+                                    return .dismiss(consume: false)
+                                }
+                            }
+                        )
+                        self.controller?.present(tooltipController, in: .current)
+                    }
+                default:
+                    break
+                }
+            }).strict()
+        }
     }
     
     private func storyCameraTransitionOut() -> (Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut? {
@@ -10775,153 +10784,79 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private func displayMediaGalleryContextMenu(source: ContextReferenceContentNode, gesture: ContextGesture?) {
         let peerId = self.peerId
         
-        let _ = (self.context.engine.data.get(EngineDataMap([
-            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: self.chatLocation.threadId, tag: .photo),
-            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: self.chatLocation.threadId, tag: .video)
-        ]))
-        |> deliverOnMainQueue).startStandalone(next: { [weak self] messageCounts in
-            guard let strongSelf = self else {
+        if let currentPaneKey = self.paneContainerNode.currentPaneKey, case .botPreview = currentPaneKey {
+            guard let controller = self.controller else {
                 return
             }
-
-            var mediaCount: [MessageTags: Int32] = [:]
-            for (key, count) in messageCounts {
-                mediaCount[key.tag] = count.flatMap(Int32.init) ?? 0
-            }
-
-            let photoCount: Int32 = mediaCount[.photo] ?? 0
-            let videoCount: Int32 = mediaCount[.video] ?? 0
-
-            guard let controller = strongSelf.controller else {
+            guard let pane = self.paneContainerNode.currentPane?.node as? PeerInfoStoryPaneNode else {
                 return
             }
-            guard let pane = strongSelf.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode else {
+            guard let data = self.data, let user = data.peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) else {
                 return
             }
-
+            
             var items: [ContextMenuItem] = []
-
-            let strings = strongSelf.presentationData.strings
-
-            var recurseGenerateAction: ((Bool) -> ContextMenuActionItem)?
-            let generateAction: (Bool) -> ContextMenuActionItem = { [weak pane] isZoomIn in
-                let nextZoomLevel = isZoomIn ? pane?.availableZoomLevels().increment : pane?.availableZoomLevels().decrement
-                let canZoom: Bool = nextZoomLevel != nil
-
-                return ContextMenuActionItem(id: isZoomIn ? 0 : 1, text: isZoomIn ? strings.SharedMedia_ZoomIn : strings.SharedMedia_ZoomOut, textColor: canZoom ? .primary : .disabled, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: isZoomIn ? "Chat/Context Menu/ZoomIn" : "Chat/Context Menu/ZoomOut"), color: canZoom ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
-                }, action: canZoom ? { action in
-                    guard let pane = pane, let zoomLevel = isZoomIn ? pane.availableZoomLevels().increment : pane.availableZoomLevels().decrement else {
-                        return
-                    }
-                    pane.updateZoomLevel(level: zoomLevel)
-                    if let recurseGenerateAction = recurseGenerateAction {
-                        action.updateAction(0, recurseGenerateAction(true))
-                        action.updateAction(1, recurseGenerateAction(false))
-                    }
-                } : nil)
-            }
-            recurseGenerateAction = { isZoomIn in
-                return generateAction(isZoomIn)
-            }
-
-            items.append(.action(generateAction(true)))
-            items.append(.action(generateAction(false)))
-
+            
+            let strings = self.presentationData.strings
+            let _ = strings
+            
+            //TODO:localize
+            
             var ignoreNextActions = false
-            if strongSelf.chatLocation.threadId == nil {
-                items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowCalendar, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor)
-                }, action: { _, a in
+            
+            if pane.canAddMoreBotPreviews() {
+                items.append(.action(ContextMenuActionItem(text: "Add Preview", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, a in
                     if ignoreNextActions {
                         return
                     }
                     ignoreNextActions = true
                     a(.default)
                     
-                    self?.openMediaCalendar()
+                    if let self {
+                        self.headerNode.navigationButtonContainer.performAction?(.postStory, nil, nil)
+                    }
                 })))
             }
-
-            if photoCount != 0 && videoCount != 0 {
-                items.append(.separator)
-
-                let showPhotos: Bool
-                switch pane.contentType {
-                case .photo, .photoOrVideo:
-                    showPhotos = true
-                default:
-                    showPhotos = false
+            
+            items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, a in
+                if ignoreNextActions {
+                    return
                 }
-                let showVideos: Bool
-                switch pane.contentType {
-                case .video, .photoOrVideo:
-                    showVideos = true
-                default:
-                    showVideos = false
+                ignoreNextActions = true
+                a(.default)
+                
+                let _ = self
+            })))
+            
+            items.append(.action(ContextMenuActionItem(text: "Select", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak pane] _, a in
+                if ignoreNextActions {
+                    return
                 }
-
-                items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowPhotos, icon: { theme in
-                    if !showPhotos {
-                        return nil
-                    }
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                }, action: { [weak pane] _, a in
-                    a(.default)
-
-                    guard let pane = pane else {
-                        return
-                    }
-                    let updatedContentType: PeerInfoVisualMediaPaneNode.ContentType
-                    switch pane.contentType {
-                    case .photoOrVideo:
-                        updatedContentType = .video
-                    case .photo:
-                        updatedContentType = .photo
-                    case .video:
-                        updatedContentType = .photoOrVideo
-                    default:
-                        updatedContentType = pane.contentType
-                    }
-                    pane.updateContentType(contentType: updatedContentType)
-                })))
-                items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowVideos, icon: { theme in
-                    if !showVideos {
-                        return nil
-                    }
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                }, action: { [weak pane] _, a in
-                    a(.default)
-
-                    guard let pane = pane else {
-                        return
-                    }
-                    let updatedContentType: PeerInfoVisualMediaPaneNode.ContentType
-                    switch pane.contentType {
-                    case .photoOrVideo:
-                        updatedContentType = .photo
-                    case .photo:
-                        updatedContentType = .photoOrVideo
-                    case .video:
-                        updatedContentType = .video
-                    default:
-                        updatedContentType = pane.contentType
-                    }
-                    pane.updateContentType(contentType: updatedContentType)
-                })))
-            }
-
-            let contextController = ContextController(presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-            contextController.passthroughTouchEvent = { sourceView, point in
+                ignoreNextActions = true
+                a(.default)
+                
+                if let pane {
+                    pane.setIsSelectionModeActive(true)
+                }
+            })))
+            
+            let contextController = ContextController(presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            contextController.passthroughTouchEvent = { [weak self] sourceView, point in
                 guard let strongSelf = self else {
                     return .ignore
                 }
-
+                
                 let localPoint = strongSelf.view.convert(sourceView.convert(point, to: nil), from: nil)
                 guard let localResult = strongSelf.hitTest(localPoint, with: nil) else {
                     return .dismiss(consume: true, result: nil)
                 }
-
+                
                 var testView: UIView? = localResult
                 while true {
                     if let testViewValue = testView {
@@ -10944,12 +10879,188 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         break
                     }
                 }
-
+                
                 return .dismiss(consume: true, result: nil)
             }
-            strongSelf.mediaGalleryContextMenu = contextController
+            self.mediaGalleryContextMenu = contextController
             controller.presentInGlobalOverlay(contextController)
-        })
+        } else {
+            let _ = (self.context.engine.data.get(EngineDataMap([
+                TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: self.chatLocation.threadId, tag: .photo),
+                TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: self.chatLocation.threadId, tag: .video)
+            ]))
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] messageCounts in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                var mediaCount: [MessageTags: Int32] = [:]
+                for (key, count) in messageCounts {
+                    mediaCount[key.tag] = count.flatMap(Int32.init) ?? 0
+                }
+                
+                let photoCount: Int32 = mediaCount[.photo] ?? 0
+                let videoCount: Int32 = mediaCount[.video] ?? 0
+                
+                guard let controller = strongSelf.controller else {
+                    return
+                }
+                guard let pane = strongSelf.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode else {
+                    return
+                }
+                
+                var items: [ContextMenuItem] = []
+                
+                let strings = strongSelf.presentationData.strings
+                
+                var recurseGenerateAction: ((Bool) -> ContextMenuActionItem)?
+                let generateAction: (Bool) -> ContextMenuActionItem = { [weak pane] isZoomIn in
+                    let nextZoomLevel = isZoomIn ? pane?.availableZoomLevels().increment : pane?.availableZoomLevels().decrement
+                    let canZoom: Bool = nextZoomLevel != nil
+                    
+                    return ContextMenuActionItem(id: isZoomIn ? 0 : 1, text: isZoomIn ? strings.SharedMedia_ZoomIn : strings.SharedMedia_ZoomOut, textColor: canZoom ? .primary : .disabled, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: isZoomIn ? "Chat/Context Menu/ZoomIn" : "Chat/Context Menu/ZoomOut"), color: canZoom ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
+                    }, action: canZoom ? { action in
+                        guard let pane = pane, let zoomLevel = isZoomIn ? pane.availableZoomLevels().increment : pane.availableZoomLevels().decrement else {
+                            return
+                        }
+                        pane.updateZoomLevel(level: zoomLevel)
+                        if let recurseGenerateAction = recurseGenerateAction {
+                            action.updateAction(0, recurseGenerateAction(true))
+                            action.updateAction(1, recurseGenerateAction(false))
+                        }
+                    } : nil)
+                }
+                recurseGenerateAction = { isZoomIn in
+                    return generateAction(isZoomIn)
+                }
+                
+                items.append(.action(generateAction(true)))
+                items.append(.action(generateAction(false)))
+                
+                var ignoreNextActions = false
+                if strongSelf.chatLocation.threadId == nil {
+                    items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowCalendar, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor)
+                    }, action: { _, a in
+                        if ignoreNextActions {
+                            return
+                        }
+                        ignoreNextActions = true
+                        a(.default)
+                        
+                        self?.openMediaCalendar()
+                    })))
+                }
+                
+                if photoCount != 0 && videoCount != 0 {
+                    items.append(.separator)
+                    
+                    let showPhotos: Bool
+                    switch pane.contentType {
+                    case .photo, .photoOrVideo:
+                        showPhotos = true
+                    default:
+                        showPhotos = false
+                    }
+                    let showVideos: Bool
+                    switch pane.contentType {
+                    case .video, .photoOrVideo:
+                        showVideos = true
+                    default:
+                        showVideos = false
+                    }
+                    
+                    items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowPhotos, icon: { theme in
+                        if !showPhotos {
+                            return nil
+                        }
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak pane] _, a in
+                        a(.default)
+                        
+                        guard let pane = pane else {
+                            return
+                        }
+                        let updatedContentType: PeerInfoVisualMediaPaneNode.ContentType
+                        switch pane.contentType {
+                        case .photoOrVideo:
+                            updatedContentType = .video
+                        case .photo:
+                            updatedContentType = .photo
+                        case .video:
+                            updatedContentType = .photoOrVideo
+                        default:
+                            updatedContentType = pane.contentType
+                        }
+                        pane.updateContentType(contentType: updatedContentType)
+                    })))
+                    items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowVideos, icon: { theme in
+                        if !showVideos {
+                            return nil
+                        }
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak pane] _, a in
+                        a(.default)
+                        
+                        guard let pane = pane else {
+                            return
+                        }
+                        let updatedContentType: PeerInfoVisualMediaPaneNode.ContentType
+                        switch pane.contentType {
+                        case .photoOrVideo:
+                            updatedContentType = .photo
+                        case .photo:
+                            updatedContentType = .photoOrVideo
+                        case .video:
+                            updatedContentType = .video
+                        default:
+                            updatedContentType = pane.contentType
+                        }
+                        pane.updateContentType(contentType: updatedContentType)
+                    })))
+                }
+                
+                let contextController = ContextController(presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                contextController.passthroughTouchEvent = { sourceView, point in
+                    guard let strongSelf = self else {
+                        return .ignore
+                    }
+                    
+                    let localPoint = strongSelf.view.convert(sourceView.convert(point, to: nil), from: nil)
+                    guard let localResult = strongSelf.hitTest(localPoint, with: nil) else {
+                        return .dismiss(consume: true, result: nil)
+                    }
+                    
+                    var testView: UIView? = localResult
+                    while true {
+                        if let testViewValue = testView {
+                            if let node = testViewValue.asyncdisplaykit_node as? PeerInfoHeaderNavigationButton {
+                                node.isUserInteractionEnabled = false
+                                DispatchQueue.main.async {
+                                    node.isUserInteractionEnabled = true
+                                }
+                                return .dismiss(consume: false, result: nil)
+                            } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
+                                node.brieflyDisableTouchActions()
+                                return .dismiss(consume: false, result: nil)
+                            } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoStoryPaneNode {
+                                node.brieflyDisableTouchActions()
+                                return .dismiss(consume: false, result: nil)
+                            } else {
+                                testView = testViewValue.superview
+                            }
+                        } else {
+                            break
+                        }
+                    }
+                    
+                    return .dismiss(consume: true, result: nil)
+                }
+                strongSelf.mediaGalleryContextMenu = contextController
+                controller.presentInGlobalOverlay(contextController)
+            })
+        }
     }
 
     private func openMediaCalendar() {
@@ -11626,6 +11737,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             }
                         case .media:
                             rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .more, isForExpandedView: true))
+                        case .botPreview:
+                            if let data = self.data, data.hasBotPreviewItems, let user = data.peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
+                                rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .more, isForExpandedView: true))
+                            }
                         default:
                             break
                         }

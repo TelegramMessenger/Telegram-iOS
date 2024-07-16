@@ -100,7 +100,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
     }
     
     static var body: Body {
-        let background = Child(BlurredBackgroundComponent.self)
+        let background = Child(Rectangle.self)
         let readingProgress = Child(Rectangle.self)
         let separator = Child(Rectangle.self)
         let loadingProgress = Child(LoadingProgressComponent.self)
@@ -118,7 +118,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             let size = CGSize(width: context.availableSize.width, height: context.component.topInset + contentHeight)
             
             let background = background.update(
-                component: BlurredBackgroundComponent(color: context.component.backgroundColor),
+                component: Rectangle(color: context.component.backgroundColor.withAlphaComponent(1.0)),
                 availableSize: CGSize(width: size.width, height: size.height),
                 transition: context.transition
             )
@@ -178,6 +178,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             
             context.add(readingProgress
                 .position(CGPoint(x: readingProgress.size.width / 2.0, y: size.height / 2.0))
+                .opacity(context.component.centerItem?.id == AnyHashable("search") ? 0.0 : 1.0)
             )
             
             context.add(separator
@@ -369,7 +370,7 @@ final class ReferenceButtonComponent: Component {
     final class View: HighlightTrackingButton, ComponentTaggedView {
         private let sourceView: ContextControllerSourceView
         let referenceNode: ContextReferenceContentNode
-        private let componentView: ComponentView<Empty>
+        let componentView: ComponentView<Empty>
         
         private var component: ReferenceButtonComponent?
         
