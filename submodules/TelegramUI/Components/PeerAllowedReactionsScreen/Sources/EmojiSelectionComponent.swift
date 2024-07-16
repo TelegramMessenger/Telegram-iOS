@@ -194,7 +194,7 @@ public final class EmojiSelectionComponent: Component {
                         component.backspace?()
                         AudioServicesPlaySystemSound(1155)
                     }
-                ).withHoldAction({ [weak self] in
+                ).withHoldAction({ [weak self] _ in
                     guard let self, let component = self.component else {
                         return
                     }

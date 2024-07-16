@@ -195,10 +195,10 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         } else {
             let displayTopPeers: ContactListPresentation.TopPeers
             var selectedPeers: [EnginePeer.Id] = []
-            if case let .premiumGifting(birthdays, selectToday) = mode {
+            if case let .premiumGifting(birthdays, selectToday, hasActions) = mode {
                 if let birthdays {
                     let today = Calendar(identifier: .gregorian).component(.day, from: Date())
-                    var sections: [(String, [EnginePeer.Id])] = []
+                    var sections: [(String, [EnginePeer.Id], Bool)] = []
                     var todayPeers: [EnginePeer.Id] = []
                     var yesterdayPeers: [EnginePeer.Id] = []
                     var tomorrowPeers: [EnginePeer.Id] = []
@@ -217,13 +217,13 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                     }
                     
                     if !todayPeers.isEmpty {
-                        sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayToday, todayPeers))
+                        sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayToday, todayPeers, hasActions))
                     }
                     if !yesterdayPeers.isEmpty {
-                        sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayYesterday, yesterdayPeers))
+                        sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayYesterday, yesterdayPeers, hasActions))
                     }
                     if !tomorrowPeers.isEmpty {
-                        sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayTomorrow, tomorrowPeers))
+                        sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayTomorrow, tomorrowPeers, hasActions))
                     }
                     
                     displayTopPeers = .custom(sections)

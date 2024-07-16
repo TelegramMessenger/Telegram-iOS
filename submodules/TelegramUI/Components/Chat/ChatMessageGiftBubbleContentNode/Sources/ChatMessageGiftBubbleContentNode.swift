@@ -235,6 +235,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 var giftSize = CGSize(width: 220.0, height: 240.0)
                 
+                let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+                
                 let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, message: EngineMessage(item.message), accountPeerId: item.context.account.peerId)
             
                 let primaryTextColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
@@ -252,6 +254,14 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                         case let .giftPremium(_, _, monthsValue, _, _):
                             months = monthsValue
                             text = item.presentationData.strings.Notification_PremiumGift_Subtitle(item.presentationData.strings.Notification_PremiumGift_Months(months)).string
+                        case let .giftStars(_, _, count, _, _, _):
+                            months = 6
+                            var peerName = ""
+                            if let peer = item.message.peers[item.message.id.peerId] {
+                                peerName = EnginePeer(peer).compactDisplayTitle
+                            }
+                            title = item.presentationData.strings.Notification_StarsGift_Title(Int32(count))
+                            text = incoming ? item.presentationData.strings.Notification_StarsGift_Subtitle : item.presentationData.strings.Notification_StarsGift_SubtitleYou(peerName).string
                         case let .giftCode(_, fromGiveaway, unclaimed, channelId, monthsValue, _, _, _, _):
                             if channelId == nil {
                                 months = monthsValue

@@ -30,6 +30,7 @@ swift_library(
         "//submodules/UndoUI",
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/TelegramUI/Components/ListActionItemComponent",
+        "//submodules/TelegramUI/Components/NavigationStackComponent",
     ],
     visibility = [
         "//visibility:public",

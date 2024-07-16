@@ -16,6 +16,8 @@ import OpenInExternalAppUI
 import MultilineTextComponent
 import MinimizedContainer
 import InstantPageUI
+import NavigationStackComponent
+import LottieComponent
 
 private let settingsTag = GenericComponentViewTag()
 
@@ -26,6 +28,7 @@ private final class BrowserScreenComponent: CombinedComponent {
     let contentState: BrowserContentState?
     let presentationState: BrowserPresentationState
     let performAction: ActionSlot<BrowserScreen.Action>
+    let performHoldAction: (UIView, ContextGesture?, BrowserScreen.Action) -> Void
     let panelCollapseFraction: CGFloat
     
     init(
@@ -33,12 +36,14 @@ private final class BrowserScreenComponent: CombinedComponent {
         contentState: BrowserContentState?,
         presentationState: BrowserPresentationState,
         performAction: ActionSlot<BrowserScreen.Action>,
+        performHoldAction: @escaping (UIView, ContextGesture?, BrowserScreen.Action) -> Void,
         panelCollapseFraction: CGFloat
     ) {
         self.context = context
         self.contentState = contentState
         self.presentationState = presentationState
         self.performAction = performAction
+        self.performHoldAction = performHoldAction
         self.panelCollapseFraction = panelCollapseFraction
     }
     
@@ -72,7 +77,8 @@ private final class BrowserScreenComponent: CombinedComponent {
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let performAction = context.component.performAction
-                        
+            let performHoldAction = context.component.performHoldAction
+            
             let navigationContent: AnyComponentWithIdentity<Empty>?
             var navigationLeftItems: [AnyComponentWithIdentity<Empty>]
             var navigationRightItems: [AnyComponentWithIdentity<Empty>]
@@ -120,9 +126,12 @@ private final class BrowserScreenComponent: CombinedComponent {
                         component: AnyComponent(
                             ReferenceButtonComponent(
                                 content: AnyComponent(
-                                    BundleIconComponent(
-                                        name: "Instant View/Settings",
-                                        tintColor: environment.theme.rootController.navigationBar.primaryTextColor
+                                    LottieComponent(
+                                        content: LottieComponent.AppBundleContent(
+                                            name: "anim_moredots"
+                                        ),
+                                        color: environment.theme.rootController.navigationBar.primaryTextColor,
+                                        size: CGSize(width: 30.0, height: 30.0)
                                     )
                                 ),
                                 tag: settingsTag,
@@ -145,7 +154,6 @@ private final class BrowserScreenComponent: CombinedComponent {
                                             tintColor: environment.theme.rootController.navigationBar.primaryTextColor
                                         )
                                     ),
-                                    tag: settingsTag,
                                     action: {
                                         performAction.invoke(isLoading ? .stop : .reload)
                                     }
@@ -172,7 +180,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                     leftItems: navigationLeftItems,
                     rightItems: navigationRightItems,
                     centerItem: navigationContent,
-                    readingProgress: 0.0,
+                    readingProgress: context.component.contentState?.readingProgress ?? 0.0,
                     loadingProgress: context.component.contentState?.estimatedProgress,
                     collapseFraction: collapseFraction
                 ),
@@ -206,7 +214,8 @@ private final class BrowserScreenComponent: CombinedComponent {
                             textColor: environment.theme.rootController.navigationBar.primaryTextColor,
                             canGoBack: context.component.contentState?.canGoBack ?? false,
                             canGoForward: context.component.contentState?.canGoForward ?? false,
-                            performAction: performAction
+                            performAction: performAction,
+                            performHoldAction: performHoldAction
                         )
                     )
                 )
@@ -242,8 +251,11 @@ private final class BrowserScreenComponent: CombinedComponent {
 }
 
 struct BrowserPresentationState: Equatable {
-    var fontSize: Int32
-    var fontIsSerif: Bool
+    struct FontState: Equatable {
+        var size: Int32
+        var isSerif: Bool
+    }
+    var fontState: FontState
     var isSearching: Bool
     var searchResultIndex: Int
     var searchResultCount: Int
@@ -275,19 +287,21 @@ public class BrowserScreen: ViewController, MinimizableController {
         private weak var controller: BrowserScreen?
         private let context: AccountContext
         
-        private let contentContainerView: UIView
-        fileprivate var content: BrowserContent?
+        private let contentContainerView = UIView()
+        fileprivate let contentNavigationContainer = ComponentView<Empty>()
+        fileprivate var content: [BrowserContent] = []
         
-        private var contentState: BrowserContentState?
-        private var contentStateDisposable: Disposable?
+        fileprivate var contentState: BrowserContentState?
+        private var contentStateDisposable = MetaDisposable()
         
         private var presentationState: BrowserPresentationState
         
-        private let performAction: ActionSlot<BrowserScreen.Action>
+        private let performAction = ActionSlot<BrowserScreen.Action>()
         
-        fileprivate let componentHost: ComponentView<ViewControllerComponentContainer.Environment>
+        fileprivate let componentHost = ComponentView<ViewControllerComponentContainer.Environment>()
         
         private var presentationData: PresentationData
+        private var presentationDataDisposable: Disposable?
         private var validLayout: (ContainerViewLayout, CGFloat)?
         
         init(controller: BrowserScreen) {
@@ -295,42 +309,17 @@ public class BrowserScreen: ViewController, MinimizableController {
             self.controller = controller
             self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             
-            self.presentationState = BrowserPresentationState(fontSize: 100, fontIsSerif: false, isSearching: false, searchResultIndex: 0, searchResultCount: 0, searchQueryIsEmpty: true)
-            
-            self.performAction = ActionSlot()
-
-            self.contentContainerView = UIView()
-            self.contentContainerView.clipsToBounds = true
-                        
-            self.componentHost = ComponentView<ViewControllerComponentContainer.Environment>()
-            
+            self.presentationState = BrowserPresentationState(
+                fontState: BrowserPresentationState.FontState(size: 100, isSerif: false),
+                isSearching: false, searchResultIndex: 0, searchResultCount: 0, searchQueryIsEmpty: true
+            )
+                                                
             super.init()
             
-            let content: BrowserContent
-            switch controller.subject {
-            case let .webPage(url):
-                content = BrowserWebContent(context: controller.context, url: url)
-            case let .instantPage(webPage, sourceLocation):
-                content = BrowserInstantPageContent(context: controller.context, webPage: webPage, url: webPage.content.url ?? "", sourceLocation: sourceLocation)
-            }
-            
-            self.content = content
-            self.contentStateDisposable = (content.state
-            |> deliverOnMainQueue).start(next: { [weak self] state in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.controller?.title = state.title
-                strongSelf.contentState = state
-                strongSelf.requestLayout(transition: .easeInOut(duration: 0.25))
-            }).strict()
-            
-            self.content?.onScrollingUpdate = { [weak self] update in
-                self?.onContentScrollingUpdate(update)
-            }
-            
+            self.pushContent(controller.subject, transition: .immediate)
+             
             self.performAction.connect { [weak self] action in
-                guard let self, let content = self.content, let url = self.contentState?.url else {
+                guard let self, let content = self.content.last, let url = self.contentState?.url else {
                     return
                 }
                 switch action {
@@ -341,7 +330,11 @@ public class BrowserScreen: ViewController, MinimizableController {
                 case .stop:
                     content.stop()
                 case .navigateBack:
-                    content.navigateBack()
+                    if content.currentState.canGoBack {
+                        content.navigateBack()
+                    } else {
+                        self.popContent(transition: .spring(duration: 0.4))
+                    }
                 case .navigateForward:
                     content.navigateForward()
                 case .share:
@@ -398,88 +391,215 @@ public class BrowserScreen: ViewController, MinimizableController {
                 case .decreaseFontSize:
                     self.updatePresentationState({ state in
                         var updatedState = state
-                        switch state.fontSize {
+                        switch state.fontState.size {
                         case 150:
-                            updatedState.fontSize = 125
+                            updatedState.fontState.size = 125
                         case 125:
-                            updatedState.fontSize = 115
+                            updatedState.fontState.size = 115
                         case 115:
-                            updatedState.fontSize = 100
+                            updatedState.fontState.size = 100
                         case 100:
-                            updatedState.fontSize = 85
+                            updatedState.fontState.size = 85
                         case 85:
-                            updatedState.fontSize = 75
+                            updatedState.fontState.size = 75
                         case 75:
-                            updatedState.fontSize = 50
+                            updatedState.fontState.size = 50
                         default:
-                            updatedState.fontSize = 50
+                            updatedState.fontState.size = 50
                         }
                         return updatedState
                     })
-                    content.setFontSize(CGFloat(self.presentationState.fontSize) / 100.0)
+                    content.updateFontState(self.presentationState.fontState)
                 case .increaseFontSize:
                     self.updatePresentationState({ state in
                         var updatedState = state
-                        switch state.fontSize {
+                        switch state.fontState.size {
                         case 125:
-                            updatedState.fontSize = 150
+                            updatedState.fontState.size = 150
                         case 115:
-                            updatedState.fontSize = 125
+                            updatedState.fontState.size = 125
                         case 100:
-                            updatedState.fontSize = 115
+                            updatedState.fontState.size = 115
                         case 85:
-                            updatedState.fontSize = 100
+                            updatedState.fontState.size = 100
                         case 75:
-                            updatedState.fontSize = 85
+                            updatedState.fontState.size = 85
                         case 50:
-                            updatedState.fontSize = 75
+                            updatedState.fontState.size = 75
                         default:
-                            updatedState.fontSize = 150
+                            updatedState.fontState.size = 150
                         }
                         return updatedState
                     })
-                    content.setFontSize(CGFloat(self.presentationState.fontSize) / 100.0)
+                    content.updateFontState(self.presentationState.fontState)
                 case .resetFontSize:
                     self.updatePresentationState({ state in
                         var updatedState = state
-                        updatedState.fontSize = 100
+                        updatedState.fontState.size = 100
                         return updatedState
                     })
-                    content.setFontSize(CGFloat(self.presentationState.fontSize) / 100.0)
+                    content.updateFontState(self.presentationState.fontState)
                 case let .updateFontIsSerif(value):
                     self.updatePresentationState({ state in
                         var updatedState = state
-                        updatedState.fontIsSerif = value
+                        updatedState.fontState.isSerif = value
                         return updatedState
                     })
-                    content.setForceSerif(value)
+                    content.updateFontState(self.presentationState.fontState)
                 }
             }
+            
+            self.presentationDataDisposable = (controller.context.sharedContext.presentationData
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+                guard let self else {
+                    return
+                }
+                self.presentationData = presentationData
+                self.requestLayout(transition: .immediate)
+            })
         }
         
         deinit {
-            self.contentStateDisposable?.dispose()
+            self.presentationDataDisposable?.dispose()
+            self.contentStateDisposable.dispose()
         }
         
         override func didLoad() {
             super.didLoad()
             
+            self.contentContainerView.clipsToBounds = true
             self.view.addSubview(self.contentContainerView)
-            if let content = self.content {
-                self.contentContainerView.addSubview(content)
-            }
         }
         
         func updatePresentationState(animated: Bool = false, _ f: (BrowserPresentationState) -> BrowserPresentationState) {
             self.presentationState = f(self.presentationState)
             self.requestLayout(transition: animated ? .easeInOut(duration: 0.2) : .immediate)
         }
+
+        func pushContent(_ content: BrowserScreen.Subject, transition: ComponentTransition) {
+            let browserContent: BrowserContent
+            switch content {
+            case let .webPage(url):
+                browserContent = BrowserWebContent(context: self.context, url: url)
+            case let .instantPage(webPage, anchor, sourceLocation):
+                let instantPageContent = BrowserInstantPageContent(context: self.context, webPage: webPage, anchor: anchor, url: webPage.content.url ?? "", sourceLocation: sourceLocation)
+                instantPageContent.openPeer = { [weak self] peer in
+                    guard let self else {
+                        return
+                    }
+                    self.openPeer(peer)
+                }
+                browserContent = instantPageContent
+            }
+            browserContent.pushContent = { [weak self] content in
+                guard let self else {
+                    return
+                }
+                self.pushContent(content, transition: .spring(duration: 0.4))
+            }
+            browserContent.present = { [weak self] c, a in
+                guard let self, let controller = self.controller else {
+                    return
+                }
+                controller.present(c, in: .window(.root), with: a)
+            }
+            browserContent.presentInGlobalOverlay = { [weak self] c in
+                guard let self, let controller = self.controller else {
+                    return
+                }
+                controller.presentInGlobalOverlay(c)
+            }
+            browserContent.getNavigationController = { [weak self] in
+                return self?.controller?.navigationController as? NavigationController
+            }
+            browserContent.minimize = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.minimize()
+            }
+            
+            self.content.append(browserContent)
+            self.requestLayout(transition: transition)
+            
+            self.setupContentStateUpdates()
+        }
         
-        func minimize() {
+        func popContent(transition: ComponentTransition) {
+            self.content.removeLast()
+            self.requestLayout(transition: transition)
+            
+            self.setupContentStateUpdates()
+        }
+        
+        func openPeer(_ peer: EnginePeer) {
             guard let controller = self.controller, let navigationController = controller.navigationController as? NavigationController else {
                 return
             }
-            navigationController.minimizeViewController(controller, damping: nil, beforeMaximize: { _, completion in
+            self.minimize()
+            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), animated: true))
+        }
+        
+        private func setupContentStateUpdates() {
+            for content in self.content {
+                content.onScrollingUpdate = { _ in }
+            }
+            
+            guard let content = self.content.last else {
+                self.controller?.title = ""
+                self.contentState = nil
+                self.contentStateDisposable.set(nil)
+                self.requestLayout(transition: .easeInOut(duration: 0.25))
+                return
+            }
+            
+            var previousState = BrowserContentState(title: "", url: "", estimatedProgress: 1.0, readingProgress: 0.0, contentType: .webPage, canGoBack: false, canGoForward: false, backList: [], forwardList: [])
+            if self.content.count > 1 {
+                for content in self.content.prefix(upTo: self.content.count - 1) {
+                    var backList = previousState.backList
+                    backList.append(BrowserContentState.HistoryItem(url: content.currentState.url, title: content.currentState.title, uuid: content.uuid))
+                    previousState = previousState.withUpdatedBackList(backList)
+                }
+            }
+            
+            self.contentStateDisposable.set((content.state
+            |> deliverOnMainQueue).startStrict(next: { [weak self] state in
+                guard let self else {
+                    return
+                }
+                var backList = state.backList
+                backList.insert(contentsOf: previousState.backList, at: 0)
+                
+                var canGoBack = state.canGoBack
+                if !backList.isEmpty {
+                    canGoBack = true
+                }
+                
+                let previousState = self.contentState
+                let state = state.withUpdatedCanGoBack(canGoBack).withUpdatedBackList(backList)
+                self.controller?.title = state.title
+                self.contentState = state
+                
+                let transition: ComponentTransition
+                if let previousState, previousState.withUpdatedReadingProgress(state.readingProgress) == state {
+                    transition = .immediate
+                } else {
+                    transition = .easeInOut(duration: 0.25)
+                }
+                
+                self.requestLayout(transition: transition)
+            }))
+                        
+            content.onScrollingUpdate = { [weak self] update in
+                self?.onContentScrollingUpdate(update)
+            }
+        }
+        
+        func minimize(topEdgeOffset: CGFloat? = nil, damping: CGFloat? = nil, initialVelocity: CGFloat? = nil) {
+            guard let controller = self.controller, let navigationController = controller.navigationController as? NavigationController else {
+                return
+            }
+            navigationController.minimizeViewController(controller, topEdgeOffset: topEdgeOffset, damping: damping, velocity: initialVelocity, beforeMaximize: { _, completion in
                 completion()
             }, setupContainer: { [weak self] current in
                 let minimizedContainer: MinimizedContainerImpl?
@@ -497,6 +617,10 @@ public class BrowserScreen: ViewController, MinimizableController {
         func openSettings() {
             guard let referenceView = self.componentHost.findTaggedView(tag: settingsTag) as? ReferenceButtonComponent.View else {
                 return
+            }
+            
+            if let animationComponentView = referenceView.componentView.view as? LottieComponent.View {
+                animationComponentView.playOnce()
             }
 
             self.view.endEditing(true)
@@ -526,20 +650,20 @@ public class BrowserScreen: ViewController, MinimizableController {
                 
                 let performAction = self.performAction
                 
-                let forceIsSerif = self.presentationState.fontIsSerif
+                let forceIsSerif = self.presentationState.fontState.isSerif
                 let fontItem = BrowserFontSizeContextMenuItem(
-                    value: self.presentationState.fontSize,
+                    value: self.presentationState.fontState.size,
                     decrease: { [weak self] in
                         performAction.invoke(.decreaseFontSize)
                         if let self {
-                            return self.presentationState.fontSize
+                            return self.presentationState.fontState.size
                         } else {
                             return 100
                         }
                     }, increase: { [weak self] in
                         performAction.invoke(.increaseFontSize)
                         if let self {
-                            return self.presentationState.fontSize
+                            return self.presentationState.fontState.size
                         } else {
                             return 100
                         }
@@ -598,7 +722,7 @@ public class BrowserScreen: ViewController, MinimizableController {
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
-            if result == self.componentHost.view, let content = self.content {
+            if result == self.componentHost.view, let content = self.content.last {
                 return content.hitTest(self.view.convert(point, to: content), with: event)
             }
             return result
@@ -654,6 +778,51 @@ public class BrowserScreen: ViewController, MinimizableController {
             }
         }
         
+        func navigateTo(_ item: BrowserContentState.HistoryItem) {
+            if let _ = item.webItem {
+                if let last = self.content.last {
+                    last.navigateTo(historyItem: item)
+                }
+            } else if let uuid = item.uuid {
+                var newContent = self.content
+                while newContent.last?.uuid != uuid {
+                    newContent.removeLast()
+                }
+                self.content = newContent
+                self.requestLayout(transition: .spring(duration: 0.4))
+            }
+        }
+        
+        func performHoldAction(view: UIView, gesture: ContextGesture?, action: BrowserScreen.Action) {
+            guard let controller = self.controller, let contentState = self.contentState else {
+                return
+            }
+            
+            let source: ContextContentSource = .reference(BrowserReferenceContentSource(controller: controller, sourceView: view))
+            var items: [ContextMenuItem] = []
+            switch action {
+            case .navigateBack:
+                for item in contentState.backList {
+                    items.append(.action(ContextMenuActionItem(text: item.title, textLayout: .secondLineWithValue(item.url), icon: { _ in return nil }, action: { [weak self] (_, action) in
+                        self?.navigateTo(item)
+                        action(.default)
+                    })))
+                }
+            case .navigateForward:
+                for item in contentState.forwardList {
+                    items.append(.action(ContextMenuActionItem(text: item.title, textLayout: .secondLineWithValue(item.url), icon: { _ in return nil }, action: { [weak self] (_, action) in
+                        self?.navigateTo(item)
+                        action(.default)
+                    })))
+                }
+            default:
+                return
+            }
+            
+            let contextController = ContextController(presentationData: self.presentationData, source: source, items: .single(ContextController.Items(content: .list(items))))
+            self.controller?.present(contextController, in: .window(.root))
+        }
+        
         func requestLayout(transition: ComponentTransition) {
             if let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
@@ -694,6 +863,11 @@ public class BrowserScreen: ViewController, MinimizableController {
                         contentState: self.contentState,
                         presentationState: self.presentationState,
                         performAction: self.performAction,
+                        performHoldAction: { [weak self] view, gesture, action in
+                            if let self {
+                                self.performHoldAction(view: view, gesture: gesture, action: action)
+                            }
+                        },
                         panelCollapseFraction: self.scrollingPanelOffsetFraction
                     )
                 ),
@@ -711,12 +885,48 @@ public class BrowserScreen: ViewController, MinimizableController {
                 transition.setFrame(view: componentView, frame: CGRect(origin: .zero, size: componentSize))
             }
             transition.setFrame(view: self.contentContainerView, frame: CGRect(origin: .zero, size: layout.size))
-            if let content = self.content {
-                let collapsedHeight: CGFloat = 24.0
-                let topInset: CGFloat = environment.statusBarHeight + navigationBarHeight * (1.0 - self.scrollingPanelOffsetFraction) + collapsedHeight * self.scrollingPanelOffsetFraction
-                let bottomInset = 49.0 + layout.intrinsicInsets.bottom
-                content.updateLayout(size: layout.size, insets: UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: bottomInset, right: layout.safeInsets.right), transition: transition)
-                transition.setFrame(view: content, frame: CGRect(origin: .zero, size: layout.size))
+                
+            var items: [AnyComponentWithIdentity<Empty>] = []
+            for content in self.content {
+                items.append(
+                    AnyComponentWithIdentity(id: content.uuid, component: AnyComponent(
+                        BrowserContentComponent(
+                            content: content,
+                            insets: UIEdgeInsets(
+                                top: environment.statusBarHeight,
+                                left: layout.safeInsets.left,
+                                bottom: layout.intrinsicInsets.bottom,
+                                right: layout.safeInsets.right
+                            ),
+                            navigationBarHeight: navigationBarHeight,
+                            scrollingPanelOffsetFraction: self.scrollingPanelOffsetFraction
+                        )
+                    ))
+                )
+            }
+            
+            let _ = self.contentNavigationContainer.update(
+                transition: transition,
+                component: AnyComponent(
+                    NavigationStackComponent(
+                        items: items,
+                        requestPop: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.popContent(transition: .spring(duration: 0.4))
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: layout.size
+            )
+            let navigationFrame = CGRect(origin: .zero, size: layout.size)
+            if let view = self.contentNavigationContainer.view {
+                if view.superview == nil {
+                    self.contentContainerView.addSubview(view)
+                }
+                transition.setFrame(view: view, frame: navigationFrame)
             }
             
             self.navigationBarHeight = environment.navigationHeight
@@ -726,7 +936,7 @@ public class BrowserScreen: ViewController, MinimizableController {
     
     public enum Subject {
         case webPage(url: String)
-        case instantPage(webPage: TelegramMediaWebpage, sourceLocation: InstantPageSourceLocation)
+        case instantPage(webPage: TelegramMediaWebpage, anchor: String?, sourceLocation: InstantPageSourceLocation)
     }
     
     private let context: AccountContext
@@ -743,12 +953,16 @@ public class BrowserScreen: ViewController, MinimizableController {
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown)
         
         self.scrollToTop = { [weak self] in
-            (self?.displayNode as? Node)?.content?.scrollToTop()
+            self?.node.content.last?.scrollToTop()
         }
     }
     
     required public init(coder: NSCoder) {
         preconditionFailure()
+    }
+    
+    private var node: Node {
+        return self.displayNode as! Node
     }
     
     override public func loadDisplayNode() {
@@ -760,11 +974,34 @@ public class BrowserScreen: ViewController, MinimizableController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.height, transition: ComponentTransition(transition))
+        self.node.containerLayoutUpdated(layout: layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.height, transition: ComponentTransition(transition))
+    }
+    
+    public func requestMinimize(topEdgeOffset: CGFloat?, initialVelocity: CGFloat?) {
+        self.node.minimize(topEdgeOffset: topEdgeOffset, damping: 180.0, initialVelocity: initialVelocity)
     }
     
     public var isMinimized = false
     public var isMinimizable = true
+    
+    public var minimizedIcon: UIImage? {
+        if let contentState = self.node.contentState {
+            switch contentState.contentType {
+            case .webPage:
+                return contentState.favicon
+            case .instantPage:
+                return UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon")?.withRenderingMode(.alwaysTemplate)
+            }
+        }
+        return nil
+    }
+    
+    public var minimizedProgress: Float? {
+        if let contentState = self.node.contentState {
+            return Float(contentState.readingProgress)
+        }
+        return nil
+    }
 }
 
 private final class BrowserReferenceContentSource: ContextReferenceContentSource {
@@ -778,5 +1015,72 @@ private final class BrowserReferenceContentSource: ContextReferenceContentSource
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private final class BrowserContentComponent: Component {
+    let content: BrowserContent
+    let insets: UIEdgeInsets
+    let navigationBarHeight: CGFloat
+    let scrollingPanelOffsetFraction: CGFloat
+    
+    init(
+        content: BrowserContent,
+        insets: UIEdgeInsets,
+        navigationBarHeight: CGFloat,
+        scrollingPanelOffsetFraction: CGFloat
+    ) {
+        self.content = content
+        self.insets = insets
+        self.navigationBarHeight = navigationBarHeight
+        self.scrollingPanelOffsetFraction = scrollingPanelOffsetFraction
+    }
+    
+    static func ==(lhs: BrowserContentComponent, rhs: BrowserContentComponent) -> Bool {
+        if lhs.content.uuid != rhs.content.uuid {
+            return false
+        }
+        if lhs.insets != rhs.insets {
+            return false
+        }
+        if lhs.navigationBarHeight != rhs.navigationBarHeight {
+            return false
+        }
+        if lhs.scrollingPanelOffsetFraction != rhs.scrollingPanelOffsetFraction {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIView {
+        init() {
+            super.init(frame: CGRect())
+        }
+
+        required init?(coder aDecoder: NSCoder) {
+            preconditionFailure()
+        }
+
+        func update(component: BrowserContentComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+            if component.content.superview !== self {
+                self.addSubview(component.content)
+            }
+            
+            let collapsedHeight: CGFloat = 24.0
+            let topInset: CGFloat = component.insets.top + component.navigationBarHeight * (1.0 - component.scrollingPanelOffsetFraction) + collapsedHeight * component.scrollingPanelOffsetFraction
+            let bottomInset = 49.0 + component.insets.bottom
+            component.content.updateLayout(size: availableSize, insets: UIEdgeInsets(top: topInset, left: component.insets.left, bottom: bottomInset, right: component.insets.right), transition: transition)
+            transition.setFrame(view: component.content, frame: CGRect(origin: .zero, size: availableSize))
+            
+            return availableSize
+        }
+    }
+
+    func makeView() -> View {
+        return View()
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

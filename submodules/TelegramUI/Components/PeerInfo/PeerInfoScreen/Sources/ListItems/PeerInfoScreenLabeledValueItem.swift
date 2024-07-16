@@ -137,6 +137,8 @@ private func generateExpandBackground(size: CGSize, color: UIColor) -> UIImage? 
 }
 
 private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
+    private weak var context: AccountContext?
+    
     private let containerNode: ContextControllerSourceNode
     private let contextSourceNode: ContextExtractedContentContainingNode
     
@@ -401,8 +403,8 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                                 if self.linkItemWithProgress != currentLinkItem {
                                     self.linkItemWithProgress = currentLinkItem
                                     
-                                    if let validLayout = self.validLayout {
-                                        let _ = self.update(width: validLayout.width, safeInsets: validLayout.safeInsets, presentationData: validLayout.presentationData, item: validLayout.item, topItem: validLayout.topItem, bottomItem: validLayout.bottomItem, hasCorners: validLayout.hasCorners, transition: .immediate)
+                                    if let validLayout = self.validLayout, let context = self.context {
+                                        let _ = self.update(context: context, width: validLayout.width, safeInsets: validLayout.safeInsets, presentationData: validLayout.presentationData, item: validLayout.item, topItem: validLayout.topItem, bottomItem: validLayout.bottomItem, hasCorners: validLayout.hasCorners, transition: .immediate)
                                     }
                                 }
                             })
@@ -430,8 +432,8 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                                 if self.linkItemWithProgress != currentLinkItem {
                                     self.linkItemWithProgress = currentLinkItem
                                     
-                                    if let validLayout = self.validLayout {
-                                        let _ = self.update(width: validLayout.width, safeInsets: validLayout.safeInsets, presentationData: validLayout.presentationData, item: validLayout.item, topItem: validLayout.topItem, bottomItem: validLayout.bottomItem, hasCorners: validLayout.hasCorners, transition: .immediate)
+                                    if let validLayout = self.validLayout, let context = self.context {
+                                        let _ = self.update(context: context, width: validLayout.width, safeInsets: validLayout.safeInsets, presentationData: validLayout.presentationData, item: validLayout.item, topItem: validLayout.topItem, bottomItem: validLayout.bottomItem, hasCorners: validLayout.hasCorners, transition: .immediate)
                                     }
                                 }
                             })
@@ -448,11 +450,12 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         }
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenLabeledValueItem else {
             return 10.0
         }
         
+        self.context = context
         self.validLayout = (width, safeInsets, presentationData, item, topItem, bottomItem, hasCorners)
         
         self.item = item

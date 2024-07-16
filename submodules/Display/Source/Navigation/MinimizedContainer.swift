@@ -11,7 +11,7 @@ public protocol MinimizedContainer: ASDisplayNode {
     var statusBarStyle: StatusBarStyle { get }
     var statusBarStyleUpdated: (() -> Void)? { get set }
     
-    func addController(_ viewController: MinimizableController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, transition: ContainedViewLayoutTransition)
+    func addController(_ viewController: MinimizableController, topEdgeOffset: CGFloat?, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, transition: ContainedViewLayoutTransition)
     func maximizeController(_ viewController: MinimizableController, animated: Bool, completion: @escaping (Bool) -> Void)
     func collapse()
     func dismissAll(completion: @escaping () -> Void)
@@ -26,7 +26,9 @@ public protocol MinimizableController: ViewController {
     var isMinimized: Bool { get set }
     var isMinimizable: Bool { get }
     var minimizedIcon: UIImage? { get }
+    var minimizedProgress: Float? { get }
     
+    func requestMinimize(topEdgeOffset: CGFloat?, initialVelocity: CGFloat?)
     func makeContentSnapshotView() -> UIView?
     func shouldDismissImmediately() -> Bool
 }
@@ -50,6 +52,14 @@ public extension MinimizableController {
     
     var minimizedIcon: UIImage? {
         return nil
+    }
+    
+    var minimizedProgress: Float? {
+        return nil
+    }
+    
+    func requestMinimize(topEdgeOffset: CGFloat?, initialVelocity: CGFloat?) {
+        
     }
     
     func makeContentSnapshotView() -> UIView? {

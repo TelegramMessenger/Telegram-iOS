@@ -26,17 +26,20 @@ final class StarsTransactionsScreenComponent: Component {
     let starsContext: StarsContext
     let openTransaction: (StarsContext.State.Transaction) -> Void
     let buy: () -> Void
+    let gift: () -> Void
     
     init(
         context: AccountContext,
         starsContext: StarsContext,
         openTransaction: @escaping (StarsContext.State.Transaction) -> Void,
-        buy: @escaping () -> Void
+        buy: @escaping () -> Void,
+        gift: @escaping () -> Void
     ) {
         self.context = context
         self.starsContext = starsContext
         self.openTransaction = openTransaction
         self.buy = buy
+        self.gift = gift
     }
     
     static func ==(lhs: StarsTransactionsScreenComponent, rhs: StarsTransactionsScreenComponent) -> Bool {
@@ -88,6 +91,8 @@ final class StarsTransactionsScreenComponent: Component {
         private let descriptionView = ComponentView<Empty>()
         
         private let balanceView = ComponentView<Empty>()
+        
+        private let subscriptionsView = ComponentView<Empty>()
         
         private let topBalanceTitleView = ComponentView<Empty>()
         private let topBalanceValueView = ComponentView<Empty>()
@@ -282,6 +287,7 @@ final class StarsTransactionsScreenComponent: Component {
             }
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
             if self.stateDisposable == nil {
                 self.stateDisposable = (component.starsContext.state
@@ -531,7 +537,27 @@ final class StarsTransactionsScreenComponent: Component {
                                 }
                                 component.buy()
                             },
-                            buyAds: nil
+                            buyAds: nil,
+                            additionalAction: AnyComponent(
+                                Button(
+                                    content: AnyComponent(
+                                        HStack([
+                                            AnyComponentWithIdentity(
+                                                id: "icon",
+                                                component: AnyComponent(BundleIconComponent(name: "Premium/Stars/Gift", tintColor: environment.theme.list.itemAccentColor))
+                                            ),
+                                            AnyComponentWithIdentity(
+                                                id: "label",
+                                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Gift Stars to Friends", font: Font.regular(17.0), textColor: environment.theme.list.itemAccentColor))))
+                                            )
+                                        ],
+                                        spacing: 6.0)
+                                    ),
+                                    action: {
+                                        component.gift()
+                                    }
+                                )
+                            )
                         )
                     ))]
                 )),
@@ -545,9 +571,41 @@ final class StarsTransactionsScreenComponent: Component {
                 }
                 starTransition.setFrame(view: balanceView, frame: balanceFrame)
             }
-            
             contentHeight += balanceSize.height
             contentHeight += 44.0
+            
+            let subscriptionsItems: [AnyComponentWithIdentity<Empty>] = []
+            
+            if !subscriptionsItems.isEmpty {
+                //TODO:localize
+                let subscriptionsSize = self.subscriptionsView.update(
+                    transition: .immediate,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: environment.theme,
+                        header: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "My Subscriptions".uppercased(),
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
+                        )),
+                        footer: nil,
+                        items: subscriptionsItems
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInsets, height: availableSize.height)
+                )
+                let subscriptionsFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - subscriptionsSize.width) / 2.0), y: contentHeight), size: subscriptionsSize)
+                if let subscriptionsView = self.subscriptionsView.view {
+                    if subscriptionsView.superview == nil {
+                        self.scrollView.addSubview(subscriptionsView)
+                    }
+                    starTransition.setFrame(view: subscriptionsView, frame: subscriptionsFrame)
+                }
+                contentHeight += subscriptionsSize.height
+                contentHeight += 44.0
+            }
             
             let initialTransactions = self.starsState?.transactions ?? []
             var panelItems: [StarsTransactionsPanelContainerComponent.Item] = []
@@ -704,6 +762,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         self.starsContext = starsContext
         
         var buyImpl: (() -> Void)?
+        var giftImpl: (() -> Void)?
         var openTransactionImpl: ((StarsContext.State.Transaction) -> Void)?
         super.init(context: context, component: StarsTransactionsScreenComponent(
             context: context,
@@ -713,6 +772,9 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
             },
             buy: {
                 buyImpl?()
+            },
+            gift: {
+                giftImpl?()
             }
         ), navigationBarAppearance: .transparent)
         
@@ -744,7 +806,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                 guard let self else {
                     return
                 }
-                let controller = context.sharedContext.makeStarsPurchaseScreen(context: context, starsContext: starsContext, options: options, peerId: nil, requiredStars: nil, completion: { [weak self] stars in
+                let controller = context.sharedContext.makeStarsPurchaseScreen(context: context, starsContext: starsContext, options: options, purpose: .generic, completion: { [weak self] stars in
                     guard let self else {
                         return
                     }
@@ -763,6 +825,36 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                         elevatedLayout: false,
                         action: { _ in return true})
                     self.present(resultController, in: .window(.root))
+                })
+                self.push(controller)
+            })
+        }
+        
+        giftImpl = { [weak self] in
+            guard let self else {
+                return
+            }
+            let _ = combineLatest(queue: Queue.mainQueue(),
+                self.options.get() |> take(1),
+                self.context.account.stateManager.contactBirthdays |> take(1)
+            ).start(next: { [weak self] options, birthdays in
+                guard let self else {
+                    return
+                }
+                let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .stars(birthdays), completion: { [weak self] peerIds in
+                    guard let self, let peerId = peerIds.first else {
+                        return
+                    }
+                    let purchaseController = self.context.sharedContext.makeStarsPurchaseScreen(
+                        context: self.context,
+                        starsContext: starsContext,
+                        options: options,
+                        purpose: .gift(peerId: peerId),
+                        completion: { stars in
+                          
+                        }
+                    )
+                    self.push(purchaseController)
                 })
                 self.push(controller)
             })

@@ -11,6 +11,8 @@ import PhotoResources
 import AvatarNode
 import AccountContext
 import InvisibleInkDustNode
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
 final class StarsParticlesView: UIView {
     private struct Particle {
@@ -251,6 +253,7 @@ public final class StarsImageComponent: Component {
         case media([AnyMediaReference])
         case extendedMedia([TelegramExtendedMedia])
         case transactionPeer(StarsContext.State.Transaction.Peer)
+        case gift(Int64)
         
         public static func == (lhs: StarsImageComponent.Subject, rhs: StarsImageComponent.Subject) -> Bool {
             switch lhs {
@@ -280,6 +283,12 @@ public final class StarsImageComponent: Component {
                 }
             case let .transactionPeer(lhsPeer):
                 if case let .transactionPeer(rhsPeer) = rhs, lhsPeer == rhsPeer {
+                    return true
+                } else {
+                    return false
+                }
+            case let .gift(lhsCount):
+                if case let .gift(rhsCount) = rhs, lhsCount == rhsCount {
                     return true
                 } else {
                     return false
@@ -346,6 +355,8 @@ public final class StarsImageComponent: Component {
         private var iconView: UIImageView?
         private var dustNode: MediaDustNode?
         private var button: UIControl?
+        
+        private var animationNode: AnimatedStickerNode?
         
         private var lockView: UIImageView?
         private var countView = ComponentView<Empty>()
@@ -776,6 +787,31 @@ public final class StarsImageComponent: Component {
                     iconBackgroundView.frame = imageFrame
                     iconView.frame = imageFrame.insetBy(dx: iconInset, dy: iconInset).offsetBy(dx: 0.0, dy: iconOffset)
                 }
+            case let .gift(count):
+                let animationNode: AnimatedStickerNode
+                if let current = self.animationNode {
+                    animationNode = current
+                } else {
+                    let stickerName: String
+                    if count <= 1000 {
+                        stickerName = "Gift3"
+                    } else if count < 2500 {
+                        stickerName = "Gift6"
+                    } else {
+                        stickerName = "Gift12"
+                    }
+                    animationNode = DefaultAnimatedStickerNodeImpl()
+                    animationNode.autoplay = true
+                    animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: stickerName), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
+                    animationNode.visibility = true
+                    containerNode.view.addSubview(animationNode.view)
+                    self.animationNode = animationNode
+                    
+                    animationNode.playOnce()
+                }
+                let animationFrame = imageFrame.insetBy(dx: -imageFrame.width * 0.19, dy: -imageFrame.height * 0.19).offsetBy(dx: 0.0, dy: -14.0)
+                animationNode.frame = animationFrame
+                animationNode.updateLayout(size: animationFrame.size)
             }
             
             if let _ = component.action {

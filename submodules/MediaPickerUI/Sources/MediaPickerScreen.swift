@@ -26,6 +26,7 @@ import CameraScreen
 import MediaEditor
 import ImageObjectSeparation
 import ChatSendMessageActionUI
+import AnimatedCountLabelNode
 
 final class MediaPickerInteraction {
     let downloadManager: AssetDownloadManager
@@ -193,7 +194,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     private let saveEditedPhotos: Bool
     
     private let titleView: MediaPickerTitleView
+    private let cancelButtonNode: WebAppCancelButtonNode
     private let moreButtonNode: MoreButtonNode
+    private let selectedButtonNode: SelectedButtonNode
     
     public weak var webSearchController: WebSearchController?
     
@@ -227,6 +230,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     public var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)? = nil
     
     private let selectedCollection = Promise<PHAssetCollection?>(nil)
+    private var selectedCollectionValue: PHAssetCollection? {
+        didSet {
+            self.selectedCollection.set(.single(self.selectedCollectionValue))
+        }
+    }
     
     var dismissAll: () -> Void = { }
     
@@ -935,8 +943,6 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
             }
         
-            
-            
             var previousEntries = self.currentEntries
             
             if self.resetOnUpdate {
@@ -992,7 +998,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.backgroundNode.updateColor(color: self.presentationData.theme.rootController.tabBar.backgroundColor, transition: .immediate)
         }
         
-        private var currentDisplayMode: DisplayMode = .all
+        private(set) var currentDisplayMode: DisplayMode = .all {
+            didSet {
+                self.displayModeUpdated(self.currentDisplayMode)
+            }
+        }
+        var displayModeUpdated: (DisplayMode) -> Void = { _ in }
+        
         func updateDisplayMode(_ displayMode: DisplayMode, animated: Bool = true) {
             let updated = self.currentDisplayMode != displayMode
             self.currentDisplayMode = displayMode
@@ -1803,8 +1815,12 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.titleView.title = presentationData.strings.Attachment_Gallery
         }
         
+        self.cancelButtonNode = WebAppCancelButtonNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        
         self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
         self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
+        
+        self.selectedButtonNode = SelectedButtonNode(theme: self.presentationData.theme)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
         
@@ -1906,7 +1922,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             if case let .assets(collection, _) = self.subject, collection != nil {
                 self.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.backPressed))
             } else {
-                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+                self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: self.cancelButtonNode)
+                self.navigationItem.leftBarButtonItem?.action = #selector(self.cancelPressed)
+                self.navigationItem.leftBarButtonItem?.target = self
+                
+//                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
             }
             
             if self.bannedSendPhotos != nil && self.bannedSendVideos != nil {
@@ -1922,6 +1942,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 strongSelf.searchOrMorePressed(node: strongSelf.moreButtonNode.contextSourceNode, gesture: gesture)
             }
         }
+        
+        self.selectedButtonNode.addTarget(self, action: #selector(self.selectedPressed), forControlEvents: .touchUpInside)
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -2050,6 +2072,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         
         self._ready.set(self.controllerNode.ready.get())
         
+        self.controllerNode.displayModeUpdated = { [weak self] _ in
+            guard let self else {
+                return
+            }
+            let count = Int32(self.interaction?.selectionState?.count() ?? 0)
+            self.updateSelectionState(count: count)
+        }
         if case .media = self.subject {
             self.controllerNode.updateDisplayMode(.selected, animated: false)
         }
@@ -2086,10 +2115,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     }
                     self.controllerNode.resetOnUpdate = true
                     if collection.assetCollectionSubtype == .smartAlbumUserLibrary {
-                        self.selectedCollection.set(.single(nil))
+                        self.selectedCollectionValue = nil
                         self.titleView.title = self.presentationData.strings.MediaPicker_Recents
                     } else {
-                        self.selectedCollection.set(.single(collection))
+                        self.selectedCollectionValue = collection
                         self.titleView.title = collection.localizedTitle ?? ""
                     }
                     self.scrollToTop?()
@@ -2211,6 +2240,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     fileprivate func updateSelectionState(count: Int32) {
         self.selectionCount = count
     
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
         var moreIsVisible = false
         if case let .assets(_, mode) = self.subject, [.story, .createSticker].contains(mode) {
             moreIsVisible = true
@@ -2220,25 +2250,32 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             moreIsVisible = true
 //            self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
         } else {
-            if count > 0 {
-                self.titleView.segments = [self.presentationData.strings.Attachment_AllMedia, self.presentationData.strings.Attachment_SelectedMedia(count)]
-                self.titleView.segmentsHidden = false
-                moreIsVisible = true
-//                self.moreButtonNode.iconNode.enqueueState(.more, animated: true)
+            let title: String
+            let isEnabled: Bool
+            if self.controllerNode.currentDisplayMode == .selected {
+                title = self.presentationData.strings.Attachment_SelectedMedia(count)
+                isEnabled = false
             } else {
-                self.titleView.segmentsHidden = true
-                moreIsVisible = false
-//                self.moreButtonNode.iconNode.enqueueState(.search, animated: true)
-                
-                if self.titleView.index != 0 {
-                    Queue.mainQueue().after(0.3) {
-                        self.titleView.index = 0
-                    }
-                }
+                title = self.selectedCollectionValue?.localizedTitle ?? self.presentationData.strings.MediaPicker_Recents
+                isEnabled = true
             }
+            self.titleView.updateTitle(title: title, isEnabled: isEnabled, animated: true)
+            self.cancelButtonNode.setState(isEnabled ? .cancel : .back, animated: true)
+            
+            let isSelectionButtonVisible = count > 0 && self.controllerNode.currentDisplayMode == .all
+            transition.updateAlpha(node: self.selectedButtonNode, alpha: isSelectionButtonVisible ? 1.0 : 0.0)
+            transition.updateTransformScale(node: self.selectedButtonNode, scale: isSelectionButtonVisible ? 1.0 : 0.01)
+            
+            let selectedSize = self.selectedButtonNode.update(count: count)
+            if self.selectedButtonNode.supernode == nil {
+                self.navigationBar?.addSubnode(self.selectedButtonNode)
+            }
+            self.selectedButtonNode.frame = CGRect(origin: CGPoint(x: self.view.bounds.width - 54.0 - selectedSize.width, y: 18.0 + UIScreenPixel), size: selectedSize)
+            
+            self.titleView.segmentsHidden = true
+            moreIsVisible = count > 0
         }
         
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
         transition.updateAlpha(node: self.moreButtonNode.iconNode, alpha: moreIsVisible ? 1.0 : 0.0)
         transition.updateTransformScale(node: self.moreButtonNode.iconNode, scale: moreIsVisible ? 1.0 : 0.1)
     }
@@ -2246,7 +2283,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     private func updateThemeAndStrings() {
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.titleView.theme = self.presentationData.theme
+        self.cancelButtonNode.theme = self.presentationData.theme
         self.moreButtonNode.theme = self.presentationData.theme
+        self.selectedButtonNode.theme = self.presentationData.theme
         self.controllerNode.updatePresentationData(self.presentationData)
     }
     
@@ -2304,13 +2343,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             return true
         }
     }
-    
-    @objc private func cancelPressed() {
-        self.dismissAllTooltips()
         
-        self.dismiss()
-    }
-    
     public override func dismiss(completion: (() -> Void)? = nil) {
         self.controllerNode.cancelAssetDownloads()
         
@@ -2406,6 +2439,19 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.presentWebSearch(groupsController, activateOnDisplay)
         }
         self.groupsController = groupsController
+    }
+    
+    @objc private func cancelPressed() {
+        self.dismissAllTooltips()
+        if case .back = self.cancelButtonNode.state {
+            self.controllerNode.updateDisplayMode(.all)
+        } else {
+            self.dismiss()
+        }
+    }
+    
+    @objc private func selectedPressed() {
+        self.controllerNode.updateDisplayMode(.selected, animated: true)
     }
     
     @objc private func searchOrMorePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {
@@ -3131,4 +3177,66 @@ public func stickerMediaPickerController(
     controller.navigationPresentation = .flatModal
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     return controller
+}
+
+private class SelectedButtonNode: HighlightableButtonNode {
+    private let background = ASImageNode()
+    private let icon = ASImageNode()
+    private let label = ImmediateAnimatedCountLabelNode()
+    
+    var theme: PresentationTheme {
+        didSet {
+            self.background.image = generateStretchableFilledCircleImage(radius: 21.0 / 2.0, color: self.theme.list.itemCheckColors.fillColor)
+            let _ = self.update(count: self.count)
+        }
+    }
+    
+    private var count: Int32 = 0
+    
+    init(theme: PresentationTheme) {
+        self.theme = theme
+        
+        super.init()
+        
+        self.background.displaysAsynchronously = false
+        self.icon.displaysAsynchronously = false
+        self.label.displaysAsynchronously = false
+        
+        self.icon.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
+        self.background.image = generateStretchableFilledCircleImage(radius: 21.0 / 2.0, color: self.theme.list.itemCheckColors.fillColor)
+        
+        self.addSubnode(self.background)
+        self.addSubnode(self.icon)
+        self.addSubnode(self.label)
+    }
+    
+    func update(count: Int32) -> CGSize {
+        self.count = count
+        
+        let diameter: CGFloat = 21.0
+        let font = Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers])
+        
+        let stringValue = "\(max(1, count))"
+        var segments: [AnimatedCountLabelNode.Segment] = []
+        for char in stringValue {
+            if let intValue = Int(String(char)) {
+                segments.append(.number(intValue, NSAttributedString(string: String(char), font: font, textColor: self.theme.list.itemCheckColors.foregroundColor)))
+            }
+        }
+        self.label.segments = segments
+                
+        let textSize = self.label.updateLayout(size: CGSize(width: 100.0, height: diameter), animated: true)
+        let size = CGSize(width: textSize.width + 28.0, height: diameter)
+        
+        if let _ = self.icon.image {
+            let iconSize = CGSize(width: 22.0, height: 22.0)
+            let iconFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+            self.icon.frame = iconFrame
+        }
+        
+        self.label.frame = CGRect(origin: CGPoint(x: 21.0, y: floor((size.height - textSize.height) / 2.0) - UIScreenPixel), size: textSize)
+        self.background.frame = CGRect(origin: .zero, size: size)
+        
+        return size
+    }
 }

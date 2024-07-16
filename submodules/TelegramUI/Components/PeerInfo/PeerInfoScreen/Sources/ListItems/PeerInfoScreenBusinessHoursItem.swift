@@ -12,6 +12,7 @@ import ComponentFlow
 import MultilineTextComponent
 import BundleIconComponent
 import PlainButtonComponent
+import AccountContext
 
 func businessHoursTextToCopy(businessHours: TelegramBusinessHours, presentationData: PresentationData, displayLocalTimezone: Bool) -> String {
     var text = ""
@@ -279,7 +280,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         }
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenBusinessHoursItem else {
             return 10.0
         }

@@ -632,6 +632,7 @@ private final class PendingInAppPurchaseState: Codable {
             case giftCode
             case giveaway
             case stars
+            case starsGift
         }
         
         case subscription
@@ -641,6 +642,7 @@ private final class PendingInAppPurchaseState: Codable {
         case giftCode(peerIds: [EnginePeer.Id], boostPeer: EnginePeer.Id?)
         case giveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32)
         case stars(count: Int64)
+        case starsGift(peerId: EnginePeer.Id, count: Int64)
         
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -674,7 +676,14 @@ private final class PendingInAppPurchaseState: Codable {
                     untilDate: try container.decode(Int32.self, forKey: .untilDate)
                 )
             case .stars:
-                self = .stars(count: try container.decode(Int64.self, forKey: .stars))
+                self = .stars(
+                    count: try container.decode(Int64.self, forKey: .stars)
+                )
+            case .starsGift:
+                self = .starsGift(
+                    peerId: EnginePeer.Id(try container.decode(Int64.self, forKey: .peer)),
+                    count: try container.decode(Int64.self, forKey: .stars)
+                )
             default:
                 throw DecodingError.generic
             }
@@ -710,6 +719,10 @@ private final class PendingInAppPurchaseState: Codable {
             case let .stars(count):
                 try container.encode(PurposeType.stars.rawValue, forKey: .type)
                 try container.encode(count, forKey: .stars)
+            case let .starsGift(peerId, count):
+                try container.encode(PurposeType.starsGift.rawValue, forKey: .type)
+                try container.encode(peerId.toInt64(), forKey: .peer)
+                try container.encode(count, forKey: .stars)
             }
         }
         
@@ -729,9 +742,8 @@ private final class PendingInAppPurchaseState: Codable {
                 self = .giveaway(boostPeer: boostPeer, additionalPeerIds: additionalPeerIds, countries: countries, onlyNewSubscribers: onlyNewSubscribers, showWinners: showWinners, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate)
             case let .stars(count, _, _):
                 self = .stars(count: count)
-            case let .starsGift(_, count, _, _):
-                //TODO:localize
-                self = .stars(count: count)
+            case let .starsGift(peerId, count, _, _):
+                self = .starsGift(peerId: peerId, count: count)
             }
         }
         
@@ -752,6 +764,8 @@ private final class PendingInAppPurchaseState: Codable {
                 return .giveaway(boostPeer: boostPeer, additionalPeerIds: additionalPeerIds, countries: countries, onlyNewSubscribers: onlyNewSubscribers, showWinners: showWinners, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount)
             case let .stars(count):
                 return .stars(count: count, currency: currency, amount: amount)
+            case let .starsGift(peerId, count):
+                return .starsGift(peerId: peerId, count: count, currency: currency, amount: amount)
             }
         }
     }

@@ -3,6 +3,7 @@ import Display
 import TelegramPresentationData
 import TextFormat
 import Markdown
+import AccountContext
 
 final class PeerInfoScreenCommentItem: PeerInfoScreenItem {
     enum LinkAction {
@@ -63,7 +64,7 @@ private final class PeerInfoScreenCommentItemNode: PeerInfoScreenItemNode {
         self.view.addGestureRecognizer(recognizer)
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenCommentItem else {
             return 10.0
         }

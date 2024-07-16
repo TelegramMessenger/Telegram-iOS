@@ -219,7 +219,7 @@ private func preparedTransition(from fromEntries: [LocationPickerEntry], to toEn
 enum LocationPickerLocation: Equatable {
     case none
     case selecting
-    case location(CLLocationCoordinate2D, String?)
+    case location(CLLocationCoordinate2D, String?, Bool)
     case venue(TelegramMediaMap, Int64?, String?)
     
     var isCustom: Bool {
@@ -245,8 +245,8 @@ enum LocationPickerLocation: Equatable {
                 } else {
                     return false
                 }
-            case let .location(lhsCoordinate, lhsAddress):
-                if case let .location(rhsCoordinate, rhsAddress) = rhs, locationCoordinatesAreEqual(lhsCoordinate, rhsCoordinate), lhsAddress == rhsAddress {
+            case let .location(lhsCoordinate, lhsAddress, lhsGlobal):
+                if case let .location(rhsCoordinate, rhsAddress, rhsGlobal) = rhs, locationCoordinatesAreEqual(lhsCoordinate, rhsCoordinate), lhsAddress == rhsAddress, lhsGlobal == rhsGlobal {
                     return true
                 } else {
                     return false
@@ -589,7 +589,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                                       
                 var entries: [LocationPickerEntry] = []
                 switch state.selectedLocation {
-                    case let .location(coordinate, address):
+                    case let .location(coordinate, address, _):
                         let title: String
                         switch strongSelf.mode {
                             case .share:
@@ -722,12 +722,13 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                         strongSelf.headerNode.mapNode.resetAnnotationSelection()
                     case .selecting:
                         strongSelf.headerNode.mapNode.resetAnnotationSelection()
-                    case let .location(coordinate, address):
+                    case let .location(coordinate, address, global):
                         var updateMap = false
+                        let span = global ? LocationMapNode.globalMapSpan : LocationMapNode.defaultMapSpan
                         switch previousState.selectedLocation {
                             case .none, .venue:
                                 updateMap = true
-                            case let .location(previousCoordinate, _):
+                            case let .location(previousCoordinate, _, _):
                                 if !locationCoordinatesAreEqual(previousCoordinate, coordinate) {
                                     updateMap = true
                                 }
@@ -735,7 +736,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                                 break
                         }
                         if updateMap {
-                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: coordinate, isUserLocation: false, hidePicker: false, animated: true)
+                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: coordinate, span: span, isUserLocation: false, hidePicker: false, animated: true)
                             strongSelf.headerNode.mapNode.switchToPicking(animated: false)
                         }
                     
@@ -849,11 +850,11 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                     ))
                 }
                 
-                if case let .location(coordinate, address) = state.selectedLocation, address == nil {
+                if case let .location(coordinate, address, global) = state.selectedLocation, address == nil {
                     setupGeocoding(coordinate, { [weak self] geoAddress, address, cityName, streetName, countryCode, isStreet in
                         self?.updateState { state in
                             var state = state
-                            state.selectedLocation = .location(coordinate, address)
+                            state.selectedLocation = .location(coordinate, address, global)
                             state.geoAddress = geoAddress
                             state.city = cityName
                             state.street = streetName
@@ -938,7 +939,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             strongSelf.updateState { state in
                 var state = state
                 if case .selecting = state.selectedLocation {
-                    state.selectedLocation = .location(coordinate, nil)
+                    state.selectedLocation = .location(coordinate, nil, false)
                     state.searchingVenuesAround = false
                 }
                 return state
@@ -1231,7 +1232,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
     }
     
     func requestPlacesAtSelectedLocation() {
-        if case let .location(coordinate, _) = self.state.selectedLocation {
+        if case let .location(coordinate, _, _) = self.state.selectedLocation {
             self.headerNode.mapNode.setMapCenter(coordinate: coordinate, animated: true)
             self.searchVenuesPromise.set(.single(coordinate))
             self.updateState { state in

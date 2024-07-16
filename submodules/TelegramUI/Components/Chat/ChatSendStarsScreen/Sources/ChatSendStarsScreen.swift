@@ -137,15 +137,22 @@ private final class BalanceComponent: CombinedComponent {
 }
 
 private final class BadgeComponent: Component {
+    enum Direction {
+        case left
+        case right
+    }
     let theme: PresentationTheme
     let title: String
+    let inertiaDirection: Direction?
     
     init(
         theme: PresentationTheme,
-        title: String
+        title: String,
+        inertiaDirection: Direction?
     ) {
         self.theme = theme
         self.title = title
+        self.inertiaDirection = inertiaDirection
     }
     
     static func ==(lhs: BadgeComponent, rhs: BadgeComponent) -> Bool {
@@ -153,6 +160,9 @@ private final class BadgeComponent: Component {
             return false
         }
         if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.inertiaDirection != rhs.inertiaDirection {
             return false
         }
         return true
@@ -174,6 +184,7 @@ private final class BadgeComponent: Component {
         private var component: BadgeComponent?
         
         private var previousAvailableSize: CGSize?
+        private var previousInertiaDirection: BadgeComponent.Direction?
         
         override init(frame: CGRect) {
             self.badgeView = UIView()
@@ -225,9 +236,8 @@ private final class BadgeComponent: Component {
         required init(coder: NSCoder) {
             preconditionFailure()
         }
-        
+                
         func update(component: BadgeComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-            
             if self.component == nil {
                 self.badgeIcon.image = UIImage(bundleImageName: "Premium/SendStarsStarSliderIcon")?.withRenderingMode(.alwaysTemplate)
             }
@@ -237,23 +247,8 @@ private final class BadgeComponent: Component {
             
             self.badgeLabel.color = .white
                 
-            let countWidth: CGFloat
-            switch component.title.count {
-            case 1:
-                countWidth = 20.0
-            case 2:
-                countWidth = 35.0
-            case 3:
-                countWidth = 51.0
-            case 4:
-                countWidth = 60.0
-            case 5:
-                countWidth = 74.0
-            case 6:
-                countWidth = 88.0
-            default:
-                countWidth = 51.0
-            }
+            let badgeLabelSize = self.badgeLabel.update(value: component.title, transition: .easeInOut(duration: 0.12))
+            let countWidth: CGFloat = badgeLabelSize.width + 3.0
             let badgeWidth: CGFloat = countWidth + 54.0
             
             let badgeSize = CGSize(width: badgeWidth, height: 48.0)
@@ -264,6 +259,25 @@ private final class BadgeComponent: Component {
             self.badgeView.bounds = CGRect(origin: .zero, size: badgeFullSize)
             
             transition.setAnchorPoint(layer: self.badgeView.layer, anchorPoint: CGPoint(x: 0.5, y: 1.0))
+            
+            if component.inertiaDirection != self.previousInertiaDirection {
+                self.previousInertiaDirection = component.inertiaDirection
+                
+                var angle: CGFloat = 0.0
+                let transition: ContainedViewLayoutTransition
+                if let inertiaDirection = component.inertiaDirection {
+                    switch inertiaDirection {
+                    case .left:
+                        angle = 0.22
+                    case .right:
+                        angle = -0.22
+                    }
+                    transition = .animated(duration: 0.45, curve: .spring)
+                } else {
+                    transition = .animated(duration: 0.45, curve: .customSpring(damping: 65.0, initialVelocity: 0.0))
+                }
+                transition.updateTransformRotation(view: self.badgeView, angle: angle)
+            }
             
             self.badgeForeground.bounds = CGRect(origin: CGPoint(), size: CGSize(width: badgeFullSize.width * 3.0, height: badgeFullSize.height))
             if self.badgeForeground.animation(forKey: "movement") == nil {
@@ -276,8 +290,6 @@ private final class BadgeComponent: Component {
             self.badgeView.alpha = 1.0
             
             let size = badgeSize
-            
-            let badgeLabelSize = self.badgeLabel.update(value: component.title, transition: .easeInOut(duration: 0.12))
             transition.setFrame(view: self.badgeLabel, frame: CGRect(origin: CGPoint(x: 14.0 + floorToScreenPixels((badgeFullSize.width - badgeLabelSize.width) / 2.0), y: 5.0), size: badgeLabelSize))
             
             if self.previousAvailableSize != availableSize {
@@ -651,9 +663,11 @@ private final class ChatSendStarsScreenComponent: Component {
         private let title = ComponentView<Empty>()
         private let descriptionText = ComponentView<Empty>()
         
+        private let badgeStars = BadgeStarsView()
         private let slider = ComponentView<Empty>()
         private let sliderBackground = UIView()
         private let sliderForeground = UIView()
+        private let sliderStars = SliderStarsView()
         private let badge = ComponentView<Empty>()
         
         private var topPeersLeftSeparator: SimpleLayer?
@@ -703,9 +717,7 @@ private final class ChatSendStarsScreenComponent: Component {
             
             self.addSubview(self.dimView)
             self.layer.addSublayer(self.backgroundLayer)
-            
-            self.addSubview(self.navigationBarContainer)
-            
+                        
             self.scrollView.delaysContentTouches = true
             self.scrollView.canCancelContentTouches = true
             self.scrollView.clipsToBounds = false
@@ -727,6 +739,11 @@ private final class ChatSendStarsScreenComponent: Component {
             self.scrollContentClippingView.addSubview(self.scrollView)
             
             self.scrollView.addSubview(self.scrollContentView)
+            
+            self.sliderForeground.clipsToBounds = true
+            self.sliderForeground.addSubview(self.sliderStars)
+            
+            self.addSubview(self.navigationBarContainer)
             
             self.dimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
         }
@@ -830,6 +847,10 @@ private final class ChatSendStarsScreenComponent: Component {
             }
         }
         
+        private var previousSliderValue: Float = 0.0
+        private var previousTimestamp: Double?
+        private var inertiaDirection: BadgeComponent.Direction?
+        
         func update(component: ChatSendStarsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             let themeUpdated = self.environment?.theme !== environment.theme
@@ -881,6 +902,53 @@ private final class ChatSendStarsScreenComponent: Component {
                         }
                         self.amount = 1 + Int64(value)
                         self.state?.updated(transition: .immediate)
+                        
+                        let sliderValue = Float(value) / 1000.0
+                        let currentTimestamp = CACurrentMediaTime()
+                        
+                        if let previousTimestamp {
+                            let deltaTime = currentTimestamp - previousTimestamp
+                            let delta = sliderValue - self.previousSliderValue
+                            let deltaValue = abs(sliderValue - self.previousSliderValue)
+                            
+                            let speed = deltaValue / Float(deltaTime)
+                            let newSpeed = max(0, min(65.0, speed * 70.0))
+                            
+                            var inertiaDirection: BadgeComponent.Direction?
+                            if newSpeed >= 1.0 {
+                                if delta > 0.0 {
+                                    inertiaDirection = .right
+                                } else {
+                                    inertiaDirection = .left
+                                }
+                            }
+                            if inertiaDirection != self.inertiaDirection {
+                                self.inertiaDirection = inertiaDirection
+                                self.state?.updated(transition: .immediate)
+                            }
+                            
+                            if newSpeed < 0.01 && deltaValue < 0.001 {
+                                
+                            } else {
+                                self.badgeStars.update(speed: newSpeed, delta: delta)
+                            }
+                        }
+                        
+                        self.previousSliderValue = sliderValue
+                        self.previousTimestamp = currentTimestamp
+                    },
+                    isTrackingUpdated: { [weak self] isTracking in
+                        guard let self else {
+                            return
+                        }
+                        if !isTracking {
+                            self.previousTimestamp = nil
+                            self.badgeStars.update(speed: 0.0)
+                        }
+                        if self.inertiaDirection != nil {
+                            self.inertiaDirection = nil
+                            self.state?.updated(transition: .immediate)
+                        }
                     }
                 )),
                 environment: {},
@@ -889,6 +957,7 @@ private final class ChatSendStarsScreenComponent: Component {
             let sliderFrame = CGRect(origin: CGPoint(x: sliderInset, y: contentHeight + 127.0), size: sliderSize)
             if let sliderView = self.slider.view {
                 if sliderView.superview == nil {
+                    self.scrollContentView.addSubview(self.badgeStars)
                     self.scrollContentView.addSubview(self.sliderBackground)
                     self.scrollContentView.addSubview(self.sliderForeground)
                     self.scrollContentView.addSubview(sliderView)
@@ -910,20 +979,30 @@ private final class ChatSendStarsScreenComponent: Component {
                 self.sliderBackground.layer.cornerRadius = sliderBackgroundFrame.height * 0.5
                 self.sliderForeground.layer.cornerRadius = sliderBackgroundFrame.height * 0.5
                 
+                self.sliderStars.frame = CGRect(origin: .zero, size: sliderBackgroundFrame.size)
+                self.sliderStars.update(size: sliderBackgroundFrame.size, value: progressFraction)
+                
                 self.sliderForeground.isHidden = sliderForegroundFrame.width <= sliderMinWidth
+                
+                var effectiveInertiaDirection = self.inertiaDirection
+                if progressFraction <= 0.03 || progressFraction >= 0.97 {
+                    effectiveInertiaDirection = nil
+                }
                 
                 let badgeSize = self.badge.update(
                     transition: transition,
                     component: AnyComponent(BadgeComponent(
-                        theme: environment.theme, title: "\(self.amount)")
-                    ),
+                        theme: environment.theme, 
+                        title: "\(self.amount)",
+                        inertiaDirection: effectiveInertiaDirection
+                    )),
                     environment: {},
                     containerSize: CGSize(width: 200.0, height: 200.0)
                 )
                 var badgeFrame = CGRect(origin: CGPoint(x: sliderForegroundFrame.minX + sliderForegroundFrame.width - floorToScreenPixels(sliderMinWidth * 0.5), y: sliderForegroundFrame.minY - 8.0), size: badgeSize)
                 if let badgeView = self.badge.view as? BadgeComponent.View {
                     if badgeView.superview == nil {
-                        self.scrollContentView.addSubview(badgeView)
+                        self.scrollContentView.insertSubview(badgeView, belowSubview: self.badgeStars)
                     }
                     
                     let badgeSideInset = sideInset + 15.0
@@ -943,6 +1022,10 @@ private final class ChatSendStarsScreenComponent: Component {
                     
                     badgeView.adjustTail(size: badgeSize, overflowWidth: -badgeOverflowWidth)
                 }
+                
+                let starsRect = CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: sliderForegroundFrame.midY))
+                self.badgeStars.frame = starsRect
+                self.badgeStars.update(size: starsRect.size, emitterPosition: CGPoint(x: badgeFrame.minX, y: badgeFrame.midY - 64.0))
             }
             
             contentHeight += 123.0
@@ -1436,4 +1519,199 @@ private func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor:
         context.addLine(to: CGPoint(x: 10.0, y: 20.0))
         context.strokePath()
     })
+}
+
+private final class BadgeStarsView: UIView {
+    private let staticEmitterLayer = CAEmitterLayer()
+    private let dynamicEmitterLayer = CAEmitterLayer()
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        self.layer.addSublayer(self.staticEmitterLayer)
+        self.layer.addSublayer(self.dynamicEmitterLayer)
+    }
+    
+    required init(coder: NSCoder) {
+        preconditionFailure()
+    }
+        
+    private func setupEmitter() {
+        let color = UIColor(rgb: 0xffbe27)
+        
+        self.staticEmitterLayer.emitterShape = .circle
+        self.staticEmitterLayer.emitterSize = CGSize(width: 10.0, height: 5.0)
+        self.staticEmitterLayer.emitterMode = .outline
+        self.layer.addSublayer(self.staticEmitterLayer)
+        
+        self.dynamicEmitterLayer.birthRate = 0.0
+        self.dynamicEmitterLayer.emitterShape = .circle
+        self.dynamicEmitterLayer.emitterSize = CGSize(width: 10.0, height: 55.0)
+        self.dynamicEmitterLayer.emitterMode = .surface
+        self.layer.addSublayer(self.dynamicEmitterLayer)
+        
+        let staticEmitter = CAEmitterCell()
+        staticEmitter.name = "emitter"
+        staticEmitter.contents = UIImage(bundleImageName: "Premium/Stars/Particle")?.cgImage
+        staticEmitter.birthRate = 20.0
+        staticEmitter.lifetime = 2.7
+        staticEmitter.velocity = 30.0
+        staticEmitter.velocityRange = 3
+        staticEmitter.scale = 0.15
+        staticEmitter.scaleRange = 0.08
+        staticEmitter.emissionRange = .pi * 2.0
+        staticEmitter.setValue(3.0, forKey: "mass")
+        staticEmitter.setValue(2.0, forKey: "massRange")
+        
+        let dynamicEmitter = CAEmitterCell()
+        dynamicEmitter.name = "emitter"
+        dynamicEmitter.contents = UIImage(bundleImageName: "Premium/Stars/Particle")?.cgImage
+        dynamicEmitter.birthRate = 0.0
+        dynamicEmitter.lifetime = 2.7
+        dynamicEmitter.velocity = 30.0
+        dynamicEmitter.velocityRange = 3
+        dynamicEmitter.scale = 0.15
+        dynamicEmitter.scaleRange = 0.08
+        dynamicEmitter.emissionRange = .pi / 3.0
+        dynamicEmitter.setValue(3.0, forKey: "mass")
+        dynamicEmitter.setValue(2.0, forKey: "massRange")
+        
+        let staticColors: [Any] = [
+            UIColor.white.withAlphaComponent(0.0).cgColor,
+            UIColor.white.withAlphaComponent(0.35).cgColor,
+            color.cgColor,
+            color.cgColor,
+            color.withAlphaComponent(0.0).cgColor
+        ]
+        let staticColorBehavior = CAEmitterCell.createEmitterBehavior(type: "colorOverLife")
+        staticColorBehavior.setValue(staticColors, forKey: "colors")
+        staticEmitter.setValue([staticColorBehavior], forKey: "emitterBehaviors")
+        
+        let dynamicColors: [Any] = [
+            UIColor.white.withAlphaComponent(0.35).cgColor,
+            color.withAlphaComponent(0.85).cgColor,
+            color.cgColor,
+            color.cgColor,
+            color.withAlphaComponent(0.0).cgColor
+        ]
+        let dynamicColorBehavior = CAEmitterCell.createEmitterBehavior(type: "colorOverLife")
+        dynamicColorBehavior.setValue(dynamicColors, forKey: "colors")
+        dynamicEmitter.setValue([dynamicColorBehavior], forKey: "emitterBehaviors")
+        
+        let attractor = CAEmitterCell.createEmitterBehavior(type: "simpleAttractor")
+        attractor.setValue("attractor", forKey: "name")
+        attractor.setValue(20, forKey: "falloff")
+        attractor.setValue(35, forKey: "radius")
+        self.staticEmitterLayer.setValue([attractor], forKey: "emitterBehaviors")
+        self.staticEmitterLayer.setValue(4.0, forKeyPath: "emitterBehaviors.attractor.stiffness")
+        self.staticEmitterLayer.setValue(false, forKeyPath: "emitterBehaviors.attractor.enabled")
+        
+        self.staticEmitterLayer.emitterCells = [staticEmitter]
+        self.dynamicEmitterLayer.emitterCells = [dynamicEmitter]
+    }
+    
+    func update(speed: Float, delta: Float? = nil) {
+        if speed > 0.0 {
+            if self.dynamicEmitterLayer.birthRate.isZero {
+                self.dynamicEmitterLayer.beginTime = CACurrentMediaTime()
+            }
+            
+            self.dynamicEmitterLayer.setValue(Float(20.0 + speed * 1.4), forKeyPath: "emitterCells.emitter.birthRate")
+            self.dynamicEmitterLayer.setValue(2.7 - min(1.1, 1.5 * speed / 120.0), forKeyPath: "emitterCells.emitter.lifetime")
+            self.dynamicEmitterLayer.setValue(30.0 + CGFloat(speed / 80.0), forKeyPath: "emitterCells.emitter.velocity")
+            
+            if let delta, speed > 15.0 {
+                self.dynamicEmitterLayer.setValue(delta > 0 ? .pi : 0, forKeyPath: "emitterCells.emitter.emissionLongitude")
+                self.dynamicEmitterLayer.setValue(.pi / 2.0, forKeyPath: "emitterCells.emitter.emissionRange")
+            } else {
+                self.dynamicEmitterLayer.setValue(0.0, forKeyPath: "emitterCells.emitter.emissionLongitude")
+                self.dynamicEmitterLayer.setValue(.pi * 2.0, forKeyPath: "emitterCells.emitter.emissionRange")
+            }
+            self.staticEmitterLayer.setValue(true, forKeyPath: "emitterBehaviors.attractor.enabled")
+            
+            self.dynamicEmitterLayer.birthRate = 1.0
+            self.staticEmitterLayer.birthRate = 0.0
+        } else {
+            self.dynamicEmitterLayer.birthRate = 0.0
+            
+            if let staticEmitter = self.staticEmitterLayer.emitterCells?.first {
+                staticEmitter.beginTime = CACurrentMediaTime()
+            }
+            self.staticEmitterLayer.birthRate = 1.0
+            self.staticEmitterLayer.setValue(false, forKeyPath: "emitterBehaviors.attractor.enabled")
+        }
+    }
+    
+    func update(size: CGSize, emitterPosition: CGPoint) {
+        if self.staticEmitterLayer.emitterCells == nil {
+            self.setupEmitter()
+        }
+        
+        self.staticEmitterLayer.frame = CGRect(origin: .zero, size: size)
+        self.staticEmitterLayer.emitterPosition = emitterPosition
+        
+        self.dynamicEmitterLayer.frame = CGRect(origin: .zero, size: size)
+        self.dynamicEmitterLayer.emitterPosition = emitterPosition
+        self.staticEmitterLayer.setValue(emitterPosition, forKeyPath: "emitterBehaviors.attractor.position")
+    }
+}
+
+private final class SliderStarsView: UIView {
+    private let emitterLayer = CAEmitterLayer()
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        self.layer.addSublayer(self.emitterLayer)
+    }
+    
+    required init(coder: NSCoder) {
+        preconditionFailure()
+    }
+        
+    private func setupEmitter() {
+        self.emitterLayer.emitterShape = .rectangle
+        self.emitterLayer.emitterMode = .surface
+        self.layer.addSublayer(self.emitterLayer)
+                
+        let emitter = CAEmitterCell()
+        emitter.name = "emitter"
+        emitter.contents = UIImage(bundleImageName: "Premium/Stars/Particle")?.cgImage
+        emitter.birthRate = 20.0
+        emitter.lifetime = 2.0
+        emitter.velocity = 15.0
+        emitter.velocityRange = 10
+        emitter.scale = 0.15
+        emitter.scaleRange = 0.08
+        emitter.emissionRange = .pi / 4.0
+        emitter.setValue(3.0, forKey: "mass")
+        emitter.setValue(2.0, forKey: "massRange")
+        self.emitterLayer.emitterCells = [emitter]
+        
+        let colors: [Any] = [
+            UIColor.white.withAlphaComponent(0.0).cgColor,
+            UIColor.white.withAlphaComponent(0.38).cgColor,
+            UIColor.white.withAlphaComponent(0.38).cgColor,
+            UIColor.white.withAlphaComponent(0.0).cgColor,
+            UIColor.white.withAlphaComponent(0.38).cgColor,
+            UIColor.white.withAlphaComponent(0.38).cgColor,
+            UIColor.white.withAlphaComponent(0.0).cgColor
+        ]
+        let colorBehavior = CAEmitterCell.createEmitterBehavior(type: "colorOverLife")
+        colorBehavior.setValue(colors, forKey: "colors")
+        emitter.setValue([colorBehavior], forKey: "emitterBehaviors")
+    }
+
+    func update(size: CGSize, value: CGFloat) {
+        if self.emitterLayer.emitterCells == nil {
+            self.setupEmitter()
+        }
+        
+        self.emitterLayer.setValue(20.0 + Float(value * 40.0), forKeyPath: "emitterCells.emitter.birthRate")
+        self.emitterLayer.setValue(15.0 + value * 75.0, forKeyPath: "emitterCells.emitter.velocity")
+        
+        self.emitterLayer.frame = CGRect(origin: .zero, size: size)
+        self.emitterLayer.emitterPosition = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+        self.emitterLayer.emitterSize = size
+    }
 }

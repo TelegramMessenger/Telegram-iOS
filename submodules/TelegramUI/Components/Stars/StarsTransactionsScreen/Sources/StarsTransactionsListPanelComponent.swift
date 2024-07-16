@@ -203,12 +203,13 @@ final class StarsTransactionsListPanelComponent: Component {
                                   
                     let fontBaseDisplaySize = 17.0
                     
-                    let itemTitle: String
+                    var itemTitle: String
                     let itemSubtitle: String?
                     var itemDate: String
+                    var itemPeer = item.peer
                     switch item.peer {
                     case let .peer(peer):
-                        if !item.media.isEmpty {
+                         if !item.media.isEmpty {
                             itemTitle = environment.strings.Stars_Intro_Transaction_MediaPurchase
                             itemSubtitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                         } else if let title = item.title {
@@ -216,7 +217,16 @@ final class StarsTransactionsListPanelComponent: Component {
                             itemSubtitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                         } else {
                             itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
-                            itemSubtitle = nil
+                            if item.flags.contains(.isGift) {
+                                //TODO:localize
+                                itemSubtitle = "Received Gift"
+                                if peer.id.namespace == Namespaces.Peer.CloudUser && peer.id.id._internalGetInt64Value() == 777000 {
+                                    itemTitle = "Unknown User"
+                                    itemPeer = .fragment
+                                }
+                            } else {
+                                itemSubtitle = nil
+                            }
                         }
                     case .appStore:
                         itemTitle = environment.strings.Stars_Intro_Transaction_AppleTopUp_Title
@@ -298,7 +308,7 @@ final class StarsTransactionsListPanelComponent: Component {
                             theme: environment.theme,
                             title: AnyComponent(VStack(titleComponents, alignment: .left, spacing: 2.0)),
                             contentInsets: UIEdgeInsets(top: 9.0, left: environment.containerInsets.left, bottom: 8.0, right: environment.containerInsets.right),
-                            leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: item.peer, photo: item.photo, media: item.media, backgroundColor: environment.theme.list.plainBackgroundColor))), false),
+                            leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: itemPeer, photo: item.photo, media: item.media, backgroundColor: environment.theme.list.plainBackgroundColor))), false),
                             icon: nil,
                             accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
                             action: { [weak self] _ in
@@ -379,7 +389,17 @@ final class StarsTransactionsListPanelComponent: Component {
                     let wasEmpty = self.items.isEmpty
                     let hadLocalTransactions = self.items.contains(where: { $0.flags.contains(.isLocal) })
                     
-                    self.items = status.transactions
+                    var existingIds = Set<String>()
+                    var filteredItems: [StarsContext.State.Transaction] = []
+                    for transaction in status.transactions {
+                        let id = transaction.extendedId
+                        if !existingIds.contains(id) {
+                            existingIds.insert(id)
+                            filteredItems.append(transaction)
+                        }
+                    }
+                    
+                    self.items = filteredItems
                     if !status.isLoading {
                         self.currentLoadMoreId = nil
                     }

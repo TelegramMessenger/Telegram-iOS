@@ -30,6 +30,8 @@ private func makeEntityView(context: AccountContext, entity: DrawingEntity) -> D
         return DrawingLocationEntityView(context: context, entity: entity)
     } else if let entity = entity as? DrawingLinkEntity {
         return DrawingLinkEntityView(context: context, entity: entity)
+    } else if let entity = entity as? DrawingWeatherEntity {
+        return DrawingWeatherEntityView(context: context, entity: entity)
     } else {
         return nil
     }
@@ -57,6 +59,9 @@ private func prepareForRendering(entityView: DrawingEntityView) {
         entityView.entity.renderImage = entityView.getRenderImage()
     }
     if let entityView = entityView as? DrawingLinkEntityView {
+        entityView.entity.renderImage = entityView.getRenderImage()
+    }
+    if let entityView = entityView as? DrawingWeatherEntityView {
         entityView.entity.renderImage = entityView.getRenderImage()
     }
 }
@@ -396,6 +401,14 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 location.referenceDrawingSize = self.size
                 location.width = floor(self.size.width * 0.85)
                 location.scale = zoomScale
+            }
+        } else if let weather = entity as? DrawingWeatherEntity {
+            weather.position = center
+            if setup {
+                weather.rotation = rotation
+                weather.referenceDrawingSize = self.size
+                weather.width = floor(self.size.width * 0.85)
+                weather.scale = zoomScale
             }
         }
     }
