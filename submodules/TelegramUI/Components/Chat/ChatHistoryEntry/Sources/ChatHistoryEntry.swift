@@ -43,7 +43,7 @@ public struct ChatMessageEntryAttributes: Equatable {
 
 public enum ChatHistoryEntry: Identifiable, Comparable {
     case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryLocation?, ChatHistoryMessageSelection, ChatMessageEntryAttributes)
-    case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)], ChatPresentationData)
+    case MessageGroupEntry(Int64, [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)], ChatPresentationData)
     case UnreadEntry(MessageIndex, ChatPresentationData)
     case ReplyCountEntry(MessageIndex, Bool, Int, ChatPresentationData)
     case ChatInfoEntry(String, String, TelegramMediaImage?, TelegramMediaFile?, ChatPresentationData)
@@ -63,7 +63,7 @@ public enum ChatHistoryEntry: Identifiable, Comparable {
                 }
                 return UInt64(message.stableId) | ((type << 40))
             case let .MessageGroupEntry(groupInfo, _, _):
-                return UInt64(groupInfo.stableId) | ((UInt64(2) << 40))
+                return UInt64(bitPattern: groupInfo) | ((UInt64(2) << 40))
             case .UnreadEntry:
                 return UInt64(4) << 40
             case .ReplyCountEntry:
