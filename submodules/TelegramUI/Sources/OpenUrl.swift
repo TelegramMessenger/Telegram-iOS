@@ -251,16 +251,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             |> deliverOnMainQueue).startStandalone(next: handleResolvedUrl)
         }
         
-        if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
-            if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == context.sharedContext.applicationBindings.appSpecificScheme) {
-                if parsedUrl.host == "ipfs" {
-                    if let value = URL(string: "ipfs:/" + parsedUrl.path) {
-                        parsedUrl = value
-                    }
-                } else if parsedUrl.host == "ton" {
-                    if let value = URL(string: "ton:/" + parsedUrl.path) {
-                        parsedUrl = value
-                    }
+        if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == context.sharedContext.applicationBindings.appSpecificScheme) {
+            if parsedUrl.host == "tonsite" {
+                if let value = URL(string: "tonsite:/" + parsedUrl.path) {
+                    parsedUrl = value
                 }
             }
         }
@@ -1008,10 +1002,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
         if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
             isInternetUrl = true
         }
-        if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
-            if parsedUrl.scheme == "ipfs" || parsedUrl.scheme == "ipns" || parsedUrl.scheme == "ton" {
-                isInternetUrl = true
-            }
+        if parsedUrl.scheme == "tonsite" {
+            isInternetUrl = true
         }
         
         if isInternetUrl {
@@ -1045,7 +1037,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 let _ = (settings
                 |> deliverOnMainQueue).startStandalone(next: { settings in
                     if settings.defaultWebBrowser == nil {
-                        if isCompact && context.sharedContext.immediateExperimentalUISettings.browserExperiment {
+                        //TODO:release check !isCompact
+                        if isCompact || "".isEmpty {
                             let controller = BrowserScreen(context: context, subject: .webPage(url: parsedUrl.absoluteString))
                             navigationController?.pushViewController(controller)
                         } else {

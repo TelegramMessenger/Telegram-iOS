@@ -130,13 +130,8 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
         if !pathComponents.isEmpty && !pathComponents[0].isEmpty {
             let peerName: String = pathComponents[0]
             
-            if sharedContext.immediateExperimentalUISettings.browserExperiment {
-                if query.hasPrefix("ipfs/") {
-                    return .externalUrl(url: "ipfs://" + String(query[query.index(query.startIndex, offsetBy: "ipfs/".count)...]))
-                }
-                if query.hasPrefix("ton/") {
-                    return .externalUrl(url: "ton://" + String(query[query.index(query.startIndex, offsetBy: "ton/".count)...]))
-                }
+            if query.hasPrefix("tonsite/") {
+                return .externalUrl(url: "tonsite://" + String(query[query.index(query.startIndex, offsetBy: "tonsite/".count)...]))
             }
             
             if pathComponents[0].hasPrefix("+") || pathComponents[0].hasPrefix("%20") {
