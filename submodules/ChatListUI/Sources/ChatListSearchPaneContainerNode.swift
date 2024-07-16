@@ -51,6 +51,7 @@ public enum ChatListSearchPaneKey {
     case chats
     case topics
     case channels
+    case apps
     case media
     case downloads
     case links
@@ -68,6 +69,8 @@ extension ChatListSearchPaneKey {
             return .topics
         case .channels:
             return .channels
+        case .apps:
+            return .apps
         case .media:
             return .media
         case .downloads:
@@ -92,6 +95,7 @@ func defaultAvailableSearchPanes(isForum: Bool, hasDownloads: Bool) -> [ChatList
         result.append(.chats)
     }
     result.append(.channels)
+    result.append(.apps)
     result.append(contentsOf: [.media, .downloads, .links, .files, .music, .voice])
         
     if !hasDownloads {

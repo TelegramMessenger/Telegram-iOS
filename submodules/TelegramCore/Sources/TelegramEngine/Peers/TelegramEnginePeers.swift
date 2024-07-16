@@ -600,6 +600,14 @@ public extension TelegramEngine {
         public func managedUpdatedRecentPeers() -> Signal<Void, NoError> {
             return _internal_managedUpdatedRecentPeers(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network)
         }
+        
+        public func recentApps() -> Signal<[EnginePeer.Id], NoError> {
+            return _internal_recentApps(accountPeerId: self.account.peerId, postbox: self.account.postbox)
+        }
+        
+        public func managedUpdatedRecentApps() -> Signal<Void, NoError> {
+            return _internal_managedUpdatedRecentApps(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network)
+        }
 
         public func removeRecentPeer(peerId: PeerId) -> Signal<Void, NoError> {
             return _internal_removeRecentPeer(account: self.account, peerId: peerId)
@@ -1423,8 +1431,16 @@ public extension TelegramEngine {
             return _internal_requestRecommendedChannels(account: self.account, peerId: peerId, forceUpdate: forceUpdate)
         }
         
+        public func recommendedAppPeerIds() -> Signal<[EnginePeer.Id]?, NoError> {
+            return _internal_recommendedAppPeerIds(account: self.account)
+        }
+        
         public func requestGlobalRecommendedChannelsIfNeeded() -> Signal<Never, NoError> {
             return _internal_requestRecommendedChannels(account: self.account, peerId: nil, forceUpdate: false)
+        }
+        
+        public func requestRecommendedAppsIfNeeded() -> Signal<Never, NoError> {
+            return _internal_requestRecommendedApps(account: self.account, forceUpdate: false)
         }
         
         public func isPremiumRequiredToContact(_ peerIds: [EnginePeer.Id]) -> Signal<[EnginePeer.Id], NoError> {

@@ -86,6 +86,7 @@ public extension Api {
 }
 public extension Api {
     enum TopPeerCategory: TypeConstructorDescription {
+        case topPeerCategoryBotsApp
         case topPeerCategoryBotsInline
         case topPeerCategoryBotsPM
         case topPeerCategoryChannels
@@ -97,6 +98,12 @@ public extension Api {
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .topPeerCategoryBotsApp:
+                    if boxed {
+                        buffer.appendInt32(-39945236)
+                    }
+                    
+                    break
                 case .topPeerCategoryBotsInline:
                     if boxed {
                         buffer.appendInt32(344356834)
@@ -150,6 +157,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .topPeerCategoryBotsApp:
+                return ("topPeerCategoryBotsApp", [])
                 case .topPeerCategoryBotsInline:
                 return ("topPeerCategoryBotsInline", [])
                 case .topPeerCategoryBotsPM:
@@ -169,6 +178,9 @@ public extension Api {
     }
     }
     
+        public static func parse_topPeerCategoryBotsApp(_ reader: BufferReader) -> TopPeerCategory? {
+            return Api.TopPeerCategory.topPeerCategoryBotsApp
+        }
         public static func parse_topPeerCategoryBotsInline(_ reader: BufferReader) -> TopPeerCategory? {
             return Api.TopPeerCategory.topPeerCategoryBotsInline
         }

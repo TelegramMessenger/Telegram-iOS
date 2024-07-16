@@ -921,6 +921,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-94849324] = { return Api.ThemeSettings.parse_themeSettings($0) }
     dict[-7173643] = { return Api.Timezone.parse_timezone($0) }
     dict[-305282981] = { return Api.TopPeer.parse_topPeer($0) }
+    dict[-39945236] = { return Api.TopPeerCategory.parse_topPeerCategoryBotsApp($0) }
     dict[344356834] = { return Api.TopPeerCategory.parse_topPeerCategoryBotsInline($0) }
     dict[-1419371685] = { return Api.TopPeerCategory.parse_topPeerCategoryBotsPM($0) }
     dict[371037736] = { return Api.TopPeerCategory.parse_topPeerCategoryChannels($0) }
@@ -1167,6 +1168,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1284008785] = { return Api.auth.SentCodeType.parse_sentCodeTypeSmsPhrase($0) }
     dict[-1542017919] = { return Api.auth.SentCodeType.parse_sentCodeTypeSmsWord($0) }
     dict[-391678544] = { return Api.bots.BotInfo.parse_botInfo($0) }
+    dict[428978491] = { return Api.bots.PopularAppBots.parse_popularAppBots($0) }
     dict[-309659827] = { return Api.channels.AdminLogResults.parse_adminLogResults($0) }
     dict[-541588713] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1699676497] = { return Api.channels.ChannelParticipants.parse_channelParticipants($0) }
@@ -1396,7 +1398,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
@@ -2145,6 +2147,8 @@ public extension Api {
             case let _1 as Api.auth.SentCodeType:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.bots.BotInfo:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.bots.PopularAppBots:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.channels.AdminLogResults:
                 _1.serialize(buffer, boxed)
