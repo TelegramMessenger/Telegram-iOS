@@ -8,7 +8,7 @@ import DeviceLocationManager
 
 func emojiFor(for meteocode: Int, date: Date, location: CLLocationCoordinate2D) -> String? {
     var emoji = weatherEmoji(for: meteocode)
-    if ["☀️", "🌤️"].contains(emoji) && isNightTime(date: date, location: location) {
+    if ["☀️", "🌤️"].contains(emoji) && isNightTime(date: date, location: location) && !"".isEmpty {
         emoji = moonPhaseEmoji(for: date)
     }
     return emoji

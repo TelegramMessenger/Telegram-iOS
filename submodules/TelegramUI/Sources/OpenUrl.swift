@@ -737,6 +737,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var appName: String?
                         var startApp: String?
                         var text: String?
+                        var profile: Bool = false
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -779,6 +780,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                     startGroup = ""
                                 } else if queryItem.name == "startchannel" {
                                     startChannel = ""
+                                } else if queryItem.name == "profile" {
+                                    profile = true
                                 }
                             }
                         }
@@ -857,6 +860,13 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 result += "?text=\(text)"
                             }
                             convertedUrl = result
+                        }
+                        if profile, let current = convertedUrl {
+                            if current.contains("?") {
+                                convertedUrl = current + "&profile"
+                            } else {
+                                convertedUrl = current + "?profile"
+                            }
                         }
                     }
                 } else if parsedUrl.host == "hostOverride" {
