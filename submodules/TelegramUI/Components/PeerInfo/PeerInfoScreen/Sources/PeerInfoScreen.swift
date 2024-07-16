@@ -10791,6 +10791,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             guard let pane = self.paneContainerNode.currentPane?.node as? PeerInfoStoryPaneNode else {
                 return
             }
+            guard let data = self.data, let user = data.peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) else {
+                return
+            }
             
             var items: [ContextMenuItem] = []
             
@@ -10801,19 +10804,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             
             var ignoreNextActions = false
             
-            items.append(.action(ContextMenuActionItem(text: "Add Preview", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] _, a in
-                if ignoreNextActions {
-                    return
-                }
-                ignoreNextActions = true
-                a(.default)
-                
-                if let self {
-                    self.headerNode.navigationButtonContainer.performAction?(.postStory, nil, nil)
-                }
-            })))
+            if pane.canAddMoreBotPreviews() {
+                items.append(.action(ContextMenuActionItem(text: "Add Preview", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, a in
+                    if ignoreNextActions {
+                        return
+                    }
+                    ignoreNextActions = true
+                    a(.default)
+                    
+                    if let self {
+                        self.headerNode.navigationButtonContainer.performAction?(.postStory, nil, nil)
+                    }
+                })))
+            }
             
             items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
@@ -11733,7 +11738,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         case .media:
                             rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .more, isForExpandedView: true))
                         case .botPreview:
-                            if let data = self.data, data.hasBotPreviewItems {
+                            if let data = self.data, data.hasBotPreviewItems, let user = data.peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
                                 rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .more, isForExpandedView: true))
                             }
                         default:
