@@ -3132,7 +3132,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                             parentController.cancelItemSelection()
                         }
                         
-                        let _ = self.context.engine.messages.deleteBotPreviews(peerId: peerId, ids: mappedItemIds)
+                        let _ = self.context.engine.messages.deleteBotPreviews(peerId: peerId, ids: mappedItemIds).startStandalone()
                     })
                 ]),
                 ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -3445,6 +3445,52 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: text, cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                 }
             ))
+            selectionItems.append(BottomActionsPanelComponent.Item(
+                id: "delete",
+                color: .destructive,
+                title: presentationData.strings.StoryList_ActionPanel_Delete,
+                isEnabled: !selectedIds.isEmpty,
+                action: { [weak self] in
+                    guard let self, let selectedIds = self.itemInteraction.selectedIds else {
+                        return
+                    }
+                    
+                    self.presentDeleteConfirmation(ids: selectedIds)
+                }
+            ))
+            
+            let selectionPanelSize = selectionPanel.update(
+                transition: selectionPanelTransition,
+                component: AnyComponent(BottomActionsPanelComponent(
+                    theme: presentationData.theme,
+                    insets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset),
+                    items: selectionItems
+                )),
+                environment: {},
+                containerSize: size
+            )
+            let selectionPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - selectionPanelSize.height), size: selectionPanelSize)
+            if let selectionPanelView = selectionPanel.view {
+                if selectionPanelView.superview == nil {
+                    self.view.addSubview(selectionPanelView)
+                    transition.animatePositionAdditive(layer: selectionPanelView.layer, offset: CGPoint(x: 0.0, y: selectionPanelFrame.height))
+                }
+                selectionPanelTransition.setFrame(view: selectionPanelView, frame: selectionPanelFrame)
+            }
+            bottomInset = selectionPanelSize.height
+        } else if self.isProfileEmbedded, let selectedIds = self.itemInteraction.selectedIds, self.canManageStories, case .botPreview = self.scope {
+            let selectionPanel: ComponentView<Empty>
+            var selectionPanelTransition = ComponentTransition(transition)
+            if let current = self.selectionPanel {
+                selectionPanel = current
+            } else {
+                selectionPanelTransition = selectionPanelTransition.withAnimation(.none)
+                selectionPanel = ComponentView()
+                self.selectionPanel = selectionPanel
+            }
+            
+            var selectionItems: [BottomActionsPanelComponent.Item] = []
+            
             selectionItems.append(BottomActionsPanelComponent.Item(
                 id: "delete",
                 color: .destructive,

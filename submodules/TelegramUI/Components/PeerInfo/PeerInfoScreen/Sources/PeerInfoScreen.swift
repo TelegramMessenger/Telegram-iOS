@@ -10792,8 +10792,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 return
             }
             
-            let _ = pane
-            
             var items: [ContextMenuItem] = []
             
             let strings = self.presentationData.strings
@@ -10831,14 +10829,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             
             items.append(.action(ContextMenuActionItem(text: "Select", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] _, a in
+            }, action: { [weak pane] _, a in
                 if ignoreNextActions {
                     return
                 }
                 ignoreNextActions = true
                 a(.default)
                 
-                let _ = self
+                if let pane {
+                    pane.setIsSelectionModeActive(true)
+                }
             })))
             
             let contextController = ContextController(presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
