@@ -430,7 +430,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                             ),
                             action: {
                                 if toPeer.id.namespace == Namespaces.Peer.CloudUser && toPeer.id.id._internalGetInt64Value() == 777000 {
-                                    
+                                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                    component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_Transaction_FragmentUnknown_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
                                 } else if delayedCloseOnOpenPeer {
                                     component.openPeer(toPeer)
                                     Queue.mainQueue().after(1.0, {
