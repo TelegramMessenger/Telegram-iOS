@@ -4100,7 +4100,9 @@ private final class BottomActionsPanelComponent: Component {
                 
                 let itemCenterX: CGFloat = CGFloat(i) * (floor((availableSize.width - sideInset * 2.0) / CGFloat(itemsAndSizes.count - 1)))
                 let itemX: CGFloat
-                if i == 0 {
+                if itemsAndSizes.count == 1 {
+                    itemX = floor((availableSize.width - itemSize.width) * 0.5)
+                } else if i == 0 {
                     itemX = sideInset
                 } else if i == itemsAndSizes.count - 1 {
                     itemX = availableSize.width - sideInset - itemSize.width
