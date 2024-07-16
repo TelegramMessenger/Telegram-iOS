@@ -18,83 +18,13 @@ import UndoUI
 import LottieComponent
 import MultilineTextComponent
 
-/*private final class IpfsSchemeHandler: NSObject, WKURLSchemeHandler {
-    private final class PendingTask {
-        let sourceTask: any WKURLSchemeTask
-        var urlSessionTask: URLSessionTask?
-        let isCompleted = Atomic<Bool>(value: false)
-        
-        init(sourceTask: any WKURLSchemeTask) {
-            self.sourceTask = sourceTask
-            
-            var cleanUrl = sourceTask.request.url!.absoluteString
-            if let range = cleanUrl.range(of: "/ipfs/") {
-                cleanUrl = "ipfs://" + String(cleanUrl[range.upperBound...])
-            } else if let range = cleanUrl.range(of: "/ipns/") {
-                cleanUrl = "ipns://" + String(cleanUrl[range.upperBound...])
-            }
-            print("Load: \(cleanUrl)")
-            cleanUrl = cleanUrl.replacingOccurrences(of: "ipns://", with: "ipns/")
-            cleanUrl = cleanUrl.replacingOccurrences(of: "ipfs://", with: "ipfs/")
-            let mappedUrl = "https://cloudflare-ipfs.com/\(cleanUrl)"
-            let isCompleted = self.isCompleted
-            self.urlSessionTask = URLSession.shared.dataTask(with: URLRequest(url: URL(string: mappedUrl)!), completionHandler: { data, response, error in
-                if isCompleted.swap(true) {
-                    return
-                }
-                
-                if let error {
-                    sourceTask.didFailWithError(error)
-                } else {
-                    if let response {
-                        sourceTask.didReceive(response)
-                    }
-                    if let data {
-                        sourceTask.didReceive(data)
-                    }
-                    sourceTask.didFinish()
-                }
-            })
-            self.urlSessionTask?.resume()
-        }
-        
-        func cancel() {
-            if let urlSessionTask = self.urlSessionTask {
-                self.urlSessionTask = nil
-                if !self.isCompleted.swap(true) {
-                    switch urlSessionTask.state {
-                    case .running, .suspended:
-                        urlSessionTask.cancel()
-                    default:
-                        break
-                    }
-                }
-            }
-        }
-    }
-    
-    private var pendingTasks: [PendingTask] = []
-    
-    func webView(_ webView: WKWebView, start urlSchemeTask: any WKURLSchemeTask) {
-        self.pendingTasks.append(PendingTask(sourceTask: urlSchemeTask))
-    }
-    
-    func webView(_ webView: WKWebView, stop urlSchemeTask: any WKURLSchemeTask) {
-        if let index = self.pendingTasks.firstIndex(where: { $0.sourceTask === urlSchemeTask }) {
-            let task = self.pendingTasks[index]
-            self.pendingTasks.remove(at: index)
-            task.cancel()
-        }
-    }
-}*/
-
 private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
     private final class PendingTask {
         let sourceTask: any WKURLSchemeTask
         var urlSessionTask: URLSessionTask?
         let isCompleted = Atomic<Bool>(value: false)
         
-        init(sourceTask: any WKURLSchemeTask) {
+        init(proxyServerHost: String, sourceTask: any WKURLSchemeTask) {
             self.sourceTask = sourceTask
             
             var mappedHost: String = ""
@@ -111,7 +41,7 @@ private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
                     mappedPath = "/\(mappedPath)"
                 }
             }
-            let mappedUrl = "https://\(mappedHost).magic.org\(mappedPath)"
+            let mappedUrl = "https://\(mappedHost).\(proxyServerHost)\(mappedPath)"
             let isCompleted = self.isCompleted
             self.urlSessionTask = URLSession.shared.dataTask(with: URLRequest(url: URL(string: mappedUrl)!), completionHandler: { data, response, error in
                 if isCompleted.swap(true) {
@@ -148,10 +78,16 @@ private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
         }
     }
     
+    private let proxyServerHost: String
+    
     private var pendingTasks: [PendingTask] = []
     
+    init(proxyServerHost: String) {
+        self.proxyServerHost = proxyServerHost
+    }
+    
     func webView(_ webView: WKWebView, start urlSchemeTask: any WKURLSchemeTask) {
-        self.pendingTasks.append(PendingTask(sourceTask: urlSchemeTask))
+        self.pendingTasks.append(PendingTask(proxyServerHost: self.proxyServerHost, sourceTask: urlSchemeTask))
     }
     
     func webView(_ webView: WKWebView, stop urlSchemeTask: any WKURLSchemeTask) {
@@ -200,7 +136,11 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         let configuration = WKWebViewConfiguration()
         
-        configuration.setURLSchemeHandler(TonSchemeHandler(), forURLScheme: "tonsite")
+        var proxyServerHost = "magic.org"
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let hostValue = data["ton_proxy_address"] as? String {
+            proxyServerHost = hostValue
+        }
+        configuration.setURLSchemeHandler(TonSchemeHandler(proxyServerHost: proxyServerHost), forURLScheme: "tonsite")
         
         self.webView = WKWebView(frame: CGRect(), configuration: configuration)
         self.webView.allowsLinkPreview = true

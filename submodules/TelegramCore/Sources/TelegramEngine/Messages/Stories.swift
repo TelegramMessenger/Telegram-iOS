@@ -1327,6 +1327,9 @@ func _internal_uploadBotPreviewImpl(
                                             return current
                                         }
                                         var media = currentBotPreview.media
+                                        if let index = media.firstIndex(where: { $0.id == resultMediaValue.id }) {
+                                            media.remove(at: index)
+                                        }
                                         media.append(resultMediaValue)
                                         let botPreview = CachedUserData.BotPreview(media: media)
                                         current = current.withUpdatedBotPreview(botPreview)
