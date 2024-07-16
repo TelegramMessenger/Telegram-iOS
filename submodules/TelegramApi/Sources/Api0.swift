@@ -242,7 +242,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1744710921] = { return Api.DocumentAttribute.parse_documentAttributeHasStickers($0) }
     dict[1815593308] = { return Api.DocumentAttribute.parse_documentAttributeImageSize($0) }
     dict[1662637586] = { return Api.DocumentAttribute.parse_documentAttributeSticker($0) }
-    dict[-745541182] = { return Api.DocumentAttribute.parse_documentAttributeVideo($0) }
+    dict[389652397] = { return Api.DocumentAttribute.parse_documentAttributeVideo($0) }
     dict[761606687] = { return Api.DraftMessage.parse_draftMessage($0) }
     dict[453805082] = { return Api.DraftMessage.parse_draftMessageEmpty($0) }
     dict[-1764723459] = { return Api.EmailVerification.parse_emailVerificationApple($0) }
@@ -1398,7 +1398,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
