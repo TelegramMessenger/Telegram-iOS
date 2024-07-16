@@ -12533,3 +12533,5 @@ Sorry for the inconvenience.";
 "Monetization.Proceeds.TonAndStars.Info" = "Stars and TON from your total balance can be used for ads or withdrawn as rewards 21 and 3 days respectively after they are earned.";
 
 "Stars.Transaction.FragmentUnknown_URL" = "https://fragment.com/stars";
+"Conversation.StatusBotSubscribers_1" = "1 user";
+"Conversation.StatusBotSubscribers_any" = "%d users";

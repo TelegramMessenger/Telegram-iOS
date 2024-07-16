@@ -2263,11 +2263,15 @@ public extension Api.functions.bots {
                 }
 }
 public extension Api.functions.bots {
-                static func deletePreviewMedia(bot: Api.InputUser, media: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func deletePreviewMedia(bot: Api.InputUser, media: [Api.InputMedia]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1220635873)
+                    buffer.appendInt32(481471475)
                     bot.serialize(buffer, true)
-                    media.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(media.count))
+                    for item in media {
+                        item.serialize(buffer, true)
+                    }
                     return (FunctionDescription(name: "bots.deletePreviewMedia", parameters: [("bot", String(describing: bot)), ("media", String(describing: media))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?

@@ -555,7 +555,12 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                         let string = NSAttributedString(string: statusText, font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(string, .generic)
                                     } else if let _ = user.botInfo {
-                                        let statusText = self.strings.Bot_GenericBotStatus
+                                        let statusText: String
+                                        if let subscriberCount = user.subscriberCount {
+                                            statusText = self.strings.Conversation_StatusBotSubscribers(subscriberCount)
+                                        } else {
+                                            statusText = self.strings.Bot_GenericBotStatus
+                                        }
                                         
                                         let string = NSAttributedString(string: statusText, font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(string, .generic)

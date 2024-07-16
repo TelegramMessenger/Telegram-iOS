@@ -449,7 +449,11 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                             statusText = ""
                             statusColor = item.presentationData.theme.list.itemPrimaryTextColor
                         } else if let _ = peer.botInfo {
-                            statusText = item.presentationData.strings.Bot_GenericBotStatus
+                            if let subscriberCount = peer.subscriberCount {
+                                statusText = item.presentationData.strings.Conversation_StatusBotSubscribers(subscriberCount)
+                            } else {
+                                statusText = item.presentationData.strings.Bot_GenericBotStatus
+                            }
                             statusColor = item.presentationData.theme.list.itemSecondaryTextColor
                         } else if case .generic = item.mode, !servicePeer, let presence = item.presence {
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970

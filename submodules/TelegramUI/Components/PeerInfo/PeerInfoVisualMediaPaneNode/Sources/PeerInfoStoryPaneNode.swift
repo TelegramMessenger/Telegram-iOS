@@ -1476,6 +1476,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         case peer(id: EnginePeer.Id, isSaved: Bool, isArchived: Bool)
         case search(query: String)
         case location(coordinates: MediaArea.Coordinates, venue: MediaArea.Venue)
+        case botPreview(id: EnginePeer.Id)
     }
     
     public struct ZoomLevel {
@@ -1547,6 +1548,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     private var mapInfoData: MapInfoData?
     private var mapInfoNode: LocationInfoListItemNode?
     private var searchHeader: ComponentView<Empty>?
+    
+    private var barBackgroundLayer: SimpleLayer?
     
     private let itemGrid: SparseItemGrid
     private let itemGridBinding: SparseItemGridBindingImpl
@@ -1699,6 +1702,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 self.listSource = SearchStoryListContext(account: context.account, source: .hashtag(query))
             case let .location(coordinates, venue):
                 self.listSource = SearchStoryListContext(account: context.account, source: .mediaArea(.venue(coordinates: coordinates, venue: venue)))
+            case let .botPreview(id):
+                self.listSource = BotPreviewStoryListContext(account: context.account, engine: context.engine, peerId: id)
             }
         }
         self.calendarSource = nil
@@ -2170,6 +2175,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         switch self.scope {
         case let .peer(_, _, isArchived):
             paneKey = isArchived ? .storyArchive : .stories
+        case .botPreview:
+            paneKey = .botPreview
         default:
             paneKey = .stories
         }
@@ -2623,7 +2630,12 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             
             let title: String
             if state.totalCount == 0 {
-                title = ""
+                if case .botPreview = self.scope {
+                    //TODO:localize
+                    title = "no preview added"
+                } else {
+                    title = ""
+                }
             } else if case let .peer(_, isSaved, isArchived) = self.scope {
                 if isSaved {
                     title = self.presentationData.strings.StoryList_SubtitleSaved(Int32(state.totalCount))
@@ -2632,6 +2644,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 } else {
                     title = self.presentationData.strings.StoryList_SubtitleCount(Int32(state.totalCount))
                 }
+            } else if case .botPreview = self.scope {
+                //TODO:localize
+                if state.totalCount == 1 {
+                    title = "1 preview"
+                } else {
+                    title = "\(state.totalCount) previews"
+                }
             } else {
                 title = ""
             }
@@ -2639,6 +2658,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             switch self.scope {
             case let .peer(_, _, isArchived):
                 paneKey = isArchived ? .storyArchive : .stories
+            case .botPreview:
+                paneKey = .botPreview
             default:
                 paneKey = .stories
             }
@@ -3036,38 +3057,88 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     }
     
     private func presentDeleteConfirmation(ids: Set<Int32>) {
-        guard case let .peer(peerId, _, _) = self.scope else {
-            return
-        }
-        
-        let presentationData = self.presentationData
-        let controller = ActionSheetController(presentationData: presentationData)
-        let dismissAction: () -> Void = { [weak controller] in
-            controller?.dismissAnimated()
-        }
-        
-        let title: String = presentationData.strings.StoryList_DeleteConfirmation_Title(Int32(ids.count))
-        
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: title),
-                ActionSheetButtonItem(title: presentationData.strings.StoryList_DeleteConfirmation_Action, color: .destructive, action: { [weak self] in
-                    dismissAction()
-                    
-                    guard let self else {
-                        return
+        if case let .peer(peerId, _, _) = self.scope {
+            let presentationData = self.presentationData
+            let controller = ActionSheetController(presentationData: presentationData)
+            let dismissAction: () -> Void = { [weak controller] in
+                controller?.dismissAnimated()
+            }
+            
+            let title: String = presentationData.strings.StoryList_DeleteConfirmation_Title(Int32(ids.count))
+            
+            controller.setItemGroups([
+                ActionSheetItemGroup(items: [
+                    ActionSheetTextItem(title: title),
+                    ActionSheetButtonItem(title: presentationData.strings.StoryList_DeleteConfirmation_Action, color: .destructive, action: { [weak self] in
+                        dismissAction()
+                        
+                        guard let self else {
+                            return
+                        }
+                        
+                        if let parentController = self.parentController as? PeerInfoScreen {
+                            parentController.cancelItemSelection()
+                        }
+                        
+                        let _ = self.context.engine.messages.deleteStories(peerId: peerId, ids: Array(ids)).startStandalone()
+                    })
+                ]),
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+            ])
+            self.parentController?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        } else if case let .botPreview(peerId) = self.scope {
+            let presentationData = self.presentationData
+            let controller = ActionSheetController(presentationData: presentationData)
+            let dismissAction: () -> Void = { [weak controller] in
+                controller?.dismissAnimated()
+            }
+            
+            var mappedItemIds: [MediaId] = []
+            if let items = self.items {
+                mappedItemIds = items.items.compactMap { item -> MediaId? in
+                    guard let item = item as? VisualMediaItem else {
+                        return nil
                     }
-                    
-                    if let parentController = self.parentController as? PeerInfoScreen {
-                        parentController.cancelItemSelection()
+                    if ids.contains(item.story.id) {
+                        return item.story.media.id
+                    } else {
+                        return nil
                     }
-                    
-                    let _ = self.context.engine.messages.deleteStories(peerId: peerId, ids: Array(ids)).startStandalone()
-                })
-            ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-        ])
-        self.parentController?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }
+            }
+            if mappedItemIds.isEmpty {
+                return
+            }
+            
+            //TODO:localize
+            let title: String
+            if mappedItemIds.count == 1 {
+                title = "Delete 1 Preview?"
+            } else {
+                title = "Delete \(mappedItemIds.count) Previews?"
+            }
+            
+            controller.setItemGroups([
+                ActionSheetItemGroup(items: [
+                    ActionSheetTextItem(title: title),
+                    ActionSheetButtonItem(title: "Delete", color: .destructive, action: { [weak self] in
+                        dismissAction()
+                        
+                        guard let self else {
+                            return
+                        }
+                        
+                        if let parentController = self.parentController as? PeerInfoScreen {
+                            parentController.cancelItemSelection()
+                        }
+                        
+                        let _ = self.context.engine.messages.deleteBotPreviews(peerId: peerId, ids: mappedItemIds)
+                    })
+                ]),
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+            ])
+            self.parentController?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }
     }
     
     private func update(transition: ContainedViewLayoutTransition) {
@@ -3266,6 +3337,19 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             mapOptionsNode.updateLayout(size: mapOptionsFrame.size, leftInset: sideInset, rightInset: sideInset, transition: transition)
         }
         
+        if self.isProfileEmbedded, case .botPreview = self.scope {
+            let barBackgroundLayer: SimpleLayer
+            if let current = self.barBackgroundLayer {
+                barBackgroundLayer = current
+            } else {
+                barBackgroundLayer = SimpleLayer()
+                self.barBackgroundLayer = barBackgroundLayer
+                self.layer.insertSublayer(barBackgroundLayer, at: 0)
+            }
+            barBackgroundLayer.backgroundColor = presentationData.theme.list.plainBackgroundColor.cgColor
+            transition.updateFrame(layer: barBackgroundLayer, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: gridTopInset)))
+        }
+        
         var bottomInset = bottomInset
         if self.isProfileEmbedded, let selectedIds = self.itemInteraction.selectedIds, self.canManageStories, case let .peer(peerId, _, isArchived) = self.scope {
             let selectionPanel: ComponentView<Empty>
@@ -3460,6 +3544,71 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             
             let backgroundColor: UIColor
             if self.isProfileEmbedded {
+                backgroundColor = presentationData.theme.list.plainBackgroundColor
+            } else {
+                backgroundColor = presentationData.theme.list.blocksBackgroundColor
+            }
+            
+            if self.didUpdateItemsOnce {
+                ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut)).setBackgroundColor(view: self.view, color: backgroundColor)
+            } else {
+                self.view.backgroundColor = backgroundColor
+            }
+        } else if case .botPreview = self.scope, let items = self.items, items.items.isEmpty, items.count == 0 {
+            let emptyStateView: ComponentView<Empty>
+            var emptyStateTransition = ComponentTransition(transition)
+            if let current = self.emptyStateView {
+                emptyStateView = current
+            } else {
+                emptyStateTransition = .immediate
+                emptyStateView = ComponentView()
+                self.emptyStateView = emptyStateView
+            }
+            //TODO:localize
+            let emptyStateSize = emptyStateView.update(
+                transition: emptyStateTransition,
+                component: AnyComponent(EmptyStateIndicatorComponent(
+                    context: self.context,
+                    theme: presentationData.theme,
+                    fitToHeight: self.isProfileEmbedded,
+                    animationName: nil,
+                    title: "No Preview",
+                    text: "Upload screenshots and video demos for your Mini App that will be visible for your users here.",
+                    actionTitle: self.canManageStories ? "Add Preview" : nil,
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.emptyAction?()
+                    },
+                    additionalActionTitle: nil,
+                    additionalAction: {}
+                )),
+                environment: {},
+                containerSize: CGSize(width: size.width, height: size.height - gridTopInset - bottomInset)
+            )
+            
+            let emptyStateFrame: CGRect
+            if self.isProfileEmbedded {
+                emptyStateFrame = CGRect(origin: CGPoint(x: floor((size.width - emptyStateSize.width) * 0.5), y: max(gridTopInset + 22.0, floor((visibleHeight - gridTopInset - bottomInset - emptyStateSize.height) * 0.5))), size: emptyStateSize)
+            } else {
+                emptyStateFrame = CGRect(origin: CGPoint(x: floor((size.width - emptyStateSize.width) * 0.5), y: gridTopInset), size: emptyStateSize)
+            }
+            
+            if let emptyStateComponentView = emptyStateView.view {
+                if emptyStateComponentView.superview == nil {
+                    self.view.addSubview(emptyStateComponentView)
+                    if self.didUpdateItemsOnce {
+                        emptyStateComponentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                }
+                emptyStateTransition.setFrame(view: emptyStateComponentView, frame: emptyStateFrame)
+            }
+            
+            let backgroundColor: UIColor
+            if self.isProfileEmbedded, case .botPreview = self.scope {
+                backgroundColor = presentationData.theme.list.blocksBackgroundColor
+            } else if self.isProfileEmbedded {
                 backgroundColor = presentationData.theme.list.plainBackgroundColor
             } else {
                 backgroundColor = presentationData.theme.list.blocksBackgroundColor

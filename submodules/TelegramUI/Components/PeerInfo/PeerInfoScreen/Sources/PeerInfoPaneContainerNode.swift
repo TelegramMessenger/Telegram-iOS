@@ -404,10 +404,10 @@ private final class PeerInfoPendingPane {
         ensureRectVisible: @escaping (UIView, CGRect) -> Void,
         externalDataUpdated: @escaping (ContainedViewLayoutTransition) -> Void
     ) {
-        let captureProtected = data.peer?.isCopyProtectionEnabled ?? false
+        var captureProtected = data.peer?.isCopyProtectionEnabled ?? false
         let paneNode: PeerInfoPaneNode
         switch key {
-        case .stories, .storyArchive:
+        case .stories, .storyArchive, .botPreview:
             var canManage = false
             if let peer = data.peer {
                 if peer.id == context.account.peerId {
@@ -419,7 +419,27 @@ private final class PeerInfoPendingPane {
                 }
             }
             
-            let visualPaneNode = PeerInfoStoryPaneNode(context: context, scope: .peer(id: peerId, isSaved: false, isArchived: key == .storyArchive), captureProtected: captureProtected, isProfileEmbedded: true, canManageStories: canManage, navigationController: chatControllerInteraction.navigationController, listContext: key == .storyArchive ? data.storyArchiveListContext : data.storyListContext)
+            var listContext: StoryListContext?
+            var scope: PeerInfoStoryPaneNode.Scope = .peer(id: peerId, isSaved: false, isArchived: key == .storyArchive)
+            switch key {
+            case .storyArchive:
+                listContext = data.storyArchiveListContext
+            case .botPreview:
+                listContext = data.botPreviewStoryListContext
+                scope = .botPreview(id: peerId)
+                
+                if let peer = data.peer {
+                    if let user = peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
+                        canManage = true
+                    }
+                }
+                
+                captureProtected = false
+            default:
+                listContext = data.storyListContext
+            }
+            
+            let visualPaneNode = PeerInfoStoryPaneNode(context: context, scope: scope, captureProtected: captureProtected, isProfileEmbedded: true, canManageStories: canManage, navigationController: chatControllerInteraction.navigationController, listContext: listContext)
             paneNode = visualPaneNode
             visualPaneNode.openCurrentDate = {
                 openMediaCalendar()
@@ -1092,6 +1112,9 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                 title = presentationData.strings.PeerInfo_PaneStories
             case .storyArchive:
                 title = presentationData.strings.PeerInfo_PaneArchivedStories
+            case .botPreview:
+                //TODO:localize
+                title = "Preview"
             case .media:
                 title = presentationData.strings.PeerInfo_PaneMedia
             case .files:

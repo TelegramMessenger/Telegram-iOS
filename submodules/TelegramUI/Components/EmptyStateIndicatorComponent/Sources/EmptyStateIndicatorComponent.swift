@@ -7,11 +7,12 @@ import ButtonComponent
 import TelegramPresentationData
 import AccountContext
 import MultilineTextComponent
+import BalancedTextComponent
 
 public final class EmptyStateIndicatorComponent: Component {
     public let context: AccountContext
     public let theme: PresentationTheme
-    public let animationName: String
+    public let animationName: String?
     public let title: String
     public let text: String
     public let actionTitle: String?
@@ -24,7 +25,7 @@ public final class EmptyStateIndicatorComponent: Component {
         context: AccountContext,
         theme: PresentationTheme,
         fitToHeight: Bool,
-        animationName: String,
+        animationName: String?,
         title: String,
         text: String,
         actionTitle: String?,
@@ -94,16 +95,19 @@ public final class EmptyStateIndicatorComponent: Component {
             self.component = component
             self.componentState = state
             
-            let animationSize = self.animation.update(
-                transition: transition,
-                component: AnyComponent(AnimatedStickerComponent(
-                    account: component.context.account,
-                    animation: AnimatedStickerComponent.Animation(source: .bundle(name: component.animationName), loop: true),
-                    size: CGSize(width: 120.0, height: 120.0)
-                )),
-                environment: {},
-                containerSize: CGSize(width: 120.0, height: 120.0)
-            )
+            var animationSize: CGSize?
+            if let animationName = component.animationName {
+                animationSize = self.animation.update(
+                    transition: transition,
+                    component: AnyComponent(AnimatedStickerComponent(
+                        account: component.context.account,
+                        animation: AnimatedStickerComponent.Animation(source: .bundle(name: animationName), loop: true),
+                        size: CGSize(width: 120.0, height: 120.0)
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 120.0, height: 120.0)
+                )
+            }
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -116,13 +120,13 @@ public final class EmptyStateIndicatorComponent: Component {
             )
             let textSize = self.text.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
+                component: AnyComponent(BalancedTextComponent(
                     text: .plain(NSAttributedString(string: component.text, font: Font.regular(15.0), textColor: component.theme.list.itemSecondaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0
                 )),
                 environment: {},
-                containerSize: CGSize(width: min(300.0, availableSize.width - 16.0 * 2.0), height: 1000.0)
+                containerSize: CGSize(width: min(400.0, availableSize.width - 16.0 * 2.0), height: 1000.0)
             )
             var buttonSize: CGSize?
             if let actionTitle = component.actionTitle {
@@ -203,7 +207,12 @@ public final class EmptyStateIndicatorComponent: Component {
             let titleSpacing: CGFloat = 17.0
             let buttonSpacing: CGFloat = 21.0
             
-            var totalHeight: CGFloat = animationSize.height + animationSpacing + titleSize.height + titleSpacing + textSize.height
+            var totalHeight: CGFloat = 0.0
+            
+            if let animationSize {
+                totalHeight += animationSize.height + animationSpacing
+            }
+            totalHeight += titleSize.height + titleSpacing + textSize.height
             if let buttonSize {
                 totalHeight += buttonSpacing + buttonSize.height
             }
@@ -218,7 +227,7 @@ public final class EmptyStateIndicatorComponent: Component {
                 contentY = floor((availableSize.height - totalHeight) * 0.5)
             }
             
-            if let animationView = self.animation.view {
+            if let animationSize, let animationView = self.animation.view {
                 if animationView.superview == nil {
                     self.addSubview(animationView)
                 }
