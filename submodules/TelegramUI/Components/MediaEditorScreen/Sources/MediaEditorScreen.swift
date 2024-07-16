@@ -2545,6 +2545,16 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         private(set) var hasAnyChanges = false
         
+        fileprivate var drawingScreen: DrawingScreen?
+        fileprivate var stickerScreen: StickerPickerScreen?
+        fileprivate weak var cutoutScreen: MediaCutoutScreen?
+        private var defaultToEmoji = false
+        
+        private var previousDrawingData: Data?
+        private var previousDrawingEntities: [DrawingEntity]?
+        
+        private var weatherPromise: Promise<StickerPickerScreen.Weather>?
+        
         private var playbackPositionDisposable: Disposable?
         
         var recording: MediaEditorScreen.Recording
@@ -4572,61 +4582,21 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.mediaEditor?.play()
         }
         
-        func addWeather() {
-            if !self.didSetupStaticEmojiPack {
-                self.didSetupStaticEmojiPack = true
-                self.staticEmojiPack.set(self.context.engine.stickers.loadedStickerPack(reference: .name("staticemoji"), forceActualized: false))
-            }
+        func addWeather(_ weather: StickerPickerScreen.Weather.LoadedWeather) {
+            let weatherFormatter = MeasurementFormatter()
+            weatherFormatter.locale = Locale.current
+            weatherFormatter.unitStyle = .short
+            weatherFormatter.numberFormatter.maximumFractionDigits = 0
             
-            let emojiFile: Signal<TelegramMediaFile?, NoError>
-            let emoji = "☀️".strippedEmoji
-            
-            emojiFile = self.context.animatedEmojiStickers
-            |> take(1)
-            |> map { result -> TelegramMediaFile? in
-                if let file = result[emoji]?.first {
-                    return file.file
-                } else {
-                    return nil
-                }
-                
-//                if case let .result(_, items, _) = result, let match = items.first(where: { item in
-//                    var displayText: String?
-//                    for attribute in item.file.attributes {
-//                        if case let .Sticker(alt, _, _) = attribute {
-//                            displayText = alt
-//                            break
-//                        }
-//                    }
-//                    if let displayText, displayText.hasPrefix(emoji) {
-//                        return true
-//                    } else {
-//                        return false
-//                    }
-//                }) {
-//                    return match.file
-//                } else {
-//                    return nil
-//                }
-            }
-
-            
-            let _ = (emojiFile
-            |> deliverOnMainQueue).start(next: { [weak self] emojiFile in
-                guard let self else {
-                    return
-                }
-                let scale = 1.0
-                self.interaction?.insertEntity(
-                    DrawingWeatherEntity(
-                        temperature: "35°C",
-                        style: .white,
-                        icon: emojiFile
-                    ),
-                    scale: scale,
-                    position: nil
-                )
-            })
+            self.interaction?.insertEntity(
+                DrawingWeatherEntity(
+                    temperature: weatherFormatter.string(from: Measurement(value: weather.temperature, unit: UnitTemperature.celsius)),
+                    style: .white,
+                    icon: weather.emojiFile
+                ),
+                scale: nil,
+                position: nil
+            )
         }
         
         func updateModalTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -4707,15 +4677,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         func viewForZooming(in scrollView: UIScrollView) -> UIView? {
             return self.previewContentContainerView
         }
-        
-        fileprivate var drawingScreen: DrawingScreen?
-        fileprivate var stickerScreen: StickerPickerScreen?
-        fileprivate weak var cutoutScreen: MediaCutoutScreen?
-        private var defaultToEmoji = false
-        
-        private var previousDrawingData: Data?
-        private var previousDrawingEntities: [DrawingEntity]?
-        
+                
         func requestLayout(forceUpdate: Bool, transition: ComponentTransition) {
             guard let layout = self.validLayout else {
                 return
@@ -4812,7 +4774,23 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     if let controller = self.controller, case .stickerEditor = controller.mode {
                                         hasInteractiveStickers = false
                                     }
-                                    let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), forceDark: true, defaultToEmoji: self.defaultToEmoji, hasGifs: true, hasInteractiveStickers: hasInteractiveStickers)
+                                    
+                                    var weatherSignal: Signal<StickerPickerScreen.Weather, NoError>
+                                    if "".isEmpty {
+                                        let weatherPromise: Promise<StickerPickerScreen.Weather>
+                                        if let current = self.weatherPromise {
+                                            weatherPromise = current
+                                        } else {
+                                            weatherPromise = Promise()
+                                            weatherPromise.set(getWeather(context: self.context))
+                                            self.weatherPromise = weatherPromise
+                                        }
+                                        weatherSignal = weatherPromise.get()
+                                    } else {
+                                        weatherSignal = .single(.none)
+                                    }
+                                    
+                                    let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), forceDark: true, defaultToEmoji: self.defaultToEmoji, hasGifs: true, hasInteractiveStickers: hasInteractiveStickers, weather: weatherSignal)
                                     controller.completion = { [weak self] content in
                                         guard let self else {
                                             return false
@@ -4885,7 +4863,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     }
                                     controller.addWeather = { [weak self, weak controller] in
                                         if let self {
-                                            self.addWeather()
+                                            if let weatherPromise = self.weatherPromise {
+                                                let _ = (weatherPromise.get()
+                                                |> take(1)).start(next: { [weak self] weather in
+                                                    if let self, case let .loaded(loaded) = weather {
+                                                        self.addWeather(loaded)
+                                                    }
+                                                })
+                                            }
                                             
                                             self.stickerScreen = nil
                                             controller?.dismiss(animated: true)

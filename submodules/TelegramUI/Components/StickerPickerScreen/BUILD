@@ -33,6 +33,8 @@ swift_library(
         "//submodules/TelegramUI/Components/EntityKeyboard",
         "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
         "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/TelegramUI/Components/LottieComponentResourceContent",
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/TelegramUI/Components/MediaEditor",
         "//submodules/TelegramUI/Components/CameraButtonComponent",

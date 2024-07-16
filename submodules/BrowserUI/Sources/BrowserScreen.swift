@@ -455,6 +455,9 @@ public class BrowserScreen: ViewController, MinimizableController {
                     return
                 }
                 self.presentationData = presentationData
+                for content in self.content {
+                    content.updatePresentationData(presentationData)
+                }
                 self.requestLayout(transition: .immediate)
             })
         }
@@ -480,9 +483,9 @@ public class BrowserScreen: ViewController, MinimizableController {
             let browserContent: BrowserContent
             switch content {
             case let .webPage(url):
-                browserContent = BrowserWebContent(context: self.context, url: url)
+                browserContent = BrowserWebContent(context: self.context, presentationData: self.presentationData, url: url)
             case let .instantPage(webPage, anchor, sourceLocation):
-                let instantPageContent = BrowserInstantPageContent(context: self.context, webPage: webPage, anchor: anchor, url: webPage.content.url ?? "", sourceLocation: sourceLocation)
+                let instantPageContent = BrowserInstantPageContent(context: self.context, presentationData: self.presentationData, webPage: webPage, anchor: anchor, url: webPage.content.url ?? "", sourceLocation: sourceLocation)
                 instantPageContent.openPeer = { [weak self] peer in
                     guard let self else {
                         return
@@ -580,14 +583,15 @@ public class BrowserScreen: ViewController, MinimizableController {
                 self.controller?.title = state.title
                 self.contentState = state
                 
-                let transition: ComponentTransition
-                if let previousState, previousState.withUpdatedReadingProgress(state.readingProgress) == state {
-                    transition = .immediate
-                } else {
-                    transition = .easeInOut(duration: 0.25)
+                if !self.isUpdating {
+                    let transition: ComponentTransition
+                    if let previousState, previousState.withUpdatedReadingProgress(state.readingProgress) == state {
+                        transition = .immediate
+                    } else {
+                        transition = .easeInOut(duration: 0.25)
+                    }
+                    self.requestLayout(transition: transition)
                 }
-                
-                self.requestLayout(transition: transition)
             }))
                         
             content.onScrollingUpdate = { [weak self] update in
@@ -823,13 +827,19 @@ public class BrowserScreen: ViewController, MinimizableController {
             self.controller?.present(contextController, in: .window(.root))
         }
         
+        private var isUpdating = false
         func requestLayout(transition: ComponentTransition) {
-            if let (layout, navigationBarHeight) = self.validLayout {
+            if !self.isUpdating, let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
             }
         }
         
         func containerLayoutUpdated(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ComponentTransition) {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
             self.validLayout = (layout, navigationBarHeight)
             
             let environment = ViewControllerComponentContainer.Environment(

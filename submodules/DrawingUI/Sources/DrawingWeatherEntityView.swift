@@ -113,12 +113,7 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         var result = self.textView.sizeThatFits(CGSize(width: self.weatherEntity.width, height: .greatestFiniteMagnitude))
         self.textSize = result
         
-        let widthExtension: CGFloat
-        if self.weatherEntity.icon != nil {
-            widthExtension = result.height * 0.77
-        } else {
-            widthExtension = result.height * 0.65
-        }
+        let widthExtension: CGFloat = result.height * 0.7
         result.width = floorToScreenPixels(max(224.0, ceil(result.width) + 20.0) + widthExtension)
         result.height = ceil(result.height * 1.2);
         return result;
@@ -136,18 +131,16 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
     public override func layoutSubviews() {
         super.layoutSubviews()
         
-        let iconSize: CGFloat
-        let iconOffset: CGFloat
-        if self.weatherEntity.icon != nil {
-            iconSize = min(80.0, floor(self.bounds.height * 0.7))
-            iconOffset = 0.2
-        } else {
-            iconSize = min(76.0, floor(self.bounds.height * 0.6))
-            iconOffset = 0.3
-        }
-        
+        let iconSize = min(80.0, floor(self.bounds.height * 0.7))
+        let iconOffset: CGFloat = 0.3
+   
         self.iconView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(iconSize * iconOffset), y: floorToScreenPixels((self.bounds.height - iconSize) / 2.0)), size: CGSize(width: iconSize, height: iconSize))
         self.imageNode.frame = self.iconView.frame.offsetBy(dx: 0.0, dy: 2.0)
+        
+        if let animationNode = self.animationNode {
+            animationNode.frame = self.iconView.frame.offsetBy(dx: 0.0, dy: 2.0)
+            animationNode.updateLayout(size: self.iconView.frame.size)
+        }
         
         let imageSize = CGSize(width: iconSize, height: iconSize)
         self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
@@ -304,29 +297,19 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
             self.addSubnode(self.imageNode)
             if let dimensions = file.dimensions {
                 if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
+                    let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))
                     if self.animationNode == nil {
                         let animationNode = DefaultAnimatedStickerNodeImpl()
-                        animationNode.autoplay = false
+                        animationNode.autoplay = true
                         self.animationNode = animationNode
-                        animationNode.started = { [weak self, weak animationNode] in
+                        animationNode.started = { [weak self] in
                             self?.imageNode.isHidden = true
-                            
-                            let _ = animationNode
-//                            if let animationNode = animationNode {
-//                                let _ = (animationNode.status
-//                                |> take(1)
-//                                |> deliverOnMainQueue).start(next: { [weak self] status in
-//                                    self?.started?(status.duration)
-//                                })
-//                            }
                         }
-                        self.addSubnode(animationNode)
+                        animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: file.resource, isVideo: file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                         
-                        if file.isCustomTemplateEmoji {
-                            animationNode.dynamicColor = UIColor(rgb: 0xffffff)
-                        }
+                        self.addSubnode(animationNode)
                     }
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, userLocation: .other, file: file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))))
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, userLocation: .other, file: file, small: false, size: fittedDimensions))
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: file.resource).start())
                 } else {
                     if let animationNode = self.animationNode {
