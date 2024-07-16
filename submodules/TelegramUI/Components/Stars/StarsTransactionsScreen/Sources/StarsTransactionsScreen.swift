@@ -815,12 +815,14 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let resultController = UndoOverlayController(
                         presentationData: presentationData,
-                        content: .image(
-                            image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
-                            title: presentationData.strings.Stars_Intro_PurchasedTitle,
+                        content: .universal(
+                            animation: "StarsBuy",
+                            scale: 0.066,
+                            colors: [:],
+                            title: presentationData.strings.Stars_Intro_PurchasedTitle, 
                             text: presentationData.strings.Stars_Intro_PurchasedText(presentationData.strings.Stars_Intro_PurchasedText_Stars(Int32(stars))).string,
-                            round: false,
-                            undoText: nil
+                            customUndoText: nil,
+                            timeout: nil
                         ),
                         elevatedLayout: false,
                         action: { _ in return true})
@@ -850,8 +852,42 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                         starsContext: starsContext,
                         options: options,
                         purpose: .gift(peerId: peerId),
-                        completion: { stars in
-                          
+                        completion: { [weak self] stars in
+                            guard let self else {
+                                return
+                            }
+                            
+                            Queue.mainQueue().after(2.0) {
+                                //TODO:localize
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                let resultController = UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .universal(
+                                        animation: "StarsSend",
+                                        scale: 0.066,
+                                        colors: [:],
+                                        title: nil,
+                                        text: "\(stars) Stars sent.",
+                                        customUndoText: "View Chat",
+                                        timeout: nil
+                                    ),
+                                    elevatedLayout: false,
+                                    action: { [weak self] action in
+                                        if case .undo = action, let navigationController = self?.navigationController as? NavigationController {
+                                            let _ = (context.engine.data.get(
+                                                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                                            )
+                                            |> deliverOnMainQueue).start(next: { peer in
+                                                guard let peer else {
+                                                    return
+                                                }
+                                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peer), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: true, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: nil, animated: true))
+                                            })
+                                        }
+                                        return true
+                                    })
+                                self.present(resultController, in: .window(.root))
+                            }
                         }
                     )
                     self.push(purchaseController)

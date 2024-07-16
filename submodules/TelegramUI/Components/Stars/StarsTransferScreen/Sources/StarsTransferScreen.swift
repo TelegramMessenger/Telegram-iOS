@@ -518,12 +518,21 @@ private final class SheetContent: CombinedComponent {
                                         if let lastController = navigationController.viewControllers.last as? ViewController {
                                             let resultController = UndoOverlayController(
                                                 presentationData: presentationData,
-                                                content: .image(
-                                                    image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
+//                                                content: .image(
+//                                                    image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
+//                                                    title: presentationData.strings.Stars_Transfer_PurchasedTitle,
+//                                                    text: text,
+//                                                    round: false,
+//                                                    undoText: nil
+//                                                ),
+                                                content: .universal(
+                                                    animation: "StarsSend",
+                                                    scale: 0.066,
+                                                    colors: [:],
                                                     title: presentationData.strings.Stars_Transfer_PurchasedTitle,
                                                     text: text,
-                                                    round: false,
-                                                    undoText: nil
+                                                    customUndoText: nil,
+                                                    timeout: nil
                                                 ),
                                                 elevatedLayout: lastController is ChatController,
                                                 action: { _ in return true}
