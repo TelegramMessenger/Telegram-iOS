@@ -8,18 +8,20 @@ import TelegramPresentationData
 import ItemListUI
 import PhotoResources
 import OpenInExternalAppUI
+import AccountContext
+import AppBundle
 
 class WebBrowserItem: ListViewItem, ItemListItem {
-    let engine: TelegramEngine
+    let context: AccountContext
     let presentationData: ItemListPresentationData
     let title: String
-    let application: OpenInApplication
+    let application: OpenInApplication?
     let checked: Bool
     public let sectionId: ItemListSectionId
     let action: () -> Void
     
-    public init(engine: TelegramEngine, presentationData: ItemListPresentationData, title: String, application: OpenInApplication, checked: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
-        self.engine = engine
+    public init(context: AccountContext, presentationData: ItemListPresentationData, title: String, application: OpenInApplication?, checked: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+        self.context = context
         self.presentationData = presentationData
         self.title = title
         self.application = application
@@ -131,6 +133,7 @@ private final class WebBrowserItemNode: ListViewItemNode {
         let makeIconLayout = self.iconNode.asyncLayout()
         
         let currentItem = self.item
+
         
         return { item, params, neighbors in
             let leftInset: CGFloat = params.leftInset + 16.0 + 43.0
@@ -140,18 +143,25 @@ private final class WebBrowserItemNode: ListViewItemNode {
             let imageApply = makeIconLayout(arguments)
             
             var updatedIconSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-            if currentItem?.application != item.application {
+            if currentItem == nil {
                 switch item.application {
+                case .none:
+                    let icons = item.context.sharedContext.applicationBindings.getAvailableAlternateIcons()
+                    let current = item.context.sharedContext.applicationBindings.getAlternateIconName()
+                    let currentIcon = icons.first(where: { $0.name == current })?.imageName ?? "BlueIcon"
+                    if let image = UIImage(named: currentIcon, in: getAppBundle(), compatibleWith: nil) {
+                        updatedIconSignal = openInAppIcon(engine: item.context.engine, appIcon: .image(image: image))
+                    }
                 case .safari:
                     if let image = UIImage(bundleImageName: "Open In/Safari") {
-                        updatedIconSignal = openInAppIcon(engine: item.engine, appIcon: .image(image: image))
+                        updatedIconSignal = openInAppIcon(engine: item.context.engine, appIcon: .image(image: image))
                     }
                 case .maps:
                     if let image = UIImage(bundleImageName: "Open In/Maps") {
-                        updatedIconSignal = openInAppIcon(engine: item.engine, appIcon: .image(image: image))
+                        updatedIconSignal = openInAppIcon(engine: item.context.engine, appIcon: .image(image: image))
                     }
                 case let .other(_, identifier, _, store):
-                    updatedIconSignal = openInAppIcon(engine: item.engine, appIcon: .resource(resource: OpenInAppIconResource(appStoreId: identifier, store: store)))
+                    updatedIconSignal = openInAppIcon(engine: item.context.engine, appIcon: .resource(resource: OpenInAppIconResource(appStoreId: identifier, store: store)))
                 }
             }
             

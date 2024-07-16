@@ -178,6 +178,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             
             context.add(readingProgress
                 .position(CGPoint(x: readingProgress.size.width / 2.0, y: size.height / 2.0))
+                .opacity(context.component.centerItem?.id == AnyHashable("search") ? 0.0 : 1.0)
             )
             
             context.add(separator

@@ -1036,9 +1036,19 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 
                 let _ = (settings
                 |> deliverOnMainQueue).startStandalone(next: { settings in
-                    if settings.defaultWebBrowser == nil {
-                        //TODO:release check !isCompact
-                        if isCompact || "".isEmpty {
+                    if let defaultWebBrowser = settings.defaultWebBrowser, defaultWebBrowser != "inApp" {
+                        let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))
+                        if let option = openInOptions.first(where: { $0.identifier == settings.defaultWebBrowser }) {
+                            if case let .openUrl(url) = option.action() {
+                                context.sharedContext.applicationBindings.openUrl(url)
+                            } else {
+                                context.sharedContext.applicationBindings.openUrl(url)
+                            }
+                        } else {
+                            context.sharedContext.applicationBindings.openUrl(url)
+                        }
+                    } else {
+                        if settings.defaultWebBrowser == nil && isCompact {
                             let controller = BrowserScreen(context: context, subject: .webPage(url: parsedUrl.absoluteString))
                             navigationController?.pushViewController(controller)
                         } else {
@@ -1050,17 +1060,6 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             } else {
                                 context.sharedContext.applicationBindings.openUrl(parsedUrl.absoluteString)
                             }
-                        }
-                    } else {
-                        let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))
-                        if let option = openInOptions.first(where: { $0.identifier == settings.defaultWebBrowser }) {
-                            if case let .openUrl(url) = option.action() {
-                                context.sharedContext.applicationBindings.openUrl(url)
-                            } else {
-                                context.sharedContext.applicationBindings.openUrl(url)
-                            }
-                        } else {
-                            context.sharedContext.applicationBindings.openUrl(url)
                         }
                     }
                 })
