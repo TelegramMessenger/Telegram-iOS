@@ -41,6 +41,7 @@ swift_library(
         "//submodules/ContextUI",
         "//submodules/UndoUI",
         "//submodules/GalleryUI",
+        "//submodules/TelegramUI/Components/TextLoadingEffect",
     ],
     visibility = [
         "//visibility:public",

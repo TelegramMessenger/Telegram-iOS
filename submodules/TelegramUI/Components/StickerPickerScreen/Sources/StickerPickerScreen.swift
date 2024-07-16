@@ -24,6 +24,7 @@ import LottieComponent
 import LottieComponentResourceContent
 import UndoUI
 import GalleryUI
+import TextLoadingEffect
 
 private final class StickerSelectionComponent: Component {
     typealias EnvironmentType = Empty
@@ -2216,6 +2217,7 @@ private final class InteractiveStickerButtonContent: Component {
         private let backgroundLayer = SimpleLayer()
         let tintBackgroundLayer = SimpleLayer()
         
+        private var loadingView: TextLoadingEffectView?
         private var icon: ComponentView<Empty>
         private var title: ComponentView<Empty>
         
@@ -2295,8 +2297,24 @@ private final class InteractiveStickerButtonContent: Component {
                     }
                     transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: padding + iconSize.width + spacing, y: floorToScreenPixels((buttonSize.height - titleSize.height) / 2.0)), size: titleSize))
                 }
+                
+                if let loadingView = self.loadingView {
+                    self.loadingView = nil
+                    loadingView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                        loadingView.removeFromSuperview()
+                    })
+                }
             } else {
                 buttonSize = CGSize(width: 87.0, height: 34.0)
+                
+                let loadingView: TextLoadingEffectView
+                if let current = self.loadingView {
+                    loadingView = current
+                } else {
+                    loadingView = TextLoadingEffectView()
+                    self.addSubview(loadingView)
+                    self.loadingView = loadingView
+                }
             }
             
             self.backgroundLayer.cornerRadius = 6.0
@@ -2313,6 +2331,12 @@ private final class InteractiveStickerButtonContent: Component {
                     let mappedFrame = self.convert(self.bounds, to: tintContainerView)
                     transition.setFrame(layer: self.tintBackgroundLayer, frame: mappedFrame)
                 }
+            }
+            
+            if let loadingView = self.loadingView {
+                let loadingSize = CGSize(width: buttonSize.width - 18.0, height: 16.0)
+                loadingView.update(color: UIColor.white, rect: CGRect(origin: .zero, size: loadingSize))
+                loadingView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((buttonSize.width - loadingSize.width) / 2.0), y: floorToScreenPixels((buttonSize.width - loadingSize.width) / 2.0)), size: loadingSize)
             }
             
             return buttonSize
