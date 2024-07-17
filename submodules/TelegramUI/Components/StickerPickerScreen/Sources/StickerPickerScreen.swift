@@ -25,6 +25,7 @@ import LottieComponentResourceContent
 import UndoUI
 import GalleryUI
 import TextLoadingEffect
+import TelegramStringFormatting
 
 private final class StickerSelectionComponent: Component {
     typealias EnvironmentType = Empty
@@ -2618,7 +2619,6 @@ final class ItemStack<ChildEnvironment: Equatable>: CombinedComponent {
 
 final class StoryStickersContentView: UIView, EmojiCustomContentView {
     private let context: AccountContext
-    private let weatherFormatter: MeasurementFormatter
     
     let tintContainerView = UIView()
     private let container = ComponentView<Empty>()
@@ -2636,10 +2636,6 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
     
     init(context: AccountContext, weather: Signal<StickerPickerScreen.Weather, NoError>) {
         self.context = context
-        self.weatherFormatter = MeasurementFormatter()
-        self.weatherFormatter.locale = Locale.current
-        self.weatherFormatter.unitStyle = .short
-        self.weatherFormatter.numberFormatter.maximumFractionDigits = 0
         
         super.init(frame: .zero)
                 
@@ -2740,7 +2736,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
                                         InteractiveStickerButtonContent(
                                             context: self.context,
                                             theme: theme,
-                                            title: self.weatherFormatter.string(from: Measurement(value: weather.temperature, unit: UnitTemperature.celsius)),
+                                            title: stringForTemperature(weather.temperature),
                                             iconName: weather.emoji,
                                             iconFile: weather.emojiFile,
                                             useOpaqueTheme: useOpaqueTheme,

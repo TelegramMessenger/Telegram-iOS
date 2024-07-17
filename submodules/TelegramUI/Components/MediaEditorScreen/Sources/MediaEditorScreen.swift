@@ -4583,14 +4583,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         func addWeather(_ weather: StickerPickerScreen.Weather.LoadedWeather) {
-            let weatherFormatter = MeasurementFormatter()
-            weatherFormatter.locale = Locale.current
-            weatherFormatter.unitStyle = .short
-            weatherFormatter.numberFormatter.maximumFractionDigits = 0
-            
             self.interaction?.insertEntity(
                 DrawingWeatherEntity(
-                    temperature: weatherFormatter.string(from: Measurement(value: weather.temperature, unit: UnitTemperature.celsius)),
+                    temperature: stringForTemperature(weather.temperature),
                     style: .white,
                     icon: weather.emojiFile
                 ),
