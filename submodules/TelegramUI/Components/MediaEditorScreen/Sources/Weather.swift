@@ -58,18 +58,14 @@ func getWeather(context: AccountContext) -> Signal<StickerPickerScreen.Weather, 
                 return getWeatherData(context: context, location: location)
                 |> mapToSignal { weather in
                     if let weather {
-                        return context.animatedEmojiStickers
-                        |> take(1)
-                        |> mapToSignal { result in
-                            if let match = result[weather.emoji.strippedEmoji]?.first {
-                                return .single(.loaded(StickerPickerScreen.Weather.LoadedWeather(
-                                    emoji: weather.emoji.strippedEmoji,
-                                    emojiFile: match.file,
-                                    temperature: weather.temperature
-                                )))
-                            } else {
-                                return .single(.none)
-                            }
+                        if let match = context.animatedEmojiStickersValue[weather.emoji.strippedEmoji]?.first {
+                            return .single(.loaded(StickerPickerScreen.Weather.LoadedWeather(
+                                emoji: weather.emoji.strippedEmoji,
+                                emojiFile: match.file,
+                                temperature: weather.temperature
+                            )))
+                        } else {
+                            return .single(.none)
                         }
                     } else {
                         return .single(.none)

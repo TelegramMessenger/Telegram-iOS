@@ -249,7 +249,7 @@ public enum MediaArea: Codable, Equatable {
             try container.encode(coordinates, forKey: .coordinates)
             try container.encode(url, forKey: .value)
         case let .weather(coordinates, emoji, temperature, flags):
-            try container.encode(MediaAreaType.link.rawValue, forKey: .type)
+            try container.encode(MediaAreaType.weather.rawValue, forKey: .type)
             try container.encode(coordinates, forKey: .coordinates)
             try container.encode(emoji, forKey: .value)
             try container.encode(temperature, forKey: .temperature)
