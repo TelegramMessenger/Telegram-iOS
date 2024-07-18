@@ -231,6 +231,7 @@ public extension Api {
         case mediaAreaSuggestedReaction(flags: Int32, coordinates: Api.MediaAreaCoordinates, reaction: Api.Reaction)
         case mediaAreaUrl(coordinates: Api.MediaAreaCoordinates, url: String)
         case mediaAreaVenue(coordinates: Api.MediaAreaCoordinates, geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String)
+        case mediaAreaWeather(flags: Int32, coordinates: Api.MediaAreaCoordinates, emoji: String, temperatureC: Double)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -294,6 +295,15 @@ public extension Api {
                     serializeString(venueId, buffer: buffer, boxed: false)
                     serializeString(venueType, buffer: buffer, boxed: false)
                     break
+                case .mediaAreaWeather(let flags, let coordinates, let emoji, let temperatureC):
+                    if boxed {
+                        buffer.appendInt32(1132918857)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    coordinates.serialize(buffer, true)
+                    serializeString(emoji, buffer: buffer, boxed: false)
+                    serializeDouble(temperatureC, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -313,6 +323,8 @@ public extension Api {
                 return ("mediaAreaUrl", [("coordinates", coordinates as Any), ("url", url as Any)])
                 case .mediaAreaVenue(let coordinates, let geo, let title, let address, let provider, let venueId, let venueType):
                 return ("mediaAreaVenue", [("coordinates", coordinates as Any), ("geo", geo as Any), ("title", title as Any), ("address", address as Any), ("provider", provider as Any), ("venueId", venueId as Any), ("venueType", venueType as Any)])
+                case .mediaAreaWeather(let flags, let coordinates, let emoji, let temperatureC):
+                return ("mediaAreaWeather", [("flags", flags as Any), ("coordinates", coordinates as Any), ("emoji", emoji as Any), ("temperatureC", temperatureC as Any)])
     }
     }
     
@@ -466,6 +478,28 @@ public extension Api {
             let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
                 return Api.MediaArea.mediaAreaVenue(coordinates: _1!, geo: _2!, title: _3!, address: _4!, provider: _5!, venueId: _6!, venueType: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_mediaAreaWeather(_ reader: BufferReader) -> MediaArea? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.MediaAreaCoordinates?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.MediaAreaCoordinates
+            }
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Double?
+            _4 = reader.readDouble()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MediaArea.mediaAreaWeather(flags: _1!, coordinates: _2!, emoji: _3!, temperatureC: _4!)
             }
             else {
                 return nil

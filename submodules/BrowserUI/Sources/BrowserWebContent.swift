@@ -492,14 +492,22 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        self.currentError = error
+        if (error as NSError).code != -999 {
+            self.currentError = error
+        } else {
+            self.currentError = nil
+        }
         if let (size, insets) = self.validLayout {
             self.updateLayout(size: size, insets: insets, transition: .immediate)
         }
     }
     
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        self.currentError = error
+        if (error as NSError).code != -999 {
+            self.currentError = error
+        } else {
+            self.currentError = nil
+        }
         if let (size, insets) = self.validLayout {
             self.updateLayout(size: size, insets: insets, transition: .immediate)
         }

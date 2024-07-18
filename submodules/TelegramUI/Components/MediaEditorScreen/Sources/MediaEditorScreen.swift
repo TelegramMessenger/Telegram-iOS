@@ -4583,16 +4583,24 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         func addWeather(_ weather: StickerPickerScreen.Weather.LoadedWeather) {
-            let weatherFormatter = MeasurementFormatter()
-            weatherFormatter.locale = Locale.current
-            weatherFormatter.unitStyle = .short
-            weatherFormatter.numberFormatter.maximumFractionDigits = 0
+            let maxWeatherCount = 3
+            var currentWeatherCount = 0
+            self.entitiesView.eachView { entityView in
+                if entityView.entity is DrawingWeatherEntity {
+                    currentWeatherCount += 1
+                }
+            }
+            if currentWeatherCount >= maxWeatherCount {
+                self.controller?.hapticFeedback.error()
+                return
+            }
             
             self.interaction?.insertEntity(
                 DrawingWeatherEntity(
-                    temperature: weatherFormatter.string(from: Measurement(value: weather.temperature, unit: UnitTemperature.celsius)),
-                    style: .white,
-                    icon: weather.emojiFile
+                    emoji: weather.emoji,
+                    emojiFile: weather.emojiFile,
+                    temperature: weather.temperature,
+                    style: .white
                 ),
                 scale: nil,
                 position: nil
@@ -6066,7 +6074,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         })
         self.present(controller, in: .window(.root))
     }
-    
+        
     func maybePresentDiscardAlert() {
         self.hapticFeedback.impact(.light)
         if !self.isEligibleForDraft() {

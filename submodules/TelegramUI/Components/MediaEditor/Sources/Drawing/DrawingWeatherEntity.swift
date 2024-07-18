@@ -11,7 +11,7 @@ public final class DrawingWeatherEntity: DrawingEntity, Codable {
         case uuid
         case style
         case color
-        case hasCustomColor
+        case emoji
         case temperature
         case icon
         case referenceDrawingSize
@@ -25,9 +25,6 @@ public final class DrawingWeatherEntity: DrawingEntity, Codable {
     public enum Style: Codable, Equatable {
         case white
         case black
-        case transparent
-        case custom
-        case blur
     }
     
     public var uuid: UUID
@@ -37,20 +34,11 @@ public final class DrawingWeatherEntity: DrawingEntity, Codable {
     
     
     public var style: Style
-    public var temperature: String
     public var icon: TelegramMediaFile?
-    public var color: DrawingColor = DrawingColor(color: .white)  {
-        didSet {
-            if self.color.toUIColor().argb == UIColor.white.argb {
-                self.style = .white
-                self.hasCustomColor = false
-            } else {
-                self.style = .custom
-                self.hasCustomColor = true
-            }
-        }
-    }
-    public var hasCustomColor = false
+    public var emoji: String
+    public var temperature: Double
+    
+    public var color: DrawingColor = DrawingColor.clear
     public var lineWidth: CGFloat = 0.0
     
     public var referenceDrawingSize: CGSize
@@ -74,13 +62,14 @@ public final class DrawingWeatherEntity: DrawingEntity, Codable {
         return false
     }
     
-    public init(temperature: String, style: Style, icon: TelegramMediaFile?) {
+    public init(emoji: String, emojiFile: TelegramMediaFile?, temperature: Double, style: Style) {
         self.uuid = UUID()
         
+        self.emoji = emoji
+        self.icon = emojiFile
         self.temperature = temperature
         self.style = style
-        self.icon = icon
-        
+
         self.referenceDrawingSize = .zero
         self.position = .zero
         self.width = 100.0
@@ -91,10 +80,9 @@ public final class DrawingWeatherEntity: DrawingEntity, Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
-        self.temperature = try container.decode(String.self, forKey: .temperature)
+        self.emoji = try container.decode(String.self, forKey: .emoji)
+        self.temperature = try container.decode(Double.self, forKey: .temperature)
         self.style = try container.decode(Style.self, forKey: .style)
-        self.color = try container.decodeIfPresent(DrawingColor.self, forKey: .color) ?? DrawingColor(color: .white)
-        self.hasCustomColor = try container.decodeIfPresent(Bool.self, forKey: .hasCustomColor) ?? false
         
         if let iconData = try container.decodeIfPresent(Data.self, forKey: .icon) {
             self.icon = PostboxDecoder(buffer: MemoryBuffer(data: iconData)).decodeRootObject() as? TelegramMediaFile
@@ -113,10 +101,9 @@ public final class DrawingWeatherEntity: DrawingEntity, Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.uuid, forKey: .uuid)
+        try container.encode(self.emoji, forKey: .emoji)
         try container.encode(self.temperature, forKey: .temperature)
         try container.encode(self.style, forKey: .style)
-        try container.encode(self.color, forKey: .color)
-        try container.encode(self.hasCustomColor, forKey: .hasCustomColor)
         
         var encoder = PostboxEncoder()
         if let icon = self.icon {
@@ -137,7 +124,7 @@ public final class DrawingWeatherEntity: DrawingEntity, Codable {
     }
 
     public func duplicate(copy: Bool) -> DrawingEntity {
-        let newEntity = DrawingWeatherEntity(temperature: self.temperature, style: self.style, icon: self.icon)
+        let newEntity = DrawingWeatherEntity(emoji: self.emoji, emojiFile: self.icon, temperature: self.temperature, style: self.style)
         if copy {
             newEntity.uuid = self.uuid
         }
@@ -154,6 +141,9 @@ public final class DrawingWeatherEntity: DrawingEntity, Codable {
             return false
         }
         if self.uuid != other.uuid {
+            return false
+        }
+        if self.emoji != other.emoji {
             return false
         }
         if self.temperature != other.temperature {

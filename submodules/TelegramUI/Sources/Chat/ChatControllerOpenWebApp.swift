@@ -346,8 +346,6 @@ public extension ChatControllerImpl {
         }
         self.attachmentController?.dismiss(animated: true, completion: nil)
         
-        
-        
         let openBotApp: (Bool, Bool) -> Void = { [weak self] allowWrite, justInstalled in
             guard let strongSelf = self else {
                 return

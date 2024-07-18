@@ -1692,13 +1692,17 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         var clearCacheAsDelete = false
         if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info, !isMigrated {
             var views: Int = 0
+            var forwards: Int = 0
             for attribute in message.attributes {
                 if let attribute = attribute as? ViewCountMessageAttribute {
                     views = attribute.count
                 }
+                if let attribute = attribute as? ForwardCountMessageAttribute {
+                    forwards = attribute.count
+                }
             }
             
-            if infoSummaryData.canViewStats, views >= 100 {
+            if infoSummaryData.canViewStats, forwards >= 1 || views >= 100 {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextViewStats, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.actionSheet.primaryTextColor)
                 }, action: { c, _ in

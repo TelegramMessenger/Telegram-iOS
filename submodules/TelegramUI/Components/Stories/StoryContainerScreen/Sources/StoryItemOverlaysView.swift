@@ -20,6 +20,7 @@ import LottieComponent
 import LottieComponentResourceContent
 import StickerResources
 import AnimationCache
+import TelegramStringFormatting
 
 private let shadowImage: UIImage = {
     return UIImage(bundleImageName: "Stories/ReactionShadow")!
@@ -224,12 +225,16 @@ public func storyPreviewWithAddedReactions(
     }
 }
 
+private protocol ItemView: UIView {
+    
+}
+
 final class StoryItemOverlaysView: UIView {
     static let counterFont: UIFont = {
         return Font.with(size: 17.0, design: .camera, weight: .semibold, traits: .monospacedNumbers)
     }()
     
-    private final class ItemView: HighlightTrackingButton {
+    private final class ReactionView: HighlightTrackingButton, ItemView {
         private let shadowView: UIImageView
         private let coverView: UIImageView
         
@@ -524,6 +529,120 @@ final class StoryItemOverlaysView: UIView {
         }
     }
     
+    private final class WeatherView: UIView, ItemView {
+        private let backgroundView = UIView()
+        private let directStickerView = ComponentView<Empty>()
+        private let text = ComponentView<Empty>()
+        
+        private var file: TelegramMediaFile?
+        private var textFont: UIFont?
+        
+        private var customEmojiLoadDisposable: Disposable?
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            
+            self.backgroundView.clipsToBounds = true
+            if #available(iOS 13.0, *) {
+                self.backgroundView.layer.cornerCurve = .continuous
+            }
+            self.addSubview(self.backgroundView)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.customEmojiLoadDisposable?.dispose()
+        }
+        
+        func update(
+            context: AccountContext,
+            emoji: String,
+            emojiFile: TelegramMediaFile?,
+            temperature: Double,
+            flags: MediaArea.WeatherFlags,
+            synchronous: Bool,
+            size: CGSize,
+            cornerRadius: CGFloat,
+            isActive: Bool
+        ) {
+            self.backgroundView.backgroundColor = flags.contains(.isDark) ? UIColor(rgb: 0x000000) : UIColor(rgb: 0xffffff)
+            self.backgroundView.frame = CGRect(origin: .zero, size: size)
+            self.backgroundView.layer.cornerRadius = cornerRadius
+            
+            let itemSize = CGSize(width: floor(size.height * 0.71), height: floor(size.height * 0.71))
+            
+            if self.file?.fileId != emojiFile?.fileId, let file = emojiFile {
+                self.file = file
+                
+                self.customEmojiLoadDisposable?.dispose()
+                self.customEmojiLoadDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: .standalone(resource: file.resource)).start()
+                
+                let placeholderColor = flags.contains(.isDark) ? UIColor(white: 1.0, alpha: 0.1) : UIColor(white: 0.0, alpha: 0.1)
+                let _ = self.directStickerView.update(
+                    transition: .immediate,
+                    component: AnyComponent(LottieComponent(
+                        content: LottieComponent.ResourceContent(context: context, file: file, attemptSynchronously: synchronous, providesPlaceholder: true),
+                        placeholderColor: placeholderColor,
+                        renderingScale: 2.0,
+                        loop: true
+                    )),
+                    environment: {},
+                    containerSize: itemSize
+                )
+            }
+            
+            let textFont: UIFont
+            if let current = self.textFont {
+                textFont = current
+            } else {
+                textFont = Font.with(size: floorToScreenPixels(size.height * 0.69), design: .camera, weight: .semibold, traits: .monospacedNumbers)
+                self.textFont = textFont
+            }
+            
+            let string = NSMutableAttributedString(
+                string: stringForTemperature(temperature),
+                font: textFont,
+                textColor: flags.contains(.isDark) ? UIColor(rgb: 0xffffff) : UIColor(rgb: 0x000000)
+            )
+            string.addAttribute(.kern, value: -(size.height / 38.0) as NSNumber, range: NSMakeRange(0, string.length))
+            
+            let textSize = self.text.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    MultilineTextComponent(text: .plain(string))
+                ),
+                environment: {},
+                containerSize: size
+            )
+            
+            if let view = self.text.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                }
+                let textFrame = CGRect(origin: CGPoint(x: size.width - textSize.width - size.height * 0.2, y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
+                let textTransition = ComponentTransition.immediate
+                textTransition.setFrame(view: view, frame: textFrame)
+            }
+            
+            if let directStickerView = self.directStickerView.view as? LottieComponent.View {
+                if directStickerView.superview == nil {
+                    self.addSubview(directStickerView)
+                }
+                
+                let stickerFrame = itemSize.centered(around: CGPoint(x: size.height * 0.5 + size.height * 0.058, y: size.height * 0.5))
+                
+                let stickerTransition = ComponentTransition.immediate
+                stickerTransition.setPosition(view: directStickerView, position: stickerFrame.center)
+                stickerTransition.setBounds(view: directStickerView, bounds: CGRect(origin: CGPoint(), size: stickerFrame.size))
+                
+                directStickerView.externalShouldPlay = isActive
+            }
+        }
+    }
+    
     private var itemViews: [Int: ItemView] = [:]
     var activate: ((UIView, MessageReaction.Reaction) -> Void)?
     var requestUpdate: (() -> Void)?
@@ -561,25 +680,37 @@ final class StoryItemOverlaysView: UIView {
         isActive: Bool,
         transition: ComponentTransition
     ) {
+        func getFrameAndRotation(coordinates: MediaArea.Coordinates, scale: CGFloat = 1.0) -> (frame: CGRect, rotation: CGFloat, cornerRadius: CGFloat)? {
+            let referenceSize = size
+            var areaSize = CGSize(width: coordinates.width / 100.0 * referenceSize.width, height: coordinates.height / 100.0 * referenceSize.height)
+            areaSize.width *= scale
+            areaSize.height *= scale
+            let targetFrame = CGRect(x: coordinates.x / 100.0 * referenceSize.width - areaSize.width * 0.5, y: coordinates.y / 100.0 * referenceSize.height - areaSize.height * 0.5, width: areaSize.width, height: areaSize.height)
+            if targetFrame.width < 5.0 || targetFrame.height < 5.0 {
+                return nil
+            }
+            var cornerRadius: CGFloat = 0.0
+            if let radius = coordinates.cornerRadius {
+                cornerRadius = radius / 100.0 * areaSize.width
+            }
+            
+            return (targetFrame, coordinates.rotation * (CGFloat.pi / 180.0), cornerRadius)
+        }
+        
         var nextId = 0
         for mediaArea in story.mediaAreas {
             switch mediaArea {
             case let .reaction(coordinates, reaction, flags):
-                let referenceSize = size
-                var areaSize = CGSize(width: coordinates.width / 100.0 * referenceSize.width, height: coordinates.height / 100.0 * referenceSize.height)
-                areaSize.width *= 0.97
-                areaSize.height *= 0.97
-                let targetFrame = CGRect(x: coordinates.x / 100.0 * referenceSize.width - areaSize.width * 0.5, y: coordinates.y / 100.0 * referenceSize.height - areaSize.height * 0.5, width: areaSize.width, height: areaSize.height)
-                if targetFrame.width < 5.0 || targetFrame.height < 5.0 {
+                guard let (itemFrame, itemRotation, _) = getFrameAndRotation(coordinates: coordinates, scale: 0.97) else {
                     continue
                 }
                 
-                let itemView: ItemView
+                let itemView: ReactionView
                 let itemId = nextId
-                if let current = self.itemViews[itemId] {
+                if let current = self.itemViews[itemId] as? ReactionView {
                     itemView = current
                 } else {
-                    itemView = ItemView(frame: CGRect())
+                    itemView = ReactionView(frame: CGRect())
                     itemView.activate = { [weak self] view, reaction in
                         self?.activate?(view, reaction)
                     }
@@ -590,9 +721,9 @@ final class StoryItemOverlaysView: UIView {
                     self.addSubview(itemView)
                 }
                                 
-                transition.setPosition(view: itemView, position: targetFrame.center)
-                transition.setBounds(view: itemView, bounds: CGRect(origin: CGPoint(), size: targetFrame.size))
-                transition.setTransform(view: itemView, transform: CATransform3DMakeRotation(coordinates.rotation * (CGFloat.pi / 180.0), 0.0, 0.0, 1.0))
+                transition.setPosition(view: itemView, position: itemFrame.center)
+                transition.setBounds(view: itemView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+                transition.setTransform(view: itemView, transform: CATransform3DMakeRotation(itemRotation, 0.0, 0.0, 1.0))
                 
                 var counter = 0
                 if let reactionData = story.views?.reactions.first(where: { $0.value == reaction }) {
@@ -607,7 +738,39 @@ final class StoryItemOverlaysView: UIView {
                     availableReactions: availableReactions,
                     entityFiles: entityFiles,
                     synchronous: attemptSynchronous,
-                    size: targetFrame.size,
+                    size: itemFrame.size,
+                    isActive: isActive
+                )
+                
+                nextId += 1
+            case let .weather(coordinates, emoji, temperature, flags):
+                guard let (itemFrame, itemRotation, cornerRadius) = getFrameAndRotation(coordinates: coordinates) else {
+                    continue
+                }
+                
+                let itemView: WeatherView
+                let itemId = nextId
+                if let current = self.itemViews[itemId] as? WeatherView {
+                    itemView = current
+                } else {
+                    itemView = WeatherView(frame: CGRect())
+                    self.itemViews[itemId] = itemView
+                    self.addSubview(itemView)
+                }
+                                
+                transition.setPosition(view: itemView, position: itemFrame.center)
+                transition.setBounds(view: itemView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+                transition.setTransform(view: itemView, transform: CATransform3DMakeRotation(itemRotation, 0.0, 0.0, 1.0))
+                                
+                itemView.update(
+                    context: context,
+                    emoji: emoji,
+                    emojiFile: context.animatedEmojiStickersValue[emoji]?.first?.file,
+                    temperature: temperature,
+                    flags: flags,
+                    synchronous: attemptSynchronous,
+                    size: itemFrame.size,
+                    cornerRadius: cornerRadius,
                     isActive: isActive
                 )
                 
