@@ -1543,7 +1543,14 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                         }
                     }
 
-                    let arguments = TransformImageArguments(corners: corners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: isInlinePlayableVideo ? .fill(.black) : .blurBackground, emptyColor: emptyColor, custom: patternArguments)
+                    var videoCorners = corners
+                    var imageCorners = corners
+                    if let file = media as? TelegramMediaFile, file.isInstantVideo {
+                        videoCorners = ImageCorners(radius: boundingSize.width / 2.0)
+                        imageCorners = ImageCorners(radius: 0.0)
+                    }
+                    
+                    let arguments = TransformImageArguments(corners: imageCorners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: isInlinePlayableVideo ? .fill(.black) : .blurBackground, emptyColor: emptyColor, custom: patternArguments)
                     
                     let imageFrame = CGRect(origin: CGPoint(x: -arguments.insets.left, y: -arguments.insets.top), size: arguments.drawingSize).ensuredValid
                     let cleanImageFrame = CGRect(origin: imageFrame.origin, size: CGSize(width: imageFrame.width - arguments.corners.extendedEdges.right, height: imageFrame.height))
@@ -1563,7 +1570,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             strongSelf.automaticPlayback = automaticPlayback
                             strongSelf.automaticDownload = automaticDownload
                             strongSelf.preferredStoryHighQuality = associatedData.preferredStoryHighQuality
-                            
+                                                        
                             if let previousArguments = strongSelf.currentImageArguments {
                                 if previousArguments.imageSize == arguments.imageSize {
                                     strongSelf.pinchContainerNode.frame = imageFrame
@@ -1616,7 +1623,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 statusFrame.origin.y = floor(imageFrame.height / 2.0 - statusFrame.height / 2.0)
                                 statusNode.frame = statusFrame
                             }
-                            
+                                                        
                             var updatedVideoNodeReadySignal: Signal<Void, NoError>?
                             var updatedPlayerStatusSignal: Signal<MediaPlayerStatus?, NoError>?
                             if let currentReplaceVideoNode = replaceVideoNode {
@@ -1628,7 +1635,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 }
                                 
                                 if currentReplaceVideoNode, let updatedVideoFile = updateVideoFile {
-                                    let decoration = ChatBubbleVideoDecoration(corners: arguments.corners, nativeSize: nativeSize, contentMode: contentMode.bubbleVideoDecorationContentMode, backgroundColor: arguments.emptyColor ?? .black)
+                                    let decoration = ChatBubbleVideoDecoration(corners: videoCorners, nativeSize: nativeSize, contentMode: contentMode.bubbleVideoDecorationContentMode, backgroundColor: arguments.emptyColor ?? .black)
                                     strongSelf.videoNodeDecoration = decoration
                                     let mediaManager = context.sharedContext.mediaManager
                                     
@@ -1700,10 +1707,17 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }), strongSelf.extendedMediaOverlayNode == nil {
                                 strongSelf.internallyVisible = false
                             }
-                            
+                                                        
                             if let videoNode = strongSelf.videoNode {
-                                if !(replaceVideoNode ?? false), let decoration = videoNode.decoration as? ChatBubbleVideoDecoration, decoration.corners != corners {
-                                    decoration.updateCorners(corners)
+                                if !(replaceVideoNode ?? false), let decoration = videoNode.decoration as? ChatBubbleVideoDecoration, decoration.corners != videoCorners {
+                                    decoration.updateCorners(videoCorners)
+                                }
+                                
+                                if !videoCorners.isEmpty && imageCorners.isEmpty {
+                                    strongSelf.imageNode.clipsToBounds = true
+                                    strongSelf.imageNode.cornerRadius = videoCorners.topLeft.radius
+                                } else {
+                                    strongSelf.imageNode.cornerRadius = 0.0
                                 }
                                 
                                 videoNode.updateLayout(size: arguments.drawingSize, transition: .immediate)
