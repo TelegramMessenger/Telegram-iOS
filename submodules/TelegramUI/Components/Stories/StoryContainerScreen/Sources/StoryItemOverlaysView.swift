@@ -754,6 +754,7 @@ final class StoryItemOverlaysView: UIView {
                     itemView = current
                 } else {
                     itemView = WeatherView(frame: CGRect())
+                    itemView.isUserInteractionEnabled = false
                     self.itemViews[itemId] = itemView
                     self.addSubview(itemView)
                 }
