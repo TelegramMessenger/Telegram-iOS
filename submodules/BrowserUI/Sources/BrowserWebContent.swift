@@ -27,6 +27,8 @@ private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
         init(proxyServerHost: String, sourceTask: any WKURLSchemeTask) {
             self.sourceTask = sourceTask
             
+            let requestUrl = sourceTask.request.url
+            
             var mappedHost: String = ""
             if let host = sourceTask.request.url?.host {
                 mappedHost = host
@@ -52,7 +54,20 @@ private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
                     sourceTask.didFailWithError(error)
                 } else {
                     if let response {
-                        sourceTask.didReceive(response)
+                        if let response = response as? HTTPURLResponse, let requestUrl {
+                            if let updatedResponse = HTTPURLResponse(
+                                url: requestUrl,
+                                statusCode: response.statusCode,
+                                httpVersion: "HTTP/1.1",
+                                headerFields: response.allHeaderFields as? [String: String] ?? [:]
+                            ) {
+                                sourceTask.didReceive(updatedResponse)
+                            } else {
+                                sourceTask.didReceive(response)
+                            }
+                        } else {
+                            sourceTask.didReceive(response)
+                        }
                     }
                     if let data {
                         sourceTask.didReceive(data)
