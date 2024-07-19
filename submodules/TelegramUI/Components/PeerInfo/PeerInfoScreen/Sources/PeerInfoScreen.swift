@@ -9781,6 +9781,36 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.controller?.push(controller)
     }
     
+    private func openBotPreviewEditor(target: Stories.PendingTarget, source: Any, transitionIn: (UIView, CGRect, UIImage?)?) {
+        let context = self.context
+
+        let externalState = MediaEditorTransitionOutExternalState(
+            storyTarget: target,
+            isForcedTarget: false,
+            isPeerArchived: false,
+            transitionOut: nil
+        )
+        
+        let controller = context.sharedContext.makeBotPreviewEditorScreen(
+            context: context,
+            source: source,
+            target: target,
+            transitionArguments: transitionIn,
+            externalState: externalState,
+            completion: { result, commit in
+                if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                    var viewControllers = rootController.viewControllers
+                    viewControllers = viewControllers.filter { !($0 is AttachmentController)}
+                    rootController.setViewControllers(viewControllers, animated: false)
+                    
+                    rootController.proceedWithStoryUpload(target: target, result: result, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                }
+            },
+            cancelled: {}
+        )
+        self.controller?.push(controller)
+    }
+    
     private func openPostStory(sourceFrame: CGRect?) {
         self.postingAvailabilityDisposable?.dispose()
         
@@ -9788,12 +9818,20 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             if !botInfo.flags.contains(.canEdit) {
                 return
             }
-            let cameraTransitionIn: StoryCameraTransitionIn? = nil
-            
-            if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                let coordinator = rootController.openStoryCamera(customTarget: .botPreview(self.peerId), transitionIn: cameraTransitionIn, transitionedIn: {}, transitionOut: self.storyCameraTransitionOut())
-                coordinator?.animateIn()
-            }
+            let controller = self.context.sharedContext.makeStoryMediaPickerScreen(
+                context: self.context,
+                isDark: false,
+                getSourceRect: { return .zero },
+                completion: { [weak self] result, transitionView, transitionRect, transitionImage, transitionOut, dismissed in
+                    guard let self else {
+                        return
+                    }
+                    self.openBotPreviewEditor(target: .botPreview(self.peerId), source: result, transitionIn: (transitionView, transitionRect, transitionImage))
+                },
+                dismissed: {},
+                groupsPresented: {}
+            )
+            self.controller?.push(controller)
         } else {
             let canPostStatus: Signal<StoriesUploadAvailability, NoError>
             canPostStatus = self.context.engine.messages.checkStoriesUploadAvailability(target: .peer(self.peerId))

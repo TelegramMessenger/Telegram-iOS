@@ -818,7 +818,7 @@ final class MediaEditorScreenComponent: Component {
             }
             
             var doneButtonTitle: String?
-            var doneButtonIcon: UIImage
+            var doneButtonIcon: UIImage?
             switch controller.mode {
             case .storyEditor:
                 doneButtonTitle = isEditingStory ? environment.strings.Story_Editor_Done.uppercased() : environment.strings.Story_Editor_Next.uppercased()
@@ -826,6 +826,10 @@ final class MediaEditorScreenComponent: Component {
             case .stickerEditor:
                 doneButtonTitle = nil
                 doneButtonIcon = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Apply"), color: .white)!
+            case .botPreview:
+                //TODO:localize
+                doneButtonTitle = environment.strings.Story_Editor_Add
+                doneButtonIcon = nil
             }
             
             let doneButtonSize = self.doneButton.update(
@@ -859,6 +863,8 @@ final class MediaEditorScreenComponent: Component {
                             }
                         case .stickerEditor:
                             controller.requestStickerCompletion(animated: true)
+                        case .botPreview:
+                            controller.requestStoryCompletion(animated: true)
                         }
                     }
                 )),
@@ -2415,6 +2421,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         case storyEditor
         case stickerEditor(mode: StickerEditorMode)
+        case botPreview
     }
     
     public enum TransitionIn {
@@ -2870,7 +2877,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let mediaEntity = DrawingMediaEntity(size: fittedSize)
             mediaEntity.position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
             switch controller.mode {
-            case .storyEditor:
+            case .storyEditor, .botPreview:
                 if fittedSize.height > fittedSize.width {
                     mediaEntity.scale = max(storyDimensions.width / fittedSize.width, storyDimensions.height / fittedSize.height)
                 } else {
@@ -3623,7 +3630,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             transitionInView.contentMode = .scaleAspectFill
             var initialScale: CGFloat
             switch controller.mode {
-            case .storyEditor:
+            case .storyEditor, .botPreview:
                 if image.size.height > image.size.width {
                     initialScale = max(self.previewContainerView.bounds.width / image.size.width, self.previewContainerView.bounds.height / image.size.height)
                 } else {
@@ -4779,12 +4786,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     mediaEditor.maybePauseVideo()
 
                                     var hasInteractiveStickers = true
-                                    if let controller = self.controller, case .stickerEditor = controller.mode {
-                                        hasInteractiveStickers = false
+                                    if let controller = self.controller {
+                                        switch controller.mode {
+                                        case .stickerEditor, .botPreview:
+                                            hasInteractiveStickers = false
+                                        default:
+                                            break
+                                        }
                                     }
                                     
                                     var weatherSignal: Signal<StickerPickerScreen.Weather, NoError>
-                                    if "".isEmpty {
+                                    if hasInteractiveStickers {
                                         let weatherPromise: Promise<StickerPickerScreen.Weather>
                                         if let current = self.weatherPromise {
                                             weatherPromise = current
@@ -6096,7 +6108,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 save = presentationData.strings.Story_Editor_DraftKeepMedia
             }
             text = presentationData.strings.Story_Editor_DraftDiscaedText
-        case .stickerEditor:
+        case .stickerEditor, .botPreview:
             title = presentationData.strings.Story_Editor_DraftDiscardMedia
             text = presentationData.strings.Story_Editor_DiscardText
         }
@@ -7435,12 +7447,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
 
 private final class DoneButtonContentComponent: CombinedComponent {
     let backgroundColor: UIColor
-    let icon: UIImage
+    let icon: UIImage?
     let title: String?
 
     init(
         backgroundColor: UIColor,
-        icon: UIImage,
+        icon: UIImage?,
         title: String?
     ) {
         self.backgroundColor = backgroundColor
@@ -7464,12 +7476,14 @@ private final class DoneButtonContentComponent: CombinedComponent {
         let text = Child(Text.self)
 
         return { context in
-            let iconSize = context.component.icon.size
-            let icon = icon.update(
-                component: Image(image: context.component.icon, tintColor: .white, size: iconSize),
-                availableSize: CGSize(width: 180.0, height: 100.0),
-                transition: .immediate
-            )
+            var iconChild: _UpdatedChildComponent?
+            if let iconImage = context.component.icon {
+                iconChild = icon.update(
+                    component: Image(image: iconImage, tintColor: .white, size: iconImage.size),
+                    availableSize: CGSize(width: 180.0, height: 100.0),
+                    transition: .immediate
+                )
+            }
             
             let backgroundHeight: CGFloat = 33.0
             var backgroundSize = CGSize(width: backgroundHeight, height: backgroundHeight)
@@ -7489,7 +7503,10 @@ private final class DoneButtonContentComponent: CombinedComponent {
                     transition: .immediate
                 )
                 
-                let updatedBackgroundWidth = backgroundSize.width + textSpacing + title!.size.width
+                var updatedBackgroundWidth = backgroundSize.width + title!.size.width
+                if let _ = iconChild {
+                    updatedBackgroundWidth += textSpacing
+                }
                 if updatedBackgroundWidth < 126.0 {
                     backgroundSize.width = updatedBackgroundWidth
                 } else {
@@ -7509,16 +7526,22 @@ private final class DoneButtonContentComponent: CombinedComponent {
             )
             
             if let title {
+                var titlePosition = backgroundSize.width / 2.0
+                if let _ = iconChild {
+                    titlePosition = title.size.width / 2.0 + 15.0
+                }
                 context.add(title
-                    .position(CGPoint(x: title.size.width / 2.0 + 15.0, y: backgroundHeight / 2.0))
+                    .position(CGPoint(x: titlePosition, y: backgroundHeight / 2.0))
                     .opacity(hideTitle ? 0.0 : 1.0)
                 )
             }
             
-            context.add(icon
-                .position(CGPoint(x: background.size.width - 16.0, y: backgroundSize.height / 2.0))
-            )
-
+            if let iconChild {
+                context.add(iconChild
+                    .position(CGPoint(x: background.size.width - 16.0, y: backgroundSize.height / 2.0))
+                )
+            }
+            
             return backgroundSize
         }
     }

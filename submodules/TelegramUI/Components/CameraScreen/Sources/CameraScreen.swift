@@ -2979,7 +2979,7 @@ public class CameraScreen: ViewController {
         if let current = self.galleryController {
             controller = current
         } else {
-            controller = self.context.sharedContext.makeStoryMediaPickerScreen(context: self.context, getSourceRect: { [weak self] in
+            controller = self.context.sharedContext.makeStoryMediaPickerScreen(context: self.context, isDark: true, getSourceRect: { [weak self] in
                 if let self {
                     if let galleryButton = self.node.componentHost.findTaggedView(tag: galleryButtonTag) {
                         return galleryButton.convert(galleryButton.bounds, to: self.view).offsetBy(dx: 0.0, dy: -15.0)

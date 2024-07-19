@@ -12535,3 +12535,5 @@ Sorry for the inconvenience.";
 "Stars.Transaction.FragmentUnknown_URL" = "https://fragment.com/stars";
 "Conversation.StatusBotSubscribers_1" = "1 user";
 "Conversation.StatusBotSubscribers_any" = "%d users";
+
+"Story.Editor.Add" = "Add";
