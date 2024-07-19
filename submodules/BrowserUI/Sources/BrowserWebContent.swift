@@ -152,14 +152,26 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         let configuration = WKWebViewConfiguration()
         
+        let bundle = Bundle.main
+        let bundleVersion = bundle.infoDictionary?["CFBundleShortVersionString"] ?? ""
+        
         var proxyServerHost = "magic.org"
         if let data = context.currentAppConfiguration.with({ $0 }).data, let hostValue = data["ton_proxy_address"] as? String {
             proxyServerHost = hostValue
         }
         configuration.setURLSchemeHandler(TonSchemeHandler(proxyServerHost: proxyServerHost), forURLScheme: "tonsite")
+        configuration.allowsInlineMediaPlayback = true
+        configuration.applicationNameForUserAgent = "Telegram-iOS \(bundleVersion)"
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            configuration.mediaTypesRequiringUserActionForPlayback = []
+        } else {
+            configuration.mediaPlaybackRequiresUserAction = false
+        }
         
         self.webView = WKWebView(frame: CGRect(), configuration: configuration)
         self.webView.allowsLinkPreview = true
+        
+  
         
         if #available(iOS 11.0, *) {
             self.webView.scrollView.contentInsetAdjustmentBehavior = .never
