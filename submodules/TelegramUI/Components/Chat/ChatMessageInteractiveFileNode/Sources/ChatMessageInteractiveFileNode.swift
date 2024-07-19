@@ -650,7 +650,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 let messageTheme = arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing
                 let isInstantVideo = arguments.file.isInstantVideo
                 for attribute in arguments.file.attributes {
-                    if case let .Video(videoDuration, _, flags, _) = attribute, flags.contains(.instantRoundVideo) {
+                    if case let .Video(videoDuration, _, flags, _, _) = attribute, flags.contains(.instantRoundVideo) {
                         isAudio = true
                         isVoice = true
                         
@@ -1558,7 +1558,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         var isVoice = false
         var audioDuration: Int32?
         for attribute in file.attributes {
-            if case let .Video(duration, _, flags, _) = attribute, flags.contains(.instantRoundVideo) {
+            if case let .Video(duration, _, flags, _, _) = attribute, flags.contains(.instantRoundVideo) {
                 isAudio = true
                 isVoice = true
                 audioDuration = Int32(duration)

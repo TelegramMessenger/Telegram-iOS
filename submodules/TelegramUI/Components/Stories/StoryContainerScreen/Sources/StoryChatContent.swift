@@ -1820,7 +1820,7 @@ public func preloadStoryMedia(context: AccountContext, info: StoryPreloadInfo) -
     case let .file(file):
         var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
         for attribute in file.attributes {
-            if case let .Video(_, _, _, preloadSize) = attribute {
+            if case let .Video(_, _, _, preloadSize, _) = attribute {
                 if let preloadSize {
                     fetchRange = (0 ..< Int64(preloadSize), .default)
                 }
@@ -2045,7 +2045,7 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
         case let .file(file):
             var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
             for attribute in file.attributes {
-                if case let .Video(_, _, _, preloadSize) = attribute {
+                if case let .Video(_, _, _, preloadSize, _) = attribute {
                     if let preloadSize {
                         fetchRange = (0 ..< Int64(preloadSize), .default)
                     }

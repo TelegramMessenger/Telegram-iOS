@@ -76,6 +76,7 @@ final class MediaEditorScreenComponent: Component {
         case cutout
         case cutoutErase
         case cutoutRestore
+        case cover
     }
     
     let context: AccountContext
@@ -827,7 +828,6 @@ final class MediaEditorScreenComponent: Component {
                 doneButtonTitle = nil
                 doneButtonIcon = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Apply"), color: .white)!
             case .botPreview:
-                //TODO:localize
                 doneButtonTitle = environment.strings.Story_Editor_Add
                 doneButtonIcon = nil
             }
@@ -841,31 +841,7 @@ final class MediaEditorScreenComponent: Component {
                         title: doneButtonTitle)),
                     effectAlignment: .center,
                     action: { [weak controller] in
-                        guard let controller else {
-                            return
-                        }
-                        switch controller.mode {
-                        case .storyEditor:
-                            guard !controller.node.recording.isActive else {
-                                return
-                            }
-                            guard controller.checkCaptionLimit() else {
-                                return
-                            }
-                            if controller.isEditingStory {
-                                controller.requestStoryCompletion(animated: true)
-                            } else {
-                                if controller.checkIfCompletionIsAllowed() {
-                                    controller.openPrivacySettings(completion: { [weak controller] in
-                                        controller?.requestStoryCompletion(animated: true)
-                                    })
-                                }
-                            }
-                        case .stickerEditor:
-                            controller.requestStickerCompletion(animated: true)
-                        case .botPreview:
-                            controller.requestStoryCompletion(animated: true)
-                        }
+                        controller?.node.requestCompletion()
                     }
                 )),
                 environment: {},
@@ -2555,6 +2531,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         fileprivate var drawingScreen: DrawingScreen?
         fileprivate var stickerScreen: StickerPickerScreen?
         fileprivate weak var cutoutScreen: MediaCutoutScreen?
+        fileprivate weak var coverScreen: MediaCoverScreen?
         private var defaultToEmoji = false
         
         private var previousDrawingData: Data?
@@ -4614,6 +4591,75 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             )
         }
         
+        func requestCompletion() {
+            guard let controller = self.controller else {
+                return
+            }
+            switch controller.mode {
+            case .storyEditor:
+                guard !controller.node.recording.isActive else {
+                    return
+                }
+                guard controller.checkCaptionLimit() else {
+                    return
+                }
+                if controller.isEditingStory {
+                    controller.requestStoryCompletion(animated: true)
+                } else {
+                    if controller.checkIfCompletionIsAllowed() {
+                        controller.openPrivacySettings(completion: { [weak controller] in
+                            controller?.requestStoryCompletion(animated: true)
+                        })
+                    }
+                }
+            case .stickerEditor:
+                controller.requestStickerCompletion(animated: true)
+            case .botPreview:
+                controller.requestStoryCompletion(animated: true)
+            }
+        }
+        
+        func openCoverSelection() {
+            guard let mediaEditor = self.mediaEditor else {
+                return
+            }
+            
+            guard let portalView = PortalView(matchPosition: false) else {
+                return
+            }
+            portalView.view.layer.rasterizationScale = UIScreenScale
+            self.previewContentContainerView.addPortal(view: portalView)
+            
+            let scale = 48.0 / self.previewContentContainerView.frame.height
+            portalView.view.transform = CGAffineTransformMakeScale(scale, scale)
+            
+            if self.entitiesView.hasSelection {
+                self.entitiesView.selectEntity(nil)
+            }
+            let coverController = MediaCoverScreen(
+                context: self.context,
+                mediaEditor: mediaEditor,
+                previewView: self.previewView,
+                portalView:  portalView
+            )
+            coverController.dismissed = { [weak self] in
+                if let self {
+                    self.animateInFromTool()
+                    Queue.mainQueue().after(0.1) {
+                        self.requestCompletion()
+                    }
+                }
+            }
+            coverController.completed = { [weak self] position, image in
+                if let self {
+                    self.controller?.currentCoverImage = image
+                }
+            }
+            self.controller?.present(coverController, in: .window(.root))
+            self.coverScreen = coverController
+            self.animateOutToTool(tool: .cover)
+        }
+        
         func updateModalTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
             guard let layout = self.validLayout, case .compact = layout.metrics.widthClass else {
                 return
@@ -5077,6 +5123,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     }
                                     self.controller?.present(controller, in: .window(.root))
                                     self.animateOutToTool(tool: .tools)
+                                case .cover:
+                                    self.openCoverSelection()
                                 }
                             }
                         },
@@ -5652,8 +5700,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         return self.isEditingStory || self.forwardSource != nil
     }
      
+    private var currentCoverImage: UIImage?
     func openPrivacySettings(_ privacy: MediaEditorResultPrivacy? = nil, completion: @escaping () -> Void = {}) {
-        self.node.mediaEditor?.maybePauseVideo()
+        guard let mediaEditor = self.node.mediaEditor else {
+            return
+        }
+        mediaEditor.maybePauseVideo()
         
         self.hapticFeedback.impact(.light)
     
@@ -5662,6 +5714,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let text = self.getCaption().string
         let mentions = generateTextEntities(text, enabledTypes: [.mention], currentEntities: []).map { (text as NSString).substring(with: NSRange(location: $0.range.lowerBound + 1, length: $0.range.upperBound - $0.range.lowerBound - 1)) }
                 
+        let coverImage = self.currentCoverImage ?? mediaEditor.resultImage
+        
         let stateContext = ShareWithPeersScreen.StateContext(
             context: self.context,
             subject: .stories(editing: false),
@@ -5679,6 +5733,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let initialPrivacy = privacy.privacy
             let timeout = privacy.timeout
             
+            var editCoverImpl: (() -> Void)?
+            
             let controller = ShareWithPeersScreen(
                 context: self.context,
                 initialPrivacy: initialPrivacy,
@@ -5687,6 +5743,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 pin: privacy.pin,
                 timeout: privacy.timeout,
                 mentions: mentions,
+                coverImage: coverImage,
                 stateContext: stateContext,
                 completion: { [weak self] sendAsPeerId, privacy, allowScreenshots, pin, _, completed in
                     guard let self else {
@@ -5736,6 +5793,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             pin: pin
                         ), completion: completion)
                     })
+                },
+                editCover: {
+                    editCoverImpl?()
                 }
             )
             controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
@@ -5748,6 +5808,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self.node.mediaEditor?.play()
             }
             self.push(controller)
+            
+            editCoverImpl = { [weak self, weak controller] in
+                if let self {
+                    Queue.mainQueue().after(0.25, {
+                        self.node.openCoverSelection()
+                    })
+                }
+                if let controller {
+                    controller.dismiss()
+                }
+            }
         })
     }
     
@@ -8074,7 +8145,7 @@ private func stickerFile(resource: TelegramMediaResource, thumbnailResource: Tel
     fileAttributes.append(.FileName(fileName: isVideo ? "sticker.webm" : "sticker.webp"))
     fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
     if isVideo {
-        fileAttributes.append(.Video(duration: duration ?? 3.0, size: dimensions, flags: [], preloadSize: nil))
+        fileAttributes.append(.Video(duration: duration ?? 3.0, size: dimensions, flags: [], preloadSize: nil, coverTime: nil))
     } else {
         fileAttributes.append(.ImageSize(size: dimensions))
     }

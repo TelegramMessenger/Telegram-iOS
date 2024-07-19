@@ -1707,7 +1707,7 @@ private final class NotificationServiceHandler {
                                                     } else if let file = media as? TelegramMediaFile {
                                                         resource = file.resource
                                                         for attribute in file.attributes {
-                                                            if case let .Video(_, _, _, preloadSize) = attribute {
+                                                            if case let .Video(_, _, _, preloadSize, _) = attribute {
                                                                 fetchSize = preloadSize.flatMap(Int64.init)
                                                             }
                                                         }
