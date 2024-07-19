@@ -2022,7 +2022,7 @@ final class ShareWithPeersScreenComponent: Component {
                 }
                 self.currentHasChannels = hasChannels
                 
-                if self.selectedOptions.contains(.pin) {
+                if self.selectedOptions.contains(.pin) && component.coverItem != nil {
                     hasCover = true
                 }
                 if let currentHasCover = self.currentHasCover, currentHasCover != hasCover {

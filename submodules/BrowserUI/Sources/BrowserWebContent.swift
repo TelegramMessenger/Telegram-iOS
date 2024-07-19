@@ -161,7 +161,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
         configuration.setURLSchemeHandler(TonSchemeHandler(proxyServerHost: proxyServerHost), forURLScheme: "tonsite")
         configuration.allowsInlineMediaPlayback = true
-        configuration.applicationNameForUserAgent = "Telegram-iOS \(bundleVersion)"
+        configuration.applicationNameForUserAgent = "Telegram-iOS/\(bundleVersion)"
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             configuration.mediaTypesRequiringUserActionForPlayback = []
         } else {
