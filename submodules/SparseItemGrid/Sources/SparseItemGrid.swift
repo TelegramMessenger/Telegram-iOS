@@ -190,6 +190,10 @@ public final class SparseItemGrid: ASDisplayNode {
         open var holeAnchor: HoleAnchor {
             preconditionFailure()
         }
+        
+        open var isReorderable: Bool {
+            return false
+        }
 
         public init() {
         }
@@ -1148,7 +1152,7 @@ public final class SparseItemGrid: ASDisplayNode {
                         
                         var itemScale: CGFloat
                         let itemCornerRadius: CGFloat
-                        if self.isReordering {
+                        if self.isReordering && item.isReorderable {
                             itemScale = (itemFrame.height - 6.0 * 2.0) / itemFrame.height
                             itemCornerRadius = 10.0
                         } else {
@@ -1240,7 +1244,7 @@ public final class SparseItemGrid: ASDisplayNode {
                 if let layer = item.layer {
                     layer.update(size: layer.bounds.size, insets: layout.containerLayout.insets, displayItem: item, binding: items.itemBinding, item: contentItem)
                     
-                    if self.isReordering {
+                    if self.isReordering, let contentItem, contentItem.isReorderable {
                         if layer.animation(forKey: "shaking_position") == nil {
                             startShaking(layer: layer)
                         }

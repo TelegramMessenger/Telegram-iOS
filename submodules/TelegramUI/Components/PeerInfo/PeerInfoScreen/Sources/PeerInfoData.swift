@@ -1305,7 +1305,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                             }
                         }
                         
-                        if let user = peerView.peers[peerView.peerId] as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
+                        if let user = peerView.peers[peerView.peerId] as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp), botInfo.flags.contains(.canEdit) {
                             availablePanes?.insert(.botPreview, at: 0)
                         } else if let cachedData = peerView.cachedData as? CachedUserData, let botPreview = cachedData.botPreview, !botPreview.media.isEmpty {
                             availablePanes?.insert(.botPreview, at: 0)

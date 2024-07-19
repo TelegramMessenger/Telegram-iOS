@@ -918,6 +918,20 @@ public enum ChatOpenWebViewSource: Equatable {
     case inline(bot: EnginePeer)
 }
 
+public final class BotPreviewEditorTransitionOut {
+    public weak var destinationView: UIView?
+    public let destinationRect: CGRect
+    public let destinationCornerRadius: CGFloat
+    public let completion: (() -> Void)?
+    
+    public init(destinationView: UIView?, destinationRect: CGRect, destinationCornerRadius: CGFloat, completion: (() -> Void)?) {
+        self.destinationView = destinationView
+        self.destinationRect = destinationRect
+        self.destinationCornerRadius = destinationCornerRadius
+        self.completion = completion
+    }
+}
+
 public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
@@ -1060,7 +1074,7 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeMediaPickerScreen(context: AccountContext, hasSearch: Bool, completion: @escaping (Any) -> Void) -> ViewController
     
-    func makeBotPreviewEditorScreen(context: AccountContext, source: Any?, target: Stories.PendingTarget, transitionArguments: (UIView, CGRect, UIImage?)?, externalState: MediaEditorTransitionOutExternalState, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController
+    func makeBotPreviewEditorScreen(context: AccountContext, source: Any?, target: Stories.PendingTarget, transitionArguments: (UIView, CGRect, UIImage?)?, transitionOut: @escaping () -> BotPreviewEditorTransitionOut?, externalState: MediaEditorTransitionOutExternalState, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController
     
     func makeStickerEditorScreen(context: AccountContext, source: Any?, intro: Bool, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile, [String], @escaping () -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController
     

@@ -9816,6 +9816,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             source: source,
             target: target,
             transitionArguments: transitionIn,
+            transitionOut: { [weak self] in
+                guard let self else {
+                    return nil
+                }
+                
+                if let pane = self.paneContainerNode.currentPane?.node as? PeerInfoStoryPaneNode, let transitionView = pane.extractPendingStoryTransitionView() {
+                    return BotPreviewEditorTransitionOut(
+                        destinationView: transitionView,
+                        destinationRect: transitionView.bounds,
+                        destinationCornerRadius: 0.0,
+                        completion: { [weak transitionView] in
+                            transitionView?.removeFromSuperview()
+                        }
+                    )
+                }
+                
+                return nil
+            },
             externalState: externalState,
             completion: { result, commit in
                 if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
