@@ -173,7 +173,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         
         self.filterContainerNode = ChatListSearchFiltersContainerNode()
-        self.paneContainerNode = ChatListSearchPaneContainerNode(context: context, animationCache: animationCache, animationRenderer: animationRenderer, updatedPresentationData: updatedPresentationData, peersFilter: self.peersFilter, requestPeerType: self.requestPeerType, location: location, searchQuery: self.searchQuery.get(), searchOptions: self.searchOptions.get(), navigationController: navigationController)
+        self.paneContainerNode = ChatListSearchPaneContainerNode(context: context, animationCache: animationCache, animationRenderer: animationRenderer, updatedPresentationData: updatedPresentationData, peersFilter: self.peersFilter, requestPeerType: self.requestPeerType, location: location, searchQuery: self.searchQuery.get(), searchOptions: self.searchOptions.get(), navigationController: navigationController, parentController: parentController())
         self.paneContainerNode.clipsToBounds = true
         
         super.init()

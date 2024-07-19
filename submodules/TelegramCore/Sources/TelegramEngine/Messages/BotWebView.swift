@@ -60,6 +60,50 @@ func _internal_requestSimpleWebView(postbox: Postbox, network: Network, botId: P
     |> switchToLatest
 }
 
+func _internal_requestMainWebView(postbox: Postbox, network: Network, botId: PeerId, source: RequestSimpleWebViewSource, themeParams: [String: Any]?) -> Signal<RequestWebViewResult, RequestWebViewError> {
+    var serializedThemeParams: Api.DataJSON?
+    if let themeParams = themeParams, let data = try? JSONSerialization.data(withJSONObject: themeParams, options: []), let dataString = String(data: data, encoding: .utf8) {
+        serializedThemeParams = .dataJSON(data: dataString)
+    }
+    return postbox.transaction { transaction -> Signal<RequestWebViewResult, RequestWebViewError> in
+        guard let bot = transaction.getPeer(botId), let inputUser = apiInputUser(bot) else {
+            return .fail(.generic)
+        }
+        guard let peer = transaction.getPeer(botId), let inputPeer = apiInputPeer(peer) else {
+            return .fail(.generic)
+        }
+
+        var flags: Int32 = 0
+        if let _ = serializedThemeParams {
+            flags |= (1 << 0)
+        }
+        switch source {
+        case .inline:
+            flags |= (1 << 1)
+        case .settings:
+            flags |= (1 << 2)
+        default:
+            break
+        }
+        return network.request(Api.functions.messages.requestMainWebView(flags: flags, peer: inputPeer, bot: inputUser, startParam: nil, themeParams: serializedThemeParams, platform: botWebViewPlatform))
+        |> mapError { _ -> RequestWebViewError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<RequestWebViewResult, RequestWebViewError> in
+            switch result {
+            case let .webViewResultUrl(flags, queryId, url):
+                var resultFlags: RequestWebViewResult.Flags = []
+                if (flags & (1 << 1)) != 0 {
+                    resultFlags.insert(.fullSize)
+                }
+                return .single(RequestWebViewResult(flags: resultFlags, queryId: queryId, url: url, keepAliveSignal: nil))
+            }
+        }
+    }
+    |> castError(RequestWebViewError.self)
+    |> switchToLatest
+}
+
 public enum KeepWebViewError {
     case generic
 }

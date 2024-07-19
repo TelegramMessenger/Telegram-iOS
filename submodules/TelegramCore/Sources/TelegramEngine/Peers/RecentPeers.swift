@@ -306,3 +306,26 @@ public func _internal_managedUpdatedRecentApps(accountPeerId: PeerId, postbox: P
         return updateOnce
     }
 }
+
+func _internal_removeRecentlyUsedApp(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+        if let entry = transaction.retrieveItemCacheEntry(id: cachedRecentAppsEntryId()), let recentPeers = entry.get(CachedRecentPeers.self) {
+            let updatedRecentPeers = CachedRecentPeers(enabled: recentPeers.enabled, ids: recentPeers.ids.filter({ $0 != peerId }))
+            if let updatedEntry = CodableEntry(updatedRecentPeers) {
+                transaction.putItemCacheEntry(id: cachedRecentAppsEntryId(), entry: updatedEntry)
+            }
+        }
+        
+        if let peer = transaction.getPeer(peerId), let apiPeer = apiInputPeer(peer) {
+            return account.network.request(Api.functions.contacts.resetTopPeerRating(category: .topPeerCategoryBotsApp, peer: apiPeer))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}

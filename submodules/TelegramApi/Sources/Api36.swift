@@ -7449,6 +7449,26 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func requestMainWebView(flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, startParam: String?, themeParams: Api.DataJSON?, platform: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewResult>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-908059013)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    bot.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(startParam!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {themeParams!.serialize(buffer, true)}
+                    serializeString(platform, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.requestMainWebView", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("bot", String(describing: bot)), ("startParam", String(describing: startParam)), ("themeParams", String(describing: themeParams)), ("platform", String(describing: platform))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WebViewResult? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.WebViewResult?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.WebViewResult
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func requestSimpleWebView(flags: Int32, bot: Api.InputUser, url: String?, startParam: String?, themeParams: Api.DataJSON?, platform: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewResult>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1094336115)

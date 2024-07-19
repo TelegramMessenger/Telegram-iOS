@@ -810,7 +810,20 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         }
         for (_, pane) in self.pendingPanes {
             if let paneNode = pane.pane.node as? PeerInfoStoryPaneNode {
-                paneNode.updateSelectedStories(selectedStoryIds: selectedStoryIds, animated: animated)
+                paneNode.updateSelectedStories(selectedStoryIds: selectedStoryIds, animated: false)
+            }
+        }
+    }
+    
+    func updatePaneIsReordering(isReordering: Bool, animated: Bool) {
+        for (_, pane) in self.currentPanes {
+            if let paneNode = pane.node as? PeerInfoStoryPaneNode {
+                paneNode.updateIsReordering(isReordering: isReordering, animated: animated)
+            }
+        }
+        for (_, pane) in self.pendingPanes {
+            if let paneNode = pane.pane.node as? PeerInfoStoryPaneNode {
+                paneNode.updateIsReordering(isReordering: isReordering, animated: false)
             }
         }
     }

@@ -633,6 +633,10 @@ public extension TelegramEngine {
         public func removeRecentlyUsedInlineBot(peerId: PeerId) -> Signal<Void, NoError> {
             return _internal_removeRecentlyUsedInlineBot(account: self.account, peerId: peerId)
         }
+        
+        public func removeRecentlyUsedApp(peerId: PeerId) -> Signal<Void, NoError> {
+            return _internal_removeRecentlyUsedApp(account: self.account, peerId: peerId)
+        }
 
         public func uploadedPeerPhoto(resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
             return _internal_uploadedPeerPhoto(postbox: self.account.postbox, network: self.account.network, resource: resource)

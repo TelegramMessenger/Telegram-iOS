@@ -30,6 +30,7 @@ final class PeerInfoState {
     let isEditing: Bool
     let selectedMessageIds: Set<MessageId>?
     let selectedStoryIds: Set<Int32>?
+    let paneIsReordering: Bool
     let updatingAvatar: PeerInfoUpdatingAvatar?
     let updatingBio: String?
     let avatarUploadProgress: AvatarUploadProgress?
@@ -42,6 +43,7 @@ final class PeerInfoState {
         isEditing: Bool,
         selectedMessageIds: Set<MessageId>?,
         selectedStoryIds: Set<Int32>?,
+        paneIsReordering: Bool,
         updatingAvatar: PeerInfoUpdatingAvatar?,
         updatingBio: String?,
         avatarUploadProgress: AvatarUploadProgress?,
@@ -53,6 +55,7 @@ final class PeerInfoState {
         self.isEditing = isEditing
         self.selectedMessageIds = selectedMessageIds
         self.selectedStoryIds = selectedStoryIds
+        self.paneIsReordering = paneIsReordering
         self.updatingAvatar = updatingAvatar
         self.updatingBio = updatingBio
         self.avatarUploadProgress = avatarUploadProgress
@@ -67,6 +70,7 @@ final class PeerInfoState {
             isEditing: isEditing,
             selectedMessageIds: self.selectedMessageIds,
             selectedStoryIds: self.selectedStoryIds,
+            paneIsReordering: self.paneIsReordering,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -82,6 +86,7 @@ final class PeerInfoState {
             isEditing: self.isEditing,
             selectedMessageIds: selectedMessageIds,
             selectedStoryIds: self.selectedStoryIds,
+            paneIsReordering: self.paneIsReordering,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -97,6 +102,23 @@ final class PeerInfoState {
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
             selectedStoryIds: selectedStoryIds,
+            paneIsReordering: self.paneIsReordering,
+            updatingAvatar: self.updatingAvatar,
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
+        )
+    }
+    
+    func withPaneIsReordering(_ paneIsReordering: Bool) -> PeerInfoState {
+        return PeerInfoState(
+            isEditing: self.isEditing,
+            selectedMessageIds: self.selectedMessageIds,
+            selectedStoryIds: self.selectedStoryIds,
+            paneIsReordering: paneIsReordering,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -112,6 +134,7 @@ final class PeerInfoState {
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
             selectedStoryIds: self.selectedStoryIds,
+            paneIsReordering: self.paneIsReordering,
             updatingAvatar: updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -127,6 +150,7 @@ final class PeerInfoState {
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
             selectedStoryIds: self.selectedStoryIds,
+            paneIsReordering: self.paneIsReordering,
             updatingAvatar: self.updatingAvatar,
             updatingBio: updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -142,6 +166,7 @@ final class PeerInfoState {
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
             selectedStoryIds: self.selectedStoryIds,
+            paneIsReordering: self.paneIsReordering,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: avatarUploadProgress,
@@ -157,6 +182,7 @@ final class PeerInfoState {
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
             selectedStoryIds: self.selectedStoryIds,
+            paneIsReordering: self.paneIsReordering,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -172,6 +198,7 @@ final class PeerInfoState {
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
             selectedStoryIds: self.selectedStoryIds,
+            paneIsReordering: self.paneIsReordering,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -187,6 +214,7 @@ final class PeerInfoState {
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
             selectedStoryIds: self.selectedStoryIds,
+            paneIsReordering: self.paneIsReordering,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -202,6 +230,7 @@ final class PeerInfoState {
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
             selectedStoryIds: self.selectedStoryIds,
+            paneIsReordering: self.paneIsReordering,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,

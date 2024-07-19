@@ -126,6 +126,7 @@ private final class ChatListSearchPendingPane {
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
         interaction: ChatListSearchInteraction,
         navigationController: NavigationController?,
+        parentController: ViewController?,
         peersFilter: ChatListNodePeersFilter,
         requestPeerType: [ReplyMarkupButtonRequestPeerType]?,
         location: ChatListControllerLocation,
@@ -135,7 +136,7 @@ private final class ChatListSearchPendingPane {
         key: ChatListSearchPaneKey,
         hasBecomeReady: @escaping (ChatListSearchPaneKey) -> Void
     ) {
-        let paneNode = ChatListSearchListPaneNode(context: context, animationCache: animationCache, animationRenderer: animationRenderer, updatedPresentationData: updatedPresentationData, interaction: interaction, key: key, peersFilter: (key == .chats || key == .topics) ? peersFilter : [], requestPeerType: requestPeerType, location: location, searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController, globalPeerSearchContext: globalPeerSearchContext)
+        let paneNode = ChatListSearchListPaneNode(context: context, animationCache: animationCache, animationRenderer: animationRenderer, updatedPresentationData: updatedPresentationData, interaction: interaction, key: key, peersFilter: (key == .chats || key == .topics) ? peersFilter : [], requestPeerType: requestPeerType, location: location, searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController, parentController: parentController, globalPeerSearchContext: globalPeerSearchContext)
         
         self.pane = ChatListSearchPaneWrapper(key: key, node: paneNode)
         self.disposable = (paneNode.isReady
@@ -163,6 +164,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
     private let searchOptions: Signal<ChatListSearchOptions?, NoError>
     private let globalPeerSearchContext: GlobalPeerSearchContext
     private let navigationController: NavigationController?
+    private weak var parentController: ViewController?
     var interaction: ChatListSearchInteraction?
         
     let isReady = Promise<Bool>()
@@ -193,7 +195,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
     
     private var currentAvailablePanes: [ChatListSearchPaneKey]?
     
-    init(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peersFilter: ChatListNodePeersFilter, requestPeerType: [ReplyMarkupButtonRequestPeerType]?, location: ChatListControllerLocation, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?) {
+    init(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peersFilter: ChatListNodePeersFilter, requestPeerType: [ReplyMarkupButtonRequestPeerType]?, location: ChatListControllerLocation, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?, parentController: ViewController?) {
         self.context = context
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
@@ -204,6 +206,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
         self.searchQuery = searchQuery
         self.searchOptions = searchOptions
         self.navigationController = navigationController
+        self.parentController = parentController
         self.globalPeerSearchContext = GlobalPeerSearchContext()
                 
         super.init()
@@ -434,6 +437,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
                     updatedPresentationData: self.updatedPresentationData,
                     interaction: self.interaction!,
                     navigationController: self.navigationController,
+                    parentController: self.parentController,
                     peersFilter: self.peersFilter,
                     requestPeerType: self.requestPeerType,
                     location: self.location,

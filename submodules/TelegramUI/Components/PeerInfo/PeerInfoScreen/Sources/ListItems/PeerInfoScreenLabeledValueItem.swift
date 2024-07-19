@@ -673,7 +673,11 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         }
         
         if let button = item.button {
-            height += 3.0
+            if textSize.height > 0.0 {
+                height += 3.0
+            } else {
+                height -= 7.0
+            }
             
             let actionButton: ComponentView<Empty>
             if let current = self.actionButton {

@@ -2679,6 +2679,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController {
         return StarsTransactionScreen(context: context, subject: .gift(message), action: {})
     }
+    
+    public func openWebApp(context: AccountContext, parentController: ViewController, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peer: EnginePeer, threadId: Int64?, buttonText: String, url: String, simple: Bool, source: ChatOpenWebViewSource, skipTermsOfService: Bool) {
+        openWebAppImpl(context: context, parentController: parentController, updatedPresentationData: updatedPresentationData, peer: peer, threadId: threadId, buttonText: buttonText, url: url, simple: simple, source: source, skipTermsOfService: skipTermsOfService)
+    }
 }
 
 private func peerInfoControllerImpl(context: AccountContext, updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>)?, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, requestsContext: PeerInvitationImportersContext? = nil) -> ViewController? {

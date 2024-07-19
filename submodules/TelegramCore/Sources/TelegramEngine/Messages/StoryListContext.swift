@@ -2087,13 +2087,15 @@ public final class BotPreviewStoryListContext: StoryListContext {
         
         private var isLoadingMore: Bool = false
         private var requestDisposable: Disposable?
-        
         private var updatesDisposable: Disposable?
+        private let reorderDisposable = MetaDisposable()
         
         private var completionCallbacksByToken: [AnyHashable: [() -> Void]] = [:]
         
         private var nextId: Int32 = 1
+        private var pendingIdMapping: [Int32: Int32] = [:]
         private var idMapping: [MediaId: Int32] = [:]
+        private var reverseIdMapping: [Int32: MediaId] = [:]
         
         init(queue: Queue, account: Account, engine: TelegramEngine, peerId: EnginePeer.Id) {
             self.queue = queue
@@ -2107,16 +2109,67 @@ public final class BotPreviewStoryListContext: StoryListContext {
             
             self.stateValue = State(peerReference: nil, items: [], pinnedIds: Set(), totalCount: 0, loadMoreToken: AnyHashable(0 as Int), isCached: true, hasCache: false, allEntityFiles: [:], isLoading: false)
             
-            self.requestDisposable = (engine.data.subscribe(
-                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
-                TelegramEngine.EngineData.Item.Peer.BotPreview(id: peerId)
+            let localStateKey: PostboxViewKey = .storiesState(key: .local)
+            
+            self.requestDisposable = (combineLatest(queue: queue,
+                engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                    TelegramEngine.EngineData.Item.Peer.BotPreview(id: peerId)
+                ),
+                account.postbox.combinedView(keys: [localStateKey])
             )
-            |> deliverOnMainQueue).start(next: { [weak self] peer, botPreview in
+            |> deliverOn(self.queue)).start(next: { [weak self] peerAndBotPreview, combinedView in
                 guard let self else {
                     return
                 }
                 
+                let (peer, botPreview) = peerAndBotPreview
+                
                 var items: [State.Item] = []
+                
+                if let stateView = combinedView.views[localStateKey] as? StoryStatesView, let localState = stateView.value?.get(Stories.LocalState.self) {
+                    for item in localState.items.reversed() {
+                        let mappedId: Int32
+                        if let current = self.pendingIdMapping[item.stableId] {
+                            mappedId = current
+                        } else {
+                            mappedId = self.nextId
+                            self.nextId += 1
+                            self.pendingIdMapping[item.stableId] = mappedId
+                        }
+                        if case .botPreview(peerId) = item.target {
+                            items.append(State.Item(
+                                id: StoryId(peerId: peerId, id: mappedId),
+                                storyItem: EngineStoryItem(
+                                    id: mappedId,
+                                    timestamp: 0,
+                                    expirationTimestamp: Int32.max,
+                                    media: EngineMedia(item.media),
+                                    alternativeMedia: nil,
+                                    mediaAreas: [],
+                                    text: "",
+                                    entities: [],
+                                    views: nil,
+                                    privacy: nil,
+                                    isPinned: false,
+                                    isExpired: false,
+                                    isPublic: false,
+                                    isPending: true,
+                                    isCloseFriends: false,
+                                    isContacts: false,
+                                    isSelectedContacts: false,
+                                    isForwardingDisabled: false,
+                                    isEdited: false,
+                                    isMy: false,
+                                    myReaction: nil,
+                                    forwardInfo: nil,
+                                    author: nil
+                                ),
+                                peer: nil
+                            ))
+                        }
+                    }
+                }
                 
                 if let botPreview {
                     for media in botPreview.media {
@@ -2131,6 +2184,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
                             id = self.nextId
                             self.nextId += 1
                             self.idMapping[mediaId] = id
+                            self.reverseIdMapping[id] = mediaId
                         }
                         
                         items.append(State.Item(
@@ -2181,9 +2235,76 @@ public final class BotPreviewStoryListContext: StoryListContext {
         
         deinit {
             self.requestDisposable?.dispose()
+            self.updatesDisposable?.dispose()
+            self.reorderDisposable.dispose()
         }
         
         func loadMore(completion: (() -> Void)?) {
+        }
+        
+        func reorderItems(ids: [StoryId]) {
+            let peerId = self.peerId
+            let idMapping = self.idMapping
+            let reverseIdMapping = self.reverseIdMapping
+            
+            let _ = (self.account.postbox.transaction({ transaction -> (Api.InputUser?, [Api.InputMedia]) in
+                let inputUser = transaction.getPeer(peerId).flatMap(apiInputUser)
+                
+                var inputMedia: [Api.InputMedia] = []
+                transaction.updatePeerCachedData(peerIds: Set([self.peerId]), update: { _, current in
+                    guard var current = current as? CachedUserData else {
+                        return current
+                    }
+                    guard let currentBotPreview = current.botPreview else {
+                        return current
+                    }
+                    
+                    var media: [Media] = []
+                    media = []
+                    
+                    var seenIds = Set<Int32>()
+                    for id in ids {
+                        guard let mediaId = reverseIdMapping[id.id] else {
+                            continue
+                        }
+                        if let index = currentBotPreview.media.firstIndex(where: { $0.id == mediaId }) {
+                            seenIds.insert(id.id)
+                            media.append(currentBotPreview.media[index])
+                        }
+                    }
+                    
+                    for item in currentBotPreview.media {
+                        guard let id = item.id, let storyId = idMapping[id] else {
+                            continue
+                        }
+                        if !seenIds.contains(storyId) {
+                            media.append(item)
+                        }
+                    }
+                    
+                    for item in media {
+                        if let image = item as? TelegramMediaImage, let resource = image.representations.last?.resource as? CloudPhotoSizeMediaResource {
+                            inputMedia.append(.inputMediaPhoto(flags: 0, id: .inputPhoto(id: resource.photoId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), ttlSeconds: nil))
+                            inputMedia.append(Api.InputMedia.inputMediaPhoto(flags: 0, id: Api.InputPhoto.inputPhoto(id: resource.photoId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), ttlSeconds: nil))
+                        } else if let file = item as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource {
+                            inputMedia.append(.inputMediaDocument(flags: 0, id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), ttlSeconds: nil, query: nil))
+                        }
+                    }
+                    
+                    let botPreview = CachedUserData.BotPreview(media: media)
+                    current = current.withUpdatedBotPreview(botPreview)
+                    return current
+                })
+                
+                return (inputUser, inputMedia)
+            })
+            |> deliverOn(self.queue)).startStandalone(next: { [weak self] inputUser, inputMedia in
+                guard let self, let inputUser else {
+                    return
+                }
+                let signal = self.account.network.request(Api.functions.bots.reorderPreviewMedias(bot: inputUser, order: inputMedia))
+                self.reorderDisposable.set(signal.startStrict())
+            })
         }
     }
     
@@ -2206,7 +2327,13 @@ public final class BotPreviewStoryListContext: StoryListContext {
     
     public func loadMore(completion: (() -> Void)? = nil) {
         self.impl.with { impl in
-            impl.loadMore(completion : completion)
+            impl.loadMore(completion: completion)
+        }
+    }
+    
+    public func reorderItems(ids: [StoryId]) {
+        self.impl.with { impl in
+            impl.reorderItems(ids: ids)
         }
     }
 }

@@ -574,6 +574,10 @@ public extension TelegramEngine {
             return _internal_requestSimpleWebView(postbox: self.account.postbox, network: self.account.network, botId: botId, url: url, source: source, themeParams: themeParams)
         }
         
+        public func requestMainWebView(botId: PeerId, source: RequestSimpleWebViewSource, themeParams: [String: Any]?) -> Signal<RequestWebViewResult, RequestWebViewError> {
+            return _internal_requestMainWebView(postbox: self.account.postbox, network: self.account.network, botId: botId, source: source, themeParams: themeParams)
+        }
+        
         public func requestAppWebView(peerId: PeerId, appReference: BotAppReference, payload: String?, themeParams: [String: Any]?, compact: Bool, allowWrite: Bool) -> Signal<RequestWebViewResult, RequestWebViewError> {
             return _internal_requestAppWebView(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, appReference: appReference, payload: payload, themeParams: themeParams, compact: compact, allowWrite: allowWrite)
         }

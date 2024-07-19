@@ -951,6 +951,7 @@ public protocol PeerInfoScreen: ViewController {
     
     func openBirthdaySetup()
     func toggleStorySelection(ids: [Int32], isSelected: Bool)
+    func togglePaneIsReordering(isReordering: Bool)
     func cancelItemSelection()
 }
 
