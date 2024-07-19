@@ -2533,7 +2533,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
     }
     
-    public func makeBotPreviewEditorScreen(context: AccountContext, source: Any?, target: Stories.PendingTarget, transitionArguments: (UIView, CGRect, UIImage?)?, externalState: MediaEditorTransitionOutExternalState, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController {
+    public func makeBotPreviewEditorScreen(context: AccountContext, source: Any?, target: Stories.PendingTarget, transitionArguments: (UIView, CGRect, UIImage?)?, transitionOut: @escaping () -> BotPreviewEditorTransitionOut?, externalState: MediaEditorTransitionOutExternalState, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController {
         let subject: Signal<MediaEditorScreen.Subject?, NoError>
         if let asset = source as? PHAsset {
             subject = .single(.asset(asset))
@@ -2560,6 +2560,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         destinationView: transitionArguments.0,
                         destinationRect: transitionArguments.0.bounds,
                         destinationCornerRadius: 0.0
+                    )
+                } else if finished, let transitionOut = transitionOut(), let destinationView = transitionOut.destinationView {
+                    return MediaEditorScreen.TransitionOut(
+                        destinationView: destinationView,
+                        destinationRect: transitionOut.destinationRect,
+                        destinationCornerRadius: transitionOut.destinationCornerRadius,
+                        completion: transitionOut.completion
                     )
                 }
                 return nil
