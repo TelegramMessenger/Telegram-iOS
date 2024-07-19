@@ -567,11 +567,7 @@ final class StoryItemOverlaysView: UIView {
             size: CGSize,
             cornerRadius: CGFloat,
             isActive: Bool
-        ) {
-            self.backgroundView.backgroundColor = flags.contains(.isDark) ? UIColor(rgb: 0x000000) : UIColor(rgb: 0xffffff)
-            self.backgroundView.frame = CGRect(origin: .zero, size: size)
-            self.backgroundView.layer.cornerRadius = cornerRadius
-            
+        ) -> CGSize {
             let itemSize = CGSize(width: floor(size.height * 0.71), height: floor(size.height * 0.71))
             
             if self.file?.fileId != emojiFile?.fileId, let file = emojiFile {
@@ -615,14 +611,19 @@ final class StoryItemOverlaysView: UIView {
                     MultilineTextComponent(text: .plain(string))
                 ),
                 environment: {},
-                containerSize: size
+                containerSize: CGSize(width: .greatestFiniteMagnitude, height: size.height)
             )
+            
+            let leftInset = size.height * 0.058
+            let rightInset = size.height * 0.2
+            let spacing = size.height * 0.205
+            let contentWidth: CGFloat = leftInset + itemSize.width + spacing + textSize.width + rightInset
             
             if let view = self.text.view {
                 if view.superview == nil {
                     self.addSubview(view)
                 }
-                let textFrame = CGRect(origin: CGPoint(x: size.width - textSize.width - size.height * 0.2, y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
+                let textFrame = CGRect(origin: CGPoint(x: contentWidth - textSize.width - rightInset, y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
                 let textTransition = ComponentTransition.immediate
                 textTransition.setFrame(view: view, frame: textFrame)
             }
@@ -632,7 +633,7 @@ final class StoryItemOverlaysView: UIView {
                     self.addSubview(directStickerView)
                 }
                 
-                let stickerFrame = itemSize.centered(around: CGPoint(x: size.height * 0.5 + size.height * 0.058, y: size.height * 0.5))
+                let stickerFrame = itemSize.centered(around: CGPoint(x: size.height * 0.5 + leftInset, y: size.height * 0.5))
                 
                 let stickerTransition = ComponentTransition.immediate
                 stickerTransition.setPosition(view: directStickerView, position: stickerFrame.center)
@@ -640,6 +641,14 @@ final class StoryItemOverlaysView: UIView {
                 
                 directStickerView.externalShouldPlay = isActive
             }
+            
+            let contentSize = CGSize(width: contentWidth, height: size.height)
+            
+            self.backgroundView.backgroundColor = flags.contains(.isDark) ? UIColor(rgb: 0x000000) : UIColor(rgb: 0xffffff)
+            self.backgroundView.frame = CGRect(origin: .zero, size: contentSize)
+            self.backgroundView.layer.cornerRadius = cornerRadius
+            
+            return contentSize
         }
     }
     
@@ -754,15 +763,12 @@ final class StoryItemOverlaysView: UIView {
                     itemView = current
                 } else {
                     itemView = WeatherView(frame: CGRect())
+                    itemView.isUserInteractionEnabled = false
                     self.itemViews[itemId] = itemView
                     self.addSubview(itemView)
                 }
-                                
-                transition.setPosition(view: itemView, position: itemFrame.center)
-                transition.setBounds(view: itemView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
-                transition.setTransform(view: itemView, transform: CATransform3DMakeRotation(itemRotation, 0.0, 0.0, 1.0))
-                                
-                itemView.update(
+                                                                
+                let itemSize = itemView.update(
                     context: context,
                     emoji: emoji,
                     emojiFile: context.animatedEmojiStickersValue[emoji]?.first?.file,
@@ -773,6 +779,10 @@ final class StoryItemOverlaysView: UIView {
                     cornerRadius: cornerRadius,
                     isActive: isActive
                 )
+                
+                transition.setPosition(view: itemView, position: itemFrame.center)
+                transition.setBounds(view: itemView, bounds: CGRect(origin: CGPoint(), size: itemSize))
+                transition.setTransform(view: itemView, transform: CATransform3DMakeRotation(itemRotation, 0.0, 0.0, 1.0))
                 
                 nextId += 1
             default:

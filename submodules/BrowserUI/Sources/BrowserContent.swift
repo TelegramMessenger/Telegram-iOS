@@ -153,6 +153,7 @@ protocol BrowserContent: UIView {
     var getNavigationController: () -> NavigationController? { get set }
     
     var minimize: () -> Void { get set }
+    var close: () -> Void { get set }
     
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void { get set }
         

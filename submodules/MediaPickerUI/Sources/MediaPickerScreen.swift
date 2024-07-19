@@ -2982,12 +2982,16 @@ public func mediaPickerController(
 
 public func storyMediaPickerController(
     context: AccountContext,
+    isDark: Bool,
     getSourceRect: @escaping () -> CGRect,
     completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void,
     dismissed: @escaping () -> Void,
     groupsPresented: @escaping () -> Void
 ) -> ViewController {
-    let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
+    var presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+    if isDark {
+        presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+    }
     let updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
         return nil

@@ -521,6 +521,16 @@ public class BrowserScreen: ViewController, MinimizableController {
                 }
                 self.minimize()
             }
+            browserContent.close = { [weak self] in
+                guard let self, let controller = self.controller else {
+                    return
+                }
+                if controller.isMinimized {
+                    
+                } else {
+                    controller.dismiss()
+                }
+            }
             
             self.content.append(browserContent)
             self.requestLayout(transition: transition)
@@ -951,6 +961,9 @@ public class BrowserScreen: ViewController, MinimizableController {
     
     private let context: AccountContext
     private let subject: Subject
+    
+
+    var openPreviousOnClose = false
     
     public init(context: AccountContext, subject: Subject) {
         self.context = context

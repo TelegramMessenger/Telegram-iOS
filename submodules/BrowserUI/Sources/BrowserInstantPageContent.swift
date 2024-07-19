@@ -67,6 +67,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     var pushContent: (BrowserScreen.Subject) -> Void = { _ in }
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
     var minimize: () -> Void = { }
+    var close: () -> Void = { }
     
     var openPeer: (EnginePeer) -> Void = { _ in }
     

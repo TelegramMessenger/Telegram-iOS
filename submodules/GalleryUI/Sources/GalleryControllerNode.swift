@@ -512,6 +512,10 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
             }
         } else {
             self.scrollView.setContentOffset(CGPoint(x: 0.0, y: self.scrollView.contentSize.height / 3.0), animated: true)
+            
+            if let chatController = self.baseNavigationController()?.topViewController as? ChatController {
+                chatController.updatePushedTransition(1.0, transition: .animated(duration: 0.45, curve: .customSpring(damping: 180.0, initialVelocity: 0.0)))
+            }
         }
     }
     

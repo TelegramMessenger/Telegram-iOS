@@ -159,7 +159,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let peersFilter: ChatListNodePeersFilter
     private let requestPeerType: [ReplyMarkupButtonRequestPeerType]?
-    private let location: ChatListControllerLocation
+    var location: ChatListControllerLocation
     private let searchQuery: Signal<String?, NoError>
     private let searchOptions: Signal<ChatListSearchOptions?, NoError>
     private let globalPeerSearchContext: GlobalPeerSearchContext
