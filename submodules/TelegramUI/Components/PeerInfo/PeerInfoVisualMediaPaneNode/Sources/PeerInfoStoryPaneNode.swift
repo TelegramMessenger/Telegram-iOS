@@ -92,12 +92,16 @@ private final class VisualMediaItem: SparseItemGrid.Item {
     override var index: Int {
         return self.indexValue
     }
+    override var isReorderable: Bool {
+        return self.isReorderableValue
+    }
     let localMonthTimestamp: Int32
     let peer: PeerReference
     let storyId: StoryId
     let story: EngineStoryItem
     let authorPeer: EnginePeer?
     let isPinned: Bool
+    let isReorderableValue: Bool
 
     override var id: AnyHashable {
         return AnyHashable(self.storyId)
@@ -111,7 +115,7 @@ private final class VisualMediaItem: SparseItemGrid.Item {
         return VisualMediaHoleAnchor(index: self.index, storyId: self.storyId, localMonthTimestamp: self.localMonthTimestamp)
     }
     
-    init(index: Int, peer: PeerReference, storyId: StoryId, story: EngineStoryItem, authorPeer: EnginePeer?, isPinned: Bool, localMonthTimestamp: Int32) {
+    init(index: Int, peer: PeerReference, storyId: StoryId, story: EngineStoryItem, authorPeer: EnginePeer?, isPinned: Bool, localMonthTimestamp: Int32, isReorderable: Bool) {
         self.indexValue = index
         self.peer = peer
         self.storyId = storyId
@@ -119,6 +123,7 @@ private final class VisualMediaItem: SparseItemGrid.Item {
         self.authorPeer = authorPeer
         self.isPinned = isPinned
         self.localMonthTimestamp = localMonthTimestamp
+        self.isReorderableValue = isReorderable
     }
 }
 
@@ -2453,6 +2458,18 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     }
                     self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: isPinned ? "anim_toastunpin" : "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                 })))
+                if isPinned {
+                    //TODO:localize
+                    items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                        c?.dismiss(completion: {
+                            guard let self else {
+                                return
+                            }
+                            
+                            self.beginReordering()
+                        })
+                    })))
+                }
             }
             
             items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Edit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
@@ -2769,6 +2786,18 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 continue
             }
             
+            var isReorderable = false
+            switch self.scope {
+            case .botPreview:
+                isReorderable = !item.storyItem.isPending
+            case let .peer(id, _, _):
+                if id == self.context.account.peerId {
+                    isReorderable = state.pinnedIds.contains(item.storyItem.id)
+                }
+            default:
+                break
+            }
+            
             mappedItems.append(VisualMediaItem(
                 index: mappedItems.count,
                 peer: peerReference,
@@ -2776,7 +2805,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 story: item.storyItem,
                 authorPeer: item.peer,
                 isPinned: state.pinnedIds.contains(item.storyItem.id),
-                localMonthTimestamp: Month(localTimestamp: item.storyItem.timestamp + timezoneOffset).packedValue
+                localMonthTimestamp: Month(localTimestamp: item.storyItem.timestamp + timezoneOffset).packedValue,
+                isReorderable: isReorderable
             ))
         }
         if mappedItems.count < state.totalCount, let lastItem = state.items.last, let _ = state.loadMoreToken {
@@ -2809,7 +2839,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
 
         let currentSynchronous = synchronous && firstTime
         let currentReloadAtTop = reloadAtTop && firstTime
-        self.updateHistory(items: items, pinnedIds: state.pinnedIds, synchronous: currentSynchronous, reloadAtTop: currentReloadAtTop, animated: animated)
+        self.updateHistory(items: items, pinnedIds: Set(state.pinnedIds), synchronous: currentSynchronous, reloadAtTop: currentReloadAtTop, animated: animated)
     }
     
     private func updateHistory(items: SparseItemGrid.Items, pinnedIds: Set<Int32>, synchronous: Bool, reloadAtTop: Bool, animated: Bool) {
@@ -2845,11 +2875,29 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     }
     
     private func reorderIfPossible(item: SparseItemGrid.Item, toIndex: Int) {
-        if case .botPreview = self.scope, let items = self.items, let item = item as? VisualMediaItem {
+        if let items = self.items, let item = item as? VisualMediaItem {
+            var toIndex = toIndex
+            if case .botPreview = self.scope {
+            } else if case let .peer(id, _, _) = self.scope {
+                if id == self.context.account.peerId {
+                    let maxPinnedIndex = items.items.lastIndex(where: { ($0 as? VisualMediaItem)?.isPinned == true })
+                    if let maxPinnedIndex {
+                        toIndex = min(toIndex, maxPinnedIndex)
+                    } else {
+                        return
+                    }
+                }
+            } else {
+                return
+            }
+            
             guard let toItem = items.items.first(where: { $0.index == toIndex }) as? VisualMediaItem else {
                 return
             }
             if item.story.isPending || toItem.story.isPending {
+                return
+            }
+            if !item.isReorderable {
                 return
             }
             
@@ -3980,6 +4028,21 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 self.reorderedIds = nil
                 if case .botPreview = self.scope, let listSource = self.listSource as? BotPreviewStoryListContext {
                     listSource.reorderItems(ids: reorderedIds)
+                } else if case let .peer(id, _, _) = self.scope, id == self.context.account.peerId, let items = self.items {
+                    var updatedPinnedIds: [Int32] = []
+                    for id in reorderedIds {
+                        inner: for item in items.items {
+                            if let item = item as? VisualMediaItem {
+                                if item.storyId == id {
+                                    if item.isPinned {
+                                        updatedPinnedIds.append(id.id)
+                                        break inner
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: id, ids: updatedPinnedIds).startStandalone()
                 }
             }
         }
