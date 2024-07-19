@@ -828,7 +828,7 @@ final class MediaEditorScreenComponent: Component {
                 doneButtonTitle = nil
                 doneButtonIcon = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Apply"), color: .white)!
             case .botPreview:
-                doneButtonTitle = environment.strings.Story_Editor_Add
+                doneButtonTitle = environment.strings.Story_Editor_Add.uppercased()
                 doneButtonIcon = nil
             }
             
@@ -4596,7 +4596,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             )
         }
         
-        func requestCompletion() {
+        func requestCompletion(playHaptic: Bool = true) {
             guard let controller = self.controller else {
                 return
             }
@@ -4612,6 +4612,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     controller.requestStoryCompletion(animated: true)
                 } else {
                     if controller.checkIfCompletionIsAllowed() {
+                        controller.hapticFeedback.impact(.light)
                         controller.openPrivacySettings(completion: { [weak controller] in
                             controller?.requestStoryCompletion(animated: true)
                         })
@@ -4650,9 +4651,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             coverController.dismissed = { [weak self] in
                 if let self {
                     self.animateInFromTool()
-                    Queue.mainQueue().after(0.1) {
-                        self.requestCompletion()
-                    }
+                    self.requestCompletion(playHaptic: false)
                 }
             }
             coverController.completed = { [weak self] position, image in
@@ -5711,15 +5710,18 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             return
         }
         mediaEditor.maybePauseVideo()
-        
-        self.hapticFeedback.impact(.light)
-    
+            
         let privacy = privacy ?? self.state.privacy
         
         let text = self.getCaption().string
         let mentions = generateTextEntities(text, enabledTypes: [.mention], currentEntities: []).map { (text as NSString).substring(with: NSRange(location: $0.range.lowerBound + 1, length: $0.range.upperBound - $0.range.lowerBound - 1)) }
                 
-        let coverImage = self.currentCoverImage ?? mediaEditor.resultImage
+        let coverImage: UIImage?
+        if mediaEditor.sourceIsVideo {
+            coverImage = self.currentCoverImage ?? mediaEditor.resultImage
+        } else {
+            coverImage = nil
+        }
         
         let stateContext = ShareWithPeersScreen.StateContext(
             context: self.context,

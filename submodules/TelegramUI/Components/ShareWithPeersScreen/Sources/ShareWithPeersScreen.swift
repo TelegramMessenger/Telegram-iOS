@@ -3141,7 +3141,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                 ))
             }
             
-            if !editing || pin {
+            if !editing || pin, coverImage != nil {
                 coverItem = ShareWithPeersScreenComponent.CoverItem(id: .choose, title: "Choose Story Cover", image: coverImage)
             }
         }
