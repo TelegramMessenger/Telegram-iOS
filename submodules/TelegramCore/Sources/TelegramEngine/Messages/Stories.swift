@@ -5,12 +5,12 @@ import TelegramApi
 
 public enum EngineStoryInputMedia {
     case image(dimensions: PixelDimensions, data: Data, stickers: [TelegramMediaFile])
-    case video(dimensions: PixelDimensions, duration: Double, resource: TelegramMediaResource, firstFrameFile: TempBoxFile?, stickers: [TelegramMediaFile])
+    case video(dimensions: PixelDimensions, duration: Double, resource: TelegramMediaResource, firstFrameFile: TempBoxFile?, stickers: [TelegramMediaFile], coverTime: Double?)
     case existing(media: Media)
     
     var embeddedStickers: [TelegramMediaFile] {
         switch self {
-        case let .image(_, _, stickers), let .video(_, _, _, _, stickers):
+        case let .image(_, _, stickers), let .video(_, _, _, _, stickers, _):
             return stickers
         case .existing:
             return []
@@ -849,7 +849,7 @@ private func prepareUploadStoryContent(account: Account, media: EngineStoryInput
             flags: []
         )
         return imageMedia
-    case let .video(dimensions, duration, resource, firstFrameFile, _):
+    case let .video(dimensions, duration, resource, firstFrameFile, _, coverTime):
         var previewRepresentations: [TelegramMediaImageRepresentation] = []
         if let firstFrameFile = firstFrameFile {
             account.postbox.mediaBox.storeCachedResourceRepresentation(resource.id.stringRepresentation, representationId: "first-frame", keepDuration: .general, tempFile: firstFrameFile)
@@ -871,7 +871,7 @@ private func prepareUploadStoryContent(account: Account, media: EngineStoryInput
             mimeType: "video/mp4",
             size: nil,
             attributes: [
-                TelegramMediaFileAttribute.Video(duration: duration, size: dimensions, flags: .supportsStreaming, preloadSize: nil)
+                TelegramMediaFileAttribute.Video(duration: duration, size: dimensions, flags: .supportsStreaming, preloadSize: nil, coverTime: coverTime)
             ]
         )
         
@@ -1290,7 +1290,7 @@ func _internal_uploadBotPreviewImpl(
         }
         
         let passFetchProgress = media is TelegramMediaFile
-        let (contentSignal, _) = uploadedStoryContent(postbox: postbox, network: network, media: media, mediaReference: nil, embeddedStickers: embeddedStickers, accountPeerId: accountPeerId, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: revalidationContext, auxiliaryMethods: auxiliaryMethods, passFetchProgress: passFetchProgress)
+        let (contentSignal, originalMedia) = uploadedStoryContent(postbox: postbox, network: network, media: media, mediaReference: nil, embeddedStickers: embeddedStickers, accountPeerId: accountPeerId, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: revalidationContext, auxiliaryMethods: auxiliaryMethods, passFetchProgress: passFetchProgress)
         return contentSignal
         |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
             switch result {
@@ -1319,6 +1319,8 @@ func _internal_uploadBotPreviewImpl(
                                 }
                                 
                                 if let resultMediaValue = textMediaAndExpirationTimerFromApiMedia(resultMedia, toPeerId).media {
+                                    applyMediaResourceChanges(from: originalMedia, to: resultMediaValue, postbox: postbox, force: originalMedia is TelegramMediaFile && resultMediaValue is TelegramMediaFile)
+                                    
                                     transaction.updatePeerCachedData(peerIds: Set([toPeerId]), update: { _, current in
                                         guard var current = current as? CachedUserData else {
                                             return current
@@ -1330,7 +1332,7 @@ func _internal_uploadBotPreviewImpl(
                                         if let index = media.firstIndex(where: { $0.id == resultMediaValue.id }) {
                                             media.remove(at: index)
                                         }
-                                        media.append(resultMediaValue)
+                                        media.insert(resultMediaValue, at: 0)
                                         let botPreview = CachedUserData.BotPreview(media: media)
                                         current = current.withUpdatedBotPreview(botPreview)
                                         return current

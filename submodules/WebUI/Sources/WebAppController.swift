@@ -326,11 +326,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
             guard let controller = self.controller else {
                 return
             }
+            
             if let url = controller.url, controller.source != .menu {
                 self.queryId = controller.queryId
                 if let parsedUrl = URL(string: url) {
                     self.webView?.load(URLRequest(url: parsedUrl))
                 }
+                
+                self.checkBotIdAndUrl(url)
                 
                 if let keepAliveSignal = controller.keepAliveSignal {
                     self.keepAliveDisposable = (keepAliveSignal
@@ -351,6 +354,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         guard let strongSelf = self else {
                             return
                         }
+                        strongSelf.checkBotIdAndUrl(result.url)
                         if let parsedUrl = URL(string: result.url) {
                             strongSelf.queryId = result.queryId
                             strongSelf.webView?.load(URLRequest(url: parsedUrl))
@@ -372,6 +376,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 guard let self, let parsedUrl = URL(string: result.url) else {
                                     return
                                 }
+                                self.checkBotIdAndUrl(result.url)
                                 self.controller?.titleView?.title = WebAppTitle(title: appStart.botApp.title, counter: self.presentationData.strings.WebApp_Miniapp, isVerified: controller.botVerified)
                                 self.webView?.load(URLRequest(url: parsedUrl))
                             })
@@ -384,6 +389,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             }
                             strongSelf.queryId = result.queryId
                             strongSelf.webView?.load(URLRequest(url: parsedUrl))
+                            
+                            strongSelf.checkBotIdAndUrl(result.url)
                             
                             if let keepAliveSignal = result.keepAliveSignal {
                                 strongSelf.keepAliveDisposable = (keepAliveSignal
@@ -401,6 +408,15 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         })
                     }
                 }
+            }
+        }
+        
+        func checkBotIdAndUrl(_ url: String) {
+            //1985737506
+            if url.hasPrefix("https://walletbot.me"), let botId = self.controller?.botId.id._internalGetInt64Value(), botId != 1985737506 {
+                let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: "Bot id mismatch, please report steps to app developer", actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
+                })])
+                self.controller?.present(alertController, in: .window(.root))
             }
         }
         

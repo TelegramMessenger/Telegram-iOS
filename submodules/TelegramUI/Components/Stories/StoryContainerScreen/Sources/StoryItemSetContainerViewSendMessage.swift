@@ -3434,6 +3434,8 @@ final class StoryItemSetContainerSendMessage {
             actions.append(ContextMenuAction(content: .textWithSubtitleAndIcon(title: updatedPresentationData.initial.strings.Story_ViewLink, subtitle: url, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: {
                 action()
             }))
+        case .weather:
+            return
         }
         
         self.selectedMediaArea =  mediaArea

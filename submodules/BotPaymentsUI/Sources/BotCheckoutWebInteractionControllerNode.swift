@@ -60,6 +60,7 @@ final class BotCheckoutWebInteractionControllerNode: ViewControllerTracingNode, 
                 if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                     webView.allowsLinkPreview = false
                 }
+                webView.navigationDelegate = self
             case .externalVerification:
                 webView = WKWebView()
                 if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {

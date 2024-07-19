@@ -144,7 +144,7 @@ public extension ImportSticker {
             fileAttributes.append(.FileName(fileName: "sticker.webm"))
             fileAttributes.append(.Animated)
             fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
-            fileAttributes.append(.Video(duration: self.duration ?? 3.0, size: self.dimensions, flags: [], preloadSize: nil))
+            fileAttributes.append(.Video(duration: self.duration ?? 3.0, size: self.dimensions, flags: [], preloadSize: nil, coverTime: nil))
         } else if self.mimeType == "application/x-tgsticker" {
             fileAttributes.append(.FileName(fileName: "sticker.tgs"))
             fileAttributes.append(.Animated)

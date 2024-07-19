@@ -1136,7 +1136,7 @@ private final class StoryContainerScreenComponent: Component {
                 var isSilentVideo = false
                 if case let .file(file) = slice.item.storyItem.media {
                     for attribute in file.attributes {
-                        if case let .Video(_, _, flags, _) = attribute {
+                        if case let .Video(_, _, flags, _, _) = attribute {
                             if flags.contains(.isSilent) {
                                 isSilentVideo = true
                             }
@@ -1669,6 +1669,18 @@ private final class StoryContainerScreenComponent: Component {
                                     }
                                     component.content.markAsSeen(id: id)
                                 },
+                                reorder: { [weak self] in
+                                    guard let self, let environment = self.environment else {
+                                        return
+                                    }
+                                    var performReorderAction: (() -> Void)?
+                                    if let controller = environment.controller() as? StoryContainerScreen {
+                                        performReorderAction = controller.performReorderAction
+                                    }
+                                    environment.controller()?.dismiss(completion: {
+                                        performReorderAction?()
+                                    })
+                                },
                                 controller: { [weak self] in
                                     return self?.environment?.controller()
                                 },
@@ -2027,6 +2039,7 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
     }
     
     public var customBackAction: (() -> Void)?
+    public var performReorderAction: (() -> Void)?
     
     public init(
         context: AccountContext,

@@ -331,6 +331,10 @@ private final class GenericItemLayer: CALayer, ItemLayer {
 
         self.contentsGravity = .resize
     }
+    
+    override init(layer: Any) {
+        super.init(layer: layer)
+    }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
@@ -994,6 +998,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         } else {
             return .never()
         }
+    }
+    
+    func reorderIfPossible(item: SparseItemGrid.Item, toIndex: Int) {
     }
 
     func onTap(item: SparseItemGrid.Item, itemLayer: CALayer, point: CGPoint) {

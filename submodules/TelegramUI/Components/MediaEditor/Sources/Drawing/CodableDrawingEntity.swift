@@ -120,7 +120,7 @@ public enum CodableDrawingEntity: Equatable {
             rotation = entity.rotation
             scale = entity.scale
             if let size {
-                cornerRadius = 10.0 / (size.width * entity.scale)
+                cornerRadius = (size.height * 0.17) / size.width
             }
         default:
             return nil
@@ -190,6 +190,17 @@ public enum CodableDrawingEntity: Equatable {
             return .link(
                 coordinates: coordinates,
                 url: url
+            )
+        case let .weather(entity):
+            var flags: MediaArea.WeatherFlags = []
+            if entity.style == .black {
+                flags.insert(.isDark)
+            }
+            return .weather(
+                coordinates: coordinates,
+                emoji: entity.emoji,
+                temperature: entity.temperature,
+                flags: flags
             )
         default:
             return nil

@@ -520,6 +520,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[340088945] = { return Api.MediaArea.parse_mediaAreaSuggestedReaction($0) }
     dict[926421125] = { return Api.MediaArea.parse_mediaAreaUrl($0) }
     dict[-1098720356] = { return Api.MediaArea.parse_mediaAreaVenue($0) }
+    dict[1132918857] = { return Api.MediaArea.parse_mediaAreaWeather($0) }
     dict[-808853502] = { return Api.MediaAreaCoordinates.parse_mediaAreaCoordinates($0) }
     dict[-1808510398] = { return Api.Message.parse_message($0) }
     dict[-1868117372] = { return Api.Message.parse_messageEmpty($0) }
@@ -1080,7 +1081,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1886646706] = { return Api.UrlAuthResult.parse_urlAuthResultAccepted($0) }
     dict[-1445536993] = { return Api.UrlAuthResult.parse_urlAuthResultDefault($0) }
     dict[-1831650802] = { return Api.UrlAuthResult.parse_urlAuthResultRequest($0) }
-    dict[1340722400] = { return Api.User.parse_user($0) }
+    dict[-2093920310] = { return Api.User.parse_user($0) }
     dict[-742634630] = { return Api.User.parse_userEmpty($0) }
     dict[-862357728] = { return Api.UserFull.parse_userFull($0) }
     dict[-2100168954] = { return Api.UserProfilePhoto.parse_userProfilePhoto($0) }
@@ -1398,7 +1399,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
                 return nil
             }
         }

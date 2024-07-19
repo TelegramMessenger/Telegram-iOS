@@ -338,7 +338,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     return CameraScreen.TransitionOut(
                         destinationView: destinationView,
                         destinationRect: transitionOut.destinationRect,
-                        destinationCornerRadius: transitionOut.destinationCornerRadius
+                        destinationCornerRadius: transitionOut.destinationCornerRadius,
+                        completion: transitionOut.completion
                     )
                 } else {
                     return nil
@@ -408,13 +409,15 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             return MediaEditorScreen.TransitionOut(
                                 destinationView: destinationView,
                                 destinationRect: transitionOut.destinationRect,
-                                destinationCornerRadius: transitionOut.destinationCornerRadius
+                                destinationCornerRadius: transitionOut.destinationCornerRadius,
+                                completion: transitionOut.completion
                             )
                         } else if !finished, let resultTransition, let (destinationView, destinationRect) = resultTransition.transitionOut(isNew) {
                             return MediaEditorScreen.TransitionOut(
                                 destinationView: destinationView,
                                 destinationRect: destinationRect,
-                                destinationCornerRadius: 0.0
+                                destinationCornerRadius: 0.0,
+                                completion: nil
                             )
                         } else {
                             return nil
@@ -671,7 +674,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 return nil
                             }
                         }
-                        media = .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: result.stickers)
+                        media = .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: result.stickers, coverTime: values.coverImageTimestamp)
                     }
                 default:
                     break

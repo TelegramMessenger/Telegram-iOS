@@ -8,6 +8,7 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import StickerResources
 import MediaEditor
+import TelegramStringFormatting
 
 private func generateIcon(style: DrawingWeatherEntity.Style) -> UIImage? {
     guard let image = UIImage(bundleImageName: "Chat/Attach Menu/Location") else {
@@ -50,7 +51,6 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
     }
     
     let backgroundView: UIView
-    let blurredBackgroundView: BlurredBackgroundView
     
     let textView: DrawingTextView
     let iconView: UIImageView
@@ -61,12 +61,13 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
     private let stickerFetchedDisposable = MetaDisposable()
     private let cachedDisposable = MetaDisposable()
     
+    let temperature: String
+    
     init(context: AccountContext, entity: DrawingWeatherEntity) {
+        self.temperature = stringForTemperature(entity.temperature)
+        
         self.backgroundView = UIView()
         self.backgroundView.clipsToBounds = true
-        
-        self.blurredBackgroundView = BlurredBackgroundView(color: UIColor(white: 0.0, alpha: 0.25), enableBlur: true)
-        self.blurredBackgroundView.clipsToBounds = true
         
         self.textView = DrawingTextView(frame: .zero)
         self.textView.clipsToBounds = false
@@ -95,7 +96,6 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
                 
         self.textView.delegate = self
         self.addSubview(self.backgroundView)
-        self.addSubview(self.blurredBackgroundView)
         self.addSubview(self.textView)
         self.addSubview(self.iconView)
         
@@ -138,7 +138,7 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         self.imageNode.frame = self.iconView.frame.offsetBy(dx: 0.0, dy: 2.0)
         
         if let animationNode = self.animationNode {
-            animationNode.frame = self.iconView.frame.offsetBy(dx: 0.0, dy: 2.0)
+            animationNode.frame = self.iconView.frame
             animationNode.updateLayout(size: self.iconView.frame.size)
         }
         
@@ -147,8 +147,6 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         
         self.textView.frame = CGRect(origin: CGPoint(x: self.bounds.width - self.textSize.width - 6.0, y: floorToScreenPixels((self.bounds.height - self.textSize.height) / 2.0)), size: self.textSize)
         self.backgroundView.frame = self.bounds
-        self.blurredBackgroundView.frame = self.bounds
-        self.blurredBackgroundView.update(size: self.bounds.size, transition: .immediate)
     }
     
     override func selectedTapAction() -> Bool {
@@ -161,16 +159,6 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         case .white:
             updatedStyle = .black
         case .black:
-            updatedStyle = .transparent
-        case .transparent:
-            if self.weatherEntity.hasCustomColor {
-                updatedStyle = .custom
-            } else {
-                updatedStyle = .white
-            }
-        case .custom:
-            updatedStyle = .white
-        case .blur:
             updatedStyle = .white
         }
         self.weatherEntity.style = updatedStyle
@@ -182,7 +170,7 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         
     private var displayFontSize: CGFloat {
         var textFontSize: CGFloat = 0.07
-        let textLength = self.weatherEntity.temperature.count
+        let textLength = self.temperature.count
         if textLength > 10 {
             textFontSize = max(0.01, 0.07 - CGFloat(textLength - 10) / 100.0)
         }
@@ -194,7 +182,7 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
     }
     
     private func updateText() {
-        let text = NSMutableAttributedString(string: self.weatherEntity.temperature.uppercased())
+        let text = NSMutableAttributedString(string: self.temperature.uppercased())
         let range = NSMakeRange(0, text.length)
         let fontSize = self.displayFontSize
     
@@ -213,15 +201,8 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         switch self.weatherEntity.style {
         case .white:
             textColor = .black
-        case .black, .transparent, .blur:
+        case .black:
             textColor = .white
-        case .custom:
-            let color = self.weatherEntity.color.toUIColor()
-            if color.lightness > 0.705 {
-                textColor = .black
-            } else {
-                textColor = .white
-            }
         }
         
         text.addAttribute(.foregroundColor, value: textColor, range: range)
@@ -241,34 +222,10 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
             self.textView.textColor = .black
             self.backgroundView.backgroundColor = .white
             self.backgroundView.isHidden = false
-            self.blurredBackgroundView.isHidden = true
         case .black:
             self.textView.textColor = .white
             self.backgroundView.backgroundColor = .black
             self.backgroundView.isHidden = false
-            self.blurredBackgroundView.isHidden = true
-        case .transparent:
-            self.textView.textColor = .white
-            self.backgroundView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.2)
-            self.backgroundView.isHidden = false
-            self.blurredBackgroundView.isHidden = true
-        case .custom:
-            let color = self.weatherEntity.color.toUIColor()
-            let textColor: UIColor
-            if color.lightness > 0.705 {
-                textColor = .black
-            } else {
-                textColor = .white
-            }
-            self.textView.textColor = textColor
-            self.backgroundView.backgroundColor = color
-            self.backgroundView.isHidden = false
-            self.blurredBackgroundView.isHidden = true
-        case .blur:
-            self.textView.textColor = .white
-            self.backgroundView.isHidden = true
-            self.backgroundView.backgroundColor = UIColor(rgb: 0xffffff)
-            self.blurredBackgroundView.isHidden = false
         }
         self.textView.textAlignment = .left
         
@@ -282,10 +239,8 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         }
         
         self.backgroundView.layer.cornerRadius = self.textSize.height * 0.2
-        self.blurredBackgroundView.layer.cornerRadius = self.backgroundView.layer.cornerRadius
         if #available(iOS 13.0, *) {
             self.backgroundView.layer.cornerCurve = .continuous
-            self.blurredBackgroundView.layer.cornerCurve = .continuous
         }
         
         super.update(animated: animated)

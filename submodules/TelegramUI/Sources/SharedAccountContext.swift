@@ -2533,6 +2533,53 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
     }
     
+    public func makeBotPreviewEditorScreen(context: AccountContext, source: Any?, target: Stories.PendingTarget, transitionArguments: (UIView, CGRect, UIImage?)?, transitionOut: @escaping () -> BotPreviewEditorTransitionOut?, externalState: MediaEditorTransitionOutExternalState, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController {
+        let subject: Signal<MediaEditorScreen.Subject?, NoError>
+        if let asset = source as? PHAsset {
+            subject = .single(.asset(asset))
+        } else if let image = source as? UIImage {
+            subject = .single(.image(image, PixelDimensions(image.size), nil, .bottomRight))
+        } else {
+            subject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
+        }
+        let editorController = MediaEditorScreen(
+            context: context,
+            mode: .botPreview,
+            subject: subject,
+            customTarget: nil,
+            transitionIn: transitionArguments.flatMap { .gallery(
+                MediaEditorScreen.TransitionIn.GalleryTransitionIn(
+                    sourceView: $0.0,
+                    sourceRect: $0.1,
+                    sourceImage: $0.2
+                )
+            ) },
+            transitionOut: { finished, isNew in
+                if !finished, let transitionArguments {
+                    return MediaEditorScreen.TransitionOut(
+                        destinationView: transitionArguments.0,
+                        destinationRect: transitionArguments.0.bounds,
+                        destinationCornerRadius: 0.0
+                    )
+                } else if finished, let transitionOut = transitionOut(), let destinationView = transitionOut.destinationView {
+                    return MediaEditorScreen.TransitionOut(
+                        destinationView: destinationView,
+                        destinationRect: transitionOut.destinationRect,
+                        destinationCornerRadius: transitionOut.destinationCornerRadius,
+                        completion: transitionOut.completion
+                    )
+                }
+                return nil
+            }, completion: { result, commit in
+                completion(result, commit)
+            } as (MediaEditorScreen.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+        )
+        editorController.cancelled = { _ in
+            cancelled()
+        }
+        return editorController
+    }
+    
     public func makeStickerEditorScreen(context: AccountContext, source: Any?, intro: Bool, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile, [String], @escaping () -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController {
         let subject: Signal<MediaEditorScreen.Subject?, NoError>
         var mode: MediaEditorScreen.Mode.StickerEditorMode
@@ -2605,8 +2652,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return mediaPickerController(context: context, hasSearch: hasSearch, completion: completion)
     }
     
-    public func makeStoryMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void, groupsPresented: @escaping () -> Void) -> ViewController {
-        return storyMediaPickerController(context: context, getSourceRect: getSourceRect, completion: completion, dismissed: dismissed, groupsPresented: groupsPresented)
+    public func makeStoryMediaPickerScreen(context: AccountContext, isDark: Bool, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void, groupsPresented: @escaping () -> Void) -> ViewController {
+        return storyMediaPickerController(context: context, isDark: isDark, getSourceRect: getSourceRect, completion: completion, dismissed: dismissed, groupsPresented: groupsPresented)
     }
     
     public func makeStickerMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect?, completion: @escaping (Any?, UIView?, CGRect, UIImage?, Bool, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void) -> ViewController {
@@ -2678,6 +2725,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController {
         return StarsTransactionScreen(context: context, subject: .gift(message), action: {})
+    }
+    
+    public func openWebApp(context: AccountContext, parentController: ViewController, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peer: EnginePeer, threadId: Int64?, buttonText: String, url: String, simple: Bool, source: ChatOpenWebViewSource, skipTermsOfService: Bool) {
+        openWebAppImpl(context: context, parentController: parentController, updatedPresentationData: updatedPresentationData, peer: peer, threadId: threadId, buttonText: buttonText, url: url, simple: simple, source: source, skipTermsOfService: skipTermsOfService)
     }
 }
 

@@ -1556,11 +1556,13 @@ private func monetizationEntries(
     entries.append(.adsProceedsTitle(presentationData.theme, presentationData.strings.Monetization_StarsProceeds_Title))
     entries.append(.adsProceedsOverview(presentationData.theme, canViewRevenue ? data : nil, canViewStarsRevenue ? starsData : nil))
     
+    let hasTonBalance = data.balances.overallRevenue > 0
+    let hasStarsBalance = (starsData?.balances.overallRevenue ?? 0) > 0
     
     let proceedsInfo: String
-    if canViewStarsRevenue && canViewRevenue {
+    if (canViewStarsRevenue && hasStarsBalance) && (canViewRevenue && hasTonBalance) {
         proceedsInfo = presentationData.strings.Monetization_Proceeds_TonAndStars_Info
-    } else if canViewStarsRevenue {
+    } else if canViewStarsRevenue && hasStarsBalance {
         proceedsInfo = presentationData.strings.Monetization_Proceeds_Stars_Info
     } else {
         proceedsInfo = presentationData.strings.Monetization_Proceeds_Ton_Info
@@ -1675,7 +1677,7 @@ private func monetizationEntries(
         }
     }
     
-    if isCreator {
+    if isCreator && canViewRevenue {
         var switchOffAdds: Bool? = nil
         if let boostData, boostData.level >= premiumConfiguration.minChannelRestrictAdsLevel {
             switchOffAdds = adsRestricted

@@ -118,6 +118,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let navigate: (NavigationDirection) -> Void
     public let delete: () -> Void
     public let markAsSeen: (StoryId) -> Void
+    public let reorder: () -> Void
     public let controller: () -> ViewController?
     public let toggleAmbientMode: () -> Void
     public let keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>
@@ -154,6 +155,7 @@ public final class StoryItemSetContainerComponent: Component {
         navigate: @escaping (NavigationDirection) -> Void,
         delete: @escaping () -> Void,
         markAsSeen: @escaping (StoryId) -> Void,
+        reorder: @escaping () -> Void,
         controller: @escaping () -> ViewController?,
         toggleAmbientMode: @escaping () -> Void,
         keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>,
@@ -189,6 +191,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.navigate = navigate
         self.delete = delete
         self.markAsSeen = markAsSeen
+        self.reorder = reorder
         self.controller = controller
         self.toggleAmbientMode = toggleAmbientMode
         self.keyboardInputData = keyboardInputData
@@ -3798,7 +3801,7 @@ public final class StoryItemSetContainerComponent: Component {
                 isVideo = true
                 soundAlpha = 1.0
                 for attribute in file.attributes {
-                    if case let .Video(_, _, flags, _) = attribute {
+                    if case let .Video(_, _, flags, _, _) = attribute {
                         if flags.contains(.isSilent) {
                             isSilentVideo = true
                             soundAlpha = 0.5
@@ -3831,7 +3834,7 @@ public final class StoryItemSetContainerComponent: Component {
                         var isSilentVideo = false
                         if case let .file(file) = component.slice.item.storyItem.media {
                             for attribute in file.attributes {
-                                if case let .Video(_, _, flags, _) = attribute {
+                                if case let .Video(_, _, flags, _, _) = attribute {
                                     if flags.contains(.isSilent) {
                                         isSilentVideo = true
                                     }
@@ -5678,6 +5681,14 @@ public final class StoryItemSetContainerComponent: Component {
             component.presentController(actionSheet, nil)
         }
         
+        private func performReorderAction() {
+            guard let component = self.component else {
+                return
+            }
+            
+            component.reorder()
+        }
+        
         private func performLikeAction() {
             guard let component = self.component else {
                 return
@@ -6566,7 +6577,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 return
                             }
                             
-                            let _ = component
+                            component.reorder()
                         })))
                         items.append(.action(ContextMenuActionItem(text: "Edit Preview", icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)

@@ -99,6 +99,9 @@ extension TelegramUser {
                 if (flags2 & (1 << 11)) != 0 {
                     botFlags.insert(.isBusiness)
                 }
+                if (flags2 & (1 << 13)) != 0 {
+                    botFlags.insert(.hasWebApp)
+                }
                 botInfo = BotUserInfo(flags: botFlags, inlinePlaceholder: botInlinePlaceholder)
             }
             

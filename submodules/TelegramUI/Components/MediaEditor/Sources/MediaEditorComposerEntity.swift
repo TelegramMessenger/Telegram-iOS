@@ -70,7 +70,9 @@ private func prerenderTextTransformations(entity: DrawingEntity, image: UIImage,
 }
 
 func composerEntitiesForDrawingEntity(postbox: Postbox, textScale: CGFloat, entity: DrawingEntity, colorSpace: CGColorSpace, tintColor: UIColor? = nil) -> [MediaEditorComposerEntity] {
-    if let entity = entity as? DrawingStickerEntity {
+    if entity is DrawingWeatherEntity {
+        return []
+    } else if let entity = entity as? DrawingStickerEntity {
         if case let .file(_, type) = entity.content, case .reaction = type {
             return []
         } else {
@@ -126,9 +128,9 @@ func composerEntitiesForDrawingEntity(postbox: Postbox, textScale: CGFloat, enti
             return entities
         } else if let entity = entity as? DrawingLocationEntity {
             return [prerenderTextTransformations(entity: entity, image: renderImage, textScale: textScale, colorSpace: colorSpace)]
-        } else if let entity = entity as? DrawingWeatherEntity {
-            return [prerenderTextTransformations(entity: entity, image: renderImage, textScale: textScale, colorSpace: colorSpace)]
         } else if let entity = entity as? DrawingLinkEntity {
+            return [prerenderTextTransformations(entity: entity, image: renderImage, textScale: textScale, colorSpace: colorSpace)]
+        } else if let entity = entity as? DrawingWeatherEntity {
             return [prerenderTextTransformations(entity: entity, image: renderImage, textScale: textScale, colorSpace: colorSpace)]
         }
     }

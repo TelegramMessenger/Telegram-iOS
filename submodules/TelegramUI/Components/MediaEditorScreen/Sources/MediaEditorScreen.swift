@@ -76,6 +76,7 @@ final class MediaEditorScreenComponent: Component {
         case cutout
         case cutoutErase
         case cutoutRestore
+        case cover
     }
     
     let context: AccountContext
@@ -818,7 +819,7 @@ final class MediaEditorScreenComponent: Component {
             }
             
             var doneButtonTitle: String?
-            var doneButtonIcon: UIImage
+            var doneButtonIcon: UIImage?
             switch controller.mode {
             case .storyEditor:
                 doneButtonTitle = isEditingStory ? environment.strings.Story_Editor_Done.uppercased() : environment.strings.Story_Editor_Next.uppercased()
@@ -826,6 +827,9 @@ final class MediaEditorScreenComponent: Component {
             case .stickerEditor:
                 doneButtonTitle = nil
                 doneButtonIcon = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Apply"), color: .white)!
+            case .botPreview:
+                doneButtonTitle = environment.strings.Story_Editor_Add.uppercased()
+                doneButtonIcon = nil
             }
             
             let doneButtonSize = self.doneButton.update(
@@ -837,29 +841,7 @@ final class MediaEditorScreenComponent: Component {
                         title: doneButtonTitle)),
                     effectAlignment: .center,
                     action: { [weak controller] in
-                        guard let controller else {
-                            return
-                        }
-                        switch controller.mode {
-                        case .storyEditor:
-                            guard !controller.node.recording.isActive else {
-                                return
-                            }
-                            guard controller.checkCaptionLimit() else {
-                                return
-                            }
-                            if controller.isEditingStory {
-                                controller.requestStoryCompletion(animated: true)
-                            } else {
-                                if controller.checkIfCompletionIsAllowed() {
-                                    controller.openPrivacySettings(completion: { [weak controller] in
-                                        controller?.requestStoryCompletion(animated: true)
-                                    })
-                                }
-                            }
-                        case .stickerEditor:
-                            controller.requestStickerCompletion(animated: true)
-                        }
+                        controller?.node.requestCompletion()
                     }
                 )),
                 environment: {},
@@ -2415,6 +2397,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         case storyEditor
         case stickerEditor(mode: StickerEditorMode)
+        case botPreview
     }
     
     public enum TransitionIn {
@@ -2443,15 +2426,18 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         public weak var destinationView: UIView?
         public let destinationRect: CGRect
         public let destinationCornerRadius: CGFloat
+        public let completion: (() -> Void)?
         
         public init(
             destinationView: UIView,
             destinationRect: CGRect,
-            destinationCornerRadius: CGFloat
+            destinationCornerRadius: CGFloat,
+            completion: (() -> Void)? = nil
         ) {
             self.destinationView = destinationView
             self.destinationRect = destinationRect
             self.destinationCornerRadius = destinationCornerRadius
+            self.completion = completion
         }
     }
     
@@ -2548,6 +2534,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         fileprivate var drawingScreen: DrawingScreen?
         fileprivate var stickerScreen: StickerPickerScreen?
         fileprivate weak var cutoutScreen: MediaCutoutScreen?
+        fileprivate weak var coverScreen: MediaCoverScreen?
         private var defaultToEmoji = false
         
         private var previousDrawingData: Data?
@@ -2870,7 +2857,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let mediaEntity = DrawingMediaEntity(size: fittedSize)
             mediaEntity.position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
             switch controller.mode {
-            case .storyEditor:
+            case .storyEditor, .botPreview:
                 if fittedSize.height > fittedSize.width {
                     mediaEntity.scale = max(storyDimensions.width / fittedSize.width, storyDimensions.height / fittedSize.height)
                 } else {
@@ -3623,7 +3610,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             transitionInView.contentMode = .scaleAspectFill
             var initialScale: CGFloat
             switch controller.mode {
-            case .storyEditor:
+            case .storyEditor, .botPreview:
                 if image.size.height > image.size.width {
                     initialScale = max(self.previewContainerView.bounds.width / image.size.width, self.previewContainerView.bounds.height / image.size.height)
                 } else {
@@ -3785,6 +3772,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if let transitionOut = controller.transitionOut(finished, isNew), let destinationView = transitionOut.destinationView {
                 var destinationTransitionView: UIView?
                 var destinationTransitionRect: CGRect = .zero
+                let transitionOutCompletion = transitionOut.completion
                 if !finished {
                     if let transitionIn = controller.transitionIn, case let .gallery(galleryTransitionIn) = transitionIn, let sourceImage = galleryTransitionIn.sourceImage, isNew != true {
                         let sourceSuperView = galleryTransitionIn.sourceView?.superview?.superview
@@ -3867,6 +3855,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     destinationView.isHidden = false
                     destinationSnapshotView?.removeFromSuperview()
                     completion()
+                    transitionOutCompletion?()
                 })
                 self.previewContainerView.layer.animateScale(from: 1.0, to: destinationScale, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 self.previewContainerView.layer.animateBounds(from: self.previewContainerView.bounds, to: CGRect(origin: CGPoint(x: 0.0, y: (self.previewContainerView.bounds.height - self.previewContainerView.bounds.width * destinationAspectRatio) / 2.0), size: CGSize(width: self.previewContainerView.bounds.width, height: self.previewContainerView.bounds.width * destinationAspectRatio)), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
@@ -4583,20 +4572,96 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         func addWeather(_ weather: StickerPickerScreen.Weather.LoadedWeather) {
-            let weatherFormatter = MeasurementFormatter()
-            weatherFormatter.locale = Locale.current
-            weatherFormatter.unitStyle = .short
-            weatherFormatter.numberFormatter.maximumFractionDigits = 0
+            let maxWeatherCount = 3
+            var currentWeatherCount = 0
+            self.entitiesView.eachView { entityView in
+                if entityView.entity is DrawingWeatherEntity {
+                    currentWeatherCount += 1
+                }
+            }
+            if currentWeatherCount >= maxWeatherCount {
+                self.controller?.hapticFeedback.error()
+                return
+            }
             
             self.interaction?.insertEntity(
                 DrawingWeatherEntity(
-                    temperature: weatherFormatter.string(from: Measurement(value: weather.temperature, unit: UnitTemperature.celsius)),
-                    style: .white,
-                    icon: weather.emojiFile
+                    emoji: weather.emoji,
+                    emojiFile: weather.emojiFile,
+                    temperature: weather.temperature,
+                    style: .white
                 ),
                 scale: nil,
                 position: nil
             )
+        }
+        
+        func requestCompletion(playHaptic: Bool = true) {
+            guard let controller = self.controller else {
+                return
+            }
+            switch controller.mode {
+            case .storyEditor:
+                guard !controller.node.recording.isActive else {
+                    return
+                }
+                guard controller.checkCaptionLimit() else {
+                    return
+                }
+                if controller.isEditingStory {
+                    controller.requestStoryCompletion(animated: true)
+                } else {
+                    if controller.checkIfCompletionIsAllowed() {
+                        controller.hapticFeedback.impact(.light)
+                        controller.openPrivacySettings(completion: { [weak controller] in
+                            controller?.requestStoryCompletion(animated: true)
+                        })
+                    }
+                }
+            case .stickerEditor:
+                controller.requestStickerCompletion(animated: true)
+            case .botPreview:
+                controller.requestStoryCompletion(animated: true)
+            }
+        }
+        
+        func openCoverSelection() {
+            guard let mediaEditor = self.mediaEditor else {
+                return
+            }
+            
+            guard let portalView = PortalView(matchPosition: false) else {
+                return
+            }
+            portalView.view.layer.rasterizationScale = UIScreenScale
+            self.previewContentContainerView.addPortal(view: portalView)
+            
+            let scale = 48.0 / self.previewContentContainerView.frame.height
+            portalView.view.transform = CGAffineTransformMakeScale(scale, scale)
+            
+            if self.entitiesView.hasSelection {
+                self.entitiesView.selectEntity(nil)
+            }
+            let coverController = MediaCoverScreen(
+                context: self.context,
+                mediaEditor: mediaEditor,
+                previewView: self.previewView,
+                portalView:  portalView
+            )
+            coverController.dismissed = { [weak self] in
+                if let self {
+                    self.animateInFromTool()
+                    self.requestCompletion(playHaptic: false)
+                }
+            }
+            coverController.completed = { [weak self] position, image in
+                if let self {
+                    self.controller?.currentCoverImage = image
+                }
+            }
+            self.controller?.present(coverController, in: .window(.root))
+            self.coverScreen = coverController
+            self.animateOutToTool(tool: .cover)
         }
         
         func updateModalTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -4771,12 +4836,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     mediaEditor.maybePauseVideo()
 
                                     var hasInteractiveStickers = true
-                                    if let controller = self.controller, case .stickerEditor = controller.mode {
-                                        hasInteractiveStickers = false
+                                    if let controller = self.controller {
+                                        switch controller.mode {
+                                        case .stickerEditor, .botPreview:
+                                            hasInteractiveStickers = false
+                                        default:
+                                            break
+                                        }
                                     }
                                     
                                     var weatherSignal: Signal<StickerPickerScreen.Weather, NoError>
-                                    if "".isEmpty {
+                                    if hasInteractiveStickers {
                                         let weatherPromise: Promise<StickerPickerScreen.Weather>
                                         if let current = self.weatherPromise {
                                             weatherPromise = current
@@ -5057,6 +5127,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     }
                                     self.controller?.present(controller, in: .window(.root))
                                     self.animateOutToTool(tool: .tools)
+                                case .cover:
+                                    self.openCoverSelection()
                                 }
                             }
                         },
@@ -5632,16 +5704,25 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         return self.isEditingStory || self.forwardSource != nil
     }
      
+    private var currentCoverImage: UIImage?
     func openPrivacySettings(_ privacy: MediaEditorResultPrivacy? = nil, completion: @escaping () -> Void = {}) {
-        self.node.mediaEditor?.maybePauseVideo()
-        
-        self.hapticFeedback.impact(.light)
-    
+        guard let mediaEditor = self.node.mediaEditor else {
+            return
+        }
+        mediaEditor.maybePauseVideo()
+            
         let privacy = privacy ?? self.state.privacy
         
         let text = self.getCaption().string
         let mentions = generateTextEntities(text, enabledTypes: [.mention], currentEntities: []).map { (text as NSString).substring(with: NSRange(location: $0.range.lowerBound + 1, length: $0.range.upperBound - $0.range.lowerBound - 1)) }
                 
+        let coverImage: UIImage?
+        if mediaEditor.sourceIsVideo {
+            coverImage = self.currentCoverImage ?? mediaEditor.resultImage
+        } else {
+            coverImage = nil
+        }
+        
         let stateContext = ShareWithPeersScreen.StateContext(
             context: self.context,
             subject: .stories(editing: false),
@@ -5659,6 +5740,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let initialPrivacy = privacy.privacy
             let timeout = privacy.timeout
             
+            var editCoverImpl: (() -> Void)?
+            
             let controller = ShareWithPeersScreen(
                 context: self.context,
                 initialPrivacy: initialPrivacy,
@@ -5667,6 +5750,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 pin: privacy.pin,
                 timeout: privacy.timeout,
                 mentions: mentions,
+                coverImage: coverImage,
                 stateContext: stateContext,
                 completion: { [weak self] sendAsPeerId, privacy, allowScreenshots, pin, _, completed in
                     guard let self else {
@@ -5716,6 +5800,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             pin: pin
                         ), completion: completion)
                     })
+                },
+                editCover: {
+                    editCoverImpl?()
                 }
             )
             controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
@@ -5728,6 +5815,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self.node.mediaEditor?.play()
             }
             self.push(controller)
+            
+            editCoverImpl = { [weak self, weak controller] in
+                if let self {
+                    Queue.mainQueue().after(0.25, {
+                        self.node.openCoverSelection()
+                    })
+                }
+                if let controller {
+                    controller.dismiss()
+                }
+            }
         })
     }
     
@@ -6066,7 +6164,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         })
         self.present(controller, in: .window(.root))
     }
-    
+        
     func maybePresentDiscardAlert() {
         self.hapticFeedback.impact(.light)
         if !self.isEligibleForDraft() {
@@ -6088,7 +6186,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 save = presentationData.strings.Story_Editor_DraftKeepMedia
             }
             text = presentationData.strings.Story_Editor_DraftDiscaedText
-        case .stickerEditor:
+        case .stickerEditor, .botPreview:
             title = presentationData.strings.Story_Editor_DraftDiscardMedia
             text = presentationData.strings.Story_Editor_DiscardText
         }
@@ -7427,12 +7525,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
 
 private final class DoneButtonContentComponent: CombinedComponent {
     let backgroundColor: UIColor
-    let icon: UIImage
+    let icon: UIImage?
     let title: String?
 
     init(
         backgroundColor: UIColor,
-        icon: UIImage,
+        icon: UIImage?,
         title: String?
     ) {
         self.backgroundColor = backgroundColor
@@ -7456,12 +7554,14 @@ private final class DoneButtonContentComponent: CombinedComponent {
         let text = Child(Text.self)
 
         return { context in
-            let iconSize = context.component.icon.size
-            let icon = icon.update(
-                component: Image(image: context.component.icon, tintColor: .white, size: iconSize),
-                availableSize: CGSize(width: 180.0, height: 100.0),
-                transition: .immediate
-            )
+            var iconChild: _UpdatedChildComponent?
+            if let iconImage = context.component.icon {
+                iconChild = icon.update(
+                    component: Image(image: iconImage, tintColor: .white, size: iconImage.size),
+                    availableSize: CGSize(width: 180.0, height: 100.0),
+                    transition: .immediate
+                )
+            }
             
             let backgroundHeight: CGFloat = 33.0
             var backgroundSize = CGSize(width: backgroundHeight, height: backgroundHeight)
@@ -7481,7 +7581,10 @@ private final class DoneButtonContentComponent: CombinedComponent {
                     transition: .immediate
                 )
                 
-                let updatedBackgroundWidth = backgroundSize.width + textSpacing + title!.size.width
+                var updatedBackgroundWidth = backgroundSize.width + title!.size.width
+                if let _ = iconChild {
+                    updatedBackgroundWidth += textSpacing
+                }
                 if updatedBackgroundWidth < 126.0 {
                     backgroundSize.width = updatedBackgroundWidth
                 } else {
@@ -7501,16 +7604,22 @@ private final class DoneButtonContentComponent: CombinedComponent {
             )
             
             if let title {
+                var titlePosition = backgroundSize.width / 2.0
+                if let _ = iconChild {
+                    titlePosition = title.size.width / 2.0 + 15.0
+                }
                 context.add(title
-                    .position(CGPoint(x: title.size.width / 2.0 + 15.0, y: backgroundHeight / 2.0))
+                    .position(CGPoint(x: titlePosition, y: backgroundHeight / 2.0))
                     .opacity(hideTitle ? 0.0 : 1.0)
                 )
             }
             
-            context.add(icon
-                .position(CGPoint(x: background.size.width - 16.0, y: backgroundSize.height / 2.0))
-            )
-
+            if let iconChild {
+                context.add(iconChild
+                    .position(CGPoint(x: background.size.width - 16.0, y: backgroundSize.height / 2.0))
+                )
+            }
+            
             return backgroundSize
         }
     }
@@ -8043,7 +8152,7 @@ private func stickerFile(resource: TelegramMediaResource, thumbnailResource: Tel
     fileAttributes.append(.FileName(fileName: isVideo ? "sticker.webm" : "sticker.webp"))
     fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
     if isVideo {
-        fileAttributes.append(.Video(duration: duration ?? 3.0, size: dimensions, flags: [], preloadSize: nil))
+        fileAttributes.append(.Video(duration: duration ?? 3.0, size: dimensions, flags: [], preloadSize: nil, coverTime: nil))
     } else {
         fileAttributes.append(.ImageSize(size: dimensions))
     }

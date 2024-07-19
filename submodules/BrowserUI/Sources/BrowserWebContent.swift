@@ -27,6 +27,8 @@ private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
         init(proxyServerHost: String, sourceTask: any WKURLSchemeTask) {
             self.sourceTask = sourceTask
             
+            let requestUrl = sourceTask.request.url
+            
             var mappedHost: String = ""
             if let host = sourceTask.request.url?.host {
                 mappedHost = host
@@ -52,7 +54,20 @@ private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
                     sourceTask.didFailWithError(error)
                 } else {
                     if let response {
-                        sourceTask.didReceive(response)
+                        if let response = response as? HTTPURLResponse, let requestUrl {
+                            if let updatedResponse = HTTPURLResponse(
+                                url: requestUrl,
+                                statusCode: response.statusCode,
+                                httpVersion: "HTTP/1.1",
+                                headerFields: response.allHeaderFields as? [String: String] ?? [:]
+                            ) {
+                                sourceTask.didReceive(updatedResponse)
+                            } else {
+                                sourceTask.didReceive(response)
+                            }
+                        } else {
+                            sourceTask.didReceive(response)
+                        }
                     }
                     if let data {
                         sourceTask.didReceive(data)
@@ -125,6 +140,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     var pushContent: (BrowserScreen.Subject) -> Void = { _ in }
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
     var minimize: () -> Void = { }
+    var close: () -> Void = { }
     var present: (ViewController, Any?) -> Void = { _, _ in }
     var presentInGlobalOverlay: (ViewController) -> Void = { _ in }
     var getNavigationController: () -> NavigationController? = { return nil }
@@ -136,14 +152,26 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         let configuration = WKWebViewConfiguration()
         
+        let bundle = Bundle.main
+        let bundleVersion = bundle.infoDictionary?["CFBundleShortVersionString"] ?? ""
+        
         var proxyServerHost = "magic.org"
         if let data = context.currentAppConfiguration.with({ $0 }).data, let hostValue = data["ton_proxy_address"] as? String {
             proxyServerHost = hostValue
         }
         configuration.setURLSchemeHandler(TonSchemeHandler(proxyServerHost: proxyServerHost), forURLScheme: "tonsite")
+        configuration.allowsInlineMediaPlayback = true
+        configuration.applicationNameForUserAgent = "Telegram-iOS/\(bundleVersion)"
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            configuration.mediaTypesRequiringUserActionForPlayback = []
+        } else {
+            configuration.mediaPlaybackRequiresUserAction = false
+        }
         
         self.webView = WKWebView(frame: CGRect(), configuration: configuration)
         self.webView.allowsLinkPreview = true
+        
+  
         
         if #available(iOS 11.0, *) {
             self.webView.scrollView.contentInsetAdjustmentBehavior = .never
@@ -176,6 +204,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         if #available(iOS 15.0, *) {
             self.webView.underPageBackgroundColor = presentationData.theme.list.plainBackgroundColor
         }
+        if #available(iOS 16.4, *) {
+            self.webView.isInspectable = true
+        }
         self.addSubview(self.webView)
     }
     
@@ -202,35 +233,54 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             self.updateLayout(size: size, insets: insets, transition: .immediate)
         }
     }
+        
+    private let setupFontFunctions = """
+    (function() {
+      const styleId = 'telegram-font-overrides';
+
+      function setTelegramFontOverrides(font, textSizeAdjust) {
+        let style = document.getElementById(styleId);
+
+        if (!style) {
+          style = document.createElement('style');
+          style.id = styleId;
+          document.head.appendChild(style);
+        }
+
+        let cssRules = '* {';
+        if (font !== null) {
+            cssRules += `
+            font-family: ${font} !important;
+            `;
+        }
+        if (textSizeAdjust !== null) {
+            cssRules += `
+            -webkit-text-size-adjust: ${textSizeAdjust} !important;
+            `;
+        }
+        cssRules += '}';
+
+        style.innerHTML = cssRules;
+
+        if (font === null && textSizeAdjust === null) {
+          style.parentNode.removeChild(style);
+        }
+      }
+      window.setTelegramFontOverrides = setTelegramFontOverrides;
+    })();
+    """
     
     var currentFontState = BrowserPresentationState.FontState(size: 100, isSerif: false)
     func updateFontState(_ state: BrowserPresentationState.FontState) {
         self.updateFontState(state, force: false)
     }
     func updateFontState(_ state: BrowserPresentationState.FontState, force: Bool) {
-        if self.currentFontState.size != state.size || (force && self.currentFontState.size != 100) {
-            self.setFontSize(state.size)
-        }
-        if self.currentFontState.isSerif != state.isSerif || (force && self.currentFontState.isSerif) {
-            self.setFontSerif(state.isSerif)
-        }
         self.currentFontState = state
-    }
-    
-    private func setFontSize(_ fontSize: Int32) {
-        let js = "document.getElementsByTagName('body')[0].style.webkitTextSizeAdjust='\(fontSize)%'"
-        self.webView.evaluateJavaScript(js, completionHandler: nil)
-    }
-    
-    private func setFontSerif(_ force: Bool) {
-        let js: String
-        if force {
-            js = "document.getElementsByTagName(\'body\')[0].style.fontFamily = 'Georgia, serif';"
-        } else {
-            js = "document.getElementsByTagName(\'body\')[0].style.fontFamily = '\"Lucida Grande\", \"Lucida Sans Unicode\", Arial, Helvetica, Verdana, sans-serif';"
-        }
-        self.webView.evaluateJavaScript(js) { _, _ in
-        }
+        
+        let fontFamily = state.isSerif ? "'Georgia, serif'" : "null"
+        let textSizeAdjust = state.size != 100 ? "'\(state.size)%'" : "null"
+        let js = "\(setupFontFunctions) setTelegramFontOverrides(\(fontFamily), \(textSizeAdjust))";
+        self.webView.evaluateJavaScript(js) { _, _ in }
     }
     
     private var didSetupSearch = false
@@ -477,17 +527,38 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        self.currentError = error
+        if (error as NSError).code != -999 {
+            self.currentError = error
+        } else {
+            self.currentError = nil
+        }
         if let (size, insets) = self.validLayout {
             self.updateLayout(size: size, insets: insets, transition: .immediate)
         }
     }
     
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        self.currentError = error
+        if (error as NSError).code != -999 {
+            self.currentError = error
+        } else {
+            self.currentError = nil
+        }
         if let (size, insets) = self.validLayout {
             self.updateLayout(size: size, insets: insets, transition: .immediate)
         }
+    }
+    
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if navigationAction.targetFrame == nil {
+            if let url = navigationAction.request.url?.absoluteString {
+                self.open(url: url, new: true)
+            }
+        }
+        return nil
+    }
+    
+    func webViewDidClose(_ webView: WKWebView) {
+        self.close()
     }
     
     @available(iOSApplicationExtension 15.0, iOS 15.0, *)
@@ -596,8 +667,10 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     private func open(url: String, new: Bool) {
         let subject: BrowserScreen.Subject = .webPage(url: url)
         if new, let navigationController = self.getNavigationController() {
+            navigationController._keepModalDismissProgress = true
             self.minimize()
             let controller = BrowserScreen(context: self.context, subject: subject)
+            navigationController._keepModalDismissProgress = true
             navigationController.pushViewController(controller)
         } else {
             self.pushContent(subject)

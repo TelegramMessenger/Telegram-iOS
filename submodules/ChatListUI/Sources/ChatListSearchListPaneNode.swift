@@ -289,7 +289,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     header: header,
                     action: { _ in
                         if let chatPeer = peer.peer.peers[peer.peer.peerId] {
-                            peerSelected(EnginePeer(chatPeer), nil, section == .recommendedChannels)
+                            peerSelected(EnginePeer(chatPeer), nil, section == .recommendedChannels || section == .popularApps)
                         }
                     },
                     disabledAction: { _ in
@@ -298,10 +298,18 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                         }
                     },
                     deletePeer: deletePeer,
-                    contextAction: (key == .channels || key == .apps) ? nil : peerContextAction.flatMap { peerContextAction in
+                    contextAction: (key == .channels) ? nil : peerContextAction.flatMap { peerContextAction in
                         return { node, gesture, location in
                             if let chatPeer = peer.peer.peers[peer.peer.peerId] {
-                                peerContextAction(EnginePeer(chatPeer), .recentSearch, node, gesture, location)
+                                let source: ChatListSearchContextActionSource
+                                
+                                if key == .apps {
+                                    source = .recentApps
+                                } else {
+                                    source = .recentSearch
+                                }
+                                
+                                peerContextAction(EnginePeer(chatPeer), source, node, gesture, location)
                             } else {
                                 gesture?.cancel()
                             }
@@ -1072,6 +1080,7 @@ private struct ChatListSearchMessagesContext {
 public enum ChatListSearchContextActionSource {
     case recentPeers
     case recentSearch
+    case recentApps
     case search(EngineMessage.Id?)
 }
 
@@ -1249,6 +1258,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private let tagMask: EngineMessage.Tags?
     private let location: ChatListControllerLocation
     private let navigationController: NavigationController?
+    private weak var parentController: ViewController?
     
     private let recentListNode: ListView
     private let shimmerNode: ChatListSearchShimmerNode
@@ -1321,7 +1331,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private var searchQueryDisposable: Disposable?
     private var searchOptionsDisposable: Disposable?
   
-    init(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, interaction: ChatListSearchInteraction, key: ChatListSearchPaneKey, peersFilter: ChatListNodePeersFilter, requestPeerType: [ReplyMarkupButtonRequestPeerType]?, location: ChatListControllerLocation, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?, globalPeerSearchContext: GlobalPeerSearchContext?) {
+    init(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, interaction: ChatListSearchInteraction, key: ChatListSearchPaneKey, peersFilter: ChatListNodePeersFilter, requestPeerType: [ReplyMarkupButtonRequestPeerType]?, location: ChatListControllerLocation, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?, parentController: ViewController?, globalPeerSearchContext: GlobalPeerSearchContext?) {
         self.context = context
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
@@ -1329,6 +1339,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.key = key
         self.location = location
         self.navigationController = navigationController
+        self.parentController = parentController
         
         let globalPeerSearchContext = globalPeerSearchContext ?? GlobalPeerSearchContext()
         
@@ -3531,22 +3542,32 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         }
                     } else if case .apps = key {
                         if let navigationController = self.navigationController {
-                            var customChatNavigationStack: [EnginePeer.Id]?
                             if isRecommended {
-                                if let recommendedChannelOrder = previousRecentItemsValue.with({ $0 })?.recommendedChannelOrder {
-                                    var customChatNavigationStackValue: [EnginePeer.Id] = []
-                                    customChatNavigationStackValue.append(contentsOf: recommendedChannelOrder)
-                                    customChatNavigationStack = customChatNavigationStackValue
+                                if let peerInfoScreen = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                                    navigationController.pushViewController(peerInfoScreen)
                                 }
+                            } else if case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp), let parentController = self.parentController {
+                                self.context.sharedContext.openWebApp(
+                                    context: self.context,
+                                    parentController: parentController,
+                                    updatedPresentationData: nil,
+                                    peer: peer,
+                                    threadId: nil,
+                                    buttonText: "",
+                                    url: "",
+                                    simple: true,
+                                    source: .generic,
+                                    skipTermsOfService: true
+                                )
+                            } else {
+                                
+                                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                                    navigationController: navigationController,
+                                    context: self.context,
+                                    chatLocation: .peer(peer),
+                                    keepStack: .always
+                                ))
                             }
-                            
-                            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
-                                navigationController: navigationController,
-                                context: self.context,
-                                chatLocation: .peer(peer),
-                                keepStack: .always,
-                                customChatNavigationStack: customChatNavigationStack
-                            ))
                         }
                     } else {
                         interaction.openPeer(peer, nil, threadId, true)
