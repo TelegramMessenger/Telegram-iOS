@@ -2426,15 +2426,18 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         public weak var destinationView: UIView?
         public let destinationRect: CGRect
         public let destinationCornerRadius: CGFloat
+        public let completion: (() -> Void)?
         
         public init(
             destinationView: UIView,
             destinationRect: CGRect,
-            destinationCornerRadius: CGFloat
+            destinationCornerRadius: CGFloat,
+            completion: (() -> Void)? = nil
         ) {
             self.destinationView = destinationView
             self.destinationRect = destinationRect
             self.destinationCornerRadius = destinationCornerRadius
+            self.completion = completion
         }
     }
     
@@ -3769,6 +3772,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if let transitionOut = controller.transitionOut(finished, isNew), let destinationView = transitionOut.destinationView {
                 var destinationTransitionView: UIView?
                 var destinationTransitionRect: CGRect = .zero
+                let transitionOutCompletion = transitionOut.completion
                 if !finished {
                     if let transitionIn = controller.transitionIn, case let .gallery(galleryTransitionIn) = transitionIn, let sourceImage = galleryTransitionIn.sourceImage, isNew != true {
                         let sourceSuperView = galleryTransitionIn.sourceView?.superview?.superview
@@ -3851,6 +3855,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     destinationView.isHidden = false
                     destinationSnapshotView?.removeFromSuperview()
                     completion()
+                    transitionOutCompletion?()
                 })
                 self.previewContainerView.layer.animateScale(from: 1.0, to: destinationScale, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 self.previewContainerView.layer.animateBounds(from: self.previewContainerView.bounds, to: CGRect(origin: CGPoint(x: 0.0, y: (self.previewContainerView.bounds.height - self.previewContainerView.bounds.width * destinationAspectRatio) / 2.0), size: CGSize(width: self.previewContainerView.bounds.width, height: self.previewContainerView.bounds.width * destinationAspectRatio)), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)

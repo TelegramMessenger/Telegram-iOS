@@ -38,6 +38,7 @@ public struct BotUserInfoFlags: OptionSet {
     public static let canBeAddedToAttachMenu = BotUserInfoFlags(rawValue: (1 << 4))
     public static let canEdit = BotUserInfoFlags(rawValue: (1 << 5))
     public static let isBusiness = BotUserInfoFlags(rawValue: (1 << 6))
+    public static let hasWebApp = BotUserInfoFlags(rawValue: (1 << 7))
 }
 
 public struct BotUserInfo: PostboxCoding, Equatable {
