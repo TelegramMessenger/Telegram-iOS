@@ -1821,6 +1821,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
         
         self.selectedButtonNode = SelectedButtonNode(theme: self.presentationData.theme)
+        self.selectedButtonNode.alpha = 0.0
+        self.selectedButtonNode.transform = CATransform3DMakeScale(0.01, 0.01, 1.0)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
         
@@ -2239,6 +2241,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     fileprivate var selectionCount: Int32 = 0
     fileprivate func updateSelectionState(count: Int32) {
         self.selectionCount = count
+        guard let layout = self.validLayout else {
+            return
+        }
     
         let transition = ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
         var moreIsVisible = false
@@ -2262,15 +2267,22 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.titleView.updateTitle(title: title, isEnabled: isEnabled, animated: true)
             self.cancelButtonNode.setState(isEnabled ? .cancel : .back, animated: true)
             
+            let selectedSize = self.selectedButtonNode.update(count: count)
+            
+            var safeInset: CGFloat = 0.0
+            if layout.safeInsets.right > 0.0 {
+                safeInset += layout.safeInsets.right + 16.0
+            }
+            let navigationHeight = navigationLayout(layout: layout).navigationFrame.height
+            self.selectedButtonNode.frame = CGRect(origin: CGPoint(x: self.view.bounds.width - 54.0 - selectedSize.width - safeInset, y: floorToScreenPixels((navigationHeight - selectedSize.height) / 2.0) + UIScreenPixel), size: selectedSize)
+            
             let isSelectionButtonVisible = count > 0 && self.controllerNode.currentDisplayMode == .all
             transition.updateAlpha(node: self.selectedButtonNode, alpha: isSelectionButtonVisible ? 1.0 : 0.0)
             transition.updateTransformScale(node: self.selectedButtonNode, scale: isSelectionButtonVisible ? 1.0 : 0.01)
             
-            let selectedSize = self.selectedButtonNode.update(count: count)
             if self.selectedButtonNode.supernode == nil {
                 self.navigationBar?.addSubnode(self.selectedButtonNode)
             }
-            self.selectedButtonNode.frame = CGRect(origin: CGPoint(x: self.view.bounds.width - 54.0 - selectedSize.width, y: 18.0 + UIScreenPixel), size: selectedSize)
             
             self.titleView.segmentsHidden = true
             moreIsVisible = count > 0
@@ -2656,9 +2668,16 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
-        
+                
         self.validLayout = layout
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
+
+        var safeInset: CGFloat = 0.0
+        if layout.safeInsets.right > 0.0 {
+            safeInset += layout.safeInsets.right + 16.0
+        }
+        let navigationHeight = navigationLayout(layout: layout).navigationFrame.height
+        self.selectedButtonNode.frame = CGRect(origin: CGPoint(x: self.view.bounds.width - 54.0 - self.selectedButtonNode.frame.width - safeInset, y: floorToScreenPixels((navigationHeight - self.selectedButtonNode.frame.height) / 2.0) + UIScreenPixel), size: self.selectedButtonNode.frame.size)
     }
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {

@@ -65,6 +65,9 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         if requirePhoneNumbers {
             filters.append(.excludeWithoutPhoneNumbers)
         }
+        if case .starsGifting = mode {
+            filters.append(.excludeBots)
+        }
         self.filters = filters
         
         let displayTopPeers: ContactListPresentation.TopPeers
@@ -304,7 +307,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         } else {
             categories.insert(.global)
         }
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, updatedPresentationData: (self.presentationData, self.presentationDataPromise.get()), onlyWriteable: false, categories: categories, addContact: nil, openPeer: { [weak self] peer in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, updatedPresentationData: (self.presentationData, self.presentationDataPromise.get()), onlyWriteable: false, categories: categories, filters: self.filters, addContact: nil, openPeer: { [weak self] peer in
             if let strongSelf = self {
                 var updated = false
                 strongSelf.contactListNode.updateSelectionState { state -> ContactListNodeGroupSelectionState? in

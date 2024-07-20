@@ -394,6 +394,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                     var existingPeerIds = Set<EnginePeer.Id>()
                     var disabledPeerIds = Set<EnginePeer.Id>()
                     var requirePhoneNumbers = false
+                    var excludeBots = false
                     for filter in filters {
                         switch filter {
                             case .excludeSelf:
@@ -404,6 +405,8 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                                 disabledPeerIds = disabledPeerIds.union(peerIds)
                             case .excludeWithoutPhoneNumbers:
                                 requirePhoneNumbers = true
+                            case .excludeBots:
+                                excludeBots = true
                         }
                     }
                     var existingNormalizedPhoneNumbers = Set<DeviceContactNormalizedPhoneNumber>()
@@ -413,10 +416,17 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                             continue
                         }
                         
-                        if case let .user(user) = peer, requirePhoneNumbers {
-                            let phone = user.phone ?? ""
-                            if phone.isEmpty {
-                                continue
+                        if case let .user(user) = peer {
+                            if requirePhoneNumbers {
+                                let phone = user.phone ?? ""
+                                if phone.isEmpty {
+                                    continue
+                                }
+                            }
+                            if excludeBots {
+                                if user.botInfo != nil {
+                                    continue
+                                }
                             }
                         }
                         
@@ -442,11 +452,18 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                                 continue
                             }
 
-                            if let user = peer.peer as? TelegramUser, requirePhoneNumbers {
-                                let phone = user.phone ?? ""
-                                if phone.isEmpty {
-                                    continue
+                            if let user = peer.peer as? TelegramUser {
+                                if requirePhoneNumbers {
+                                    let phone = user.phone ?? ""
+                                    if phone.isEmpty {
+                                        continue
+                                    }
                                 }
+                                if excludeBots {
+                                    if user.botInfo != nil {
+                                        continue
+                                    }
+                                } 
                             }
                             
                             if !existingPeerIds.contains(peer.peer.id) {

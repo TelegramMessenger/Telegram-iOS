@@ -2878,6 +2878,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if isFromCamera && mediaDimensions.width > mediaDimensions.height {
                 mediaEntity.scale = storyDimensions.height / fittedSize.height
             }
+            
+            if case .botPreview = controller.mode {
+                if fittedSize.width / fittedSize.height < storyDimensions.width / storyDimensions.height {
+                    mediaEntity.scale = storyDimensions.height / fittedSize.height
+                }
+            }
              
             let initialValues: MediaEditorValues?
             if case let .draft(draft, _) = subject {

@@ -1499,6 +1499,8 @@ public final class ContactListNode: ASDisplayNode {
                                     disabledPeerIds = disabledPeerIds.union(peerIds)
                                 case .excludeWithoutPhoneNumbers:
                                     requirePhoneNumbers = true
+                                case .excludeBots:
+                                    break
                                 }
                             }
                             
@@ -1786,6 +1788,8 @@ public final class ContactListNode: ASDisplayNode {
                                 disabledPeerIds = disabledPeerIds.union(peerIds)
                             case .excludeWithoutPhoneNumbers:
                                 requirePhoneNumbers = true
+                            case .excludeBots:
+                                break
                             }
                         }
                         
