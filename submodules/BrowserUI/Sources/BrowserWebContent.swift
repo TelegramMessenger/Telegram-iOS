@@ -171,8 +171,6 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView = WKWebView(frame: CGRect(), configuration: configuration)
         self.webView.allowsLinkPreview = true
         
-  
-        
         if #available(iOS 11.0, *) {
             self.webView.scrollView.contentInsetAdjustmentBehavior = .never
         }
@@ -194,6 +192,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         self.webView.allowsBackForwardNavigationGestures = true
         self.webView.scrollView.delegate = self
+        self.webView.scrollView.clipsToBounds = false
+//        self.webView.translatesAutoresizingMaskIntoConstraints = false
         self.webView.navigationDelegate = self
         self.webView.uiDelegate = self
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.title), options: [], context: nil)
@@ -202,6 +202,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.canGoBack), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.canGoForward), options: [], context: nil)
         if #available(iOS 15.0, *) {
+            self.backgroundColor = presentationData.theme.list.plainBackgroundColor
             self.webView.underPageBackgroundColor = presentationData.theme.list.plainBackgroundColor
         }
         if #available(iOS 16.4, *) {
@@ -227,6 +228,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         if #available(iOS 15.0, *) {
+            self.backgroundColor = presentationData.theme.list.plainBackgroundColor
             self.webView.underPageBackgroundColor = presentationData.theme.list.plainBackgroundColor
         }
         if let (size, insets) = self.validLayout {
@@ -399,17 +401,22 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     private var validLayout: (CGSize, UIEdgeInsets)?
     func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ComponentTransition) {
         self.validLayout = (size, insets)
-                
-        var scrollInsets = insets
-        scrollInsets.left = 0.0
-        scrollInsets.right = 0.0
-        scrollInsets.top = 0.0
-        if self.webView.scrollView.contentInset != insets {
-            self.webView.scrollView.contentInset = scrollInsets
-            self.webView.scrollView.scrollIndicatorInsets = scrollInsets
-        }
+        
         self.previousScrollingOffset = ScrollingOffsetState(value: self.webView.scrollView.contentOffset.y, isDraggingOrDecelerating: self.webView.scrollView.isDragging || self.webView.scrollView.isDecelerating)
-        transition.setFrame(view: self.webView, frame: CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top)))
+        
+        let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - insets.bottom))
+        var refresh = false
+        if self.webView.frame.width > 0 && webViewFrame.width != self.webView.frame.width {
+            refresh = true
+        }
+        transition.setFrame(view: self.webView, frame: webViewFrame)
+        
+        if refresh {
+            self.webView.reloadInputViews()
+        }
+        
+        self.webView.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
+        self.webView.scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         
         if let error = self.currentError {
             let errorSize = self.errorView.update(
@@ -749,7 +756,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                 result.insert(Favicon(url: url.absoluteString, dimensions: nil))
             }
             
-            var largestIcon = result.first(where: { $0.url.lowercased().contains(".svg") })
+            var largestIcon: Favicon? // = result.first(where: { $0.url.lowercased().contains(".svg") })
             if largestIcon == nil {
                 largestIcon = result.first
                 for icon in result {

@@ -12537,3 +12537,8 @@ Sorry for the inconvenience.";
 "Conversation.StatusBotSubscribers_any" = "%d users";
 
 "Story.Editor.Add" = "Add";
+
+"WebBrowser.LinkForwardTooltip.Chat.One" = "Link forwarded to **%@**";
+"WebBrowser.LinkForwardTooltip.TwoChats.One" = "Link forwarded to **%@** and **%@**";
+"WebBrowser.LinkForwardTooltip.ManyChats.One" = "Link forwarded to **%@** and %@ others";
+"WebBrowser.LinkForwardTooltip.SavedMessages.One" = "Link forwarded to **Saved Messages**";
