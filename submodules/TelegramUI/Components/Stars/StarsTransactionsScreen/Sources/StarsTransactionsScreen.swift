@@ -857,8 +857,13 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                                 return
                             }
                             
+                            if let navigationController = self.navigationController as? NavigationController {
+                                var controllers = navigationController.viewControllers
+                                controllers = controllers.filter { !($0 is ContactSelectionController) }
+                                navigationController.setViewControllers(controllers, animated: true)
+                            }
+                            
                             Queue.mainQueue().after(2.0) {
-                                //TODO:localize
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 let resultController = UndoOverlayController(
                                     presentationData: presentationData,
@@ -867,8 +872,8 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                                         scale: 0.066,
                                         colors: [:],
                                         title: nil,
-                                        text: "\(stars) Stars sent.",
-                                        customUndoText: "View Chat",
+                                        text: presentationData.strings.Stars_Intro_StarsSent(Int32(stars)),
+                                        customUndoText: presentationData.strings.Stars_Intro_StarsSent_ViewChat,
                                         timeout: nil
                                     ),
                                     elevatedLayout: false,

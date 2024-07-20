@@ -12542,3 +12542,7 @@ Sorry for the inconvenience.";
 "WebBrowser.LinkForwardTooltip.TwoChats.One" = "Link forwarded to **%@** and **%@**";
 "WebBrowser.LinkForwardTooltip.ManyChats.One" = "Link forwarded to **%@** and %@ others";
 "WebBrowser.LinkForwardTooltip.SavedMessages.One" = "Link forwarded to **Saved Messages**";
+
+"Stars.Intro.StarsSent_1" = "%@ Star sent.";
+"Stars.Intro.StarsSent_any" = "%@ Stars sent.";
+"Stars.Intro.StarsSent.ViewChat" = "View Chat";
