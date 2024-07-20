@@ -2274,7 +2274,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 safeInset += layout.safeInsets.right + 16.0
             }
             let navigationHeight = navigationLayout(layout: layout).navigationFrame.height
-            self.selectedButtonNode.frame = CGRect(origin: CGPoint(x: self.view.bounds.width - 54.0 - selectedSize.width - safeInset, y: floorToScreenPixels((navigationHeight - selectedSize.height) / 2.0) + UIScreenPixel), size: selectedSize)
+            self.selectedButtonNode.frame = CGRect(origin: CGPoint(x: self.view.bounds.width - 54.0 - selectedSize.width - safeInset, y: floorToScreenPixels((navigationHeight - selectedSize.height) / 2.0) + 1.0), size: selectedSize)
             
             let isSelectionButtonVisible = count > 0 && self.controllerNode.currentDisplayMode == .all
             transition.updateAlpha(node: self.selectedButtonNode, alpha: isSelectionButtonVisible ? 1.0 : 0.0)
@@ -2677,7 +2677,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             safeInset += layout.safeInsets.right + 16.0
         }
         let navigationHeight = navigationLayout(layout: layout).navigationFrame.height
-        self.selectedButtonNode.frame = CGRect(origin: CGPoint(x: self.view.bounds.width - 54.0 - self.selectedButtonNode.frame.width - safeInset, y: floorToScreenPixels((navigationHeight - self.selectedButtonNode.frame.height) / 2.0) + UIScreenPixel), size: self.selectedButtonNode.frame.size)
+        self.selectedButtonNode.frame = CGRect(origin: CGPoint(x: self.view.bounds.width - 54.0 - self.selectedButtonNode.frame.width - safeInset, y: floorToScreenPixels((navigationHeight - self.selectedButtonNode.frame.height) / 2.0) + 1.0), size: self.selectedButtonNode.frame.size)
     }
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {

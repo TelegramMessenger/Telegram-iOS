@@ -2065,6 +2065,8 @@ public class StickerPickerScreen: ViewController {
         }
         
         case none
+        case notDetermined
+        case notAllowed
         case fetching
         case loaded(StickerPickerScreen.Weather.LoadedWeather)
     }
@@ -2722,66 +2724,64 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
             
         } else {
             maxHorizontalItems = 3
-                        
+            
+            let weatherButtonContent: AnyComponent<Empty>
             switch self.weather {
+            case .notAllowed, .notDetermined:
+                weatherButtonContent = AnyComponent(
+                    InteractiveStickerButtonContent(
+                        context: self.context,
+                        theme: theme,
+                        title: stringForTemperature(24),
+                        iconName: "☀️",
+                        iconFile: self.context.animatedEmojiStickersValue["☀️"]?.first?.file,
+                        useOpaqueTheme: useOpaqueTheme,
+                        tintContainerView: self.tintContainerView
+                    )
+                )
             case let .loaded(weather):
-                items.append(
-                    AnyComponentWithIdentity(
-                        id: "weather",
-                        component: AnyComponent(
-                            CameraButton(
-                                content: AnyComponentWithIdentity(
-                                    id: "weather",
-                                    component: AnyComponent(
-                                        InteractiveStickerButtonContent(
-                                            context: self.context,
-                                            theme: theme,
-                                            title: stringForTemperature(weather.temperature),
-                                            iconName: weather.emoji,
-                                            iconFile: weather.emojiFile,
-                                            useOpaqueTheme: useOpaqueTheme,
-                                            tintContainerView: self.tintContainerView
-                                        )
-                                    )
-                                ),
-                                action: { [weak self] in
-                                    if let self {
-                                        self.weatherAction()
-                                    }
-                                })
-                        )
+                weatherButtonContent = AnyComponent(
+                    InteractiveStickerButtonContent(
+                        context: self.context,
+                        theme: theme,
+                        title: stringForTemperature(weather.temperature),
+                        iconName: weather.emoji,
+                        iconFile: weather.emojiFile,
+                        useOpaqueTheme: useOpaqueTheme,
+                        tintContainerView: self.tintContainerView
                     )
                 )
             case .fetching:
-                items.append(
-                    AnyComponentWithIdentity(
-                        id: "weather",
-                        component: AnyComponent(
-                            CameraButton(
-                                content: AnyComponentWithIdentity(
-                                    id: "weather",
-                                    component: AnyComponent(
-                                        InteractiveStickerButtonContent(
-                                            context: self.context,
-                                            theme: theme,
-                                            title: nil,
-                                            iconName: nil,
-                                            useOpaqueTheme: useOpaqueTheme,
-                                            tintContainerView: self.tintContainerView
-                                        )
-                                    )
-                                ),
-                                action: { [weak self] in
-                                    if let self {
-                                        self.weatherAction()
-                                    }
-                                })
-                        )
+                weatherButtonContent = AnyComponent(
+                    InteractiveStickerButtonContent(
+                        context: self.context,
+                        theme: theme,
+                        title: nil,
+                        iconName: nil,
+                        useOpaqueTheme: useOpaqueTheme,
+                        tintContainerView: self.tintContainerView
                     )
                 )
             default:
                 fatalError()
             }
+            items.append(
+                AnyComponentWithIdentity(
+                    id: "weather",
+                    component: AnyComponent(
+                        CameraButton(
+                            content: AnyComponentWithIdentity(
+                                id: "weather",
+                                component: weatherButtonContent
+                            ),
+                            action: { [weak self] in
+                                if let self {
+                                    self.weatherAction()
+                                }
+                            })
+                    )
+                )
+            )
         }
         
         items.append(

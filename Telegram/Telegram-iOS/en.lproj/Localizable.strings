@@ -12546,3 +12546,9 @@ Sorry for the inconvenience.";
 "Stars.Intro.StarsSent_1" = "%@ Star sent.";
 "Stars.Intro.StarsSent_any" = "%@ Stars sent.";
 "Stars.Intro.StarsSent.ViewChat" = "View Chat";
+
+"Stars.Gift.Received.Title" = "Received Gift";
+"Stars.Gift.Received.Text" = "Use Stars to unlock content and services on Telegram. [See Examples >]()";
+
+"Stars.Gift.Sent.Title" = "Sent Gift";
+"Stars.Gift.Sent.Text" = "With Stars, %@ will be able to unlock content and services on Telegram. [See Examples >]()";
