@@ -559,7 +559,11 @@ private final class CameraContext {
         guard let mainDeviceContext = self.mainDeviceContext else {
             return .complete()
         }
-        mainDeviceContext.device.setTorchMode(self._flashMode)
+        if self.initialConfiguration.isRoundVideo && self.positionValue == .front {
+            
+        } else {
+            mainDeviceContext.device.setTorchMode(self._flashMode)
+        }
         
         let orientation = self.simplePreviewView?.videoPreviewLayer.connection?.videoOrientation ?? .portrait
         if self.initialConfiguration.isRoundVideo {
