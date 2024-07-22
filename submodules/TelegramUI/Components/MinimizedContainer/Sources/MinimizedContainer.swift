@@ -649,7 +649,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             scrollView.isScrollEnabled = false
             scrollView.panGestureRecognizer.isEnabled = false
             scrollView.panGestureRecognizer.isEnabled = true
-            scrollView.contentOffset = contentOffset
+            scrollView.setContentOffset(contentOffset, animated: false)
             self.currentTransition = .collapse
             self.requestUpdate(transition: .animated(duration: 0.4, curve: .customSpring(damping: 180.0, initialVelocity: initialVelocity)))
         }

@@ -5,6 +5,7 @@ import TelegramCore
 import StickerPickerScreen
 import AccountContext
 import DeviceLocationManager
+import DeviceAccess
 
 struct StoryWeather {
     let emoji: String
@@ -50,33 +51,44 @@ func getWeather(context: AccountContext) -> Signal<StickerPickerScreen.Weather, 
     guard let locationManager = context.sharedContext.locationManager else {
         return .single(.none)
     }
-    return .single(.fetching)
-    |> then(
-        currentLocationManagerCoordinate(manager: locationManager, timeout: 5.0)
-        |> mapToSignal { location in
-            if let location {
-                return getWeatherData(context: context, location: location)
-                |> mapToSignal { weather in
-                    if let weather {
-                        let effectiveEmoji = emojiFor(for: weather.emoji.strippedEmoji, date: Date(), location: location)
-                        if let match = context.animatedEmojiStickersValue[effectiveEmoji]?.first {
-                            return .single(.loaded(StickerPickerScreen.Weather.LoadedWeather(
-                                emoji: effectiveEmoji,
-                                emojiFile: match.file,
-                                temperature: weather.temperature
-                            )))
-                        } else {
-                            return .single(.none)
+    
+    return DeviceAccess.authorizationStatus(subject: .location(.send))
+    |> mapToSignal { status in
+        switch status {
+        case .notDetermined:
+            return .single(.notDetermined)
+        case .denied, .restricted, .unreachable:
+            return .single(.notAllowed)
+        case .allowed:
+            return .single(.fetching)
+            |> then(
+                currentLocationManagerCoordinate(manager: locationManager, timeout: 5.0)
+                |> mapToSignal { location in
+                    if let location {
+                        return getWeatherData(context: context, location: location)
+                        |> mapToSignal { weather in
+                            if let weather {
+                                let effectiveEmoji = emojiFor(for: weather.emoji.strippedEmoji, date: Date(), location: location)
+                                if let match = context.animatedEmojiStickersValue[effectiveEmoji]?.first {
+                                    return .single(.loaded(StickerPickerScreen.Weather.LoadedWeather(
+                                        emoji: effectiveEmoji,
+                                        emojiFile: match.file,
+                                        temperature: weather.temperature
+                                    )))
+                                } else {
+                                    return .single(.none)
+                                }
+                            } else {
+                                return .single(.none)
+                            }
                         }
                     } else {
                         return .single(.none)
                     }
                 }
-            } else {
-                return .single(.none)
-            }
+            )
         }
-    )
+    }
 }
 
 private struct WeatherBotConfiguration {

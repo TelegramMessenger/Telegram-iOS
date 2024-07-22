@@ -2014,7 +2014,7 @@ final class ShareWithPeersScreenComponent: Component {
                     hasCategories = true
                 }
                 let sendAsPeersCount = component.stateContext.stateValue?.sendAsPeers.count ?? 1
-                if sendAsPeersCount > 1 && !"".isEmpty {
+                if sendAsPeersCount > 1 {
                     hasChannels = true
                 }
                 if let currentHasChannels = self.currentHasChannels, currentHasChannels != hasChannels {
@@ -2618,7 +2618,11 @@ final class ShareWithPeersScreenComponent: Component {
                         inset += 10.0 + environment.safeInsets.bottom + 50.0 + footersTotalHeight
                     } else {
                         if !hasCategories {
-                            inset = 314.0
+                            if self.selectedOptions.contains(.pin) {
+                                inset = 422.0
+                            } else {
+                                inset = 314.0
+                            }
                             inset += 10.0 + environment.safeInsets.bottom + 50.0 + footersTotalHeight
                         } else {
                             if hasChannels {

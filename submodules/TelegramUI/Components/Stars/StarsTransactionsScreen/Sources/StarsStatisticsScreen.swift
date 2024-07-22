@@ -466,8 +466,10 @@ final class StarsStatisticsScreenComponent: Component {
                                 return nil
                             }
                         },
-                        tapAction: { attributes, _ in
-                            component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_BotRevenue_Withdraw_Info_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                        tapAction: { [weak self] attributes, _ in
+                            if let controller = self?.controller?() as? StarsStatisticsScreen, let navigationController = controller.navigationController as? NavigationController {
+                                component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_BotRevenue_Withdraw_Info_URL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                            }
                         }
                     )),
                     items: [AnyComponentWithIdentity(id: 0, component: AnyComponent(

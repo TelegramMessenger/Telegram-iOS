@@ -1183,6 +1183,8 @@ public class AttachmentController: ViewController, MinimizableController {
         self.blocksBackgroundWhenInOverlay = true
         self.acceptsFocusWhenInOverlay = true
         
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.context.sharedContext.currentPresentationData.with { $0 }.strings.Common_Back, style: .plain, target: nil, action: nil)
+        
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
                 strongSelf.node.scrollToTop()

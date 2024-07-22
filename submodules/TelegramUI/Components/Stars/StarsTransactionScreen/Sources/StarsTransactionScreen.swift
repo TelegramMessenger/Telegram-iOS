@@ -200,8 +200,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             switch subject {
             case let .transaction(transaction, parentPeer):
                 if transaction.flags.contains(.isGift) {
-                    titleText = "Received Gift"
-                    descriptionText = "Use Stars to unlock content and services on Telegram. [See Examples >]()"
+                    titleText = strings.Stars_Gift_Received_Title
+                    descriptionText = strings.Stars_Gift_Received_Text
                     count = transaction.count
                     countOnTop = true
                     transactionId = transaction.id
@@ -218,7 +218,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     photo = nil
                     isRefund = false
                     isGift = true
-                    delayedCloseOnOpenPeer = false
                 } else {
                     switch transaction.peer {
                     case let .peer(peer):
@@ -320,9 +319,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 delayedCloseOnOpenPeer = false
             case let .gift(message):
                 let incoming = message.flags.contains(.Incoming)
-                titleText = incoming ? "Received Gift" : "Sent Gift"
+                titleText = incoming ? strings.Stars_Gift_Received_Title : strings.Stars_Gift_Sent_Title
                 let peerName = state.peerMap[message.id.peerId]?.compactDisplayTitle ?? ""
-                descriptionText = incoming ? "Use Stars to unlock content and services on Telegram. [See Examples >]()" : "With Stars, \(peerName) will be able to unlock content and services on Telegram. [See Examples >]()"
+                descriptionText = incoming ? strings.Stars_Gift_Received_Text : strings.Stars_Gift_Sent_Text(peerName).string
                 if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .giftStars(_, _, countValue, _, _, _) = action.action {
                     count = countValue
                     if !incoming {
@@ -346,7 +345,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 photo = nil
                 isRefund = false
                 isGift = true
-                delayedCloseOnOpenPeer = false
             }
             if let spaceRegex {
                 let nsRange = NSRange(descriptionText.startIndex..., in: descriptionText)
@@ -484,10 +482,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                                 )
                             ),
                             action: {
-                                if toPeer.id.namespace == Namespaces.Peer.CloudUser && toPeer.id.id._internalGetInt64Value() == 777000 {
-                                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                    component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_Transaction_FragmentUnknown_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
-                                } else if delayedCloseOnOpenPeer {
+                                if delayedCloseOnOpenPeer {
                                     component.openPeer(toPeer)
                                     Queue.mainQueue().after(1.0, {
                                         component.cancel(false)
@@ -607,8 +602,11 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         }
                     },
                     tapAction: { attributes, _ in
-                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                        component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_Transaction_Terms_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                        if let controller = controller() as? StarsTransactionScreen, let navigationController = controller.navigationController as? NavigationController {
+                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                            component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_Transaction_Terms_URL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                            component.cancel(true)
+                        }
                     }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),

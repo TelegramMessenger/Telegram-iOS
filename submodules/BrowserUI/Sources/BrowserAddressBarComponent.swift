@@ -7,33 +7,39 @@ import TelegramPresentationData
 import AccountContext
 import BundleIconComponent
 
-final class SearchBarContentComponent: Component {
+final class AddressBarContentComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let url: String
     let performAction: ActionSlot<BrowserScreen.Action>
     
     init(
         theme: PresentationTheme,
         strings: PresentationStrings,
+        url: String,
         performAction: ActionSlot<BrowserScreen.Action>
     ) {
         self.theme = theme
         self.strings = strings
+        self.url = url
         self.performAction = performAction
     }
     
-    static func ==(lhs: SearchBarContentComponent, rhs: SearchBarContentComponent) -> Bool {
+    static func ==(lhs: AddressBarContentComponent, rhs: AddressBarContentComponent) -> Bool {
         if lhs.theme !== rhs.theme {
             return false
         }
         if lhs.strings !== rhs.strings {
             return false
         }
+        if lhs.url != rhs.url {
+            return false
+        }
         return true
     }
 
     final class View: UIView, UITextFieldDelegate {
-        private final class SearchTextField: UITextField {
+        private final class TextField: UITextField {
             override func textRect(forBounds bounds: CGRect) -> CGRect {
                 return bounds.integral
             }
@@ -75,12 +81,12 @@ final class SearchBarContentComponent: Component {
         private var placeholderContent = ComponentView<Empty>()
         
         private var textFrame: CGRect?
-        private var textField: SearchTextField?
+        private var textField: TextField?
         
         private var tapRecognizer: UITapGestureRecognizer?
         
         private var params: Params?
-        private var component: SearchBarContentComponent?
+        private var component: AddressBarContentComponent?
         
         public var wantsDisplayBelowKeyboard: Bool {
             return self.textField != nil
@@ -160,7 +166,7 @@ final class SearchBarContentComponent: Component {
                 let backgroundFrame = self.backgroundLayer.frame
                 let textFieldFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textFrame.minX, height: backgroundFrame.height))
                 
-                let textField = SearchTextField(frame: textFieldFrame)
+                let textField = TextField(frame: textFieldFrame)
                 textField.autocorrectionType = .no
                 textField.returnKeyType = .search
                 self.textField = textField
@@ -240,11 +246,10 @@ final class SearchBarContentComponent: Component {
             }
         }
         
-        func update(component: SearchBarContentComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+        func update(component: AddressBarContentComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             self.update(theme: component.theme, strings: component.strings, size: availableSize, transition: transition)
-            self.activateTextInput()
             
             return availableSize
         }

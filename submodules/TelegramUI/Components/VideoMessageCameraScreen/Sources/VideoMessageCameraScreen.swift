@@ -81,7 +81,11 @@ struct CameraState: Equatable {
     }
 
     func updatedRecording(_ recording: Recording) -> CameraState {
-        return CameraState(position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, flashTintSize: self.flashTintSize, recording: recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled, isViewOnceEnabled: self.isViewOnceEnabled)
+        var flashModeDidChange = self.flashModeDidChange
+        if case .none = self.recording {
+            flashModeDidChange = false
+        }
+        return CameraState(position: self.position, flashMode: self.flashMode, flashModeDidChange: flashModeDidChange, flashTint: self.flashTint, flashTintSize: self.flashTintSize, recording: recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled, isViewOnceEnabled: self.isViewOnceEnabled)
     }
     
     func updatedDuration(_ duration: Double) -> CameraState {
@@ -121,6 +125,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
     let push: (ViewController) -> Void
     let startRecording: ActionSlot<Void>
     let stopRecording: ActionSlot<Void>
+    let cancelRecording: ActionSlot<Void>
     let completion: ActionSlot<VideoMessageCameraScreen.CaptureResult>
     
     init(
@@ -135,6 +140,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
         push: @escaping (ViewController) -> Void,
         startRecording: ActionSlot<Void>,
         stopRecording: ActionSlot<Void>,
+        cancelRecording: ActionSlot<Void>,
         completion: ActionSlot<VideoMessageCameraScreen.CaptureResult>
     ) {
         self.context = context
@@ -148,6 +154,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
         self.push = push
         self.startRecording = startRecording
         self.stopRecording = stopRecording
+        self.cancelRecording = cancelRecording
         self.completion = completion
     }
     
@@ -216,6 +223,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
         private let present: (ViewController) -> Void
         private let startRecording: ActionSlot<Void>
         private let stopRecording: ActionSlot<Void>
+        private let cancelRecording: ActionSlot<Void>
         private let completion: ActionSlot<VideoMessageCameraScreen.CaptureResult>
         private let getController: () -> VideoMessageCameraScreen?
         
@@ -234,6 +242,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             present: @escaping (ViewController) -> Void,
             startRecording: ActionSlot<Void>,
             stopRecording: ActionSlot<Void>,
+            cancelRecording: ActionSlot<Void>,
             completion: ActionSlot<VideoMessageCameraScreen.CaptureResult>,
             getController: @escaping () -> VideoMessageCameraScreen? = {
                 return nil
@@ -243,6 +252,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             self.present = present
             self.startRecording = startRecording
             self.stopRecording = stopRecording
+            self.cancelRecording = cancelRecording
             self.completion = completion
             self.getController = getController
             
@@ -259,6 +269,10 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             })
             self.stopRecording.connect({ [weak self] _ in
                 self?.stopVideoRecording()
+            })
+            
+            self.cancelRecording.connect({ [weak self] _ in
+                self?.cancelVideoRecording()
             })
         }
         
@@ -284,19 +298,28 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             }
             self.lastFlipTimestamp = currentTimestamp
             
+            let isFrontCamera = controller.cameraState.position == .back
             camera.togglePosition()
-                        
+                                    
             self.hapticFeedback.impact(.veryLight)
+            
+            self.updateScreenBrightness(isFrontCamera: isFrontCamera)
+            
+            if isFrontCamera {
+                camera.setTorchActive(false)
+            } else {
+                camera.setTorchActive(controller.cameraState.flashMode == .on)
+            }
         }
         
         func toggleFlashMode() {
             guard let controller = self.getController(), let camera = controller.camera else {
                 return
             }
-            var flashOn = false
+            var isFlashOn = false
             switch controller.cameraState.flashMode {
             case .off:
-                flashOn = true
+                isFlashOn = true
                 camera.setFlashMode(.on)
             case .on:
                 camera.setFlashMode(.off)
@@ -305,22 +328,29 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             }
             self.hapticFeedback.impact(.light)
             
-            self.updateScreenBrightness(flashOn: flashOn)
+            self.updateScreenBrightness(isFlashOn: isFlashOn)
+            
+            if controller.cameraState.position == .back {
+                if isFlashOn {
+                    camera.setTorchActive(true)
+                } else {
+                    camera.setTorchActive(false)
+                }
+            }
         }
         
         private var initialBrightness: CGFloat?
         private var brightnessArguments: (Double, Double, CGFloat, CGFloat)?
         private var brightnessAnimator: ConstantDisplayLinkAnimator?
         
-        func updateScreenBrightness(flashOn: Bool?) {
+        func updateScreenBrightness(isFrontCamera: Bool? = nil, isFlashOn: Bool? = nil) {
             guard let controller = self.getController() else {
                 return
             }
-            let isFrontCamera = controller.cameraState.position == .front
-            let isVideo = true
-            let isFlashOn = flashOn ?? (controller.cameraState.flashMode == .on)
+            let isFrontCamera = isFrontCamera ?? (controller.cameraState.position == .front)
+            let isFlashOn = isFlashOn ?? (controller.cameraState.flashMode == .on)
             
-            if isFrontCamera && isVideo && isFlashOn {
+            if isFrontCamera && isFlashOn {
                 if self.initialBrightness == nil {
                     self.initialBrightness = UIScreen.main.brightness
                     self.brightnessArguments = (CACurrentMediaTime(), 0.2, UIScreen.main.brightness, 1.0)
@@ -382,11 +412,11 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             let isFirstRecording = initialDuration.isZero
             controller.node.resumeCameraCapture()
             
-            controller.updatePreviewState({ _ in return nil}, transition: .spring(duration: 0.4))
-            
             controller.node.dismissAllTooltips()
             controller.updateCameraState({ $0.updatedRecording(pressing ? .holding : .handsFree).updatedDuration(initialDuration) }, transition: .spring(duration: 0.4))
         
+            controller.updatePreviewState({ _ in return nil }, transition: .spring(duration: 0.4))
+            
             controller.node.withReadyCamera(isFirstTime: !controller.node.cameraIsActive) {
                 Queue.mainQueue().after(0.15) {
                     self.resultDisposable.set((camera.startRecording()
@@ -411,6 +441,10 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             
             if initialDuration > 0.0 {
                 controller.onResume()
+            }
+            
+            if controller.cameraState.position == .front && controller.cameraState.flashMode == .on {
+                self.updateScreenBrightness()
             }
         }
         
@@ -439,7 +473,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                 }
             }))
             
-            if case .front = controller.cameraState.position, let initialBrightness = self.initialBrightness {
+            if let initialBrightness = self.initialBrightness {
                 self.initialBrightness = nil
                 self.brightnessArguments = (CACurrentMediaTime(), 0.2, UIScreen.main.brightness, initialBrightness)
                 self.animateBrightnessChange()
@@ -453,6 +487,14 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             controller.updateCameraState({ $0.updatedRecording(.handsFree) }, transition: .spring(duration: 0.4))
         }
         
+        func cancelVideoRecording() {
+            if let initialBrightness = self.initialBrightness {
+                self.initialBrightness = nil
+                self.brightnessArguments = (CACurrentMediaTime(), 0.2, UIScreen.main.brightness, initialBrightness)
+                self.animateBrightnessChange()
+            }
+        }
+        
         func updateZoom(fraction: CGFloat) {
             guard let camera = self.getController()?.camera else {
                 return
@@ -462,7 +504,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, present: self.present, startRecording: self.startRecording, stopRecording: self.stopRecording, completion: self.completion, getController: self.getController)
+        return State(context: self.context, present: self.present, startRecording: self.startRecording, stopRecording: self.stopRecording, cancelRecording: self.cancelRecording, completion: self.completion, getController: self.getController)
     }
     
     static var body: Body {
@@ -517,7 +559,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             }
             
             if !component.isPreviewing {
-                if case .on = component.cameraState.flashMode {
+                if case .on = component.cameraState.flashMode, case .front = component.cameraState.position {
                     let frontFlash = frontFlash.update(
                         component: Image(image: state.image(.flashImage, theme: environment.theme), tintColor: component.cameraState.flashTint.color),
                         availableSize: availableSize,
@@ -611,7 +653,9 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                         action: { [weak state] in
                             if let state {
                                 state.toggleFlashMode()
-                                flashAction.invoke(Void())
+                                Queue.mainQueue().justDispatch {
+                                    flashAction.invoke(Void())
+                                }
                             }
                         }
                     ),
@@ -801,6 +845,7 @@ public class VideoMessageCameraScreen: ViewController {
         
         fileprivate let startRecording = ActionSlot<Void>()
         fileprivate let stopRecording = ActionSlot<Void>()
+        fileprivate let cancelRecording = ActionSlot<Void>()
         private let completion = ActionSlot<VideoMessageCameraScreen.CaptureResult>()
                 
         var cameraState: CameraState {
@@ -1432,6 +1477,7 @@ public class VideoMessageCameraScreen: ViewController {
                         },
                         startRecording: self.startRecording,
                         stopRecording: self.stopRecording,
+                        cancelRecording: self.cancelRecording,
                         completion: self.completion
                     )
                 ),
@@ -1894,6 +1940,8 @@ public class VideoMessageCameraScreen: ViewController {
     }
     
     public func discardVideo() {
+        self.node.cancelRecording.invoke(Void())
+        
         self.requestDismiss(animated: true)
     }
     

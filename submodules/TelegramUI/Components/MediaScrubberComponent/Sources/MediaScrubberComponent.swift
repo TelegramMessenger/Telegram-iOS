@@ -88,6 +88,7 @@ public final class MediaScrubberComponent: Component {
     let portalView: PortalView?
     
     let positionUpdated: (Double, Bool) -> Void
+    let coverPositionUpdated: (Double, Bool, @escaping () -> Void) -> Void
     let trackTrimUpdated: (Int32, Double, Double, Bool, Bool) -> Void
     let trackOffsetUpdated: (Int32, Double, Bool) -> Void
     let trackLongPressed: (Int32, UIView) -> Void
@@ -104,6 +105,7 @@ public final class MediaScrubberComponent: Component {
         tracks: [Track],
         portalView: PortalView? = nil,
         positionUpdated: @escaping (Double, Bool) -> Void,
+        coverPositionUpdated: @escaping (Double, Bool, @escaping () -> Void) -> Void = { _, _, _ in },
         trackTrimUpdated: @escaping (Int32, Double, Double, Bool, Bool) -> Void,
         trackOffsetUpdated: @escaping (Int32, Double, Bool) -> Void,
         trackLongPressed: @escaping (Int32, UIView) -> Void
@@ -119,6 +121,7 @@ public final class MediaScrubberComponent: Component {
         self.tracks = tracks
         self.portalView = portalView
         self.positionUpdated = positionUpdated
+        self.coverPositionUpdated = coverPositionUpdated
         self.trackTrimUpdated = trackTrimUpdated
         self.trackOffsetUpdated = trackOffsetUpdated
         self.trackLongPressed = trackLongPressed
@@ -164,6 +167,7 @@ public final class MediaScrubberComponent: Component {
     
         private var selectedTrackId: Int32 = 0
         private var isPanningCursor = false
+        private var ignoreCursorPositionUpdate = false
         
         private var scrubberSize: CGSize?
         
@@ -327,10 +331,18 @@ public final class MediaScrubberComponent: Component {
             switch gestureRecognizer.state {
             case .began, .changed:
                 self.isPanningCursor = true
-                component.positionUpdated(position, false)
+                if case .cover = component.style {
+                    component.coverPositionUpdated(position, false, {})
+                } else {
+                    component.positionUpdated(position, false)
+                }
             case .ended, .cancelled:
                 self.isPanningCursor = false
-                component.positionUpdated(position, true)
+                if case .cover = component.style {
+                    component.coverPositionUpdated(position, false, {})
+                } else {
+                    component.positionUpdated(position, true)
+                }
             default:
                 break
             }
@@ -345,7 +357,7 @@ public final class MediaScrubberComponent: Component {
             var y: CGFloat = -5.0 - UIScreenPixel
             if let component = self.component, case .cover = component.style {
                 cursorWidth = 30.0 + 12.0
-                cursorMargin = 0.0
+                cursorMargin = handleWidth
                 height = 50.0
                 isCover = true
                 y += 1.0
@@ -472,6 +484,23 @@ public final class MediaScrubberComponent: Component {
                 } else {
                     trackTransition = .immediate
                     trackView = TrackView()
+                    trackView.onTap = { [weak self] fraction in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        var position = max(self.startPosition, min(self.endPosition, self.trimDuration * fraction))
+                        if let offset = self.mainAudioTrackOffset {
+                            position += offset
+                        }
+                        self.ignoreCursorPositionUpdate = true
+                        component.coverPositionUpdated(position, true, { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.ignoreCursorPositionUpdate = false
+                            self.state?.updated(transition: .immediate)
+                        })
+                    }
                     trackView.onSelection = { [weak self] id in
                         guard let self else {
                             return
@@ -659,13 +688,15 @@ public final class MediaScrubberComponent: Component {
                 self.cursorPositionAnimation = nil
                 self.cursorDisplayLink?.isPaused = true
                 
-                var cursorPosition = component.position
-                if let offset = self.mainAudioTrackOffset {
-                    cursorPosition -= offset
+                if !self.ignoreCursorPositionUpdate {
+                    var cursorPosition = component.position
+                    if let offset = self.mainAudioTrackOffset {
+                        cursorPosition -= offset
+                    }
+                    let cursorFrame = cursorFrame(size: scrubberSize, height: self.effectiveCursorHeight, position: cursorPosition, duration: trimDuration)
+                    transition.setFrame(view: self.cursorView, frame: cursorFrame)
+                    transition.setFrame(view: self.cursorContentView, frame: cursorFrame.insetBy(dx: 6.0, dy: 2.0).offsetBy(dx: -1.0  - UIScreenPixel, dy: 0.0))
                 }
-                let cursorFrame = cursorFrame(size: scrubberSize, height: self.effectiveCursorHeight, position: cursorPosition, duration: trimDuration)
-                transition.setFrame(view: self.cursorView, frame: cursorFrame)
-                transition.setFrame(view: self.cursorContentView, frame: cursorFrame.insetBy(dx: 6.0, dy: 2.0).offsetBy(dx: -1.0  - UIScreenPixel, dy: 0.0))
             } else {
                 if let (_, _, end, ended) = self.cursorPositionAnimation {
                     if ended, component.position >= self.startPosition && component.position < end - 1.0 {
@@ -718,6 +749,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     fileprivate var videoOpaqueFrameLayers: [VideoFrameLayer] = []
     
     var onSelection: (Int32) -> Void = { _ in }
+    var onTap: (CGFloat) -> Void = { _ in }
     var offsetUpdated: (Double, Bool) -> Void = { _, _ in }
     var updated: (ComponentTransition) -> Void = { _ in }
     
@@ -794,10 +826,15 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     }
     
     @objc private func handleTap(_ gestureRecognizer: UITapGestureRecognizer) {
-        guard let (track, _, _, _) = self.params else {
+        guard let params = self.params else {
             return
         }
-        self.onSelection(track.id)
+        if case .cover = params.style {
+            let location = gestureRecognizer.location(in: self)
+            self.onTap(location.x / self.frame.width)
+        } else {
+            self.onSelection(params.track.id)
+        }
     }
     
     private func updateTrackOffset(done: Bool) {
@@ -841,6 +878,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     }
     
     private var params: (
+        style: MediaScrubberComponent.Style,
         track: MediaScrubberComponent.Track,
         isSelected: Bool,
         availableSize: CGSize,
@@ -889,7 +927,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         transition: ComponentTransition
     ) -> CGSize {
         let previousParams = self.params
-        self.params = (track, isSelected, availableSize, duration)
+        self.params = (style, track, isSelected, availableSize, duration)
         
         let fullTrackHeight: CGFloat
         let framesCornerRadius: CGFloat

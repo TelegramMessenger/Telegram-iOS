@@ -109,7 +109,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                         component: AnyComponent(
                             Button(
                                 content: AnyComponent(
-                                    MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Common_Close, font: Font.regular(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor, paragraphAlignment: .center)), horizontalAlignment: .left, maximumNumberOfLines: 1)
+                                    MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.WebBrowser_Done, font: Font.regular(17.0), textColor: environment.theme.rootController.navigationBar.accentTextColor, paragraphAlignment: .center)), horizontalAlignment: .left, maximumNumberOfLines: 1)
                                 ),
                                 action: {
                                     performAction.invoke(.close)
@@ -119,7 +119,6 @@ private final class BrowserScreenComponent: CombinedComponent {
                     )
                 ]
                 
-                let isLoading = (context.component.contentState?.estimatedProgress ?? 1.0) < 1.0
                 navigationRightItems = [
                     AnyComponentWithIdentity(
                         id: "settings",
@@ -130,7 +129,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                                         content: LottieComponent.AppBundleContent(
                                             name: "anim_moredots"
                                         ),
-                                        color: environment.theme.rootController.navigationBar.primaryTextColor,
+                                        color: environment.theme.rootController.navigationBar.accentTextColor,
                                         size: CGSize(width: 30.0, height: 30.0)
                                     )
                                 ),
@@ -142,27 +141,6 @@ private final class BrowserScreenComponent: CombinedComponent {
                         )
                     )
                 ]
-                if case .webPage = context.component.contentState?.contentType {
-                    navigationRightItems.insert(
-                        AnyComponentWithIdentity(
-                            id: isLoading ? "stop" : "reload",
-                            component: AnyComponent(
-                                ReferenceButtonComponent(
-                                    content: AnyComponent(
-                                        BundleIconComponent(
-                                            name: isLoading ? "Instant View/CloseIcon" : "Chat/Context Menu/Reload",
-                                            tintColor: environment.theme.rootController.navigationBar.primaryTextColor
-                                        )
-                                    ),
-                                    action: {
-                                        performAction.invoke(isLoading ? .stop : .reload)
-                                    }
-                                )
-                            )
-                        ),
-                        at: 0
-                    )
-                }
             }
             
             let collapseFraction = context.component.presentationState.isSearching ? 0.0 : context.component.panelCollapseFraction
@@ -211,6 +189,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                     id: "navigation",
                     component: AnyComponent(
                         NavigationToolbarContentComponent(
+                            accentColor: environment.theme.rootController.navigationBar.accentTextColor,
                             textColor: environment.theme.rootController.navigationBar.primaryTextColor,
                             canGoBack: context.component.contentState?.canGoBack ?? false,
                             canGoForward: context.component.contentState?.canGoForward ?? false,
@@ -281,6 +260,8 @@ public class BrowserScreen: ViewController, MinimizableController {
         case increaseFontSize
         case resetFontSize
         case updateFontIsSerif(Bool)
+        case addBookmark
+        case openBookmarks
     }
 
     fileprivate final class Node: ViewControllerTracingNode {
@@ -340,6 +321,62 @@ public class BrowserScreen: ViewController, MinimizableController {
                 case .share:
                     let presentationData = self.presentationData
                     let shareController = ShareController(context: self.context, subject: .url(url))
+                    shareController.completed = { [weak self] peerIds in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let _ = (strongSelf.context.engine.data.get(
+                            EngineDataList(
+                                peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                            )
+                        )
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] peerList in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            let peers = peerList.compactMap { $0 }
+                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                            
+                            let text: String
+                            var savedMessages = false
+                            if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
+                                text = presentationData.strings.WebBrowser_LinkForwardTooltip_SavedMessages_One
+                                savedMessages = true
+                            } else {
+                                if peers.count == 1, let peer = peers.first {
+                                    let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.WebBrowser_LinkForwardTooltip_Chat_One(peerName).string
+                                } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                    let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.WebBrowser_LinkForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
+                                } else if let peer = peers.first {
+                                    let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.WebBrowser_LinkForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
+                                } else {
+                                    text = ""
+                                }
+                            }
+                            
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
+                                if savedMessages, let self, action == .info {
+                                    let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+                                             |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                        guard let self, let peer else {
+                                            return
+                                        }
+                                        guard let navigationController = self.controller?.navigationController as? NavigationController else {
+                                            return
+                                        }
+                                        self.minimize()
+                                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), forceOpenChat: true))
+                                    })
+                                }
+                                return false
+                            }), in: .current)
+                        })
+                    }
                     shareController.actionCompleted = { [weak self] in
                         self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     }
@@ -446,6 +483,12 @@ public class BrowserScreen: ViewController, MinimizableController {
                         return updatedState
                     })
                     content.updateFontState(self.presentationState.fontState)
+                case .addBookmark:
+                    if let content = self.content.last {
+                        self.addBookmark(content.currentState.url)
+                    }
+                case .openBookmarks:
+                    break
                 }
             }
             
@@ -551,6 +594,43 @@ public class BrowserScreen: ViewController, MinimizableController {
             }
             self.minimize()
             self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), animated: true))
+        }
+        
+        func addBookmark(_ url: String) {
+            let _ = enqueueMessages(
+                account: self.context.account,
+                peerId: self.context.account.peerId,
+                messages: [.message(
+                    text: url,
+                    attributes: [],
+                    inlineStickers: [:],
+                    mediaReference: nil,
+                    threadId: nil,
+                    replyToMessageId: nil,
+                    replyToStoryId: nil,
+                    localGroupingKey: nil,
+                    correlationId: nil,
+                    bubbleUpEmojiOrStickersets: []
+                )]
+            ).start()
+            
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: presentationData.strings.WebBrowser_LinkAddedToBookmarks), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
+                if let self, action == .info {
+                    let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+                        |> deliverOnMainQueue).start(next: { [weak self] peer in
+                        guard let self, let peer else {
+                            return
+                        }
+                        guard let navigationController = self.controller?.navigationController as? NavigationController else {
+                            return
+                        }
+                        self.minimize()
+                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), forceOpenChat: true))
+                    })
+                }
+                return false
+            }), in: .current)
         }
         
         private func setupContentStateUpdates() {
@@ -712,16 +792,29 @@ public class BrowserScreen: ViewController, MinimizableController {
                     .action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontSanFrancisco, icon: forceIsSerif ? emptyIcon : checkIcon, action: { (controller, action) in
                         performAction.invoke(.updateFontIsSerif(false))
                         action(.default)
-                    })), .action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontNewYork, textFont: .custom(font: Font.with(size: 17.0, design: .serif, traits: []), height: nil, verticalOffset: nil), icon: forceIsSerif ? checkIcon : emptyIcon, action: { (controller, action) in
+                    })), 
+                    .action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontNewYork, textFont: .custom(font: Font.with(size: 17.0, design: .serif, traits: []), height: nil, verticalOffset: nil), icon: forceIsSerif ? checkIcon : emptyIcon, action: { (controller, action) in
                         performAction.invoke(.updateFontIsSerif(true))
                         action(.default)
                     })),
                     .separator,
+                    .action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_Reload, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Reload"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                        performAction.invoke(.reload)
+                        action(.default)
+                    })),
                     .action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_Search, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Search"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
                         performAction.invoke(.updateSearchActive(true))
                         action(.default)
                     })),
-                    .action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_OpenInBrowser(openInTitle).string, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Browser"), color: theme.contextMenu.primaryColor) }, action: { [weak self] (controller, action) in
+                    .action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_Share, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                        performAction.invoke(.share)
+                        action(.default)
+                    })),
+                    .action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_AddBookmark, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                        performAction.invoke(.addBookmark)
+                        action(.default)
+                    })),
+                    .action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_OpenInBrowser(openInTitle).string, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Browser"), color: theme.contextMenu.primaryColor) }, action: { [weak self] (controller, action) in
                         if let self {
                             self.context.sharedContext.applicationBindings.openUrl(openInUrl)
                         }
@@ -1018,7 +1111,7 @@ public class BrowserScreen: ViewController, MinimizableController {
         }
         return nil
     }
-    
+        
     public var minimizedProgress: Float? {
         if let contentState = self.node.contentState {
             return Float(contentState.readingProgress)
@@ -1091,7 +1184,7 @@ private final class BrowserContentComponent: Component {
             
             let collapsedHeight: CGFloat = 24.0
             let topInset: CGFloat = component.insets.top + component.navigationBarHeight * (1.0 - component.scrollingPanelOffsetFraction) + collapsedHeight * component.scrollingPanelOffsetFraction
-            let bottomInset = 49.0 + component.insets.bottom
+            let bottomInset = (49.0 + component.insets.bottom) * (1.0 - component.scrollingPanelOffsetFraction)
             component.content.updateLayout(size: availableSize, insets: UIEdgeInsets(top: topInset, left: component.insets.left, bottom: bottomInset, right: component.insets.right), transition: transition)
             transition.setFrame(view: component.content, frame: CGRect(origin: .zero, size: availableSize))
             
