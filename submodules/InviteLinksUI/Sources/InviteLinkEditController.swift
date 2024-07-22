@@ -1,4 +1,4 @@
-import Foundation
+wimport Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -460,7 +460,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
     let actionsDisposable = DisposableSet()
 
     let initialState: InviteLinkEditControllerState
-    if let invite = invite, case let .link(_, title, _, requestApproval, _, _, _, _, expireDate, usageLimit, count, _) = invite {
+    if let invite = invite, case let .link(_, title, _, requestApproval, _, _, _, _, expireDate, usageLimit, count, _, _) = invite {
         var usageLimit = usageLimit
         if let limit = usageLimit, let count = count, count > 0 {
             usageLimit = limit - count
@@ -593,7 +593,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
             let requestNeeded = state.requestApproval && !isPublic
             
             if invite == nil {
-                let _ = (context.engine.peers.createPeerExportedInvitation(peerId: peerId, title: title, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
+                let _ = (context.engine.peers.createPeerExportedInvitation(peerId: peerId, title: title, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded, subscriptionPricing: nil)
                 |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                 |> deliverOnMainQueue).start(next: { invite in
                     completion?(invite)
@@ -606,7 +606,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
                     }
                     presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 })
-            } else if let initialInvite = invite, case let .link(link, _, _, initialRequestApproval, _, _, _, _, initialExpireDate, initialUsageLimit, _, _) = initialInvite {
+            } else if let initialInvite = invite, case let .link(link, _, _, initialRequestApproval, _, _, _, _, initialExpireDate, initialUsageLimit, _, _, _) = initialInvite {
                 if initialExpireDate == expireDate && initialUsageLimit == usageLimit && initialRequestApproval == requestNeeded {
                     completion?(initialInvite)
                     dismissImpl?()

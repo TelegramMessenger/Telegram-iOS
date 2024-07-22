@@ -5,11 +5,11 @@ import Postbox
 public extension TelegramEngine {
     final class Payments {
         private let account: Account
-
+        
         init(account: Account) {
             self.account = account
         }
-
+        
         public func getBankCardInfo(cardNumber: String) -> Signal<BankCardInfo?, NoError> {
             return _internal_getBankCardInfo(account: self.account, cardNumber: cardNumber)
         }
@@ -25,7 +25,7 @@ public extension TelegramEngine {
         public func validateBotPaymentForm(saveInfo: Bool, source: BotPaymentInvoiceSource, formInfo: BotPaymentRequestedInfo) -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError> {
             return _internal_validateBotPaymentForm(account: self.account, saveInfo: saveInfo, source: source, formInfo: formInfo)
         }
-
+        
         public func sendBotPaymentForm(source: BotPaymentInvoiceSource, formId: Int64, validatedInfoId: String?, shippingOptionId: String?, tipAmount: Int64?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
             return _internal_sendBotPaymentForm(account: self.account, formId: formId, source: source, validatedInfoId: validatedInfoId, shippingOptionId: shippingOptionId, tipAmount: tipAmount, credentials: credentials)
         }
@@ -33,7 +33,7 @@ public extension TelegramEngine {
         public func requestBotPaymentReceipt(messageId: MessageId) -> Signal<BotPaymentReceipt, RequestBotPaymentReceiptError> {
             return _internal_requestBotPaymentReceipt(account: self.account, messageId: messageId)
         }
-
+        
         public func clearBotPaymentInfo(info: BotPaymentInfo) -> Signal<Void, NoError> {
             return _internal_clearBotPaymentInfo(network: self.account.network, info: info)
         }
@@ -88,6 +88,10 @@ public extension TelegramEngine {
         
         public func sendStarsPaymentForm(formId: Int64, source: BotPaymentInvoiceSource) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
             return _internal_sendStarsPaymentForm(account: self.account, formId: formId, source: source)
+        }
+        
+        public func cancelStarsSubscription(subscriptionId: String, reason: String) -> Signal<Never, CancelStarsSubsciptionError> {
+            return _internal_cancelStarsSubscription(account: self.account, subscriptionId: subscriptionId, reason: reason)
         }
     }
 }

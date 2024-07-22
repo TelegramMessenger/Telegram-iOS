@@ -1004,6 +1004,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum InputInvoice: TypeConstructorDescription {
+        case inputInvoiceChatInviteSubscription(hash: String)
         case inputInvoiceMessage(peer: Api.InputPeer, msgId: Int32)
         case inputInvoicePremiumGiftCode(purpose: Api.InputStorePaymentPurpose, option: Api.PremiumGiftCodeOption)
         case inputInvoiceSlug(slug: String)
@@ -1011,6 +1012,12 @@ public extension Api {
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .inputInvoiceChatInviteSubscription(let hash):
+                    if boxed {
+                        buffer.appendInt32(887591921)
+                    }
+                    serializeString(hash, buffer: buffer, boxed: false)
+                    break
                 case .inputInvoiceMessage(let peer, let msgId):
                     if boxed {
                         buffer.appendInt32(-977967015)
@@ -1042,6 +1049,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .inputInvoiceChatInviteSubscription(let hash):
+                return ("inputInvoiceChatInviteSubscription", [("hash", hash as Any)])
                 case .inputInvoiceMessage(let peer, let msgId):
                 return ("inputInvoiceMessage", [("peer", peer as Any), ("msgId", msgId as Any)])
                 case .inputInvoicePremiumGiftCode(let purpose, let option):
@@ -1053,6 +1062,17 @@ public extension Api {
     }
     }
     
+        public static func parse_inputInvoiceChatInviteSubscription(_ reader: BufferReader) -> InputInvoice? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputInvoice.inputInvoiceChatInviteSubscription(hash: _1!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_inputInvoiceMessage(_ reader: BufferReader) -> InputInvoice? {
             var _1: Api.InputPeer?
             if let signature = reader.readInt32() {

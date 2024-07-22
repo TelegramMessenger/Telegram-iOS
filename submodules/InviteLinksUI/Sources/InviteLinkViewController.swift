@@ -425,7 +425,7 @@ public final class InviteLinkViewController: ViewController {
             self.controller = controller
             
             self.importersContext = importersContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .invite(invite: invite, requested: false))
-            if case let .link(_, _, _, requestApproval, _, _, _, _, _, _, _, _) = invite, requestApproval {
+            if case let .link(_, _, _, requestApproval, _, _, _, _, _, _, _, _, _) = invite, requestApproval {
                 self.requestsContext = context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .invite(invite: invite, requested: true))
             } else {
                 self.requestsContext = nil
@@ -568,7 +568,7 @@ public final class InviteLinkViewController: ViewController {
                 }
                 
                 var creatorIsBot: Signal<Bool, NoError>
-                if case let .link(_, _, _, _, _, adminId, _, _, _, _, _, _) = invite {
+                if case let .link(_, _, _, _, _, adminId, _, _, _, _, _, _, _) = invite {
                     creatorIsBot = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: adminId))
                     |> map { peer -> Bool in
                         if let peer, case let .user(user) = peer, user.botInfo != nil {
@@ -716,7 +716,7 @@ public final class InviteLinkViewController: ViewController {
                 requestsState = .single(PeerInvitationImportersState.Empty)
             }
             
-            if case let .link(_, _, _, _, _, adminId, date, _, _, usageLimit, _, _) = invite {
+            if case let .link(_, _, _, _, _, adminId, date, _, _, usageLimit, _, _, _) = invite {
                 self.disposable = (combineLatest(
                     self.presentationDataPromise.get(),
                     self.importersContext.state,
@@ -1002,7 +1002,7 @@ public final class InviteLinkViewController: ViewController {
             var subtitleText = ""
             var subtitleColor = self.presentationData.theme.list.itemSecondaryTextColor
             
-            if case let .link(_, title, _, _, isRevoked, _, _, _, expireDate, usageLimit, count, _) = self.invite {
+            if case let .link(_, title, _, _, isRevoked, _, _, _, expireDate, usageLimit, count, _, _) = self.invite {
                 if isRevoked {
                     subtitleText = self.presentationData.strings.InviteLink_Revoked
                 } else if let usageLimit = usageLimit, let count = count, count >= usageLimit {

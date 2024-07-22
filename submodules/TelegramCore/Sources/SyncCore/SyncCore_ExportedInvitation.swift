@@ -1,7 +1,7 @@
 import Postbox
 
 public enum ExportedInvitation: Codable, Equatable {
-    case link(link: String, title: String?, isPermanent: Bool, requestApproval: Bool, isRevoked: Bool, adminId: PeerId, date: Int32, startDate: Int32?, expireDate: Int32?, usageLimit: Int32?, count: Int32?, requestedCount: Int32?)
+    case link(link: String, title: String?, isPermanent: Bool, requestApproval: Bool, isRevoked: Bool, adminId: PeerId, date: Int32, startDate: Int32?, expireDate: Int32?, usageLimit: Int32?, count: Int32?, requestedCount: Int32?, pricing: StarsSubscriptionPricing?)
     case publicJoinRequest
     
     public init(from decoder: Decoder) throws {
@@ -21,8 +21,9 @@ public enum ExportedInvitation: Codable, Equatable {
             let usageLimit = try container.decodeIfPresent(Int32.self, forKey: "usageLimit")
             let count = try container.decodeIfPresent(Int32.self, forKey: "count")
             let requestedCount = try? container.decodeIfPresent(Int32.self, forKey: "requestedCount")
+            let pricing = try? container.decodeIfPresent(StarsSubscriptionPricing.self, forKey: "pricing")
             
-            self = .link(link: link, title: title, isPermanent: isPermanent, requestApproval: requestApproval, isRevoked: isRevoked, adminId: adminId, date: date, startDate: startDate, expireDate: expireDate, usageLimit: usageLimit, count: count, requestedCount: requestedCount)
+            self = .link(link: link, title: title, isPermanent: isPermanent, requestApproval: requestApproval, isRevoked: isRevoked, adminId: adminId, date: date, startDate: startDate, expireDate: expireDate, usageLimit: usageLimit, count: count, requestedCount: requestedCount, pricing: pricing)
         } else {
             self = .publicJoinRequest
         }
@@ -32,7 +33,7 @@ public enum ExportedInvitation: Codable, Equatable {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
         switch self {
-            case let .link(link, title, isPermanent, requestApproval, isRevoked, adminId, date, startDate, expireDate, usageLimit, count, requestedCount):
+            case let .link(link, title, isPermanent, requestApproval, isRevoked, adminId, date, startDate, expireDate, usageLimit, count, requestedCount, pricing):
                 let type: Int32 = 0
                 try container.encode(type, forKey: "t")
                 try container.encode(link, forKey: "l")
@@ -47,6 +48,7 @@ public enum ExportedInvitation: Codable, Equatable {
                 try container.encodeIfPresent(usageLimit, forKey: "usageLimit")
                 try container.encodeIfPresent(count, forKey: "count")
                 try container.encodeIfPresent(requestedCount, forKey: "requestedCount")
+                try container.encodeIfPresent(pricing, forKey: "pricing")
             case .publicJoinRequest:
                 let type: Int32 = 1
                 try container.encode(type, forKey: "t")
@@ -55,8 +57,8 @@ public enum ExportedInvitation: Codable, Equatable {
     
     public static func ==(lhs: ExportedInvitation, rhs: ExportedInvitation) -> Bool {
         switch lhs {
-            case let .link(link, title, isPermanent, requestApproval, isRevoked, adminId, date, startDate, expireDate, usageLimit, count, requestedCount):
-                if case .link(link, title, isPermanent, requestApproval, isRevoked, adminId, date, startDate, expireDate, usageLimit, count, requestedCount) = rhs {
+            case let .link(link, title, isPermanent, requestApproval, isRevoked, adminId, date, startDate, expireDate, usageLimit, count, requestedCount, pricing):
+                if case .link(link, title, isPermanent, requestApproval, isRevoked, adminId, date, startDate, expireDate, usageLimit, count, requestedCount, pricing) = rhs {
                     return true
                 } else {
                     return false
@@ -72,8 +74,8 @@ public enum ExportedInvitation: Codable, Equatable {
     
     public func withUpdated(isRevoked: Bool) -> ExportedInvitation {
         switch self {
-            case let .link(link, title, isPermanent, requestApproval, _, adminId, date, startDate, expireDate, usageLimit, count, requestedCount):
-                return .link(link: link, title: title, isPermanent: isPermanent, requestApproval: requestApproval, isRevoked: isRevoked, adminId: adminId, date: date, startDate: startDate, expireDate: expireDate, usageLimit: usageLimit, count: count, requestedCount: requestedCount)
+            case let .link(link, title, isPermanent, requestApproval, _, adminId, date, startDate, expireDate, usageLimit, count, requestedCount, pricing):
+                return .link(link: link, title: title, isPermanent: isPermanent, requestApproval: requestApproval, isRevoked: isRevoked, adminId: adminId, date: date, startDate: startDate, expireDate: expireDate, usageLimit: usageLimit, count: count, requestedCount: requestedCount, pricing: pricing)
             case .publicJoinRequest:
                 return .publicJoinRequest
         }

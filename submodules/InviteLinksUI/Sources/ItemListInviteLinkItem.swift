@@ -9,7 +9,7 @@ import ShimmerEffect
 import TelegramCore
 
 func invitationAvailability(_ invite: ExportedInvitation) -> CGFloat {
-    if case let .link(_, _, _, _, isRevoked, _, date, startDate, expireDate, usageLimit, count, _) = invite {
+    if case let .link(_, _, _, _, isRevoked, _, date, startDate, expireDate, usageLimit, count, _, _) = invite {
         if isRevoked {
             return 0.0
         }
@@ -299,7 +299,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
             let color: ItemBackgroundColor
             let nextColor: ItemBackgroundColor
             let transitionFraction: CGFloat
-            if let invite = item.invite, case let .link(_, _, _, _, isRevoked, _, _, _, expireDate, usageLimit, _, _) = invite {
+            if let invite = item.invite, case let .link(_, _, _, _, isRevoked, _, _, _, expireDate, usageLimit, _, _, _) = invite {
                 if isRevoked {
                     color = .gray
                     nextColor = .gray
@@ -346,7 +346,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
             var timerValue: TimerNode.Value?
             
             
-            if let invite = item.invite, case let  .link(_, title, _, _, _, _, date, startDate, expireDate, usageLimit, count, requestedCount) = invite {
+            if let invite = item.invite, case let  .link(_, title, _, _, _, _, date, startDate, expireDate, usageLimit, count, requestedCount, _) = invite {
                 if let title = title, !title.isEmpty {
                     titleText = title
                 }

@@ -1280,15 +1280,15 @@ public extension Api {
 }
 public extension Api {
     indirect enum ChatInvite: TypeConstructorDescription {
-        case chatInvite(flags: Int32, title: String, about: String?, photo: Api.Photo, participantsCount: Int32, participants: [Api.User]?, color: Int32)
+        case chatInvite(flags: Int32, title: String, about: String?, photo: Api.Photo, participantsCount: Int32, participants: [Api.User]?, color: Int32, subscriptionPricing: Api.StarsSubscriptionPricing?, subscriptionFormId: Int64?)
         case chatInviteAlready(chat: Api.Chat)
         case chatInvitePeek(chat: Api.Chat, expires: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .chatInvite(let flags, let title, let about, let photo, let participantsCount, let participants, let color):
+                case .chatInvite(let flags, let title, let about, let photo, let participantsCount, let participants, let color, let subscriptionPricing, let subscriptionFormId):
                     if boxed {
-                        buffer.appendInt32(-840897472)
+                        buffer.appendInt32(-1965998484)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
@@ -1301,6 +1301,8 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     serializeInt32(color, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 10) != 0 {subscriptionPricing!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 10) != 0 {serializeInt64(subscriptionFormId!, buffer: buffer, boxed: false)}
                     break
                 case .chatInviteAlready(let chat):
                     if boxed {
@@ -1320,8 +1322,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .chatInvite(let flags, let title, let about, let photo, let participantsCount, let participants, let color):
-                return ("chatInvite", [("flags", flags as Any), ("title", title as Any), ("about", about as Any), ("photo", photo as Any), ("participantsCount", participantsCount as Any), ("participants", participants as Any), ("color", color as Any)])
+                case .chatInvite(let flags, let title, let about, let photo, let participantsCount, let participants, let color, let subscriptionPricing, let subscriptionFormId):
+                return ("chatInvite", [("flags", flags as Any), ("title", title as Any), ("about", about as Any), ("photo", photo as Any), ("participantsCount", participantsCount as Any), ("participants", participants as Any), ("color", color as Any), ("subscriptionPricing", subscriptionPricing as Any), ("subscriptionFormId", subscriptionFormId as Any)])
                 case .chatInviteAlready(let chat):
                 return ("chatInviteAlready", [("chat", chat as Any)])
                 case .chatInvitePeek(let chat, let expires):
@@ -1348,6 +1350,12 @@ public extension Api {
             } }
             var _7: Int32?
             _7 = reader.readInt32()
+            var _8: Api.StarsSubscriptionPricing?
+            if Int(_1!) & Int(1 << 10) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.StarsSubscriptionPricing
+            } }
+            var _9: Int64?
+            if Int(_1!) & Int(1 << 10) != 0 {_9 = reader.readInt64() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 5) == 0) || _3 != nil
@@ -1355,8 +1363,10 @@ public extension Api {
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.ChatInvite.chatInvite(flags: _1!, title: _2!, about: _3, photo: _4!, participantsCount: _5!, participants: _6, color: _7!)
+            let _c8 = (Int(_1!) & Int(1 << 10) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 10) == 0) || _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.ChatInvite.chatInvite(flags: _1!, title: _2!, about: _3, photo: _4!, participantsCount: _5!, participants: _6, color: _7!, subscriptionPricing: _8, subscriptionFormId: _9)
             }
             else {
                 return nil

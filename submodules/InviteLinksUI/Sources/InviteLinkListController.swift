@@ -284,7 +284,7 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
     let mainInvite: ExportedInvitation?
     var isPublic = false
     if let peer = peer, let address = peer.addressName, !address.isEmpty && admin == nil {
-        mainInvite = .link(link: "t.me/\(address)", title: nil, isPermanent: true, requestApproval: false, isRevoked: false, adminId: EnginePeer.Id(0), date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil)
+        mainInvite = .link(link: "t.me/\(address)", title: nil, isPermanent: true, requestApproval: false, isRevoked: false, adminId: EnginePeer.Id(0), date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil, pricing: nil)
         isPublic = true
     } else if let invites = invites, let invite = invites.first(where: { $0.isPermanent && !$0.isRevoked }) {
         mainInvite = invite
@@ -299,7 +299,7 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
     let importersCount: Int32
     if let count = importers?.count {
         importersCount = count
-    } else if let mainInvite = mainInvite, case let .link(_, _, _, _, _, _, _, _, _, _, count, _) = mainInvite, let count = count {
+    } else if let mainInvite = mainInvite, case let .link(_, _, _, _, _, _, _, _, _, _, count, _, _) = mainInvite, let count = count {
         importersCount = count
     } else {
         importersCount = 0
@@ -338,7 +338,7 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
     if let additionalInvites = additionalInvites {
         var index: Int32 = 0
         for invite in additionalInvites {
-            if case let .link(_, _, _, _, _, _, _, _, expireDate, _, _, _) = invite {
+            if case let .link(_, _, _, _, _, _, _, _, expireDate, _, _, _, _) = invite {
                 entries.append(.link(index, presentationData.theme, invite, canEditLinks, expireDate != nil ? tick : nil))
                 index += 1
             }
@@ -533,7 +533,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
             })
         })))
         
-        if case let .link(_, _, _, _, _, adminId, _, _, _, _, _, _) = invite, adminId.toInt64() != 0 {
+        if case let .link(_, _, _, _, _, adminId, _, _, _, _, _, _, _) = invite, adminId.toInt64() != 0 {
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
             }, action: { _, f in
