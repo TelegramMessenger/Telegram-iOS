@@ -109,10 +109,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                         component: AnyComponent(
                             Button(
                                 content: AnyComponent(
-                                    BundleIconComponent(
-                                        name: "Instant View/CloseIcon",
-                                        tintColor: environment.theme.rootController.navigationBar.accentTextColor
-                                    )
+                                    MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.WebBrowser_Done, font: Font.regular(17.0), textColor: environment.theme.rootController.navigationBar.accentTextColor, paragraphAlignment: .center)), horizontalAlignment: .left, maximumNumberOfLines: 1)
                                 ),
                                 action: {
                                     performAction.invoke(.close)
@@ -122,7 +119,6 @@ private final class BrowserScreenComponent: CombinedComponent {
                     )
                 ]
                 
-                let isLoading = (context.component.contentState?.estimatedProgress ?? 1.0) < 1.0
                 navigationRightItems = [
                     AnyComponentWithIdentity(
                         id: "settings",
@@ -145,27 +141,6 @@ private final class BrowserScreenComponent: CombinedComponent {
                         )
                     )
                 ]
-                if case .webPage = context.component.contentState?.contentType {
-                    navigationRightItems.insert(
-                        AnyComponentWithIdentity(
-                            id: isLoading ? "stop" : "reload",
-                            component: AnyComponent(
-                                ReferenceButtonComponent(
-                                    content: AnyComponent(
-                                        BundleIconComponent(
-                                            name: isLoading ? "Instant View/Close" : "Chat/Context Menu/Reload",
-                                            tintColor: environment.theme.rootController.navigationBar.primaryTextColor
-                                        )
-                                    ),
-                                    action: {
-                                        performAction.invoke(isLoading ? .stop : .reload)
-                                    }
-                                )
-                            )
-                        ),
-                        at: 0
-                    )
-                }
             }
             
             let collapseFraction = context.component.presentationState.isSearching ? 0.0 : context.component.panelCollapseFraction
@@ -817,13 +792,22 @@ public class BrowserScreen: ViewController, MinimizableController {
                     .action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontSanFrancisco, icon: forceIsSerif ? emptyIcon : checkIcon, action: { (controller, action) in
                         performAction.invoke(.updateFontIsSerif(false))
                         action(.default)
-                    })), .action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontNewYork, textFont: .custom(font: Font.with(size: 17.0, design: .serif, traits: []), height: nil, verticalOffset: nil), icon: forceIsSerif ? checkIcon : emptyIcon, action: { (controller, action) in
+                    })), 
+                    .action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontNewYork, textFont: .custom(font: Font.with(size: 17.0, design: .serif, traits: []), height: nil, verticalOffset: nil), icon: forceIsSerif ? checkIcon : emptyIcon, action: { (controller, action) in
                         performAction.invoke(.updateFontIsSerif(true))
                         action(.default)
                     })),
                     .separator,
+                    .action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_Reload, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Reload"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                        performAction.invoke(.reload)
+                        action(.default)
+                    })),
                     .action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_Search, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Search"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
                         performAction.invoke(.updateSearchActive(true))
+                        action(.default)
+                    })),
+                    .action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_Share, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                        performAction.invoke(.share)
                         action(.default)
                     })),
                     .action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_AddBookmark, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in

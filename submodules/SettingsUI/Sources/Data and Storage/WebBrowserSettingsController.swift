@@ -17,7 +17,6 @@ import LinkPresentation
 private final class WebBrowserSettingsControllerArguments {
     let context: AccountContext
     let updateDefaultBrowser: (String?) -> Void
-    let updateAutologin: (Bool) -> Void
     let clearCookies: () -> Void
     let addException: () -> Void
     let clearExceptions: () -> Void
@@ -25,14 +24,12 @@ private final class WebBrowserSettingsControllerArguments {
     init(
         context: AccountContext,
         updateDefaultBrowser: @escaping (String?) -> Void,
-        updateAutologin: @escaping (Bool) -> Void,
         clearCookies: @escaping () -> Void,
         addException: @escaping () -> Void,
         clearExceptions: @escaping () -> Void
     ) {
         self.context = context
         self.updateDefaultBrowser = updateDefaultBrowser
-        self.updateAutologin = updateAutologin
         self.clearCookies = clearCookies
         self.addException = addException
         self.clearExceptions = clearExceptions
@@ -41,7 +38,6 @@ private final class WebBrowserSettingsControllerArguments {
 
 private enum WebBrowserSettingsSection: Int32 {
     case browsers
-    case autologin
     case clearCookies
     case exceptions
 }
@@ -49,9 +45,6 @@ private enum WebBrowserSettingsSection: Int32 {
 private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
     case browserHeader(PresentationTheme, String)
     case browser(PresentationTheme, String, OpenInApplication?, String?, Bool, Int32)
-    
-    case autologin(PresentationTheme, String, Bool)
-    case autologinInfo(PresentationTheme, String)
     
     case clearCookies(PresentationTheme, String)
     case clearCookiesInfo(PresentationTheme, String)
@@ -66,8 +59,6 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
         switch self {
             case .browserHeader, .browser:
                 return WebBrowserSettingsSection.browsers.rawValue
-            case .autologin, .autologinInfo:
-                return WebBrowserSettingsSection.autologin.rawValue
             case .clearCookies, .clearCookiesInfo:
                 return WebBrowserSettingsSection.clearCookies.rawValue
             case .exceptionsHeader, .exceptionsAdd, .exception, .exceptionsClear, .exceptionsInfo:
@@ -81,10 +72,6 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
                 return 0
             case let .browser(_, _, _, _, _, index):
                 return 1 + index
-            case .autologin:
-                return 100
-            case .autologinInfo:
-                return 101
             case .clearCookies:
                 return 102
             case .clearCookiesInfo:
@@ -112,18 +99,6 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
                 }
             case let .browser(lhsTheme, lhsTitle, lhsApplication, lhsIdentifier, lhsSelected, lhsIndex):
                 if case let .browser(rhsTheme, rhsTitle, rhsApplication, rhsIdentifier, rhsSelected, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsApplication == rhsApplication, lhsIdentifier == rhsIdentifier, lhsSelected == rhsSelected, lhsIndex == rhsIndex {
-                    return true
-                } else {
-                    return false
-                }
-            case let .autologin(lhsTheme, lhsText, lhsValue):
-                if case let .autologin(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .autologinInfo(lhsTheme, lhsText):
-                if case let .autologinInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -186,12 +161,6 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
                 return WebBrowserItem(context: arguments.context, presentationData: presentationData, title: title, application: application, checked: selected, sectionId: self.section) {
                     arguments.updateDefaultBrowser(identifier)
                 }
-            case let .autologin(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
-                    arguments.updateAutologin(updatedValue)
-                })
-            case let .autologinInfo(_, text):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .clearCookies(_, text):
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.accentDeleteIconImage(presentationData.theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
                     arguments.clearCookies()
@@ -231,9 +200,6 @@ private func webBrowserSettingsControllerEntries(context: AccountContext, presen
     }
     
     if settings.defaultWebBrowser == nil {
-        entries.append(.autologin(presentationData.theme, presentationData.strings.WebBrowser_AutoLogin, settings.autologin))
-        entries.append(.autologinInfo(presentationData.theme, presentationData.strings.WebBrowser_AutoLogin_Info))
-        
         entries.append(.clearCookies(presentationData.theme, presentationData.strings.WebBrowser_ClearCookies))
         entries.append(.clearCookiesInfo(presentationData.theme, presentationData.strings.WebBrowser_ClearCookies_Info))
         
@@ -266,11 +232,6 @@ public func webBrowserSettingsController(context: AccountContext) -> ViewControl
         updateDefaultBrowser: { identifier in
             let _ = updateWebBrowserSettingsInteractively(accountManager: context.sharedContext.accountManager, {
                 $0.withUpdatedDefaultWebBrowser(identifier)
-            }).start()
-        },
-        updateAutologin: { autologin in
-            let _ = updateWebBrowserSettingsInteractively(accountManager: context.sharedContext.accountManager, {
-                $0.withUpdatedAutologin(autologin)
             }).start()
         },
         clearCookies: {

@@ -12553,6 +12553,8 @@ Sorry for the inconvenience.";
 "Stars.Gift.Sent.Title" = "Sent Gift";
 "Stars.Gift.Sent.Text" = "With Stars, %@ will be able to unlock content and services on Telegram. [See Examples >]()";
 
+"WebBrowser.Reload" = "Reload";
+"WebBrowser.Share" = "Share";
 "WebBrowser.AddBookmark" = "Add Bookmark";
 
 "WebBrowser.LinkAddedToBookmarks" = "Link added to [Bookmarks]() and **Saved Messages**.";
@@ -12578,3 +12580,5 @@ Sorry for the inconvenience.";
 "WebBrowser.Exceptions.Create.Title" = "Add Website";
 "WebBrowser.Exceptions.Create.Text" = "Enter a domain that you don't want to be opened in the in-app browser.";
 "WebBrowser.Exceptions.Create.Placeholder" = "Enter URL";
+
+"WebBrowser.Done" = "Done";

@@ -29,16 +29,14 @@ public struct WebBrowserException: Codable, Equatable {
 
 public struct WebBrowserSettings: Codable, Equatable {
     public let defaultWebBrowser: String?
-    public let autologin: Bool
     public let exceptions: [WebBrowserException]
     
     public static var defaultSettings: WebBrowserSettings {
-        return WebBrowserSettings(defaultWebBrowser: nil, autologin: true, exceptions: [])
+        return WebBrowserSettings(defaultWebBrowser: nil, exceptions: [])
     }
     
-    public init(defaultWebBrowser: String?, autologin: Bool, exceptions: [WebBrowserException]) {
+    public init(defaultWebBrowser: String?, exceptions: [WebBrowserException]) {
         self.defaultWebBrowser = defaultWebBrowser
-        self.autologin = autologin
         self.exceptions = exceptions
     }
     
@@ -46,7 +44,6 @@ public struct WebBrowserSettings: Codable, Equatable {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         self.defaultWebBrowser = try? container.decodeIfPresent(String.self, forKey: "defaultWebBrowser")
-        self.autologin = (try? container.decodeIfPresent(Bool.self, forKey: "autologin")) ?? true
         self.exceptions = (try? container.decodeIfPresent([WebBrowserException].self, forKey: "exceptions")) ?? []
     }
     
@@ -54,15 +51,11 @@ public struct WebBrowserSettings: Codable, Equatable {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
         try container.encodeIfPresent(self.defaultWebBrowser, forKey: "defaultWebBrowser")
-        try container.encode(self.autologin, forKey: "autologin")
         try container.encode(self.exceptions, forKey: "exceptions")
     }
     
     public static func ==(lhs: WebBrowserSettings, rhs: WebBrowserSettings) -> Bool {
         if lhs.defaultWebBrowser != rhs.defaultWebBrowser {
-            return false
-        }
-        if lhs.autologin != rhs.autologin {
             return false
         }
         if lhs.exceptions != rhs.exceptions {
@@ -72,15 +65,11 @@ public struct WebBrowserSettings: Codable, Equatable {
     }
     
     public func withUpdatedDefaultWebBrowser(_ defaultWebBrowser: String?) -> WebBrowserSettings {
-        return WebBrowserSettings(defaultWebBrowser: defaultWebBrowser, autologin: self.autologin, exceptions: self.exceptions)
+        return WebBrowserSettings(defaultWebBrowser: defaultWebBrowser, exceptions: self.exceptions)
     }
-    
-    public func withUpdatedAutologin(_ autologin: Bool) -> WebBrowserSettings {
-        return WebBrowserSettings(defaultWebBrowser: self.defaultWebBrowser, autologin: autologin, exceptions: self.exceptions)
-    }
-    
+        
     public func withUpdatedExceptions(_ exceptions: [WebBrowserException]) -> WebBrowserSettings {
-        return WebBrowserSettings(defaultWebBrowser: self.defaultWebBrowser, autologin: self.autologin, exceptions: exceptions)
+        return WebBrowserSettings(defaultWebBrowser: self.defaultWebBrowser, exceptions: exceptions)
     }
 }
 
