@@ -159,6 +159,14 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         case .white:
             updatedStyle = .black
         case .black:
+            updatedStyle = .transparent
+        case .transparent:
+            if self.weatherEntity.hasCustomColor {
+                updatedStyle = .custom
+            } else {
+                updatedStyle = .white
+            }
+        case .custom:
             updatedStyle = .white
         }
         self.weatherEntity.style = updatedStyle
@@ -201,8 +209,15 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         switch self.weatherEntity.style {
         case .white:
             textColor = .black
-        case .black:
+        case .black, .transparent:
             textColor = .white
+        case .custom:
+            let color = self.weatherEntity.color.toUIColor()
+            if color.lightness > 0.705 {
+                textColor = .black
+            } else {
+                textColor = .white
+            }
         }
         
         text.addAttribute(.foregroundColor, value: textColor, range: range)
@@ -225,6 +240,21 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         case .black:
             self.textView.textColor = .white
             self.backgroundView.backgroundColor = .black
+            self.backgroundView.isHidden = false
+        case .transparent:
+            self.textView.textColor = .white
+            self.backgroundView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.2)
+            self.backgroundView.isHidden = false
+        case .custom:
+            let color = self.weatherEntity.color.toUIColor()
+            let textColor: UIColor
+            if color.lightness > 0.705 {
+                textColor = .black
+            } else {
+                textColor = .white
+            }
+            self.textView.textColor = textColor
+            self.backgroundView.backgroundColor = color
             self.backgroundView.isHidden = false
         }
         self.textView.textAlignment = .left

@@ -48,7 +48,6 @@ import StickerPackEditTitleController
 import StickerPickerScreen
 import UIKitRuntimeUtils
 import ImageObjectSeparation
-import DeviceAccess
 
 private let playbackButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
@@ -4592,7 +4591,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         func presentLocationAccessAlert() {
-            DeviceAccess.authorizeAccess(to: .location(.send), locationManager: self.locationManager, presentationData: self.presentationData, present: { [weak self] c, a in
+            DeviceAccess.authorizeAccess(to: .location(.weather), locationManager: self.locationManager, presentationData: self.presentationData, present: { [weak self] c, a in
                 self?.controller?.present(c, in: .window(.root), with: a)
             }, openSettings: { [weak self] in
                 self?.context.sharedContext.applicationBindings.openSettings()

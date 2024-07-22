@@ -2307,7 +2307,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
                 guard let self, let inputUser else {
                     return
                 }
-                let signal = self.account.network.request(Api.functions.bots.reorderPreviewMedias(bot: inputUser, order: inputMedia))
+                let signal = self.account.network.request(Api.functions.bots.reorderPreviewMedias(bot: inputUser, langCode: "", order: inputMedia))
                 self.reorderDisposable.set(signal.startStrict())
             })
         }

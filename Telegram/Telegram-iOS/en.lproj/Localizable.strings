@@ -12582,3 +12582,5 @@ Sorry for the inconvenience.";
 "WebBrowser.Exceptions.Create.Placeholder" = "Enter URL";
 
 "WebBrowser.Done" = "Done";
+
+"AccessDenied.LocationWeather" = "Telegram needs access to your location so that you can add the weather widget to your stories.\n\nPlease go to Settings > Privacy > Location Services and set Telegram to ON.";

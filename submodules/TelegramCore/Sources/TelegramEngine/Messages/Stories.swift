@@ -1300,7 +1300,7 @@ func _internal_uploadBotPreviewImpl(
                 return postbox.transaction { transaction -> Signal<StoryUploadResult, NoError> in
                     switch content.content {
                     case let .media(inputMedia, _):
-                        return network.request(Api.functions.bots.addPreviewMedia(bot: inputUser, media: inputMedia))
+                        return network.request(Api.functions.bots.addPreviewMedia(bot: inputUser, langCode: "", media: inputMedia))
                         |> map(Optional.init)
                         |> `catch` { _ -> Signal<Api.MessageMedia?, NoError> in
                             return .single(nil)
@@ -1402,7 +1402,7 @@ func _internal_deleteBotPreviews(account: Account, peerId: PeerId, ids: [MediaId
             return .complete()
         }
         
-        return account.network.request(Api.functions.bots.deletePreviewMedia(bot: inputPeer, media: inputMedia))
+        return account.network.request(Api.functions.bots.deletePreviewMedia(bot: inputPeer, langCode: "", media: inputMedia))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }

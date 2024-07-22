@@ -192,15 +192,12 @@ public enum CodableDrawingEntity: Equatable {
                 url: url
             )
         case let .weather(entity):
-            var flags: MediaArea.WeatherFlags = []
-            if entity.style == .black {
-                flags.insert(.isDark)
-            }
+            let color: UInt32 = 0xffffffff
             return .weather(
                 coordinates: coordinates,
                 emoji: entity.emoji,
                 temperature: entity.temperature,
-                flags: flags
+                color: Int32(bitPattern: color)
             )
         default:
             return nil

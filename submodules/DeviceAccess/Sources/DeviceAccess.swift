@@ -36,6 +36,7 @@ public enum DeviceAccessLocationSubject {
     case send
     case live
     case tracking
+    case weather
 }
 
 public enum DeviceAccessSubject {
@@ -474,7 +475,7 @@ public final class DeviceAccess {
                             }
                         case .authorizedWhenInUse:
                             switch locationSubject {
-                                case .send, .tracking:
+                                case .send, .tracking, .weather:
                                     completion(true)
                                 case .live:
                                     completion(false)
@@ -495,6 +496,8 @@ public final class DeviceAccess {
                                             text = presentationData.strings.AccessDenied_LocationDenied
                                         case .tracking:
                                             text = presentationData.strings.AccessDenied_LocationTracking
+                                        case .weather:
+                                            text = presentationData.strings.AccessDenied_LocationWeather
                                     }
                                 } else {
                                     text = presentationData.strings.AccessDenied_LocationDisabled
@@ -505,7 +508,7 @@ public final class DeviceAccess {
                             }
                         case .notDetermined:
                             switch locationSubject {
-                                case .send, .tracking:
+                                case .send, .tracking, .weather:
                                     locationManager?.requestWhenInUseAuthorization(completion: { status in
                                         completion(status == .authorizedWhenInUse || status == .authorizedAlways)
                                     })
