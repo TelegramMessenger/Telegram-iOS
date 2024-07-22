@@ -81,7 +81,11 @@ struct CameraState: Equatable {
     }
 
     func updatedRecording(_ recording: Recording) -> CameraState {
-        return CameraState(position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, flashTintSize: self.flashTintSize, recording: recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled, isViewOnceEnabled: self.isViewOnceEnabled)
+        var flashModeDidChange = self.flashModeDidChange
+        if case .none = self.recording {
+            flashModeDidChange = false
+        }
+        return CameraState(position: self.position, flashMode: self.flashMode, flashModeDidChange: flashModeDidChange, flashTint: self.flashTint, flashTintSize: self.flashTintSize, recording: recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled, isViewOnceEnabled: self.isViewOnceEnabled)
     }
     
     func updatedDuration(_ duration: Double) -> CameraState {
@@ -408,11 +412,11 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             let isFirstRecording = initialDuration.isZero
             controller.node.resumeCameraCapture()
             
-            controller.updatePreviewState({ _ in return nil}, transition: .spring(duration: 0.4))
-            
             controller.node.dismissAllTooltips()
             controller.updateCameraState({ $0.updatedRecording(pressing ? .holding : .handsFree).updatedDuration(initialDuration) }, transition: .spring(duration: 0.4))
         
+            controller.updatePreviewState({ _ in return nil }, transition: .spring(duration: 0.4))
+            
             controller.node.withReadyCamera(isFirstTime: !controller.node.cameraIsActive) {
                 Queue.mainQueue().after(0.15) {
                     self.resultDisposable.set((camera.startRecording()
@@ -437,6 +441,10 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             
             if initialDuration > 0.0 {
                 controller.onResume()
+            }
+            
+            if controller.cameraState.position == .front && controller.cameraState.flashMode == .on {
+                self.updateScreenBrightness()
             }
         }
         
@@ -645,7 +653,9 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                         action: { [weak state] in
                             if let state {
                                 state.toggleFlashMode()
-                                flashAction.invoke(Void())
+                                Queue.mainQueue().justDispatch {
+                                    flashAction.invoke(Void())
+                                }
                             }
                         }
                     ),

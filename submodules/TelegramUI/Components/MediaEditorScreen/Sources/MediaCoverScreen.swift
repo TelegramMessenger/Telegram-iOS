@@ -338,6 +338,19 @@ private final class MediaCoverScreenComponent: Component {
                                 mediaEditor.seek(position, andPlay: false)
                             }
                         },
+                        coverPositionUpdated: { [weak mediaEditor] position, tap, commit in
+                            if let mediaEditor {
+                                if tap {
+                                    mediaEditor.setOnNextDisplay {
+                                        commit()
+                                    }
+                                    mediaEditor.seek(position, andPlay: false)
+                                } else {
+                                    mediaEditor.seek(position, andPlay: false)
+                                    commit()
+                                }
+                            }
+                        },
                         trackTrimUpdated: { _, _, _, _, _ in
                         },
                         trackOffsetUpdated: { _, _, _ in

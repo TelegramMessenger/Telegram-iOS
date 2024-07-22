@@ -48,6 +48,7 @@ import StickerPackEditTitleController
 import StickerPickerScreen
 import UIKitRuntimeUtils
 import ImageObjectSeparation
+import DeviceAccess
 
 private let playbackButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
@@ -2553,6 +2554,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         var recording: MediaEditorScreen.Recording
         
+        private let locationManager = LocationManager()
+        
         private var presentationData: PresentationData
         private var validLayout: ContainerViewLayout?
         
@@ -4584,7 +4587,37 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.mediaEditor?.play()
         }
         
-        func addWeather(_ weather: StickerPickerScreen.Weather.LoadedWeather) {
+        func requestWeather() {
+            
+        }
+        
+        func presentLocationAccessAlert() {
+            DeviceAccess.authorizeAccess(to: .location(.send), locationManager: self.locationManager, presentationData: self.presentationData, present: { [weak self] c, a in
+                self?.controller?.present(c, in: .window(.root), with: a)
+            }, openSettings: { [weak self] in
+                self?.context.sharedContext.applicationBindings.openSettings()
+            }, { [weak self] authorized in
+                guard let self, authorized else {
+                    return
+                }
+                let weatherPromise = Promise<StickerPickerScreen.Weather>()
+                weatherPromise.set(getWeather(context: self.context))
+                self.weatherPromise = weatherPromise
+                
+                let _ = (weatherPromise.get()
+                |> deliverOnMainQueue).start(next: { [weak self] result in
+                    if let self, case let .loaded(weather) = result {
+                        self.addWeather(weather)
+                    }
+                })
+            })
+        }
+        
+        func addWeather(_ weather: StickerPickerScreen.Weather.LoadedWeather?) {
+            guard let weather else {
+                
+                return
+            }
             let maxWeatherCount = 3
             var currentWeatherCount = 0
             self.entitiesView.eachView { entityView in
@@ -4948,9 +4981,16 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         if let self {
                                             if let weatherPromise = self.weatherPromise {
                                                 let _ = (weatherPromise.get()
-                                                |> take(1)).start(next: { [weak self] weather in
-                                                    if let self, case let .loaded(loaded) = weather {
-                                                        self.addWeather(loaded)
+                                                |> take(1)).start(next: { [weak self] result in
+                                                    if let self {
+                                                        switch result {
+                                                        case let .loaded(weather):
+                                                            self.addWeather(weather)
+                                                        case .notDetermined, .notAllowed:
+                                                            self.presentLocationAccessAlert()
+                                                        default:
+                                                            break
+                                                        }
                                                     }
                                                 })
                                             }
