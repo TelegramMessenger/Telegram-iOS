@@ -522,9 +522,9 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
         return .link(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), url: url)
     case let .mediaAreaChannelPost(coordinates, channelId, messageId):
         return .channelMessage(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), messageId: EngineMessage.Id(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), namespace: Namespaces.Message.Cloud, id: messageId))
-    case let .mediaAreaWeather(flags, coordinates, emoji, temperatureC):
+    case let .mediaAreaWeather(coordinates, emoji, temperatureC, color):
         var parsedFlags = MediaArea.WeatherFlags()
-        if (flags & (1 << 0)) != 0 {
+        if color != 0 {
             parsedFlags.insert(.isDark)
         }
         return .weather(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), emoji: emoji, temperature: temperatureC, flags: parsedFlags)
@@ -581,11 +581,7 @@ func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea], transaction: Transac
         case let .link(_, url):
             apiMediaAreas.append(.mediaAreaUrl(coordinates: inputCoordinates, url: url))
         case let .weather(_, emoji, temperature, flags):
-            var apiFlags: Int32 = 0
-            if flags.contains(.isDark) {
-                apiFlags |= (1 << 0)
-            }
-            apiMediaAreas.append(.mediaAreaWeather(flags: apiFlags, coordinates: inputCoordinates, emoji: emoji, temperatureC: temperature))
+            apiMediaAreas.append(.mediaAreaWeather(coordinates: inputCoordinates, emoji: emoji, temperatureC: temperature, color: flags.contains(.isDark) ? 1 : 0))
         }
     }
     return apiMediaAreas

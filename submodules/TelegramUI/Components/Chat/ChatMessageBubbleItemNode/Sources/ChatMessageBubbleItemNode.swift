@@ -4576,7 +4576,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         }
                     }
                 } else if case .tap = gesture {
-                    item.controllerInteraction.clickThroughMessage()
+                    item.controllerInteraction.clickThroughMessage(self.view, location)
                 } else if case .doubleTap = gesture {
                     if canAddMessageReactions(message: item.message) {
                         item.controllerInteraction.updateMessageReaction(item.message, .default, false, nil)

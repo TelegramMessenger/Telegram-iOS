@@ -3287,7 +3287,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, navigateToMessage: { _, _, _ in
         }, navigateToMessageStandalone: { _ in
         }, navigateToThreadMessage: { _, _, _ in
-        }, tapMessage: nil, clickThroughMessage: {
+        }, tapMessage: nil, clickThroughMessage: { _, _ in
         }, toggleMessagesSelection: { [weak self] ids, value in
             guard let strongSelf = self else {
                 return
@@ -9864,7 +9864,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     guard let self else {
                         return
                     }
-                    self.openBotPreviewEditor(target: .botPreview(self.peerId), source: result, transitionIn: (transitionView, transitionRect, transitionImage))
+                    
+                    guard let pane = self.paneContainerNode.currentPane?.node as? PeerInfoStoryPaneNode else {
+                        return
+                    }
+                    
+                    self.openBotPreviewEditor(target: .botPreview(id: self.peerId, language: pane.currentBotPreviewLanguage?.id), source: result, transitionIn: (transitionView, transitionRect, transitionImage))
                 },
                 dismissed: {},
                 groupsPresented: {}
@@ -10938,6 +10943,23 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     self.toggleStorySelection(ids: [], isSelected: true)
                 }
             })))
+            
+            if let language = pane.currentBotPreviewLanguage {
+                //TODO:localize
+                items.append(.action(ContextMenuActionItem(text: "Delete \(language.name)", textColor: .destructive, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                }, action: { [weak pane] _, a in
+                    if ignoreNextActions {
+                        return
+                    }
+                    ignoreNextActions = true
+                    a(.default)
+                    
+                    if let pane {
+                        pane.presentDeleteBotPreviewLanguage()
+                    }
+                })))
+            }
             
             let contextController = ContextController(presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             contextController.passthroughTouchEvent = { [weak self] sourceView, point in

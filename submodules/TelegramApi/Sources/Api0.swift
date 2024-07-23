@@ -105,6 +105,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-944407322] = { return Api.BotMenuButton.parse_botMenuButton($0) }
     dict[1113113093] = { return Api.BotMenuButton.parse_botMenuButtonCommands($0) }
     dict[1966318984] = { return Api.BotMenuButton.parse_botMenuButtonDefault($0) }
+    dict[602479523] = { return Api.BotPreviewMedia.parse_botPreviewMedia($0) }
     dict[-2076642874] = { return Api.BroadcastRevenueBalances.parse_broadcastRevenueBalances($0) }
     dict[1434332356] = { return Api.BroadcastRevenueTransaction.parse_broadcastRevenueTransactionProceeds($0) }
     dict[1121127726] = { return Api.BroadcastRevenueTransaction.parse_broadcastRevenueTransactionRefund($0) }
@@ -520,7 +521,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[340088945] = { return Api.MediaArea.parse_mediaAreaSuggestedReaction($0) }
     dict[926421125] = { return Api.MediaArea.parse_mediaAreaUrl($0) }
     dict[-1098720356] = { return Api.MediaArea.parse_mediaAreaVenue($0) }
-    dict[1132918857] = { return Api.MediaArea.parse_mediaAreaWeather($0) }
+    dict[1235637404] = { return Api.MediaArea.parse_mediaAreaWeather($0) }
     dict[-808853502] = { return Api.MediaAreaCoordinates.parse_mediaAreaCoordinates($0) }
     dict[-1808510398] = { return Api.Message.parse_message($0) }
     dict[-1868117372] = { return Api.Message.parse_messageEmpty($0) }
@@ -1170,6 +1171,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1542017919] = { return Api.auth.SentCodeType.parse_sentCodeTypeSmsWord($0) }
     dict[-391678544] = { return Api.bots.BotInfo.parse_botInfo($0) }
     dict[428978491] = { return Api.bots.PopularAppBots.parse_popularAppBots($0) }
+    dict[212278628] = { return Api.bots.PreviewInfo.parse_previewInfo($0) }
     dict[-309659827] = { return Api.channels.AdminLogResults.parse_adminLogResults($0) }
     dict[-541588713] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1699676497] = { return Api.channels.ChannelParticipants.parse_channelParticipants($0) }
@@ -1492,6 +1494,8 @@ public extension Api {
             case let _1 as Api.BotInlineResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BotMenuButton:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.BotPreviewMedia:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BroadcastRevenueBalances:
                 _1.serialize(buffer, boxed)
@@ -2150,6 +2154,8 @@ public extension Api {
             case let _1 as Api.bots.BotInfo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.bots.PopularAppBots:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.bots.PreviewInfo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.channels.AdminLogResults:
                 _1.serialize(buffer, boxed)

@@ -1148,7 +1148,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             var botPreviewStoryListContext: StoryListContext?
             let hasBotPreviewItems: Signal<Bool, NoError>
             if case .bot = kind {
-                let botPreviewStoryListContextValue = BotPreviewStoryListContext(account: context.account, engine: context.engine, peerId: peerId)
+                let botPreviewStoryListContextValue = BotPreviewStoryListContext(account: context.account, engine: context.engine, peerId: peerId, language: nil, assumeEmpty: false)
                 botPreviewStoryListContext = botPreviewStoryListContextValue
                 hasBotPreviewItems = botPreviewStoryListContextValue.state
                 |> map { state in
@@ -1307,7 +1307,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         
                         if let user = peerView.peers[peerView.peerId] as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp), botInfo.flags.contains(.canEdit) {
                             availablePanes?.insert(.botPreview, at: 0)
-                        } else if let cachedData = peerView.cachedData as? CachedUserData, let botPreview = cachedData.botPreview, !botPreview.media.isEmpty {
+                        } else if let cachedData = peerView.cachedData as? CachedUserData, let botPreview = cachedData.botPreview, !botPreview.items.isEmpty {
                             availablePanes?.insert(.botPreview, at: 0)
                         }
                     }

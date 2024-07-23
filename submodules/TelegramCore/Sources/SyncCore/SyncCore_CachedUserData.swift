@@ -627,40 +627,87 @@ extension TelegramBusinessChatLinks {
 public final class CachedUserData: CachedPeerData {
     public final class BotPreview: Codable, Equatable {
         private enum CodingKeys: String, CodingKey {
-            case media
+            case items
+            case alternativeLanguageCodes
         }
         
-        public let media: [Media]
+        public final class Item: Codable, Equatable {
+            private enum CodingKeys: String, CodingKey {
+                case media = "m"
+                case timestamp = "t"
+            }
+            
+            public let media: Media
+            public let timestamp: Int32
+            
+            public init(media: Media, timestamp: Int32) {
+                self.media = media
+                self.timestamp = timestamp
+            }
+            
+            public init(from decoder: any Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                
+                let mediaData = try container.decode(Data.self, forKey: .media)
+                guard let media = PostboxDecoder(buffer: MemoryBuffer(data: mediaData)).decodeRootObject() as? Media else {
+                    throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "media"))
+                }
+                self.media = media
+                
+                self.timestamp = try container.decode(Int32.self, forKey: .timestamp)
+            }
+            
+            public func encode(to encoder: any Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                
+                let encoder = PostboxEncoder()
+                encoder.encodeRootObject(media)
+                try container.encode(encoder.makeData(), forKey: .media)
+                
+                try container.encode(self.timestamp, forKey: .timestamp)
+            }
+            
+            public static func ==(lhs: Item, rhs: Item) -> Bool {
+                if lhs === rhs {
+                    return true
+                }
+                if !lhs.media.isEqual(to: rhs.media) {
+                    return false
+                }
+                return true
+            }
+        }
         
-        public init(media: [Media]) {
-            self.media = media
+        public let items: [Item]
+        public let alternativeLanguageCodes: [String]
+        
+        public init(items: [Item], alternativeLanguageCodes: [String]) {
+            self.items = items
+            self.alternativeLanguageCodes = alternativeLanguageCodes
         }
         
         public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
-            let mediaData = try container.decode([Data].self, forKey: .media)
-            self.media = mediaData.compactMap { data -> Media? in
-                return PostboxDecoder(buffer: MemoryBuffer(data: data)).decodeRootObject() as? Media
-            }
+            self.items = try container.decode([Item].self, forKey: .items)
+            self.alternativeLanguageCodes = try container.decode([String].self, forKey: .alternativeLanguageCodes)
         }
         
         public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             
-            let mediaData = self.media.map { media -> Data in
-                let encoder = PostboxEncoder()
-                encoder.encodeRootObject(media)
-                return encoder.makeData()
-            }
-            try container.encode(mediaData, forKey: .media)
+            try container.encode(self.items, forKey: .items)
+            try container.encode(self.alternativeLanguageCodes, forKey: .alternativeLanguageCodes)
         }
         
         public static func ==(lhs: BotPreview, rhs: BotPreview) -> Bool {
             if lhs === rhs {
                 return true
             }
-            if !areMediaArraysEqual(lhs.media, rhs.media) {
+            if lhs.items != rhs.items {
+                return false
+            }
+            if lhs.alternativeLanguageCodes != rhs.alternativeLanguageCodes {
                 return false
             }
             return true

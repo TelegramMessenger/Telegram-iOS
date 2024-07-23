@@ -12,6 +12,7 @@ swift_library(
     deps = [
         "//submodules/Display",
         "//submodules/AsyncDisplayKit",
+        "//submodules/ComponentFlow",
     ],
     visibility = [
         "//visibility:public",
