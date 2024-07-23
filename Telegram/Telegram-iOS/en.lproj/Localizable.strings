@@ -12581,6 +12581,23 @@ Sorry for the inconvenience.";
 "WebBrowser.Exceptions.Create.Text" = "Enter a domain that you don't want to be opened in the in-app browser.";
 "WebBrowser.Exceptions.Create.Placeholder" = "Enter URL";
 
+"WebBrowser.Exceptions.ClearConfirmation.Text" = "Are you sure you want to clear this list?";
+"WebBrowser.Exceptions.ClearConfirmation.Clear" = "Clear";
+
 "WebBrowser.Done" = "Done";
 
 "AccessDenied.LocationWeather" = "Telegram needs access to your location so that you can add the weather widget to your stories.\n\nPlease go to Settings > Privacy > Location Services and set Telegram to ON.";
+
+"Story.Editor.TooltipWeatherLimitValue_1" = "**%@** weather stickers";
+"Story.Editor.TooltipWeatherLimitValue_any" = "**%@** weather stickers";
+"Story.Editor.TooltipWeatherLimitText" = "You can't add more than %@ to a story.";
+
+"WebBrowser.AddressPlaceholder" = "Enter URL";
+
+"WebBrowser.Bookmarks.Title" = "Bookmarks";
+"WebBrowser.Bookmarks.BookmarkCurrent" = "Bookmark Current Page";
+
+"Story.Privacy.ChooseCover" = "Choose Story Cover";
+"Story.Privacy.ChooseCoverInfo" = "Choose a frame from the story to show in your Profile.";
+"Story.Privacy.ChooseCoverChannelInfo" = "Choose a frame from the story to show in channel profile.";
+"Story.Privacy.ChooseCoverGroupInfo" = "Choose a frame from the story to show in group profile.";

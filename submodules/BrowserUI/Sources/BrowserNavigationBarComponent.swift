@@ -5,6 +5,21 @@ import ComponentFlow
 import BlurredBackgroundComponent
 import ContextUI
 
+final class BrowserNavigationBarEnvironment: Equatable {
+    public let fraction: CGFloat
+    
+    public init(fraction: CGFloat) {
+        self.fraction = fraction
+    }
+    
+    public static func ==(lhs: BrowserNavigationBarEnvironment, rhs: BrowserNavigationBarEnvironment) -> Bool {
+        if lhs.fraction != rhs.fraction {
+            return false
+        }
+        return true
+    }
+}
+
 final class BrowserNavigationBarComponent: CombinedComponent {
     let backgroundColor: UIColor
     let separatorColor: UIColor
@@ -16,7 +31,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
     let sideInset: CGFloat
     let leftItems: [AnyComponentWithIdentity<Empty>]
     let rightItems: [AnyComponentWithIdentity<Empty>]
-    let centerItem: AnyComponentWithIdentity<Empty>?
+    let centerItem: AnyComponentWithIdentity<BrowserNavigationBarEnvironment>?
     let readingProgress: CGFloat
     let loadingProgress: Double?
     let collapseFraction: CGFloat
@@ -32,7 +47,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         sideInset: CGFloat,
         leftItems: [AnyComponentWithIdentity<Empty>],
         rightItems: [AnyComponentWithIdentity<Empty>],
-        centerItem: AnyComponentWithIdentity<Empty>?,
+        centerItem: AnyComponentWithIdentity<BrowserNavigationBarEnvironment>?,
         readingProgress: CGFloat,
         loadingProgress: Double?,
         collapseFraction: CGFloat
@@ -106,7 +121,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         let loadingProgress = Child(LoadingProgressComponent.self)
         let leftItems = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
         let rightItems = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
-        let centerItems = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
+        let centerItems = ChildMap(environment: BrowserNavigationBarEnvironment.self, keyedBy: AnyHashable.self)
         
         return { context in
             var availableWidth = context.availableSize.width
@@ -169,16 +184,20 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             }
             
             if !leftItemList.isEmpty || !rightItemList.isEmpty {
-                availableWidth -= 32.0
+                availableWidth -= 14.0
             }
                         
             context.add(background
                 .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
             )
             
+            var readingProgressAlpha = context.component.collapseFraction
+            if leftItemList.isEmpty && rightItemList.isEmpty {
+                readingProgressAlpha = 0.0
+            }
             context.add(readingProgress
                 .position(CGPoint(x: readingProgress.size.width / 2.0, y: size.height / 2.0))
-                .opacity(context.component.centerItem?.id == AnyHashable("search") ? 0.0 : 1.0)
+                .opacity(readingProgressAlpha)
             )
             
             context.add(separator
@@ -199,7 +218,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
                     .appear(.default(scale: true, alpha: true))
                     .disappear(.default(scale: true, alpha: true))
                 )
-                leftItemX -= item.size.width + 8.0
+                leftItemX += item.size.width + 8.0
                 centerLeftInset += item.size.width + 8.0
             }
     
@@ -220,20 +239,27 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             let maxCenterInset = max(centerLeftInset, centerRightInset)
             
             if !leftItemList.isEmpty || !rightItemList.isEmpty {
-                availableWidth -= 28.0
+                availableWidth -= 20.0
             }
+            
+            let environment = BrowserNavigationBarEnvironment(fraction: context.component.collapseFraction)
             
             let centerItem = context.component.centerItem.flatMap { item in
                 centerItems[item.id].update(
                     component: item.component,
+                    environment: { environment },
                     availableSize: CGSize(width: availableWidth, height: expandedHeight),
                     transition: context.transition
                 )
             }
-
+            
+            var centerX = maxCenterInset + (context.availableSize.width - maxCenterInset * 2.0) / 2.0
+            if "".isEmpty {
+                centerX = centerLeftInset + (context.availableSize.width - centerLeftInset - centerRightInset) / 2.0
+            }
             if let centerItem = centerItem {
                 context.add(centerItem
-                    .position(CGPoint(x: maxCenterInset + (context.availableSize.width - maxCenterInset * 2.0) / 2.0, y: context.component.topInset + contentHeight / 2.0))
+                    .position(CGPoint(x: centerX, y: context.component.topInset + contentHeight / 2.0))
                     .scale(1.0 - 0.35 * context.component.collapseFraction)
                     .appear(.default(scale: false, alpha: true))
                     .disappear(.default(scale: false, alpha: true))

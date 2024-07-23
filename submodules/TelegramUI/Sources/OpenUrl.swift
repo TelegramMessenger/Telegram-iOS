@@ -1039,18 +1039,18 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     return settings
                 }
 
-                var isCompact = false
-                if let metrics = navigationController?.validLayout?.metrics, case .compact = metrics.widthClass {
-                    isCompact = true
-                }
+//                var isCompact = false
+//                if let metrics = navigationController?.validLayout?.metrics, case .compact = metrics.widthClass {
+//                    isCompact = true
+//                }
                 
                 let _ = (settings
                 |> deliverOnMainQueue).startStandalone(next: { settings in
                     if let defaultWebBrowser = settings.defaultWebBrowser, defaultWebBrowser != "inApp" {
                         let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))
                         if let option = openInOptions.first(where: { $0.identifier == settings.defaultWebBrowser }) {
-                            if case let .openUrl(url) = option.action() {
-                                context.sharedContext.applicationBindings.openUrl(url)
+                            if case let .openUrl(openInUrl) = option.action() {
+                                context.sharedContext.applicationBindings.openUrl(openInUrl)
                             } else {
                                 context.sharedContext.applicationBindings.openUrl(url)
                             }
@@ -1058,11 +1058,20 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             context.sharedContext.applicationBindings.openUrl(url)
                         }
                     } else {
-                        if settings.defaultWebBrowser == nil && isCompact {
+                        var isExceptedDomain = false
+                        let host = ".\((parsedUrl.host ?? "").lowercased())"
+                        for exception in settings.exceptions {
+                            if host.hasSuffix(".\(exception.domain)") {
+                                isExceptedDomain = true
+                                break
+                            }
+                        }
+                        
+                        if settings.defaultWebBrowser == nil && !isExceptedDomain {
                             let controller = BrowserScreen(context: context, subject: .webPage(url: parsedUrl.absoluteString))
                             navigationController?.pushViewController(controller)
                         } else {
-                            if let window = navigationController?.view.window {
+                            if let window = navigationController?.view.window, !isExceptedDomain {
                                 let controller = SFSafariViewController(url: parsedUrl)
                                 controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
                                 controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor

@@ -3155,6 +3155,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             }
+            
+            if let initialLink = controller.initialLink {
+                self.addInitialLink(initialLink)
+            }
         }
         
         private var initialMaskScale: CGFloat = .zero
@@ -4559,6 +4563,45 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             controller.push(linkController)
         }
         
+        func addInitialLink(_ link: String) {
+            guard self.context.isPremium else {
+                return
+            }
+            let text = link
+            
+            var attributes: [MessageAttribute] = []
+            attributes.append(TextEntitiesMessageAttribute(entities: [.init(range: 0 ..< (text as NSString).length, type: .Url)]))
+            
+//            attributes.append(WebpagePreviewMessageAttribute(leadingPreview: !self.positionBelowText, forceLargeMedia: self.largeMedia, isManuallyAdded: false, isSafe: true))
+            
+            let effectiveMedia: TelegramMediaWebpage? = nil
+//            if let webpage = self.webpage, case .Loaded = webpage.content {
+//                effectiveMedia = webpage
+//            }
+            
+            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
+            let message = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: text, attributes: attributes, media: effectiveMedia.flatMap { [$0] } ?? [], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+            
+            let renderer = DrawingMessageRenderer(context: self.context, messages: [message], parentView: self.view, isLink: true)
+            renderer.render(completion: { [weak self] renderResult in
+                guard let self else {
+                    return
+                }
+                let result = CreateLinkScreen.Result(
+                    url: link,
+                    name: "",
+                    webpage: effectiveMedia,
+                    positionBelowText: false,
+                    largeMedia: nil,
+                    image: effectiveMedia != nil ? renderResult.dayImage : nil,
+                    nightImage: effectiveMedia != nil ? renderResult.nightImage : nil
+                )
+                
+                let entity = DrawingLinkEntity(url: result.url, name: result.name, webpage: result.webpage, positionBelowText: result.positionBelowText, largeMedia: result.largeMedia, style: .white)
+                self.interaction?.insertEntity(entity, position: CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.width / 3.0 * 4.0), select: false)
+            })
+        }
+        
         func addReaction() {
             guard let controller = self.controller else {
                 return
@@ -4625,7 +4668,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
             }
             if currentWeatherCount >= maxWeatherCount {
-                self.controller?.hapticFeedback.error()
+                self.controller?.presentWeatherLimitTooltip()
                 return
             }
             
@@ -5535,6 +5578,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     fileprivate let initialPrivacy: EngineStoryPrivacy?
     fileprivate let initialMediaAreas: [MediaArea]?
     fileprivate let initialVideoPosition: Double?
+    fileprivate let initialLink: String?
     
     fileprivate let transitionIn: TransitionIn?
     fileprivate let transitionOut: (Bool, Bool?) -> TransitionOut?
@@ -5569,6 +5613,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         initialPrivacy: EngineStoryPrivacy? = nil,
         initialMediaAreas: [MediaArea]? = nil,
         initialVideoPosition: Double? = nil,
+        initialLink: String? = nil,
         transitionIn: TransitionIn?,
         transitionOut: @escaping (Bool, Bool?) -> TransitionOut?,
         completion: @escaping (MediaEditorScreen.Result, @escaping (@escaping () -> Void) -> Void) -> Void
@@ -5583,6 +5628,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.initialPrivacy = initialPrivacy
         self.initialMediaAreas = initialMediaAreas
         self.initialVideoPosition = initialVideoPosition
+        self.initialLink = initialLink
         self.transitionIn = transitionIn
         self.transitionOut = transitionOut
         self.completion = completion
@@ -6207,6 +6253,29 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let content: UndoOverlayContent = .info(
             title: nil,
             text: presentationData.strings.Story_Editor_TooltipReachedLinkLimitText(value).string,
+            timeout: nil,
+            customUndoText: nil
+        )
+        
+        let controller = UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: true, position: .top, animateInAsReplacement: false, action: { _ in
+            return true
+        })
+        self.present(controller, in: .window(.root))
+    }
+    
+    fileprivate func presentWeatherLimitTooltip() {
+        self.hapticFeedback.impact(.light)
+        
+        self.dismissAllTooltips()
+        
+        let context = self.context
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let limit: Int32 = 3
+        
+        let value = presentationData.strings.Story_Editor_TooltipWeatherLimitValue(limit)
+        let content: UndoOverlayContent = .info(
+            title: nil,
+            text: presentationData.strings.Story_Editor_TooltipWeatherLimitText(value).string,
             timeout: nil,
             customUndoText: nil
         )

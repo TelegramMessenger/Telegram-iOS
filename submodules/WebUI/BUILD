@@ -39,6 +39,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
         "//submodules/ShareController",
         "//submodules/UndoUI",
+        "//submodules/OverlayStatusController",
     ],
     visibility = [
         "//visibility:public",

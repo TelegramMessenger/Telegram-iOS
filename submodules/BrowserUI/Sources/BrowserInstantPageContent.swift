@@ -1378,4 +1378,10 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         }
         self.updateVisibleItems(visibleBounds: self.scrollNode.view.bounds, animated: animated)
     }
+    
+    func addToRecentlyVisited() {
+        if let webPage = self.webPage {
+            let _ = addRecentlyVisitedLink(engine: self.context.engine, webPage: webPage).startStandalone()
+        }
+    }
 }

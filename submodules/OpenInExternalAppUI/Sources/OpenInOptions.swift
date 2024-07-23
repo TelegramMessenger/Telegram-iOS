@@ -286,7 +286,7 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 }))
             }
             
-            options.append(OpenInOption(identifier: "2gis", application: .other(title: "2GIS", identifier: 481627348, scheme: "dgis", store: nil), action: {
+            options.append(OpenInOption(identifier: "2gis", application: .other(title: "2GIS", identifier: 481627348, scheme: "dgis", store: "ru"), action: {
                 let coordinates = "\(lon),\(lat)"
                 if let _ = directions {
                     return .openUrl(url: "dgis://2gis.ru/routeSearch/to/\(coordinates)/go")

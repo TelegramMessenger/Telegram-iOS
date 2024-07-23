@@ -992,7 +992,7 @@ final class ShareWithPeersScreenComponent: Component {
                         
                         let sectionTitle: String
                         if section.id == 0, case .stories = component.stateContext.subject {
-                            sectionTitle = environment.strings.Story_Privacy_PostStoryAsHeader
+                            sectionTitle = component.coverItem == nil ? environment.strings.Story_Privacy_PostStoryAsHeader : ""
                         } else if section.id == 2 {
                             sectionTitle = environment.strings.Story_Privacy_WhoCanViewHeader
                         } else if section.id == 1 {
@@ -1721,10 +1721,9 @@ final class ShareWithPeersScreenComponent: Component {
                         self.visibleSectionFooters[section.id] = sectionFooter
                     }
                     
-                    var footerText = "Choose a frame from the story to show in your Profile."
-                    
+                    var footerText = environment.strings.Story_Privacy_ChooseCoverInfo
                     if let sendAsPeerId = self.sendAsPeerId, sendAsPeerId.isGroupOrChannel == true {
-                        footerText = isSendAsGroup ? "Choose a frame from the story to show in group profile.": "Choose a frame from the story to show in channel profile."
+                        footerText = isSendAsGroup ? environment.strings.Story_Privacy_ChooseCoverGroupInfo : environment.strings.Story_Privacy_ChooseCoverChannelInfo
                     }
                     
                     let footerSize = sectionFooter.update(
@@ -2043,8 +2042,13 @@ final class ShareWithPeersScreenComponent: Component {
             var sideInset: CGFloat = 0.0
             if case .stories = component.stateContext.subject {
                 sideInset = 16.0
-                self.scrollView.isScrollEnabled = false
-                self.dismissPanGesture?.isEnabled = true
+                if availableSize.width < 393.0 && hasCover {
+                    self.scrollView.isScrollEnabled = true
+                    self.dismissPanGesture?.isEnabled = false
+                } else {
+                    self.scrollView.isScrollEnabled = false
+                    self.dismissPanGesture?.isEnabled = true
+                }
             } else if case .peers = component.stateContext.subject {
                 sideInset = 16.0
                 self.dismissPanGesture?.isEnabled = false
@@ -2417,7 +2421,7 @@ final class ShareWithPeersScreenComponent: Component {
                     if !editing && hasChannels {
                         sections.append(ItemLayout.Section(
                             id: 0,
-                            insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 0.0, right: 0.0),
+                            insets: UIEdgeInsets(top: component.coverItem == nil ? 28.0 : 12.0, left: 0.0, bottom: 0.0, right: 0.0),
                             itemHeight: peerItemSize.height,
                             itemCount: 1
                         ))
@@ -2461,7 +2465,7 @@ final class ShareWithPeersScreenComponent: Component {
             } else {
                 containerInset += 10.0
             }
-            
+                        
             var navigationHeight: CGFloat = 56.0
             let navigationSideInset: CGFloat = 16.0
             var navigationButtonsWidth: CGFloat = 0.0
@@ -2599,9 +2603,9 @@ final class ShareWithPeersScreenComponent: Component {
             }
             navigationHeight += navigationTextFieldFrame.height
             
-            if case .stories = component.stateContext.subject {
-                navigationHeight += 16.0
-            }
+//            if case .stories = component.stateContext.subject {
+//                navigationHeight += 16.0
+//            }
             
             let topInset: CGFloat
             if environment.inputHeight != 0.0 || !self.navigationTextFieldState.text.isEmpty {
@@ -2905,7 +2909,7 @@ final class ShareWithPeersScreenComponent: Component {
                 bottomPanelInset = 8.0
                 transition.setFrame(view: self.bottomBackgroundView, frame: CGRect(origin: CGPoint(x: containerSideInset, y: availableSize.height - bottomPanelHeight - 8.0), size: CGSize(width: containerWidth, height: bottomPanelHeight + bottomPanelInset)))
                 self.bottomBackgroundView.update(size: self.bottomBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
-                transition.setFrame(layer: self.bottomSeparatorLayer, frame: CGRect(origin: CGPoint(x: containerSideInset + sideInset, y: availableSize.height - bottomPanelHeight - bottomPanelInset - UIScreenPixel), size: CGSize(width: containerWidth, height: UIScreenPixel)))
+                transition.setFrame(layer: self.bottomSeparatorLayer, frame: CGRect(origin: CGPoint(x: containerSideInset, y: availableSize.height - bottomPanelHeight - bottomPanelInset - UIScreenPixel), size: CGSize(width: containerWidth, height: UIScreenPixel)))
             }
                         
             let itemContainerSize = CGSize(width: itemsContainerWidth, height: availableSize.height)
@@ -3146,7 +3150,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             }
             
             if !editing || pin, coverImage != nil {
-                coverItem = ShareWithPeersScreenComponent.CoverItem(id: .choose, title: "Choose Story Cover", image: coverImage)
+                coverItem = ShareWithPeersScreenComponent.CoverItem(id: .choose, title: presentationData.strings.Story_Privacy_ChooseCover, image: coverImage)
             }
         }
         

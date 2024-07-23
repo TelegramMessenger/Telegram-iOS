@@ -231,7 +231,18 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     params.present(controller, nil)
                 } else if let rootController = params.navigationController?.view.window?.rootViewController {
                     let proceed = {
-                        presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file, canShare: !params.message.isCopyProtected())
+                        if params.context.sharedContext.immediateExperimentalUISettings.browserExperiment && BrowserScreen.supportedDocumentMimeTypes.contains(file.mimeType) {
+                            let subject: BrowserScreen.Subject
+                            if file.mimeType == "application/pdf" {
+                                subject = .pdfDocument(file: file)
+                            } else {
+                                subject = .document(file: file)
+                            }
+                            let controller = BrowserScreen(context: params.context, subject: subject)
+                            params.navigationController?.pushViewController(controller)
+                        } else {
+                            presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file, canShare: !params.message.isCopyProtected())
+                        }
                     }
                     if file.mimeType.contains("image/svg") {
                         let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }

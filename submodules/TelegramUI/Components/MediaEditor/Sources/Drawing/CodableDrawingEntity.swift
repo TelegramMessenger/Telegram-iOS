@@ -192,7 +192,17 @@ public enum CodableDrawingEntity: Equatable {
                 url: url
             )
         case let .weather(entity):
-            let color: UInt32 = 0xffffffff
+            let color: UInt32
+            switch entity.style {
+            case .white:
+                color = 0xffffffff
+            case .black:
+                color = 0xff000000
+            case .transparent:
+                color = 0x51000000
+            case .custom:
+                color = entity.color.toUIColor().argb
+            }
             return .weather(
                 coordinates: coordinates,
                 emoji: entity.emoji,

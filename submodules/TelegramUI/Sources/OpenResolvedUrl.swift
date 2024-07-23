@@ -34,6 +34,7 @@ import StoryContainerScreen
 import WallpaperGalleryScreen
 import TelegramStringFormatting
 import TextFormat
+import BrowserUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -248,7 +249,14 @@ func openResolvedUrlImpl(
             })
                 present(controller, nil)
         case let .instantView(webpage, anchor):
-            navigationController?.pushViewController(InstantPageController(context: context, webPage: webpage, sourceLocation: InstantPageSourceLocation(userLocation: .other, peerType: .channel), anchor: anchor))
+            let sourceLocation = InstantPageSourceLocation(userLocation: .other, peerType: .channel)
+            let pageController: ViewController
+            if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
+                pageController = BrowserScreen(context: context, subject: .instantPage(webPage: webpage, anchor: anchor, sourceLocation: sourceLocation))
+            } else {
+                pageController = InstantPageController(context: context, webPage: webpage, sourceLocation: sourceLocation, anchor: anchor)
+            }
+            navigationController?.pushViewController(pageController)
         case let .join(link):
             dismissInput()
         
