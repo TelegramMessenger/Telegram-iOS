@@ -1373,8 +1373,12 @@ public extension TelegramEngine {
             return _internal_getStoryById(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, peerId: peerId, id: id)
         }
         
-        public func deleteBotPreviews(peerId: EnginePeer.Id, ids: [MediaId]) -> Signal<Never, NoError> {
-            return _internal_deleteBotPreviews(account: self.account, peerId: peerId, ids: ids)
+        public func deleteBotPreviews(peerId: EnginePeer.Id, language: String?, media: [Media]) -> Signal<Never, NoError> {
+            return _internal_deleteBotPreviews(account: self.account, peerId: peerId, language: language, media: media)
+        }
+        
+        public func deleteBotPreviewsLanguage(peerId: EnginePeer.Id, language: String, media: [Media]) -> Signal<Never, NoError> {
+            return _internal_deleteBotPreviewsLanguage(account: self.account, peerId: peerId, language: language, media: media)
         }
         
         public func synchronouslyIsMessageDeletedInteractively(ids: [EngineMessage.Id]) -> [EngineMessage.Id] {

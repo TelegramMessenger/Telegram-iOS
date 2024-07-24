@@ -1586,7 +1586,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 return
                             }
                             
-                            self.item?.controllerInteraction.clickThroughMessage()
+                            self.item?.controllerInteraction.clickThroughMessage(self.view, location)
                         case .longTap, .doubleTap, .secondaryTap:
                             break
                         case .hold:

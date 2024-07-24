@@ -393,7 +393,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         return nil
                     case let .peer(id):
                         return id
-                    case let .botPreview(id):
+                    case let .botPreview(id, _):
                         return id
                     }
                 }

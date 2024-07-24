@@ -550,6 +550,10 @@ public final class SparseItemGrid: ASDisplayNode {
         var offset: CGFloat {
             return self.scrollView.contentOffset.y
         }
+        
+        var contentBottomOffset: CGFloat {
+            return -self.scrollView.contentOffset.y + self.scrollView.contentSize.height
+        }
 
         let coveringOffsetUpdated: (Viewport, ContainedViewLayoutTransition) -> Void
         let offsetUpdated: (Viewport, ContainedViewLayoutTransition) -> Void
@@ -1442,6 +1446,10 @@ public final class SparseItemGrid: ASDisplayNode {
             return self.fromViewport.coveringInsetOffset * (1.0 - self.currentProgress) + self.toViewport.coveringInsetOffset * self.currentProgress
         }
         
+        var contentBottomOffset: CGFloat {
+            return self.fromViewport.contentBottomOffset * (1.0 - self.currentProgress) + self.toViewport.contentBottomOffset * self.currentProgress
+        }
+        
         var offset: CGFloat {
             return self.fromViewport.offset * (1.0 - self.currentProgress) + self.toViewport.offset * self.currentProgress
         }
@@ -1627,6 +1635,16 @@ public final class SparseItemGrid: ASDisplayNode {
             return currentViewportTransition.coveringInsetOffset
         } else if let currentViewport = self.currentViewport {
             return currentViewport.coveringInsetOffset
+        } else {
+            return 0.0
+        }
+    }
+    
+    public var contentBottomOffset: CGFloat {
+        if let currentViewportTransition = self.currentViewportTransition {
+            return currentViewportTransition.contentBottomOffset
+        } else if let currentViewport = self.currentViewport {
+            return currentViewport.contentBottomOffset
         } else {
             return 0.0
         }

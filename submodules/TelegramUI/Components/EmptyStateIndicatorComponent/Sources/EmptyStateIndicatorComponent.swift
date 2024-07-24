@@ -13,25 +13,27 @@ public final class EmptyStateIndicatorComponent: Component {
     public let context: AccountContext
     public let theme: PresentationTheme
     public let animationName: String?
-    public let title: String
+    public let title: String?
     public let text: String
     public let actionTitle: String?
     public let fitToHeight: Bool
     public let action: () -> Void
     public let additionalActionTitle: String?
     public let additionalAction: () -> Void
+    public let additionalActionSeparator: String?
     
     public init(
         context: AccountContext,
         theme: PresentationTheme,
         fitToHeight: Bool,
         animationName: String?,
-        title: String,
+        title: String?,
         text: String,
         actionTitle: String?,
         action: @escaping () -> Void,
         additionalActionTitle: String?,
-        additionalAction: @escaping () -> Void
+        additionalAction: @escaping () -> Void,
+        additionalActionSeparator: String? = nil
     ) {
         self.context = context
         self.theme = theme
@@ -43,6 +45,7 @@ public final class EmptyStateIndicatorComponent: Component {
         self.action = action
         self.additionalActionTitle = additionalActionTitle
         self.additionalAction = additionalAction
+        self.additionalActionSeparator = additionalActionSeparator
     }
 
     public static func ==(lhs: EmptyStateIndicatorComponent, rhs: EmptyStateIndicatorComponent) -> Bool {
@@ -70,6 +73,9 @@ public final class EmptyStateIndicatorComponent: Component {
         if lhs.additionalActionTitle != rhs.additionalActionTitle {
             return false
         }
+        if lhs.additionalActionSeparator != rhs.additionalActionSeparator {
+            return false
+        }
         return true
     }
 
@@ -82,6 +88,9 @@ public final class EmptyStateIndicatorComponent: Component {
         private let text = ComponentView<Empty>()
         private var button: ComponentView<Empty>?
         private var additionalButton: ComponentView<Empty>?
+        private var additionalSeparatorLeft: SimpleLayer?
+        private var additionalSeparatorRight: SimpleLayer?
+        private var additionalSeparatorText: ComponentView<Empty>?
         
         override public init(frame: CGRect) {
             super.init(frame: frame)
@@ -108,16 +117,20 @@ public final class EmptyStateIndicatorComponent: Component {
                     containerSize: CGSize(width: 120.0, height: 120.0)
                 )
             }
-            let titleSize = self.title.update(
-                transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.title, font: Font.semibold(17.0), textColor: component.theme.list.itemPrimaryTextColor)),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 0
-                )),
-                environment: {},
-                containerSize: CGSize(width: min(300.0, availableSize.width - 16.0 * 2.0), height: 1000.0)
-            )
+            
+            var titleSize: CGSize?
+            if let title = component.title {
+                titleSize = self.title.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: title, font: Font.semibold(17.0), textColor: component.theme.list.itemPrimaryTextColor)),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: min(300.0, availableSize.width - 16.0 * 2.0), height: 1000.0)
+                )
+            }
             let textSize = self.text.update(
                 transition: .immediate,
                 component: AnyComponent(BalancedTextComponent(
@@ -203,18 +216,79 @@ public final class EmptyStateIndicatorComponent: Component {
                 }
             }
             
+            var additionalSeparatorTextSize: CGSize?
+            if let additionalActionSeparator = component.additionalActionSeparator {
+                let additionalSeparatorText: ComponentView<Empty>
+                if let current = self.additionalSeparatorText {
+                    additionalSeparatorText = current
+                } else {
+                    additionalSeparatorText = ComponentView()
+                    self.additionalSeparatorText = additionalSeparatorText
+                }
+                
+                let additionalSeparatorLeft: SimpleLayer
+                if let current = self.additionalSeparatorLeft {
+                    additionalSeparatorLeft = current
+                } else {
+                    additionalSeparatorLeft = SimpleLayer()
+                    self.additionalSeparatorLeft = additionalSeparatorLeft
+                    self.layer.addSublayer(additionalSeparatorLeft)
+                }
+                
+                let additionalSeparatorRight: SimpleLayer
+                if let current = self.additionalSeparatorRight {
+                    additionalSeparatorRight = current
+                } else {
+                    additionalSeparatorRight = SimpleLayer()
+                    self.additionalSeparatorRight = additionalSeparatorRight
+                    self.layer.addSublayer(additionalSeparatorRight)
+                }
+                
+                additionalSeparatorLeft.backgroundColor = component.theme.list.itemPlainSeparatorColor.cgColor
+                additionalSeparatorRight.backgroundColor = component.theme.list.itemPlainSeparatorColor.cgColor
+                
+                additionalSeparatorTextSize = additionalSeparatorText.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: additionalActionSeparator, font: Font.regular(15.0), textColor: component.theme.list.itemSecondaryTextColor))
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width:  min(300.0, availableSize.width - 16.0 * 2.0), height: 100.0)
+                )
+            } else {
+                if let additionalSeparatorLeft = self.additionalSeparatorLeft {
+                    self.additionalSeparatorLeft = nil
+                    additionalSeparatorLeft.removeFromSuperlayer()
+                }
+                if let additionalSeparatorRight = self.additionalSeparatorRight {
+                    self.additionalSeparatorRight = nil
+                    additionalSeparatorRight.removeFromSuperlayer()
+                }
+                if let additionalSeparatorText = self.additionalSeparatorText {
+                    self.additionalSeparatorText = nil
+                    additionalSeparatorText.view?.removeFromSuperview()
+                }
+            }
+            
             let animationSpacing: CGFloat = 11.0
             let titleSpacing: CGFloat = 17.0
             let buttonSpacing: CGFloat = 21.0
+            let additionalSeparatorHeight: CGFloat = 31.0
             
             var totalHeight: CGFloat = 0.0
             
             if let animationSize {
                 totalHeight += animationSize.height + animationSpacing
             }
-            totalHeight += titleSize.height + titleSpacing + textSize.height
+            if let titleSize {
+                totalHeight += titleSize.height + titleSpacing
+            }
+            totalHeight += textSize.height
             if let buttonSize {
                 totalHeight += buttonSpacing + buttonSize.height
+            }
+            if let _ = additionalSeparatorTextSize {
+                totalHeight += additionalSeparatorHeight
             }
             if let additionalButtonSize {
                 totalHeight += buttonSpacing + additionalButtonSize.height
@@ -234,7 +308,7 @@ public final class EmptyStateIndicatorComponent: Component {
                 transition.setFrame(view: animationView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - animationSize.width) * 0.5), y: contentY), size: animationSize))
                 contentY += animationSize.height + animationSpacing
             }
-            if let titleView = self.title.view {
+            if let titleSize, let titleView = self.title.view {
                 if titleView.superview == nil {
                     self.addSubview(titleView)
                 }
@@ -255,6 +329,25 @@ public final class EmptyStateIndicatorComponent: Component {
                 transition.setFrame(view: buttonView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - buttonSize.width) * 0.5), y: contentY), size: buttonSize))
                 contentY += buttonSize.height + buttonSpacing
             }
+            
+            if let additionalSeparatorTextSize, let additionalSeparatorText = self.additionalSeparatorText, let additionalSeparatorLeft = self.additionalSeparatorLeft, let additionalSeparatorRight = self.additionalSeparatorRight {
+                let additionalSeparatorTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - additionalSeparatorTextSize.width) * 0.5), y: contentY), size: additionalSeparatorTextSize)
+                if let additionalSeparatorTextView = additionalSeparatorText.view {
+                    if additionalSeparatorTextView.superview == nil {
+                        self.addSubview(additionalSeparatorTextView)
+                    }
+                    transition.setFrame(view: additionalSeparatorTextView, frame: additionalSeparatorTextFrame)
+                }
+                
+                let separatorWidth: CGFloat = 72.0
+                let separatorSpacing: CGFloat = 10.0
+                
+                transition.setFrame(layer: additionalSeparatorLeft, frame: CGRect(origin: CGPoint(x: additionalSeparatorTextFrame.minX - separatorSpacing - separatorWidth, y: additionalSeparatorTextFrame.midY + 1.0), size: CGSize(width: separatorWidth, height: UIScreenPixel)))
+                transition.setFrame(layer: additionalSeparatorRight, frame: CGRect(origin: CGPoint(x: additionalSeparatorTextFrame.maxX + separatorSpacing, y: additionalSeparatorTextFrame.midY + 1.0), size: CGSize(width: separatorWidth, height: UIScreenPixel)))
+                
+                contentY += additionalSeparatorHeight
+            }
+            
             if let additionalButtonSize, let additionalButtonView = self.additionalButton?.view {
                 if additionalButtonView.superview == nil {
                     self.addSubview(additionalButtonView)
