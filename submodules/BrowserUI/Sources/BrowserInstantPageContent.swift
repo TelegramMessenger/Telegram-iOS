@@ -1418,4 +1418,8 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
             let _ = addRecentlyVisitedLink(engine: self.context.engine, webPage: webPage).startStandalone()
         }
     }
+    
+    func makeContentSnapshotView() -> UIView? {
+        return nil
+    }
 }

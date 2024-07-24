@@ -2541,6 +2541,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                             peer: peer,
                             storyItem: item,
                             videoPlaybackPosition: nil,
+                            cover: false,
                             repost: false,
                             transitionIn: .gallery(MediaEditorScreen.TransitionIn.GalleryTransitionIn(sourceView: self.itemGrid.view, sourceRect: foundItemLayer?.frame ?? .zero, sourceImage: sourceImage)),
                             transitionOut: MediaEditorScreen.TransitionOut(destinationView: self.itemGrid.view, destinationRect: foundItemLayer?.frame ?? .zero, destinationCornerRadius: 0.0),

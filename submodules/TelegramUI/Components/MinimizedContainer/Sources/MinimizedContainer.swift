@@ -616,8 +616,6 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             return
         }
         
-//        self.scrollView.contentOffset = CGPoint(x: 0.0, y: max(0.0, self.scrollView.contentSize.height - self.scrollView.bounds.height))
-        
         if self.items.count == 1, let item = self.items.first {
             if let navigationController = self.navigationController {
                 item.beforeMaximize(navigationController, { [weak self] in
@@ -625,6 +623,12 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 })
             }
         } else {
+            let contentOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.bounds.height)
+            self.scrollView.contentOffset = CGPoint(x: 0.0, y: contentOffset)
+            for itemNode in self.itemNodes.values {
+                itemNode.frame = itemNode.frame.offsetBy(dx: 0.0, dy: contentOffset)
+            }
+            
             self.isExpanded = true
             self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
         }
@@ -646,7 +650,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         if scrollView.contentOffset.y < -64.0, let lastItemId = self.items.last?.id, let itemNode = self.itemNodes[lastItemId] {
             let velocity = scrollView.panGestureRecognizer.velocity(in: self.view).y
             let distance = layout.size.height - self.collapsedHeight(layout: layout) - itemNode.frame.minY
-            let initialVelocity = distance != 0.0 ? abs(velocity / distance) : 0.0
+            let initialVelocity = min(8.0, distance != 0.0 ? abs(velocity / distance) : 0.0)
             
             self.isExpanded = false
             scrollView.isScrollEnabled = false
@@ -747,6 +751,10 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         
         var index = 0
         let contentHeight = frameForIndex(index: self.items.count - 1, size: layout.size, insets: itemInsets, itemCount: self.items.count, boundingSize: layout.size).midY - 70.0
+        
+        var effectiveScrollBounds = self.scrollView.bounds
+        effectiveScrollBounds.origin.y = max(0.0, min(contentHeight - self.scrollView.bounds.height, effectiveScrollBounds.origin.y))
+        
         for item in self.items {
             if let currentTransition = self.currentTransition {
                 if currentTransition.matches(item: item) {
@@ -859,14 +867,14 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             
             if self.isExpanded {
                 let currentItemFrame = frameForIndex(index: index, size: layout.size, insets: itemInsets, itemCount: self.items.count, boundingSize: layout.size)
-                let currentItemTransform = final3dTransform(for: currentItemFrame.minY, size: currentItemFrame.size, contentHeight: contentHeight, itemCount: self.items.count, additionalAngle: self.highlightedItemId == item.id ? 0.04 : nil, scrollBounds: self.scrollView.bounds, insets: itemInsets)
+                let currentItemTransform = final3dTransform(for: currentItemFrame.minY, size: currentItemFrame.size, contentHeight: contentHeight, itemCount: self.items.count, additionalAngle: self.highlightedItemId == item.id ? 0.04 : nil, scrollBounds: effectiveScrollBounds, insets: itemInsets)
                                 
                 var effectiveItemFrame = currentItemFrame
-                var effectiveItemTransform = currentItemTransform
+                let effectiveItemTransform = currentItemTransform
                 
                 if let dismissingItemId = self.dismissingItemId, let deletingIndex = self.items.firstIndex(where: { $0.id == dismissingItemId }), let offset = self.dismissingItemOffset {
-                    var targetItemFrame: CGRect?
-                    var targetItemTransform: CATransform3D?
+//                    var targetItemFrame: CGRect?
+//                    var targetItemTransform: CATransform3D?
                     if deletingIndex == index {
                         let effectiveOffset: CGFloat
                         if offset <= 0.0 {
@@ -875,25 +883,26 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                             effectiveOffset = scrollingRubberBandingOffset(offset: offset, bandingStart: 0.0, range: 20.0)
                         }
                         effectiveItemFrame = effectiveItemFrame.offsetBy(dx: effectiveOffset, dy: 0.0)
-                    } else if index < deletingIndex {
-                        let frame = frameForIndex(index: index, size: layout.size, insets: itemInsets, itemCount: self.items.count - 1, boundingSize: layout.size)
-                        let spacing = interitemSpacing(itemCount: self.items.count - 1, boundingSize: layout.size, insets: itemInsets)
-                        
-                        targetItemFrame = frame
-                        targetItemTransform = final3dTransform(for: frame.minY, size: layout.size, contentHeight: contentHeight - layout.size.height - spacing, itemCount: self.items.count - 1, scrollBounds: self.scrollView.bounds, insets: itemInsets)
-                    } else {
-                        let frame = frameForIndex(index: index - 1, size: layout.size, insets: itemInsets, itemCount: self.items.count - 1, boundingSize: layout.size)
-                        let spacing = interitemSpacing(itemCount: self.items.count - 1, boundingSize: layout.size, insets: itemInsets)
-                        
-                        targetItemFrame = frame
-                        targetItemTransform = final3dTransform(for: frame.minY, size: layout.size, contentHeight: contentHeight - layout.size.height - spacing, itemCount: self.items.count - 1, scrollBounds: self.scrollView.bounds, insets: itemInsets)
-                    }
+                    } 
+//                    else if index < deletingIndex {
+//                        let frame = frameForIndex(index: index, size: layout.size, insets: itemInsets, itemCount: self.items.count - 1, boundingSize: layout.size)
+//                        let spacing = interitemSpacing(itemCount: self.items.count - 1, boundingSize: layout.size, insets: itemInsets)
+//                        
+//                        targetItemFrame = frame
+//                        targetItemTransform = final3dTransform(for: frame.minY, size: layout.size, contentHeight: contentHeight - layout.size.height - spacing, itemCount: self.items.count - 1, scrollBounds: self.scrollView.bounds, insets: itemInsets)
+//                    } else {
+//                        let frame = frameForIndex(index: index - 1, size: layout.size, insets: itemInsets, itemCount: self.items.count - 1, boundingSize: layout.size)
+//                        let spacing = interitemSpacing(itemCount: self.items.count - 1, boundingSize: layout.size, insets: itemInsets)
+//                        
+//                        targetItemFrame = frame
+//                        targetItemTransform = final3dTransform(for: frame.minY, size: layout.size, contentHeight: contentHeight - layout.size.height - spacing, itemCount: self.items.count - 1, scrollBounds: self.scrollView.bounds, insets: itemInsets)
+//                    }
                     
-                    if let targetItemFrame, let targetItemTransform {
-                        let fraction = max(0.0, min(1.0, -1.0 * offset / (layout.size.width * 1.5)))
-                        effectiveItemFrame = effectiveItemFrame.interpolate(with: targetItemFrame, fraction: fraction)
-                        effectiveItemTransform = effectiveItemTransform.interpolate(with: targetItemTransform, fraction: fraction)
-                    }
+//                    if let targetItemFrame, let targetItemTransform {
+//                        let fraction = max(0.0, min(1.0, -1.0 * offset / (layout.size.width * 1.5)))
+//                        effectiveItemFrame = effectiveItemFrame.interpolate(with: targetItemFrame, fraction: fraction)
+//                        effectiveItemTransform = effectiveItemTransform.interpolate(with: targetItemTransform, fraction: fraction)
+//                    }
                 }
                 itemFrame = effectiveItemFrame
                 itemTransform = effectiveItemTransform
@@ -904,6 +913,8 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 var hideTransform = false
                 if let currentTransition = self.currentTransition {
                     if case let .maximize(itemId) = currentTransition {
+                        itemOffset += self.scrollView.bounds.origin.y
+                        
                         itemOffset += layout.size.height * 0.25
                         if let lastItemNode = self.scrollView.subviews.last?.asyncdisplaykit_node as? ItemNode, lastItemNode.item.id == itemId {
                             hideTransform = true
@@ -954,7 +965,16 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         
         let contentSize = CGSize(width: layout.size.width, height: contentHeight)
         if self.scrollView.contentSize != contentSize {
+            var contentSizeDelta: CGFloat?
+            if contentSize.height < self.scrollView.contentSize.height, transition.isAnimated {
+                let currentContentOffset = self.scrollView.contentOffset.y
+                let updatedContentOffset = max(0.0, contentSize.height - self.scrollView.bounds.height)
+                contentSizeDelta = currentContentOffset - updatedContentOffset
+            }
             self.scrollView.contentSize = contentSize
+            if let contentSizeDelta {
+                transition.animateBounds(layer: self.scrollView.layer, from: CGRect(origin: CGPoint(x: 0.0, y: self.scrollView.contentOffset.y + contentSizeDelta), size: self.scrollView.bounds.size))
+            }
         }
         if self.scrollView.frame != bounds {
             self.scrollView.frame = bounds

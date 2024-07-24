@@ -1104,7 +1104,18 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_share_to_story":
                     if let json = json, let mediaUrl = json["media_url"] as? String {
                         let text = json["text"] as? String
-                        let link = json["widget_link"] as? String
+                        let link = json["widget_link"] as? [String: Any]
+                        
+                        var linkUrl: String?
+                        var linkName: String?
+                        if let link {
+                            if let url = link["url"] as? String {
+                                linkUrl = url
+                                if let name = link["name"] as? String {
+                                    linkName = name
+                                }
+                            }
+                        }
                         
                         enum FetchResult {
                             case result(Data)
@@ -1112,7 +1123,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                         
                         let controller = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: {
-                            
                         }))
                         self.controller?.present(controller, in: .window(.root))
                         
@@ -1154,7 +1164,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                         isPeerArchived: false,
                                         transitionOut: nil
                                     )
-                                    let controller = self.context.sharedContext.makeStoryMediaEditorScreen(context: self.context, source: source, text: text, link: link, completion: { result, commit in
+                                    let controller = self.context.sharedContext.makeStoryMediaEditorScreen(context: self.context, source: source, text: text, link: linkUrl.flatMap { ($0, linkName) }, completion: { result, commit in
 //                                        let targetPeerId: EnginePeer.Id
                                         let target: Stories.PendingTarget
 //                                        if let sendAsPeerId = result.options.sendAsPeerId {
@@ -2114,8 +2124,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public func isContainerPanningUpdated(_ isPanning: Bool) {
         self.controllerNode.isContainerPanningUpdated(isPanning)
     }
-        
+     
+    private var validLayout: ContainerViewLayout?
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.validLayout = layout
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
@@ -2171,6 +2183,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.controllerNode.webView?.hideScrollIndicators()
                 } else {
                     self.requestLayout(transition: .immediate)
+                    self.controllerNode.webView?.setNeedsLayout()
                 }
             }
         }
@@ -2204,6 +2217,22 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     public var minimizedIcon: UIImage? {
         return self.controllerNode.icon
+    }
+    
+    public func makeContentSnapshotView() -> UIView? {
+        guard let webView = self.controllerNode.webView, let _ = self.validLayout else {
+            return nil
+        }
+        
+        let configuration = WKSnapshotConfiguration()
+        configuration.rect = CGRect(origin: .zero, size: webView.frame.size)
+
+        let imageView = UIImageView()
+        imageView.frame = CGRect(origin: .zero, size: webView.frame.size)
+        webView.takeSnapshot(with: configuration, completionHandler: { image, _ in
+            imageView.image = image
+        })
+        return imageView
     }
 }
 

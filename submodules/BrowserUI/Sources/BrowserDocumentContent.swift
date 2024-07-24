@@ -468,4 +468,8 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
     
     func addToRecentlyVisited() {
     }
+    
+    func makeContentSnapshotView() -> UIView? {
+        return nil
+    }
 }

@@ -674,7 +674,17 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 return nil
                             }
                         }
-                        media = .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: result.stickers, coverTime: values.coverImageTimestamp)
+                        
+                        var coverTime: Double?
+                        if let coverImageTimestamp = values.coverImageTimestamp {
+                            if let trimRange = values.videoTrimRange {
+                                coverTime = coverImageTimestamp - trimRange.lowerBound
+                            } else {
+                                coverTime = coverImageTimestamp
+                            }
+                        }
+                        
+                        media = .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: result.stickers, coverTime: coverTime)
                     }
                 default:
                     break
