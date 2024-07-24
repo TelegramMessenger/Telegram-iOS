@@ -9587,6 +9587,7 @@ Sorry for the inconvenience.";
 "Story.ContextPrivacy.LabelEveryone" = "Everyone";
 "Story.Context.Privacy" = "Who Can See";
 "Story.Context.Edit" = "Edit Story";
+"Story.Context.EditCover" = "Edit Cover";
 "Story.Context.SaveToProfile" = "Save to Profile";
 "Story.Context.RemoveFromProfile" = "Remove from Profile";
 "Story.ToastRemovedFromProfileText" = "Story removed from your profile";

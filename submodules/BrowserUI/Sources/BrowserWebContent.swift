@@ -244,8 +244,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             self.backgroundColor = presentationData.theme.list.plainBackgroundColor
             self.webView.underPageBackgroundColor = presentationData.theme.list.plainBackgroundColor
         }
-        if let (size, insets) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, transition: .immediate)
+        if let (size, insets, fullInsets) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: .immediate)
         }
     }
         
@@ -254,6 +254,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     func updateFontState(_ state: BrowserPresentationState.FontState) {
         self.updateFontState(state, force: false)
     }
+    
     func updateFontState(_ state: BrowserPresentationState.FontState, force: Bool) {
         self.currentFontState = state
         
@@ -432,13 +433,13 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.webView.scrollView.contentInset.top), animated: true)
     }
     
-    private var validLayout: (CGSize, UIEdgeInsets)?
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ComponentTransition) {
-        self.validLayout = (size, insets)
+    private var validLayout: (CGSize, UIEdgeInsets, UIEdgeInsets)?
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, transition: ComponentTransition) {
+        self.validLayout = (size, insets, fullInsets)
         
         self.previousScrollingOffset = ScrollingOffsetState(value: self.webView.scrollView.contentOffset.y, isDraggingOrDecelerating: self.webView.scrollView.isDragging || self.webView.scrollView.isDecelerating)
         
-        let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - insets.bottom))
+        let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - fullInsets.bottom))
         var refresh = false
         if self.webView.frame.width > 0 && webViewFrame.width != self.webView.frame.width {
             refresh = true
@@ -575,8 +576,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         } else {
             self.currentError = nil
         }
-        if let (size, insets) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, transition: .immediate)
+        if let (size, insets, fullInsets) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: .immediate)
         }
     }
     
@@ -586,8 +587,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         } else {
             self.currentError = nil
         }
-        if let (size, insets) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, transition: .immediate)
+        if let (size, insets, fullInsets) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: .immediate)
         }
     }
     

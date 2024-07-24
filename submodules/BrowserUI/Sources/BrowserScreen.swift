@@ -908,7 +908,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                         action(.default)
                     })))
                 }
-                if [.webPage, .instantPage].contains(contentState.contentType) {
+                if [.webPage].contains(contentState.contentType) {
                     items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_Search, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Search"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
                         performAction.invoke(.updateSearchActive(true))
                         action(.default)
@@ -1311,7 +1311,10 @@ private final class BrowserContentComponent: Component {
             let collapsedHeight: CGFloat = 24.0
             let topInset: CGFloat = component.insets.top + component.navigationBarHeight * (1.0 - component.scrollingPanelOffsetFraction) + collapsedHeight * component.scrollingPanelOffsetFraction
             let bottomInset = (49.0 + component.insets.bottom) * (1.0 - component.scrollingPanelOffsetFraction)
-            component.content.updateLayout(size: availableSize, insets: UIEdgeInsets(top: topInset, left: component.insets.left, bottom: bottomInset, right: component.insets.right), transition: transition)
+            let insets = UIEdgeInsets(top: topInset, left: component.insets.left, bottom: bottomInset, right: component.insets.right)
+            let fullInsets = UIEdgeInsets(top: component.insets.top + component.navigationBarHeight, left: component.insets.left, bottom: 49.0 + component.insets.bottom, right: component.insets.right)
+            
+            component.content.updateLayout(size: availableSize, insets: insets, fullInsets: fullInsets, transition: transition)
             transition.setFrame(view: component.content, frame: CGRect(origin: .zero, size: availableSize))
             
             return availableSize

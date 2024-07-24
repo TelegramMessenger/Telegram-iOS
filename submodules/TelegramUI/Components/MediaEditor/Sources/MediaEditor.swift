@@ -1508,7 +1508,15 @@ public final class MediaEditor {
     
     public func setVideoTrimRange(_ trimRange: Range<Double>, apply: Bool) {
         self.updateValues(mode: .skipRendering) { values in
-            return values.withUpdatedVideoTrimRange(trimRange)
+            var updatedValues = values.withUpdatedVideoTrimRange(trimRange)
+            if let coverImageTimestamp = updatedValues.coverImageTimestamp {
+                if coverImageTimestamp < trimRange.lowerBound {
+                    updatedValues = updatedValues.withUpdatedCoverImageTimestamp(trimRange.lowerBound)
+                } else if coverImageTimestamp > trimRange.upperBound {
+                    updatedValues = updatedValues.withUpdatedCoverImageTimestamp(trimRange.upperBound)
+                }
+            }
+            return updatedValues
         }
         
         if apply {

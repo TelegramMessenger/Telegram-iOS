@@ -26,6 +26,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     private let context: AccountContext
     private var presentationData: PresentationData
     private var theme: InstantPageTheme
+    private var settings: InstantPagePresentationSettings = .defaultSettings
     private let sourceLocation: InstantPageSourceLocation
     
     private var webPage: TelegramMediaWebpage?
@@ -85,7 +86,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     private let loadProgress = ValuePromise<CGFloat>(1.0, ignoreRepeated: true)
     private let readingProgress = ValuePromise<CGFloat>(1.0, ignoreRepeated: true)
 
-    private var containerLayout: (size: CGSize, insets: UIEdgeInsets)?
+    private var containerLayout: (size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets)?
     private var setupScrollOffsetOnLayout = false
     
     init(context: AccountContext, presentationData: PresentationData, webPage: TelegramMediaWebpage, anchor: String?, url: String, sourceLocation: InstantPageSourceLocation) {
@@ -175,8 +176,9 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         
-        self.theme = instantPageThemeForType(presentationData.theme.overallDarkAppearance ? .dark : .light, settings: .defaultSettings)
+        self.theme = instantPageThemeForType(presentationData.theme.overallDarkAppearance ? .dark : .light, settings: self.settings)
         self.updatePageLayout()
+        self.updateVisibleItems(visibleBounds: self.scrollNode.view.bounds)
     }
     
     func tapActionAtPoint(_ point: CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction {
@@ -295,10 +297,10 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     }
     
     private func requestLayout(transition: ContainedViewLayoutTransition) {
-        guard let (size, insets) = self.containerLayout else {
+        guard let (size, insets, fullInsets) = self.containerLayout else {
             return
         }
-        self.updateLayout(size: size, insets: insets, transition: transition)
+        self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: transition)
     }
     
     func reload() {
@@ -319,8 +321,40 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         
     }
     
+    var currentFontState = BrowserPresentationState.FontState(size: 100, isSerif: false)
     func updateFontState(_ state: BrowserPresentationState.FontState) {
+        self.currentFontState = state
         
+        let fontSize: InstantPagePresentationFontSize
+        switch state.size {
+        case 50:
+            fontSize = .xxsmall
+        case 75:
+            fontSize = .xsmall
+        case 85:
+            fontSize = .small
+        case 100:
+            fontSize = .standard
+        case 115:
+            fontSize = .large
+        case 125:
+            fontSize = .xlarge
+        case 150:
+            fontSize = .xxlarge
+        default:
+            fontSize = .standard
+        }
+        
+        self.settings = InstantPagePresentationSettings(
+            themeType: self.presentationData.theme.overallDarkAppearance ? .dark : .light,
+            fontSize: fontSize,
+            forceSerif: state.isSerif,
+            autoNightMode: false,
+            ignoreAutoNightModeUntil: 0
+        )
+        self.theme = instantPageThemeForType(self.presentationData.theme.overallDarkAppearance ? .dark : .light, settings: self.settings)
+        self.updatePageLayout()
+        self.updateVisibleItems(visibleBounds: self.scrollNode.view.bounds)
     }
         
     func setSearch(_ query: String?, completion: ((Int) -> Void)?) {
@@ -340,12 +374,12 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: true)
     }
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ComponentTransition) {
-        self.updateLayout(size: size, insets: insets, transition: transition.containedViewLayoutTransition)
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, transition: ComponentTransition) {
+        self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: transition.containedViewLayoutTransition)
     }
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
-        self.containerLayout = (size, insets)
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+        self.containerLayout = (size, insets, fullInsets)
         
         var updateVisibleItems = false
         let resetContentOffset = self.scrollNode.bounds.size.width.isZero || self.setupScrollOffsetOnLayout || !(self.initialAnchor ?? "").isEmpty
@@ -401,7 +435,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     }
     
     private func updatePageLayout() {
-        guard let (size, insets) = self.containerLayout, let webPage = self.webPage else {
+        guard let (size, insets, _) = self.containerLayout, let webPage = self.webPage else {
             return
         }
         

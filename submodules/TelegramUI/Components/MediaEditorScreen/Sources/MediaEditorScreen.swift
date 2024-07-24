@@ -4747,7 +4747,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     self.controller?.currentCoverImage = image
                 }
             }
-            self.controller?.present(coverController, in: .window(.root))
+            self.controller?.present(coverController, in: .current)
             self.coverScreen = coverController
             self.animateOutToTool(tool: .cover)
         }
@@ -5808,6 +5808,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             return
         }
         mediaEditor.maybePauseVideo()
+        mediaEditor.seek(mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, andPlay: false)
             
         let privacy = privacy ?? self.state.privacy
         
@@ -5916,9 +5917,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             editCoverImpl = { [weak self, weak controller] in
                 if let self {
-                    Queue.mainQueue().after(0.25, {
-                        self.node.openCoverSelection()
-                    })
+                    self.node.openCoverSelection()
                 }
                 if let controller {
                     controller.dismiss()

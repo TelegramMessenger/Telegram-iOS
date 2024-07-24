@@ -665,7 +665,7 @@ public final class MediaScrubberComponent: Component {
             transition.setFrame(view: self.ghostTrimView, frame: ghostTrimViewFrame)
             transition.setAlpha(view: self.ghostTrimView, alpha: ghostTrimVisible ? 0.75 : 0.0)
             
-            if case .videoMessage = component.style {
+            if [.videoMessage, .cover].contains(component.style) {
                 for (_ , trackView) in self.trackViews {
                     trackView.updateOpaqueEdges(
                         left: leftHandleFrame.minX,
@@ -803,7 +803,6 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         
         self.scrollView.delegate = self
         
-        self.videoTransparentFramesContainer.alpha = 0.5
         self.videoTransparentFramesContainer.clipsToBounds = true
         self.videoTransparentFramesContainer.isUserInteractionEnabled = false
         
@@ -935,13 +934,16 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         case .editor, .cover:
             fullTrackHeight = trackHeight
             framesCornerRadius = 9.0
+            self.videoTransparentFramesContainer.alpha = 0.35
         case .videoMessage:
             fullTrackHeight = 33.0
             framesCornerRadius = fullTrackHeight / 2.0
+            self.videoTransparentFramesContainer.alpha = 0.5
         }
         self.videoTransparentFramesContainer.layer.cornerRadius = framesCornerRadius
         self.videoOpaqueFramesContainer.layer.cornerRadius = framesCornerRadius
         
+
         let scrubberSize = CGSize(width: availableSize.width, height: isSelected ? fullTrackHeight : collapsedTrackHeight)
         
         var screenSpanDuration = duration
