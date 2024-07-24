@@ -55,7 +55,7 @@ public final class BrowserBookmarksScreen: ViewController {
             }, navigateToMessage: { _, _, _ in
             }, navigateToMessageStandalone: { _ in
             }, navigateToThreadMessage: { _, _, _ in
-            }, tapMessage: nil, clickThroughMessage: {
+            }, tapMessage: nil, clickThroughMessage: { _, _ in
             }, toggleMessagesSelection: { _, _ in
             }, sendCurrentMessage: { _, _ in
             }, sendMessage: { _ in
