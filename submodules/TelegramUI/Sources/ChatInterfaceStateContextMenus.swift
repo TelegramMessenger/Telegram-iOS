@@ -397,7 +397,7 @@ func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions 
                         return []
                     case .Animated:
                         break
-                    case let .Video(_, _, flags, _):
+                    case let .Video(_, _, flags, _, _):
                         if flags.contains(.instantRoundVideo) {
                             return []
                         } else {

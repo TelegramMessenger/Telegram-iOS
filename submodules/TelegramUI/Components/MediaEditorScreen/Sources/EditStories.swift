@@ -216,7 +216,7 @@ public extension MediaEditorScreen {
                                     }
                                 }
                                 
-                                update((context.engine.messages.editStory(peerId: peer.id, id: storyItem.id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: result.stickers), mediaAreas: result.mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
+                                update((context.engine.messages.editStory(peerId: peer.id, id: storyItem.id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: result.stickers, coverTime: nil), mediaAreas: result.mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
                                 |> deliverOnMainQueue).startStrict(next: { result in
                                     switch result {
                                     case let .progress(progress):

@@ -235,7 +235,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
     case Sticker(displayText: String, packReference: StickerPackReference?, maskData: StickerMaskCoords?)
     case ImageSize(size: PixelDimensions)
     case Animated
-    case Video(duration: Double, size: PixelDimensions, flags: TelegramMediaVideoFlags, preloadSize: Int32?)
+    case Video(duration: Double, size: PixelDimensions, flags: TelegramMediaVideoFlags, preloadSize: Int32?, coverTime: Double?)
     case Audio(isVoice: Bool, duration: Int, title: String?, performer: String?, waveform: Data?)
     case HasLinkedStickers
     case hintFileIsLarge
@@ -262,7 +262,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
                     duration = Double(decoder.decodeInt32ForKey("du", orElse: 0))
                 }
             
-                self = .Video(duration: duration, size: PixelDimensions(width: decoder.decodeInt32ForKey("w", orElse: 0), height: decoder.decodeInt32ForKey("h", orElse: 0)), flags: TelegramMediaVideoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0)), preloadSize: decoder.decodeOptionalInt32ForKey("prs"))
+                self = .Video(duration: duration, size: PixelDimensions(width: decoder.decodeInt32ForKey("w", orElse: 0), height: decoder.decodeInt32ForKey("h", orElse: 0)), flags: TelegramMediaVideoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0)), preloadSize: decoder.decodeOptionalInt32ForKey("prs"), coverTime: decoder.decodeOptionalDoubleForKey("ct"))
             case typeAudio:
                 let waveformBuffer = decoder.decodeBytesForKeyNoCopy("wf")
                 var waveform: Data?
@@ -309,7 +309,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
                 encoder.encodeInt32(Int32(size.height), forKey: "h")
             case .Animated:
                 encoder.encodeInt32(typeAnimated, forKey: "t")
-            case let .Video(duration, size, flags, preloadSize):
+            case let .Video(duration, size, flags, preloadSize, coverTime):
                 encoder.encodeInt32(typeVideo, forKey: "t")
                 encoder.encodeDouble(duration, forKey: "dur")
                 encoder.encodeInt32(Int32(size.width), forKey: "w")
@@ -319,6 +319,11 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
                     encoder.encodeInt32(preloadSize, forKey: "prs")
                 } else {
                     encoder.encodeNil(forKey: "prs")
+                }
+                if let coverTime = coverTime {
+                    encoder.encodeDouble(coverTime, forKey: "ct")
+                } else {
+                    encoder.encodeNil(forKey: "ct")
                 }
             case let .Audio(isVoice, duration, title, performer, waveform):
                 encoder.encodeInt32(typeAudio, forKey: "t")
@@ -592,7 +597,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     
     public var isInstantVideo: Bool {
         for attribute in self.attributes {
-            if case .Video(_, _, let flags, _) = attribute {
+            if case .Video(_, _, let flags, _, _) = attribute {
                 return flags.contains(.instantRoundVideo)
             }
         }
@@ -601,7 +606,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     
     public var preloadSize: Int32? {
         for attribute in self.attributes {
-            if case .Video(_, _, _, let preloadSize) = attribute {
+            if case .Video(_, _, _, let preloadSize, _) = attribute {
                 return preloadSize
             }
         }

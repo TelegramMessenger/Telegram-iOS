@@ -203,7 +203,7 @@ public final class ChatMessageAccessibilityData {
                                         text = item.presentationData.strings.VoiceOver_Chat_MusicTitle(title, performer).string
                                         text.append(item.presentationData.strings.VoiceOver_Chat_Duration(durationString).string)
                                     }
-                                case let .Video(duration, _, flags, _):
+                                case let .Video(duration, _, flags, _, _):
                                     isSpecialFile = true
                                     if isSelected == nil {
                                         hint = item.presentationData.strings.VoiceOver_Chat_PlayHint

@@ -282,7 +282,7 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         let transition: ContainedViewLayoutTransition
         let dismissProgress: CGFloat
         if (velocity.y < -0.5 || progress >= 0.5) && self.checkInteractiveDismissWithControllers() {
-            if let controller = self.container.controllers.last as? MinimizableController, self.isDraggingHeader || "".isEmpty {
+            if let controller = self.container.controllers.last as? MinimizableController {
                 dismissProgress = 0.0
                 targetOffset = 0.0
                 transition = .immediate

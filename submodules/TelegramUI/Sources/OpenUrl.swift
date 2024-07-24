@@ -1033,7 +1033,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     }
                     if accessChallengeData.data.isLockable {
                         if passcodeSettings.autolockTimeout != nil && settings.defaultWebBrowser == nil {
-                            settings = WebBrowserSettings(defaultWebBrowser: "safari")
+                            settings = WebBrowserSettings(defaultWebBrowser: "safari", exceptions: [])
                         }
                     }
                     return settings

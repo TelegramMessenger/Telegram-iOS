@@ -476,6 +476,7 @@ public final class MediaEditor {
                 audioTrackOffset: nil,
                 audioTrackVolume: nil,
                 audioTrackSamples: nil,
+                coverImageTimestamp: nil,
                 qualityPreset: nil
             )
         }
@@ -1730,6 +1731,12 @@ public final class MediaEditor {
             audioMixInputParameters.setVolume(Float(volume ?? 1.0), at: .zero)
             audioMix.inputParameters = [audioMixInputParameters]
             self.audioPlayer?.currentItem?.audioMix = audioMix
+        }
+    }
+    
+    public func setCoverImageTimestamp(_ coverImageTimestamp: Double?) {
+        self.updateValues(mode: .skipRendering) { values in
+            return values.withUpdatedCoverImageTimestamp(coverImageTimestamp)
         }
     }
     

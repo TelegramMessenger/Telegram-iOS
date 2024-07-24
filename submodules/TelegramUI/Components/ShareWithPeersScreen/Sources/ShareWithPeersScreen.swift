@@ -38,9 +38,11 @@ final class ShareWithPeersScreenComponent: Component {
     let mentions: [String]
     let categoryItems: [CategoryItem]
     let optionItems: [OptionItem]
+    let coverItem: CoverItem?
     let completion: (EnginePeer.Id?, EngineStoryPrivacy, Bool, Bool, [EnginePeer], Bool) -> Void
     let editCategory: (EngineStoryPrivacy, Bool, Bool) -> Void
     let editBlockedPeers: (EngineStoryPrivacy, Bool, Bool) -> Void
+    let editCover: () -> Void
     let peerCompletion: (EnginePeer.Id) -> Void
     
     init(
@@ -54,9 +56,11 @@ final class ShareWithPeersScreenComponent: Component {
         mentions: [String],
         categoryItems: [CategoryItem],
         optionItems: [OptionItem],
+        coverItem: CoverItem?,
         completion: @escaping (EnginePeer.Id?, EngineStoryPrivacy, Bool, Bool, [EnginePeer], Bool) -> Void,
         editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
         editBlockedPeers: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
+        editCover: @escaping () -> Void,
         peerCompletion: @escaping (EnginePeer.Id) -> Void
     ) {
         self.context = context
@@ -69,9 +73,11 @@ final class ShareWithPeersScreenComponent: Component {
         self.mentions = mentions
         self.categoryItems = categoryItems
         self.optionItems = optionItems
+        self.coverItem = coverItem
         self.completion = completion
         self.editCategory = editCategory
         self.editBlockedPeers = editBlockedPeers
+        self.editCover = editCover
         self.peerCompletion = peerCompletion
     }
     
@@ -104,6 +110,9 @@ final class ShareWithPeersScreenComponent: Component {
             return false
         }
         if lhs.optionItems != rhs.optionItems {
+            return false
+        }
+        if lhs.coverItem != rhs.coverItem {
             return false
         }
         return true
@@ -252,6 +261,33 @@ final class ShareWithPeersScreenComponent: Component {
         }
         
         static func ==(lhs: OptionItem, rhs: OptionItem) -> Bool {
+            if lhs === rhs {
+                return true
+            }
+            return false
+        }
+    }
+    
+    enum CoverId: Int, Hashable {
+        case choose = 0
+    }
+    
+    final class CoverItem: Equatable {
+        let id: CoverId
+        let title: String
+        let image: UIImage?
+        
+        init(
+            id: CoverId,
+            title: String,
+            image: UIImage?
+        ) {
+            self.id = id
+            self.title = title
+            self.image = image
+        }
+        
+        static func ==(lhs: CoverItem, rhs: CoverItem) -> Bool {
             if lhs === rhs {
                 return true
             }
@@ -1624,8 +1660,91 @@ final class ShareWithPeersScreenComponent: Component {
                         }
                         sectionFooterTransition.setFrame(view: footerView, frame: footerFrame)
                     }
+                    sectionOffset += footerSize.height
+                } else if section.id == 4 && section.itemCount > 0 {
+                    if let item = component.coverItem {
+                        let itemFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset, y: sectionOffset + section.insets.top + CGFloat(0) * section.itemHeight), size: CGSize(width: itemLayout.containerSize.width, height: section.itemHeight))
+                        if !visibleBounds.intersects(itemFrame) {
+                            continue
+                        }
+                        
+                        let itemId = AnyHashable(item.id)
+                        validIds.append(itemId)
+                        
+                        var itemTransition = transition
+                        let visibleItem: ComponentView<Empty>
+                        if let current = self.visibleItems[itemId] {
+                            visibleItem = current
+                        } else {
+                            visibleItem = ComponentView()
+                            if !transition.animation.isImmediate {
+                                itemTransition = .immediate
+                            }
+                            self.visibleItems[itemId] = visibleItem
+                        }
+                        
+                        let _ = visibleItem.update(
+                            transition: itemTransition,
+                            component: AnyComponent(CoverListItemComponent(
+                                theme: environment.theme,
+                                title: item.title,
+                                image: item.image,
+                                hasNext: false,
+                                action: {
+                                    component.editCover()
+                                }
+                            )),
+                            environment: {},
+                            containerSize: itemFrame.size
+                        )
+                        if let itemView = visibleItem.view {
+                            if itemView.superview == nil {
+                                if let minSectionHeader {
+                                    self.itemContainerView.insertSubview(itemView, belowSubview: minSectionHeader)
+                                } else {
+                                    self.itemContainerView.addSubview(itemView)
+                                }
+                            }
+                            itemTransition.setFrame(view: itemView, frame: itemFrame)
+                        }
+                    }
+                    
+                    let sectionFooter: ComponentView<Empty>
+                    var sectionFooterTransition = transition
+                    if let current = self.visibleSectionFooters[section.id] {
+                        sectionFooter = current
+                    } else {
+                        if !transition.animation.isImmediate {
+                            sectionFooterTransition = .immediate
+                        }
+                        sectionFooter = ComponentView()
+                        self.visibleSectionFooters[section.id] = sectionFooter
+                    }
+                    
+                    var footerText = "Choose a frame from the story to show in your Profile."
+                    
+                    if let sendAsPeerId = self.sendAsPeerId, sendAsPeerId.isGroupOrChannel == true {
+                        footerText = isSendAsGroup ? "Choose a frame from the story to show in group profile.": "Choose a frame from the story to show in channel profile."
+                    }
+                    
+                    let footerSize = sectionFooter.update(
+                        transition: sectionFooterTransition,
+                        component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: footerText, font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor)),
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.2
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: itemLayout.containerSize.width - 16.0 * 2.0, height: itemLayout.contentHeight)
+                    )
+                    let footerFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset + 16.0, y: sectionOffset + section.totalHeight + 7.0), size: footerSize)
+                    if let footerView = sectionFooter.view {
+                        if footerView.superview == nil {
+                            self.itemContainerView.addSubview(footerView)
+                        }
+                        sectionFooterTransition.setFrame(view: footerView, frame: footerFrame)
+                    }
                 }
-                
                 sectionOffset += section.totalHeight
             }
             
@@ -1873,6 +1992,8 @@ final class ShareWithPeersScreenComponent: Component {
         }
         
         private var currentHasChannels: Bool?
+        private var currentHasCover: Bool?
+        
         func update(component: ShareWithPeersScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             guard !self.isDismissed else {
                 return availableSize
@@ -1886,6 +2007,7 @@ final class ShareWithPeersScreenComponent: Component {
             
             var hasCategories = false
             var hasChannels = false
+            var hasCover = false
             if case .stories = component.stateContext.subject {
                 if let peerId = self.sendAsPeerId, peerId.isGroupOrChannel {
                 } else {
@@ -1899,6 +2021,14 @@ final class ShareWithPeersScreenComponent: Component {
                     contentTransition = .spring(duration: 0.4)
                 }
                 self.currentHasChannels = hasChannels
+                
+                if self.selectedOptions.contains(.pin) && component.coverItem != nil {
+                    hasCover = true
+                }
+                if let currentHasCover = self.currentHasCover, currentHasCover != hasCover {
+                    contentTransition = .spring(duration: 0.4)
+                }
+                self.currentHasCover = hasCover
             } else if case .members = component.stateContext.subject {
                 self.dismissPanGesture?.isEnabled = false
             } else if case .channels = component.stateContext.subject {
@@ -2306,6 +2436,15 @@ final class ShareWithPeersScreenComponent: Component {
                         itemHeight: optionItemSize.height,
                         itemCount: component.optionItems.count
                     ))
+                    
+                    if hasCover {
+                        sections.append(ItemLayout.Section(
+                            id: 4,
+                            insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 0.0, right: 0.0),
+                            itemHeight: optionItemSize.height,
+                            itemCount: 1
+                        ))
+                    }
                 } else {
                     sections.append(ItemLayout.Section(
                         id: 1,
@@ -2479,7 +2618,11 @@ final class ShareWithPeersScreenComponent: Component {
                         inset += 10.0 + environment.safeInsets.bottom + 50.0 + footersTotalHeight
                     } else {
                         if !hasCategories {
-                            inset = 314.0
+                            if self.selectedOptions.contains(.pin) {
+                                inset = 422.0
+                            } else {
+                                inset = 314.0
+                            }
                             inset += 10.0 + environment.safeInsets.bottom + 50.0 + footersTotalHeight
                         } else {
                             if hasChannels {
@@ -2489,8 +2632,12 @@ final class ShareWithPeersScreenComponent: Component {
                                     inset = 1000.0
                                 }
                             } else {
-                                inset = 464.0
-                                inset += 10.0 + environment.safeInsets.bottom + 50.0 + footersTotalHeight
+                                if self.selectedOptions.contains(.pin) {
+                                    inset = 1000.0
+                                } else {
+                                    inset = 464.0
+                                    inset += 10.0 + environment.safeInsets.bottom + 50.0 + footersTotalHeight
+                                }
                             }
                         }
                     }
@@ -2849,10 +2996,12 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         pin: Bool = false,
         timeout: Int = 0,
         mentions: [String] = [],
+        coverImage: UIImage? = nil,
         stateContext: StateContext,
         completion: @escaping (EnginePeer.Id?, EngineStoryPrivacy, Bool, Bool, [EnginePeer], Bool) -> Void,
         editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void = { _, _, _ in },
         editBlockedPeers: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void = { _, _, _ in },
+        editCover: @escaping () -> Void = { },
         peerCompletion: @escaping (EnginePeer.Id) -> Void = { _ in }
     ) {
         self.context = context
@@ -2861,6 +3010,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         
         var categoryItems: [ShareWithPeersScreenComponent.CategoryItem] = []
         var optionItems: [ShareWithPeersScreenComponent.OptionItem] = []
+        var coverItem: ShareWithPeersScreenComponent.CoverItem?
         if case let .stories(editing) = stateContext.subject {
             var everyoneSubtitle = presentationData.strings.Story_Privacy_ExcludePeople
             if (stateContext.stateValue?.savedSelectedPeers[.everyone]?.count ?? 0) > 0 {
@@ -2994,6 +3144,10 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     title: presentationData.strings.Story_Privacy_KeepOnMyPage
                 ))
             }
+            
+            if !editing || pin, coverImage != nil {
+                coverItem = ShareWithPeersScreenComponent.CoverItem(id: .choose, title: "Choose Story Cover", image: coverImage)
+            }
         }
         
         var theme: ViewControllerComponentContainer.Theme = .dark
@@ -3013,9 +3167,11 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             mentions: mentions,
             categoryItems: categoryItems,
             optionItems: optionItems,
+            coverItem: coverItem,
             completion: completion,
             editCategory: editCategory,
             editBlockedPeers: editBlockedPeers,
+            editCover: editCover,
             peerCompletion: peerCompletion
         ), navigationBarAppearance: .none, theme: theme)
         

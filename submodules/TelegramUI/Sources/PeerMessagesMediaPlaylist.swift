@@ -72,7 +72,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                         } else {
                             return SharedMediaPlaybackData(type: .music, source: source)
                         }
-                    case let .Video(_, _, flags, _):
+                    case let .Video(_, _, flags, _, _):
                         if flags.contains(.instantRoundVideo) {
                             return SharedMediaPlaybackData(type: .instantVideo, source: source)
                         } else {
@@ -129,7 +129,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                         displayData = SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: albumArt, long: CGFloat(duration) > 10.0 * 60.0, caption: caption)
                     }
                     return displayData
-                case let .Video(_, _, flags, _):
+                case let .Video(_, _, flags, _, _):
                     if flags.contains(.instantRoundVideo) {
                         return SharedMediaPlaybackDisplayData.instantVideo(author: self.message.effectiveAuthor.flatMap(EnginePeer.init), peer: self.message.peers[self.message.id.peerId].flatMap(EnginePeer.init), timestamp: self.message.timestamp)
                     } else {

@@ -120,6 +120,7 @@ final class BrowserToolbarComponent: CombinedComponent {
 }
 
 final class NavigationToolbarContentComponent: CombinedComponent {
+    let accentColor: UIColor
     let textColor: UIColor
     let canGoBack: Bool
     let canGoForward: Bool
@@ -127,12 +128,14 @@ final class NavigationToolbarContentComponent: CombinedComponent {
     let performHoldAction: (UIView, ContextGesture?, BrowserScreen.Action) -> Void
     
     init(
+        accentColor: UIColor,
         textColor: UIColor,
         canGoBack: Bool,
         canGoForward: Bool,
         performAction: ActionSlot<BrowserScreen.Action>,
         performHoldAction: @escaping (UIView, ContextGesture?, BrowserScreen.Action) -> Void
     ) {
+        self.accentColor = accentColor
         self.textColor = textColor
         self.canGoBack = canGoBack
         self.canGoForward = canGoForward
@@ -141,6 +144,9 @@ final class NavigationToolbarContentComponent: CombinedComponent {
     }
     
     static func ==(lhs: NavigationToolbarContentComponent, rhs: NavigationToolbarContentComponent) -> Bool {
+        if lhs.accentColor != rhs.accentColor {
+            return false
+        }
         if lhs.textColor != rhs.textColor {
             return false
         }
@@ -157,6 +163,7 @@ final class NavigationToolbarContentComponent: CombinedComponent {
         let back = Child(ContextReferenceButtonComponent.self)
         let forward = Child(ContextReferenceButtonComponent.self)
         let share = Child(Button.self)
+        let bookmark = Child(Button.self)
         let openIn = Child(Button.self)
         
         return { context in
@@ -166,7 +173,7 @@ final class NavigationToolbarContentComponent: CombinedComponent {
             
             let sideInset: CGFloat = 5.0
             let buttonSize = CGSize(width: 50.0, height: availableSize.height)
-            let spacing = (availableSize.width - buttonSize.width * 4.0 - sideInset * 2.0) / 3.0
+            let spacing = (availableSize.width - buttonSize.width * 5.0 - sideInset * 2.0) / 4.0
             
             let canGoBack = context.component.canGoBack
             let back = back.update(
@@ -174,7 +181,7 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                     content: AnyComponent(
                         BundleIconComponent(
                             name: "Instant View/Back",
-                            tintColor: canGoBack ? context.component.textColor : context.component.textColor.withAlphaComponent(0.4)
+                            tintColor: canGoBack ? context.component.accentColor : context.component.accentColor.withAlphaComponent(0.4)
                         )
                     ),
                     minSize: buttonSize,
@@ -202,7 +209,7 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                     content: AnyComponent(
                         BundleIconComponent(
                             name: "Instant View/Forward",
-                            tintColor: canGoForward ? context.component.textColor : context.component.textColor.withAlphaComponent(0.4)
+                            tintColor: canGoForward ? context.component.accentColor : context.component.accentColor.withAlphaComponent(0.4)
                         )
                     ),
                     minSize: buttonSize,
@@ -229,7 +236,7 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                     content: AnyComponent(
                         BundleIconComponent(
                             name: "Chat List/NavigationShare",
-                            tintColor: context.component.textColor
+                            tintColor: context.component.accentColor
                         )
                     ),
                     action: {
@@ -243,23 +250,42 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                 .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width + spacing + share.size.width / 2.0, y: availableSize.height / 2.0))
             )
             
+            let bookmark = bookmark.update(
+                component: Button(
+                    content: AnyComponent(
+                        BundleIconComponent(
+                            name: "Instant View/Bookmark",
+                            tintColor: context.component.accentColor
+                        )
+                    ),
+                    action: {
+                        performAction.invoke(.openBookmarks)
+                    }
+                ).minSize(buttonSize),
+                availableSize: buttonSize,
+                transition: .easeInOut(duration: 0.2)
+            )
+            context.add(bookmark
+                .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width + spacing + share.size.width + spacing + bookmark.size.width / 2.0, y: availableSize.height / 2.0))
+            )
+            
             let openIn = openIn.update(
                 component: Button(
                     content: AnyComponent(
                         BundleIconComponent(
-                            name: "Instant View/Minimize",
-                            tintColor: context.component.textColor
+                            name: "Instant View/Browser",
+                            tintColor: context.component.accentColor
                         )
                     ),
                     action: {
-                        performAction.invoke(.minimize)
+                        performAction.invoke(.openIn)
                     }
                 ).minSize(buttonSize),
                 availableSize: buttonSize,
                 transition: .easeInOut(duration: 0.2)
             )
             context.add(openIn
-                .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width + spacing + share.size.width + spacing + openIn.size.width / 2.0, y: availableSize.height / 2.0))
+                .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width + spacing + share.size.width + spacing + bookmark.size.width + spacing + openIn.size.width / 2.0, y: availableSize.height / 2.0))
             )
             
             return availableSize

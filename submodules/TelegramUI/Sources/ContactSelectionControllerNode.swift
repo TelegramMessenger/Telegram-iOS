@@ -55,7 +55,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     
     var searchContainerNode: ContactsSearchContainerNode?
     
-    init(context: AccountContext, presentationData: PresentationData, options: [ContactListAdditionalOption], displayDeviceContacts: Bool, displayCallIcons: Bool, multipleSelection: Bool, requirePhoneNumbers: Bool) {
+    init(context: AccountContext, mode: ContactSelectionControllerMode, presentationData: PresentationData, options: Signal<[ContactListAdditionalOption], NoError>, displayDeviceContacts: Bool, displayCallIcons: Bool, multipleSelection: Bool, requirePhoneNumbers: Bool) {
         self.context = context
         self.presentationData = presentationData
         self.displayDeviceContacts = displayDeviceContacts
@@ -65,10 +65,55 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         if requirePhoneNumbers {
             filters.append(.excludeWithoutPhoneNumbers)
         }
+        if case .starsGifting = mode {
+            filters.append(.excludeBots)
+        }
         self.filters = filters
         
+        let displayTopPeers: ContactListPresentation.TopPeers
+        if case let .starsGifting(birthdays, hasActions) = mode {
+            if let birthdays {
+                let today = Calendar(identifier: .gregorian).component(.day, from: Date())
+                var sections: [(String, [EnginePeer.Id], Bool)] = []
+                var todayPeers: [EnginePeer.Id] = []
+                var yesterdayPeers: [EnginePeer.Id] = []
+                var tomorrowPeers: [EnginePeer.Id] = []
+                
+                for (peerId, birthday) in birthdays {
+                    if birthday.day == today {
+                        todayPeers.append(peerId)
+                    } else if birthday.day == today - 1 || birthday.day > today + 5 {
+                        yesterdayPeers.append(peerId)
+                    } else if birthday.day == today + 1 || birthday.day < today + 5 {
+                        tomorrowPeers.append(peerId)
+                    }
+                }
+                
+                if !todayPeers.isEmpty {
+                    sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayToday, todayPeers, hasActions))
+                }
+                if !yesterdayPeers.isEmpty {
+                    sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayYesterday, yesterdayPeers, hasActions))
+                }
+                if !tomorrowPeers.isEmpty {
+                    sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayTomorrow, tomorrowPeers, hasActions))
+                }
+                
+                displayTopPeers = .custom(sections)
+            } else {
+                displayTopPeers = .recent
+            }
+        } else {
+            displayTopPeers = .none
+        }
+        
+        let presentation: Signal<ContactListPresentation, NoError> = options
+        |> map { options in
+            return .natural(options: options, includeChatList: false, topPeers: displayTopPeers)
+        }
+        
         var contextActionImpl: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
-        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: .single(.natural(options: options, includeChatList: false, topPeers: .none)), filters: filters, onlyWriteable: false, isGroupInvitation: false, displayCallIcons: displayCallIcons, contextAction: multipleSelection ? { peer, node, gesture, _, _ in
+        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: presentation, filters: filters, onlyWriteable: false, isGroupInvitation: false, displayCallIcons: displayCallIcons, contextAction: multipleSelection ? { peer, node, gesture, _, _ in
             contextActionImpl?(peer, node, gesture, nil)
         } : nil, multipleSelection: multipleSelection)
         
@@ -262,7 +307,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         } else {
             categories.insert(.global)
         }
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, updatedPresentationData: (self.presentationData, self.presentationDataPromise.get()), onlyWriteable: false, categories: categories, addContact: nil, openPeer: { [weak self] peer in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, updatedPresentationData: (self.presentationData, self.presentationDataPromise.get()), onlyWriteable: false, categories: categories, filters: self.filters, addContact: nil, openPeer: { [weak self] peer in
             if let strongSelf = self {
                 var updated = false
                 strongSelf.contactListNode.updateSelectionState { state -> ContactListNodeGroupSelectionState? in

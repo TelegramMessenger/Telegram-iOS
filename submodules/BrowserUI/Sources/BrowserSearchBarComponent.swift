@@ -33,7 +33,7 @@ final class SearchBarContentComponent: Component {
     }
 
     final class View: UIView, UITextFieldDelegate {
-        private final class EmojiSearchTextField: UITextField {
+        private final class SearchTextField: UITextField {
             override func textRect(forBounds bounds: CGRect) -> CGRect {
                 return bounds.integral
             }
@@ -75,7 +75,7 @@ final class SearchBarContentComponent: Component {
         private var placeholderContent = ComponentView<Empty>()
         
         private var textFrame: CGRect?
-        private var textField: EmojiSearchTextField?
+        private var textField: SearchTextField?
         
         private var tapRecognizer: UITapGestureRecognizer?
         
@@ -160,7 +160,7 @@ final class SearchBarContentComponent: Component {
                 let backgroundFrame = self.backgroundLayer.frame
                 let textFieldFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textFrame.minX, height: backgroundFrame.height))
                 
-                let textField = EmojiSearchTextField(frame: textFieldFrame)
+                let textField = SearchTextField(frame: textFieldFrame)
                 textField.autocorrectionType = .no
                 textField.returnKeyType = .search
                 self.textField = textField
@@ -285,7 +285,7 @@ final class SearchBarContentComponent: Component {
                 component: AnyComponent(Text(
                     text: strings.Common_Cancel,
                     font: Font.regular(17.0),
-                    color: theme.rootController.navigationBar.primaryTextColor
+                    color: theme.rootController.navigationBar.accentTextColor
                 )),
                 environment: {},
                 containerSize: CGSize(width: size.width - 32.0, height: 100.0)

@@ -48,6 +48,7 @@ import StickerPackEditTitleController
 import StickerPickerScreen
 import UIKitRuntimeUtils
 import ImageObjectSeparation
+import DeviceAccess
 
 private let playbackButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
@@ -76,6 +77,7 @@ final class MediaEditorScreenComponent: Component {
         case cutout
         case cutoutErase
         case cutoutRestore
+        case cover
     }
     
     let context: AccountContext
@@ -827,8 +829,7 @@ final class MediaEditorScreenComponent: Component {
                 doneButtonTitle = nil
                 doneButtonIcon = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Apply"), color: .white)!
             case .botPreview:
-                //TODO:localize
-                doneButtonTitle = environment.strings.Story_Editor_Add
+                doneButtonTitle = environment.strings.Story_Editor_Add.uppercased()
                 doneButtonIcon = nil
             }
             
@@ -841,31 +842,7 @@ final class MediaEditorScreenComponent: Component {
                         title: doneButtonTitle)),
                     effectAlignment: .center,
                     action: { [weak controller] in
-                        guard let controller else {
-                            return
-                        }
-                        switch controller.mode {
-                        case .storyEditor:
-                            guard !controller.node.recording.isActive else {
-                                return
-                            }
-                            guard controller.checkCaptionLimit() else {
-                                return
-                            }
-                            if controller.isEditingStory {
-                                controller.requestStoryCompletion(animated: true)
-                            } else {
-                                if controller.checkIfCompletionIsAllowed() {
-                                    controller.openPrivacySettings(completion: { [weak controller] in
-                                        controller?.requestStoryCompletion(animated: true)
-                                    })
-                                }
-                            }
-                        case .stickerEditor:
-                            controller.requestStickerCompletion(animated: true)
-                        case .botPreview:
-                            controller.requestStoryCompletion(animated: true)
-                        }
+                        controller?.node.requestCompletion()
                     }
                 )),
                 environment: {},
@@ -1222,6 +1199,7 @@ final class MediaEditorScreenComponent: Component {
             
             let displayTopButtons = !(self.inputPanelExternalState.isEditing || isEditingTextEntity || component.isDisplayingTool != nil)
             
+            var inputPanelSize: CGSize = .zero
             if case .storyEditor = controller.mode {
                 let nextInputMode: MessageInputPanelComponent.InputMode
                 switch self.currentInputMode {
@@ -1241,7 +1219,7 @@ final class MediaEditorScreenComponent: Component {
                 }
                 
                 self.inputPanel.parentState = state
-                let inputPanelSize = self.inputPanel.update(
+                inputPanelSize = self.inputPanel.update(
                     transition: transition,
                     component: AnyComponent(MessageInputPanelComponent(
                         externalState: self.inputPanelExternalState,
@@ -1453,192 +1431,7 @@ final class MediaEditorScreenComponent: Component {
                     transition.setFrame(view: inputPanelView, frame: inputPanelFrame)
                     transition.setAlpha(view: inputPanelView, alpha: isEditingTextEntity || component.isDisplayingTool != nil || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
                 }
-                
-                if let playerState = state.playerState {
-                    let scrubberInset: CGFloat = 9.0
-                    
-                    let minDuration: Double
-                    let maxDuration: Double
-                    if playerState.isAudioOnly {
-                        minDuration = 5.0
-                        maxDuration = 15.0
-                    } else {
-                        minDuration = 1.0
-                        maxDuration = storyMaxVideoDuration
-                    }
-                    
-                    let previousTrackCount = self.currentVisibleTracks?.count
-                    let visibleTracks = playerState.tracks.filter { $0.visibleInTimeline }.map { MediaScrubberComponent.Track($0) }
-                    self.currentVisibleTracks = visibleTracks
-                    
-                    var scrubberTransition = transition
-                    if let previousTrackCount, previousTrackCount != visibleTracks.count {
-                        scrubberTransition = .easeInOut(duration: 0.2)
-                    }
-                    
-                    let isAudioOnly = playerState.isAudioOnly
-                    let hasMainVideoTrack = playerState.tracks.contains(where: { $0.id == 0 })
-                    
-                    let scrubber: ComponentView<Empty>
-                    if let current = self.scrubber {
-                        scrubber = current
-                    } else {
-                        scrubber = ComponentView<Empty>()
-                        self.scrubber = scrubber
-                    }
-                    
-                    let scrubberSize = scrubber.update(
-                        transition: scrubberTransition,
-                        component: AnyComponent(MediaScrubberComponent(
-                            context: component.context,
-                            style: .editor,
-                            theme: environment.theme,
-                            generationTimestamp: playerState.generationTimestamp,
-                            position: playerState.position,
-                            minDuration: minDuration,
-                            maxDuration: maxDuration,
-                            isPlaying: playerState.isPlaying,
-                            tracks: visibleTracks,
-                            positionUpdated: { [weak mediaEditor] position, apply in
-                                if let mediaEditor {
-                                    mediaEditor.seek(position, andPlay: apply)
-                                }
-                            },
-                            trackTrimUpdated: { [weak mediaEditor] trackId, start, end, updatedEnd, apply in
-                                guard let mediaEditor else {
-                                    return
-                                }
-                                let trimRange = start..<end
-                                if trackId == 2 {
-                                    mediaEditor.setAudioTrackTrimRange(trimRange, apply: apply)
-                                    if isAudioOnly {
-                                        let offset = (mediaEditor.values.audioTrackOffset ?? 0.0)
-                                        if apply {
-                                            mediaEditor.seek(offset + start, andPlay: true)
-                                        } else {
-                                            mediaEditor.seek(offset + start, andPlay: false)
-                                            mediaEditor.stop()
-                                        }
-                                    } else {
-                                        if apply {
-                                            mediaEditor.play()
-                                        } else {
-                                            mediaEditor.stop()
-                                        }
-                                    }
-                                } else if trackId == 1 {
-                                    mediaEditor.setAdditionalVideoTrimRange(trimRange, apply: apply)
-                                    if hasMainVideoTrack {
-                                        if apply {
-                                            mediaEditor.play()
-                                        } else {
-                                            mediaEditor.stop()
-                                        }
-                                    } else {
-                                        if apply {
-                                            mediaEditor.seek(start, andPlay: true)
-                                        } else {
-                                            mediaEditor.seek(updatedEnd ? end : start, andPlay: false)
-                                        }
-                                    }
-                                } else {
-                                    mediaEditor.setVideoTrimRange(trimRange, apply: apply)
-                                    if apply {
-                                        mediaEditor.seek(start, andPlay: true)
-                                    } else {
-                                        mediaEditor.seek(updatedEnd ? end : start, andPlay: false)
-                                    }
-                                }
-                            },
-                            trackOffsetUpdated: { trackId, offset, apply in
-                                guard let mediaEditor else {
-                                    return
-                                }
-                                if trackId == 2 {
-                                    mediaEditor.setAudioTrackOffset(offset, apply: apply)
-                                    if isAudioOnly {
-                                        let offset = (mediaEditor.values.audioTrackOffset ?? 0.0)
-                                        let start = (mediaEditor.values.audioTrackTrimRange?.lowerBound ?? 0.0)
-                                        if apply {
-                                            mediaEditor.seek(offset + start, andPlay: true)
-                                        } else {
-                                            mediaEditor.seek(offset + start, andPlay: false)
-                                            mediaEditor.stop()
-                                        }
-                                    } else {
-                                        if apply {
-                                            let audioStart = mediaEditor.values.audioTrackTrimRange?.lowerBound ?? 0.0
-                                            let audioOffset = min(0.0, mediaEditor.values.audioTrackOffset ?? 0.0)
-                                            
-                                            var start = -audioOffset + audioStart
-                                            if let duration = mediaEditor.duration {
-                                                let lowerBound = mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0
-                                                let upperBound = mediaEditor.values.videoTrimRange?.upperBound ?? duration
-                                                if start >= upperBound {
-                                                    start = lowerBound
-                                                } else if start < lowerBound {
-                                                    start = lowerBound
-                                                }
-                                            }
-                                            
-                                            mediaEditor.seek(start, andPlay: true)
-                                            mediaEditor.play()
-                                        } else {
-                                            mediaEditor.stop()
-                                        }
-                                    }
-                                } else if trackId == 1 {
-                                    mediaEditor.setAdditionalVideoOffset(offset, apply: apply)
-                                }
-                            },
-                            trackLongPressed: { [weak controller] trackId, sourceView in
-                                guard let controller else {
-                                    return
-                                }
-                                controller.node.presentTrackOptions(trackId: trackId, sourceView: sourceView)
-                            }
-                        )),
-                        environment: {},
-                        containerSize: CGSize(width: previewSize.width - scrubberInset * 2.0, height: availableSize.height)
-                    )
-                    
-                    let scrubberFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - scrubberSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height + controlsBottomInset - inputPanelSize.height + 3.0), size: scrubberSize)
-                    if let scrubberView = scrubber.view {
-                        var animateIn = false
-                        if scrubberView.superview == nil {
-                            animateIn = true
-                            if let inputPanelBackgroundView = self.inputPanelBackground.view, inputPanelBackgroundView.superview != nil {
-                                self.insertSubview(scrubberView, belowSubview: inputPanelBackgroundView)
-                            } else {
-                                self.addSubview(scrubberView)
-                            }
-                        }
-                        if animateIn {
-                            scrubberView.frame = scrubberFrame
-                        } else {
-                            scrubberTransition.setFrame(view: scrubberView, frame: scrubberFrame)
-                        }
-                        if !self.animatingButtons && !(!hasMainVideoTrack && animateIn) {
-                            transition.setAlpha(view: scrubberView, alpha: component.isDisplayingTool != nil || component.isDismissing || component.isInteractingWithEntities || isEditingCaption || isRecordingAdditionalVideo || isEditingTextEntity ? 0.0 : 1.0)
-                        } else if animateIn {
-                            scrubberView.layer.animatePosition(from: CGPoint(x: 0.0, y: 44.0), to: .zero, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                            scrubberView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                            scrubberView.layer.animateScale(from: 0.6, to: 1.0, duration: 0.2)
-                        }
-                    }
-                } else {
-                    if let scrubber = self.scrubber {
-                        self.scrubber = nil
-                        if let scrubberView = scrubber.view {
-                            scrubberView.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 44.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-                            scrubberView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
-                                scrubberView.removeFromSuperview()
-                            })
-                            scrubberView.layer.animateScale(from: 1.0, to: 0.6, duration: 0.2, removeOnCompletion: false)
-                        }
-                    }
-                }
-                                  
+                                                  
                 let saveContentComponent: AnyComponentWithIdentity<Empty>
                 if component.hasAppeared {
                     saveContentComponent = AnyComponentWithIdentity(
@@ -1995,8 +1788,199 @@ final class MediaEditorScreenComponent: Component {
                     transition.setScale(view: switchCameraButtonView, scale: isRecordingAdditionalVideo ? 1.0 : 0.01)
                     transition.setAlpha(view: switchCameraButtonView, alpha: isRecordingAdditionalVideo ? 1.0 : 0.0)
                 }
-                
+            } else {
+                inputPanelSize = CGSize(width: 0.0, height: 12.0)
             }
+            
+            if case .stickerEditor = controller.mode {
+                
+            } else {
+                if let playerState = state.playerState {
+                    let scrubberInset: CGFloat = 9.0
+                    
+                    let minDuration: Double
+                    let maxDuration: Double
+                    if playerState.isAudioOnly {
+                        minDuration = 5.0
+                        maxDuration = 15.0
+                    } else {
+                        minDuration = 1.0
+                        maxDuration = storyMaxVideoDuration
+                    }
+                    
+                    let previousTrackCount = self.currentVisibleTracks?.count
+                    let visibleTracks = playerState.tracks.filter { $0.visibleInTimeline }.map { MediaScrubberComponent.Track($0) }
+                    self.currentVisibleTracks = visibleTracks
+                    
+                    var scrubberTransition = transition
+                    if let previousTrackCount, previousTrackCount != visibleTracks.count {
+                        scrubberTransition = .easeInOut(duration: 0.2)
+                    }
+                    
+                    let isAudioOnly = playerState.isAudioOnly
+                    let hasMainVideoTrack = playerState.tracks.contains(where: { $0.id == 0 })
+                    
+                    let scrubber: ComponentView<Empty>
+                    if let current = self.scrubber {
+                        scrubber = current
+                    } else {
+                        scrubber = ComponentView<Empty>()
+                        self.scrubber = scrubber
+                    }
+                    
+                    let scrubberSize = scrubber.update(
+                        transition: scrubberTransition,
+                        component: AnyComponent(MediaScrubberComponent(
+                            context: component.context,
+                            style: .editor,
+                            theme: environment.theme,
+                            generationTimestamp: playerState.generationTimestamp,
+                            position: playerState.position,
+                            minDuration: minDuration,
+                            maxDuration: maxDuration,
+                            isPlaying: playerState.isPlaying,
+                            tracks: visibleTracks,
+                            positionUpdated: { [weak mediaEditor] position, apply in
+                                if let mediaEditor {
+                                    mediaEditor.seek(position, andPlay: apply)
+                                }
+                            },
+                            trackTrimUpdated: { [weak mediaEditor] trackId, start, end, updatedEnd, apply in
+                                guard let mediaEditor else {
+                                    return
+                                }
+                                let trimRange = start..<end
+                                if trackId == 2 {
+                                    mediaEditor.setAudioTrackTrimRange(trimRange, apply: apply)
+                                    if isAudioOnly {
+                                        let offset = (mediaEditor.values.audioTrackOffset ?? 0.0)
+                                        if apply {
+                                            mediaEditor.seek(offset + start, andPlay: true)
+                                        } else {
+                                            mediaEditor.seek(offset + start, andPlay: false)
+                                            mediaEditor.stop()
+                                        }
+                                    } else {
+                                        if apply {
+                                            mediaEditor.play()
+                                        } else {
+                                            mediaEditor.stop()
+                                        }
+                                    }
+                                } else if trackId == 1 {
+                                    mediaEditor.setAdditionalVideoTrimRange(trimRange, apply: apply)
+                                    if hasMainVideoTrack {
+                                        if apply {
+                                            mediaEditor.play()
+                                        } else {
+                                            mediaEditor.stop()
+                                        }
+                                    } else {
+                                        if apply {
+                                            mediaEditor.seek(start, andPlay: true)
+                                        } else {
+                                            mediaEditor.seek(updatedEnd ? end : start, andPlay: false)
+                                        }
+                                    }
+                                } else {
+                                    mediaEditor.setVideoTrimRange(trimRange, apply: apply)
+                                    if apply {
+                                        mediaEditor.seek(start, andPlay: true)
+                                    } else {
+                                        mediaEditor.seek(updatedEnd ? end : start, andPlay: false)
+                                    }
+                                }
+                            },
+                            trackOffsetUpdated: { trackId, offset, apply in
+                                guard let mediaEditor else {
+                                    return
+                                }
+                                if trackId == 2 {
+                                    mediaEditor.setAudioTrackOffset(offset, apply: apply)
+                                    if isAudioOnly {
+                                        let offset = (mediaEditor.values.audioTrackOffset ?? 0.0)
+                                        let start = (mediaEditor.values.audioTrackTrimRange?.lowerBound ?? 0.0)
+                                        if apply {
+                                            mediaEditor.seek(offset + start, andPlay: true)
+                                        } else {
+                                            mediaEditor.seek(offset + start, andPlay: false)
+                                            mediaEditor.stop()
+                                        }
+                                    } else {
+                                        if apply {
+                                            let audioStart = mediaEditor.values.audioTrackTrimRange?.lowerBound ?? 0.0
+                                            let audioOffset = min(0.0, mediaEditor.values.audioTrackOffset ?? 0.0)
+                                            
+                                            var start = -audioOffset + audioStart
+                                            if let duration = mediaEditor.duration {
+                                                let lowerBound = mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0
+                                                let upperBound = mediaEditor.values.videoTrimRange?.upperBound ?? duration
+                                                if start >= upperBound {
+                                                    start = lowerBound
+                                                } else if start < lowerBound {
+                                                    start = lowerBound
+                                                }
+                                            }
+                                            
+                                            mediaEditor.seek(start, andPlay: true)
+                                            mediaEditor.play()
+                                        } else {
+                                            mediaEditor.stop()
+                                        }
+                                    }
+                                } else if trackId == 1 {
+                                    mediaEditor.setAdditionalVideoOffset(offset, apply: apply)
+                                }
+                            },
+                            trackLongPressed: { [weak controller] trackId, sourceView in
+                                guard let controller else {
+                                    return
+                                }
+                                controller.node.presentTrackOptions(trackId: trackId, sourceView: sourceView)
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: previewSize.width - scrubberInset * 2.0, height: availableSize.height)
+                    )
+                    
+                    let scrubberFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - scrubberSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height + controlsBottomInset - inputPanelSize.height + 3.0), size: scrubberSize)
+                    if let scrubberView = scrubber.view {
+                        var animateIn = false
+                        if scrubberView.superview == nil {
+                            animateIn = true
+                            if let inputPanelBackgroundView = self.inputPanelBackground.view, inputPanelBackgroundView.superview != nil {
+                                self.insertSubview(scrubberView, belowSubview: inputPanelBackgroundView)
+                            } else {
+                                self.addSubview(scrubberView)
+                            }
+                        }
+                        if animateIn {
+                            scrubberView.frame = scrubberFrame
+                        } else {
+                            scrubberTransition.setFrame(view: scrubberView, frame: scrubberFrame)
+                        }
+                        if !self.animatingButtons && !(!hasMainVideoTrack && animateIn) {
+                            transition.setAlpha(view: scrubberView, alpha: component.isDisplayingTool != nil || component.isDismissing || component.isInteractingWithEntities || isEditingCaption || isRecordingAdditionalVideo || isEditingTextEntity ? 0.0 : 1.0)
+                        } else if animateIn {
+                            scrubberView.layer.animatePosition(from: CGPoint(x: 0.0, y: 44.0), to: .zero, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            scrubberView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            scrubberView.layer.animateScale(from: 0.6, to: 1.0, duration: 0.2)
+                        }
+                    }
+                } else {
+                    if let scrubber = self.scrubber {
+                        self.scrubber = nil
+                        if let scrubberView = scrubber.view {
+                            scrubberView.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 44.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+                            scrubberView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                                scrubberView.removeFromSuperview()
+                            })
+                            scrubberView.layer.animateScale(from: 1.0, to: 0.6, duration: 0.2, removeOnCompletion: false)
+                        }
+                    }
+                }
+            }
+            
             if case .stickerEditor = controller.mode {
                 var stickerButtonsHidden = buttonsAreHidden
                 if let displayingTool = component.isDisplayingTool, [.cutoutErase, .cutoutRestore].contains(displayingTool) {
@@ -2558,6 +2542,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         fileprivate var drawingScreen: DrawingScreen?
         fileprivate var stickerScreen: StickerPickerScreen?
         fileprivate weak var cutoutScreen: MediaCutoutScreen?
+        fileprivate weak var coverScreen: MediaCoverScreen?
         private var defaultToEmoji = false
         
         private var previousDrawingData: Data?
@@ -2568,6 +2553,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var playbackPositionDisposable: Disposable?
         
         var recording: MediaEditorScreen.Recording
+        
+        private let locationManager = LocationManager()
         
         private var presentationData: PresentationData
         private var validLayout: ContainerViewLayout?
@@ -2900,6 +2887,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             if isFromCamera && mediaDimensions.width > mediaDimensions.height {
                 mediaEntity.scale = storyDimensions.height / fittedSize.height
+            }
+            
+            if case .botPreview = controller.mode {
+                if fittedSize.width / fittedSize.height < storyDimensions.width / storyDimensions.height {
+                    mediaEntity.scale = storyDimensions.height / fittedSize.height
+                }
             }
              
             let initialValues: MediaEditorValues?
@@ -4594,7 +4587,37 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.mediaEditor?.play()
         }
         
-        func addWeather(_ weather: StickerPickerScreen.Weather.LoadedWeather) {
+        func requestWeather() {
+            
+        }
+        
+        func presentLocationAccessAlert() {
+            DeviceAccess.authorizeAccess(to: .location(.send), locationManager: self.locationManager, presentationData: self.presentationData, present: { [weak self] c, a in
+                self?.controller?.present(c, in: .window(.root), with: a)
+            }, openSettings: { [weak self] in
+                self?.context.sharedContext.applicationBindings.openSettings()
+            }, { [weak self] authorized in
+                guard let self, authorized else {
+                    return
+                }
+                let weatherPromise = Promise<StickerPickerScreen.Weather>()
+                weatherPromise.set(getWeather(context: self.context))
+                self.weatherPromise = weatherPromise
+                
+                let _ = (weatherPromise.get()
+                |> deliverOnMainQueue).start(next: { [weak self] result in
+                    if let self, case let .loaded(weather) = result {
+                        self.addWeather(weather)
+                    }
+                })
+            })
+        }
+        
+        func addWeather(_ weather: StickerPickerScreen.Weather.LoadedWeather?) {
+            guard let weather else {
+                
+                return
+            }
             let maxWeatherCount = 3
             var currentWeatherCount = 0
             self.entitiesView.eachView { entityView in
@@ -4617,6 +4640,74 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 scale: nil,
                 position: nil
             )
+        }
+        
+        func requestCompletion(playHaptic: Bool = true) {
+            guard let controller = self.controller else {
+                return
+            }
+            switch controller.mode {
+            case .storyEditor:
+                guard !controller.node.recording.isActive else {
+                    return
+                }
+                guard controller.checkCaptionLimit() else {
+                    return
+                }
+                if controller.isEditingStory {
+                    controller.requestStoryCompletion(animated: true)
+                } else {
+                    if controller.checkIfCompletionIsAllowed() {
+                        controller.hapticFeedback.impact(.light)
+                        controller.openPrivacySettings(completion: { [weak controller] in
+                            controller?.requestStoryCompletion(animated: true)
+                        })
+                    }
+                }
+            case .stickerEditor:
+                controller.requestStickerCompletion(animated: true)
+            case .botPreview:
+                controller.requestStoryCompletion(animated: true)
+            }
+        }
+        
+        func openCoverSelection() {
+            guard let mediaEditor = self.mediaEditor else {
+                return
+            }
+            
+            guard let portalView = PortalView(matchPosition: false) else {
+                return
+            }
+            portalView.view.layer.rasterizationScale = UIScreenScale
+            self.previewContentContainerView.addPortal(view: portalView)
+            
+            let scale = 48.0 / self.previewContentContainerView.frame.height
+            portalView.view.transform = CGAffineTransformMakeScale(scale, scale)
+            
+            if self.entitiesView.hasSelection {
+                self.entitiesView.selectEntity(nil)
+            }
+            let coverController = MediaCoverScreen(
+                context: self.context,
+                mediaEditor: mediaEditor,
+                previewView: self.previewView,
+                portalView:  portalView
+            )
+            coverController.dismissed = { [weak self] in
+                if let self {
+                    self.animateInFromTool()
+                    self.requestCompletion(playHaptic: false)
+                }
+            }
+            coverController.completed = { [weak self] position, image in
+                if let self {
+                    self.controller?.currentCoverImage = image
+                }
+            }
+            self.controller?.present(coverController, in: .window(.root))
+            self.coverScreen = coverController
+            self.animateOutToTool(tool: .cover)
         }
         
         func updateModalTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -4890,9 +4981,16 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         if let self {
                                             if let weatherPromise = self.weatherPromise {
                                                 let _ = (weatherPromise.get()
-                                                |> take(1)).start(next: { [weak self] weather in
-                                                    if let self, case let .loaded(loaded) = weather {
-                                                        self.addWeather(loaded)
+                                                |> take(1)).start(next: { [weak self] result in
+                                                    if let self {
+                                                        switch result {
+                                                        case let .loaded(weather):
+                                                            self.addWeather(weather)
+                                                        case .notDetermined, .notAllowed:
+                                                            self.presentLocationAccessAlert()
+                                                        default:
+                                                            break
+                                                        }
                                                     }
                                                 })
                                             }
@@ -5082,6 +5180,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     }
                                     self.controller?.present(controller, in: .window(.root))
                                     self.animateOutToTool(tool: .tools)
+                                case .cover:
+                                    self.openCoverSelection()
                                 }
                             }
                         },
@@ -5657,16 +5757,25 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         return self.isEditingStory || self.forwardSource != nil
     }
      
+    private var currentCoverImage: UIImage?
     func openPrivacySettings(_ privacy: MediaEditorResultPrivacy? = nil, completion: @escaping () -> Void = {}) {
-        self.node.mediaEditor?.maybePauseVideo()
-        
-        self.hapticFeedback.impact(.light)
-    
+        guard let mediaEditor = self.node.mediaEditor else {
+            return
+        }
+        mediaEditor.maybePauseVideo()
+            
         let privacy = privacy ?? self.state.privacy
         
         let text = self.getCaption().string
         let mentions = generateTextEntities(text, enabledTypes: [.mention], currentEntities: []).map { (text as NSString).substring(with: NSRange(location: $0.range.lowerBound + 1, length: $0.range.upperBound - $0.range.lowerBound - 1)) }
                 
+        let coverImage: UIImage?
+        if mediaEditor.sourceIsVideo {
+            coverImage = self.currentCoverImage ?? mediaEditor.resultImage
+        } else {
+            coverImage = nil
+        }
+        
         let stateContext = ShareWithPeersScreen.StateContext(
             context: self.context,
             subject: .stories(editing: false),
@@ -5684,6 +5793,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let initialPrivacy = privacy.privacy
             let timeout = privacy.timeout
             
+            var editCoverImpl: (() -> Void)?
+            
             let controller = ShareWithPeersScreen(
                 context: self.context,
                 initialPrivacy: initialPrivacy,
@@ -5692,6 +5803,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 pin: privacy.pin,
                 timeout: privacy.timeout,
                 mentions: mentions,
+                coverImage: coverImage,
                 stateContext: stateContext,
                 completion: { [weak self] sendAsPeerId, privacy, allowScreenshots, pin, _, completed in
                     guard let self else {
@@ -5741,6 +5853,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             pin: pin
                         ), completion: completion)
                     })
+                },
+                editCover: {
+                    editCoverImpl?()
                 }
             )
             controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
@@ -5753,6 +5868,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self.node.mediaEditor?.play()
             }
             self.push(controller)
+            
+            editCoverImpl = { [weak self, weak controller] in
+                if let self {
+                    Queue.mainQueue().after(0.25, {
+                        self.node.openCoverSelection()
+                    })
+                }
+                if let controller {
+                    controller.dismiss()
+                }
+            }
         })
     }
     
@@ -8079,7 +8205,7 @@ private func stickerFile(resource: TelegramMediaResource, thumbnailResource: Tel
     fileAttributes.append(.FileName(fileName: isVideo ? "sticker.webm" : "sticker.webp"))
     fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
     if isVideo {
-        fileAttributes.append(.Video(duration: duration ?? 3.0, size: dimensions, flags: [], preloadSize: nil))
+        fileAttributes.append(.Video(duration: duration ?? 3.0, size: dimensions, flags: [], preloadSize: nil, coverTime: nil))
     } else {
         fileAttributes.append(.ImageSize(size: dimensions))
     }

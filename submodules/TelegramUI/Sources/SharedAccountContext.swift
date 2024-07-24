@@ -2193,6 +2193,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         var reachedLimitImpl: ((Int32) -> Void)?
         var presentBirthdayPickerImpl: (() -> Void)?
         let mode: ContactMultiselectionControllerMode
+        var starsMode: ContactSelectionControllerMode = .generic
         var currentBirthdays: [EnginePeer.Id: TelegramBirthday]?
         if case let .chatList(birthdays) = source, let birthdays, !birthdays.isEmpty {
             mode = .premiumGifting(birthdays: birthdays, selectToday: true, hasActions: true)
@@ -2202,6 +2203,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             currentBirthdays = birthdays
         } else if case let .stars(birthdays) = source {
             mode = .premiumGifting(birthdays: birthdays, selectToday: false, hasActions: false)
+            starsMode = .starsGifting(birthdays: birthdays, hasActions: false)
             currentBirthdays = birthdays
         } else {
             mode = .premiumGifting(birthdays: nil, selectToday: false, hasActions: true)
@@ -2238,7 +2240,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             options.set(context.engine.payments.starsGiftOptions(peerId: nil))
             let contactsController = context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(
                 context: context,
-                title: { strings in return strings.Stars_Purchase_GiftStars }
+                mode: starsMode,
+                autoDismiss: false,
+                title: { strings in return strings.Stars_Purchase_GiftStars },
+                options: contactOptions
             ))
             let _ = (contactsController.result
             |> deliverOnMainQueue).start(next: { result in

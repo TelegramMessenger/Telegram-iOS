@@ -1677,7 +1677,7 @@ private func monetizationEntries(
         }
     }
     
-    if isCreator {
+    if isCreator && canViewRevenue {
         var switchOffAdds: Bool? = nil
         if let boostData, boostData.level >= premiumConfiguration.minChannelRestrictAdsLevel {
             switchOffAdds = adsRestricted
