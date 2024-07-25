@@ -1363,6 +1363,15 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             return
                         }
                         
+                        if let navigationController = parentController.navigationController as? NavigationController, let minimizedContainer = navigationController.minimizedContainer {
+                            for controller in minimizedContainer.controllers {
+                                if let controller = controller as? AttachmentController, let mainController = controller.mainController as? WebAppController, mainController.botId == user.id && mainController.source == .generic {
+                                    navigationController.maximizeViewController(controller, animated: true)
+                                    return
+                                }
+                            }
+                        }
+                        
                         context.sharedContext.openWebApp(
                             context: context,
                             parentController: parentController,

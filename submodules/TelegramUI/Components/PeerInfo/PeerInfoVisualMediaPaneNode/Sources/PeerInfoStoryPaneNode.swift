@@ -1629,6 +1629,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     public private(set) var isSelectionModeActive: Bool
     
     private var currentParams: (size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData)?
+    private var listBottomInset: CGFloat?
     
     private let ready = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -2053,10 +2054,17 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 return SparseItemGrid.ShimmerColors(background: 0xffffff, foreground: 0xffffff)
             }
 
-            let backgroundColor = presentationData.theme.list.mediaPlaceholderColor
-            let foregroundColor = presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.6)
-
-            return SparseItemGrid.ShimmerColors(background: backgroundColor.argb, foreground: foregroundColor.argb)
+            if case .botPreview = scope {
+                let backgroundColor = presentationData.theme.list.plainBackgroundColor
+                let foregroundColor = presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.6)
+                
+                return SparseItemGrid.ShimmerColors(background: backgroundColor.argb, foreground: foregroundColor.argb)
+            } else {
+                let backgroundColor = presentationData.theme.list.mediaPlaceholderColor
+                let foregroundColor = presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.6)
+                
+                return SparseItemGrid.ShimmerColors(background: backgroundColor.argb, foreground: foregroundColor.argb)
+            }
         }
 
         self.itemGridBinding.updateShimmerLayersImpl = { [weak self] layer in
@@ -3396,7 +3404,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             }
             if case .botPreview = self.scope, self.canManageStories {
                 self.updateBotPreviewLanguageTab(size: currentParams.size, topInset: currentParams.topInset, transition: transition)
-                self.updateBotPreviewFooter(size: currentParams.size, bottomInset: currentParams.bottomInset, transition: transition)
+                self.updateBotPreviewFooter(size: currentParams.size, bottomInset: 0.0, transition: transition)
             }
         }
     }
@@ -3664,7 +3672,11 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         guard let self else {
                             return
                         }
-                        self.emptyAction?()
+                        if self.canAddMoreBotPreviews() {
+                            self.emptyAction?()
+                        } else {
+                            self.presentUnableToAddMorePreviewsAlert()
+                        }
                     },
                     additionalActionTitle: isMainLanguage ? "Create a Translation" : nil,
                     additionalAction: { [weak self] in
@@ -3680,7 +3692,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 environment: {},
                 containerSize: CGSize(width: size.width, height: 1000.0)
             )
-            let botPreviewFooterFrame = CGRect(origin: CGPoint(x: floor((size.width - botPreviewFooterSize.width) * 0.5), y: self.itemGrid.contentBottomOffset - botPreviewFooterSize.height - bottomInset), size: botPreviewFooterSize)
+            let botPreviewFooterFrame = CGRect(origin: CGPoint(x: floor((size.width - botPreviewFooterSize.width) * 0.5), y: self.itemGrid.contentBottomOffset + 16.0), size: botPreviewFooterSize)
             if let botPreviewFooterView = botPreviewFooter.view {
                 if botPreviewFooterView.superview == nil {
                     self.view.addSubview(botPreviewFooterView)
@@ -3746,16 +3758,16 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             transition.updateFrame(layer: barBackgroundLayer, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: gridTopInset)))
         }
         
-        let defaultBottomInset = bottomInset
+        var listBottomInset = bottomInset
         var bottomInset = bottomInset
         
         if case .botPreview = self.scope, self.canManageStories {
             updateBotPreviewLanguageTab(size: size, topInset: topInset, transition: transition)
             gridTopInset += 50.0
             
-            updateBotPreviewFooter(size: size, bottomInset: defaultBottomInset, transition: transition)
+            updateBotPreviewFooter(size: size, bottomInset: 0.0, transition: transition)
             if let botPreviewFooterView = self.botPreviewFooter?.view {
-                bottomInset += 18.0 + botPreviewFooterView.bounds.height
+                listBottomInset += 18.0 + botPreviewFooterView.bounds.height
             }
         }
         
@@ -3886,6 +3898,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 selectionPanelTransition.setFrame(view: selectionPanelView, frame: selectionPanelFrame)
             }
             bottomInset = selectionPanelSize.height
+            listBottomInset += selectionPanelSize.height
         } else if self.isProfileEmbedded, let selectedIds = self.itemInteraction.selectedIds, self.canManageStories, case .botPreview = self.scope {
             let selectionPanel: ComponentView<Empty>
             var selectionPanelTransition = ComponentTransition(transition)
@@ -3932,6 +3945,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 selectionPanelTransition.setFrame(view: selectionPanelView, frame: selectionPanelFrame)
             }
             bottomInset = selectionPanelSize.height
+            listBottomInset += selectionPanelSize.height
         } else if let selectionPanel = self.selectionPanel {
             self.selectionPanel = nil
             if let selectionPanelView = selectionPanel.view {
@@ -4039,7 +4053,11 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         guard let self else {
                             return
                         }
-                        self.emptyAction?()
+                        if self.canAddMoreBotPreviews() {
+                            self.emptyAction?()
+                        } else {
+                            self.presentUnableToAddMorePreviewsAlert()
+                        }
                     },
                     additionalActionTitle: self.canManageStories ? (isMainLanguage ? "Create a Translation" : "Delete this Translation") : nil,
                     additionalAction: {
@@ -4133,11 +4151,12 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             }
          
             self.itemGrid.pinchEnabled = items.count > 2 && !self.isReordering
-            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: gridTopInset, left: sideInset, bottom:  bottomInset, right: sideInset), useSideInsets: !isList, scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, fixedItemAspect: fixedItemAspect, adjustForSmallCount: adjustForSmallCount, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none, transition: animateGridItems ? .spring(duration: 0.35) : .immediate)
+            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: gridTopInset, left: sideInset, bottom:  listBottomInset, right: sideInset), useSideInsets: !isList, scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, fixedItemAspect: fixedItemAspect, adjustForSmallCount: adjustForSmallCount, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none, transition: animateGridItems ? .spring(duration: 0.35) : .immediate)
         }
         
+        self.listBottomInset = listBottomInset
         if case .botPreview = self.scope, self.canManageStories {
-            updateBotPreviewFooter(size: size, bottomInset: defaultBottomInset, transition: transition)
+            updateBotPreviewFooter(size: size, bottomInset: 0.0, transition: transition)
         }
     }
 
@@ -4238,12 +4257,21 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     }
     
     private func presentAddBotPreviewLanguage() {
-        self.parentController?.push(LanguageSelectionScreen(context: self.context, selectLocalization: { [weak self] info in
+        let excludeIds: [String] = self.currentBotPreviewLanguages.map(\.id)
+        self.parentController?.push(LanguageSelectionScreen(context: self.context, excludeIds: excludeIds, selectLocalization: { [weak self] info in
             guard let self else {
                 return
             }
             self.addBotPreviewLanguage(language: StoryListContext.State.Language(id: info.languageCode, name: info.title))
         }))
+    }
+    
+    public func presentUnableToAddMorePreviewsAlert() {
+        //TODO:localize
+        self.parentController?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: "You can add at most \(self.maxBotPreviewCount) previews.", actions: [
+            TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
+            })
+        ], parseMarkdown: true), in: .window(.root))
     }
     
     public func presentDeleteBotPreviewLanguage() {

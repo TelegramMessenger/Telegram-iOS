@@ -294,6 +294,7 @@ final class LanguageSelectionScreenNode: ViewControllerTracingNode {
     private let context: AccountContext
     private var presentationData: PresentationData
     private weak var navigationBar: NavigationBar?
+    private let excludeIds: [String]
     private let requestActivateSearch: () -> Void
     private let requestDeactivateSearch: () -> Void
     private let present: (ViewController, Any?) -> Void
@@ -316,11 +317,12 @@ final class LanguageSelectionScreenNode: ViewControllerTracingNode {
     
     private var currentListState: LocalizationListState?
     
-    init(context: AccountContext, presentationData: PresentationData, navigationBar: NavigationBar, requestActivateSearch: @escaping () -> Void, requestDeactivateSearch: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, push: @escaping (ViewController) -> Void, selectLocalization: @escaping (LocalizationInfo) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, navigationBar: NavigationBar, excludeIds: [String], requestActivateSearch: @escaping () -> Void, requestDeactivateSearch: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, push: @escaping (ViewController) -> Void, selectLocalization: @escaping (LocalizationInfo) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.presentationDataValue.set(.single(presentationData))
         self.navigationBar = navigationBar
+        self.excludeIds = excludeIds
         self.requestActivateSearch = requestActivateSearch
         self.requestDeactivateSearch = requestDeactivateSearch
         self.present = present
@@ -361,6 +363,12 @@ final class LanguageSelectionScreenNode: ViewControllerTracingNode {
                         
             var entries: [LanguageListEntry] = []
             var existingIds = Set<String>()
+            
+            var localizationListState = localizationListState
+            localizationListState.availableOfficialLocalizations = localizationListState.availableOfficialLocalizations.filter {
+                !strongSelf.excludeIds.contains($0.languageCode)
+            }
+            localizationListState.availableSavedLocalizations = []
             
             if !localizationListState.availableOfficialLocalizations.isEmpty {
                 strongSelf.currentListState = localizationListState

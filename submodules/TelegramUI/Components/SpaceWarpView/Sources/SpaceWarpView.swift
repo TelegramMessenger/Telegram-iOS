@@ -976,6 +976,7 @@ open class SpaceWarpView4: UIView, SpaceWarpView {
         meshView.frame = CGRect(origin: CGPoint(), size: size)
         
         let pixelStep = CGPoint()
+        //let pixelStep = CGPoint(x: CGFloat(resolution.x) * 0.33, y: CGFloat(resolution.y) * 0.33)
         let itemSize = CGSize(width: size.width / CGFloat(resolution.x), height: size.height / CGFloat(resolution.y))
         
         let params = RippleParams(amplitude: 26.0, frequency: 15.0, decay: 8.0, speed: 1400.0)
