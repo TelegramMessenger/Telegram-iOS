@@ -182,6 +182,11 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             configuration.mediaPlaybackRequiresUserAction = false
         }
         
+        let contentController = WKUserContentController()
+        let videoScript = WKUserScript(source: videoSource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        contentController.addUserScript(videoScript)
+        configuration.userContentController = contentController
+        
         self.webView = WebView(frame: CGRect(), configuration: configuration)
         self.webView.allowsLinkPreview = true
         
@@ -601,7 +606,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                 if download {
                     decisionHandler(.download, preferences)
                 } else {
-                    decisionHandler(.cancel, preferences)
+//                    decisionHandler(.cancel, preferences)
                 }
             })
         } else {
@@ -1145,6 +1150,48 @@ let setupFontFunctions = """
   }
   window.setTelegramFontOverrides = setTelegramFontOverrides;
 })();
+"""
+
+private let videoSource = """
+function disableWebkitEnterFullscreen(videoElement) {
+  if (videoElement && videoElement.webkitEnterFullscreen) {
+    Object.defineProperty(videoElement, 'webkitEnterFullscreen', {
+      value: undefined
+    });
+  }
+}
+
+function disableFullscreenOnExistingVideos() {
+  document.querySelectorAll('video').forEach(disableWebkitEnterFullscreen);
+}
+
+function handleMutations(mutations) {
+  mutations.forEach((mutation) => {
+    if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+      mutation.addedNodes.forEach((newNode) => {
+        if (newNode.tagName === 'VIDEO') {
+          disableWebkitEnterFullscreen(newNode);
+        }
+        if (newNode.querySelectorAll) {
+          newNode.querySelectorAll('video').forEach(disableWebkitEnterFullscreen);
+        }
+      });
+    }
+  });
+}
+
+disableFullscreenOnExistingVideos();
+
+const observer = new MutationObserver(handleMutations);
+
+observer.observe(document.body, {
+  childList: true,
+  subtree: true
+});
+
+function disconnectObserver() {
+  observer.disconnect();
+}
 """
 
 @available(iOS 16.0, *)

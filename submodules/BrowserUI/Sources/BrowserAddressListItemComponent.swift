@@ -10,6 +10,9 @@ import TelegramPresentationData
 import PhotoResources
 import AccountContext
 
+private let iconFont = Font.with(size: 30.0, design: .round, weight: .bold)
+private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radius: 6.0, color: UIColor(rgb: 0xFF9500))
+
 final class BrowserAddressListItemComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
@@ -57,6 +60,7 @@ final class BrowserAddressListItemComponent: Component {
         private let containerButton: HighlightTrackingButton
         
         private var emptyIcon: UIImageView?
+        private var emptyLabel: ComponentView<Empty>?
         private var icon = TransformImageNode()
         private let title = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
@@ -104,12 +108,14 @@ final class BrowserAddressListItemComponent: Component {
                 
             let title: String
             let subtitle: String
+            var parsedUrl: URL?
             var iconImageReferenceAndRepresentation: (AnyMediaReference, TelegramMediaImageRepresentation)?
             var updateIconImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             
             if case let .Loaded(content) = component.webPage.content {
                 title = content.title ?? content.url
                 subtitle = content.url
+                parsedUrl = URL(string: content.url)
                 
                 if let image = content.image {
                     if let representation = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 80, height: 80)) {
@@ -211,15 +217,56 @@ final class BrowserAddressListItemComponent: Component {
                 
                 iconImageApply()
                 
-//                if strongSelf.iconTextBackgroundNode.supernode != nil {
-//                    strongSelf.iconTextBackgroundNode.removeFromSupernode()
-//                }
-//                if strongSelf.iconTextNode.supernode != nil {
-//                    strongSelf.iconTextNode.removeFromSupernode()
-//                }
+                if let emptyIcon = self.emptyIcon {
+                    self.emptyIcon = nil
+                    emptyIcon.removeFromSuperview()
+                }
+                if let emptyLabel = self.emptyLabel {
+                    self.emptyLabel = nil
+                    emptyLabel.view?.removeFromSuperview()
+                }
             } else {
                 if self.icon.supernode != nil {
                     self.icon.view.removeFromSuperview()
+                }
+                
+                let icon: UIImageView
+                let label: ComponentView<Empty>
+                if let currentEmptyIcon = self.emptyIcon, let currentEmptyLabel = self.emptyLabel {
+                    icon = currentEmptyIcon
+                    label = currentEmptyLabel
+                } else {
+                    icon = UIImageView()
+                    icon.image = iconTextBackgroundImage
+                    self.addSubview(icon)
+                    
+                    label = ComponentView()
+                }
+                icon.frame = iconFrame
+                
+                var iconText = ""
+                if let parsedUrl, let host = parsedUrl.host {
+                    if parsedUrl.path.hasPrefix("/addstickers/") {
+                        iconText = "S"
+                    } else if parsedUrl.path.hasPrefix("/addemoji/") {
+                        iconText = "E"
+                    } else {
+                        iconText = host[..<host.index(after: host.startIndex)].uppercased()
+                    }
+                }
+                
+                let labelSize = label.update(
+                    transition: .immediate,
+                    component: AnyComponent(Text(text: iconText, font: iconFont, color: .white)),
+                    environment: {},
+                    containerSize: iconSize
+                )
+                let labelFrame = CGRect(origin: CGPoint(x: iconFrame.minX + floorToScreenPixels((iconFrame.width - labelSize.width) / 2.0), y: iconFrame.minY + floorToScreenPixels((iconFrame.height - labelSize.height) / 2.0)), size: labelSize)
+                if let labelView = label.view {
+                    if labelView.superview == nil {
+                        self.addSubview(labelView)
+                    }
+                    labelView.frame = labelFrame
                 }
                 
 //                if strongSelf.iconTextBackgroundNode.supernode == nil {

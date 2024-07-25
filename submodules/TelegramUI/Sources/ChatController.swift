@@ -245,6 +245,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var botStart: ChatControllerInitialBotStart?
     var attachBotStart: ChatControllerInitialAttachBotStart?
     var botAppStart: ChatControllerInitialBotAppStart?
+    let mode: ChatControllerPresentationMode
     
     let peerDisposable = MetaDisposable()
     let titleDisposable = MetaDisposable()
@@ -658,6 +659,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.botStart = botStart
         self.attachBotStart = attachBotStart
         self.botAppStart = botAppStart
+        self.mode = mode
         self.peekData = peekData
         self.currentChatListFilter = chatListFilter
         self.chatNavigationStack = chatNavigationStack
@@ -6548,6 +6550,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return value - 1
         }
         
+        self.hasBrowserOrAppInFront.set(.single(false))
+        
         let deallocate: () -> Void = {
             self.historyStateDisposable?.dispose()
             self.messageIndexDisposable.dispose()
@@ -7133,18 +7137,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        let hasBrowserOrWebAppInFront: Signal<Bool, NoError> = .single([])
-        |> then(
-            self.effectiveNavigationController?.viewControllersSignal ?? .single([])
-        )
-        |> map { controllers in
-            if controllers.last is BrowserScreen || controllers.last is AttachmentController {
-                return true
-            } else {
-                return false
+        if case .standard(.default) = self.mode {
+            let hasBrowserOrWebAppInFront: Signal<Bool, NoError> = .single([])
+            |> then(
+                self.effectiveNavigationController?.viewControllersSignal ?? .single([])
+            )
+            |> map { controllers in
+                if controllers.last is BrowserScreen || controllers.last is AttachmentController {
+                    return true
+                } else {
+                    return false
+                }
             }
+            self.hasBrowserOrAppInFront.set(hasBrowserOrWebAppInFront)
         }
-        self.hasBrowserOrAppInFront.set(hasBrowserOrWebAppInFront)
     }
     
     var returnInputViewFocus = false
@@ -7633,6 +7639,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         if let _ = self.peekData {
             self.peekTimerDisposable.set(nil)
+        }
+        
+        if case .standard(.default) = self.mode {
+            self.hasBrowserOrAppInFront.set(.single(false))
         }
     }
     

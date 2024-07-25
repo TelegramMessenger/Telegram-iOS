@@ -81,6 +81,7 @@ private final class BrowserScreenComponent: CombinedComponent {
             let performHoldAction = context.component.performHoldAction
             
             let isTablet = environment.metrics.isTablet
+            let canOpenIn = !(context.component.contentState?.url.hasPrefix("tonsite") ?? false)
             
             let navigationContent: AnyComponentWithIdentity<BrowserNavigationBarEnvironment>?
             var navigationLeftItems: [AnyComponentWithIdentity<Empty>]
@@ -148,7 +149,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                             )
                         )
                     ]
-                    
+                                        
                     if isTablet {
                         navigationLeftItems.append(
                             AnyComponentWithIdentity(
@@ -273,24 +274,26 @@ private final class BrowserScreenComponent: CombinedComponent {
                             ),
                             at: 0
                         )
-                        navigationRightItems.append(
-                            AnyComponentWithIdentity(
-                                id: "openIn",
-                                component: AnyComponent(
-                                    Button(
-                                        content: AnyComponent(
-                                            BundleIconComponent(
-                                                name: "Instant View/Browser",
-                                                tintColor: environment.theme.rootController.navigationBar.accentTextColor
-                                            )
-                                        ),
-                                        action: {
-                                            performAction.invoke(.openIn)
-                                        }
+                        if canOpenIn {
+                            navigationRightItems.append(
+                                AnyComponentWithIdentity(
+                                    id: "openIn",
+                                    component: AnyComponent(
+                                        Button(
+                                            content: AnyComponent(
+                                                BundleIconComponent(
+                                                    name: "Instant View/Browser",
+                                                    tintColor: environment.theme.rootController.navigationBar.accentTextColor
+                                                )
+                                            ),
+                                            action: {
+                                                performAction.invoke(.openIn)
+                                            }
+                                        )
                                     )
                                 )
                             )
-                        )
+                        }
                     }
                 }
             }
@@ -349,6 +352,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                             textColor: environment.theme.rootController.navigationBar.primaryTextColor,
                             canGoBack: context.component.contentState?.canGoBack ?? false,
                             canGoForward: context.component.contentState?.canGoForward ?? false,
+                            canOpenIn: canOpenIn,
                             performAction: performAction,
                             performHoldAction: performHoldAction
                         )
@@ -395,6 +399,12 @@ private final class BrowserScreenComponent: CombinedComponent {
             }
             
             if context.component.presentationState.addressFocused {
+                let addressListSize: CGSize
+                if isTablet {
+                    addressListSize = CGSize(width: 660.0, height: 420.0)
+                } else {
+                    addressListSize = CGSize(width: context.availableSize.width, height: context.availableSize.height - navigationBar.size.height - toolbarSize)
+                }
                 let addressList = addressList.update(
                     component: BrowserAddressListComponent(
                         context: context.component.context,
@@ -405,15 +415,26 @@ private final class BrowserScreenComponent: CombinedComponent {
                             performAction.invoke(.navigateTo(url))
                         }
                     ),
-                    availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height - navigationBar.size.height - toolbarSize),
+                    availableSize: addressListSize,
                     transition: context.transition
                 )
-                context.add(addressList
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height + addressList.size.height / 2.0))
-                    .clipsToBounds(true)
-                    .appear(.default(alpha: true))
-                    .disappear(.default(alpha: true))
-                )
+                
+                if isTablet {
+                    context.add(addressList
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height + addressList.size.height / 2.0 - 3.0))
+                        .cornerRadius(10.0)
+                        .clipsToBounds(true)
+                        .appear(.default(alpha: true))
+                        .disappear(.default(alpha: true))
+                    )
+                } else {
+                    context.add(addressList
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height + addressList.size.height / 2.0))
+                        .clipsToBounds(true)
+                        .appear(.default(alpha: true))
+                        .disappear(.default(alpha: true))
+                    )
+                }
             }
             
             return context.availableSize
@@ -992,7 +1013,7 @@ public class BrowserScreen: ViewController, MinimizableController {
             
             let _ = (settings
             |> deliverOnMainQueue).start(next: { [weak self] settings in
-                guard let self, let controller = self.controller, let contentState = self.contentState else {
+                guard let self, let controller = self.controller, let contentState = self.contentState, let layout = self.validLayout?.0 else {
                     return
                 }
                 
@@ -1072,22 +1093,26 @@ public class BrowserScreen: ViewController, MinimizableController {
                     })))
                 }
                 
-                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_Share, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
-                    performAction.invoke(.share)
-                    action(.default)
-                })))
+                if !layout.metrics.isTablet {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_Share, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                        performAction.invoke(.share)
+                        action(.default)
+                    })))
+                }
                 
                 if [.webPage, .instantPage].contains(contentState.contentType) {
                     items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_AddBookmark, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
                         performAction.invoke(.addBookmark)
                         action(.default)
                     })))
-                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_OpenInBrowser(openInTitle).string, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Browser"), color: theme.contextMenu.primaryColor) }, action: { [weak self] (controller, action) in
-                        if let self {
-                            self.context.sharedContext.applicationBindings.openUrl(openInUrl)
-                        }
-                        action(.default)
-                    })))
+                    if !layout.metrics.isTablet {
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_OpenInBrowser(openInTitle).string, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Browser"), color: theme.contextMenu.primaryColor) }, action: { [weak self] (controller, action) in
+                            if let self {
+                                self.context.sharedContext.applicationBindings.openUrl(openInUrl)
+                            }
+                            action(.default)
+                        })))
+                    }
                 }
                 
                 let contextController = ContextController(presentationData: self.presentationData, source: source, items: .single(ContextController.Items(content: .list(items))))
@@ -1278,7 +1303,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                         BrowserContentComponent(
                             content: content,
                             insets: UIEdgeInsets(
-                                top: environment.statusBarHeight,
+                                top: layout.statusBarHeight ?? 0.0,
                                 left: layout.safeInsets.left,
                                 bottom: layout.intrinsicInsets.bottom,
                                 right: layout.safeInsets.right
@@ -1401,6 +1426,16 @@ public class BrowserScreen: ViewController, MinimizableController {
         }
     }
     
+    public override func dismiss(completion: (() -> Void)? = nil) {
+        if let layout = self.validLayout, layout.metrics.isTablet {
+            self.node.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: layout.size.height), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { _ in
+                super.dismiss(completion: completion)
+            })
+        } else {
+            super.dismiss(completion: completion)
+        }
+    }
+    
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
@@ -1519,7 +1554,7 @@ private final class BrowserContentComponent: Component {
             }
             
             let collapsedHeight: CGFloat = 24.0
-            let topInset: CGFloat = component.insets.top + component.navigationBarHeight * (1.0 - component.scrollingPanelOffsetFraction) + collapsedHeight * component.scrollingPanelOffsetFraction
+            let topInset: CGFloat = component.navigationBarHeight * (1.0 - component.scrollingPanelOffsetFraction) + (component.insets.top + collapsedHeight) * component.scrollingPanelOffsetFraction
             let bottomInset = (49.0 + component.insets.bottom) * (1.0 - component.scrollingPanelOffsetFraction)
             let insets = UIEdgeInsets(top: topInset, left: component.insets.left, bottom: bottomInset, right: component.insets.right)
             let fullInsets = UIEdgeInsets(top: component.insets.top + component.navigationBarHeight, left: component.insets.left, bottom: 49.0 + component.insets.bottom, right: component.insets.right)
