@@ -298,13 +298,17 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                         }
                     },
                     deletePeer: deletePeer,
-                    contextAction: (key == .channels) ? nil : peerContextAction.flatMap { peerContextAction in
+                    contextAction: (key == .channels || section == .popularApps) ? nil : peerContextAction.flatMap { peerContextAction in
                         return { node, gesture, location in
                             if let chatPeer = peer.peer.peers[peer.peer.peerId] {
                                 let source: ChatListSearchContextActionSource
                                 
                                 if key == .apps {
-                                    source = .recentApps
+                                    if case .popularApps = section {
+                                        source = .popularApps
+                                    } else {
+                                        source = .recentApps
+                                    }
                                 } else {
                                     source = .recentSearch
                                 }
@@ -1081,6 +1085,7 @@ public enum ChatListSearchContextActionSource {
     case recentPeers
     case recentSearch
     case recentApps
+    case popularApps
     case search(EngineMessage.Id?)
 }
 

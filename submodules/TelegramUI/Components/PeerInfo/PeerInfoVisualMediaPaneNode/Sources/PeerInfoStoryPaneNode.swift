@@ -2495,7 +2495,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     }
                     self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: isPinned ? "anim_toastunpin" : "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                 })))
-                if isPinned {
+                if isPinned && self.canReorder() {
                     //TODO:localize
                     items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                         c?.dismiss(completion: {
@@ -2560,7 +2560,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             })))
         }
         
-        if canManage, case .botPreview = self.scope {
+        if canManage, case .botPreview = self.scope, self.canReorder() {
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c?.dismiss(completion: {
@@ -2569,17 +2569,6 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     }
                     
                     self.beginReordering()
-                })
-            })))
-            
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Edit Preview", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                c?.dismiss(completion: {
-                    guard let self else {
-                        return
-                    }
-                    
-                    let _ = self
                 })
             })))
         }
@@ -2791,7 +2780,31 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     }
                 }
                 botPreviewLanguages.sort(by: { $0.name < $1.name })
+                
+                var hadLocalItems = false
+                if let currentListState = self.currentListState {
+                    for item in currentListState.items {
+                        if item.storyItem.isPending {
+                            hadLocalItems = true
+                        }
+                    }
+                }
+                
                 self.currentListState = state
+                
+                var hasLocalItems = false
+                if let currentListState = self.currentListState {
+                    for item in currentListState.items {
+                        if item.storyItem.isPending {
+                            hasLocalItems = true
+                        }
+                    }
+                }
+                
+                var synchronous = synchronous
+                if hasLocalItems != hadLocalItems {
+                    synchronous = true
+                }
                 
                 self.updateItemsFromState(state: state, firstTime: firstTime, reloadAtTop: reloadAtTop, synchronous: synchronous, animated: false)
                 
@@ -4113,9 +4126,14 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             fixedItemHeight = nil
             
             let fixedItemAspect: CGFloat? = 0.81
+            
+            var adjustForSmallCount = true
+            if case .botPreview = self.scope {
+                adjustForSmallCount = false
+            }
          
-            self.itemGrid.pinchEnabled = items.count > 2
-            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: gridTopInset, left: sideInset, bottom:  bottomInset, right: sideInset), useSideInsets: !isList, scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, fixedItemAspect: fixedItemAspect, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none, transition: animateGridItems ? .spring(duration: 0.35) : .immediate)
+            self.itemGrid.pinchEnabled = items.count > 2 && !self.isReordering
+            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: gridTopInset, left: sideInset, bottom:  bottomInset, right: sideInset), useSideInsets: !isList, scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, fixedItemAspect: fixedItemAspect, adjustForSmallCount: adjustForSmallCount, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none, transition: animateGridItems ? .spring(duration: 0.35) : .immediate)
         }
         
         if case .botPreview = self.scope, self.canManageStories {
@@ -4210,6 +4228,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         }
         
         return items.count < self.maxBotPreviewCount
+    }
+    
+    public func canReorder() -> Bool {
+        guard let items = self.items else {
+            return false
+        }
+        return items.count > 1
     }
     
     private func presentAddBotPreviewLanguage() {

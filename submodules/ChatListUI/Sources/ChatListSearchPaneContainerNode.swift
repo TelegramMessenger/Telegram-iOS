@@ -192,6 +192,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
             
     var currentPaneUpdated: ((ChatListSearchPaneKey?, CGFloat, ContainedViewLayoutTransition) -> Void)?
     var requestExpandTabs: (() -> Bool)?
+    var requesDismissInput: (() -> Void)?
     
     private var currentAvailablePanes: [ChatListSearchPaneKey]?
     
@@ -227,11 +228,19 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
             if let (size, sideInset, bottomInset, visibleHeight, presentationData, availablePanes) = self.currentParams {
                 self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, availablePanes: availablePanes, transition: .animated(duration: 0.4, curve: .spring))
             }
+            
+            if case .apps = key {
+                self.requesDismissInput?()
+            }
         } else if self.pendingSwitchToPaneKey != key {
             self.pendingSwitchToPaneKey = key
 
             if let (size, sideInset, bottomInset, visibleHeight, presentationData, availablePanes) = self.currentParams {
                 self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, availablePanes: availablePanes, transition: .animated(duration: 0.4, curve: .spring))
+            }
+            
+            if case .apps = key {
+                self.requesDismissInput?()
             }
         }
     }
@@ -322,6 +331,10 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
                     let switchToKey = availablePanes[updatedIndex]
                     if switchToKey != self.currentPaneKey && self.currentPanes[switchToKey] != nil{
                         self.currentPaneKey = switchToKey
+                        
+                        if case .apps = switchToKey {
+                            self.requesDismissInput?()
+                        }
                     }
                 }
                 self.transitionFraction = 0.0

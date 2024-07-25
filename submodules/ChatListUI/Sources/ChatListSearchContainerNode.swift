@@ -330,6 +330,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
         }
         
+        self.paneContainerNode.requesDismissInput = {
+            parentController()?.view.endEditing(true)
+        }
+        
         self.filterContainerNode.filterPressed = { [weak self] filter in
             guard let strongSelf = self else {
                 return
