@@ -499,6 +499,9 @@ public final class MediaEditor {
         } else if case let .video(_, _, _, _, _, duration) = subject {
             self.playerPlaybackState = PlaybackState(duration: duration, position: 0.0, isPlaying: false, hasAudio: true)
             self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
+        } else if case let .draft(mediaEditorDraft) = subject, mediaEditorDraft.isVideo {
+            self.playerPlaybackState = PlaybackState(duration: mediaEditorDraft.duration ?? 0.0, position: 0.0, isPlaying: false, hasAudio: true)
+            self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
         }
     }
     

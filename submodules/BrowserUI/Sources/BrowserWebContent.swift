@@ -623,7 +623,13 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         if navigationResponse.canShowMIMEType {
             decisionHandler(.allow)
         } else if #available(iOS 14.5, *) {
-            decisionHandler(.download)
+            self.presentDownloadConfirmation(fileName: navigationResponse.response.suggestedFilename ?? "file", proceed: { download in
+                if download {
+                    decisionHandler(.download)
+                } else {
+                    decisionHandler(.cancel)
+                }
+            })
         } else {
             decisionHandler(.cancel)
         }

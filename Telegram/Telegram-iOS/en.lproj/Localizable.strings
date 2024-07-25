@@ -12646,3 +12646,6 @@ Sorry for the inconvenience.";
 
 "WebBrowser.Download.Confirmation" = "Do you want to download \"%@\"?";
 "WebBrowser.Download.Download" = "Download";
+
+"Story.Cover" = "Story Cover";
+"Story.SaveCover" = "Save Cover";

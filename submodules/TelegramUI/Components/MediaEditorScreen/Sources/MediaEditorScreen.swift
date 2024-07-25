@@ -4740,6 +4740,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             coverController.completed = { [weak self] position, image in
                 if let self {
                     self.controller?.currentCoverImage = image
+                    if exclusive {
+                        self.requestCompletion()
+                    }
                 }
             }
             self.controller?.present(coverController, in: .current)
@@ -5548,6 +5551,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         public let media: MediaResult?
         public let mediaAreas: [MediaArea]
         public let caption: NSAttributedString
+        public let coverTimestamp: Double?
         public let options: MediaEditorResultPrivacy
         public let stickers: [TelegramMediaFile]
         public let randomId: Int64
@@ -5556,6 +5560,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.media = nil
             self.mediaAreas = []
             self.caption = NSAttributedString()
+            self.coverTimestamp = nil
             self.options = MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false)
             self.stickers = []
             self.randomId = 0
@@ -5565,6 +5570,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             media: MediaResult?,
             mediaAreas: [MediaArea] = [],
             caption: NSAttributedString = NSAttributedString(),
+            coverTimestamp: Double? = nil,
             options: MediaEditorResultPrivacy = MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false),
             stickers: [TelegramMediaFile] = [],
             randomId: Int64 = 0
@@ -5572,6 +5578,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.media = media
             self.mediaAreas = mediaAreas
             self.caption = caption
+            self.coverTimestamp = coverTimestamp
             self.options = options
             self.stickers = stickers
             self.randomId = randomId
@@ -6479,8 +6486,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
         
-        if self.isEmbeddedEditor && !(self.node.hasAnyChanges || hasEntityChanges) {
-            self.completion(MediaEditorScreen.Result(media: nil, mediaAreas: [], caption: caption, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
+        var hasAnyChanges = self.node.hasAnyChanges
+        if self.isEditingStoryCover {
+            hasAnyChanges = false
+        }
+        
+        if self.isEmbeddedEditor && !(hasAnyChanges || hasEntityChanges) {
+            self.completion(MediaEditorScreen.Result(media: nil, mediaAreas: [], caption: caption, coverTimestamp: mediaEditor.values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                     self?.dismiss()
                     Queue.mainQueue().justDispatch {
@@ -6488,7 +6500,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 })
             })
-            
             return
         }
         
@@ -6754,7 +6765,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: inputImage, dimensions: storyDimensions, values: mediaEditor.values, time: firstFrameTime, textScale: 2.0, completion: { [weak self] coverImage in
                         if let self {
                             Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
-                            self.completion(MediaEditorScreen.Result(media: .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), mediaAreas: mediaAreas, caption: caption, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
+                            self.completion(MediaEditorScreen.Result(media: .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), mediaAreas: mediaAreas, caption: caption, coverTimestamp: mediaEditor.values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
                                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                     self?.dismiss()
                                     Queue.mainQueue().justDispatch {
@@ -6777,7 +6788,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
                     if let self, let resultImage {
                         Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
-                        self.completion(MediaEditorScreen.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas: mediaAreas, caption: caption, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
+                        self.completion(MediaEditorScreen.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas: mediaAreas, caption: caption, coverTimestamp: nil, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
                             self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                 self?.dismiss()
                                 Queue.mainQueue().justDispatch {
@@ -6925,6 +6936,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 media: .sticker(file: file, emoji: self.effectiveStickerEmoji()),
                                 mediaAreas: [],
                                 caption: NSAttributedString(),
+                                coverTimestamp: nil,
                                 options: MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false),
                                 stickers: [],
                                 randomId: 0

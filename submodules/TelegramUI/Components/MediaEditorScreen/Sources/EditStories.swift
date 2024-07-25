@@ -154,10 +154,14 @@ public extension MediaEditorScreen {
                     })
                 } else {
                     var updatedText: String?
+                    var updatedCoverTimestamp: Double?
                     var updatedEntities: [MessageTextEntity]?
                     if result.caption.string != storyItem.text || entities != storyItem.entities {
                         updatedText = result.caption.string
                         updatedEntities = entities
+                    }
+                    if let coverTimestamp = result.coverTimestamp {
+                        updatedCoverTimestamp = coverTimestamp
                     }
                     
                     if let mediaResult = result.media {
@@ -237,8 +241,22 @@ public extension MediaEditorScreen {
                         default:
                             break
                         }
-                    } else if updatedText != nil {
-                        let _ = (context.engine.messages.editStory(peerId: peer.id, id: storyItem.id, media: nil, mediaAreas: nil, text: updatedText, entities: updatedEntities, privacy: nil)
+                    } else if updatedText != nil || updatedCoverTimestamp != nil {
+                        var media: EngineStoryInputMedia?
+                        if let updatedCoverTimestamp {
+                            if case let .file(file) = storyItem.media {
+                                var updatedAttributes: [TelegramMediaFileAttribute] = []
+                                for attribute in file.attributes {
+                                    if case let .Video(duration, size, flags, preloadSize, _) = attribute {
+                                        updatedAttributes.append(.Video(duration: duration, size: size, flags: flags, preloadSize: preloadSize, coverTime: updatedCoverTimestamp))
+                                    } else {
+                                        updatedAttributes.append(attribute)
+                                    }
+                                }
+                                media = .existing(media: file.withUpdatedAttributes(updatedAttributes))
+                            }
+                        }
+                        let _ = (context.engine.messages.editStory(peerId: peer.id, id: storyItem.id, media: media, mediaAreas: nil, text: updatedText, entities: updatedEntities, privacy: nil)
                         |> deliverOnMainQueue).startStandalone(next: { result in
                             switch result {
                             case .completed:
