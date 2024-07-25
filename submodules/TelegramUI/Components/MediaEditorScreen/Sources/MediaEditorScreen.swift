@@ -6507,8 +6507,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.saveDraft(id: randomId)
             
             var firstFrame: Signal<(UIImage?, UIImage?), NoError>
-            let firstFrameTime = CMTime(seconds: mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, preferredTimescale: CMTimeScale(60))
-
+            let firstFrameTime: CMTime
+            if let coverImageTimestamp = mediaEditor.values.coverImageTimestamp {
+                firstFrameTime = CMTime(seconds: coverImageTimestamp, preferredTimescale: CMTimeScale(60))
+            } else {
+                firstFrameTime = CMTime(seconds: mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, preferredTimescale: CMTimeScale(60))
+            }
             let videoResult: Signal<MediaResult.VideoResult, NoError>
             var videoIsMirrored = false
             let duration: Double
