@@ -66,6 +66,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     var currentAccessibilityAreas: [AccessibilityAreaNode] = []
     
     var pushContent: (BrowserScreen.Subject) -> Void = { _ in }
+    var openAppUrl: (String) -> Void = { _ in }
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
     var minimize: () -> Void = { }
     var close: () -> Void = { }
@@ -764,6 +765,10 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
             readingProgress = max(0.0, min(1.0, value))
         }
         self.readingProgress.set(readingProgress)
+    }
+    
+    func resetScrolling() {
+        self.updateScrollingOffset(isReset: true, transition: .spring(duration: 0.4))
     }
     
     private func scrollableContentOffset(item: InstantPageScrollableItem) -> CGPoint {

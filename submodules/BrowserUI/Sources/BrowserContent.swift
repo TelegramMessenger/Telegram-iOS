@@ -162,12 +162,14 @@ protocol BrowserContent: UIView {
     var present: (ViewController, Any?) -> Void { get set }
     var presentInGlobalOverlay: (ViewController) -> Void { get set }
     var getNavigationController: () -> NavigationController? { get set }
+    var openAppUrl: (String) -> Void { get set }
     
     var minimize: () -> Void { get set }
     var close: () -> Void { get set }
     
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void { get set }
-        
+    func resetScrolling()
+    
     func reload()
     func stop()
     

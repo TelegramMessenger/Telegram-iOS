@@ -9,6 +9,11 @@ var uiWebview_SearchResultCount = 0;
  keyword    - string to search
  */
 
+function isElementVisible(element) {
+    var style = window.getComputedStyle(element);
+    return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+}
+
 function uiWebview_HighlightAllOccurencesOfStringForElement(element,keyword) {
     if (element) {
         if (element.nodeType == 3) {        // Text node
@@ -19,6 +24,8 @@ function uiWebview_HighlightAllOccurencesOfStringForElement(element,keyword) {
                 var idx = value.toLowerCase().indexOf(keyword);
 
                 if (idx < 0) break;
+                
+//                if (!isElementVisible(element)) break;
 
                 count++;
                 elementTmp = document.createTextNode(value.substr(idx+keyword.length));
@@ -86,7 +93,7 @@ function uiWebview_HighlightAllOccurencesOfStringForElement(element,keyword) {
 
 
         } else if (element.nodeType == 1) { // Element node
-            if (element.style.display != "none" && element.nodeName.toLowerCase() != 'select') {
+            if (element.nodeName.toLowerCase() != 'select') {
                 for (var i=element.childNodes.length-1; i>=0; i--) {
                     uiWebview_HighlightAllOccurencesOfStringForElement(element.childNodes[i],keyword);
                 }

@@ -35,6 +35,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
     let readingProgress: CGFloat
     let loadingProgress: Double?
     let collapseFraction: CGFloat
+    let activate: () -> Void
     
     init(
         backgroundColor: UIColor,
@@ -50,7 +51,8 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         centerItem: AnyComponentWithIdentity<BrowserNavigationBarEnvironment>?,
         readingProgress: CGFloat,
         loadingProgress: Double?,
-        collapseFraction: CGFloat
+        collapseFraction: CGFloat,
+        activate: @escaping () -> Void
     ) {
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
@@ -66,6 +68,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         self.readingProgress = readingProgress
         self.loadingProgress = loadingProgress
         self.collapseFraction = collapseFraction
+        self.activate = activate
     }
     
     static func ==(lhs: BrowserNavigationBarComponent, rhs: BrowserNavigationBarComponent) -> Bool {
@@ -122,6 +125,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         let leftItems = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
         let rightItems = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
         let centerItems = ChildMap(environment: BrowserNavigationBarEnvironment.self, keyedBy: AnyHashable.self)
+        let activate = Child(Button.self)
         
         return { context in
             var availableWidth = context.availableSize.width
@@ -263,6 +267,23 @@ final class BrowserNavigationBarComponent: CombinedComponent {
                     .scale(1.0 - 0.35 * context.component.collapseFraction)
                     .appear(.default(scale: false, alpha: true))
                     .disappear(.default(scale: false, alpha: true))
+                )
+            }
+            
+            if context.component.collapseFraction == 1.0 {
+                let activateAction = context.component.activate
+                let activate = activate.update(
+                    component: Button(
+                        content: AnyComponent(Rectangle(color: UIColor(rgb: 0x000000, alpha: 0.001))),
+                        action: {
+                            activateAction()
+                        }
+                    ),
+                    availableSize: size,
+                    transition: .immediate
+                )
+                context.add(activate
+                    .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
                 )
             }
             

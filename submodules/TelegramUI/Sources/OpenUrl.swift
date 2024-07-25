@@ -1008,11 +1008,12 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             return
         }
         
+        let urlScheme = (parsedUrl.scheme ?? "").lowercased()
         var isInternetUrl = false
-        if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
+        if  ["http", "https"].contains(urlScheme) {
             isInternetUrl = true
         }
-        if parsedUrl.scheme == "tonsite" {
+        if urlScheme == "tonsite" {
             isInternetUrl = true
         }
         
@@ -1032,7 +1033,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         settings = .defaultSettings
                     }
                     if accessChallengeData.data.isLockable {
-                        if passcodeSettings.autolockTimeout != nil && settings.defaultWebBrowser == nil {
+                        if passcodeSettings.autolockTimeout != nil && settings.defaultWebBrowser == "inApp" {
                             settings = WebBrowserSettings(defaultWebBrowser: "safari", exceptions: [])
                         }
                     }

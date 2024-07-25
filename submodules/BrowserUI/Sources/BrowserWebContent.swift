@@ -18,6 +18,7 @@ import UndoUI
 import LottieComponent
 import MultilineTextComponent
 import UrlEscaping
+import UrlHandling
 
 private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
     private final class PendingTask {
@@ -139,6 +140,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     private let faviconDisposable = MetaDisposable()
     
     var pushContent: (BrowserScreen.Subject) -> Void = { _ in }
+    var openAppUrl: (String) -> Void = { _ in }
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
     var minimize: () -> Void = { }
     var close: () -> Void = { }
@@ -201,6 +203,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         super.init(frame: .zero)
         
+        self.backgroundColor = presentationData.theme.list.plainBackgroundColor
+        self.webView.backgroundColor = presentationData.theme.list.plainBackgroundColor
+        
         self.webView.allowsBackForwardNavigationGestures = true
         self.webView.scrollView.delegate = self
         self.webView.scrollView.clipsToBounds = false
@@ -214,7 +219,6 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.canGoForward), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.hasOnlySecureContent), options: [], context: nil)
         if #available(iOS 15.0, *) {
-            self.backgroundColor = presentationData.theme.list.plainBackgroundColor
             self.webView.underPageBackgroundColor = presentationData.theme.list.plainBackgroundColor
         }
         if #available(iOS 16.4, *) {
@@ -460,11 +464,12 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                     ErrorComponent(
                         theme: self.presentationData.theme,
                         title: self.presentationData.strings.Browser_ErrorTitle,
-                        text: error.localizedDescription
+                        text: error.localizedDescription,
+                        insets: insets
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: size.width - insets.left - insets.right - 72.0, height: size.height)
+                containerSize: CGSize(width: size.width, height: size.height)
             )
             if self.errorView.superview == nil {
                 self.addSubview(self.errorView)
@@ -521,14 +526,25 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate {
             self.snapScrollingOffsetToInsets()
+            
+            if self.ignoreUpdatesUntilScrollingStopped {
+                self.ignoreUpdatesUntilScrollingStopped = false
+            }
         }
     }
     
     public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         self.snapScrollingOffsetToInsets()
+        
+        if self.ignoreUpdatesUntilScrollingStopped {
+            self.ignoreUpdatesUntilScrollingStopped = false
+        }
     }
     
     private func updateScrollingOffset(isReset: Bool, transition: ComponentTransition) {
+        guard !self.ignoreUpdatesUntilScrollingStopped else {
+            return
+        }
         let scrollView = self.webView.scrollView
         let isInteracting = scrollView.isDragging || scrollView.isDecelerating
         if let previousScrollingOffsetValue = self.previousScrollingOffset {
@@ -555,6 +571,30 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
         self.updateState {
             $0.withUpdatedReadingProgress(readingProgress)
+        }
+    }
+    
+    private var ignoreUpdatesUntilScrollingStopped = false
+    func resetScrolling() {
+        self.updateScrollingOffset(isReset: true, transition: .spring(duration: 0.4))
+        self.ignoreUpdatesUntilScrollingStopped = true
+    }
+    
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if let url = navigationAction.request.url?.absoluteString {
+            if isTelegramMeLink(url) || isTelegraPhLink(url) {
+                decisionHandler(.cancel)
+                self.minimize()
+                self.openAppUrl(url)
+            } else {
+                if #available(iOS 14.5, *), navigationAction.shouldPerformDownload {
+                    decisionHandler(.download)
+                } else {
+                    decisionHandler(.allow)
+                }
+            }
+        } else {
+            decisionHandler(.allow)
         }
     }
     
@@ -881,15 +921,18 @@ private final class ErrorComponent: CombinedComponent {
     let theme: PresentationTheme
     let title: String
     let text: String
+    let insets: UIEdgeInsets
   
     init(
         theme: PresentationTheme,
         title: String,
-        text: String
+        text: String,
+        insets: UIEdgeInsets
     ) {
         self.theme = theme
         self.title = title
         self.text = text
+        self.insets = insets
     }
     
     static func ==(lhs: ErrorComponent, rhs: ErrorComponent) -> Bool {
@@ -902,10 +945,14 @@ private final class ErrorComponent: CombinedComponent {
         if lhs.text != rhs.text {
             return false
         }
+        if lhs.insets != rhs.insets {
+            return false
+        }
         return true
     }
     
     static var body: Body {
+        let background = Child(Rectangle.self)
         let animation = Child(LottieComponent.self)
         let title = Child(MultilineTextComponent.self)
         let text = Child(MultilineTextComponent.self)
@@ -916,6 +963,17 @@ private final class ErrorComponent: CombinedComponent {
             let animationSpacing: CGFloat = 8.0
             let textSpacing: CGFloat = 8.0
             
+            let constrainedWidth = context.availableSize.width - 76.0 - context.component.insets.left - context.component.insets.right
+            
+            let background = background.update(
+                component: Rectangle(color: context.component.theme.list.plainBackgroundColor),
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
+            context.add(background
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
+            )
+            
             let animation = animation.update(
                 component: LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
@@ -923,9 +981,6 @@ private final class ErrorComponent: CombinedComponent {
                 environment: {},
                 availableSize: CGSize(width: animationSize, height: animationSize),
                 transition: .immediate
-            )
-            context.add(animation
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + animation.size.height / 2.0))
             )
             contentHeight += animation.size.height + animationSpacing
             
@@ -939,11 +994,8 @@ private final class ErrorComponent: CombinedComponent {
                     horizontalAlignment: .center
                 ),
                 environment: {},
-                availableSize: context.availableSize,
+                availableSize: CGSize(width: constrainedWidth, height: context.availableSize.height),
                 transition: .immediate
-            )
-            context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight +  title.size.height / 2.0))
             )
             contentHeight += title.size.height + textSpacing
             
@@ -958,15 +1010,27 @@ private final class ErrorComponent: CombinedComponent {
                     maximumNumberOfLines: 0
                 ),
                 environment: {},
-                availableSize: context.availableSize,
+                availableSize: CGSize(width: constrainedWidth, height: context.availableSize.height),
                 transition: .immediate
             )
-            context.add(text
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + text.size.height / 2.0))
-            )
             contentHeight += text.size.height
-
-            return CGSize(width: context.availableSize.width, height: contentHeight)
+            
+            var originY = floor((context.availableSize.height - contentHeight) / 2.0)
+            context.add(animation
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + animation.size.height / 2.0))
+            )
+            originY += animation.size.height + animationSpacing
+            
+            context.add(title
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + title.size.height / 2.0))
+            )
+            originY += title.size.height + textSpacing
+            
+            context.add(text
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + text.size.height / 2.0))
+            )
+            
+            return context.availableSize
         }
     }
 }

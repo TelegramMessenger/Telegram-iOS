@@ -38,6 +38,7 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     var pushContent: (BrowserScreen.Subject) -> Void = { _ in }
+    var openAppUrl: (String) -> Void = { _ in }
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
     var minimize: () -> Void = { }
     var close: () -> Void = { }
@@ -350,6 +351,10 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.updateState {
             $0.withUpdatedReadingProgress(readingProgress)
         }
+    }
+    
+    func resetScrolling() {
+        self.updateScrollingOffset(isReset: true, transition: .spring(duration: 0.4))
     }
     
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {

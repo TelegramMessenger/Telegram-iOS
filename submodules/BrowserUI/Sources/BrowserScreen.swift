@@ -188,7 +188,10 @@ private final class BrowserScreenComponent: CombinedComponent {
                     centerItem: navigationContent,
                     readingProgress: context.component.contentState?.readingProgress ?? 0.0,
                     loadingProgress: context.component.contentState?.estimatedProgress,
-                    collapseFraction: collapseFraction
+                    collapseFraction: collapseFraction,
+                    activate: {
+                        performAction.invoke(.expand)
+                    }
                 ),
                 availableSize: context.availableSize,
                 transition: context.transition
@@ -267,6 +270,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                 )
                 context.add(addressList
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height + addressList.size.height / 2.0))
+                    .clipsToBounds(true)
                     .appear(.default(alpha: true))
                     .disappear(.default(alpha: true))
                 )
@@ -314,6 +318,7 @@ public class BrowserScreen: ViewController, MinimizableController {
         case openAddressBar
         case closeAddressBar
         case navigateTo(String)
+        case expand
     }
 
     fileprivate final class Node: ViewControllerTracingNode {
@@ -568,6 +573,10 @@ public class BrowserScreen: ViewController, MinimizableController {
                         updatedState.addressFocused = false
                         return updatedState
                     })
+                case .expand:
+                    if let content = self.content.last {
+                        content.resetScrolling()
+                    }
                 }
             }
             
@@ -625,6 +634,14 @@ public class BrowserScreen: ViewController, MinimizableController {
                     return
                 }
                 self.pushContent(content, transition: .spring(duration: 0.4))
+            }
+            browserContent.openAppUrl = { [weak self] url in
+                guard let self else {
+                    return
+                }
+                self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: false, presentationData: self.presentationData, navigationController: self.controller?.navigationController as? NavigationController, dismissInput: { [weak self] in
+                    self?.view.window?.endEditing(true)
+                })
             }
             browserContent.present = { [weak self] c, a in
                 guard let self, let controller = self.controller else {
@@ -987,6 +1004,10 @@ public class BrowserScreen: ViewController, MinimizableController {
                     } else {
                         transition = transition.withAnimation(.curve(duration: 0.25, curve: .easeInOut))
                     }
+                }
+                
+                if update.isReset {
+                    scrollingPanelOffsetFraction = 0.0
                 }
                 
                 if scrollingPanelOffsetFraction != self.scrollingPanelOffsetFraction {

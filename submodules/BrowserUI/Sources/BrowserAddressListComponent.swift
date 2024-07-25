@@ -148,7 +148,7 @@ final class BrowserAddressListComponent: Component {
         }
         
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-            self.endEditing(true)
+            self.window?.endEditing(true)
         }
         
         private func updateScrolling(transition: ComponentTransition) {

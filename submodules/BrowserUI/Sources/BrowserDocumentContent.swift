@@ -17,7 +17,6 @@ import ShareController
 import UndoUI
 import UrlEscaping
 
-
 final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
@@ -37,6 +36,7 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
     }
     
     var pushContent: (BrowserScreen.Subject) -> Void = { _ in }
+    var openAppUrl: (String) -> Void = { _ in }
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
     var minimize: () -> Void = { }
     var close: () -> Void = { }
@@ -358,6 +358,10 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
         self.updateState {
             $0.withUpdatedReadingProgress(readingProgress)
         }
+    }
+    
+    func resetScrolling() {
+        self.updateScrollingOffset(isReset: true, transition: .spring(duration: 0.4))
     }
     
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
