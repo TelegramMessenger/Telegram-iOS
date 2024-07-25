@@ -465,7 +465,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         self.webView.scrollView.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: fullInsets.bottom, right: 0.0)
         self.webView.customBottomInset = max(insets.bottom, safeInsets.bottom)
-//        self.webView.scrollView.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 34.0, right: 0.0)
+
         self.webView.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         self.webView.scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         
@@ -589,7 +589,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     private var ignoreUpdatesUntilScrollingStopped = false
     func resetScrolling() {
         self.updateScrollingOffset(isReset: true, transition: .spring(duration: 0.4))
-        self.ignoreUpdatesUntilScrollingStopped = true
+        if self.webView.scrollView.isDecelerating {
+            self.ignoreUpdatesUntilScrollingStopped = true
+        }
     }
     
     @available(iOS 13.0, *)

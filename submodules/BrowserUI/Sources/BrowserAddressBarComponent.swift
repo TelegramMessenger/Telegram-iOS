@@ -15,6 +15,7 @@ final class AddressBarContentComponent: Component {
     
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let metrics: LayoutMetrics
     let url: String
     let isSecure: Bool
     let isExpanded: Bool
@@ -23,6 +24,7 @@ final class AddressBarContentComponent: Component {
     init(
         theme: PresentationTheme,
         strings: PresentationStrings,
+        metrics: LayoutMetrics,
         url: String,
         isSecure: Bool,
         isExpanded: Bool,
@@ -30,6 +32,7 @@ final class AddressBarContentComponent: Component {
     ) {
         self.theme = theme
         self.strings = strings
+        self.metrics = metrics
         self.url = url
         self.isSecure = isSecure
         self.isExpanded = isExpanded
@@ -41,6 +44,9 @@ final class AddressBarContentComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.metrics != rhs.metrics {
             return false
         }
         if lhs.url != rhs.url {
@@ -78,6 +84,7 @@ final class AddressBarContentComponent: Component {
             var title: String
             var isSecure: Bool
             var collapseFraction: CGFloat
+            var isTablet: Bool
             
             static func ==(lhs: Params, rhs: Params) -> Bool {
                 if lhs.theme !== rhs.theme {
@@ -99,6 +106,9 @@ final class AddressBarContentComponent: Component {
                     return false
                 }
                 if lhs.collapseFraction != rhs.collapseFraction {
+                    return false
+                }
+                if lhs.isTablet != rhs.isTablet {
                     return false
                 }
                 return true
@@ -254,7 +264,7 @@ final class AddressBarContentComponent: Component {
             self.placeholderContent.view?.isHidden = !text.isEmpty
             
             if let params = self.params {
-                self.update(theme: params.theme, strings: params.strings, size: params.size, isActive: params.isActive, title: params.title, isSecure: params.isSecure, collapseFraction: params.collapseFraction, transition: .immediate)
+                self.update(theme: params.theme, strings: params.strings, size: params.size, isActive: params.isActive, title: params.title, isSecure: params.isSecure, collapseFraction: params.collapseFraction, isTablet: params.isTablet, transition: .immediate)
             }
         }
         
@@ -281,12 +291,12 @@ final class AddressBarContentComponent: Component {
                 title = title.idnaDecoded ?? title
             }
             
-            self.update(theme: component.theme, strings: component.strings, size: availableSize, isActive: isActive, title: title.lowercased(), isSecure: component.isSecure, collapseFraction: collapseFraction, transition: transition)
+            self.update(theme: component.theme, strings: component.strings, size: availableSize, isActive: isActive, title: title.lowercased(), isSecure: component.isSecure, collapseFraction: collapseFraction, isTablet: component.metrics.isTablet, transition: transition)
             
             return availableSize
         }
         
-        public func update(theme: PresentationTheme, strings: PresentationStrings, size: CGSize, isActive: Bool, title: String, isSecure: Bool, collapseFraction: CGFloat, transition: ComponentTransition) {
+        public func update(theme: PresentationTheme, strings: PresentationStrings, size: CGSize, isActive: Bool, title: String, isSecure: Bool, collapseFraction: CGFloat, isTablet: Bool, transition: ComponentTransition) {
             let params = Params(
                 theme: theme,
                 strings: strings,
@@ -294,7 +304,8 @@ final class AddressBarContentComponent: Component {
                 isActive: isActive,
                 title: title,
                 isSecure: isSecure,
-                collapseFraction: collapseFraction
+                collapseFraction: collapseFraction,
+                isTablet: isTablet
             )
             
             if self.params == params {
@@ -334,13 +345,13 @@ final class AddressBarContentComponent: Component {
             let cancelButtonSpacing: CGFloat = 8.0
             
             var backgroundFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: CGSize(width: size.width - sideInset * 2.0, height: inputHeight))
-            if isActiveWithText {
+            if isActiveWithText && !isTablet {
                 backgroundFrame.size.width -= cancelTextSize.width + cancelButtonSpacing
             }
             transition.setFrame(layer: self.backgroundLayer, frame: backgroundFrame)
             
             transition.setFrame(view: self.cancelButton, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX, y: 0.0), size: CGSize(width: cancelButtonSpacing + cancelTextSize.width, height: size.height)))
-            self.cancelButton.isUserInteractionEnabled = isActiveWithText
+            self.cancelButton.isUserInteractionEnabled = isActiveWithText && !isTablet
             
             let textX: CGFloat = backgroundFrame.minX + sideInset
             let textFrame = CGRect(origin: CGPoint(x: textX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textX, height: backgroundFrame.height))
@@ -418,7 +429,7 @@ final class AddressBarContentComponent: Component {
                     cancelButtonTitleComponentView.isUserInteractionEnabled = false
                 }
                 transition.setFrame(view: cancelButtonTitleComponentView, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX + cancelButtonSpacing, y: floor((size.height - cancelTextSize.height) / 2.0)), size: cancelTextSize))
-                transition.setAlpha(view: cancelButtonTitleComponentView, alpha: isActiveWithText ? 1.0 : 0.0)
+                transition.setAlpha(view: cancelButtonTitleComponentView, alpha: isActiveWithText && !isTablet ? 1.0 : 0.0)
             }
                         
             let textFieldFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textFrame.minX, height: backgroundFrame.height))

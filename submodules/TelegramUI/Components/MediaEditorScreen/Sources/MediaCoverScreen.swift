@@ -225,7 +225,7 @@ private final class MediaCoverScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(Button(
                     content: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: "Cancel", font: Font.regular(17.0), textColor: .white)))
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Common_Cancel, font: Font.regular(17.0), textColor: .white)))
                     ),
                     action: { [weak controller] in
                         controller?.requestDismiss(animated: true)
@@ -546,6 +546,7 @@ final class MediaCoverScreen: ViewController {
     fileprivate let mediaEditor: Signal<MediaEditor?, NoError>
     fileprivate let previewView: MediaEditorPreviewView
     fileprivate let portalView: PortalView
+    fileprivate let exclusive: Bool
     
     func withMediaEditor(_ f: @escaping (MediaEditor) -> Void) {
         let _ = (self.mediaEditor
@@ -564,12 +565,14 @@ final class MediaCoverScreen: ViewController {
         context: AccountContext,
         mediaEditor: Signal<MediaEditor?, NoError>,
         previewView: MediaEditorPreviewView,
-        portalView: PortalView
+        portalView: PortalView,
+        exclusive: Bool
     ) {
         self.context = context
         self.mediaEditor = mediaEditor
         self.previewView = previewView
         self.portalView = portalView
+        self.exclusive = exclusive
         
         super.init(navigationBarPresentationData: nil)
         self.navigationPresentation = .flatModal
@@ -601,7 +604,9 @@ final class MediaCoverScreen: ViewController {
         self.dismissed()
         
         self.node.animateOutToEditor(completion: {
-            self.dismiss()
+            if !self.exclusive {
+                self.dismiss()
+            }
         })
     }
     

@@ -520,7 +520,7 @@ public final class MediaEditor {
         self.renderer.consume(main: .texture(texture, time, hasTransparency), additional: additionalTexture.flatMap { .texture($0, time, false) }, render: true, displayEnabled: false)
     }
     
-    private func setupSource() {
+    private func setupSource(andPlay: Bool) {
         guard let renderTarget = self.previewView else {
             return
         }
@@ -830,6 +830,9 @@ public final class MediaEditor {
                     self.setupTimeObservers()
                     Queue.mainQueue().justDispatch {
                         let startPlayback = {
+                            guard andPlay else {
+                                return
+                            }
                             player.playImmediately(atRate: 1.0)
 //                            additionalPlayer?.playImmediately(atRate: 1.0)
                             self.audioPlayer?.playImmediately(atRate: 1.0)
@@ -941,13 +944,13 @@ public final class MediaEditor {
         self.audioDelayTimer = nil
     }
     
-    public func attachPreviewView(_ previewView: MediaEditorPreviewView) {
+    public func attachPreviewView(_ previewView: MediaEditorPreviewView, andPlay: Bool) {
         self.previewView?.renderer = nil
         
         self.previewView = previewView
         previewView.renderer = self.renderer
         
-        self.setupSource()
+        self.setupSource(andPlay: andPlay)
     }
     
     private var skipRendering = false
@@ -1118,8 +1121,9 @@ public final class MediaEditor {
             self.initialSeekPosition = position
             return
         }
-        self.renderer.setRate(1.0)
-        if !play {
+        if play {
+            self.renderer.setRate(1.0)
+        } else {
             self.player?.pause()
             self.additionalPlayer?.pause()
             self.audioPlayer?.pause()
