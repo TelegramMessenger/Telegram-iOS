@@ -1189,7 +1189,7 @@ public class BrowserScreen: ViewController, MinimizableController {
     private let context: AccountContext
     private let subject: Subject
     
-    var openPreviousOnClose = false
+    private var openPreviousOnClose = false
     
     private var validLayout: ContainerViewLayout?
     
@@ -1205,9 +1205,10 @@ public class BrowserScreen: ViewController, MinimizableController {
 //        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     ]
     
-    public init(context: AccountContext, subject: Subject) {
+    public init(context: AccountContext, subject: Subject, openPreviousOnClose: Bool = false) {
         self.context = context
         self.subject = subject
+        self.openPreviousOnClose = openPreviousOnClose
         
         super.init(navigationBarPresentationData: nil)
         
@@ -1243,7 +1244,16 @@ public class BrowserScreen: ViewController, MinimizableController {
     }
     
     public func requestMinimize(topEdgeOffset: CGFloat?, initialVelocity: CGFloat?) {
+        self.openPreviousOnClose = false
         self.node.minimize(topEdgeOffset: topEdgeOffset, damping: 180.0, initialVelocity: initialVelocity)
+    }
+    
+    public override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        if self.openPreviousOnClose, let navigationController = self.navigationController as? NavigationController, let minimizedContainer = navigationController.minimizedContainer, let controller = minimizedContainer.controllers.last {
+            navigationController.maximizeViewController(controller, animated: true)
+        }
     }
     
     public var isMinimized = false {

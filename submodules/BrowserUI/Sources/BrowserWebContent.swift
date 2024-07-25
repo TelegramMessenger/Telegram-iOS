@@ -19,6 +19,7 @@ import LottieComponent
 import MultilineTextComponent
 import UrlEscaping
 import UrlHandling
+import SaveProgressScreen
 
 private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
     private final class PendingTask {
@@ -157,16 +158,12 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         let configuration = WKWebViewConfiguration()
         
-//        let bundle = Bundle.main
-//        let bundleVersion = bundle.infoDictionary?["CFBundleShortVersionString"] ?? ""
-//        
         var proxyServerHost = "magic.org"
         if let data = context.currentAppConfiguration.with({ $0 }).data, let hostValue = data["ton_proxy_address"] as? String {
             proxyServerHost = hostValue
         }
         configuration.setURLSchemeHandler(TonSchemeHandler(proxyServerHost: proxyServerHost), forURLScheme: "tonsite")
         configuration.allowsInlineMediaPlayback = true
-//        configuration.applicationNameForUserAgent = "Telegram-iOS/\(bundleVersion)"
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             configuration.mediaTypesRequiringUserActionForPlayback = []
         } else {
@@ -580,6 +577,41 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.ignoreUpdatesUntilScrollingStopped = true
     }
     
+    @available(iOS 13.0, *)
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, preferences: WKWebpagePreferences, decisionHandler: @escaping (WKNavigationActionPolicy, WKWebpagePreferences) -> Void) {
+        if #available(iOS 14.5, *), navigationAction.shouldPerformDownload {
+            self.presentDownloadConfirmation(fileName: navigationAction.request.mainDocumentURL?.lastPathComponent ?? "file", proceed: { download in
+                if download {
+                    decisionHandler(.download, preferences)
+                } else {
+                    decisionHandler(.cancel, preferences)
+                }
+            })
+        } else {
+            if let url = navigationAction.request.url?.absoluteString {
+                if isTelegramMeLink(url) || isTelegraPhLink(url) {
+                    decisionHandler(.cancel, preferences)
+                    self.minimize()
+                    self.openAppUrl(url)
+                } else {
+                    decisionHandler(.allow, preferences)
+                }
+            } else {
+                decisionHandler(.allow, preferences)
+            }
+        }
+    }
+    
+    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+        if navigationResponse.canShowMIMEType {
+            decisionHandler(.allow)
+        } else if #available(iOS 14.5, *) {
+            decisionHandler(.download)
+        } else {
+            decisionHandler(.cancel)
+        }
+    }
+    
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         if let url = navigationAction.request.url?.absoluteString {
             if isTelegramMeLink(url) || isTelegraPhLink(url) {
@@ -587,11 +619,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                 self.minimize()
                 self.openAppUrl(url)
             } else {
-                if #available(iOS 14.5, *), navigationAction.shouldPerformDownload {
-                    decisionHandler(.download)
-                } else {
-                    decisionHandler(.allow)
-                }
+                decisionHandler(.allow)
             }
         } else {
             decisionHandler(.allow)
@@ -636,7 +664,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.close()
     }
     
-    @available(iOSApplicationExtension 15.0, iOS 15.0, *)
+    @available(iOS 15.0, *)
     func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
         decisionHandler(.prompt)
     }
@@ -739,12 +767,37 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         completionHandler(configuration)
     }
     
+    private func presentDownloadConfirmation(fileName: String, proceed: @escaping (Bool) -> Void) {
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        var completed = false
+        let alertController = textAlertController(context: self.context, updatedPresentationData: nil, title: nil, text: presentationData.strings.WebBrowser_Download_Confirmation(fileName).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+            if !completed {
+                completed = true
+                proceed(false)
+            }
+        }), TextAlertAction(type: .defaultAction, title: presentationData.strings.WebBrowser_Download_Download, action: {
+            if !completed {
+                completed = true
+                proceed(true)
+            }
+        })])
+        alertController.dismissed = { byOutsideTap in
+            if byOutsideTap {
+                if !completed {
+                    completed = true
+                    proceed(false)
+                }
+            }
+        }
+        self.present(alertController, nil)
+    }
+    
     private func open(url: String, new: Bool) {
         let subject: BrowserScreen.Subject = .webPage(url: url)
         if new, let navigationController = self.getNavigationController() {
             navigationController._keepModalDismissProgress = true
             self.minimize()
-            let controller = BrowserScreen(context: self.context, subject: subject)
+            let controller = BrowserScreen(context: self.context, subject: subject, openPreviousOnClose: true)
             navigationController._keepModalDismissProgress = true
             navigationController.pushViewController(controller)
         } else {

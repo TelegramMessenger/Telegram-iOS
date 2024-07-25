@@ -12602,3 +12602,6 @@ Sorry for the inconvenience.";
 "Story.Privacy.ChooseCoverInfo" = "Choose a frame from the story to show in your Profile.";
 "Story.Privacy.ChooseCoverChannelInfo" = "Choose a frame from the story to show in channel profile.";
 "Story.Privacy.ChooseCoverGroupInfo" = "Choose a frame from the story to show in group profile.";
+
+"WebBrowser.Download.Confirmation" = "Do you want to download \"%@\"?";
+"WebBrowser.Download.Download" = "Download";

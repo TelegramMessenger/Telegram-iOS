@@ -245,6 +245,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             if !leftItemList.isEmpty || !rightItemList.isEmpty {
                 availableWidth -= 20.0
             }
+            availableWidth -= context.component.sideInset * 2.0
             
             let environment = BrowserNavigationBarEnvironment(fraction: context.component.collapseFraction)
             

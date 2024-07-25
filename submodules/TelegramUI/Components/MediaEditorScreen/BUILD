@@ -64,6 +64,7 @@ swift_library(
         "//submodules/WebsiteType",
         "//submodules/UrlEscaping",
         "//submodules/DeviceLocationManager",
+        "//submodules/TelegramUI/Components/SaveProgressScreen",
     ],
     visibility = [
         "//visibility:public",
