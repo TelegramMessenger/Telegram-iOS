@@ -13,6 +13,7 @@ swift_library(
         "//submodules/Display",
         "//submodules/AsyncDisplayKit",
         "//submodules/ComponentFlow",
+        "//submodules/TelegramUI/Components/SpaceWarpView/STCMeshView",
     ],
     visibility = [
         "//visibility:public",
