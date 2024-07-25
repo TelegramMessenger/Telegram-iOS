@@ -402,7 +402,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 self.animationNode = animationNode
             }
         } else {
-            let animationNode = DefaultAnimatedStickerNodeImpl(useMetalCache: item.context.sharedContext.immediateExperimentalUISettings.acceleratedStickers)
+            let animationNode = DefaultAnimatedStickerNodeImpl(useMetalCache: false)
             animationNode.started = { [weak self] in
                 if let strongSelf = self {
                     strongSelf.imageNode.alpha = 0.0

@@ -6616,17 +6616,6 @@ public final class StoryItemSetContainerComponent: Component {
                             
                             component.reorder()
                         })))
-                        items.append(.action(ContextMenuActionItem(text: "Edit Preview", icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, a in
-                            a(.default)
-                            
-                            guard let self, let component = self.component else {
-                                return
-                            }
-                            
-                            let _ = component
-                        })))
                         items.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.destructiveColor)
                         }, action: { [weak self] _, a in

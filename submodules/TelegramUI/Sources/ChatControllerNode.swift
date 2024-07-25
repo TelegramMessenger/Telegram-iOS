@@ -98,16 +98,17 @@ class ChatNodeContainer: ASDisplayNode {
         }
     }
     
-    override init() {
+    init(rippleEffect: Bool) {
         self.contentNodeImpl = ASDisplayNode()
         
         super.init()
         
-        #if DEBUG && false
-        self.setViewBlock({
-            return SpaceWarpView(frame: CGRect())
-        })
-        #endif
+        if rippleEffect {
+            self.setViewBlock({
+                return SpaceWarpView4(frame: CGRect())
+            })
+            self.contentNodeImpl.layer.allowsGroupOpacity = true
+        }
         
         (self.view as? SpaceWarpView)?.contentView.addSubnode(self.contentNodeImpl)
     }
@@ -154,7 +155,7 @@ class HistoryNodeContainer: ASDisplayNode {
         
         #if DEBUG && false
         self.setViewBlock({
-            return SpaceWarpView(frame: CGRect())
+            return SpaceWarpView1(frame: CGRect())
         })
         #endif
 
@@ -444,7 +445,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         self.backgroundNode = backgroundNode
         
-        self.contentContainerNode = ChatNodeContainer()
+        self.contentContainerNode = ChatNodeContainer(rippleEffect: context.sharedContext.immediateExperimentalUISettings.rippleEffect)
         self.contentDimNode = ASDisplayNode()
         self.contentDimNode.isUserInteractionEnabled = false
         self.contentDimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.2)

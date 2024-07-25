@@ -1273,8 +1273,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 interaction.openPhone(phone, node, nil, progress)
             }, longTapAction: nil, contextAction: { node, gesture, _ in
                 interaction.openPhone(phone, node, gesture, nil)
-            }, requestLayout: {
-                interaction.requestLayout(false)
+            }, requestLayout: { animated in
+                interaction.requestLayout(animated)
             }))
         }
         if let mainUsername = user.addressName {
@@ -1304,8 +1304,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         interaction.openQrCode()
                     }, contextAction: { node, gesture, _ in
                         interaction.openUsernameContextMenu(node, gesture)
-                    }, requestLayout: {
-                        interaction.requestLayout(false)
+                    }, requestLayout: { animated in
+                        interaction.requestLayout(animated)
                     }
                 )
             )
@@ -1332,7 +1332,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 
                 items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 400, context: context, label: hasBirthdayToday ? presentationData.strings.UserInfo_BirthdayToday : presentationData.strings.UserInfo_Birthday, text: stringForCompactBirthday(birthday, strings: presentationData.strings, showAge: true), textColor: .primary, leftIcon: hasBirthdayToday ? .birthday : nil, icon: hasBirthdayToday ? .premiumGift : nil, action: birthdayAction, longTapAction: nil, iconAction: {
                     interaction.openPremiumGift()
-                }, contextAction: birthdayContextAction, requestLayout: {
+                }, contextAction: birthdayContextAction, requestLayout: { _ in
                 }))
             }
             
@@ -1347,12 +1347,12 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }
             
             if user.isFake {
-                items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: "", text: user.botInfo != nil ? presentationData.strings.UserInfo_FakeBotWarning : presentationData.strings.UserInfo_FakeUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: {
-                    interaction.requestLayout(false)
+                items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: "", text: user.botInfo != nil ? presentationData.strings.UserInfo_FakeBotWarning : presentationData.strings.UserInfo_FakeUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: { animated in
+                    interaction.requestLayout(animated)
                 }))
             } else if user.isScam {
-                items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: user.botInfo != nil ? presentationData.strings.UserInfo_ScamBotWarning : presentationData.strings.UserInfo_ScamUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: {
-                    interaction.requestLayout(false)
+                items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: user.botInfo != nil ? presentationData.strings.UserInfo_ScamBotWarning : presentationData.strings.UserInfo_ScamUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: { animated in
+                    interaction.requestLayout(animated)
                 }))
             } else if hasAbout || hasWebApp {
                 var actionButton: PeerInfoScreenLabeledValueItem.Button?
@@ -1385,8 +1385,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 
                 items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: label, text: cachedData.about ?? "", textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.isPremium ? enabledPublicBioEntities : enabledPrivateBioEntities), action: isMyProfile ? { node, _ in
                     bioContextAction(node, nil, nil)
-                } : nil, linkItemAction: bioLinkAction, button: actionButton, contextAction: bioContextAction, requestLayout: {
-                    interaction.requestLayout(false)
+                } : nil, linkItemAction: bioLinkAction, button: actionButton, contextAction: bioContextAction, requestLayout: { animated in
+                    interaction.requestLayout(animated)
                 }))
                 
                 if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
@@ -1579,8 +1579,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         }
                     }, iconAction: {
                         interaction.openQrCode()
-                    }, requestLayout: {
-                        interaction.requestLayout(false)
+                    }, requestLayout: { animated in
+                        interaction.requestLayout(animated)
                     }
                 )
             )
@@ -1636,8 +1636,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             }
                         }, iconAction: {
                             interaction.openQrCode()
-                        }, requestLayout: {
-                            interaction.requestLayout(false)
+                        }, requestLayout: { animated in
+                            interaction.requestLayout(animated)
                         }
                     )
                 )
@@ -1669,8 +1669,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }
                     items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledEntities), action: isMyProfile ? { node, _ in
                         bioContextAction(node, nil, nil)
-                    } : nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: {
-                        interaction.requestLayout(true)
+                    } : nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: { animated in
+                        interaction.requestLayout(animated)
                     }))
                 }
                 
@@ -1755,8 +1755,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             if let aboutText = aboutText {
                 items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPrivateBioEntities), action: isMyProfile ? { node, _ in
                     bioContextAction(node, nil, nil)
-                } : nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: {
-                    interaction.requestLayout(true)
+                } : nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: { animated in
+                    interaction.requestLayout(animated)
                 }))
             }
         }
@@ -10916,19 +10916,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 })))
             }
             
-            items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak pane] _, a in
-                if ignoreNextActions {
-                    return
-                }
-                ignoreNextActions = true
-                a(.default)
-                
-                if let pane {
-                    pane.beginReordering()
-                }
-            })))
+            if pane.canReorder() {
+                items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak pane] _, a in
+                    if ignoreNextActions {
+                        return
+                    }
+                    ignoreNextActions = true
+                    a(.default)
+                    
+                    if let pane {
+                        pane.beginReordering()
+                    }
+                })))
+            }
             
             items.append(.action(ContextMenuActionItem(text: "Select", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
