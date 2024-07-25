@@ -1064,6 +1064,9 @@ public class BrowserScreen: ViewController, MinimizableController {
                     openInUrl = url
                 }
                 
+                
+                let canOpenIn = !(self.contentState?.url.hasPrefix("tonsite") ?? false)
+                
                 var items: [ContextMenuItem] = []
                 items.append(.custom(fontItem, false))
                 
@@ -1105,7 +1108,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                         performAction.invoke(.addBookmark)
                         action(.default)
                     })))
-                    if !layout.metrics.isTablet {
+                    if !layout.metrics.isTablet && canOpenIn {
                         items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_OpenInBrowser(openInTitle).string, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Browser"), color: theme.contextMenu.primaryColor) }, action: { [weak self] (controller, action) in
                             if let self {
                                 self.context.sharedContext.applicationBindings.openUrl(openInUrl)

@@ -601,15 +601,15 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     
     @available(iOS 13.0, *)
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, preferences: WKWebpagePreferences, decisionHandler: @escaping (WKNavigationActionPolicy, WKWebpagePreferences) -> Void) {
-        if #available(iOS 14.5, *), navigationAction.shouldPerformDownload {
-            self.presentDownloadConfirmation(fileName: navigationAction.request.mainDocumentURL?.lastPathComponent ?? "file", proceed: { download in
-                if download {
-                    decisionHandler(.download, preferences)
-                } else {
-//                    decisionHandler(.cancel, preferences)
-                }
-            })
-        } else {
+//        if #available(iOS 14.5, *), navigationAction.shouldPerformDownload {
+//            self.presentDownloadConfirmation(fileName: navigationAction.request.mainDocumentURL?.lastPathComponent ?? "file", proceed: { download in
+//                if download {
+//                    decisionHandler(.download, preferences)
+//                } else {
+////                    decisionHandler(.cancel, preferences)
+//                }
+//            })
+//        } else {
             if let url = navigationAction.request.url?.absoluteString {
                 if isTelegramMeLink(url) || isTelegraPhLink(url) {
                     decisionHandler(.cancel, preferences)
@@ -621,24 +621,24 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             } else {
                 decisionHandler(.allow, preferences)
             }
-        }
+//        }
     }
     
-    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
-        if navigationResponse.canShowMIMEType {
-            decisionHandler(.allow)
-        } else if #available(iOS 14.5, *) {
-            self.presentDownloadConfirmation(fileName: navigationResponse.response.suggestedFilename ?? "file", proceed: { download in
-                if download {
-                    decisionHandler(.download)
-                } else {
-                    decisionHandler(.cancel)
-                }
-            })
-        } else {
-            decisionHandler(.cancel)
-        }
-    }
+//    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+//        if navigationResponse.canShowMIMEType {
+//            decisionHandler(.allow)
+//        } else if #available(iOS 14.5, *) {
+//            self.presentDownloadConfirmation(fileName: navigationResponse.response.suggestedFilename ?? "file", proceed: { download in
+//                if download {
+//                    decisionHandler(.download)
+//                } else {
+//                    decisionHandler(.cancel)
+//                }
+//            })
+//        } else {
+//            decisionHandler(.cancel)
+//        }
+//    }
     
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         if let url = navigationAction.request.url?.absoluteString {
