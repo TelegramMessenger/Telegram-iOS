@@ -6120,7 +6120,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 if case .file = component.slice.item.storyItem.media {
                     items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_EditCover, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+                        return generateTintedImage(image: UIImage(bundleImageName: "Stories/Context Menu/EditCover"), color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] _, a in
                         a(.default)
                         
@@ -6318,7 +6318,7 @@ public final class StoryItemSetContainerComponent: Component {
                     
                     if case .file = component.slice.item.storyItem.media {
                         items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_EditCover, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+                            return generateTintedImage(image: UIImage(bundleImageName: "Stories/Context Menu/EditCover"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, a in
                             a(.default)
                             
