@@ -188,7 +188,10 @@ private final class BrowserScreenComponent: CombinedComponent {
                     centerItem: navigationContent,
                     readingProgress: context.component.contentState?.readingProgress ?? 0.0,
                     loadingProgress: context.component.contentState?.estimatedProgress,
-                    collapseFraction: collapseFraction
+                    collapseFraction: collapseFraction,
+                    activate: {
+                        performAction.invoke(.expand)
+                    }
                 ),
                 availableSize: context.availableSize,
                 transition: context.transition
@@ -258,6 +261,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                         context: context.component.context,
                         theme: environment.theme,
                         strings: environment.strings,
+                        insets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: 0.0, right: environment.safeInsets.right),
                         navigateTo: { url in
                             performAction.invoke(.navigateTo(url))
                         }
@@ -267,6 +271,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                 )
                 context.add(addressList
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height + addressList.size.height / 2.0))
+                    .clipsToBounds(true)
                     .appear(.default(alpha: true))
                     .disappear(.default(alpha: true))
                 )
@@ -314,6 +319,7 @@ public class BrowserScreen: ViewController, MinimizableController {
         case openAddressBar
         case closeAddressBar
         case navigateTo(String)
+        case expand
     }
 
     fileprivate final class Node: ViewControllerTracingNode {
@@ -568,6 +574,10 @@ public class BrowserScreen: ViewController, MinimizableController {
                         updatedState.addressFocused = false
                         return updatedState
                     })
+                case .expand:
+                    if let content = self.content.last {
+                        content.resetScrolling()
+                    }
                 }
             }
             
@@ -625,6 +635,14 @@ public class BrowserScreen: ViewController, MinimizableController {
                     return
                 }
                 self.pushContent(content, transition: .spring(duration: 0.4))
+            }
+            browserContent.openAppUrl = { [weak self] url in
+                guard let self else {
+                    return
+                }
+                self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: false, presentationData: self.presentationData, navigationController: self.controller?.navigationController as? NavigationController, dismissInput: { [weak self] in
+                    self?.view.window?.endEditing(true)
+                })
             }
             browserContent.present = { [weak self] c, a in
                 guard let self, let controller = self.controller else {
@@ -989,6 +1007,10 @@ public class BrowserScreen: ViewController, MinimizableController {
                     }
                 }
                 
+                if update.isReset {
+                    scrollingPanelOffsetFraction = 0.0
+                }
+                
                 if scrollingPanelOffsetFraction != self.scrollingPanelOffsetFraction {
                     self.scrollingPanelOffsetFraction = scrollingPanelOffsetFraction
                     self.requestLayout(transition: transition)
@@ -1168,7 +1190,7 @@ public class BrowserScreen: ViewController, MinimizableController {
     private let context: AccountContext
     private let subject: Subject
     
-    var openPreviousOnClose = false
+    private var openPreviousOnClose = false
     
     private var validLayout: ContainerViewLayout?
     
@@ -1184,9 +1206,10 @@ public class BrowserScreen: ViewController, MinimizableController {
 //        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     ]
     
-    public init(context: AccountContext, subject: Subject) {
+    public init(context: AccountContext, subject: Subject, openPreviousOnClose: Bool = false) {
         self.context = context
         self.subject = subject
+        self.openPreviousOnClose = openPreviousOnClose
         
         super.init(navigationBarPresentationData: nil)
         
@@ -1222,7 +1245,16 @@ public class BrowserScreen: ViewController, MinimizableController {
     }
     
     public func requestMinimize(topEdgeOffset: CGFloat?, initialVelocity: CGFloat?) {
+        self.openPreviousOnClose = false
         self.node.minimize(topEdgeOffset: topEdgeOffset, damping: 180.0, initialVelocity: initialVelocity)
+    }
+    
+    public override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        if self.openPreviousOnClose, let navigationController = self.navigationController as? NavigationController, let minimizedContainer = navigationController.minimizedContainer, let controller = minimizedContainer.controllers.last {
+            navigationController.maximizeViewController(controller, animated: true)
+        }
     }
     
     public var isMinimized = false {
@@ -1339,8 +1371,8 @@ private final class BrowserContentComponent: Component {
             let bottomInset = (49.0 + component.insets.bottom) * (1.0 - component.scrollingPanelOffsetFraction)
             let insets = UIEdgeInsets(top: topInset, left: component.insets.left, bottom: bottomInset, right: component.insets.right)
             let fullInsets = UIEdgeInsets(top: component.insets.top + component.navigationBarHeight, left: component.insets.left, bottom: 49.0 + component.insets.bottom, right: component.insets.right)
-            
-            component.content.updateLayout(size: availableSize, insets: insets, fullInsets: fullInsets, transition: transition)
+                        
+            component.content.updateLayout(size: availableSize, insets: insets, fullInsets: fullInsets, safeInsets: component.insets, transition: transition)
             transition.setFrame(view: component.content, frame: CGRect(origin: .zero, size: availableSize))
             
             return availableSize

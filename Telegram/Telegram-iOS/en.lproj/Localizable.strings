@@ -12643,3 +12643,6 @@ Sorry for the inconvenience.";
 "BotPreviews.DefaultFooter.Text" = "This preview will be shown by default. You can also add translations into specific languages.";
 "BotPreviews.SelectLanguage.Title" = "Add a Translation";
 "BotPreview.ViewContextDelete" = "Delete Preview";
+
+"WebBrowser.Download.Confirmation" = "Do you want to download \"%@\"?";
+"WebBrowser.Download.Download" = "Download";

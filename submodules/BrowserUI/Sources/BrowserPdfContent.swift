@@ -38,6 +38,7 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     var pushContent: (BrowserScreen.Subject) -> Void = { _ in }
+    var openAppUrl: (String) -> Void = { _ in }
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
     var minimize: () -> Void = { }
     var close: () -> Void = { }
@@ -110,7 +111,7 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             self.backgroundColor = presentationData.theme.list.plainBackgroundColor
         }
         if let (size, insets, fullInsets) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: .immediate)
+            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, safeInsets: .zero, transition: .immediate)
         }
     }
             
@@ -249,7 +250,7 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     private var validLayout: (CGSize, UIEdgeInsets, UIEdgeInsets)?
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, transition: ComponentTransition) {
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, transition: ComponentTransition) {
         self.validLayout = (size, insets, fullInsets)
         
         self.previousScrollingOffset = ScrollingOffsetState(value: self.scrollView.contentOffset.y, isDraggingOrDecelerating: self.scrollView.isDragging || self.scrollView.isDecelerating)
@@ -350,6 +351,10 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.updateState {
             $0.withUpdatedReadingProgress(readingProgress)
         }
+    }
+    
+    func resetScrolling() {
+        self.updateScrollingOffset(isReset: true, transition: .spring(duration: 0.4))
     }
     
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {

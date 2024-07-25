@@ -13,17 +13,20 @@ final class BrowserAddressListComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let insets: UIEdgeInsets
     let navigateTo: (String) -> Void
     
     init(
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
+        insets: UIEdgeInsets,
         navigateTo: @escaping (String) -> Void
     ) {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.insets = insets
         self.navigateTo = navigateTo
     }
     
@@ -35,6 +38,9 @@ final class BrowserAddressListComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.insets != rhs.insets {
             return false
         }
         return true
@@ -148,7 +154,7 @@ final class BrowserAddressListComponent: Component {
         }
         
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-            self.endEditing(true)
+            self.window?.endEditing(true)
         }
         
         private func updateScrolling(transition: ComponentTransition) {
@@ -211,6 +217,7 @@ final class BrowserAddressListComponent: Component {
                                 theme: component.theme,
                                 style: .plain,
                                 title: sectionTitle,
+                                insets: component.insets,
                                 actionTitle: section.id == 0 ? "Clear" : nil,
                                 action: { [weak self] in
                                     if let self, let component = self.component {
@@ -292,6 +299,7 @@ final class BrowserAddressListComponent: Component {
                                 webPage: webPage!,
                                 message: itemMessage,
                                 hasNext: true,
+                                insets: component.insets,
                                 action: {
                                     if let url = webPage?.content.url {
                                         navigateTo(url)
@@ -393,6 +401,7 @@ final class BrowserAddressListComponent: Component {
                     webPage: TelegramMediaWebpage(webpageId: EngineMedia.Id(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(url: "https://telegram.org", displayUrl: "https://telegram.org", hash: 0, type: nil, websiteName: "Telegram", title: "Telegram Telegram", text: "Telegram", embedUrl: nil, embedType: nil, embedSize: nil, duration: nil, author: nil, isMediaLargeByDefault: nil, image: nil, file: nil, story: nil, attributes: [], instantPage: nil))),
                     message: nil,
                     hasNext: true,
+                    insets: .zero,
                     action: {}
                 )),
                 environment: {},

@@ -16,6 +16,7 @@ final class BrowserAddressListItemComponent: Component {
     let webPage: TelegramMediaWebpage
     var message: Message?
     let hasNext: Bool
+    let insets: UIEdgeInsets
     let action: () -> Void
     
     init(
@@ -24,6 +25,7 @@ final class BrowserAddressListItemComponent: Component {
         webPage: TelegramMediaWebpage,
         message: Message?,
         hasNext: Bool,
+        insets: UIEdgeInsets,
         action: @escaping () -> Void
     ) {
         self.context = context
@@ -31,6 +33,7 @@ final class BrowserAddressListItemComponent: Component {
         self.webPage = webPage
         self.message = message
         self.hasNext = hasNext
+        self.insets = insets
         self.action = action
     }
     
@@ -42,6 +45,9 @@ final class BrowserAddressListItemComponent: Component {
             return false
         }
         if lhs.hasNext != rhs.hasNext {
+            return false
+        }
+        if lhs.insets != rhs.insets {
             return false
         }
         return true
@@ -92,7 +98,7 @@ final class BrowserAddressListItemComponent: Component {
                                 
             let iconSize = CGSize(width: 40.0, height: 40.0)
             let height: CGFloat = 60.0
-            let leftInset: CGFloat = 11.0 + iconSize.width + 11.0
+            let leftInset: CGFloat = component.insets.left + 11.0 + iconSize.width + 11.0
             let rightInset: CGFloat = 16.0
             let titleSpacing: CGFloat = 2.0
                 
@@ -181,7 +187,7 @@ final class BrowserAddressListItemComponent: Component {
             }
             
             
-            let iconFrame = CGRect(origin: CGPoint(x: 11.0, y: floorToScreenPixels((height - iconSize.height) / 2.0)), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: 11.0 + component.insets.left, y: floorToScreenPixels((height - iconSize.height) / 2.0)), size: iconSize)
             
             let iconImageLayout = self.icon.asyncLayout()
             var iconImageApply: (() -> Void)?
