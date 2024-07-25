@@ -119,7 +119,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     private let context: AccountContext
     private var presentationData: PresentationData
     
-    private let webView: WKWebView
+    let webView: WKWebView
     
     private let errorView: ComponentHostView<Empty>
     private var currentError: Error?
@@ -486,7 +486,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         if keyPath == "title" {
             self.updateState { $0.withUpdatedTitle(self.webView.title ?? "") }
         } else if keyPath == "URL" {
-            self.updateState { $0.withUpdatedUrl(self.webView.url?.absoluteString ?? "") }
+            if let url = self.webView.url {
+                self.updateState { $0.withUpdatedUrl(url.absoluteString) }
+            }
             self.didSetupSearch = false
         }  else if keyPath == "estimatedProgress" {
             self.updateState { $0.withUpdatedEstimatedProgress(self.webView.estimatedProgress) }
@@ -571,7 +573,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        if (error as NSError).code != -999 {
+        if [-1003, -1100].contains((error as NSError).code) {
             self.currentError = error
         } else {
             self.currentError = nil
@@ -580,18 +582,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: .immediate)
         }
     }
-    
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        if (error as NSError).code != -999 {
-            self.currentError = error
-        } else {
-            self.currentError = nil
-        }
-        if let (size, insets, fullInsets) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: .immediate)
-        }
-    }
-    
+        
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil {
             if let url = navigationAction.request.url?.absoluteString {
@@ -752,7 +743,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             var nodeList = document.getElementsByTagName('link');
             for (var i = 0; i < nodeList.length; i++)
             {
-                if((nodeList[i].getAttribute('rel') == 'icon')||(nodeList[i].getAttribute('rel') == 'shortcut icon'))
+                if((nodeList[i].getAttribute('rel') == 'icon')||(nodeList[i].getAttribute('rel') == 'shortcut icon')||(nodeList[i].getAttribute('rel').startsWith('apple-touch-icon')))
                 {
                     const node = nodeList[i];
                     favicons.push({
@@ -871,6 +862,18 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     private var addToRecentsWhenReady = false
     func addToRecentlyVisited() {
         self.addToRecentsWhenReady = true
+    }
+    
+    func makeContentSnapshotView() -> UIView? {
+        let configuration = WKSnapshotConfiguration()
+        configuration.rect = CGRect(origin: .zero, size: self.webView.frame.size)
+
+        let imageView = UIImageView()
+        imageView.frame = CGRect(origin: .zero, size: self.webView.frame.size)
+        self.webView.takeSnapshot(with: configuration, completionHandler: { image, _ in
+            imageView.image = image
+        })
+        return imageView
     }
 }
 

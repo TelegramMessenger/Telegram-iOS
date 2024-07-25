@@ -460,4 +460,8 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     
     func addToRecentlyVisited() {
     }
+    
+    func makeContentSnapshotView() -> UIView? {
+        return nil
+    }
 }

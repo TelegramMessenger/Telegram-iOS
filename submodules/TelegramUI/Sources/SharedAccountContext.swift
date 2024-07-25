@@ -2654,7 +2654,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return editorController
     }
         
-    public func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: String?, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController {
+    public func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: (url: String, name: String?)?, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController {
         let subject: Signal<MediaEditorScreen.Subject?, NoError>
         if let image = source as? UIImage {
             subject = .single(.image(image, PixelDimensions(image.size), nil, .bottomRight))

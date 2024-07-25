@@ -1170,16 +1170,18 @@ public class BrowserScreen: ViewController, MinimizableController {
     
     var openPreviousOnClose = false
     
+    private var validLayout: ContainerViewLayout?
+    
     public static let supportedDocumentMimeTypes: [String] = [
-        "text/plain",
-        "text/rtf",
-        "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.template",
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+//        "text/plain",
+//        "text/rtf",
+//        "application/pdf",
+//        "application/msword",
+//        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+//        "application/vnd.ms-excel",
+//        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+//        "application/vnd.openxmlformats-officedocument.spreadsheetml.template",
+//        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     ]
     
     public init(context: AccountContext, subject: Subject) {
@@ -1212,6 +1214,8 @@ public class BrowserScreen: ViewController, MinimizableController {
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.validLayout = layout
+        
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.node.containerLayoutUpdated(layout: layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.height, transition: ComponentTransition(transition))
@@ -1221,7 +1225,15 @@ public class BrowserScreen: ViewController, MinimizableController {
         self.node.minimize(topEdgeOffset: topEdgeOffset, damping: 180.0, initialVelocity: initialVelocity)
     }
     
-    public var isMinimized = false
+    public var isMinimized = false {
+        didSet {
+            if let webContent = self.node.content.last as? BrowserWebContent {
+                if !self.isMinimized {
+                    webContent.webView.setNeedsLayout()
+                }
+            }
+        }
+    }
     public var isMinimizable = true
     
     public var minimizedIcon: UIImage? {
@@ -1243,6 +1255,20 @@ public class BrowserScreen: ViewController, MinimizableController {
             return Float(contentState.readingProgress)
         }
         return nil
+    }
+    
+    public func makeContentSnapshotView() -> UIView? {
+        if let contentSnapshot = self.node.content.last?.makeContentSnapshotView(), let layout = self.validLayout {
+            if let wrapperView = self.view.snapshotView(afterScreenUpdates: false) {
+                contentSnapshot.frame = contentSnapshot.frame.offsetBy(dx: 0.0, dy: self.navigationLayout(layout: layout).navigationFrame.height)
+                wrapperView.addSubview(contentSnapshot)
+                return wrapperView
+            } else {
+                return contentSnapshot
+            }
+        } else {
+            return self.view.snapshotView(afterScreenUpdates: false)
+        }
     }
 }
 

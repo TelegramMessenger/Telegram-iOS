@@ -47,7 +47,7 @@ private func getWeatherData(context: AccountContext, location: CLLocationCoordin
     }
 }
 
-func getWeather(context: AccountContext) -> Signal<StickerPickerScreen.Weather, NoError> {
+func getWeather(context: AccountContext, load: Bool) -> Signal<StickerPickerScreen.Weather, NoError> {
     guard let locationManager = context.sharedContext.locationManager else {
         return .single(.none)
     }
@@ -60,33 +60,37 @@ func getWeather(context: AccountContext) -> Signal<StickerPickerScreen.Weather, 
         case .denied, .restricted, .unreachable:
             return .single(.notAllowed)
         case .allowed:
-            return .single(.fetching)
-            |> then(
-                currentLocationManagerCoordinate(manager: locationManager, timeout: 5.0)
-                |> mapToSignal { location in
-                    if let location {
-                        return getWeatherData(context: context, location: location)
-                        |> mapToSignal { weather in
-                            if let weather {
-                                let effectiveEmoji = emojiFor(for: weather.emoji.strippedEmoji, date: Date(), location: location)
-                                if let match = context.animatedEmojiStickersValue[effectiveEmoji]?.first {
-                                    return .single(.loaded(StickerPickerScreen.Weather.LoadedWeather(
-                                        emoji: effectiveEmoji,
-                                        emojiFile: match.file,
-                                        temperature: weather.temperature
-                                    )))
+            if load {
+                return .single(.fetching)
+                |> then(
+                    currentLocationManagerCoordinate(manager: locationManager, timeout: 5.0)
+                    |> mapToSignal { location in
+                        if let location {
+                            return getWeatherData(context: context, location: location)
+                            |> mapToSignal { weather in
+                                if let weather {
+                                    let effectiveEmoji = emojiFor(for: weather.emoji.strippedEmoji, date: Date(), location: location)
+                                    if let match = context.animatedEmojiStickersValue[effectiveEmoji]?.first {
+                                        return .single(.loaded(StickerPickerScreen.Weather.LoadedWeather(
+                                            emoji: effectiveEmoji,
+                                            emojiFile: match.file,
+                                            temperature: weather.temperature
+                                        )))
+                                    } else {
+                                        return .single(.none)
+                                    }
                                 } else {
                                     return .single(.none)
                                 }
-                            } else {
-                                return .single(.none)
                             }
+                        } else {
+                            return .single(.none)
                         }
-                    } else {
-                        return .single(.none)
                     }
-                }
-            )
+                )
+            } else {
+                return .single(.notPreloaded)
+            }
         }
     }
 }

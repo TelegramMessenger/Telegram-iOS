@@ -5340,7 +5340,7 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         private let updateDisposable = MetaDisposable()
-        func openStoryEditing(repost: Bool = false) {
+        func openStoryEditing(repost: Bool = false, cover: Bool = false) {
             guard let component = self.component else {
                 return
             }
@@ -5351,7 +5351,17 @@ public final class StoryItemSetContainerComponent: Component {
             
             var videoPlaybackPosition: Double?
             if let visibleItem = self.visibleItems[component.slice.item.id], let view = visibleItem.view.view as? StoryItemContentComponent.View {
-                videoPlaybackPosition = view.videoPlaybackPosition
+                if cover {
+                    if case let .file(file) = component.slice.item.storyItem.media {
+                        for attribute in file.attributes {
+                            if case let .Video(_, _, _, _, coverTime) = attribute {
+                                videoPlaybackPosition = coverTime
+                            }
+                        }
+                    }
+                } else {
+                    videoPlaybackPosition = view.videoPlaybackPosition
+                }
             }
             
             guard let controller = MediaEditorScreen.makeEditStoryController(
@@ -5359,6 +5369,7 @@ public final class StoryItemSetContainerComponent: Component {
                 peer: component.slice.effectivePeer,
                 storyItem: component.slice.item.storyItem,
                 videoPlaybackPosition: videoPlaybackPosition,
+                cover: cover,
                 repost: repost,
                 transitionIn: .noAnimation,
                 transitionOut: nil,
@@ -6107,6 +6118,19 @@ public final class StoryItemSetContainerComponent: Component {
                     self.openStoryEditing()
                 })))
                 
+                if case .file = component.slice.item.storyItem.media {
+                    items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_EditCover, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, a in
+                        a(.default)
+                        
+                        guard let self else {
+                            return
+                        }
+                        self.openStoryEditing(cover: true)
+                    })))
+                }
+                
                 items.append(.separator)
 
                 items.append(.action(ContextMenuActionItem(text: component.slice.item.storyItem.isPinned ? component.strings.Story_Context_RemoveFromProfile : component.strings.Story_Context_SaveToProfile, icon: { theme in
@@ -6291,6 +6315,19 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         self.openStoryEditing()
                     })))
+                    
+                    if case .file = component.slice.item.storyItem.media {
+                        items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_EditCover, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
+                            guard let self else {
+                                return
+                            }
+                            self.openStoryEditing(cover: true)
+                        })))
+                    }
                 }
                 
                 if !items.isEmpty {

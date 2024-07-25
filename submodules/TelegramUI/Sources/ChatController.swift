@@ -128,6 +128,7 @@ import MessageUI
 import PhoneNumberFormat
 import OwnershipTransferController
 import OldChannelsController
+import BrowserUI
 
 public enum ChatControllerPeekActions {
     case standard
@@ -398,11 +399,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var historyNavigationStack = ChatHistoryNavigationStack()
     
     public let canReadHistory = ValuePromise<Bool>(true, ignoreRepeated: true)
+    public let hasBrowserOrAppInFront = Promise<Bool>(false)
     var reminderActivity: NSUserActivity?
     var isReminderActivityEnabled: Bool = false
     
-    var canReadHistoryValue = false
+    var canReadHistoryValue = false {
+        didSet {
+            self.computedCanReadHistoryPromise.set(self.canReadHistoryValue)
+        }
+    }
     var canReadHistoryDisposable: Disposable?
+    var computedCanReadHistoryPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     
     var themeEmoticonAndDarkAppearancePreviewPromise = Promise<(String?, Bool?)>((nil, nil))
     var didSetPresentationData = false
@@ -6502,8 +6509,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }
         
-        self.canReadHistoryDisposable = (combineLatest(context.sharedContext.applicationBindings.applicationInForeground, self.canReadHistory.get()) |> map { a, b in
-            return a && b
+
+        
+        self.canReadHistoryDisposable = (combineLatest(
+            context.sharedContext.applicationBindings.applicationInForeground,
+            self.canReadHistory.get(),
+            self.hasBrowserOrAppInFront.get()
+        ) |> map { inForeground, globallyEnabled, hasBrowserOrWebAppInFront in
+            return inForeground && globallyEnabled && !hasBrowserOrWebAppInFront
         } |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             if let strongSelf = self, strongSelf.canReadHistoryValue != value {
                 strongSelf.canReadHistoryValue = value
@@ -7119,6 +7132,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 )
             }
         }
+        
+        let hasBrowserOrWebAppInFront: Signal<Bool, NoError> = .single([])
+        |> then(
+            self.effectiveNavigationController?.viewControllersSignal ?? .single([])
+        )
+        |> map { controllers in
+            if controllers.last is BrowserScreen || controllers.last is AttachmentController {
+                return true
+            } else {
+                return false
+            }
+        }
+        self.hasBrowserOrAppInFront.set(hasBrowserOrWebAppInFront)
     }
     
     var returnInputViewFocus = false
@@ -7129,9 +7155,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.didAppear = true
         
         self.chatDisplayNode.historyNode.experimentalSnapScrollToItem = false
-        self.chatDisplayNode.historyNode.canReadHistory.set(combineLatest(self.context.sharedContext.applicationBindings.applicationInForeground, self.canReadHistory.get()) |> map { a, b in
-            return a && b
-        })
+        self.chatDisplayNode.historyNode.canReadHistory.set(self.computedCanReadHistoryPromise.get())
         
         self.chatDisplayNode.loadInputPanels(theme: self.presentationInterfaceState.theme, strings: self.presentationInterfaceState.strings, fontSize: self.presentationInterfaceState.fontSize)
         
