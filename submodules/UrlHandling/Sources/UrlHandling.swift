@@ -1203,7 +1203,11 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
             var url = url
             if !url.contains("://") && !url.hasPrefix("tel:") && !url.hasPrefix("mailto:") && !url.hasPrefix("calshow:") {
                 if !(url.hasPrefix("http") || url.hasPrefix("https")) {
-                    url = "http://\(url)"
+                    if let mappedURL = URL(string: "https://\(url)"), let host = mappedURL.host, host.lowercased().hasSuffix(".ton") {
+                        url = "tonsite://\(url)"
+                    } else {
+                        url = "http://\(url)"
+                    }
                 }
             }
             

@@ -254,16 +254,15 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                         }
                     }
                 } else if case .apps = key {
-                    //TODO:localize
                     if case .popularApps = section {
-                        header = ChatListSearchItemHeader(type: .text("POPULAR APPS", 1), theme: theme, strings: strings)
+                        header = ChatListSearchItemHeader(type: .text(presentationData.strings.ChatList_Search_SectionPopularApps, 1), theme: theme, strings: strings)
                     } else {
                         if let isChannelsTabExpanded {
-                            header = ChatListSearchItemHeader(type: .text("APPS YOU USE", 0), theme: theme, strings: strings, actionTitle: isChannelsTabExpanded ? presentationData.strings.ChatList_Search_SectionActionShowLess : presentationData.strings.ChatList_Search_SectionActionShowMore, action: {
+                            header = ChatListSearchItemHeader(type: .text(presentationData.strings.ChatList_Search_SectionRecentApps, 0), theme: theme, strings: strings, actionTitle: isChannelsTabExpanded ? presentationData.strings.ChatList_Search_SectionActionShowLess : presentationData.strings.ChatList_Search_SectionActionShowMore, action: {
                                 toggleChannelsTabExpanded()
                             })
                         } else {
-                            header = ChatListSearchItemHeader(type: .text("APPS YOU USE", 0), theme: theme, strings: strings, actionTitle: nil, action: nil)
+                            header = ChatListSearchItemHeader(type: .text(presentationData.strings.ChatList_Search_SectionRecentApps, 0), theme: theme, strings: strings, actionTitle: nil, action: nil)
                         }
                     }
                 } else {
@@ -1454,8 +1453,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             if key == .channels {
                 emptyRecentTextNode.attributedText = NSAttributedString(string: presentationData.strings.ChatList_Search_RecommendedChannelsEmpty_Text, font: Font.regular(15.0), textColor: presentationData.theme.list.freeTextColor)
             } else if key == .apps {
-                //TODO:localize
-                emptyRecentTextNode.attributedText = NSAttributedString(string: "No Apps Found", font: Font.regular(15.0), textColor: presentationData.theme.list.freeTextColor)
+                emptyRecentTextNode.attributedText = NSAttributedString(string: presentationData.strings.ChatList_Search_Apps_Empty_Text, font: Font.regular(15.0), textColor: presentationData.theme.list.freeTextColor)
             }
             self.emptyRecentTextNode = emptyRecentTextNode
                  
@@ -3417,7 +3415,6 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             continue
                         }
                         let peerNotificationSettings = notificationSettings[id]
-                        //TODO:localize
                         let subpeerSummary: RecentlySearchedPeerSubpeerSummary? = nil
                         var peerStoryStats: PeerStoryStats?
                         if let value = storyStats[peer.id] {

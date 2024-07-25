@@ -552,7 +552,8 @@ public final class SparseItemGrid: ASDisplayNode {
         }
         
         var contentBottomOffset: CGFloat {
-            return -self.scrollView.contentOffset.y + self.scrollView.contentSize.height
+            let bottomInset = self.layout?.containerLayout.insets.bottom ?? 0.0
+            return -self.scrollView.contentOffset.y + self.scrollView.contentSize.height - bottomInset
         }
 
         let coveringOffsetUpdated: (Viewport, ContainedViewLayoutTransition) -> Void
