@@ -2627,8 +2627,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 
                 if !isScheduled && canSpeak {
                     if #available(iOS 15.0, *) {
-                        //TODO:localize
-                        items.append(.action(ContextMenuActionItem(text: "Microphone Modes", textColor: .primary, icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MicrophoneModes, textColor: .primary, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Noise"), color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
                             f(.dismissWithoutContent)

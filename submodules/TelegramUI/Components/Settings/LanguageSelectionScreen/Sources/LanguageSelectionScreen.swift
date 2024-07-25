@@ -11,6 +11,7 @@ import SearchUI
 
 public class LanguageSelectionScreen: ViewController {
     private let context: AccountContext
+    private let excludeIds: [String]
     private let selectLocalization: (LocalizationInfo) -> Void
     
     private var controllerNode: LanguageSelectionScreenNode {
@@ -29,8 +30,9 @@ public class LanguageSelectionScreen: ViewController {
     
     private var previousContentOffset: ListViewVisibleContentOffset?
     
-    public init(context: AccountContext, selectLocalization: @escaping (LocalizationInfo) -> Void) {
+    public init(context: AccountContext, excludeIds: [String] = [], selectLocalization: @escaping (LocalizationInfo) -> Void) {
         self.context = context
+        self.excludeIds = excludeIds
         self.selectLocalization = selectLocalization
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -40,8 +42,7 @@ public class LanguageSelectionScreen: ViewController {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationPresentation = .modal
         
-        //TODO:localize
-        self.title = "Add a Translation"
+        self.title = self.presentationData.strings.BotPreviews_SelectLanguage_Title
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
@@ -92,7 +93,7 @@ public class LanguageSelectionScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = LanguageSelectionScreenNode(context: self.context, presentationData: self.presentationData, navigationBar: self.navigationBar!, requestActivateSearch: { [weak self] in
+        self.displayNode = LanguageSelectionScreenNode(context: self.context, presentationData: self.presentationData, navigationBar: self.navigationBar!, excludeIds: self.excludeIds, requestActivateSearch: { [weak self] in
             self?.activateSearch()
         }, requestDeactivateSearch: { [weak self] in
             self?.deactivateSearch()

@@ -48,6 +48,7 @@ import StickerPackEditTitleController
 import StickerPickerScreen
 import UIKitRuntimeUtils
 import ImageObjectSeparation
+import SaveProgressScreen
 
 private let playbackButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
@@ -2809,7 +2810,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             })
             
             if controller.isEditingStoryCover {
-                self.openCoverSelection(immediate: true)
+                Queue.mainQueue().justDispatch {
+                    self.openCoverSelection(exclusive: true)
+                }
             }
         }
         
@@ -2984,7 +2987,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
                 self.controller?.stickerRecommendedEmoji = emojiForClasses(classes.map { $0.0 })
             }
-            mediaEditor.attachPreviewView(self.previewView)
+            mediaEditor.attachPreviewView(self.previewView, andPlay: !(self.controller?.isEditingStoryCover ?? false))
             
             if case .empty = effectiveSubject {
                 self.stickerMaskDrawingView?.emptyColor = .black
@@ -4704,7 +4707,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
         
-        func openCoverSelection(immediate: Bool) {
+        func openCoverSelection(exclusive: Bool) {
             guard let portalView = PortalView(matchPosition: false) else {
                 return
             }
@@ -4721,12 +4724,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 context: self.context,
                 mediaEditor: self.mediaEditorPromise.get(),
                 previewView: self.previewView,
-                portalView: portalView
+                portalView: portalView,
+                exclusive: exclusive
             )
             coverController.dismissed = { [weak self] in
                 if let self {
-                    self.animateInFromTool()
-                    self.requestCompletion(playHaptic: false)
+                    if exclusive {
+                        self.controller?.requestDismiss(saveDraft: false, animated: true)
+                    } else {
+                        self.animateInFromTool()
+                        self.requestCompletion(playHaptic: false)
+                    }
                 }
             }
             coverController.completed = { [weak self] position, image in
@@ -4737,7 +4745,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.controller?.present(coverController, in: .current)
             self.coverScreen = coverController
             
-            if immediate {
+            if exclusive {
                 self.isDisplayingTool = .cover
                 self.requestUpdate(transition: .immediate)
             } else {
@@ -5226,7 +5234,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     self.controller?.present(controller, in: .window(.root))
                                     self.animateOutToTool(tool: .tools)
                                 case .cover:
-                                    self.openCoverSelection(immediate: false)
+                                    self.openCoverSelection(exclusive: false)
                                 }
                             }
                         },
@@ -5923,7 +5931,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             editCoverImpl = { [weak self, weak controller] in
                 if let self {
-                    self.node.openCoverSelection(immediate: false)
+                    self.node.openCoverSelection(exclusive: false)
                 }
                 if let controller {
                     controller.dismiss()

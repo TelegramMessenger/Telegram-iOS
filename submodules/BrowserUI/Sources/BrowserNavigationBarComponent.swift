@@ -29,12 +29,14 @@ final class BrowserNavigationBarComponent: CombinedComponent {
     let topInset: CGFloat
     let height: CGFloat
     let sideInset: CGFloat
+    let metrics: LayoutMetrics
     let leftItems: [AnyComponentWithIdentity<Empty>]
     let rightItems: [AnyComponentWithIdentity<Empty>]
     let centerItem: AnyComponentWithIdentity<BrowserNavigationBarEnvironment>?
     let readingProgress: CGFloat
     let loadingProgress: Double?
     let collapseFraction: CGFloat
+    let activate: () -> Void
     
     init(
         backgroundColor: UIColor,
@@ -45,12 +47,14 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         topInset: CGFloat,
         height: CGFloat,
         sideInset: CGFloat,
+        metrics: LayoutMetrics,
         leftItems: [AnyComponentWithIdentity<Empty>],
         rightItems: [AnyComponentWithIdentity<Empty>],
         centerItem: AnyComponentWithIdentity<BrowserNavigationBarEnvironment>?,
         readingProgress: CGFloat,
         loadingProgress: Double?,
-        collapseFraction: CGFloat
+        collapseFraction: CGFloat,
+        activate: @escaping () -> Void
     ) {
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
@@ -60,12 +64,14 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         self.topInset = topInset
         self.height = height
         self.sideInset = sideInset
+        self.metrics = metrics
         self.leftItems = leftItems
         self.rightItems = rightItems
         self.centerItem = centerItem
         self.readingProgress = readingProgress
         self.loadingProgress = loadingProgress
         self.collapseFraction = collapseFraction
+        self.activate = activate
     }
     
     static func ==(lhs: BrowserNavigationBarComponent, rhs: BrowserNavigationBarComponent) -> Bool {
@@ -91,6 +97,9 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             return false
         }
         if lhs.sideInset != rhs.sideInset {
+            return false
+        }
+        if lhs.metrics != rhs.metrics {
             return false
         }
         if lhs.leftItems != rhs.leftItems {
@@ -122,6 +131,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         let leftItems = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
         let rightItems = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
         let centerItems = ChildMap(environment: BrowserNavigationBarEnvironment.self, keyedBy: AnyHashable.self)
+        let activate = Child(Button.self)
         
         return { context in
             var availableWidth = context.availableSize.width
@@ -131,6 +141,8 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             let expandedHeight = context.component.height
             let contentHeight: CGFloat = expandedHeight * (1.0 - context.component.collapseFraction) + collapsedHeight * context.component.collapseFraction
             let size = CGSize(width: context.availableSize.width, height: context.component.topInset + contentHeight)
+            let verticalOffset: CGFloat = context.component.metrics.isTablet ? -3.0 : 0.0
+            let itemSpacing: CGFloat = context.component.metrics.isTablet ? 24.0 : 8.0
             
             let background = background.update(
                 component: Rectangle(color: context.component.backgroundColor.withAlphaComponent(1.0)),
@@ -160,7 +172,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
                 availableSize: CGSize(width: size.width, height: size.height),
                 transition: context.transition
             )
-            
+                        
             var leftItemList: [_UpdatedChildComponent] = []
             for item in context.component.leftItems {
                 let item = leftItems[item.id].update(
@@ -182,11 +194,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
                 rightItemList.append(item)
                 availableWidth -= item.size.width
             }
-            
-            if !leftItemList.isEmpty || !rightItemList.isEmpty {
-                availableWidth -= 14.0
-            }
-                        
+                    
             context.add(background
                 .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
             )
@@ -212,35 +220,37 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             var leftItemX = sideInset
             for item in leftItemList {
                 context.add(item
-                    .position(CGPoint(x: leftItemX + item.size.width / 2.0 - (item.size.width / 2.0 * 0.35 * context.component.collapseFraction), y: context.component.topInset + contentHeight / 2.0))
+                    .position(CGPoint(x: leftItemX + item.size.width / 2.0 - (item.size.width / 2.0 * 0.35 * context.component.collapseFraction), y: context.component.topInset + contentHeight / 2.0 + verticalOffset))
                     .scale(1.0 - 0.35 * context.component.collapseFraction)
                     .opacity(1.0 - context.component.collapseFraction)
                     .appear(.default(scale: true, alpha: true))
                     .disappear(.default(scale: true, alpha: true))
                 )
-                leftItemX += item.size.width + 8.0
-                centerLeftInset += item.size.width + 8.0
+                leftItemX += item.size.width + itemSpacing
+                centerLeftInset += item.size.width + itemSpacing
             }
     
             var centerRightInset = sideInset - 5.0
             var rightItemX = context.availableSize.width - (sideInset - 5.0)
             for item in rightItemList.reversed() {
                 context.add(item
-                    .position(CGPoint(x: rightItemX - item.size.width / 2.0 + (item.size.width / 2.0 * 0.35 * context.component.collapseFraction), y: context.component.topInset + contentHeight / 2.0))
+                    .position(CGPoint(x: rightItemX - item.size.width / 2.0 + (item.size.width / 2.0 * 0.35 * context.component.collapseFraction), y: context.component.topInset + contentHeight / 2.0 + verticalOffset))
                     .scale(1.0 - 0.35 * context.component.collapseFraction)
                     .opacity(1.0 - context.component.collapseFraction)
                     .appear(.default(scale: true, alpha: true))
                     .disappear(.default(scale: true, alpha: true))
                 )
-                rightItemX -= item.size.width + 8.0
-                centerRightInset += item.size.width + 8.0
+                rightItemX -= item.size.width + itemSpacing
+                centerRightInset += item.size.width + itemSpacing
             }
             
             let maxCenterInset = max(centerLeftInset, centerRightInset)
             
             if !leftItemList.isEmpty || !rightItemList.isEmpty {
-                availableWidth -= 20.0
+                availableWidth -= itemSpacing * CGFloat(max(0, leftItemList.count - 1)) + itemSpacing * CGFloat(max(0, rightItemList.count - 1)) + 30.0
             }
+            availableWidth -= context.component.sideInset * 2.0
+            availableWidth = min(660.0, availableWidth)
             
             let environment = BrowserNavigationBarEnvironment(fraction: context.component.collapseFraction)
             
@@ -259,10 +269,27 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             }
             if let centerItem = centerItem {
                 context.add(centerItem
-                    .position(CGPoint(x: centerX, y: context.component.topInset + contentHeight / 2.0))
+                    .position(CGPoint(x: centerX, y: context.component.topInset + contentHeight / 2.0 + verticalOffset))
                     .scale(1.0 - 0.35 * context.component.collapseFraction)
                     .appear(.default(scale: false, alpha: true))
                     .disappear(.default(scale: false, alpha: true))
+                )
+            }
+            
+            if context.component.collapseFraction == 1.0 {
+                let activateAction = context.component.activate
+                let activate = activate.update(
+                    component: Button(
+                        content: AnyComponent(Rectangle(color: UIColor(rgb: 0x000000, alpha: 0.001))),
+                        action: {
+                            activateAction()
+                        }
+                    ),
+                    availableSize: size,
+                    transition: .immediate
+                )
+                context.add(activate
+                    .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
                 )
             }
             

@@ -46,6 +46,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatHistorySearchContainerNode",
         "//submodules/SearchUI",
         "//submodules/SearchBarNode",
+        "//submodules/TelegramUI/Components/SaveProgressScreen",
     ],
     visibility = [
         "//visibility:public",

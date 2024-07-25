@@ -162,12 +162,14 @@ protocol BrowserContent: UIView {
     var present: (ViewController, Any?) -> Void { get set }
     var presentInGlobalOverlay: (ViewController) -> Void { get set }
     var getNavigationController: () -> NavigationController? { get set }
+    var openAppUrl: (String) -> Void { get set }
     
     var minimize: () -> Void { get set }
     var close: () -> Void { get set }
     
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void { get set }
-        
+    func resetScrolling()
+    
     func reload()
     func stop()
     
@@ -186,7 +188,7 @@ protocol BrowserContent: UIView {
     
     func addToRecentlyVisited()
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, transition: ComponentTransition)
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, transition: ComponentTransition)
     
     func makeContentSnapshotView() -> UIView?
 }

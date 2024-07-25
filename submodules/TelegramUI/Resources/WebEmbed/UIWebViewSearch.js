@@ -9,6 +9,10 @@ var uiWebview_SearchResultCount = 0;
  keyword    - string to search
  */
 
+function isElementVisible(e) {
+    return true
+}
+
 function uiWebview_HighlightAllOccurencesOfStringForElement(element,keyword) {
     if (element) {
         if (element.nodeType == 3) {        // Text node
@@ -86,7 +90,7 @@ function uiWebview_HighlightAllOccurencesOfStringForElement(element,keyword) {
 
 
         } else if (element.nodeType == 1) { // Element node
-            if (element.style.display != "none" && element.nodeName.toLowerCase() != 'select') {
+            if (element.nodeName.toLowerCase() != 'select' && isElementVisible(element)) {
                 for (var i=element.childNodes.length-1; i>=0; i--) {
                     uiWebview_HighlightAllOccurencesOfStringForElement(element.childNodes[i],keyword);
                 }

@@ -18,6 +18,8 @@ import UndoUI
 import LottieComponent
 import MultilineTextComponent
 import UrlEscaping
+import UrlHandling
+import SaveProgressScreen
 
 private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
     private final class PendingTask {
@@ -115,11 +117,23 @@ private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
     }
 }
 
+final class WebView: WKWebView {
+    var customBottomInset: CGFloat = 0.0 {
+        didSet {
+            self.setNeedsLayout()
+        }
+    }
+    
+    override var safeAreaInsets: UIEdgeInsets {
+        return UIEdgeInsets(top: 0.0, left: 0.0, bottom: self.customBottomInset, right: 0.0)
+    }
+}
+
 final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     
-    let webView: WKWebView
+    let webView: WebView
     
     private let errorView: ComponentHostView<Empty>
     private var currentError: Error?
@@ -139,6 +153,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     private let faviconDisposable = MetaDisposable()
     
     var pushContent: (BrowserScreen.Subject) -> Void = { _ in }
+    var openAppUrl: (String) -> Void = { _ in }
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
     var minimize: () -> Void = { }
     var close: () -> Void = { }
@@ -155,23 +170,19 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         let configuration = WKWebViewConfiguration()
         
-//        let bundle = Bundle.main
-//        let bundleVersion = bundle.infoDictionary?["CFBundleShortVersionString"] ?? ""
-//        
         var proxyServerHost = "magic.org"
         if let data = context.currentAppConfiguration.with({ $0 }).data, let hostValue = data["ton_proxy_address"] as? String {
             proxyServerHost = hostValue
         }
         configuration.setURLSchemeHandler(TonSchemeHandler(proxyServerHost: proxyServerHost), forURLScheme: "tonsite")
         configuration.allowsInlineMediaPlayback = true
-//        configuration.applicationNameForUserAgent = "Telegram-iOS/\(bundleVersion)"
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             configuration.mediaTypesRequiringUserActionForPlayback = []
         } else {
             configuration.mediaPlaybackRequiresUserAction = false
         }
         
-        self.webView = WKWebView(frame: CGRect(), configuration: configuration)
+        self.webView = WebView(frame: CGRect(), configuration: configuration)
         self.webView.allowsLinkPreview = true
         
         if #available(iOS 11.0, *) {
@@ -201,6 +212,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         super.init(frame: .zero)
         
+        self.backgroundColor = presentationData.theme.list.plainBackgroundColor
+        self.webView.backgroundColor = presentationData.theme.list.plainBackgroundColor
+        
         self.webView.allowsBackForwardNavigationGestures = true
         self.webView.scrollView.delegate = self
         self.webView.scrollView.clipsToBounds = false
@@ -214,7 +228,6 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.canGoForward), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.hasOnlySecureContent), options: [], context: nil)
         if #available(iOS 15.0, *) {
-            self.backgroundColor = presentationData.theme.list.plainBackgroundColor
             self.webView.underPageBackgroundColor = presentationData.theme.list.plainBackgroundColor
         }
         if #available(iOS 16.4, *) {
@@ -244,8 +257,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             self.backgroundColor = presentationData.theme.list.plainBackgroundColor
             self.webView.underPageBackgroundColor = presentationData.theme.list.plainBackgroundColor
         }
-        if let (size, insets, fullInsets) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: .immediate)
+        if let (size, insets, fullInsets, safeInsets) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, safeInsets: safeInsets, transition: .immediate)
         }
     }
         
@@ -433,13 +446,13 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.webView.scrollView.contentInset.top), animated: true)
     }
     
-    private var validLayout: (CGSize, UIEdgeInsets, UIEdgeInsets)?
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, transition: ComponentTransition) {
-        self.validLayout = (size, insets, fullInsets)
+    private var validLayout: (CGSize, UIEdgeInsets, UIEdgeInsets, UIEdgeInsets)?
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, transition: ComponentTransition) {
+        self.validLayout = (size, insets, fullInsets, safeInsets)
         
         self.previousScrollingOffset = ScrollingOffsetState(value: self.webView.scrollView.contentOffset.y, isDraggingOrDecelerating: self.webView.scrollView.isDragging || self.webView.scrollView.isDecelerating)
         
-        let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - fullInsets.bottom))
+        let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top))
         var refresh = false
         if self.webView.frame.width > 0 && webViewFrame.width != self.webView.frame.width {
             refresh = true
@@ -450,6 +463,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             self.webView.reloadInputViews()
         }
         
+        self.webView.scrollView.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: fullInsets.bottom, right: 0.0)
+        self.webView.customBottomInset = max(insets.bottom, safeInsets.bottom)
+
         self.webView.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         self.webView.scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         
@@ -460,11 +476,12 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                     ErrorComponent(
                         theme: self.presentationData.theme,
                         title: self.presentationData.strings.Browser_ErrorTitle,
-                        text: error.localizedDescription
+                        text: error.localizedDescription,
+                        insets: insets
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: size.width - insets.left - insets.right - 72.0, height: size.height)
+                containerSize: CGSize(width: size.width, height: size.height)
             )
             if self.errorView.superview == nil {
                 self.addSubview(self.errorView)
@@ -521,14 +538,25 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate {
             self.snapScrollingOffsetToInsets()
+            
+            if self.ignoreUpdatesUntilScrollingStopped {
+                self.ignoreUpdatesUntilScrollingStopped = false
+            }
         }
     }
     
     public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         self.snapScrollingOffsetToInsets()
+        
+        if self.ignoreUpdatesUntilScrollingStopped {
+            self.ignoreUpdatesUntilScrollingStopped = false
+        }
     }
     
     private func updateScrollingOffset(isReset: Bool, transition: ComponentTransition) {
+        guard !self.ignoreUpdatesUntilScrollingStopped else {
+            return
+        }
         let scrollView = self.webView.scrollView
         let isInteracting = scrollView.isDragging || scrollView.isDecelerating
         if let previousScrollingOffsetValue = self.previousScrollingOffset {
@@ -558,6 +586,63 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
     }
     
+    private var ignoreUpdatesUntilScrollingStopped = false
+    func resetScrolling() {
+        self.updateScrollingOffset(isReset: true, transition: .spring(duration: 0.4))
+        if self.webView.scrollView.isDecelerating {
+            self.ignoreUpdatesUntilScrollingStopped = true
+        }
+    }
+    
+    @available(iOS 13.0, *)
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, preferences: WKWebpagePreferences, decisionHandler: @escaping (WKNavigationActionPolicy, WKWebpagePreferences) -> Void) {
+        if #available(iOS 14.5, *), navigationAction.shouldPerformDownload {
+            self.presentDownloadConfirmation(fileName: navigationAction.request.mainDocumentURL?.lastPathComponent ?? "file", proceed: { download in
+                if download {
+                    decisionHandler(.download, preferences)
+                } else {
+                    decisionHandler(.cancel, preferences)
+                }
+            })
+        } else {
+            if let url = navigationAction.request.url?.absoluteString {
+                if isTelegramMeLink(url) || isTelegraPhLink(url) {
+                    decisionHandler(.cancel, preferences)
+                    self.minimize()
+                    self.openAppUrl(url)
+                } else {
+                    decisionHandler(.allow, preferences)
+                }
+            } else {
+                decisionHandler(.allow, preferences)
+            }
+        }
+    }
+    
+    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+        if navigationResponse.canShowMIMEType {
+            decisionHandler(.allow)
+        } else if #available(iOS 14.5, *) {
+            decisionHandler(.download)
+        } else {
+            decisionHandler(.cancel)
+        }
+    }
+    
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if let url = navigationAction.request.url?.absoluteString {
+            if isTelegramMeLink(url) || isTelegraPhLink(url) {
+                decisionHandler(.cancel)
+                self.minimize()
+                self.openAppUrl(url)
+            } else {
+                decisionHandler(.allow)
+            }
+        } else {
+            decisionHandler(.allow)
+        }
+    }
+    
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         self.currentError = nil
         self.updateFontState(self.currentFontState, force: true)
@@ -578,8 +663,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         } else {
             self.currentError = nil
         }
-        if let (size, insets, fullInsets) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: .immediate)
+        if let (size, insets, fullInsets, safeInsets) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, safeInsets: safeInsets, transition: .immediate)
         }
     }
         
@@ -596,7 +681,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.close()
     }
     
-    @available(iOSApplicationExtension 15.0, iOS 15.0, *)
+    @available(iOS 15.0, *)
     func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
         decisionHandler(.prompt)
     }
@@ -699,12 +784,37 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         completionHandler(configuration)
     }
     
+    private func presentDownloadConfirmation(fileName: String, proceed: @escaping (Bool) -> Void) {
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        var completed = false
+        let alertController = textAlertController(context: self.context, updatedPresentationData: nil, title: nil, text: presentationData.strings.WebBrowser_Download_Confirmation(fileName).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+            if !completed {
+                completed = true
+                proceed(false)
+            }
+        }), TextAlertAction(type: .defaultAction, title: presentationData.strings.WebBrowser_Download_Download, action: {
+            if !completed {
+                completed = true
+                proceed(true)
+            }
+        })])
+        alertController.dismissed = { byOutsideTap in
+            if byOutsideTap {
+                if !completed {
+                    completed = true
+                    proceed(false)
+                }
+            }
+        }
+        self.present(alertController, nil)
+    }
+    
     private func open(url: String, new: Bool) {
         let subject: BrowserScreen.Subject = .webPage(url: url)
         if new, let navigationController = self.getNavigationController() {
             navigationController._keepModalDismissProgress = true
             self.minimize()
-            let controller = BrowserScreen(context: self.context, subject: subject)
+            let controller = BrowserScreen(context: self.context, subject: subject, openPreviousOnClose: true)
             navigationController._keepModalDismissProgress = true
             navigationController.pushViewController(controller)
         } else {
@@ -881,15 +991,18 @@ private final class ErrorComponent: CombinedComponent {
     let theme: PresentationTheme
     let title: String
     let text: String
+    let insets: UIEdgeInsets
   
     init(
         theme: PresentationTheme,
         title: String,
-        text: String
+        text: String,
+        insets: UIEdgeInsets
     ) {
         self.theme = theme
         self.title = title
         self.text = text
+        self.insets = insets
     }
     
     static func ==(lhs: ErrorComponent, rhs: ErrorComponent) -> Bool {
@@ -902,10 +1015,14 @@ private final class ErrorComponent: CombinedComponent {
         if lhs.text != rhs.text {
             return false
         }
+        if lhs.insets != rhs.insets {
+            return false
+        }
         return true
     }
     
     static var body: Body {
+        let background = Child(Rectangle.self)
         let animation = Child(LottieComponent.self)
         let title = Child(MultilineTextComponent.self)
         let text = Child(MultilineTextComponent.self)
@@ -916,6 +1033,17 @@ private final class ErrorComponent: CombinedComponent {
             let animationSpacing: CGFloat = 8.0
             let textSpacing: CGFloat = 8.0
             
+            let constrainedWidth = context.availableSize.width - 76.0 - context.component.insets.left - context.component.insets.right
+            
+            let background = background.update(
+                component: Rectangle(color: context.component.theme.list.plainBackgroundColor),
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
+            context.add(background
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
+            )
+            
             let animation = animation.update(
                 component: LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
@@ -923,9 +1051,6 @@ private final class ErrorComponent: CombinedComponent {
                 environment: {},
                 availableSize: CGSize(width: animationSize, height: animationSize),
                 transition: .immediate
-            )
-            context.add(animation
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + animation.size.height / 2.0))
             )
             contentHeight += animation.size.height + animationSpacing
             
@@ -939,11 +1064,8 @@ private final class ErrorComponent: CombinedComponent {
                     horizontalAlignment: .center
                 ),
                 environment: {},
-                availableSize: context.availableSize,
+                availableSize: CGSize(width: constrainedWidth, height: context.availableSize.height),
                 transition: .immediate
-            )
-            context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight +  title.size.height / 2.0))
             )
             contentHeight += title.size.height + textSpacing
             
@@ -958,15 +1080,27 @@ private final class ErrorComponent: CombinedComponent {
                     maximumNumberOfLines: 0
                 ),
                 environment: {},
-                availableSize: context.availableSize,
+                availableSize: CGSize(width: constrainedWidth, height: context.availableSize.height),
                 transition: .immediate
             )
-            context.add(text
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + text.size.height / 2.0))
-            )
             contentHeight += text.size.height
-
-            return CGSize(width: context.availableSize.width, height: contentHeight)
+            
+            var originY = floor((context.availableSize.height - contentHeight) / 2.0)
+            context.add(animation
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + animation.size.height / 2.0))
+            )
+            originY += animation.size.height + animationSpacing
+            
+            context.add(title
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + title.size.height / 2.0))
+            )
+            originY += title.size.height + textSpacing
+            
+            context.add(text
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + text.size.height / 2.0))
+            )
+            
+            return context.availableSize
         }
     }
 }
