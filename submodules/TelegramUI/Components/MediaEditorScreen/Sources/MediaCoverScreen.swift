@@ -565,7 +565,7 @@ final class MediaCoverScreen: ViewController {
         if let coverImageTimestamp = mediaEditor.values.coverImageTimestamp {
             mediaEditor.seek(coverImageTimestamp, andPlay: false)
         } else {
-            mediaEditor.seek(0.0, andPlay: false)
+            mediaEditor.seek(mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, andPlay: false)
         }
     }
     

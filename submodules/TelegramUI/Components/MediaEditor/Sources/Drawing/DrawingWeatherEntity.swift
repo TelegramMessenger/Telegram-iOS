@@ -11,6 +11,7 @@ public final class DrawingWeatherEntity: DrawingEntity, Codable {
         case uuid
         case style
         case color
+        case hasCustomColor
         case emoji
         case temperature
         case icon
@@ -25,6 +26,8 @@ public final class DrawingWeatherEntity: DrawingEntity, Codable {
     public enum Style: Codable, Equatable {
         case white
         case black
+        case transparent
+        case custom
     }
     
     public var uuid: UUID
@@ -38,7 +41,18 @@ public final class DrawingWeatherEntity: DrawingEntity, Codable {
     public var emoji: String
     public var temperature: Double
     
-    public var color: DrawingColor = DrawingColor.clear
+    public var color: DrawingColor = DrawingColor(color: .white)  {
+        didSet {
+            if self.color.toUIColor().argb == UIColor.white.argb {
+                self.style = .white
+                self.hasCustomColor = false
+            } else {
+                self.style = .custom
+                self.hasCustomColor = true
+            }
+        }
+    }
+    public var hasCustomColor = false
     public var lineWidth: CGFloat = 0.0
     
     public var referenceDrawingSize: CGSize
@@ -83,6 +97,8 @@ public final class DrawingWeatherEntity: DrawingEntity, Codable {
         self.emoji = try container.decode(String.self, forKey: .emoji)
         self.temperature = try container.decode(Double.self, forKey: .temperature)
         self.style = try container.decode(Style.self, forKey: .style)
+        self.color = try container.decodeIfPresent(DrawingColor.self, forKey: .color) ?? DrawingColor(color: .white)
+        self.hasCustomColor = try container.decodeIfPresent(Bool.self, forKey: .hasCustomColor) ?? false
         
         if let iconData = try container.decodeIfPresent(Data.self, forKey: .icon) {
             self.icon = PostboxDecoder(buffer: MemoryBuffer(data: iconData)).decodeRootObject() as? TelegramMediaFile
@@ -104,6 +120,8 @@ public final class DrawingWeatherEntity: DrawingEntity, Codable {
         try container.encode(self.emoji, forKey: .emoji)
         try container.encode(self.temperature, forKey: .temperature)
         try container.encode(self.style, forKey: .style)
+        try container.encode(self.color, forKey: .color)
+        try container.encode(self.hasCustomColor, forKey: .hasCustomColor)
         
         var encoder = PostboxEncoder()
         if let icon = self.icon {
@@ -150,6 +168,9 @@ public final class DrawingWeatherEntity: DrawingEntity, Codable {
             return false
         }
         if self.style != other.style {
+            return false
+        }
+        if self.color != other.color {
             return false
         }
         if self.referenceDrawingSize != other.referenceDrawingSize {

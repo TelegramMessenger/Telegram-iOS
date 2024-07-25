@@ -6,10 +6,12 @@ import SwiftSignalKit
 public struct WebBrowserException: Codable, Equatable {
     public let domain: String
     public let title: String
+    public let icon: TelegramMediaImage?
     
-    public init(domain: String, title: String) {
+    public init(domain: String, title: String, icon: TelegramMediaImage?) {
         self.domain = domain
         self.title = title
+        self.icon = icon
     }
     
     public init(from decoder: Decoder) throws {
@@ -17,6 +19,7 @@ public struct WebBrowserException: Codable, Equatable {
 
         self.domain = try container.decode(String.self, forKey: "domain")
         self.title = try container.decode(String.self, forKey: "title")
+        self.icon = try container.decodeIfPresent(TelegramMediaImage.self, forKey: "icon")
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -24,6 +27,11 @@ public struct WebBrowserException: Codable, Equatable {
 
         try container.encode(self.domain, forKey: "domain")
         try container.encode(self.title, forKey: "title")
+        if let icon = self.icon {
+            try container.encode(icon, forKey: "icon")
+        } else {
+            try container.encodeNil(forKey: "icon")
+        }
     }
 }
 

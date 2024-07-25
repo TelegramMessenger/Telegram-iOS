@@ -562,7 +562,7 @@ final class StoryItemOverlaysView: UIView {
             emoji: String,
             emojiFile: TelegramMediaFile?,
             temperature: Double,
-            flags: MediaArea.WeatherFlags,
+            color: Int32,
             synchronous: Bool,
             size: CGSize,
             cornerRadius: CGFloat,
@@ -570,13 +570,21 @@ final class StoryItemOverlaysView: UIView {
         ) -> CGSize {
             let itemSize = CGSize(width: floor(size.height * 0.71), height: floor(size.height * 0.71))
             
+            let backgroundColor = UIColor(argb: UInt32(bitPattern: color))
+            let textColor: UIColor
+            if backgroundColor.lightness > 0.705 {
+                textColor = .black
+            } else {
+                textColor = .white
+            }
+            let placeholderColor = textColor.withAlphaComponent(0.1)
+            
             if self.file?.fileId != emojiFile?.fileId, let file = emojiFile {
                 self.file = file
                 
                 self.customEmojiLoadDisposable?.dispose()
                 self.customEmojiLoadDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: .standalone(resource: file.resource)).start()
                 
-                let placeholderColor = flags.contains(.isDark) ? UIColor(white: 1.0, alpha: 0.1) : UIColor(white: 0.0, alpha: 0.1)
                 let _ = self.directStickerView.update(
                     transition: .immediate,
                     component: AnyComponent(LottieComponent(
@@ -601,7 +609,7 @@ final class StoryItemOverlaysView: UIView {
             let string = NSMutableAttributedString(
                 string: stringForTemperature(temperature),
                 font: textFont,
-                textColor: flags.contains(.isDark) ? UIColor(rgb: 0xffffff) : UIColor(rgb: 0x000000)
+                textColor: textColor
             )
             string.addAttribute(.kern, value: -(size.height / 38.0) as NSNumber, range: NSMakeRange(0, string.length))
             
@@ -644,7 +652,7 @@ final class StoryItemOverlaysView: UIView {
             
             let contentSize = CGSize(width: contentWidth, height: size.height)
             
-            self.backgroundView.backgroundColor = flags.contains(.isDark) ? UIColor(rgb: 0x000000) : UIColor(rgb: 0xffffff)
+            self.backgroundView.backgroundColor = backgroundColor
             self.backgroundView.frame = CGRect(origin: .zero, size: contentSize)
             self.backgroundView.layer.cornerRadius = cornerRadius
             
@@ -752,7 +760,7 @@ final class StoryItemOverlaysView: UIView {
                 )
                 
                 nextId += 1
-            case let .weather(coordinates, emoji, temperature, flags):
+            case let .weather(coordinates, emoji, temperature, color):
                 guard let (itemFrame, itemRotation, cornerRadius) = getFrameAndRotation(coordinates: coordinates) else {
                     continue
                 }
@@ -773,7 +781,7 @@ final class StoryItemOverlaysView: UIView {
                     emoji: emoji,
                     emojiFile: context.animatedEmojiStickersValue[emoji]?.first?.file,
                     temperature: temperature,
-                    flags: flags,
+                    color: color,
                     synchronous: attemptSynchronous,
                     size: itemFrame.size,
                     cornerRadius: cornerRadius,

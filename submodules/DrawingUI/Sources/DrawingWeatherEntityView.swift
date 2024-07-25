@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import ComponentFlow
 import SwiftSignalKit
 import AccountContext
 import TelegramCore
@@ -9,6 +10,8 @@ import TelegramAnimatedStickerNode
 import StickerResources
 import MediaEditor
 import TelegramStringFormatting
+import LottieComponent
+import LottieComponentResourceContent
 
 private func generateIcon(style: DrawingWeatherEntity.Style) -> UIImage? {
     guard let image = UIImage(bundleImageName: "Chat/Attach Menu/Location") else {
@@ -53,9 +56,8 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
     let backgroundView: UIView
     
     let textView: DrawingTextView
-    let iconView: UIImageView
-    private let imageNode: TransformImageNode
-    private var animationNode: AnimatedStickerNode?
+    
+    private var animation = ComponentView<Empty>()
     
     private var didSetUpAnimationNode = false
     private let stickerFetchedDisposable = MetaDisposable()
@@ -88,20 +90,14 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         self.textView.spellCheckingType = .no
         self.textView.textContainer.maximumNumberOfLines = 2
         self.textView.textContainer.lineBreakMode = .byTruncatingTail
-        
-        self.iconView = UIImageView()
-        self.imageNode = TransformImageNode()
-        
+                
         super.init(context: context, entity: entity)
                 
         self.textView.delegate = self
         self.addSubview(self.backgroundView)
         self.addSubview(self.textView)
-        self.addSubview(self.iconView)
         
         self.update(animated: false)
-        
-        self.setup()
     }
     
     required init?(coder: NSCoder) {
@@ -134,17 +130,35 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         let iconSize = min(80.0, floor(self.bounds.height * 0.7))
         let iconOffset: CGFloat = 0.3
    
-        self.iconView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(iconSize * iconOffset), y: floorToScreenPixels((self.bounds.height - iconSize) / 2.0)), size: CGSize(width: iconSize, height: iconSize))
-        self.imageNode.frame = self.iconView.frame.offsetBy(dx: 0.0, dy: 2.0)
+        let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(iconSize * iconOffset), y: floorToScreenPixels((self.bounds.height - iconSize) / 2.0)), size: CGSize(width: iconSize, height: iconSize))
         
-        if let animationNode = self.animationNode {
-            animationNode.frame = self.iconView.frame
-            animationNode.updateLayout(size: self.iconView.frame.size)
+        if let icon = self.weatherEntity.icon {
+            let _ = self.animation.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    LottieComponent(
+                        content: LottieComponent.ResourceContent(
+                            context: self.context,
+                            file: icon,
+                            attemptSynchronously: true,
+                            providesPlaceholder: true
+                        ),
+                        color: nil,
+                        placeholderColor: UIColor(rgb: 0x000000, alpha: 0.1),
+                        loop: !["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"].contains(self.weatherEntity.emoji)
+                    )
+                ),
+                environment: {},
+                containerSize: iconFrame.size
+            )
+            if let animationView = self.animation.view {
+                if animationView.superview == nil {
+                    self.addSubview(animationView)
+                }
+                animationView.frame = iconFrame
+            }
         }
-        
-        let imageSize = CGSize(width: iconSize, height: iconSize)
-        self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-        
+                                
         self.textView.frame = CGRect(origin: CGPoint(x: self.bounds.width - self.textSize.width - 6.0, y: floorToScreenPixels((self.bounds.height - self.textSize.height) / 2.0)), size: self.textSize)
         self.backgroundView.frame = self.bounds
     }
@@ -159,6 +173,14 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         case .white:
             updatedStyle = .black
         case .black:
+            updatedStyle = .transparent
+        case .transparent:
+            if self.weatherEntity.hasCustomColor {
+                updatedStyle = .custom
+            } else {
+                updatedStyle = .white
+            }
+        case .custom:
             updatedStyle = .white
         }
         self.weatherEntity.style = updatedStyle
@@ -201,8 +223,15 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         switch self.weatherEntity.style {
         case .white:
             textColor = .black
-        case .black:
+        case .black, .transparent:
             textColor = .white
+        case .custom:
+            let color = self.weatherEntity.color.toUIColor()
+            if color.lightness > 0.705 {
+                textColor = .black
+            } else {
+                textColor = .white
+            }
         }
         
         text.addAttribute(.foregroundColor, value: textColor, range: range)
@@ -226,6 +255,21 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
             self.textView.textColor = .white
             self.backgroundView.backgroundColor = .black
             self.backgroundView.isHidden = false
+        case .transparent:
+            self.textView.textColor = .white
+            self.backgroundView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.2)
+            self.backgroundView.isHidden = false
+        case .custom:
+            let color = self.weatherEntity.color.toUIColor()
+            let textColor: UIColor
+            if color.lightness > 0.705 {
+                textColor = .black
+            } else {
+                textColor = .white
+            }
+            self.textView.textColor = textColor
+            self.backgroundView.backgroundColor = color
+            self.backgroundView.isHidden = false
         }
         self.textView.textAlignment = .left
         
@@ -233,10 +277,8 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         
         self.sizeToFit()
         
-        if self.currentStyle != self.weatherEntity.style {
-            self.currentStyle = self.weatherEntity.style
-            self.iconView.image = generateIcon(style: self.weatherEntity.style)
-        }
+        
+        self.currentStyle = self.weatherEntity.style
         
         self.backgroundView.layer.cornerRadius = self.textSize.height * 0.2
         if #available(iOS 13.0, *) {
@@ -244,42 +286,6 @@ public final class DrawingWeatherEntityView: DrawingEntityView, UITextViewDelega
         }
         
         super.update(animated: animated)
-    }
-    
-    private func setup() {
-        if let file = self.weatherEntity.icon {
-            self.iconView.isHidden = true
-            self.addSubnode(self.imageNode)
-            if let dimensions = file.dimensions {
-                if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
-                    let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))
-                    if self.animationNode == nil {
-                        let animationNode = DefaultAnimatedStickerNodeImpl()
-                        animationNode.autoplay = true
-                        self.animationNode = animationNode
-                        animationNode.started = { [weak self] in
-                            self?.imageNode.isHidden = true
-                        }
-                        animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: file.resource, isVideo: file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-                        
-                        self.addSubnode(animationNode)
-                    }
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, userLocation: .other, file: file, small: false, size: fittedDimensions))
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: file.resource).start())
-                } else {
-                    if let animationNode = self.animationNode {
-                        animationNode.visibility = false
-                        self.animationNode = nil
-                        animationNode.removeFromSupernode()
-                        self.imageNode.isHidden = false
-                        self.didSetUpAnimationNode = false
-                    }
-                    self.imageNode.setSignal(chatMessageSticker(account: self.context.account, userLocation: .other, file: file, small: false, synchronousLoad: false))
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: chatMessageStickerResource(file: file, small: false)).start())
-                }
-                self.setNeedsLayout()
-            }
-        }
     }
     
     override func updateSelectionView() {

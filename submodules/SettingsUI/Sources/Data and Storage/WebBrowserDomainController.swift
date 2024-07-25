@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import UrlEscaping
+import ActivityIndicator
 
 private final class WebBrowserDomainInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
     private var theme: PresentationTheme
@@ -116,7 +117,12 @@ private final class WebBrowserDomainInputFieldNode: ASDisplayNode, ASEditableTex
     private let domainRegex = try? NSRegularExpression(pattern: "^(https?://)?([a-zA-Z0-9-]+\\.?)*([a-zA-Z]*)?(:)?(/)?$", options: [])
     private let pathRegex = try? NSRegularExpression(pattern: "^(https?://)?([a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,6}/", options: [])
     
+    var inProgress = false
+    
     func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        if self.inProgress {
+            return false
+        }
         if text == "\n" {
             self.complete?()
             return false
@@ -168,6 +174,7 @@ private final class WebBrowserDomainAlertContentNode: AlertContentNode {
     
     private let titleNode: ASTextNode
     private let textNode: ASTextNode
+    let activityIndicator: ActivityIndicator
     let inputFieldNode: WebBrowserDomainInputFieldNode
     
     private let actionNodesSeparator: ASDisplayNode
@@ -198,6 +205,9 @@ private final class WebBrowserDomainAlertContentNode: AlertContentNode {
         self.textNode = ASTextNode()
         self.textNode.maximumNumberOfLines = 2
         
+        self.activityIndicator = ActivityIndicator(type: .custom(ptheme.rootController.navigationBar.secondaryTextColor, 20.0, 1.5, false), speed: .slow)
+        self.activityIndicator.isHidden = true
+        
         self.inputFieldNode = WebBrowserDomainInputFieldNode(theme: ptheme, placeholder: strings.WebBrowser_Exceptions_Create_Placeholder)
         self.inputFieldNode.text = ""
         
@@ -224,7 +234,8 @@ private final class WebBrowserDomainAlertContentNode: AlertContentNode {
         self.addSubnode(self.textNode)
         
         self.addSubnode(self.inputFieldNode)
-
+        self.addSubnode(self.activityIndicator)
+        
         self.addSubnode(self.actionNodesSeparator)
         
         for actionNode in self.actionNodes {
@@ -335,8 +346,12 @@ private final class WebBrowserDomainAlertContentNode: AlertContentNode {
         let inputFieldWidth = resultWidth
         let inputFieldHeight = self.inputFieldNode.updateLayout(width: inputFieldWidth, transition: transition)
         let inputHeight = inputFieldHeight
-        transition.updateFrame(node: self.inputFieldNode, frame: CGRect(x: 0.0, y: origin.y, width: resultWidth, height: inputFieldHeight))
+        let inputFrame = CGRect(x: 0.0, y: origin.y, width: resultWidth, height: inputFieldHeight)
+        transition.updateFrame(node: self.inputFieldNode, frame: inputFrame)
         transition.updateAlpha(node: self.inputFieldNode, alpha: inputHeight > 0.0 ? 1.0 : 0.0)
+        
+        let activitySize = CGSize(width: 20.0, height: 20.0)
+        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: inputFrame.maxX - activitySize.width - 23.0, y: inputFrame.midY - activitySize.height / 2.0 - 3.0), size: activitySize))
         
         let resultSize = CGSize(width: resultWidth, height: titleSize.height + textSize.height + spacing + inputHeight + actionsHeight  + insets.top + insets.bottom)
         
@@ -404,11 +419,16 @@ public func webBrowserDomainController(context: AccountContext, updatedPresentat
     var dismissImpl: ((Bool) -> Void)?
     var applyImpl: (() -> Void)?
     
+    var inProgress = false
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-        dismissImpl?(true)
-        apply(nil)
+        if !inProgress {
+            dismissImpl?(true)
+            apply(nil)
+        }
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Done, action: {
-        applyImpl?()
+        if !inProgress {
+            applyImpl?()
+        }
     })]
     
     let contentNode = WebBrowserDomainAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions)
@@ -419,9 +439,12 @@ public func webBrowserDomainController(context: AccountContext, updatedPresentat
         guard let contentNode = contentNode else {
             return
         }
+        inProgress = true
+        contentNode.inputFieldNode.inProgress = true
+        contentNode.activityIndicator.isHidden = false
+        
         let updatedLink = explicitUrl(contentNode.link)
         if !updatedLink.isEmpty && isValidUrl(updatedLink, validSchemes: ["http": true, "https": true]) {
-            dismissImpl?(true)
             apply(updatedLink)
         } else {
             contentNode.animateError()

@@ -28,6 +28,7 @@ import OpenInExternalAppUI
 import ShareController
 import UndoUI
 import AvatarNode
+import OverlayStatusController
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -1099,6 +1100,84 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_setup_swipe_behavior":
                     if let json = json, let isPanGestureEnabled = json["allow_vertical_swipe"] as? Bool {
                         self.controller?._isPanGestureEnabled = isPanGestureEnabled
+                    }
+                case "web_app_share_to_story":
+                    if let json = json, let mediaUrl = json["media_url"] as? String {
+                        let text = json["text"] as? String
+                        let link = json["widget_link"] as? String
+                        
+                        enum FetchResult {
+                            case result(Data)
+                            case progress(Float)
+                        }
+                        
+                        let controller = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: {
+                            
+                        }))
+                        self.controller?.present(controller, in: .window(.root))
+                        
+                        let _ = (fetchHttpResource(url: mediaUrl)
+                        |> map(Optional.init)
+                        |> `catch` { error in
+                            return .single(nil)
+                        }
+                        |> mapToSignal { value -> Signal<FetchResult, NoError> in
+                            if case let .dataPart(_, data, _, complete) = value, complete {
+                                return .single(.result(data))
+                            } else if case let .progressUpdated(progress) = value {
+                                return .single(.progress(progress))
+                            } else {
+                                return .complete()
+                            }
+                        }
+                        |> deliverOnMainQueue).start(next: { [weak self, weak controller] next in
+                            guard let self else {
+                                return
+                            }
+                            controller?.dismiss()
+                            
+                            switch next {
+                            case let .result(data):
+                                var source: Any?
+                                if let image = UIImage(data: data) {
+                                    source = image
+                                } else {
+                                    let tempFile = TempBox.shared.tempFile(fileName: "image.mp4")
+                                    if let _ = try? data.write(to: URL(fileURLWithPath: tempFile.path), options: .atomic) {
+                                        source = tempFile.path
+                                    }
+                                }
+                                if let source {
+                                    let externalState = MediaEditorTransitionOutExternalState(
+                                        storyTarget: nil,
+                                        isForcedTarget: false,
+                                        isPeerArchived: false,
+                                        transitionOut: nil
+                                    )
+                                    let controller = self.context.sharedContext.makeStoryMediaEditorScreen(context: self.context, source: source, text: text, link: link, completion: { result, commit in
+//                                        let targetPeerId: EnginePeer.Id
+                                        let target: Stories.PendingTarget
+//                                        if let sendAsPeerId = result.options.sendAsPeerId {
+//                                            target = .peer(sendAsPeerId)
+//                                            targetPeerId = sendAsPeerId
+//                                        } else {
+                                            target = .myStories
+//                                            targetPeerId = self.context.account.peerId
+//                                        }
+                                        externalState.storyTarget = target
+                                        
+                                        if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                                            rootController.proceedWithStoryUpload(target: target, result: result, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                                        }
+                                    })
+                                    if let navigationController = self.controller?.getNavigationController() {
+                                        navigationController.pushViewController(controller)
+                                    }
+                                }
+                            default:
+                                break
+                            }
+                        })
                     }
                 default:
                     break

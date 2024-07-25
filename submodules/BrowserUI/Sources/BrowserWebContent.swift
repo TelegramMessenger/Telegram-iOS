@@ -17,6 +17,7 @@ import ShareController
 import UndoUI
 import LottieComponent
 import MultilineTextComponent
+import UrlEscaping
 
 private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
     private final class PendingTask {
@@ -145,6 +146,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     var presentInGlobalOverlay: (ViewController) -> Void = { _ in }
     var getNavigationController: () -> NavigationController? = { return nil }
     
+    private var tempFile: TempBoxFile?
+    
     init(context: AccountContext, presentationData: PresentationData, url: String) {
         self.context = context
         self.uuid = UUID()
@@ -176,7 +179,15 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
         
         var title: String = ""
-        if let parsedUrl = URL(string: url) {
+        if url.hasPrefix("file://") {
+            var updatedPath = url
+            let tempFile = TempBox.shared.file(path: url.replacingOccurrences(of: "file://", with: ""), fileName: "file.xlsx")
+            updatedPath = tempFile.path
+            self.tempFile = tempFile
+            
+            let request = URLRequest(url: URL(fileURLWithPath: updatedPath))
+            self.webView.load(request)
+        } else if let parsedUrl = URL(string: url) {
             let request = URLRequest(url: parsedUrl)
             self.webView.load(request)
             
@@ -201,6 +212,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.canGoBack), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.canGoForward), options: [], context: nil)
+        self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.hasOnlySecureContent), options: [], context: nil)
         if #available(iOS 15.0, *) {
             self.backgroundColor = presentationData.theme.list.plainBackgroundColor
             self.webView.underPageBackgroundColor = presentationData.theme.list.plainBackgroundColor
@@ -221,6 +233,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress))
         self.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.canGoBack))
         self.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.canGoForward))
+        self.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.hasOnlySecureContent))
         
         self.faviconDisposable.dispose()
     }
@@ -231,51 +244,17 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             self.backgroundColor = presentationData.theme.list.plainBackgroundColor
             self.webView.underPageBackgroundColor = presentationData.theme.list.plainBackgroundColor
         }
-        if let (size, insets) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, transition: .immediate)
+        if let (size, insets, fullInsets) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: .immediate)
         }
     }
         
-    private let setupFontFunctions = """
-    (function() {
-      const styleId = 'telegram-font-overrides';
-
-      function setTelegramFontOverrides(font, textSizeAdjust) {
-        let style = document.getElementById(styleId);
-
-        if (!style) {
-          style = document.createElement('style');
-          style.id = styleId;
-          document.head.appendChild(style);
-        }
-
-        let cssRules = '* {';
-        if (font !== null) {
-            cssRules += `
-            font-family: ${font} !important;
-            `;
-        }
-        if (textSizeAdjust !== null) {
-            cssRules += `
-            -webkit-text-size-adjust: ${textSizeAdjust} !important;
-            `;
-        }
-        cssRules += '}';
-
-        style.innerHTML = cssRules;
-
-        if (font === null && textSizeAdjust === null) {
-          style.parentNode.removeChild(style);
-        }
-      }
-      window.setTelegramFontOverrides = setTelegramFontOverrides;
-    })();
-    """
     
     var currentFontState = BrowserPresentationState.FontState(size: 100, isSerif: false)
     func updateFontState(_ state: BrowserPresentationState.FontState) {
         self.updateFontState(state, force: false)
     }
+    
     func updateFontState(_ state: BrowserPresentationState.FontState, force: Bool) {
         self.currentFontState = state
         
@@ -311,65 +290,113 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         })
     }
     
+    private var findSession: Any?
     private var previousQuery: String?
     func setSearch(_ query: String?, completion: ((Int) -> Void)?) {
         guard self.previousQuery != query else {
             return
         }
-        self.previousQuery = query
-        self.setupSearch { [weak self] in
-            if let query = query {
-                let js = "uiWebview_HighlightAllOccurencesOfString('\(query)')"
-                self?.webView.evaluateJavaScript(js, completionHandler: { [weak self] _, _ in
-                    let js = "uiWebview_SearchResultCount"
-                    self?.webView.evaluateJavaScript(js, completionHandler: { [weak self] result, _ in
-                        if let result = result as? NSNumber {
-                            self?.searchResultsCount = result.intValue
-                            completion?(result.intValue)
-                        } else {
-                            completion?(0)
-                        }
-                    })
-                })
+        
+        if #available(iOS 16.0, *), !"".isEmpty {
+            if let query {
+                var findSession: UIFindSession?
+                if let current = self.findSession as? UIFindSession {
+                    findSession = current
+                } else {
+                    self.webView.isFindInteractionEnabled = true
+
+                    if let findInteraction = self.webView.findInteraction, let webView = self.webView as? UIFindInteractionDelegate, let session = webView.findInteraction(findInteraction, sessionFor: self.webView) {
+//                        session.setValue(findInteraction, forKey: "_parentInteraction")
+//                        findInteraction.setValue(session, forKey: "_activeFindSession")
+                        findSession = session
+                        self.findSession = session
+                        
+                        webView.findInteraction?(findInteraction, didBegin: session)
+                    }
+                }
+                if let findSession {
+                    findSession.performSearch(query: query, options: BrowserSearchOptions())
+                    self.webView.findInteraction?.updateResultCount()
+                    completion?(findSession.resultCount)
+                }
             } else {
-                let js = "uiWebview_RemoveAllHighlights()"
-                self?.webView.evaluateJavaScript(js, completionHandler: nil)
-                
-                self?.currentSearchResult = 0
-                self?.searchResultsCount = 0
+                if let findInteraction = self.webView.findInteraction, let webView = self.webView as? UIFindInteractionDelegate, let session = self.findSession as? UIFindSession {
+                    webView.findInteraction?(findInteraction, didEnd: session)
+                    self.findSession = nil
+                    self.webView.isFindInteractionEnabled = false
+                }
+            }
+        } else {
+            self.setupSearch { [weak self] in
+                if let query, !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let js = "uiWebview_HighlightAllOccurencesOfString('\(query)')"
+                    self?.webView.evaluateJavaScript(js, completionHandler: { [weak self] _, _ in
+                        let js = "uiWebview_SearchResultCount"
+                        self?.webView.evaluateJavaScript(js, completionHandler: { [weak self] result, _ in
+                            if let result = result as? NSNumber {
+                                self?.searchResultsCount = result.intValue
+                                completion?(result.intValue)
+                            } else {
+                                completion?(0)
+                            }
+                        })
+                    })
+                } else {
+                    let js = "uiWebview_RemoveAllHighlights()"
+                    self?.webView.evaluateJavaScript(js, completionHandler: nil)
+                    
+                    self?.currentSearchResult = 0
+                    self?.searchResultsCount = 0
+                }
             }
         }
+        
+        self.previousQuery = query
     }
     
     private var currentSearchResult: Int = 0
     private var searchResultsCount: Int = 0
     
     func scrollToPreviousSearchResult(completion: ((Int, Int) -> Void)?) {
-        let searchResultsCount = self.searchResultsCount
-        var index = self.currentSearchResult - 1
-        if index < 0 {
-            index = searchResultsCount - 1
+        if #available(iOS 16.0, *), !"".isEmpty {
+            if let session = self.findSession as? UIFindSession {
+                session.highlightNextResult(in: .backward)
+                completion?(session.highlightedResultIndex, session.resultCount)
+            }
+        } else {
+            let searchResultsCount = self.searchResultsCount
+            var index = self.currentSearchResult - 1
+            if index < 0 {
+                index = searchResultsCount - 1
+            }
+            self.currentSearchResult = index
+            
+            let js = "uiWebview_ScrollTo('\(searchResultsCount - index - 1)')"
+            self.webView.evaluateJavaScript(js, completionHandler: { _, _ in
+                completion?(index, searchResultsCount)
+            })
         }
-        self.currentSearchResult = index
-        
-        let js = "uiWebview_ScrollTo('\(searchResultsCount - index - 1)')"
-        self.webView.evaluateJavaScript(js, completionHandler: { _, _ in
-            completion?(index, searchResultsCount)
-        })
     }
     
     func scrollToNextSearchResult(completion: ((Int, Int) -> Void)?) {
-        let searchResultsCount = self.searchResultsCount
-        var index = self.currentSearchResult + 1
-        if index >= searchResultsCount {
-            index = 0
+        if #available(iOS 16.0, *), !"".isEmpty {
+            if let session = self.findSession as? UIFindSession {
+                session.highlightNextResult(in: .forward)
+                completion?(session.highlightedResultIndex, session.resultCount)
+            }
+        } else {
+            let searchResultsCount = self.searchResultsCount
+            var index = self.currentSearchResult + 1
+            if index >= searchResultsCount {
+                index = 0
+            }
+            self.currentSearchResult = index
+            
+            let js = "uiWebview_ScrollTo('\(searchResultsCount - index - 1)')"
+            self.webView.evaluateJavaScript(js, completionHandler: { _, _ in
+                completion?(index, searchResultsCount)
+            })
         }
-        self.currentSearchResult = index
-        
-        let js = "uiWebview_ScrollTo('\(searchResultsCount - index - 1)')"
-        self.webView.evaluateJavaScript(js, completionHandler: { _, _ in
-            completion?(index, searchResultsCount)
-        })
     }
     
     func stop() {
@@ -394,17 +421,25 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
     }
     
+    func navigateTo(address: String) {
+        let finalUrl = explicitUrl(address)
+        guard let url = URL(string: finalUrl) else {
+            return
+        }
+        self.webView.load(URLRequest(url: url))
+    }
+    
     func scrollToTop() {
         self.webView.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.webView.scrollView.contentInset.top), animated: true)
     }
     
-    private var validLayout: (CGSize, UIEdgeInsets)?
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ComponentTransition) {
-        self.validLayout = (size, insets)
+    private var validLayout: (CGSize, UIEdgeInsets, UIEdgeInsets)?
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, transition: ComponentTransition) {
+        self.validLayout = (size, insets, fullInsets)
         
         self.previousScrollingOffset = ScrollingOffsetState(value: self.webView.scrollView.contentOffset.y, isDraggingOrDecelerating: self.webView.scrollView.isDragging || self.webView.scrollView.isDecelerating)
         
-        let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - insets.bottom))
+        let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - fullInsets.bottom))
         var refresh = false
         if self.webView.frame.width > 0 && webViewFrame.width != self.webView.frame.width {
             refresh = true
@@ -458,8 +493,10 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         } else if keyPath == "canGoBack" {
             self.updateState { $0.withUpdatedCanGoBack(self.webView.canGoBack) }
             self.webView.disablesInteractiveTransitionGestureRecognizer = self.webView.canGoBack
-        }  else if keyPath == "canGoForward" {
+        } else if keyPath == "canGoForward" {
             self.updateState { $0.withUpdatedCanGoForward(self.webView.canGoForward) }
+        } else if keyPath == "hasOnlySecureContent" {
+            self.updateState { $0.withUpdatedIsSecure(self.webView.hasOnlySecureContent) }
         }
     }
     
@@ -539,8 +576,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         } else {
             self.currentError = nil
         }
-        if let (size, insets) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, transition: .immediate)
+        if let (size, insets, fullInsets) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: .immediate)
         }
     }
     
@@ -550,8 +587,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         } else {
             self.currentError = nil
         }
-        if let (size, insets) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, transition: .immediate)
+        if let (size, insets, fullInsets) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: .immediate)
         }
     }
     
@@ -694,6 +731,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     private func parseFavicon() {
+        let addToRecentsWhenReady = self.addToRecentsWhenReady
+        self.addToRecentsWhenReady = false
+        
         struct Favicon: Equatable, Hashable {
             let url: String
             let dimensions: PixelDimensions?
@@ -774,9 +814,63 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                         return
                     }
                     self.updateState { $0.withUpdatedFavicon(favicon) }
+                    
+                    if addToRecentsWhenReady {
+                        var image: TelegramMediaImage?
+                        
+                        if let favicon, let imageData = favicon.pngData() {
+                            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+                            self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: imageData)
+                            image = TelegramMediaImage(
+                                imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: Int64.random(in: Int64.min ... Int64.max)),
+                                representations: [
+                                    TelegramMediaImageRepresentation(
+                                        dimensions: PixelDimensions(width: Int32(favicon.size.width), height: Int32(favicon.size.height)),
+                                        resource: resource,
+                                        progressiveSizes: [],
+                                        immediateThumbnailData: nil,
+                                        hasVideo: false,
+                                        isPersonal: false
+                                    )
+                                ],
+                                immediateThumbnailData: nil,
+                                reference: nil,
+                                partialReference: nil,
+                                flags: []
+                            )
+                        }
+                        
+                        let webPage = TelegramMediaWebpage(webpageId: MediaId(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(
+                            url: self._state.url,
+                            displayUrl: self._state.url,
+                            hash: 0,
+                            type: "",
+                            websiteName: self._state.title,
+                            title: self._state.title,
+                            text: nil,
+                            embedUrl: nil,
+                            embedType: nil,
+                            embedSize: nil,
+                            duration: nil,
+                            author: nil,
+                            isMediaLargeByDefault: nil,
+                            image: image,
+                            file: nil,
+                            story: nil,
+                            attributes: [],
+                            instantPage: nil))
+                        )
+                        
+                        let _ = addRecentlyVisitedLink(engine: self.context.engine, webPage: webPage).startStandalone()
+                    }
                 }))
             }
         })
+    }
+    
+    private var addToRecentsWhenReady = false
+    func addToRecentlyVisited() {
+        self.addToRecentsWhenReady = true
     }
 }
 
@@ -871,5 +965,52 @@ private final class ErrorComponent: CombinedComponent {
 
             return CGSize(width: context.availableSize.width, height: contentHeight)
         }
+    }
+}
+
+let setupFontFunctions = """
+(function() {
+  const styleId = 'telegram-font-overrides';
+
+  function setTelegramFontOverrides(font, textSizeAdjust) {
+    let style = document.getElementById(styleId);
+
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+
+    let cssRules = '* {';
+    if (font !== null) {
+        cssRules += `
+        font-family: ${font} !important;
+        `;
+    }
+    if (textSizeAdjust !== null) {
+        cssRules += `
+        -webkit-text-size-adjust: ${textSizeAdjust} !important;
+        `;
+    }
+    cssRules += '}';
+
+    style.innerHTML = cssRules;
+
+    if (font === null && textSizeAdjust === null) {
+      style.parentNode.removeChild(style);
+    }
+  }
+  window.setTelegramFontOverrides = setTelegramFontOverrides;
+})();
+"""
+
+@available(iOS 16.0, *)
+final class BrowserSearchOptions: UITextSearchOptions {
+    override var wordMatchMethod: UITextSearchOptions.WordMatchMethod {
+        return .contains
+    }
+
+    override var stringCompareOptions: NSString.CompareOptions {
+        return .caseInsensitive
     }
 }

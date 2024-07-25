@@ -8,6 +8,8 @@ import AccountContext
 import BundleIconComponent
 
 final class SearchBarContentComponent: Component {
+    public typealias EnvironmentType = BrowserNavigationBarEnvironment
+    
     let theme: PresentationTheme
     let strings: PresentationStrings
     let performAction: ActionSlot<BrowserScreen.Action>
@@ -351,7 +353,7 @@ final class SearchBarContentComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<BrowserNavigationBarEnvironment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

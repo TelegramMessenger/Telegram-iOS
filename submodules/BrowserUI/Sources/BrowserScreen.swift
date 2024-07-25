@@ -73,13 +73,14 @@ private final class BrowserScreenComponent: CombinedComponent {
     static var body: Body {
         let navigationBar = Child(BrowserNavigationBarComponent.self)
         let toolbar = Child(BrowserToolbarComponent.self)
+        let addressList = Child(BrowserAddressListComponent.self)
         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let performAction = context.component.performAction
             let performHoldAction = context.component.performHoldAction
             
-            let navigationContent: AnyComponentWithIdentity<Empty>?
+            let navigationContent: AnyComponentWithIdentity<BrowserNavigationBarEnvironment>?
             var navigationLeftItems: [AnyComponentWithIdentity<Empty>]
             var navigationRightItems: [AnyComponentWithIdentity<Empty>]
             if context.component.presentationState.isSearching {
@@ -96,51 +97,78 @@ private final class BrowserScreenComponent: CombinedComponent {
                 navigationLeftItems = []
                 navigationRightItems = []
             } else {
-                let title = context.component.contentState?.title ?? ""
-                navigationContent = AnyComponentWithIdentity(
-                    id: "title_\(title)",
-                    component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: title, font: Font.bold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor, paragraphAlignment: .center)), horizontalAlignment: .center, maximumNumberOfLines: 1)
-                    )
-                )
-                navigationLeftItems = [
-                    AnyComponentWithIdentity(
-                        id: "close",
+                let contentType = context.component.contentState?.contentType ?? .instantPage
+                switch contentType {
+                case .webPage:
+                    navigationContent = AnyComponentWithIdentity(
+                        id: "addressBar",
                         component: AnyComponent(
-                            Button(
-                                content: AnyComponent(
-                                    MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.WebBrowser_Done, font: Font.regular(17.0), textColor: environment.theme.rootController.navigationBar.accentTextColor, paragraphAlignment: .center)), horizontalAlignment: .left, maximumNumberOfLines: 1)
-                                ),
-                                action: {
-                                    performAction.invoke(.close)
-                                }
+                            AddressBarContentComponent(
+                                theme: environment.theme,
+                                strings: environment.strings,
+                                url: context.component.contentState?.url ?? "",
+                                isSecure: context.component.contentState?.isSecure ?? false,
+                                isExpanded: context.component.presentationState.addressFocused,
+                                performAction: performAction
                             )
                         )
                     )
-                ]
-                
-                navigationRightItems = [
-                    AnyComponentWithIdentity(
-                        id: "settings",
+                case .instantPage, .document:
+                    let title = context.component.contentState?.title ?? ""
+                    navigationContent = AnyComponentWithIdentity(
+                        id: "titleBar_\(title)",
                         component: AnyComponent(
-                            ReferenceButtonComponent(
-                                content: AnyComponent(
-                                    LottieComponent(
-                                        content: LottieComponent.AppBundleContent(
-                                            name: "anim_moredots"
-                                        ),
-                                        color: environment.theme.rootController.navigationBar.accentTextColor,
-                                        size: CGSize(width: 30.0, height: 30.0)
-                                    )
-                                ),
-                                tag: settingsTag,
-                                action: {
-                                    performAction.invoke(.openSettings)
-                                }
+                            TitleBarContentComponent(
+                                theme: environment.theme,
+                                title: title
                             )
                         )
                     )
-                ]
+                }
+               
+                if context.component.presentationState.addressFocused {
+                    navigationLeftItems = []
+                    navigationRightItems = []
+                } else {
+                    navigationLeftItems = [
+                        AnyComponentWithIdentity(
+                            id: "close",
+                            component: AnyComponent(
+                                Button(
+                                    content: AnyComponent(
+                                        MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.WebBrowser_Done, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.accentTextColor, paragraphAlignment: .center)), horizontalAlignment: .left, maximumNumberOfLines: 1)
+                                    ),
+                                    action: {
+                                        performAction.invoke(.close)
+                                    }
+                                )
+                            )
+                        )
+                    ]
+                    
+                    navigationRightItems = [
+                        AnyComponentWithIdentity(
+                            id: "settings",
+                            component: AnyComponent(
+                                ReferenceButtonComponent(
+                                    content: AnyComponent(
+                                        LottieComponent(
+                                            content: LottieComponent.AppBundleContent(
+                                                name: "anim_moredots"
+                                            ),
+                                            color: environment.theme.rootController.navigationBar.accentTextColor,
+                                            size: CGSize(width: 30.0, height: 30.0)
+                                        )
+                                    ),
+                                    tag: settingsTag,
+                                    action: {
+                                        performAction.invoke(.openSettings)
+                                    }
+                                )
+                            )
+                        )
+                    ]
+                }
             }
             
             let collapseFraction = context.component.presentationState.isSearching ? 0.0 : context.component.panelCollapseFraction
@@ -224,6 +252,26 @@ private final class BrowserScreenComponent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - toolbar.size.height / 2.0))
             )
             
+            if context.component.presentationState.addressFocused {
+                let addressList = addressList.update(
+                    component: BrowserAddressListComponent(
+                        context: context.component.context,
+                        theme: environment.theme,
+                        strings: environment.strings,
+                        navigateTo: { url in
+                            performAction.invoke(.navigateTo(url))
+                        }
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height - navigationBar.size.height - toolbar.size.height),
+                    transition: context.transition
+                )
+                context.add(addressList
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height + addressList.size.height / 2.0))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
+            }
+            
             return context.availableSize
         }
     }
@@ -239,6 +287,7 @@ struct BrowserPresentationState: Equatable {
     var searchResultIndex: Int
     var searchResultCount: Int
     var searchQueryIsEmpty: Bool
+    var addressFocused: Bool
 }
 
 public class BrowserScreen: ViewController, MinimizableController {
@@ -262,6 +311,9 @@ public class BrowserScreen: ViewController, MinimizableController {
         case updateFontIsSerif(Bool)
         case addBookmark
         case openBookmarks
+        case openAddressBar
+        case closeAddressBar
+        case navigateTo(String)
     }
 
     fileprivate final class Node: ViewControllerTracingNode {
@@ -271,7 +323,6 @@ public class BrowserScreen: ViewController, MinimizableController {
         private let contentContainerView = UIView()
         fileprivate let contentNavigationContainer = ComponentView<Empty>()
         fileprivate var content: [BrowserContent] = []
-        
         fileprivate var contentState: BrowserContentState?
         private var contentStateDisposable = MetaDisposable()
         
@@ -292,13 +343,20 @@ public class BrowserScreen: ViewController, MinimizableController {
             
             self.presentationState = BrowserPresentationState(
                 fontState: BrowserPresentationState.FontState(size: 100, isSerif: false),
-                isSearching: false, searchResultIndex: 0, searchResultCount: 0, searchQueryIsEmpty: true
+                isSearching: false, 
+                searchResultIndex: 0,
+                searchResultCount: 0,
+                searchQueryIsEmpty: true,
+                addressFocused: false
             )
                                                 
             super.init()
             
             self.pushContent(controller.subject, transition: .immediate)
-             
+            if let content = self.content.last {
+                content.addToRecentlyVisited()
+            }
+            
             self.performAction.connect { [weak self] action in
                 guard let self, let content = self.content.last, let url = self.contentState?.url else {
                     return
@@ -341,7 +399,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                             let text: String
                             var savedMessages = false
                             if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
-                                text = presentationData.strings.WebBrowser_LinkForwardTooltip_SavedMessages_One
+                                text = presentationData.strings.WebBrowser_LinkAddedToBookmarks
                                 savedMessages = true
                             } else {
                                 if peers.count == 1, let peer = peers.first {
@@ -388,7 +446,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                 case .openSettings:
                     self.openSettings()
                 case let .updateSearchActive(active):
-                    self.updatePresentationState(animated: true, { state in
+                    self.updatePresentationState(transition: .easeInOut(duration: 0.2), { state in
                         var updatedState = state
                         updatedState.isSearching = active
                         updatedState.searchQueryIsEmpty = true
@@ -485,10 +543,31 @@ public class BrowserScreen: ViewController, MinimizableController {
                     content.updateFontState(self.presentationState.fontState)
                 case .addBookmark:
                     if let content = self.content.last {
-                        self.addBookmark(content.currentState.url)
+                        self.addBookmark(content.currentState.url, showArrow: true)
                     }
                 case .openBookmarks:
-                    break
+                    self.openBookmarks()
+                case .openAddressBar:
+                    self.updatePresentationState(transition: .spring(duration: 0.4), { state in
+                        var updatedState = state
+                        updatedState.addressFocused = true
+                        return updatedState
+                    })
+                case .closeAddressBar:
+                    self.updatePresentationState(transition: .spring(duration: 0.4), { state in
+                        var updatedState = state
+                        updatedState.addressFocused = false
+                        return updatedState
+                    })
+                case let .navigateTo(address):
+                    if let content = self.content.last as? BrowserWebContent {
+                        content.navigateTo(address: address)
+                    }
+                    self.updatePresentationState(transition: .spring(duration: 0.4), { state in
+                        var updatedState = state
+                        updatedState.addressFocused = false
+                        return updatedState
+                    })
                 }
             }
             
@@ -517,9 +596,9 @@ public class BrowserScreen: ViewController, MinimizableController {
             self.view.addSubview(self.contentContainerView)
         }
         
-        func updatePresentationState(animated: Bool = false, _ f: (BrowserPresentationState) -> BrowserPresentationState) {
+        func updatePresentationState(transition: ComponentTransition = .immediate, _ f: (BrowserPresentationState) -> BrowserPresentationState) {
             self.presentationState = f(self.presentationState)
-            self.requestLayout(transition: animated ? .easeInOut(duration: 0.2) : .immediate)
+            self.requestLayout(transition: transition)
         }
 
         func pushContent(_ content: BrowserScreen.Subject, transition: ComponentTransition) {
@@ -536,6 +615,10 @@ public class BrowserScreen: ViewController, MinimizableController {
                     self.openPeer(peer)
                 }
                 browserContent = instantPageContent
+            case let .document(file):
+                browserContent = BrowserDocumentContent(context: self.context, presentationData: self.presentationData, file: file)
+            case let .pdfDocument(file):
+                browserContent = BrowserPdfContent(context: self.context, presentationData: self.presentationData, file: file)
             }
             browserContent.pushContent = { [weak self] content in
                 guard let self else {
@@ -596,7 +679,7 @@ public class BrowserScreen: ViewController, MinimizableController {
             self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), animated: true))
         }
         
-        func addBookmark(_ url: String) {
+        func addBookmark(_ url: String, showArrow: Bool) {
             let _ = enqueueMessages(
                 account: self.context.account,
                 peerId: self.context.account.peerId,
@@ -615,7 +698,9 @@ public class BrowserScreen: ViewController, MinimizableController {
             ).start()
             
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-            self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: presentationData.strings.WebBrowser_LinkAddedToBookmarks), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
+            
+            let lastController = self.controller?.navigationController?.viewControllers.last as? ViewController
+            lastController?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: presentationData.strings.WebBrowser_LinkAddedToBookmarks), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
                 if let self, action == .info {
                     let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
                         |> deliverOnMainQueue).start(next: { [weak self] peer in
@@ -708,6 +793,20 @@ public class BrowserScreen: ViewController, MinimizableController {
             }, animated: true)
         }
         
+        func openBookmarks() {
+            guard let url = self.contentState?.url else {
+                return
+            }
+            let controller = BrowserBookmarksScreen(context: self.context, url: url, openUrl: { [weak self] url in
+                if let self {
+                    self.performAction.invoke(.navigateTo(url))
+                }
+            }, addBookmark: { [weak self] in
+                self?.addBookmark(url, showArrow: false)
+            })
+            self.controller?.push(controller)
+        }
+        
         func openSettings() {
             guard let referenceView = self.componentHost.findTaggedView(tag: settingsTag) as? ReferenceButtonComponent.View else {
                 return
@@ -736,7 +835,7 @@ public class BrowserScreen: ViewController, MinimizableController {
             
             let _ = (settings
             |> deliverOnMainQueue).start(next: { [weak self] settings in
-                guard let self, let controller = self.controller else {
+                guard let self, let controller = self.controller, let contentState = self.contentState else {
                     return
                 }
                 
@@ -771,7 +870,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                     defaultWebBrowser = "safari"
                 }
                 
-                let url = self.contentState?.url ?? ""
+                let url = contentState.url
                 let openInOptions = availableOpenInOptions(context: self.context, item: .url(url: url))
                 let openInTitle: String
                 let openInUrl: String
@@ -787,40 +886,52 @@ public class BrowserScreen: ViewController, MinimizableController {
                     openInUrl = url
                 }
                 
-                let items: [ContextMenuItem] = [
-                    .custom(fontItem, false),
-                    .action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontSanFrancisco, icon: forceIsSerif ? emptyIcon : checkIcon, action: { (controller, action) in
+                var items: [ContextMenuItem] = []
+                items.append(.custom(fontItem, false))
+                
+                    
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontSanFrancisco, icon: forceIsSerif ? emptyIcon : checkIcon, action: { (controller, action) in
                         performAction.invoke(.updateFontIsSerif(false))
                         action(.default)
-                    })), 
-                    .action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontNewYork, textFont: .custom(font: Font.with(size: 17.0, design: .serif, traits: []), height: nil, verticalOffset: nil), icon: forceIsSerif ? checkIcon : emptyIcon, action: { (controller, action) in
+                })))
+                
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontNewYork, textFont: .custom(font: Font.with(size: 17.0, design: .serif, traits: []), height: nil, verticalOffset: nil), icon: forceIsSerif ? checkIcon : emptyIcon, action: { (controller, action) in
                         performAction.invoke(.updateFontIsSerif(true))
                         action(.default)
-                    })),
-                    .separator,
-                    .action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_Reload, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Reload"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                })))
+                
+                items.append(.separator)
+                
+                if case .webPage = contentState.contentType {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_Reload, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Reload"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
                         performAction.invoke(.reload)
                         action(.default)
-                    })),
-                    .action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_Search, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Search"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                    })))
+                }
+                if [.webPage].contains(contentState.contentType) {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_Search, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Search"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
                         performAction.invoke(.updateSearchActive(true))
                         action(.default)
-                    })),
-                    .action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_Share, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
-                        performAction.invoke(.share)
-                        action(.default)
-                    })),
-                    .action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_AddBookmark, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                    })))
+                }
+                
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_Share, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                    performAction.invoke(.share)
+                    action(.default)
+                })))
+                
+                if [.webPage, .instantPage].contains(contentState.contentType) {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_AddBookmark, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
                         performAction.invoke(.addBookmark)
                         action(.default)
-                    })),
-                    .action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_OpenInBrowser(openInTitle).string, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Browser"), color: theme.contextMenu.primaryColor) }, action: { [weak self] (controller, action) in
+                    })))
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_OpenInBrowser(openInTitle).string, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Browser"), color: theme.contextMenu.primaryColor) }, action: { [weak self] (controller, action) in
                         if let self {
                             self.context.sharedContext.applicationBindings.openUrl(openInUrl)
                         }
                         action(.default)
-                    }))
-                ]
+                    })))
+                }
                 
                 let contextController = ContextController(presentationData: self.presentationData, source: source, items: .single(ContextController.Items(content: .list(items))))
                 self.controller?.present(contextController, in: .window(.root))
@@ -1050,13 +1161,26 @@ public class BrowserScreen: ViewController, MinimizableController {
     public enum Subject {
         case webPage(url: String)
         case instantPage(webPage: TelegramMediaWebpage, anchor: String?, sourceLocation: InstantPageSourceLocation)
+        case document(file: TelegramMediaFile)
+        case pdfDocument(file: TelegramMediaFile)
     }
     
     private let context: AccountContext
     private let subject: Subject
     
-
     var openPreviousOnClose = false
+    
+    public static let supportedDocumentMimeTypes: [String] = [
+        "text/plain",
+        "text/rtf",
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.template",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    ]
     
     public init(context: AccountContext, subject: Subject) {
         self.context = context
@@ -1064,7 +1188,7 @@ public class BrowserScreen: ViewController, MinimizableController {
         
         super.init(navigationBarPresentationData: nil)
         
-        self.navigationPresentation = .modal
+        self.navigationPresentation = .modalInCompactLayout
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown)
         
@@ -1107,6 +1231,8 @@ public class BrowserScreen: ViewController, MinimizableController {
                 return contentState.favicon
             case .instantPage:
                 return UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon")?.withRenderingMode(.alwaysTemplate)
+            case .document:
+                return nil
             }
         }
         return nil
@@ -1185,7 +1311,10 @@ private final class BrowserContentComponent: Component {
             let collapsedHeight: CGFloat = 24.0
             let topInset: CGFloat = component.insets.top + component.navigationBarHeight * (1.0 - component.scrollingPanelOffsetFraction) + collapsedHeight * component.scrollingPanelOffsetFraction
             let bottomInset = (49.0 + component.insets.bottom) * (1.0 - component.scrollingPanelOffsetFraction)
-            component.content.updateLayout(size: availableSize, insets: UIEdgeInsets(top: topInset, left: component.insets.left, bottom: bottomInset, right: component.insets.right), transition: transition)
+            let insets = UIEdgeInsets(top: topInset, left: component.insets.left, bottom: bottomInset, right: component.insets.right)
+            let fullInsets = UIEdgeInsets(top: component.insets.top + component.navigationBarHeight, left: component.insets.left, bottom: 49.0 + component.insets.bottom, right: component.insets.right)
+            
+            component.content.updateLayout(size: availableSize, insets: insets, fullInsets: fullInsets, transition: transition)
             transition.setFrame(view: component.content, frame: CGRect(origin: .zero, size: availableSize))
             
             return availableSize

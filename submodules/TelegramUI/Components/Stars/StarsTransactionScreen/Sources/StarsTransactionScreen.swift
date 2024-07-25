@@ -23,6 +23,7 @@ import UndoUI
 import StarsImageComponent
 import GalleryUI
 import StarsAvatarComponent
+import MiniAppListScreen
 
 private final class StarsTransactionSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -34,6 +35,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     let openPeer: (EnginePeer) -> Void
     let openMessage: (EngineMessage.Id) -> Void
     let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
+    let openAppExamples: () -> Void
     let copyTransactionId: (String) -> Void
     
     init(
@@ -44,6 +46,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         openPeer: @escaping (EnginePeer) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
+        openAppExamples: @escaping () -> Void,
         copyTransactionId: @escaping (String) -> Void
     ) {
         self.context = context
@@ -53,6 +56,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         self.openPeer = openPeer
         self.openMessage = openMessage
         self.openMedia = openMedia
+        self.openAppExamples = openAppExamples
         self.copyTransactionId = copyTransactionId
     }
     
@@ -345,6 +349,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 photo = nil
                 isRefund = false
                 isGift = true
+                delayedCloseOnOpenPeer = false
             }
             if let spaceRegex {
                 let nsRange = NSRange(descriptionText.startIndex..., in: descriptionText)
@@ -647,6 +652,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             
             var descriptionSize: CGSize = .zero
             if !descriptionText.isEmpty {
+                let openAppExamples = component.openAppExamples
+                
                 if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
                     state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
                 }
@@ -665,7 +672,18 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         text: .plain(attributedString),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 5,
-                        lineSpacing: 0.2
+                        lineSpacing: 0.2,
+                        highlightColor: linkColor.withAlphaComponent(0.2),
+                        highlightAction: { attributes in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                            } else {
+                                return nil
+                            }
+                        },
+                        tapAction: { _, _ in
+                            openAppExamples()
+                        }
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
                     transition: .immediate
@@ -765,6 +783,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     let openPeer: (EnginePeer) -> Void
     let openMessage: (EngineMessage.Id) -> Void
     let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
+    let openAppExamples: () -> Void
     let copyTransactionId: (String) -> Void
     
     init(
@@ -774,6 +793,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         openPeer: @escaping (EnginePeer) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
+        openAppExamples: @escaping () -> Void,
         copyTransactionId: @escaping (String) -> Void
     ) {
         self.context = context
@@ -782,6 +802,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         self.openPeer = openPeer
         self.openMessage = openMessage
         self.openMedia = openMedia
+        self.openAppExamples = openAppExamples
         self.copyTransactionId = copyTransactionId
     }
     
@@ -826,6 +847,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
                         openPeer: context.component.openPeer,
                         openMessage: context.component.openMessage,
                         openMedia: context.component.openMedia,
+                        openAppExamples: context.component.openAppExamples,
                         copyTransactionId: context.component.copyTransactionId
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
@@ -915,6 +937,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
         var openPeerImpl: ((EnginePeer) -> Void)?
         var openMessageImpl: ((EngineMessage.Id) -> Void)?
         var openMediaImpl: (([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)?
+        var openAppExamplesImpl: (() -> Void)?
         var copyTransactionIdImpl: ((String) -> Void)?
         super.init(
             context: context,
@@ -930,6 +953,9 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 },
                 openMedia: { media, transitionNode, addToTransitionSurface in
                     openMediaImpl?(media, transitionNode, addToTransitionSurface)
+                },
+                openAppExamples: {
+                    openAppExamplesImpl?()
                 },
                 copyTransactionId: { transactionId in
                     copyTransactionIdImpl?(transactionId)
@@ -1016,6 +1042,19 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 }
                 return nil
             }))
+        }
+        
+        openAppExamplesImpl = { [weak self] in
+            guard let self else {
+                return
+            }
+            let _ = (context.sharedContext.makeMiniAppListScreenInitialData(context: context)
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
+                guard let self, let navigationController = self.navigationController as? NavigationController else {
+                    return
+                }
+                navigationController.pushViewController(context.sharedContext.makeMiniAppListScreen(context: context, initialData: initialData))
+            })
         }
         
         copyTransactionIdImpl = { [weak self] transactionId in

@@ -2653,6 +2653,35 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         return editorController
     }
+        
+    public func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: String?, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController {
+        let subject: Signal<MediaEditorScreen.Subject?, NoError>
+        if let image = source as? UIImage {
+            subject = .single(.image(image, PixelDimensions(image.size), nil, .bottomRight))
+        } else if let path = source as? String {
+            subject = .single(.video(path, nil, false, nil, nil, PixelDimensions(width: 1080, height: 1920), 0.0, [], .bottomRight))
+        } else {
+            subject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
+        }
+        let editorController = MediaEditorScreen(
+            context: context,
+            mode: .storyEditor,
+            subject: subject,
+            customTarget: nil,
+            initialCaption: text.flatMap { NSAttributedString(string: $0) },
+            initialLink: link,
+            transitionIn: nil,
+            transitionOut: { finished, isNew in
+                return nil
+            }, completion: { result, commit in
+                completion(result, commit)
+            } as (MediaEditorScreen.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+        )
+//        editorController.cancelled = { _ in
+//            cancelled()
+//        }
+        return editorController
+    }
     
     public func makeMediaPickerScreen(context: AccountContext, hasSearch: Bool, completion: @escaping (Any) -> Void) -> ViewController {
         return mediaPickerController(context: context, hasSearch: hasSearch, completion: completion)

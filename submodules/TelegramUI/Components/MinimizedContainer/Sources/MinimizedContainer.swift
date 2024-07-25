@@ -615,6 +615,9 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         guard !self.items.isEmpty && !self.isExpanded && self.currentTransition == nil else {
             return
         }
+        
+//        self.scrollView.contentOffset = CGPoint(x: 0.0, y: max(0.0, self.scrollView.contentSize.height - self.scrollView.bounds.height))
+        
         if self.items.count == 1, let item = self.items.first {
             if let navigationController = self.navigationController {
                 item.beforeMaximize(navigationController, { [weak self] in

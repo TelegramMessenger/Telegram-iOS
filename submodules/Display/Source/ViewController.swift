@@ -65,6 +65,7 @@ public enum ViewControllerNavigationPresentation {
     case flatModal
     case standaloneModal
     case modalInLargeLayout
+    case modalInCompactLayout
 }
 
 public enum TabBarItemContextActionType {

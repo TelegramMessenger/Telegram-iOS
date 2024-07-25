@@ -8,6 +8,7 @@ public enum MediaArea: Codable, Equatable {
         case value
         case flags
         case temperature
+        case color
     }
         
     public struct Coordinates: Codable, Equatable {
@@ -150,7 +151,7 @@ public enum MediaArea: Codable, Equatable {
     case reaction(coordinates: Coordinates, reaction: MessageReaction.Reaction, flags: ReactionFlags)
     case channelMessage(coordinates: Coordinates, messageId: EngineMessage.Id)
     case link(coordinates: Coordinates, url: String)
-    case weather(coordinates: Coordinates, emoji: String, temperature: Double, flags: WeatherFlags)
+    case weather(coordinates: Coordinates, emoji: String, temperature: Double, color: Int32)
    
     public struct ReactionFlags: OptionSet {
         public var rawValue: Int32
@@ -166,21 +167,6 @@ public enum MediaArea: Codable, Equatable {
         public static let isDark = ReactionFlags(rawValue: 1 << 0)
         public static let isFlipped = ReactionFlags(rawValue: 1 << 1)
     }
-    
-    public struct WeatherFlags: OptionSet {
-        public var rawValue: Int32
-        
-        public init(rawValue: Int32) {
-            self.rawValue = rawValue
-        }
-        
-        public init() {
-            self.rawValue = 0
-        }
-        
-        public static let isDark = WeatherFlags(rawValue: 1 << 0)
-    }
-
     
     private enum MediaAreaType: Int32 {
         case venue
@@ -222,8 +208,8 @@ public enum MediaArea: Codable, Equatable {
             let coordinates = try container.decode(MediaArea.Coordinates.self, forKey: .coordinates)
             let emoji = try container.decode(String.self, forKey: .value)
             let temperature = try container.decode(Double.self, forKey: .temperature)
-            let flags = WeatherFlags(rawValue: try container.decodeIfPresent(Int32.self, forKey: .flags) ?? 0)
-            self = .weather(coordinates: coordinates, emoji: emoji, temperature: temperature, flags: flags)
+            let color = try container.decodeIfPresent(Int32.self, forKey: .color) ?? 0
+            self = .weather(coordinates: coordinates, emoji: emoji, temperature: temperature, color: color)
         }
     }
     
@@ -248,12 +234,12 @@ public enum MediaArea: Codable, Equatable {
             try container.encode(MediaAreaType.link.rawValue, forKey: .type)
             try container.encode(coordinates, forKey: .coordinates)
             try container.encode(url, forKey: .value)
-        case let .weather(coordinates, emoji, temperature, flags):
+        case let .weather(coordinates, emoji, temperature, color):
             try container.encode(MediaAreaType.weather.rawValue, forKey: .type)
             try container.encode(coordinates, forKey: .coordinates)
             try container.encode(emoji, forKey: .value)
             try container.encode(temperature, forKey: .temperature)
-            try container.encode(flags.rawValue, forKey: .flags)
+            try container.encode(color, forKey: .color)
         }
     }
 }

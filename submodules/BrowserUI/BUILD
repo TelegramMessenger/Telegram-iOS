@@ -39,6 +39,13 @@ swift_library(
         "//submodules/Svg",
         "//submodules/PromptUI",
         "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/PhotoResources",
+        "//submodules/TelegramUI/Components/ChatControllerInteraction",
+        "//submodules/ChatPresentationInterfaceState",
+        "//submodules/UrlWhitelist",
+        "//submodules/TelegramUI/Components/Chat/ChatHistorySearchContainerNode",
+        "//submodules/SearchUI",
+        "//submodules/SearchBarNode",
     ],
     visibility = [
         "//visibility:public",
