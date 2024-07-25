@@ -188,7 +188,7 @@ protocol BrowserContent: UIView {
     
     func addToRecentlyVisited()
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, transition: ComponentTransition)
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, transition: ComponentTransition)
     
     func makeContentSnapshotView() -> UIView?
 }

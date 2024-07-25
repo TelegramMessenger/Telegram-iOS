@@ -261,6 +261,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                         context: context.component.context,
                         theme: environment.theme,
                         strings: environment.strings,
+                        insets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: 0.0, right: environment.safeInsets.right),
                         navigateTo: { url in
                             performAction.invoke(.navigateTo(url))
                         }
@@ -1370,8 +1371,8 @@ private final class BrowserContentComponent: Component {
             let bottomInset = (49.0 + component.insets.bottom) * (1.0 - component.scrollingPanelOffsetFraction)
             let insets = UIEdgeInsets(top: topInset, left: component.insets.left, bottom: bottomInset, right: component.insets.right)
             let fullInsets = UIEdgeInsets(top: component.insets.top + component.navigationBarHeight, left: component.insets.left, bottom: 49.0 + component.insets.bottom, right: component.insets.right)
-            
-            component.content.updateLayout(size: availableSize, insets: insets, fullInsets: fullInsets, transition: transition)
+                        
+            component.content.updateLayout(size: availableSize, insets: insets, fullInsets: fullInsets, safeInsets: component.insets, transition: transition)
             transition.setFrame(view: component.content, frame: CGRect(origin: .zero, size: availableSize))
             
             return availableSize

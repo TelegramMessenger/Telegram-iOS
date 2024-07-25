@@ -117,11 +117,23 @@ private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
     }
 }
 
+final class WebView: WKWebView {
+    var customBottomInset: CGFloat = 0.0 {
+        didSet {
+            self.setNeedsLayout()
+        }
+    }
+    
+    override var safeAreaInsets: UIEdgeInsets {
+        return UIEdgeInsets(top: 0.0, left: 0.0, bottom: self.customBottomInset, right: 0.0)
+    }
+}
+
 final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     
-    let webView: WKWebView
+    let webView: WebView
     
     private let errorView: ComponentHostView<Empty>
     private var currentError: Error?
@@ -170,7 +182,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             configuration.mediaPlaybackRequiresUserAction = false
         }
         
-        self.webView = WKWebView(frame: CGRect(), configuration: configuration)
+        self.webView = WebView(frame: CGRect(), configuration: configuration)
         self.webView.allowsLinkPreview = true
         
         if #available(iOS 11.0, *) {
@@ -245,8 +257,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             self.backgroundColor = presentationData.theme.list.plainBackgroundColor
             self.webView.underPageBackgroundColor = presentationData.theme.list.plainBackgroundColor
         }
-        if let (size, insets, fullInsets) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: .immediate)
+        if let (size, insets, fullInsets, safeInsets) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, safeInsets: safeInsets, transition: .immediate)
         }
     }
         
@@ -434,13 +446,13 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.webView.scrollView.contentInset.top), animated: true)
     }
     
-    private var validLayout: (CGSize, UIEdgeInsets, UIEdgeInsets)?
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, transition: ComponentTransition) {
-        self.validLayout = (size, insets, fullInsets)
+    private var validLayout: (CGSize, UIEdgeInsets, UIEdgeInsets, UIEdgeInsets)?
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, transition: ComponentTransition) {
+        self.validLayout = (size, insets, fullInsets, safeInsets)
         
         self.previousScrollingOffset = ScrollingOffsetState(value: self.webView.scrollView.contentOffset.y, isDraggingOrDecelerating: self.webView.scrollView.isDragging || self.webView.scrollView.isDecelerating)
         
-        let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - fullInsets.bottom))
+        let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top))
         var refresh = false
         if self.webView.frame.width > 0 && webViewFrame.width != self.webView.frame.width {
             refresh = true
@@ -451,6 +463,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             self.webView.reloadInputViews()
         }
         
+        self.webView.scrollView.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: fullInsets.bottom, right: 0.0)
+        self.webView.customBottomInset = max(insets.bottom, safeInsets.bottom)
+//        self.webView.scrollView.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 34.0, right: 0.0)
         self.webView.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         self.webView.scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         
@@ -646,8 +661,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         } else {
             self.currentError = nil
         }
-        if let (size, insets, fullInsets) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: .immediate)
+        if let (size, insets, fullInsets, safeInsets) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, safeInsets: safeInsets, transition: .immediate)
         }
     }
         

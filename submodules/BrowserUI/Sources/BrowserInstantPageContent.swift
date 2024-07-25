@@ -301,7 +301,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         guard let (size, insets, fullInsets) = self.containerLayout else {
             return
         }
-        self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: transition)
+        self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, safeInsets: .zero, transition: transition)
     }
     
     func reload() {
@@ -375,11 +375,11 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: true)
     }
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, transition: ComponentTransition) {
-        self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, transition: transition.containedViewLayoutTransition)
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, transition: ComponentTransition) {
+        self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, safeInsets: safeInsets, transition: transition.containedViewLayoutTransition)
     }
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (size, insets, fullInsets)
         
         var updateVisibleItems = false

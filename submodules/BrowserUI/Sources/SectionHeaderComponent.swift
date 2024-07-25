@@ -13,6 +13,7 @@ final class SectionHeaderComponent: Component {
     let theme: PresentationTheme
     let style: Style
     let title: String
+    let insets: UIEdgeInsets
     let actionTitle: String?
     let action: (() -> Void)?
     
@@ -20,12 +21,14 @@ final class SectionHeaderComponent: Component {
         theme: PresentationTheme,
         style: Style,
         title: String,
+        insets: UIEdgeInsets,
         actionTitle: String?,
         action: (() -> Void)?
     ) {
         self.theme = theme
         self.style = style
         self.title = title
+        self.insets = insets
         self.actionTitle = actionTitle
         self.action = action
     }
@@ -38,6 +41,9 @@ final class SectionHeaderComponent: Component {
             return false
         }
         if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.insets != rhs.insets {
             return false
         }
         if lhs.actionTitle != rhs.actionTitle {
@@ -73,7 +79,7 @@ final class SectionHeaderComponent: Component {
             self.state = state
             
             let height: CGFloat = 28.0
-            let leftInset: CGFloat = 16.0
+            let leftInset: CGFloat = 16.0 + component.insets.left
             let rightInset: CGFloat = 0.0
             
             let previousTitleFrame = self.title.view?.frame
