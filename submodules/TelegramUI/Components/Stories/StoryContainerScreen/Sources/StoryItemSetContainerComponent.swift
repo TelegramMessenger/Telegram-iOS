@@ -5655,8 +5655,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let deleteTitle: String
             if case let .user(user) = component.slice.peer, user.botInfo != nil {
-                //TODO:localize
-                deleteTitle = "Delete Preview"
+                deleteTitle = component.strings.BotPreview_ViewContextDelete
             } else {
                 deleteTitle = component.strings.Story_ContextDeleteStory
             }
@@ -6604,8 +6603,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 if case let .user(user) = component.slice.peer, let botInfo = user.botInfo {
                     if botInfo.flags.contains(.canEdit) {
-                        //TODO:localize
-                        items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.BotPreviews_MenuReorder, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, a in
                             a(.default)
@@ -6616,7 +6614,7 @@ public final class StoryItemSetContainerComponent: Component {
                             
                             component.reorder()
                         })))
-                        items.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                         }, action: { [weak self] _, a in
                             a(.default)

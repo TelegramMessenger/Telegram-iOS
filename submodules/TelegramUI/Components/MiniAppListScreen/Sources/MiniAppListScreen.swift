@@ -246,8 +246,7 @@ final class MiniAppListScreenComponent: Component {
         ) -> CGFloat {
             let rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = []
             
-            //TODO:localize
-            let titleText: String = "Examples"
+            let titleText: String = strings.MiniAppList_Title
             
             let closeTitle: String = strings.Common_Close
             let headerContent: ChatListHeaderComponent.Content? = ChatListHeaderComponent.Content(
@@ -316,12 +315,11 @@ final class MiniAppListScreenComponent: Component {
                 containerSize: size
             )
             
-            //TODO:localize
             let sectionHeaderSize = self.sectionHeader.update(
                 transition: transition,
                 component: AnyComponent(ListHeaderComponent(
                     theme: theme,
-                    title: "APPS THAT ACCEPT STARS"
+                    title: strings.MiniAppList_ListSectionHeader
                 )),
                 environment: {},
                 containerSize: CGSize(width: size.width, height: 1000.0)

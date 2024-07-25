@@ -42,8 +42,7 @@ public class LanguageSelectionScreen: ViewController {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationPresentation = .modal
         
-        //TODO:localize
-        self.title = "Add a Translation"
+        self.title = self.presentationData.strings.BotPreviews_SelectLanguage_Title
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         

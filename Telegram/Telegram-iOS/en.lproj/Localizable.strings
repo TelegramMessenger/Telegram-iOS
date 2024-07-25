@@ -12602,3 +12602,44 @@ Sorry for the inconvenience.";
 "Story.Privacy.ChooseCoverInfo" = "Choose a frame from the story to show in your Profile.";
 "Story.Privacy.ChooseCoverChannelInfo" = "Choose a frame from the story to show in channel profile.";
 "Story.Privacy.ChooseCoverGroupInfo" = "Choose a frame from the story to show in group profile.";
+
+"ChatList.Search.FilterApps" = "Apps";
+"ChatList.Search.SectionPopularApps" = "POPULAR APPS";
+"ChatList.Search.SectionRecentApps" = "APPS YOU USE";
+"ChatList.Search.Apps.Empty.Text" = "No Apps Found";
+
+"VoiceChat.MicrophoneModes" = "Microphone Modes";
+
+"MiniAppList.Title" = "Examples";
+"MiniAppList.ListSectionHeader" = "APPS THAT ACCEPT STARS";
+
+"PeerInfo.PaneBotPreviews" = "Preview";
+"PeerInfo.OpenAppButton" = "Open App";
+"PeerInfo.AppFooterAdmin" = "By publishing this mini app, you agree to the [Telegram Terms of Service for Developers](https://telegram.org/privacy).";
+"PeerInfo.AppFooter" = "By launching this mini app, you agree to the [Terms of Service for Mini Apps](https://telegram.org/privacy).";
+"BotPreviews.MenuAddPreview" = "Add Preview";
+"BotPreviews.MenuReorder" = "Reorder";
+"BotPreviews.MenuDeleteLanguage" = "Delete %@";
+"BotPreviews.SubtitleLoading" = "loading";
+"BotPreviews.SubtitleEmpty" = "no preview added";
+"BotPreviews.SubtitleCount_1" = "1 preview";
+"BotPreviews.SubtitleCount_any" = "1 previews";
+"BotPreviews.SheetDeleteTitle_1" = "Delete 1 Preview?";
+"BotPreviews.SheetDeleteTitle_any" = "Delete %d Previews?";
+"BotPreviews.LanguageTab.Main" = "Main";
+"BotPreviews.LanguageTab.Add" = "+ Add Language";
+"BotPreviews.Empty.Title" = "No Preview";
+"BotPreviews.Empty.Text_1" = "Upload up to 1 screenshot and video demos for your mini app.";
+"BotPreviews.Empty.Text_any" = "Upload up to %d screenshots and video demos for your mini app.";
+"BotPreviews.Empty.Add" = "Add Preview";
+"BotPreviews.Empty.AddTranslation" = "Create a Translation";
+"BotPreviews.Empty.DeleteTranslation" = "Delete this Translation";
+"BotPreviews.Empty.Separator" = "or";
+"BotPreviews.AlertTooManyPreviews_1" = "You can add at most 1 preview.";
+"BotPreviews.AlertTooManyPreviews_any" = "You can add at most 1 previews.";
+"BotPreviews.DeleteTranslationAlert.Title" = "Delete Translation";
+"BotPreviews.DeleteTranslationAlert.Text" = "Are you sure you want to delete this translation?";
+"BotPreviews.TranslationFooter.Text" = "This preview will be displayed for all users who have %@ set as their language.";
+"BotPreviews.DefaultFooter.Text" = "This preview will be shown by default. You can also add translations into specific languages.";
+"BotPreviews.SelectLanguage.Title" = "Add a Translation";
+"BotPreview.ViewContextDelete" = "Delete Preview";
