@@ -113,6 +113,7 @@ public final class TabSelectorComponent: Component {
             self.canCancelContentTouches = true
             self.contentInsetAdjustmentBehavior = .never
             self.alwaysBounceVertical = false
+            self.clipsToBounds = false
             
             self.addSubview(self.selectionView)
         }

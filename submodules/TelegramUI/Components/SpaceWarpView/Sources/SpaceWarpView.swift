@@ -99,9 +99,9 @@ private func transformCoordinate(
     params: RippleParams
 ) -> CGPoint {
     // The distance of the current pixel position from `origin`.
-    let distance = length(position - origin)
+    let distance: CGFloat = length(position - origin)
     
-    if distance < 2.0 {
+    if distance < 1.0 {
         return position
     }
     
@@ -115,10 +115,17 @@ private func transformCoordinate(
 
     // The ripple is a sine wave that Metal scales by an exponential decay
     // function.
-    let rippleAmount = params.amplitude * sin(params.frequency * time) * exp(-params.decay * time)
+    var rippleAmount = params.amplitude * sin(params.frequency * time) * exp(-params.decay * time)
+    let absRippleAmount = abs(rippleAmount)
+    if rippleAmount < 0.0 {
+        rippleAmount = -absRippleAmount
+    } else {
+        rippleAmount = absRippleAmount
+    }
 
     // A vector of length `amplitude` that points away from position.
-    let n = normalize(position - origin)
+    let n: CGPoint
+    n = normalize(position - origin)
 
     // Scale `n` by the ripple amount at the current pixel position and add it
     // to the current pixel position.
@@ -129,63 +136,31 @@ private func transformCoordinate(
     return newPosition
 }
 
-private func rectToQuad(
-    rect: CGRect,
-    quadTL: CGPoint,
-    quadTR: CGPoint,
-    quadBL: CGPoint,
-    quadBR: CGPoint
-) -> CATransform3D {
-    let x1a = quadTL.x
-    let y1a = quadTL.y
-    let x2a = quadTR.x
-    let y2a = quadTR.y
-    let x3a = quadBL.x
-    let y3a = quadBL.y
-    let x4a = quadBR.x
-    let y4a = quadBR.y
+func transformToFitQuad2(frame: CGRect, topLeft tl: CGPoint, topRight tr: CGPoint, bottomLeft bl: CGPoint, bottomRight br: CGPoint) -> (frame: CGRect, transform: CATransform3D) {
+    let frameTopLeft = frame.origin
     
-    let X = rect.origin.x
-    let Y = rect.origin.y
-    let W = rect.size.width
-    let H = rect.size.height
+    let transform = rectToQuad(
+        rect: CGRect(origin: CGPoint(), size: frame.size),
+        quadTL: CGPoint(x: tl.x - frameTopLeft.x, y: tl.y - frameTopLeft.y),
+        quadTR: CGPoint(x: tr.x - frameTopLeft.x, y: tr.y - frameTopLeft.y),
+        quadBL: CGPoint(x: bl.x - frameTopLeft.x, y: bl.y - frameTopLeft.y),
+        quadBR: CGPoint(x: br.x - frameTopLeft.x, y: br.y - frameTopLeft.y)
+    )
     
-    let y21 = y2a - y1a
-    let y32 = y3a - y2a
-    let y43 = y4a - y3a
-    let y14 = y1a - y4a
-    let y31 = y3a - y1a
-    let y42 = y4a - y2a
+    let anchorPoint = frame.center
+    let anchorOffset = CGPoint(x: anchorPoint.x - frame.origin.x, y: anchorPoint.y - frame.origin.y)
+    let transPos = CATransform3DMakeTranslation(anchorOffset.x, anchorOffset.y, 0)
+    let transNeg = CATransform3DMakeTranslation(-anchorOffset.x, -anchorOffset.y, 0)
+    let fullTransform = CATransform3DConcat(CATransform3DConcat(transPos, transform), transNeg)
     
-    let a = -H*(x2a*x3a*y14 + x2a*x4a*y31 - x1a*x4a*y32 + x1a*x3a*y42)
-    let b = W*(x2a*x3a*y14 + x3a*x4a*y21 + x1a*x4a*y32 + x1a*x2a*y43)
-    let c = H*X*(x2a*x3a*y14 + x2a*x4a*y31 - x1a*x4a*y32 + x1a*x3a*y42) - H*W*x1a*(x4a*y32 - x3a*y42 + x2a*y43) - W*Y*(x2a*x3a*y14 + x3a*x4a*y21 + x1a*x4a*y32 + x1a*x2a*y43)
-    
-    let d = H*(-x4a*y21*y3a + x2a*y1a*y43 - x1a*y2a*y43 - x3a*y1a*y4a + x3a*y2a*y4a)
-    let e = W*(x4a*y2a*y31 - x3a*y1a*y42 - x2a*y31*y4a + x1a*y3a*y42)
-    let f = -(W*(x4a*(Y*y2a*y31 + H*y1a*y32) - x3a*(H + Y)*y1a*y42 + H*x2a*y1a*y43 + x2a*Y*(y1a - y3a)*y4a + x1a*Y*y3a*(-y2a + y4a)) - H*X*(x4a*y21*y3a - x2a*y1a*y43 + x3a*(y1a - y2a)*y4a + x1a*y2a*(-y3a + y4a)))
-    
-    let g = H*(x3a*y21 - x4a*y21 + (-x1a + x2a)*y43)
-    let h = W*(-x2a*y31 + x4a*y31 + (x1a - x3a)*y42)
-    var i = W*Y*(x2a*y31 - x4a*y31 - x1a*y42 + x3a*y42) + H*(X*(-(x3a*y21) + x4a*y21 + x1a*y43 - x2a*y43) + W*(-(x3a*y2a) + x4a*y2a + x2a*y3a - x4a*y3a - x2a*y4a + x3a*y4a))
-    
-    let kEpsilon = 0.0001
-    
-    if fabs(i) < kEpsilon {
-        i = kEpsilon * (i > 0 ? 1.0 : -1.0)
-    }
-    
-    let transform = CATransform3D(m11: a/i, m12: d/i, m13: 0, m14: g/i, m21: b/i, m22: e/i, m23: 0, m24: h/i, m31: 0, m32: 0, m33: 1, m34: 0, m41: c/i, m42: f/i, m43: 0, m44: 1.0)
-    return transform
+    return (frame, fullTransform)
 }
 
-func transformToFitQuad(frame: CGRect, topLeft tl: CGPoint, topRight tr: CGPoint, bottomLeft bl: CGPoint, bottomRight br: CGPoint) -> CATransform3D {
-    /*let boundingBox = UIView.boundingBox(forQuadWithTR: tr, tl: tl, bl: bl, br: br)
-    self.layer.transform = CATransform3DIdentity // keeps current transform from interfering
-    self.frame = boundingBox*/
+func transformToFitQuad(frame: CGRect, topLeft tl: CGPoint, topRight tr: CGPoint, bottomLeft bl: CGPoint, bottomRight br: CGPoint) -> (frame: CGRect, transform: CATransform3D) {
+    let boundingBox = boundingBox(forQuadWithTR: tr, tl: tl, bl: bl, br: br)
     
-    let frameTopLeft = frame.origin
-    let transform = rectToQuad2(
+    let frameTopLeft = boundingBox.origin
+    let transform = rectToQuad(
         rect: CGRect(origin: CGPoint(), size: frame.size),
         quadTL: CGPoint(x: tl.x - frameTopLeft.x, y: tl.y - frameTopLeft.y),
         quadTR: CGPoint(x: tr.x - frameTopLeft.x, y: tr.y - frameTopLeft.y),
@@ -195,12 +170,13 @@ func transformToFitQuad(frame: CGRect, topLeft tl: CGPoint, topRight tr: CGPoint
     
     // To account for anchor point, we must translate, transform, translate
     let anchorPoint = frame.center
-    let anchorOffset = CGPoint(x: anchorPoint.x - frame.origin.x, y: anchorPoint.y - frame.origin.y)
+    let anchorOffset = CGPoint(x: anchorPoint.x - boundingBox.origin.x, y: anchorPoint.y - boundingBox.origin.y)
     let transPos = CATransform3DMakeTranslation(anchorOffset.x, anchorOffset.y, 0)
     let transNeg = CATransform3DMakeTranslation(-anchorOffset.x, -anchorOffset.y, 0)
     let fullTransform = CATransform3DConcat(CATransform3DConcat(transPos, transform), transNeg)
     
-    return fullTransform
+    // Now we set our transform
+    return (boundingBox, fullTransform)
 }
 
 private func boundingBox(forQuadWithTR tr: CGPoint, tl: CGPoint, bl: CGPoint, br: CGPoint) -> CGRect {
@@ -219,7 +195,22 @@ private func boundingBox(forQuadWithTR tr: CGPoint, tl: CGPoint, bl: CGPoint, br
     return boundingBox
 }
 
-func rectToQuad2(rect: CGRect, quadTL topLeft: CGPoint, quadTR topRight: CGPoint, quadBL bottomLeft: CGPoint, quadBR bottomRight: CGPoint) -> CATransform3D {
+func rectToQuad(rect: CGRect, quadTL topLeft: CGPoint, quadTR topRight: CGPoint, quadBL bottomLeft: CGPoint, quadBR bottomRight: CGPoint) -> CATransform3D {
+    /*if "".isEmpty {
+        let destination = Perspective(Quadrilateral(
+            topLeft,
+            topRight,
+            bottomLeft,
+            bottomRight
+        ))
+
+        // Starting perspective is the current overlay frame or could be another 4 points.
+        let start = Perspective(Quadrilateral(rect.origin, rect.size))
+
+        // Caclulate CATransform3D from start to destination
+        return start.projectiveTransform(destination: destination)
+    }*/
+    
     return rectToQuad(rect: rect, quadTLX: topLeft.x, quadTLY: topLeft.y, quadTRX: topRight.x, quadTRY: topRight.y, quadBLX: bottomLeft.x, quadBLY: bottomLeft.y, quadBRX: bottomRight.x, quadBRY: bottomRight.y)
 }
 
@@ -264,244 +255,62 @@ private func rectToQuad(rect: CGRect, quadTLX x1a: CGFloat, quadTLY y1a: CGFloat
     return transform
 }
 
-public protocol SpaceWarpView: UIView {
-    var contentView: UIView { get }
+public protocol SpaceWarpNode: ASDisplayNode {
+    var contentNode: ASDisplayNode { get }
     
-    func trigger(at point: CGPoint)
-    func update(size: CGSize, transition: ComponentTransition)
+    func triggerRipple(at point: CGPoint)
+    func update(size: CGSize, cornerRadius: CGFloat, transition: ComponentTransition)
 }
 
-open class SpaceWarpView1: UIView, SpaceWarpView {
-    private final class GridView: UIView {
-        let cloneView: PortalView
-        let gridPosition: CGPoint
-        
-        init?(contentView: PortalSourceView, gridPosition: CGPoint) {
-            self.gridPosition = gridPosition
-            
-            guard let cloneView = PortalView(matchPosition: false) else {
-                return nil
-            }
-            self.cloneView = cloneView
-            
-            super.init(frame: CGRect())
-            
-            self.layer.anchorPoint = CGPoint(x: 0.0, y: 0.0)
-            
-            self.clipsToBounds = true
-            self.isUserInteractionEnabled = false
-            self.addSubview(cloneView.view)
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        func updateIsActive(contentView: PortalSourceView, isActive: Bool) {
-            if isActive {
-                contentView.addPortal(view: self.cloneView)
-            } else {
-                contentView.removePortal(view: self.cloneView)
-            }
-        }
-        
-        func update(containerSize: CGSize, rect: CGRect, transition: ComponentTransition) {
-            transition.setFrame(view: self.cloneView.view, frame: CGRect(origin: CGPoint(x: -rect.minX - containerSize.width * 0.5, y: -rect.minY - containerSize.height * 0.5), size: CGSize(width: containerSize.width, height: containerSize.height)))
-        }
+open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
+    public var contentNode: ASDisplayNode {
+        return self.contentNodeSource
     }
     
-    private var gridViews: [GridView] = []
-    
-    public var contentView: UIView {
-        return self.contentViewImpl
-    }
-    
-    let contentViewImpl: PortalSourceView
-    
-    private var link: SharedDisplayLinkDriver.Link?
-    private var startPoint: CGPoint?
-    
-    private var timeValue: CGFloat = 0.0
-    private var currentActiveViews: Int = 0
-    
-    private var resolution: (x: Int, y: Int)?
-    private var size: CGSize?
-    
-    override public init(frame: CGRect) {
-        self.contentViewImpl = PortalSourceView()
-        
-        super.init(frame: frame)
-        
-        self.addSubview(self.contentView)
-    }
-    
-    required public init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    public func trigger(at point: CGPoint) {
-        self.startPoint = point
-        self.timeValue = 0.0
-        
-        if self.link == nil {
-            self.link = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] deltaTime in
-                guard let self else {
-                    return
-                }
-                self.timeValue += deltaTime * (1.0 / CGFloat(UIView.animationDurationFactor()))
-                
-                if let size = self.size {
-                    self.update(size: size, transition: .immediate)
-                }
-            })
-        }
-    }
-    
-    private func updateGrid(resolutionX: Int, resolutionY: Int) {
-        if let resolution = self.resolution, resolution.x == resolutionX, resolution.y == resolutionY {
-            return
-        }
-        self.resolution = (resolutionX, resolutionY)
-        
-        for gridView in self.gridViews {
-            gridView.removeFromSuperview()
-        }
-        
-        var gridViews: [GridView] = []
-        for y in 0 ..< resolutionY {
-            for x in 0 ..< resolutionX {
-                if let gridView = GridView(contentView: self.contentViewImpl, gridPosition: CGPoint(x: CGFloat(x) / CGFloat(resolutionX), y: CGFloat(y) / CGFloat(resolutionY))) {
-                    gridView.isUserInteractionEnabled = false
-                    gridViews.append(gridView)
-                    self.addSubview(gridView)
-                }
-            }
-        }
-        self.gridViews = gridViews
-    }
-    
-    public func update(size: CGSize, transition: ComponentTransition) {
-        self.size = size
-        if size.width <= 0.0 || size.height <= 0.0 {
-            return
-        }
-        
-        self.updateGrid(resolutionX: max(2, Int(size.width / 100.0)), resolutionY: max(2, Int(size.height / 100.0)))
-        guard let resolution = self.resolution else {
-            return
-        }
-        
-        //let pixelStep = CGPoint(x: CGFloat(resolution.x) * 0.33, y: CGFloat(resolution.y) * 0.33)
-        let pixelStep = CGPoint()
-        let itemSize = CGSize(width: size.width / CGFloat(resolution.x), height: size.height / CGFloat(resolution.y))
-        
-        let params = RippleParams(amplitude: 22.0, frequency: 15.0, decay: 8.0, speed: 1400.0)
-        
-        var activeViews = 0
-        for gridView in self.gridViews {
-            let sourceRect = CGRect(origin: CGPoint(x: gridView.gridPosition.x * (size.width + pixelStep.x), y: gridView.gridPosition.y * (size.height + pixelStep.y)), size: itemSize)
-            
-            gridView.bounds = CGRect(origin: CGPoint(), size: sourceRect.size)
-            gridView.update(containerSize: size, rect: sourceRect, transition: transition)
-            
-            let initialTopLeft = CGPoint(x: sourceRect.minX, y: sourceRect.minY)
-            let initialTopRight = CGPoint(x: sourceRect.maxX, y: sourceRect.minY)
-            let initialBottomLeft = CGPoint(x: sourceRect.minX, y: sourceRect.maxY)
-            let initialBottomRight = CGPoint(x: sourceRect.maxX, y: sourceRect.maxY)
-            
-            var topLeft = initialTopLeft
-            var topRight = initialTopRight
-            var bottomLeft = initialBottomLeft
-            var bottomRight = initialBottomRight
-            
-            if let startPoint = self.startPoint {
-                topLeft = transformCoordinate(position: topLeft, origin: startPoint, time: self.timeValue, params: params)
-                topRight = transformCoordinate(position: topRight, origin: startPoint, time: self.timeValue, params: params)
-                bottomLeft = transformCoordinate(position: bottomLeft, origin: startPoint, time: self.timeValue, params: params)
-                bottomRight = transformCoordinate(position: bottomRight, origin: startPoint, time: self.timeValue, params: params)
-            }
-            
-            let distanceTopLeft = length(topLeft - initialTopLeft)
-            let distanceTopRight = length(topRight - initialTopRight)
-            let distanceBottomLeft = length(bottomLeft - initialBottomLeft)
-            let distanceBottomRight = length(bottomRight - initialBottomRight)
-            var maxDistance = max(distanceTopLeft, distanceTopRight)
-            maxDistance = max(maxDistance, distanceBottomLeft)
-            maxDistance = max(maxDistance, distanceBottomRight)
-            
-            let isActive: Bool
-            if maxDistance <= 0.5 {
-                gridView.layer.transform = CATransform3DIdentity
-                isActive = false
-            } else {
-                let transform = rectToQuad(rect: CGRect(origin: CGPoint(), size: itemSize), quadTL: topLeft, quadTR: topRight, quadBL: bottomLeft, quadBR: bottomRight)
-                gridView.layer.transform = transform
-                isActive = true
-                activeViews += 1
-            }
-            if gridView.isHidden != !isActive {
-                gridView.isHidden = !isActive
-                gridView.updateIsActive(contentView: self.contentViewImpl, isActive: isActive)
-            }
-        }
-        
-        if self.currentActiveViews != activeViews {
-            self.currentActiveViews = activeViews
-            #if DEBUG
-            print("SpaceWarpView: activeViews = \(activeViews)")
-            #endif
-        }
-    }
-    
-    
-    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if self.alpha.isZero || self.isHidden || !self.isUserInteractionEnabled {
-            return nil
-        }
-        for view in self.contentView.subviews.reversed() {
-            if let result = view.hitTest(self.convert(point, to: view), with: event), result.isUserInteractionEnabled {
-                return result
-            }
-        }
-        
-        let result = super.hitTest(point, with: event)
-        if result != self {
-            return result
-        } else {
-            return nil
-        }
-    }
-}
-
-open class SpaceWarpView2: UIView, SpaceWarpView {
-    public var contentView: UIView {
-        return self.contentViewImpl
-    }
-    
-    private let contentViewImpl: UIView
+    private let contentNodeSource: ASDisplayNode
+    private let backgroundView: UIView
+    private var currentCloneView: UIView?
     private var meshView: STCMeshView?
     
+    private var gradientLayer: SimpleGradientLayer?
+    
+    private var debugLayers: [SimpleLayer] = []
+    
+    #if DEBUG
+    private var fpsView: FPSView?
+    #endif
+    
     private var link: SharedDisplayLinkDriver.Link?
     private var startPoint: CGPoint?
     
     private var timeValue: CGFloat = 0.0
     
     private var resolution: (x: Int, y: Int)?
-    private var size: CGSize?
+    private var layoutParams: (size: CGSize, cornerRadius: CGFloat)?
     
-    override public init(frame: CGRect) {
-        self.contentViewImpl = UIView()
+    override public init() {
+        self.contentNodeSource = ASDisplayNode()
         
-        super.init(frame: frame)
+        self.backgroundView = UIView()
+        self.backgroundView.backgroundColor = .black
         
-        self.addSubview(self.contentView)
+        #if DEBUG && false
+        self.fpsView = FPSView(frame: CGRect(origin: CGPoint(x: 4.0, y: 40.0), size: CGSize()))
+        #endif
+        
+        super.init()
+        
+        self.addSubnode(self.contentNodeSource)
+        self.view.addSubview(self.backgroundView)
+        
+        #if DEBUG
+        if let fpsView = self.fpsView {
+            self.view.addSubview(fpsView)
+        }
+        #endif
     }
     
-    required public init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    public func trigger(at point: CGPoint) {
+    public func triggerRipple(at point: CGPoint) {
         self.startPoint = point
         self.timeValue = 0.0
         
@@ -512,8 +321,8 @@ open class SpaceWarpView2: UIView, SpaceWarpView {
                 }
                 self.timeValue += deltaTime * (1.0 / CGFloat(UIView.animationDurationFactor()))
                 
-                if let size = self.size {
-                    self.update(size: size, transition: .immediate)
+                if let (size, cornerRadius) = self.layoutParams {
+                    self.update(size: size, cornerRadius: cornerRadius, transition: .immediate)
                 }
             })
         }
@@ -528,458 +337,121 @@ open class SpaceWarpView2: UIView, SpaceWarpView {
         if let meshView = self.meshView {
             self.meshView = nil
             meshView.removeFromSuperview()
-            self.contentViewImpl.removeFromSuperview()
         }
+        for debugLayer in self.debugLayers {
+            debugLayer.removeFromSuperlayer()
+        }
+        self.debugLayers.removeAll()
         
         let meshView = STCMeshView(frame: CGRect())
         self.meshView = meshView
-        self.addSubview(meshView)
+        self.view.insertSubview(meshView, aboveSubview: self.backgroundView)
         
         meshView.instanceCount = resolutionX * resolutionY
         
-        meshView.contentView.addSubview(self.contentViewImpl)
-        
-        /*for gridView in self.gridViews {
-            gridView.removeFromSuperview()
-        }
-        
-        var gridViews: [GridView] = []
-        for y in 0 ..< resolutionY {
-            for x in 0 ..< resolutionX {
-                if let gridView = GridView(contentView: self.contentViewImpl, gridPosition: CGPoint(x: CGFloat(x) / CGFloat(resolutionX), y: CGFloat(y) / CGFloat(resolutionY))) {
-                    gridView.isUserInteractionEnabled = false
-                    gridViews.append(gridView)
-                    self.addSubview(gridView)
-                }
-            }
-        }
-        self.gridViews = gridViews*/
+        /*for _ in 0 ..< resolutionX * resolutionY {
+            let debugLayer = SimpleLayer()
+            debugLayer.backgroundColor = UIColor.red.cgColor
+            debugLayer.opacity = 1.0
+            self.layer.addSublayer(debugLayer)
+            self.debugLayers.append(debugLayer)
+        }*/
     }
     
-    public func update(size: CGSize, transition: ComponentTransition) {
-        self.size = size
+    public func update(size: CGSize, cornerRadius: CGFloat, transition: ComponentTransition) {
+        self.layoutParams = (size, cornerRadius)
         if size.width <= 0.0 || size.height <= 0.0 {
             return
         }
         
-        self.updateGrid(resolutionX: max(2, Int(size.width / 100.0)), resolutionY: max(2, Int(size.height / 100.0)))
-        guard let resolution = self.resolution, let meshView = self.meshView else {
-            return
-        }
+        self.contentNodeSource.frame = CGRect(origin: CGPoint(), size: size)
         
-        meshView.frame = CGRect(origin: CGPoint(), size: size)
+        transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
         
-        //let pixelStep = CGPoint(x: CGFloat(resolution.x) * 0.33, y: CGFloat(resolution.y) * 0.33)
-        let pixelStep = CGPoint()
-        let itemSize = CGSize(width: size.width / CGFloat(resolution.x), height: size.height / CGFloat(resolution.y))
+        let params = RippleParams(amplitude: 26.0, frequency: 15.0, decay: 8.0, speed: 1400.0)
         
-        let params = RippleParams(amplitude: 22.0, frequency: 15.0, decay: 8.0, speed: 1400.0)
-        
-        var instanceBounds: [CGRect] = []
-        var instancePositions: [CGPoint] = []
-        var instanceTransforms: [CATransform3D] = []
-        
-        for y in 0 ..< resolution.y {
-            for x in 0 ..< resolution.x {
-                let gridPosition = CGPoint(x: CGFloat(x) / CGFloat(resolution.x), y: CGFloat(y) / CGFloat(resolution.y))
-                
-                let sourceRect = CGRect(origin: CGPoint(x: gridPosition.x * (size.width + pixelStep.x), y: gridPosition.y * (size.height + pixelStep.y)), size: itemSize)
-                
-                instanceBounds.append(sourceRect)
-                instancePositions.append(sourceRect.center)
-                
-                //gridView.bounds = CGRect(origin: CGPoint(), size: sourceRect.size)
-                //gridView.update(containerSize: size, rect: sourceRect, transition: transition)
-                
-                let initialTopLeft = CGPoint(x: sourceRect.minX, y: sourceRect.minY)
-                let initialTopRight = CGPoint(x: sourceRect.maxX, y: sourceRect.minY)
-                let initialBottomLeft = CGPoint(x: sourceRect.minX, y: sourceRect.maxY)
-                let initialBottomRight = CGPoint(x: sourceRect.maxX, y: sourceRect.maxY)
-                
-                var topLeft = initialTopLeft
-                var topRight = initialTopRight
-                var bottomLeft = initialBottomLeft
-                var bottomRight = initialBottomRight
-                
-                if let startPoint = self.startPoint {
-                    topLeft = transformCoordinate(position: topLeft, origin: startPoint, time: self.timeValue, params: params)
-                    topRight = transformCoordinate(position: topRight, origin: startPoint, time: self.timeValue, params: params)
-                    bottomLeft = transformCoordinate(position: bottomLeft, origin: startPoint, time: self.timeValue, params: params)
-                    bottomRight = transformCoordinate(position: bottomRight, origin: startPoint, time: self.timeValue, params: params)
-                }
-                
-                let distanceTopLeft = length(topLeft - initialTopLeft)
-                let distanceTopRight = length(topRight - initialTopRight)
-                let distanceBottomLeft = length(bottomLeft - initialBottomLeft)
-                let distanceBottomRight = length(bottomRight - initialBottomRight)
-                var maxDistance = max(distanceTopLeft, distanceTopRight)
-                maxDistance = max(maxDistance, distanceBottomLeft)
-                maxDistance = max(maxDistance, distanceBottomRight)
-                
-                let transform = rectToQuad(rect: CGRect(origin: CGPoint(), size: itemSize), quadTL: topLeft - initialTopLeft, quadTR: topRight - initialTopLeft, quadBL: bottomLeft - initialTopLeft, quadBR: bottomRight - initialTopLeft)
-                instanceTransforms.append(transform)
-                
-                let isActive: Bool
-                if maxDistance <= 0.5 {
-                    //gridView.layer.transform = CATransform3DIdentity
-                    isActive = false
-                } else {
-                    let _ = transform
-                    //gridView.layer.transform = transform
-                    isActive = true
-                }
-                let _ = isActive
-            }
-        }
-        
-        instanceBounds.withUnsafeMutableBufferPointer { buffer in
-            meshView.instanceBounds = buffer.baseAddress!
-        }
-        instancePositions.withUnsafeMutableBufferPointer { buffer in
-            meshView.instancePositions = buffer.baseAddress!
-        }
-        instanceTransforms.withUnsafeMutableBufferPointer { buffer in
-            meshView.instanceTransforms = buffer.baseAddress!
-        }
-    }
-    
-    
-    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if self.alpha.isZero || self.isHidden || !self.isUserInteractionEnabled {
-            return nil
-        }
-        for view in self.contentView.subviews.reversed() {
-            if let result = view.hitTest(self.convert(point, to: view), with: event), result.isUserInteractionEnabled {
-                return result
-            }
-        }
-        
-        let result = super.hitTest(point, with: event)
-        if result != self {
-            return result
-        } else {
-            return nil
-        }
-    }
-}
-
-open class SpaceWarpView3: UIView, SpaceWarpView {
-    private final class GridView: UIView {
-        let cloneView: PortalView
-        let gridPosition: CGPoint
-        
-        init?(contentView: PortalSourceView, gridPosition: CGPoint) {
-            self.gridPosition = gridPosition
-            
-            guard let cloneView = PortalView(matchPosition: false) else {
-                return nil
-            }
-            self.cloneView = cloneView
-            
-            super.init(frame: CGRect())
-            
-            self.layer.anchorPoint = CGPoint(x: 0.0, y: 0.0)
-            
-            self.clipsToBounds = true
-            self.isUserInteractionEnabled = false
-            self.addSubview(cloneView.view)
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        func updateIsActive(contentView: PortalSourceView, isActive: Bool) {
-            if isActive {
-                contentView.addPortal(view: self.cloneView)
-            } else {
-                contentView.removePortal(view: self.cloneView)
-            }
-        }
-        
-        func update(containerSize: CGSize, rect: CGRect, transition: ComponentTransition) {
-            transition.setFrame(view: self.cloneView.view, frame: CGRect(origin: CGPoint(x: -rect.minX - containerSize.width * 0.5, y: -rect.minY - containerSize.height * 0.5), size: CGSize(width: containerSize.width, height: containerSize.height)))
-        }
-    }
-    
-    private var gridViews: [GridView] = []
-    
-    public var contentView: UIView {
-        return self.contentViewSource
-    }
-    
-    private let contentViewSource: UIView
-    private var currentCloneView: UIView?
-    private let contentViewImpl: PortalSourceView
-    
-    private var link: SharedDisplayLinkDriver.Link?
-    private var startPoint: CGPoint?
-    
-    private var timeValue: CGFloat = 0.0
-    private var currentActiveViews: Int = 0
-    
-    private var resolution: (x: Int, y: Int)?
-    private var size: CGSize?
-    
-    override public init(frame: CGRect) {
-        self.contentViewSource = UIView()
-        self.contentViewImpl = PortalSourceView()
-        
-        super.init(frame: frame)
-        
-        self.addSubview(self.contentViewSource)
-        self.addSubview(self.contentViewImpl)
-        
-        if self.link == nil {
-            self.link = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] deltaTime in
-                guard let self else {
-                    return
-                }
-                self.timeValue += deltaTime * (1.0 / CGFloat(UIView.animationDurationFactor()))
-                
-                if let size = self.size {
-                    self.update(size: size, transition: .immediate)
-                }
-            })
-        }
-    }
-    
-    required public init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    public func trigger(at point: CGPoint) {
-        self.startPoint = point
-        self.timeValue = 0.0
-    }
-    
-    private func updateGrid(resolutionX: Int, resolutionY: Int) {
-        if let resolution = self.resolution, resolution.x == resolutionX, resolution.y == resolutionY {
-            return
-        }
-        self.resolution = (resolutionX, resolutionY)
-        
-        for gridView in self.gridViews {
-            gridView.removeFromSuperview()
-        }
-        
-        var gridViews: [GridView] = []
-        for y in 0 ..< resolutionY {
-            for x in 0 ..< resolutionX {
-                if let gridView = GridView(contentView: self.contentViewImpl, gridPosition: CGPoint(x: CGFloat(x) / CGFloat(resolutionX), y: CGFloat(y) / CGFloat(resolutionY))) {
-                    gridView.isUserInteractionEnabled = false
-                    gridView.isHidden = true
-                    gridViews.append(gridView)
-                    self.addSubview(gridView)
-                }
-            }
-        }
-        self.gridViews = gridViews
-    }
-    
-    public func update(size: CGSize, transition: ComponentTransition) {
         if let currentCloneView = self.currentCloneView {
             currentCloneView.removeFromSuperview()
             self.currentCloneView = nil
         }
-        if let cloneView = self.contentViewSource.resizableSnapshotView(from: CGRect(origin: CGPoint(), size: size), afterScreenUpdates: false, withCapInsets: UIEdgeInsets()) {
-            self.currentCloneView = cloneView
-            self.contentViewImpl.addSubview(cloneView)
-        }
         
-        self.size = size
-        if size.width <= 0.0 || size.height <= 0.0 {
+        let maxEdge = (max(size.width, size.height) * 0.5) * 2.0
+        let maxDistance = sqrt(maxEdge * maxEdge + maxEdge * maxEdge)
+        
+        let maxDelay = maxDistance / params.speed
+        guard let startPoint = self.startPoint, self.timeValue < maxDelay else {
+            if let link = self.link {
+                self.link = nil
+                link.invalidate()
+            }
+            
+            if let meshView = self.meshView {
+                self.meshView = nil
+                meshView.removeFromSuperview()
+            }
+            
+            for debugLayer in self.debugLayers {
+                debugLayer.removeFromSuperlayer()
+            }
+            self.debugLayers.removeAll()
+            
+            self.resolution = nil
+            self.startPoint = nil
+            self.backgroundView.isHidden = true
+            self.contentNodeSource.clipsToBounds = false
+            self.contentNodeSource.layer.cornerRadius = 0.0
+            
+            if let gradientLayer = self.gradientLayer {
+                self.gradientLayer = nil
+                gradientLayer.removeFromSuperlayer()
+            }
+            
             return
         }
         
-        self.updateGrid(resolutionX: max(2, Int(size.width / 50.0)), resolutionY: max(2, Int(size.height / 50.0)))
-        guard let resolution = self.resolution else {
-            return
-        }
+        self.backgroundView.isHidden = false
+        self.contentNodeSource.clipsToBounds = true
+        self.contentNodeSource.layer.cornerRadius = cornerRadius
         
-        if self.timeValue >= 3.0 {
-            return
-        }
-        
-        let pixelStep = CGPoint()
-        let itemSize = CGSize(width: size.width / CGFloat(resolution.x), height: size.height / CGFloat(resolution.y))
-        
-        let params = RippleParams(amplitude: 22.0, frequency: 15.0, decay: 8.0, speed: 1400.0)
-        
-        var activeViews = 0
-        for gridView in self.gridViews {
-            let sourceRect = CGRect(origin: CGPoint(x: gridView.gridPosition.x * (size.width + pixelStep.x), y: gridView.gridPosition.y * (size.height + pixelStep.y)), size: itemSize)
-            
-            gridView.bounds = CGRect(origin: CGPoint(), size: sourceRect.size)
-            gridView.update(containerSize: size, rect: sourceRect, transition: transition)
-            
-            let initialTopLeft = CGPoint(x: sourceRect.minX, y: sourceRect.minY)
-            let initialTopRight = CGPoint(x: sourceRect.maxX, y: sourceRect.minY)
-            let initialBottomLeft = CGPoint(x: sourceRect.minX, y: sourceRect.maxY)
-            let initialBottomRight = CGPoint(x: sourceRect.maxX, y: sourceRect.maxY)
-            
-            var topLeft = initialTopLeft
-            var topRight = initialTopRight
-            var bottomLeft = initialBottomLeft
-            var bottomRight = initialBottomRight
-            
-            if let startPoint = self.startPoint {
-                topLeft = transformCoordinate(position: topLeft, origin: startPoint, time: self.timeValue, params: params)
-                topRight = transformCoordinate(position: topRight, origin: startPoint, time: self.timeValue, params: params)
-                bottomLeft = transformCoordinate(position: bottomLeft, origin: startPoint, time: self.timeValue, params: params)
-                bottomRight = transformCoordinate(position: bottomRight, origin: startPoint, time: self.timeValue, params: params)
-            }
-            
-            let distanceTopLeft = length(topLeft - initialTopLeft)
-            let distanceTopRight = length(topRight - initialTopRight)
-            let distanceBottomLeft = length(bottomLeft - initialBottomLeft)
-            let distanceBottomRight = length(bottomRight - initialBottomRight)
-            var maxDistance = max(distanceTopLeft, distanceTopRight)
-            maxDistance = max(maxDistance, distanceBottomLeft)
-            maxDistance = max(maxDistance, distanceBottomRight)
-            
-            let isActive: Bool
-            if maxDistance <= 0.5 {
-                gridView.layer.transform = CATransform3DIdentity
-                isActive = true
-                activeViews += 1
-            } else {
-                let transform = rectToQuad(rect: CGRect(origin: CGPoint(), size: itemSize), quadTL: topLeft, quadTR: topRight, quadBL: bottomLeft, quadBR: bottomRight)
-                gridView.layer.transform = transform
-                isActive = true
-                activeViews += 1
-            }
-            if gridView.isHidden != !isActive {
-                gridView.isHidden = !isActive
-                gridView.updateIsActive(contentView: self.contentViewImpl, isActive: isActive)
-            }
-        }
-        
-        if self.currentActiveViews != activeViews {
-            self.currentActiveViews = activeViews
-            #if DEBUG
-            print("SpaceWarpView: activeViews = \(activeViews)")
-            #endif
-        }
-    }
-    
-    
-    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if self.alpha.isZero || self.isHidden || !self.isUserInteractionEnabled {
-            return nil
-        }
-        for view in self.contentView.subviews.reversed() {
-            if let result = view.hitTest(self.convert(point, to: view), with: event), result.isUserInteractionEnabled {
-                return result
-            }
-        }
-        
-        let result = super.hitTest(point, with: event)
-        if result != self {
-            return result
+        /*let gradientLayer: SimpleGradientLayer
+        if let current = self.gradientLayer {
+            gradientLayer = current
         } else {
-            return nil
+            gradientLayer = SimpleGradientLayer()
+            self.gradientLayer = gradientLayer
+            self.layer.addSublayer(gradientLayer)
+            
+            gradientLayer.type = .radial
+            gradientLayer.colors = [UIColor.clear.cgColor, UIColor.clear.cgColor, UIColor.white.cgColor, UIColor.clear.cgColor, UIColor.clear.cgColor]
         }
-    }
-}
-
-open class SpaceWarpView4: UIView, SpaceWarpView {
-    public var contentView: UIView {
-        return self.contentViewSource
-    }
-    
-    private let contentViewSource: UIView
-    private var currentCloneView: UIView?
-    private var meshView: STCMeshView?
-    private let fpsView: FPSView
-    
-    private var link: SharedDisplayLinkDriver.Link?
-    private var startPoint: CGPoint?
-    
-    private var timeValue: CGFloat = 0.0
-    
-    private var resolution: (x: Int, y: Int)?
-    private var size: CGSize?
-    
-    override public init(frame: CGRect) {
-        self.contentViewSource = UIView()
-        self.fpsView = FPSView(frame: CGRect(origin: CGPoint(x: 4.0, y: 40.0), size: CGSize()))
+        gradientLayer.frame = CGRect(origin: CGPoint(), size: size)
         
-        super.init(frame: frame)
+        gradientLayer.startPoint = CGPoint(x: startPoint.x / size.width, y: startPoint.x / size.height)
+        let radius = CGSize(width: maxEdge, height: maxEdge)
+        let endEndPoint = CGPoint(x: (gradientLayer.startPoint.x + radius.width) * 1.0, y: (gradientLayer.startPoint.y + radius.height) * 1.0)
+        gradientLayer.endPoint = endEndPoint
         
-        self.addSubview(self.contentViewSource)
-        self.addSubview(self.fpsView)
+        let progress = max(0.0, min(1.0, self.timeValue / maxDelay))*/
         
-        if self.link == nil {
-            self.link = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] deltaTime in
-                guard let self else {
-                    return
-                }
-                self.timeValue += deltaTime * (1.0 / CGFloat(UIView.animationDurationFactor()))
-                
-                if let size = self.size {
-                    self.update(size: size, transition: .immediate)
-                }
-            })
+        #if DEBUG
+        if let fpsView = self.fpsView {
+            fpsView.update()
         }
-    }
-    
-    required public init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    public func trigger(at point: CGPoint) {
-        self.startPoint = point
-        self.timeValue = 0.0
-    }
-    
-    private func updateGrid(resolutionX: Int, resolutionY: Int) {
-        if let resolution = self.resolution, resolution.x == resolutionX, resolution.y == resolutionY {
-            return
-        }
-        self.resolution = (resolutionX, resolutionY)
-        
-        if let meshView = self.meshView {
-            self.meshView = nil
-            meshView.removeFromSuperview()
-        }
-        
-        let meshView = STCMeshView(frame: CGRect())
-        self.meshView = meshView
-        self.insertSubview(meshView, aboveSubview: self.contentViewSource)
-        
-        meshView.instanceCount = resolutionX * resolutionY
-    }
-    
-    public func update(size: CGSize, transition: ComponentTransition) {
-        self.size = size
-        if size.width <= 0.0 || size.height <= 0.0 {
-            return
-        }
-        
-        self.fpsView.update()
+        #endif
         
         self.updateGrid(resolutionX: max(2, Int(size.width / 40.0)), resolutionY: max(2, Int(size.height / 40.0)))
         guard let resolution = self.resolution, let meshView = self.meshView else {
             return
         }
         
-        if let currentCloneView = self.currentCloneView {
-            currentCloneView.removeFromSuperview()
-            self.currentCloneView = nil
-        }
-        if let cloneView = self.contentViewSource.resizableSnapshotView(from: CGRect(origin: CGPoint(), size: size), afterScreenUpdates: false, withCapInsets: UIEdgeInsets()) {
+        if let cloneView = self.contentNodeSource.view.resizableSnapshotView(from: CGRect(origin: CGPoint(), size: size), afterScreenUpdates: false, withCapInsets: UIEdgeInsets()) {
             self.currentCloneView = cloneView
             meshView.contentView.addSubview(cloneView)
         }
         
         meshView.frame = CGRect(origin: CGPoint(), size: size)
         
-        let pixelStep = CGPoint()
-        //let pixelStep = CGPoint(x: CGFloat(resolution.x) * 0.33, y: CGFloat(resolution.y) * 0.33)
         let itemSize = CGSize(width: size.width / CGFloat(resolution.x), height: size.height / CGFloat(resolution.y))
-        
-        let params = RippleParams(amplitude: 26.0, frequency: 15.0, decay: 8.0, speed: 1400.0)
         
         var instanceBounds: [CGRect] = []
         var instancePositions: [CGPoint] = []
@@ -989,10 +461,7 @@ open class SpaceWarpView4: UIView, SpaceWarpView {
             for x in 0 ..< resolution.x {
                 let gridPosition = CGPoint(x: CGFloat(x) / CGFloat(resolution.x), y: CGFloat(y) / CGFloat(resolution.y))
                 
-                let sourceRect = CGRect(origin: CGPoint(x: gridPosition.x * (size.width + pixelStep.x), y: gridPosition.y * (size.height + pixelStep.y)), size: itemSize)
-                
-                instanceBounds.append(sourceRect)
-                instancePositions.append(sourceRect.center)
+                let sourceRect = CGRect(origin: CGPoint(x: gridPosition.x * (size.width), y: gridPosition.y * (size.height)), size: itemSize)
                 
                 let initialTopLeft = CGPoint(x: sourceRect.minX, y: sourceRect.minY)
                 let initialTopRight = CGPoint(x: sourceRect.maxX, y: sourceRect.minY)
@@ -1004,12 +473,10 @@ open class SpaceWarpView4: UIView, SpaceWarpView {
                 var bottomLeft = initialBottomLeft
                 var bottomRight = initialBottomRight
                 
-                if let startPoint = self.startPoint {
-                    topLeft = transformCoordinate(position: topLeft, origin: startPoint, time: self.timeValue, params: params)
-                    topRight = transformCoordinate(position: topRight, origin: startPoint, time: self.timeValue, params: params)
-                    bottomLeft = transformCoordinate(position: bottomLeft, origin: startPoint, time: self.timeValue, params: params)
-                    bottomRight = transformCoordinate(position: bottomRight, origin: startPoint, time: self.timeValue, params: params)
-                }
+                topLeft = transformCoordinate(position: topLeft, origin: startPoint, time: self.timeValue, params: params)
+                topRight = transformCoordinate(position: topRight, origin: startPoint, time: self.timeValue, params: params)
+                bottomLeft = transformCoordinate(position: bottomLeft, origin: startPoint, time: self.timeValue, params: params)
+                bottomRight = transformCoordinate(position: bottomRight, origin: startPoint, time: self.timeValue, params: params)
                 
                 let distanceTopLeft = length(topLeft - initialTopLeft)
                 let distanceTopRight = length(topRight - initialTopRight)
@@ -1019,19 +486,16 @@ open class SpaceWarpView4: UIView, SpaceWarpView {
                 maxDistance = max(maxDistance, distanceBottomLeft)
                 maxDistance = max(maxDistance, distanceBottomRight)
                 
-                let transform = transformToFitQuad(frame: sourceRect, topLeft: topLeft, topRight: topRight, bottomLeft: bottomLeft, bottomRight: bottomRight)
-                instanceTransforms.append(transform)
+                var (frame, transform) = transformToFitQuad2(frame: sourceRect, topLeft: topLeft, topRight: topRight, bottomLeft: bottomLeft, bottomRight: bottomRight)
                 
-                let isActive: Bool
-                if maxDistance <= 0.5 {
-                    //gridView.layer.transform = CATransform3DIdentity
-                    isActive = false
-                } else {
-                    let _ = transform
-                    //gridView.layer.transform = transform
-                    isActive = true
+                if maxDistance <= 0.005 {
+                    transform = CATransform3DIdentity
                 }
-                let _ = isActive
+                
+                instanceBounds.append(frame)
+                instancePositions.append(frame.center)
+                
+                instanceTransforms.append(transform)
             }
         }
         
@@ -1044,15 +508,20 @@ open class SpaceWarpView4: UIView, SpaceWarpView {
         instanceTransforms.withUnsafeMutableBufferPointer { buffer in
             meshView.instanceTransforms = buffer.baseAddress!
         }
+        
+        for i in 0 ..< self.debugLayers.count {
+            self.debugLayers[i].bounds = instanceBounds[i]
+            self.debugLayers[i].position = instancePositions[i]
+            self.debugLayers[i].transform = instanceTransforms[i]
+        }
     }
     
-    
-    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override open func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.alpha.isZero || self.isHidden || !self.isUserInteractionEnabled {
             return nil
         }
-        for view in self.contentView.subviews.reversed() {
-            if let result = view.hitTest(self.convert(point, to: view), with: event), result.isUserInteractionEnabled {
+        for view in self.contentNode.view.subviews.reversed() {
+            if let result = view.hitTest(self.view.convert(point, to: view), with: event), result.isUserInteractionEnabled {
                 return result
             }
         }
