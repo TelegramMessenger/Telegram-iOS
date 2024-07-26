@@ -22,11 +22,13 @@ public final class TabSelectorComponent: Component {
         public var font: UIFont
         public var spacing: CGFloat
         public var lineSelection: Bool
+        public var verticalInset: CGFloat
         
-        public init(font: UIFont, spacing: CGFloat, lineSelection: Bool = false) {
+        public init(font: UIFont, spacing: CGFloat, lineSelection: Bool = false, verticalInset: CGFloat = 0.0) {
             self.font = font
             self.spacing = spacing
             self.lineSelection = lineSelection
+            self.verticalInset = verticalInset
         }
     }
     
@@ -92,7 +94,7 @@ public final class TabSelectorComponent: Component {
         }
     }
     
-    public final class View: UIView {
+    public final class View: UIScrollView {
         private var component: TabSelectorComponent?
         private weak var state: EmptyComponentState?
         
@@ -104,6 +106,15 @@ public final class TabSelectorComponent: Component {
             
             super.init(frame: frame)
             
+            self.showsVerticalScrollIndicator = false
+            self.showsHorizontalScrollIndicator = false
+            self.scrollsToTop = false
+            self.delaysContentTouches = false
+            self.canCancelContentTouches = true
+            self.contentInsetAdjustmentBehavior = .never
+            self.alwaysBounceVertical = false
+            self.clipsToBounds = false
+            
             self.addSubview(self.selectionView)
         }
         
@@ -114,6 +125,10 @@ public final class TabSelectorComponent: Component {
         deinit {
         }
         
+        override public func touchesShouldCancel(in view: UIView) -> Bool {
+            return true
+        }
+        
         func update(component: TabSelectorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let selectionColorUpdated = component.colors.selection != self.component?.colors.selection
            
@@ -121,6 +136,12 @@ public final class TabSelectorComponent: Component {
             self.state = state
             
             let baseHeight: CGFloat = 28.0
+            
+            var verticalInset: CGFloat = 0.0
+            if let customLayout = component.customLayout {
+                verticalInset = customLayout.verticalInset * 2.0
+            }
+            
             let innerInset: CGFloat = 12.0
             let spacing: CGFloat = component.customLayout?.spacing ?? 2.0
             
@@ -148,7 +169,7 @@ public final class TabSelectorComponent: Component {
                 }
             }
             
-            var contentWidth: CGFloat = 0.0
+            var contentWidth: CGFloat = spacing
             var previousBackgroundRect: CGRect?
             var selectedBackgroundRect: CGRect?
             var nextBackgroundRect: CGRect?
@@ -213,8 +234,8 @@ public final class TabSelectorComponent: Component {
                 if !contentWidth.isZero {
                     contentWidth += spacing
                 }
-                let itemTitleFrame = CGRect(origin: CGPoint(x: contentWidth + innerInset, y: floor((baseHeight - itemSize.height) * 0.5)), size: itemSize)
-                let itemBackgroundRect = CGRect(origin: CGPoint(x: contentWidth, y: 0.0), size: CGSize(width: innerInset + itemSize.width + innerInset, height: baseHeight))
+                let itemTitleFrame = CGRect(origin: CGPoint(x: contentWidth + innerInset, y: verticalInset + floor((baseHeight - itemSize.height) * 0.5)), size: itemSize)
+                let itemBackgroundRect = CGRect(origin: CGPoint(x: contentWidth, y: verticalInset), size: CGSize(width: innerInset + itemSize.width + innerInset, height: baseHeight))
                 contentWidth = itemBackgroundRect.maxX
                 
                 if item.id == component.selectedId {
@@ -237,6 +258,7 @@ public final class TabSelectorComponent: Component {
                 }
                 index += 1
             }
+            contentWidth += spacing
             
             var removeIds: [AnyHashable] = []
             for (id, itemView) in self.visibleItems {
@@ -277,7 +299,14 @@ public final class TabSelectorComponent: Component {
                 self.selectionView.alpha = 0.0
             }
             
-            return CGSize(width: contentWidth, height: baseHeight)
+            self.contentSize = CGSize(width: contentWidth, height: baseHeight + verticalInset * 2.0)
+            self.disablesInteractiveTransitionGestureRecognizer = contentWidth > availableSize.width
+            
+            if let selectedBackgroundRect {
+                self.scrollRectToVisible(selectedBackgroundRect.insetBy(dx: -spacing, dy: 0.0), animated: false)
+            }
+            
+            return CGSize(width: min(contentWidth, availableSize.width), height: baseHeight + verticalInset * 2.0)
         }
     }
     

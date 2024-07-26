@@ -1,4 +1,116 @@
 public extension Api {
+    indirect enum InputInvoice: TypeConstructorDescription {
+        case inputInvoiceMessage(peer: Api.InputPeer, msgId: Int32)
+        case inputInvoicePremiumGiftCode(purpose: Api.InputStorePaymentPurpose, option: Api.PremiumGiftCodeOption)
+        case inputInvoiceSlug(slug: String)
+        case inputInvoiceStars(purpose: Api.InputStorePaymentPurpose)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputInvoiceMessage(let peer, let msgId):
+                    if boxed {
+                        buffer.appendInt32(-977967015)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    break
+                case .inputInvoicePremiumGiftCode(let purpose, let option):
+                    if boxed {
+                        buffer.appendInt32(-1734841331)
+                    }
+                    purpose.serialize(buffer, true)
+                    option.serialize(buffer, true)
+                    break
+                case .inputInvoiceSlug(let slug):
+                    if boxed {
+                        buffer.appendInt32(-1020867857)
+                    }
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    break
+                case .inputInvoiceStars(let purpose):
+                    if boxed {
+                        buffer.appendInt32(1710230755)
+                    }
+                    purpose.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputInvoiceMessage(let peer, let msgId):
+                return ("inputInvoiceMessage", [("peer", peer as Any), ("msgId", msgId as Any)])
+                case .inputInvoicePremiumGiftCode(let purpose, let option):
+                return ("inputInvoicePremiumGiftCode", [("purpose", purpose as Any), ("option", option as Any)])
+                case .inputInvoiceSlug(let slug):
+                return ("inputInvoiceSlug", [("slug", slug as Any)])
+                case .inputInvoiceStars(let purpose):
+                return ("inputInvoiceStars", [("purpose", purpose as Any)])
+    }
+    }
+    
+        public static func parse_inputInvoiceMessage(_ reader: BufferReader) -> InputInvoice? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputInvoice.inputInvoiceMessage(peer: _1!, msgId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputInvoicePremiumGiftCode(_ reader: BufferReader) -> InputInvoice? {
+            var _1: Api.InputStorePaymentPurpose?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputStorePaymentPurpose
+            }
+            var _2: Api.PremiumGiftCodeOption?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.PremiumGiftCodeOption
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputInvoice.inputInvoicePremiumGiftCode(purpose: _1!, option: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputInvoiceSlug(_ reader: BufferReader) -> InputInvoice? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputInvoice.inputInvoiceSlug(slug: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputInvoiceStars(_ reader: BufferReader) -> InputInvoice? {
+            var _1: Api.InputStorePaymentPurpose?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputStorePaymentPurpose
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputInvoice.inputInvoiceStars(purpose: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     indirect enum InputMedia: TypeConstructorDescription {
         case inputMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String)
         case inputMediaDice(emoticon: String)
@@ -910,174 +1022,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.InputPaymentCredentials.inputPaymentCredentialsSaved(id: _1!, tmpPassword: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    indirect enum InputPeer: TypeConstructorDescription {
-        case inputPeerChannel(channelId: Int64, accessHash: Int64)
-        case inputPeerChannelFromMessage(peer: Api.InputPeer, msgId: Int32, channelId: Int64)
-        case inputPeerChat(chatId: Int64)
-        case inputPeerEmpty
-        case inputPeerSelf
-        case inputPeerUser(userId: Int64, accessHash: Int64)
-        case inputPeerUserFromMessage(peer: Api.InputPeer, msgId: Int32, userId: Int64)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputPeerChannel(let channelId, let accessHash):
-                    if boxed {
-                        buffer.appendInt32(666680316)
-                    }
-                    serializeInt64(channelId, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    break
-                case .inputPeerChannelFromMessage(let peer, let msgId, let channelId):
-                    if boxed {
-                        buffer.appendInt32(-1121318848)
-                    }
-                    peer.serialize(buffer, true)
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    serializeInt64(channelId, buffer: buffer, boxed: false)
-                    break
-                case .inputPeerChat(let chatId):
-                    if boxed {
-                        buffer.appendInt32(900291769)
-                    }
-                    serializeInt64(chatId, buffer: buffer, boxed: false)
-                    break
-                case .inputPeerEmpty:
-                    if boxed {
-                        buffer.appendInt32(2134579434)
-                    }
-                    
-                    break
-                case .inputPeerSelf:
-                    if boxed {
-                        buffer.appendInt32(2107670217)
-                    }
-                    
-                    break
-                case .inputPeerUser(let userId, let accessHash):
-                    if boxed {
-                        buffer.appendInt32(-571955892)
-                    }
-                    serializeInt64(userId, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    break
-                case .inputPeerUserFromMessage(let peer, let msgId, let userId):
-                    if boxed {
-                        buffer.appendInt32(-1468331492)
-                    }
-                    peer.serialize(buffer, true)
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    serializeInt64(userId, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputPeerChannel(let channelId, let accessHash):
-                return ("inputPeerChannel", [("channelId", channelId as Any), ("accessHash", accessHash as Any)])
-                case .inputPeerChannelFromMessage(let peer, let msgId, let channelId):
-                return ("inputPeerChannelFromMessage", [("peer", peer as Any), ("msgId", msgId as Any), ("channelId", channelId as Any)])
-                case .inputPeerChat(let chatId):
-                return ("inputPeerChat", [("chatId", chatId as Any)])
-                case .inputPeerEmpty:
-                return ("inputPeerEmpty", [])
-                case .inputPeerSelf:
-                return ("inputPeerSelf", [])
-                case .inputPeerUser(let userId, let accessHash):
-                return ("inputPeerUser", [("userId", userId as Any), ("accessHash", accessHash as Any)])
-                case .inputPeerUserFromMessage(let peer, let msgId, let userId):
-                return ("inputPeerUserFromMessage", [("peer", peer as Any), ("msgId", msgId as Any), ("userId", userId as Any)])
-    }
-    }
-    
-        public static func parse_inputPeerChannel(_ reader: BufferReader) -> InputPeer? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputPeer.inputPeerChannel(channelId: _1!, accessHash: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPeerChannelFromMessage(_ reader: BufferReader) -> InputPeer? {
-            var _1: Api.InputPeer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
-            }
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputPeer.inputPeerChannelFromMessage(peer: _1!, msgId: _2!, channelId: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPeerChat(_ reader: BufferReader) -> InputPeer? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPeer.inputPeerChat(chatId: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPeerEmpty(_ reader: BufferReader) -> InputPeer? {
-            return Api.InputPeer.inputPeerEmpty
-        }
-        public static func parse_inputPeerSelf(_ reader: BufferReader) -> InputPeer? {
-            return Api.InputPeer.inputPeerSelf
-        }
-        public static func parse_inputPeerUser(_ reader: BufferReader) -> InputPeer? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputPeer.inputPeerUser(userId: _1!, accessHash: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPeerUserFromMessage(_ reader: BufferReader) -> InputPeer? {
-            var _1: Api.InputPeer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
-            }
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputPeer.inputPeerUserFromMessage(peer: _1!, msgId: _2!, userId: _3!)
             }
             else {
                 return nil

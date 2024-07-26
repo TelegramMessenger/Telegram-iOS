@@ -2201,16 +2201,17 @@ public extension Api.functions.auth {
                 }
 }
 public extension Api.functions.bots {
-                static func addPreviewMedia(bot: Api.InputUser, media: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.MessageMedia>) {
+                static func addPreviewMedia(bot: Api.InputUser, langCode: String, media: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.BotPreviewMedia>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1633332331)
+                    buffer.appendInt32(397326170)
                     bot.serialize(buffer, true)
+                    serializeString(langCode, buffer: buffer, boxed: false)
                     media.serialize(buffer, true)
-                    return (FunctionDescription(name: "bots.addPreviewMedia", parameters: [("bot", String(describing: bot)), ("media", String(describing: media))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.MessageMedia? in
+                    return (FunctionDescription(name: "bots.addPreviewMedia", parameters: [("bot", String(describing: bot)), ("langCode", String(describing: langCode)), ("media", String(describing: media))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.BotPreviewMedia? in
                         let reader = BufferReader(buffer)
-                        var result: Api.MessageMedia?
+                        var result: Api.BotPreviewMedia?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.MessageMedia
+                            result = Api.parse(reader, signature: signature) as? Api.BotPreviewMedia
                         }
                         return result
                     })
@@ -2263,16 +2264,17 @@ public extension Api.functions.bots {
                 }
 }
 public extension Api.functions.bots {
-                static func deletePreviewMedia(bot: Api.InputUser, media: [Api.InputMedia]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func deletePreviewMedia(bot: Api.InputUser, langCode: String, media: [Api.InputMedia]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(481471475)
+                    buffer.appendInt32(755054003)
                     bot.serialize(buffer, true)
+                    serializeString(langCode, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(media.count))
                     for item in media {
                         item.serialize(buffer, true)
                     }
-                    return (FunctionDescription(name: "bots.deletePreviewMedia", parameters: [("bot", String(describing: bot)), ("media", String(describing: media))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "bots.deletePreviewMedia", parameters: [("bot", String(describing: bot)), ("langCode", String(describing: langCode)), ("media", String(describing: media))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -2283,17 +2285,18 @@ public extension Api.functions.bots {
                 }
 }
 public extension Api.functions.bots {
-                static func editPreviewMedia(bot: Api.InputUser, media: Api.InputMedia, newMedia: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.MessageMedia>) {
+                static func editPreviewMedia(bot: Api.InputUser, langCode: String, media: Api.InputMedia, newMedia: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.BotPreviewMedia>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1436441263)
+                    buffer.appendInt32(-2061148049)
                     bot.serialize(buffer, true)
+                    serializeString(langCode, buffer: buffer, boxed: false)
                     media.serialize(buffer, true)
                     newMedia.serialize(buffer, true)
-                    return (FunctionDescription(name: "bots.editPreviewMedia", parameters: [("bot", String(describing: bot)), ("media", String(describing: media)), ("newMedia", String(describing: newMedia))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.MessageMedia? in
+                    return (FunctionDescription(name: "bots.editPreviewMedia", parameters: [("bot", String(describing: bot)), ("langCode", String(describing: langCode)), ("media", String(describing: media)), ("newMedia", String(describing: newMedia))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.BotPreviewMedia? in
                         let reader = BufferReader(buffer)
-                        var result: Api.MessageMedia?
+                        var result: Api.BotPreviewMedia?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.MessageMedia
+                            result = Api.parse(reader, signature: signature) as? Api.BotPreviewMedia
                         }
                         return result
                     })
@@ -2364,15 +2367,31 @@ public extension Api.functions.bots {
                 }
 }
 public extension Api.functions.bots {
-                static func getPreviewMedias(bot: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.MessageMedia]>) {
+                static func getPreviewInfo(bot: Api.InputUser, langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.bots.PreviewInfo>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1720252591)
+                    buffer.appendInt32(1111143341)
                     bot.serialize(buffer, true)
-                    return (FunctionDescription(name: "bots.getPreviewMedias", parameters: [("bot", String(describing: bot))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.MessageMedia]? in
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "bots.getPreviewInfo", parameters: [("bot", String(describing: bot)), ("langCode", String(describing: langCode))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.bots.PreviewInfo? in
                         let reader = BufferReader(buffer)
-                        var result: [Api.MessageMedia]?
+                        var result: Api.bots.PreviewInfo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.bots.PreviewInfo
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.bots {
+                static func getPreviewMedias(bot: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.BotPreviewMedia]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1566222003)
+                    bot.serialize(buffer, true)
+                    return (FunctionDescription(name: "bots.getPreviewMedias", parameters: [("bot", String(describing: bot))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.BotPreviewMedia]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.BotPreviewMedia]?
                         if let _ = reader.readInt32() {
-                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageMedia.self)
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotPreviewMedia.self)
                         }
                         return result
                     })
@@ -2396,16 +2415,17 @@ public extension Api.functions.bots {
                 }
 }
 public extension Api.functions.bots {
-                static func reorderPreviewMedias(bot: Api.InputUser, order: [Api.InputMedia]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func reorderPreviewMedias(bot: Api.InputUser, langCode: String, order: [Api.InputMedia]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1472444656)
+                    buffer.appendInt32(-1238895702)
                     bot.serialize(buffer, true)
+                    serializeString(langCode, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(order.count))
                     for item in order {
                         item.serialize(buffer, true)
                     }
-                    return (FunctionDescription(name: "bots.reorderPreviewMedias", parameters: [("bot", String(describing: bot)), ("order", String(describing: order))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "bots.reorderPreviewMedias", parameters: [("bot", String(describing: bot)), ("langCode", String(describing: langCode)), ("order", String(describing: order))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

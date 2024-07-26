@@ -1126,8 +1126,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
             case .storyArchive:
                 title = presentationData.strings.PeerInfo_PaneArchivedStories
             case .botPreview:
-                //TODO:localize
-                title = "Preview"
+                title = presentationData.strings.PeerInfo_PaneBotPreviews
             case .media:
                 title = presentationData.strings.PeerInfo_PaneMedia
             case .files:

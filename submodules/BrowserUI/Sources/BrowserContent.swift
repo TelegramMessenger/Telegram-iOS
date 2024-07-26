@@ -10,6 +10,7 @@ final class BrowserContentState: Equatable {
     enum ContentType: Equatable {
         case webPage
         case instantPage
+        case document
     }
     
     struct HistoryItem: Equatable {
@@ -39,6 +40,7 @@ final class BrowserContentState: Equatable {
     let readingProgress: Double
     let contentType: ContentType
     let favicon: UIImage?
+    let isSecure: Bool
     
     let canGoBack: Bool
     let canGoForward: Bool
@@ -53,6 +55,7 @@ final class BrowserContentState: Equatable {
         readingProgress: Double,
         contentType: ContentType,
         favicon: UIImage? = nil,
+        isSecure: Bool = false,
         canGoBack: Bool = false,
         canGoForward: Bool = false,
         backList: [HistoryItem] = [],
@@ -64,6 +67,7 @@ final class BrowserContentState: Equatable {
         self.readingProgress = readingProgress
         self.contentType = contentType
         self.favicon = favicon
+        self.isSecure = isSecure
         self.canGoBack = canGoBack
         self.canGoForward = canGoForward
         self.backList = backList
@@ -89,6 +93,9 @@ final class BrowserContentState: Equatable {
         if (lhs.favicon == nil) != (rhs.favicon == nil) {
             return false
         }
+        if lhs.isSecure != rhs.isSecure {
+            return false
+        }
         if lhs.canGoBack != rhs.canGoBack {
             return false
         }
@@ -105,39 +112,43 @@ final class BrowserContentState: Equatable {
     }
     
     func withUpdatedTitle(_ title: String) -> BrowserContentState {
-        return BrowserContentState(title: title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: self.forwardList)
+        return BrowserContentState(title: title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, isSecure: self.isSecure, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: self.forwardList)
     }
     
     func withUpdatedUrl(_ url: String) -> BrowserContentState {
-        return BrowserContentState(title: self.title, url: url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: self.forwardList)
+        return BrowserContentState(title: self.title, url: url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, isSecure: self.isSecure, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: self.forwardList)
+    }
+    
+    func withUpdatedIsSecure(_ isSecure: Bool) -> BrowserContentState {
+        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, isSecure: isSecure, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: self.forwardList)
     }
     
     func withUpdatedEstimatedProgress(_ estimatedProgress: Double) -> BrowserContentState {
-        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: self.forwardList)
+        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, isSecure: self.isSecure, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: self.forwardList)
     }
     
     func withUpdatedReadingProgress(_ readingProgress: Double) -> BrowserContentState {
-        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: readingProgress, contentType: self.contentType, favicon: self.favicon, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: self.forwardList)
+        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: readingProgress, contentType: self.contentType, favicon: self.favicon, isSecure: self.isSecure, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: self.forwardList)
     }
     
     func withUpdatedFavicon(_ favicon: UIImage?) -> BrowserContentState {
-        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: favicon, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: self.forwardList)
+        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: favicon, isSecure: self.isSecure, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: self.forwardList)
     }
     
     func withUpdatedCanGoBack(_ canGoBack: Bool) -> BrowserContentState {
-        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, canGoBack: canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: self.forwardList)
+        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, isSecure: self.isSecure, canGoBack: canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: self.forwardList)
     }
     
     func withUpdatedCanGoForward(_ canGoForward: Bool) -> BrowserContentState {
-        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, canGoBack: self.canGoBack, canGoForward: canGoForward, backList: self.backList, forwardList: self.forwardList)
+        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, isSecure: self.isSecure, canGoBack: self.canGoBack, canGoForward: canGoForward, backList: self.backList, forwardList: self.forwardList)
     }
     
     func withUpdatedBackList(_ backList: [HistoryItem]) -> BrowserContentState {
-        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: backList, forwardList: self.forwardList)
+        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, isSecure: self.isSecure, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: backList, forwardList: self.forwardList)
     }
     
     func withUpdatedForwardList(_ forwardList: [HistoryItem]) -> BrowserContentState {
-        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: forwardList)
+        return BrowserContentState(title: self.title, url: self.url, estimatedProgress: self.estimatedProgress, readingProgress: self.readingProgress, contentType: self.contentType, favicon: self.favicon, isSecure: self.isSecure, canGoBack: self.canGoBack, canGoForward: self.canGoForward, backList: self.backList, forwardList: forwardList)
     }
 }
 
@@ -151,12 +162,14 @@ protocol BrowserContent: UIView {
     var present: (ViewController, Any?) -> Void { get set }
     var presentInGlobalOverlay: (ViewController) -> Void { get set }
     var getNavigationController: () -> NavigationController? { get set }
+    var openAppUrl: (String) -> Void { get set }
     
     var minimize: () -> Void { get set }
     var close: () -> Void { get set }
     
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void { get set }
-        
+    func resetScrolling()
+    
     func reload()
     func stop()
     
@@ -173,7 +186,11 @@ protocol BrowserContent: UIView {
     
     func scrollToTop()
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ComponentTransition)
+    func addToRecentlyVisited()
+    
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, transition: ComponentTransition)
+    
+    func makeContentSnapshotView() -> UIView?
 }
 
 struct ContentScrollingUpdate {

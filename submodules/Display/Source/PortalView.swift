@@ -23,6 +23,11 @@ public class PortalView {
         }
     }
     
+    func disablePortal() {
+        self.view.sourceView = nil
+        self.sourceView = nil
+    }
+    
     public func reloadPortal() {
         if let sourceView = self.sourceView as? PortalSourceView {
             self.reloadPortal(sourceView: sourceView)

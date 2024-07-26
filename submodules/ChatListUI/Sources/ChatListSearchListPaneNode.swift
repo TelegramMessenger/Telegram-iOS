@@ -34,7 +34,7 @@ import AvatarNode
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
-    case peerId(EnginePeer.Id)
+    case peerId(EnginePeer.Id, ChatListRecentEntry.Section)
 }
 
 private enum ChatListRecentEntry: Comparable, Identifiable {
@@ -51,8 +51,8 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
         switch self {
             case .topPeers:
                 return .topPeers
-            case let .peer(_, peer, _, _, _, _, _, _, _, _, _):
-                return .peerId(peer.peer.peerId)
+            case let .peer(_, peer, section, _, _, _, _, _, _, _, _):
+                return .peerId(peer.peer.peerId, section)
         }
     }
     
@@ -254,16 +254,15 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                         }
                     }
                 } else if case .apps = key {
-                    //TODO:localize
                     if case .popularApps = section {
-                        header = ChatListSearchItemHeader(type: .text("POPULAR APPS", 1), theme: theme, strings: strings)
+                        header = ChatListSearchItemHeader(type: .text(presentationData.strings.ChatList_Search_SectionPopularApps, 1), theme: theme, strings: strings)
                     } else {
                         if let isChannelsTabExpanded {
-                            header = ChatListSearchItemHeader(type: .text("APPS YOU USE", 0), theme: theme, strings: strings, actionTitle: isChannelsTabExpanded ? presentationData.strings.ChatList_Search_SectionActionShowLess : presentationData.strings.ChatList_Search_SectionActionShowMore, action: {
+                            header = ChatListSearchItemHeader(type: .text(presentationData.strings.ChatList_Search_SectionRecentApps, 0), theme: theme, strings: strings, actionTitle: isChannelsTabExpanded ? presentationData.strings.ChatList_Search_SectionActionShowLess : presentationData.strings.ChatList_Search_SectionActionShowMore, action: {
                                 toggleChannelsTabExpanded()
                             })
                         } else {
-                            header = ChatListSearchItemHeader(type: .text("APPS YOU USE", 0), theme: theme, strings: strings, actionTitle: nil, action: nil)
+                            header = ChatListSearchItemHeader(type: .text(presentationData.strings.ChatList_Search_SectionRecentApps, 0), theme: theme, strings: strings, actionTitle: nil, action: nil)
                         }
                     }
                 } else {
@@ -298,13 +297,17 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                         }
                     },
                     deletePeer: deletePeer,
-                    contextAction: (key == .channels) ? nil : peerContextAction.flatMap { peerContextAction in
+                    contextAction: (key == .channels || section == .popularApps) ? nil : peerContextAction.flatMap { peerContextAction in
                         return { node, gesture, location in
                             if let chatPeer = peer.peer.peers[peer.peer.peerId] {
                                 let source: ChatListSearchContextActionSource
                                 
                                 if key == .apps {
-                                    source = .recentApps
+                                    if case .popularApps = section {
+                                        source = .popularApps
+                                    } else {
+                                        source = .recentApps
+                                    }
                                 } else {
                                     source = .recentSearch
                                 }
@@ -1081,6 +1084,7 @@ public enum ChatListSearchContextActionSource {
     case recentPeers
     case recentSearch
     case recentApps
+    case popularApps
     case search(EngineMessage.Id?)
 }
 
@@ -1449,8 +1453,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             if key == .channels {
                 emptyRecentTextNode.attributedText = NSAttributedString(string: presentationData.strings.ChatList_Search_RecommendedChannelsEmpty_Text, font: Font.regular(15.0), textColor: presentationData.theme.list.freeTextColor)
             } else if key == .apps {
-                //TODO:localize
-                emptyRecentTextNode.attributedText = NSAttributedString(string: "No Apps Found", font: Font.regular(15.0), textColor: presentationData.theme.list.freeTextColor)
+                emptyRecentTextNode.attributedText = NSAttributedString(string: presentationData.strings.ChatList_Search_Apps_Empty_Text, font: Font.regular(15.0), textColor: presentationData.theme.list.freeTextColor)
             }
             self.emptyRecentTextNode = emptyRecentTextNode
                  
@@ -3412,7 +3415,6 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             continue
                         }
                         let peerNotificationSettings = notificationSettings[id]
-                        //TODO:localize
                         let subpeerSummary: RecentlySearchedPeerSubpeerSummary? = nil
                         var peerStoryStats: PeerStoryStats?
                         if let value = storyStats[peer.id] {
@@ -3543,9 +3545,19 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     } else if case .apps = key {
                         if let navigationController = self.navigationController {
                             if isRecommended {
+                                #if DEBUG
+                                let _ = (self.context.sharedContext.makeMiniAppListScreenInitialData(context: self.context)
+                                |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
+                                    guard let self, let navigationController = self.navigationController else {
+                                        return
+                                    }
+                                    navigationController.pushViewController(self.context.sharedContext.makeMiniAppListScreen(context: self.context, initialData: initialData))
+                                })
+                                #else
                                 if let peerInfoScreen = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                                     navigationController.pushViewController(peerInfoScreen)
                                 }
+                                #endif
                             } else if case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp), let parentController = self.parentController {
                                 self.context.sharedContext.openWebApp(
                                     context: self.context,
@@ -3560,7 +3572,6 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                     skipTermsOfService: true
                                 )
                             } else {
-                                
                                 self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
                                     navigationController: navigationController,
                                     context: self.context,

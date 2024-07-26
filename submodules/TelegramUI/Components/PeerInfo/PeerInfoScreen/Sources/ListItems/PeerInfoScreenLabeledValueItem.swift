@@ -77,7 +77,7 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
     let iconAction: (() -> Void)?
     let button: Button?
     let contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
-    let requestLayout: () -> Void
+    let requestLayout: (Bool) -> Void
     
     init(
         id: AnyHashable,
@@ -95,7 +95,7 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
         iconAction: (() -> Void)? = nil,
         button: Button? = nil,
         contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil,
-        requestLayout: @escaping () -> Void
+        requestLayout: @escaping (Bool) -> Void
     ) {
         self.id = id
         self.context = context
@@ -336,7 +336,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
     
     @objc private func expandPressed() {
         self.isExpanded = true
-        self.item?.requestLayout()
+        self.item?.requestLayout(true)
     }
     
     @objc private func iconPressed() {

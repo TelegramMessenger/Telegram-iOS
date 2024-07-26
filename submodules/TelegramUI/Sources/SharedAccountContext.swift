@@ -69,6 +69,7 @@ import StarsPurchaseScreen
 import StarsTransferScreen
 import StarsTransactionScreen
 import StarsWithdrawalScreen
+import MiniAppListScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1701,7 +1702,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return presentAddMembersImpl(context: context, updatedPresentationData: updatedPresentationData, parentController: parentController, groupPeer: groupPeer, selectAddMemberDisposable: selectAddMemberDisposable, addMemberDisposable: addMemberDisposable)
     }
     
-    public func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)?, clickThroughMessage: (() -> Void)? = nil, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: Peer?, isCentered: Bool, isPreview: Bool, isStandalone: Bool) -> ListViewItem {
+    public func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)?, clickThroughMessage: ((UIView?, CGPoint?) -> Void)? = nil, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: Peer?, isCentered: Bool, isPreview: Bool, isStandalone: Bool) -> ListViewItem {
         let controllerInteraction: ChatControllerInteraction
 
         controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
@@ -1711,8 +1712,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, navigateToThreadMessage: { _, _, _ in
             }, tapMessage: { message in
                 tapMessage?(message)
-        }, clickThroughMessage: {
-            clickThroughMessage?()
+        }, clickThroughMessage: { view, location in
+            clickThroughMessage?(view, location)
         }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in
             return false
         }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
@@ -2652,6 +2653,35 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         return editorController
     }
+        
+    public func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: (url: String, name: String?)?, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController {
+        let subject: Signal<MediaEditorScreen.Subject?, NoError>
+        if let image = source as? UIImage {
+            subject = .single(.image(image, PixelDimensions(image.size), nil, .bottomRight))
+        } else if let path = source as? String {
+            subject = .single(.video(path, nil, false, nil, nil, PixelDimensions(width: 1080, height: 1920), 0.0, [], .bottomRight))
+        } else {
+            subject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
+        }
+        let editorController = MediaEditorScreen(
+            context: context,
+            mode: .storyEditor,
+            subject: subject,
+            customTarget: nil,
+            initialCaption: text.flatMap { NSAttributedString(string: $0) },
+            initialLink: link,
+            transitionIn: nil,
+            transitionOut: { finished, isNew in
+                return nil
+            }, completion: { result, commit in
+                completion(result, commit)
+            } as (MediaEditorScreen.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+        )
+//        editorController.cancelled = { _ in
+//            cancelled()
+//        }
+        return editorController
+    }
     
     public func makeMediaPickerScreen(context: AccountContext, hasSearch: Bool, completion: @escaping (Any) -> Void) -> ViewController {
         return mediaPickerController(context: context, hasSearch: hasSearch, completion: completion)
@@ -2730,6 +2760,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController {
         return StarsTransactionScreen(context: context, subject: .gift(message), action: {})
+    }
+    
+    public func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError> {
+        return MiniAppListScreen.initialData(context: context)
+    }
+    
+    public func makeMiniAppListScreen(context: AccountContext, initialData: MiniAppListScreenInitialData) -> ViewController {
+        return MiniAppListScreen(context: context, initialData: initialData as! MiniAppListScreen.InitialData)
     }
     
     public func openWebApp(context: AccountContext, parentController: ViewController, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peer: EnginePeer, threadId: Int64?, buttonText: String, url: String, simple: Bool, source: ChatOpenWebViewSource, skipTermsOfService: Bool) {

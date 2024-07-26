@@ -725,6 +725,48 @@ public extension Api {
     }
 }
 public extension Api {
+    indirect enum BotPreviewMedia: TypeConstructorDescription {
+        case botPreviewMedia(date: Int32, media: Api.MessageMedia)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .botPreviewMedia(let date, let media):
+                    if boxed {
+                        buffer.appendInt32(602479523)
+                    }
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    media.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botPreviewMedia(let date, let media):
+                return ("botPreviewMedia", [("date", date as Any), ("media", media as Any)])
+    }
+    }
+    
+        public static func parse_botPreviewMedia(_ reader: BufferReader) -> BotPreviewMedia? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.MessageMedia?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.MessageMedia
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.BotPreviewMedia.botPreviewMedia(date: _1!, media: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum BroadcastRevenueBalances: TypeConstructorDescription {
         case broadcastRevenueBalances(currentBalance: Int64, availableBalance: Int64, overallRevenue: Int64)
     
@@ -1152,56 +1194,6 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.BusinessGreetingMessage.businessGreetingMessage(shortcutId: _1!, recipients: _2!, noActivityDays: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum BusinessIntro: TypeConstructorDescription {
-        case businessIntro(flags: Int32, title: String, description: String, sticker: Api.Document?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .businessIntro(let flags, let title, let description, let sticker):
-                    if boxed {
-                        buffer.appendInt32(1510606445)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    serializeString(description, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {sticker!.serialize(buffer, true)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .businessIntro(let flags, let title, let description, let sticker):
-                return ("businessIntro", [("flags", flags as Any), ("title", title as Any), ("description", description as Any), ("sticker", sticker as Any)])
-    }
-    }
-    
-        public static func parse_businessIntro(_ reader: BufferReader) -> BusinessIntro? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: Api.Document?
-            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.Document
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.BusinessIntro.businessIntro(flags: _1!, title: _2!, description: _3!, sticker: _4)
             }
             else {
                 return nil

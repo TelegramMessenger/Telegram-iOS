@@ -41,6 +41,8 @@ import Geocoding
 import ItemListUI
 import MultilineTextComponent
 import LocationUI
+import TabSelectorComponent
+import LanguageSelectionScreen
 
 private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
 private let mediaBadgeTextColor = UIColor.white
@@ -1565,6 +1567,9 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     private var mapInfoNode: LocationInfoListItemNode?
     private var searchHeader: ComponentView<Empty>?
     
+    private var botPreviewLanguageTab: ComponentView<Empty>?
+    private var botPreviewFooter: ComponentView<Empty>?
+    
     private var barBackgroundLayer: SimpleLayer?
     
     private let itemGrid: SparseItemGrid
@@ -1624,6 +1629,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     public private(set) var isSelectionModeActive: Bool
     
     private var currentParams: (size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData)?
+    private var listBottomInset: CGFloat?
     
     private let ready = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -1638,13 +1644,20 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
 
     public var tabBarOffsetUpdated: ((ContainedViewLayoutTransition) -> Void)?
     public var tabBarOffset: CGFloat {
-        return self.itemGrid.coveringInsetOffset
+        if case .botPreview = self.scope {
+            return 0.0
+        } else {
+            return self.itemGrid.coveringInsetOffset
+        }
     }
     
     private var currentListState: StoryListContext.State?
     private var listDisposable: Disposable?
     private var hiddenMediaDisposable: Disposable?
     private let updateDisposable = MetaDisposable()
+    
+    private var currentBotPreviewLanguages: [StoryListContext.State.Language] = []
+    private var removedBotPreviewLanguages = Set<String>()
     
     private var numberOfItemsToRequest: Int = 50
     private var isRequestingView: Bool = false
@@ -1656,6 +1669,24 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
 
     public private(set) var calendarSource: SparseMessageCalendar?
     private var listSource: StoryListContext
+    
+    private let maxBotPreviewCount: Int
+    
+    private let defaultListSource: StoryListContext
+    private var cachedListSources: [String: StoryListContext] = [:]
+    
+    public var currentBotPreviewLanguage: (id: String, name: String)? {
+        guard let listSource = self.listSource as? BotPreviewStoryListContext else {
+            return nil
+        }
+        guard let id = listSource.language else {
+            return nil
+        }
+        guard let language = self.currentBotPreviewLanguages.first(where: { $0.id == id }) else {
+            return nil
+        }
+        return (language.id, language.name)
+    }
 
     public var openCurrentDate: (() -> Void)?
     public var paneDidScroll: (() -> Void)?
@@ -1723,10 +1754,17 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             case let .location(coordinates, venue):
                 self.listSource = SearchStoryListContext(account: context.account, source: .mediaArea(.venue(coordinates: coordinates, venue: venue)))
             case let .botPreview(id):
-                self.listSource = BotPreviewStoryListContext(account: context.account, engine: context.engine, peerId: id)
+                self.listSource = BotPreviewStoryListContext(account: context.account, engine: context.engine, peerId: id, language: nil, assumeEmpty: false)
             }
         }
+        self.defaultListSource = self.listSource
         self.calendarSource = nil
+        
+        var maxBotPreviewCount = 10
+        if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["bot_preview_medias_max"] as? Double {
+            maxBotPreviewCount = Int(value)
+        }
+        self.maxBotPreviewCount = maxBotPreviewCount
         
         super.init()
 
@@ -2016,10 +2054,17 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 return SparseItemGrid.ShimmerColors(background: 0xffffff, foreground: 0xffffff)
             }
 
-            let backgroundColor = presentationData.theme.list.mediaPlaceholderColor
-            let foregroundColor = presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.6)
-
-            return SparseItemGrid.ShimmerColors(background: backgroundColor.argb, foreground: foregroundColor.argb)
+            if case .botPreview = scope {
+                let backgroundColor = presentationData.theme.list.plainBackgroundColor
+                let foregroundColor = presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.6)
+                
+                return SparseItemGrid.ShimmerColors(background: backgroundColor.argb, foreground: foregroundColor.argb)
+            } else {
+                let backgroundColor = presentationData.theme.list.mediaPlaceholderColor
+                let foregroundColor = presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.6)
+                
+                return SparseItemGrid.ShimmerColors(background: backgroundColor.argb, foreground: foregroundColor.argb)
+            }
         }
 
         self.itemGridBinding.updateShimmerLayersImpl = { [weak self] layer in
@@ -2458,9 +2503,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     }
                     self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: isPinned ? "anim_toastunpin" : "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                 })))
-                if isPinned {
-                    //TODO:localize
-                    items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                if isPinned && self.canReorder() {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.BotPreviews_MenuReorder, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                         c?.dismiss(completion: {
                             guard let self else {
                                 return
@@ -2504,6 +2548,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                             peer: peer,
                             storyItem: item,
                             videoPlaybackPosition: nil,
+                            cover: false,
                             repost: false,
                             transitionIn: .gallery(MediaEditorScreen.TransitionIn.GalleryTransitionIn(sourceView: self.itemGrid.view, sourceRect: foundItemLayer?.frame ?? .zero, sourceImage: sourceImage)),
                             transitionOut: MediaEditorScreen.TransitionOut(destinationView: self.itemGrid.view, destinationRect: foundItemLayer?.frame ?? .zero, destinationCornerRadius: 0.0),
@@ -2522,26 +2567,14 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             })))
         }
         
-        if canManage, case .botPreview = self.scope {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+        if canManage, case .botPreview = self.scope, self.canReorder() {
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.BotPreviews_MenuReorder, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c?.dismiss(completion: {
                     guard let self else {
                         return
                     }
                     
                     self.beginReordering()
-                })
-            })))
-            
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Edit Preview", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                c?.dismiss(completion: {
-                    guard let self else {
-                        return
-                    }
-                    
-                    let _ = self
                 })
             })))
         }
@@ -2689,6 +2722,10 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         
         self.listDisposable?.dispose()
         self.listDisposable = nil
+        
+        if reloadAtTop {
+            self.didUpdateItemsOnce = false
+        }
 
         self.listDisposable = (state
         |> deliverOn(queue)).startStrict(next: { [weak self] state in
@@ -2699,8 +2736,11 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             let title: String
             if state.totalCount == 0 {
                 if case .botPreview = self.scope {
-                    //TODO:localize
-                    title = "no preview added"
+                    if state.isLoading {
+                        title = self.presentationData.strings.BotPreviews_SubtitleLoading
+                    } else {
+                        title = self.presentationData.strings.BotPreviews_SubtitleEmpty
+                    }
                 } else {
                     title = ""
                 }
@@ -2713,12 +2753,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     title = self.presentationData.strings.StoryList_SubtitleCount(Int32(state.totalCount))
                 }
             } else if case .botPreview = self.scope {
-                //TODO:localize
-                if state.totalCount == 1 {
-                    title = "1 preview"
-                } else {
-                    title = "\(state.totalCount) previews"
-                }
+                title = self.presentationData.strings.BotPreviews_SubtitleCount(Int32(state.totalCount))
             } else {
                 title = ""
             }
@@ -2738,9 +2773,48 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     return
                 }
                 
+                var botPreviewLanguages = self.currentBotPreviewLanguages
+                for language in state.availableLanguages {
+                    if !botPreviewLanguages.contains(where: { $0.id == language.id }) && !self.removedBotPreviewLanguages.contains(language.id) {
+                        botPreviewLanguages.append(language)
+                    }
+                }
+                botPreviewLanguages.sort(by: { $0.name < $1.name })
+                
+                var hadLocalItems = false
+                if let currentListState = self.currentListState {
+                    for item in currentListState.items {
+                        if item.storyItem.isPending {
+                            hadLocalItems = true
+                        }
+                    }
+                }
+                
                 self.currentListState = state
                 
+                var hasLocalItems = false
+                if let currentListState = self.currentListState {
+                    for item in currentListState.items {
+                        if item.storyItem.isPending {
+                            hasLocalItems = true
+                        }
+                    }
+                }
+                
+                var synchronous = synchronous
+                if hasLocalItems != hadLocalItems {
+                    synchronous = true
+                }
+                
                 self.updateItemsFromState(state: state, firstTime: firstTime, reloadAtTop: reloadAtTop, synchronous: synchronous, animated: false)
+                
+                if self.currentBotPreviewLanguages != botPreviewLanguages || reloadAtTop {
+                    self.currentBotPreviewLanguages = botPreviewLanguages
+                    if let (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, navigationHeight, presentationData) = self.currentParams {
+                        self.update(size: size, topInset: topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: synchronous, transition: .immediate)
+                    }
+                }
+                
                 firstTime = false
                 self.isRequestingView = false
             }
@@ -2853,7 +2927,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
 
         if let (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, navigationHeight, presentationData) = self.currentParams {
             var gridSnapshot: UIView?
-            if reloadAtTop {
+            if case .botPreview = scope {
+            } else if reloadAtTop {
                 gridSnapshot = self.itemGrid.view.snapshotView(afterScreenUpdates: false)
             }
             self.update(size: size, topInset: topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: false, transition: transition, animateGridItems: animated)
@@ -2971,43 +3046,6 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     
     public func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return nil
-        
-        /*var foundItemLayer: SparseItemGridLayer?
-        self.itemGrid.forEachVisibleItem { item in
-            guard let itemLayer = item.layer as? ItemLayer else {
-                return
-            }
-            if let item = itemLayer.item, item.message.id == messageId {
-                foundItemLayer = itemLayer
-            }
-        }
-        if let itemLayer = foundItemLayer {
-            let itemFrame = self.view.convert(self.itemGrid.frameForItem(layer: itemLayer), from: self.itemGrid.view)
-            let proxyNode = ASDisplayNode()
-            proxyNode.frame = itemFrame
-            if let contents = itemLayer.getContents() {
-                if let image = contents as? UIImage {
-                    proxyNode.contents = image.cgImage
-                } else {
-                    proxyNode.contents = contents
-                }
-            }
-            proxyNode.isHidden = true
-            self.addSubnode(proxyNode)
-
-            let escapeNotification = EscapeNotification {
-                proxyNode.removeFromSupernode()
-            }
-
-            return (proxyNode, proxyNode.bounds, {
-                let view = UIView()
-                view.frame = proxyNode.frame
-                view.layer.contents = proxyNode.layer.contents
-                escapeNotification.keep()
-                return (view, nil)
-            })
-        }
-        return nil*/
     }
     
     public func extractPendingStoryTransitionView() -> UIView? {
@@ -3294,38 +3332,35 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 controller?.dismissAnimated()
             }
             
-            var mappedItemIds: [MediaId] = []
+            var mappedMedia: [Media] = []
             if let items = self.items {
-                mappedItemIds = items.items.compactMap { item -> MediaId? in
+                mappedMedia = items.items.compactMap { item -> Media? in
                     guard let item = item as? VisualMediaItem else {
                         return nil
                     }
                     if ids.contains(item.story.id) {
-                        return item.story.media.id
+                        return item.story.media._asMedia()
                     } else {
                         return nil
                     }
                 }
             }
-            if mappedItemIds.isEmpty {
+            if mappedMedia.isEmpty {
                 return
             }
             
-            //TODO:localize
-            let title: String
-            if mappedItemIds.count == 1 {
-                title = "Delete 1 Preview?"
-            } else {
-                title = "Delete \(mappedItemIds.count) Previews?"
-            }
+            let title: String = presentationData.strings.BotPreviews_SheetDeleteTitle(Int32(mappedMedia.count))
             
             controller.setItemGroups([
                 ActionSheetItemGroup(items: [
                     ActionSheetTextItem(title: title),
-                    ActionSheetButtonItem(title: "Delete", color: .destructive, action: { [weak self] in
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak self] in
                         dismissAction()
                         
                         guard let self else {
+                            return
+                        }
+                        guard let listSource = self.listSource as? BotPreviewStoryListContext else {
                             return
                         }
                         
@@ -3333,7 +3368,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                             parentController.cancelItemSelection()
                         }
                         
-                        let _ = self.context.engine.messages.deleteBotPreviews(peerId: peerId, ids: mappedItemIds).startStandalone()
+                        let _ = self.context.engine.messages.deleteBotPreviews(peerId: peerId, language: listSource.language, media: mappedMedia).startStandalone()
                     })
                 ]),
                 ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -3349,8 +3384,14 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     }
     
     private func gridScrollingOffsetUpdated(transition: ContainedViewLayoutTransition) {
-        if let _ = self.mapNode, let currentParams = self.currentParams {
-            self.updateMapLayout(size: currentParams.size, topInset: currentParams.topInset, bottomInset: currentParams.bottomInset, deviceMetrics: currentParams.deviceMetrics, transition: transition)
+        if let currentParams = self.currentParams {
+            if let _ = self.mapNode {
+                self.updateMapLayout(size: currentParams.size, topInset: currentParams.topInset, bottomInset: currentParams.bottomInset, deviceMetrics: currentParams.deviceMetrics, transition: transition)
+            }
+            if case .botPreview = self.scope, self.canManageStories {
+                self.updateBotPreviewLanguageTab(size: currentParams.size, topInset: currentParams.topInset, transition: transition)
+                self.updateBotPreviewFooter(size: currentParams.size, bottomInset: 0.0, transition: transition)
+            }
         }
     }
     
@@ -3504,6 +3545,158 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         }
     }
     
+    private func updateBotPreviewLanguageTab(size: CGSize, topInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        guard case .botPreview = self.scope, self.canManageStories else {
+            return
+        }
+        
+        let botPreviewLanguageTab: ComponentView<Empty>
+        if let current = self.botPreviewLanguageTab {
+            botPreviewLanguageTab = current
+        } else {
+            botPreviewLanguageTab = ComponentView()
+            self.botPreviewLanguageTab = botPreviewLanguageTab
+        }
+        
+        var languageItems: [TabSelectorComponent.Item] = []
+        languageItems.append(TabSelectorComponent.Item(
+            id: AnyHashable("_main"),
+            title: self.presentationData.strings.BotPreviews_LanguageTab_Main
+        ))
+        for language in self.currentBotPreviewLanguages {
+            languageItems.append(TabSelectorComponent.Item(
+                id: AnyHashable(language.id),
+                title: language.name
+            ))
+        }
+        languageItems.append(TabSelectorComponent.Item(
+            id: AnyHashable("_add"),
+            title: self.presentationData.strings.BotPreviews_LanguageTab_Add
+        ))
+        var selectedLanguageId = "_main"
+        if let listSource = self.listSource as? BotPreviewStoryListContext, let language = listSource.language {
+            selectedLanguageId = language
+        }
+        
+        let botPreviewLanguageTabSize = botPreviewLanguageTab.update(
+            transition: ComponentTransition(transition),
+            component: AnyComponent(TabSelectorComponent(
+                colors: TabSelectorComponent.Colors(
+                    foreground: self.presentationData.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.8),
+                    selection: self.presentationData.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.05)
+                ),
+                customLayout: TabSelectorComponent.CustomLayout(
+                    font: Font.medium(14.0),
+                    spacing: 9.0,
+                    verticalInset: 11.0
+                ),
+                items: languageItems,
+                selectedId: AnyHashable(selectedLanguageId),
+                setSelectedId: { [weak self] id in
+                    guard let self, let id = id.base as? String else {
+                        return
+                    }
+                    if id == "_add" {
+                        self.presentAddBotPreviewLanguage()
+                    } else if id == "_main" {
+                        self.setBotPreviewLanguage(id: nil, assumeEmpty: false)
+                    } else if let language = self.currentBotPreviewLanguages.first(where: { $0.id == id }) {
+                        self.setBotPreviewLanguage(id: language.id, assumeEmpty: false)
+                    }
+                }
+            )),
+            environment: {},
+            containerSize: CGSize(width: size.width, height: 44.0)
+        )
+        var botPreviewLanguageTabFrame = CGRect(origin: CGPoint(x: floor((size.width - botPreviewLanguageTabSize.width) * 0.5), y: topInset - 11.0), size: botPreviewLanguageTabSize)
+        
+        let effectiveScrollingOffset: CGFloat
+        effectiveScrollingOffset = self.itemGrid.scrollingOffset
+        botPreviewLanguageTabFrame.origin.y -= effectiveScrollingOffset
+        
+        let isSelectingOrReordering = self.isReordering || self.itemInteraction.selectedIds != nil
+        
+        if let botPreviewLanguageTabView = botPreviewLanguageTab.view {
+            if botPreviewLanguageTabView.superview == nil {
+                self.view.addSubview(botPreviewLanguageTabView)
+            }
+            transition.updateFrame(view: botPreviewLanguageTabView, frame: botPreviewLanguageTabFrame)
+            transition.updateAlpha(layer: botPreviewLanguageTabView.layer, alpha: isSelectingOrReordering ? 0.5 : 1.0)
+            botPreviewLanguageTabView.isUserInteractionEnabled = !isSelectingOrReordering
+        }
+    }
+    
+    private func updateBotPreviewFooter(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        if let items = self.items, !items.items.isEmpty {
+            var botPreviewFooterTransition = ComponentTransition(transition)
+            let botPreviewFooter: ComponentView<Empty>
+            if let current = self.botPreviewFooter {
+                botPreviewFooter = current
+            } else {
+                botPreviewFooterTransition = .immediate
+                botPreviewFooter = ComponentView()
+                self.botPreviewFooter = botPreviewFooter
+            }
+            
+            var isMainLanguage = true
+            let text: String
+            if let listSource = self.listSource as? BotPreviewStoryListContext, let id = listSource.language, let language = self.currentBotPreviewLanguages.first(where: { $0.id == id }) {
+                isMainLanguage = false
+                
+                text = self.presentationData.strings.BotPreviews_TranslationFooter_Text(language.name).string
+            } else {
+                text = self.presentationData.strings.BotPreviews_DefaultFooter_Text
+            }
+            
+            let botPreviewFooterSize = botPreviewFooter.update(
+                transition: botPreviewFooterTransition,
+                component: AnyComponent(EmptyStateIndicatorComponent(
+                    context: self.context,
+                    theme: self.presentationData.theme,
+                    fitToHeight: true,
+                    animationName: nil,
+                    title: nil,
+                    text: text,
+                    actionTitle: self.presentationData.strings.BotPreviews_Empty_Add,
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        if self.canAddMoreBotPreviews() {
+                            self.emptyAction?()
+                        } else {
+                            self.presentUnableToAddMorePreviewsAlert()
+                        }
+                    },
+                    additionalActionTitle: isMainLanguage ? self.presentationData.strings.BotPreviews_Empty_AddTranslation : nil,
+                    additionalAction: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        if isMainLanguage {
+                            self.presentAddBotPreviewLanguage()
+                        }
+                    },
+                    additionalActionSeparator: isMainLanguage ? self.presentationData.strings.BotPreviews_Empty_Separator : nil
+                )),
+                environment: {},
+                containerSize: CGSize(width: size.width, height: 1000.0)
+            )
+            let botPreviewFooterFrame = CGRect(origin: CGPoint(x: floor((size.width - botPreviewFooterSize.width) * 0.5), y: self.itemGrid.contentBottomOffset + 16.0), size: botPreviewFooterSize)
+            if let botPreviewFooterView = botPreviewFooter.view {
+                if botPreviewFooterView.superview == nil {
+                    self.view.addSubview(botPreviewFooterView)
+                }
+                botPreviewFooterTransition.setFrame(view: botPreviewFooterView, frame: botPreviewFooterFrame)
+            }
+        } else {
+            if let botPreviewFooter = self.botPreviewFooter {
+                self.botPreviewFooter = nil
+                botPreviewFooter.view?.removeFromSuperview()
+            }
+        }
+    }
+    
     public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         self.update(size: size, topInset: topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: synchronous, transition: transition, animateGridItems: false)
     }
@@ -3555,7 +3748,19 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             transition.updateFrame(layer: barBackgroundLayer, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: gridTopInset)))
         }
         
+        var listBottomInset = bottomInset
         var bottomInset = bottomInset
+        
+        if case .botPreview = self.scope, self.canManageStories {
+            updateBotPreviewLanguageTab(size: size, topInset: topInset, transition: transition)
+            gridTopInset += 50.0
+            
+            updateBotPreviewFooter(size: size, bottomInset: 0.0, transition: transition)
+            if let botPreviewFooterView = self.botPreviewFooter?.view {
+                listBottomInset += 18.0 + botPreviewFooterView.bounds.height
+            }
+        }
+        
         if self.isProfileEmbedded, let selectedIds = self.itemInteraction.selectedIds, self.canManageStories, case let .peer(peerId, _, isArchived) = self.scope {
             let selectionPanel: ComponentView<Empty>
             var selectionPanelTransition = ComponentTransition(transition)
@@ -3683,6 +3888,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 selectionPanelTransition.setFrame(view: selectionPanelView, frame: selectionPanelFrame)
             }
             bottomInset = selectionPanelSize.height
+            listBottomInset += selectionPanelSize.height
         } else if self.isProfileEmbedded, let selectedIds = self.itemInteraction.selectedIds, self.canManageStories, case .botPreview = self.scope {
             let selectionPanel: ComponentView<Empty>
             var selectionPanelTransition = ComponentTransition(transition)
@@ -3729,6 +3935,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 selectionPanelTransition.setFrame(view: selectionPanelView, frame: selectionPanelFrame)
             }
             bottomInset = selectionPanelSize.height
+            listBottomInset += selectionPanelSize.height
         } else if let selectionPanel = self.selectionPanel {
             self.selectionPanel = nil
             if let selectionPanelView = selectionPanel.view {
@@ -3815,7 +4022,12 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 emptyStateView = ComponentView()
                 self.emptyStateView = emptyStateView
             }
-            //TODO:localize
+            
+            var isMainLanguage = true
+            if let listSource = self.listSource as? BotPreviewStoryListContext, let _ = listSource.language {
+                isMainLanguage = false
+            }
+            
             let emptyStateSize = emptyStateView.update(
                 transition: emptyStateTransition,
                 component: AnyComponent(EmptyStateIndicatorComponent(
@@ -3823,17 +4035,28 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     theme: presentationData.theme,
                     fitToHeight: self.isProfileEmbedded,
                     animationName: nil,
-                    title: "No Preview",
-                    text: "Upload screenshots and video demos for your Mini App that will be visible for your users here.",
-                    actionTitle: self.canManageStories ? "Add Preview" : nil,
+                    title: presentationData.strings.BotPreviews_Empty_Title,
+                    text: presentationData.strings.BotPreviews_Empty_Text(Int32(self.maxBotPreviewCount)),
+                    actionTitle: self.canManageStories ? presentationData.strings.BotPreviews_Empty_Add : nil,
                     action: { [weak self] in
                         guard let self else {
                             return
                         }
-                        self.emptyAction?()
+                        if self.canAddMoreBotPreviews() {
+                            self.emptyAction?()
+                        } else {
+                            self.presentUnableToAddMorePreviewsAlert()
+                        }
                     },
-                    additionalActionTitle: nil,
-                    additionalAction: {}
+                    additionalActionTitle: self.canManageStories ? (isMainLanguage ? presentationData.strings.BotPreviews_Empty_AddTranslation : presentationData.strings.BotPreviews_Empty_DeleteTranslation) : nil,
+                    additionalAction: {
+                        if isMainLanguage {
+                            self.presentAddBotPreviewLanguage()
+                        } else {
+                            self.presentDeleteBotPreviewLanguage()
+                        }
+                    },
+                    additionalActionSeparator: self.canManageStories ? presentationData.strings.BotPreviews_Empty_Separator : nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: size.width, height: size.height - gridTopInset - bottomInset)
@@ -3860,7 +4083,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             if self.isProfileEmbedded, case .botPreview = self.scope {
                 backgroundColor = presentationData.theme.list.blocksBackgroundColor
             } else if self.isProfileEmbedded {
-                backgroundColor = presentationData.theme.list.plainBackgroundColor
+                backgroundColor = presentationData.theme.list.blocksBackgroundColor
             } else {
                 backgroundColor = presentationData.theme.list.blocksBackgroundColor
             }
@@ -3876,18 +4099,28 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 self.emptyStateView = nil
                 
                 if let emptyStateComponentView = emptyStateView.view {
-                    subTransition.setAlpha(view: emptyStateComponentView, alpha: 0.0, completion: { [weak emptyStateComponentView] _ in
-                        emptyStateComponentView?.removeFromSuperview()
-                    })
+                    if self.didUpdateItemsOnce {
+                        subTransition.setAlpha(view: emptyStateComponentView, alpha: 0.0, completion: { [weak emptyStateComponentView] _ in
+                            emptyStateComponentView?.removeFromSuperview()
+                        })
+                    } else {
+                        emptyStateComponentView.removeFromSuperview()
+                    }
                 }
                 
-                if self.isProfileEmbedded {
+                if self.isProfileEmbedded, case .botPreview = self.scope {
+                    subTransition.setBackgroundColor(view: self.view, color: presentationData.theme.list.blocksBackgroundColor)
+                } else if self.isProfileEmbedded {
                     subTransition.setBackgroundColor(view: self.view, color: presentationData.theme.list.plainBackgroundColor)
                 } else {
                     subTransition.setBackgroundColor(view: self.view, color: presentationData.theme.list.blocksBackgroundColor)
                 }
             } else {
-                self.view.backgroundColor = .clear
+                if self.isProfileEmbedded, case .botPreview = self.scope {
+                    self.view.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+                } else {
+                    self.view.backgroundColor = .clear
+                }
             }
         }
 
@@ -3900,9 +4133,19 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             fixedItemHeight = nil
             
             let fixedItemAspect: CGFloat? = 0.81
+            
+            var adjustForSmallCount = true
+            if case .botPreview = self.scope {
+                adjustForSmallCount = false
+            }
          
-            self.itemGrid.pinchEnabled = items.count > 2
-            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: gridTopInset, left: sideInset, bottom:  bottomInset, right: sideInset), useSideInsets: !isList, scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, fixedItemAspect: fixedItemAspect, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none, transition: animateGridItems ? .spring(duration: 0.35) : .immediate)
+            self.itemGrid.pinchEnabled = items.count > 2 && !self.isReordering
+            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: gridTopInset, left: sideInset, bottom:  listBottomInset, right: sideInset), useSideInsets: !isList, scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, fixedItemAspect: fixedItemAspect, adjustForSmallCount: adjustForSmallCount, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none, transition: animateGridItems ? .spring(duration: 0.35) : .immediate)
+        }
+        
+        self.listBottomInset = listBottomInset
+        if case .botPreview = self.scope, self.canManageStories {
+            updateBotPreviewFooter(size: size, bottomInset: 0.0, transition: transition)
         }
     }
 
@@ -3992,12 +4235,123 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             return false
         }
         
-        var maxCount = 10
-        if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["bot_preview_medias_max"] as? Double {
-            maxCount = Int(value)
+        return items.count < self.maxBotPreviewCount
+    }
+    
+    public func canReorder() -> Bool {
+        guard let items = self.items else {
+            return false
+        }
+        return items.count > 1
+    }
+    
+    private func presentAddBotPreviewLanguage() {
+        let excludeIds: [String] = self.currentBotPreviewLanguages.map(\.id)
+        self.parentController?.push(LanguageSelectionScreen(context: self.context, excludeIds: excludeIds, selectLocalization: { [weak self] info in
+            guard let self else {
+                return
+            }
+            self.addBotPreviewLanguage(language: StoryListContext.State.Language(id: info.languageCode, name: info.title))
+        }))
+    }
+    
+    public func presentUnableToAddMorePreviewsAlert() {
+        self.parentController?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.BotPreviews_AlertTooManyPreviews(Int32(self.maxBotPreviewCount)), actions: [
+            TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
+            })
+        ], parseMarkdown: true), in: .window(.root))
+    }
+    
+    public func presentDeleteBotPreviewLanguage() {
+        self.parentController?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: self.presentationData.strings.BotPreviews_DeleteTranslationAlert_Title, text: self.presentationData.strings.BotPreviews_DeleteTranslationAlert_Text, actions: [
+            TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {
+            }),
+            TextAlertAction(type: .destructiveAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
+                guard let self else {
+                    return
+                }
+                if let listSource = self.listSource as? BotPreviewStoryListContext, let language = listSource.language {
+                    self.deleteBotPreviewLanguage(id: language)
+                }
+            })
+        ], parseMarkdown: true), in: .window(.root))
+    }
+    
+    private func addBotPreviewLanguage(language: StoryListContext.State.Language) {
+        var botPreviewLanguages = self.currentBotPreviewLanguages
+        
+        var assumeEmpty = false
+        if !botPreviewLanguages.contains(where: { $0.id == language.id}) {
+            botPreviewLanguages.append(language)
+            assumeEmpty = true
+        }
+        botPreviewLanguages.sort(by: { $0.name < $1.name })
+        self.removedBotPreviewLanguages.remove(language.id)
+        
+        if self.currentBotPreviewLanguages != botPreviewLanguages {
+            self.currentBotPreviewLanguages = botPreviewLanguages
+            if let (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, navigationHeight, presentationData) = self.currentParams {
+                self.update(size: size, topInset: topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: false, transition: .immediate)
+            }
         }
         
-        return items.count < maxCount
+        self.setBotPreviewLanguage(id: language.id, assumeEmpty: assumeEmpty)
+    }
+    
+    private func deleteBotPreviewLanguage(id: String) {
+        var botPreviewLanguages = self.currentBotPreviewLanguages
+        
+        if let index = botPreviewLanguages.firstIndex(where: { $0.id == id}) {
+            botPreviewLanguages.remove(at: index)
+        }
+        self.removedBotPreviewLanguages.insert(id)
+        
+        guard case let .botPreview(peerId) = self.scope else {
+            return
+        }
+        
+        var mappedMedia: [Media] = []
+        if let items = self.items {
+            mappedMedia = items.items.compactMap { item -> Media? in
+                guard let item = item as? VisualMediaItem else {
+                    return nil
+                }
+                return item.story.media._asMedia()
+            }
+        }
+        let _ = self.context.engine.messages.deleteBotPreviewsLanguage(peerId: peerId, language: id, media: mappedMedia).startStandalone()
+        
+        if self.currentBotPreviewLanguages != botPreviewLanguages {
+            self.currentBotPreviewLanguages = botPreviewLanguages
+            if let (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, navigationHeight, presentationData) = self.currentParams {
+                self.update(size: size, topInset: topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: false, transition: .immediate)
+            }
+        }
+        
+        self.setBotPreviewLanguage(id: nil, assumeEmpty: false)
+    }
+    
+    private func setBotPreviewLanguage(id: String?, assumeEmpty: Bool) {
+        guard case let .botPreview(peerId) = self.scope else {
+            return
+        }
+        if let listSource = self.listSource as? BotPreviewStoryListContext, listSource.language == id {
+            return
+        }
+        
+        if let id {
+            if let cachedListSource = self.cachedListSources[id] {
+                self.listSource = cachedListSource
+            } else {
+                let listSource = BotPreviewStoryListContext(account: self.context.account, engine: self.context.engine, peerId: peerId, language: id, assumeEmpty: assumeEmpty)
+                self.listSource = listSource
+                self.cachedListSources[id] = listSource
+            }
+        } else {
+            self.listSource = self.defaultListSource
+        }
+        
+        self.requestHistoryAroundVisiblePosition(synchronous: false, reloadAtTop: true)
     }
     
     public func beginReordering() {
@@ -4027,7 +4381,17 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             if !isReordering, let reorderedIds = self.reorderedIds {
                 self.reorderedIds = nil
                 if case .botPreview = self.scope, let listSource = self.listSource as? BotPreviewStoryListContext {
-                    listSource.reorderItems(ids: reorderedIds)
+                    if let items = self.items {
+                        var reorderedMedia: [Media] = []
+                        
+                        for id in reorderedIds {
+                            if let item = items.items.first(where: { ($0 as? VisualMediaItem)?.storyId == id }) as? VisualMediaItem {
+                                reorderedMedia.append(item.story.media._asMedia())
+                            }
+                        }
+                        
+                        listSource.reorderItems(media: reorderedMedia)
+                    }
                 } else if case let .peer(id, _, _) = self.scope, id == self.context.account.peerId, let items = self.items {
                     var updatedPinnedIds: [Int32] = []
                     for id in reorderedIds {
@@ -4045,6 +4409,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: id, ids: updatedPinnedIds).startStandalone()
                 }
             }
+            
+            self.update(transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate)
         }
     }
 }

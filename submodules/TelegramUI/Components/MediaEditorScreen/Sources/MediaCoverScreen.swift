@@ -18,55 +18,53 @@ private final class MediaCoverScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let mediaEditor: MediaEditor
+    let mediaEditor: Signal<MediaEditor?, NoError>
+    let exclusive: Bool
     
     init(
         context: AccountContext,
-        mediaEditor: MediaEditor
+        mediaEditor: Signal<MediaEditor?, NoError>,
+        exclusive: Bool
     ) {
         self.context = context
         self.mediaEditor = mediaEditor
+        self.exclusive = exclusive
     }
     
     static func ==(lhs: MediaCoverScreenComponent, rhs: MediaCoverScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
+        if lhs.exclusive != rhs.exclusive {
+            return false
+        }
         return true
     }
     
     final class State: ComponentState {
-        enum ImageKey: Hashable {
-            case done
-        }
-        private var cachedImages: [ImageKey: UIImage] = [:]
-        func image(_ key: ImageKey) -> UIImage {
-            if let image = self.cachedImages[key] {
-                return image
-            } else {
-                var image: UIImage
-                switch key {
-                case .done:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Done"), color: .white)!
-                }
-                cachedImages[key] = image
-                return image
-            }
-        }
-        
         var playerStateDisposable: Disposable?
         var playerState: MediaEditorPlayerState?
         
-        init(mediaEditor: MediaEditor) {
+        private(set) var mediaEditor: MediaEditor?
+        
+        init(mediaEditor: Signal<MediaEditor?, NoError>) {
             super.init()
-            
-            self.playerStateDisposable = (mediaEditor.playerState(framesCount: 16)
-            |> deliverOnMainQueue).start(next: { [weak self] playerState in
-                if let self {
-                    if self.playerState != playerState {
-                        self.playerState = playerState
-                        self.updated()
-                    }
+                        
+            let _ = (mediaEditor
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] mediaEditor in
+                if let self, let mediaEditor {
+                    self.mediaEditor = mediaEditor
+                    
+                    self.playerStateDisposable = (mediaEditor.playerState(framesCount: 16)
+                    |> deliverOnMainQueue).start(next: { [weak self] playerState in
+                        if let self {
+                            if self.playerState != playerState {
+                                self.playerState = playerState
+                                self.updated()
+                            }
+                        }
+                    })
                 }
             })
         }
@@ -166,14 +164,6 @@ private final class MediaCoverScreenComponent: Component {
             self.state?.updated()
         }
         
-//        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-//            let result = super.hitTest(point, with: event)
-//            if let controller = self.environment?.controller() as? MediaCoverScreen, [.erase, .restore].contains(controller.mode), result == self.previewContainerView {
-//                return nil
-//            }
-//            return result
-//        }
-        
         func update(component: MediaCoverScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             self.environment = environment
@@ -182,7 +172,6 @@ private final class MediaCoverScreenComponent: Component {
                 return .zero
             }
             
-//            let isFirstTime = self.component == nil
             self.component = component
             self.state = state
             
@@ -207,15 +196,15 @@ private final class MediaCoverScreenComponent: Component {
                     controlsBottomInset = -75.0
                 }
             }
-            
-            let previewContainerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - previewSize.width) / 2.0), y: environment.safeInsets.top), size: CGSize(width: previewSize.width, height: availableSize.height - environment.safeInsets.top - environment.safeInsets.bottom + controlsBottomInset))
-            let buttonsContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - environment.safeInsets.bottom + controlsBottomInset - 31.0), size: CGSize(width: availableSize.width, height: environment.safeInsets.bottom - controlsBottomInset))
+                        
+            let previewContainerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - previewSize.width) / 2.0), y: topInset), size: CGSize(width: previewSize.width, height: availableSize.height - environment.safeInsets.top - environment.safeInsets.bottom + controlsBottomInset))
+            let buttonsContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - environment.safeInsets.bottom + controlsBottomInset), size: CGSize(width: availableSize.width, height: environment.safeInsets.bottom - controlsBottomInset))
                                     
             let cancelButtonSize = self.cancelButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
                     content: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: "Cancel", font: Font.regular(17.0), textColor: .white)))
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Common_Cancel, font: Font.regular(17.0), textColor: .white)))
                     ),
                     action: { [weak controller] in
                         controller?.requestDismiss(animated: true)
@@ -225,7 +214,7 @@ private final class MediaCoverScreenComponent: Component {
                 containerSize: CGSize(width: 120.0, height: 44.0)
             )
             let cancelButtonFrame = CGRect(
-                origin: CGPoint(x: 16.0, y: 80.0),
+                origin: CGPoint(x: 16.0, y: previewContainerFrame.minY + 28.0),
                 size: cancelButtonSize
             )
             if let cancelButtonView = self.cancelButton.view {
@@ -248,7 +237,7 @@ private final class MediaCoverScreenComponent: Component {
                         content: AnyComponentWithIdentity(
                             id: AnyHashable(0),
                             component: AnyComponent(ButtonTextContentComponent(
-                                text: "Save Cover",
+                                text: environment.strings.Story_SaveCover,
                                 badge: 0,
                                 textColor: environment.theme.list.itemCheckColors.foregroundColor,
                                 badgeBackground: .clear,
@@ -258,11 +247,16 @@ private final class MediaCoverScreenComponent: Component {
                         isEnabled: true,
                         displaysProgress: false,
                         action: { [weak controller, weak self] in
-                            if let playerState = self?.state?.playerState, let mediaEditor = self?.component?.mediaEditor, let image = mediaEditor.resultImage {
-                                mediaEditor.setCoverImageTimestamp(playerState.position)
-                                controller?.completed(playerState.position, image)
+                            guard let controller else {
+                                return
                             }
-                            controller?.requestDismiss(animated: true)
+                            if let playerState = self?.state?.playerState, let mediaEditor = self?.state?.mediaEditor, let image = mediaEditor.resultImage {
+                                mediaEditor.setCoverImageTimestamp(playerState.position)
+                                controller.completed(playerState.position, image)
+                            }
+                            if !controller.exclusive {
+                                controller.requestDismiss(animated: true)
+                            }
                         }
                     )
                 ),
@@ -270,7 +264,7 @@ private final class MediaCoverScreenComponent: Component {
                 containerSize: CGSize(width: availableSize.width - buttonSideInset * 2.0, height: 50.0)
             )
             let doneButtonFrame = CGRect(
-                origin: CGPoint(x: floor((availableSize.width - doneButtonSize.width) / 2.0), y: availableSize.height - 99.0),
+                origin: CGPoint(x: floor((availableSize.width - doneButtonSize.width) / 2.0), y: min(buttonsContainerFrame.minY, availableSize.height - doneButtonSize.height - buttonSideInset)),
                 size: doneButtonSize
             )
             if let doneButtonView = self.doneButton.view {
@@ -282,12 +276,12 @@ private final class MediaCoverScreenComponent: Component {
             
             let labelSize = self.label.update(
                 transition: transition,
-                component: AnyComponent(Text(text: "Story Cover", font: Font.semibold(17.0), color: UIColor(rgb: 0xffffff))),
+                component: AnyComponent(Text(text: environment.strings.Story_Cover, font: Font.semibold(17.0), color: UIColor(rgb: 0xffffff))),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - 88.0, height: 44.0)
             )
             let labelFrame = CGRect(
-                origin: CGPoint(x: floorToScreenPixels((availableSize.width - labelSize.width) / 2.0), y: 80.0),
+                origin: CGPoint(x: floorToScreenPixels((availableSize.width - labelSize.width) / 2.0), y: previewContainerFrame.minY + 28.0),
                 size: labelSize
             )
             if let labelView = self.label.view {
@@ -309,16 +303,17 @@ private final class MediaCoverScreenComponent: Component {
                 labelView.bounds = CGRect(origin: .zero, size: labelFrame.size)
                 transition.setPosition(view: labelView, position: labelFrame.center)
             }
+            
+            let buttonCoverFrame = CGRect(origin: CGPoint(x: 0.0, y: doneButtonFrame.minY - buttonSideInset - 11.0), size: CGSize(width: previewContainerFrame.width, height: 100.0))
                         
-            transition.setFrame(view: self.buttonsContainerView, frame: buttonsContainerFrame)
-            transition.setFrame(view: self.buttonsBackgroundView, frame: CGRect(origin: .zero, size: buttonsContainerFrame.size))
+            transition.setFrame(view: self.buttonsContainerView, frame: buttonCoverFrame)
+            transition.setFrame(view: self.buttonsBackgroundView, frame: CGRect(origin: .zero, size: buttonCoverFrame.size))
             
             transition.setFrame(view: self.previewContainerView, frame: previewContainerFrame)
             
             if let playerState = state.playerState {
                 let visibleTracks = playerState.tracks.filter { $0.id == 0 }.map { MediaScrubberComponent.Track($0) }
                 
-                let mediaEditor = component.mediaEditor
                 let scrubberInset: CGFloat = buttonSideInset
                 let scrubberSize = self.scrubber.update(
                     transition: transition,
@@ -333,13 +328,13 @@ private final class MediaCoverScreenComponent: Component {
                         isPlaying: playerState.isPlaying,
                         tracks: visibleTracks,
                         portalView: controller.portalView,
-                        positionUpdated: { [weak mediaEditor] position, apply in
-                            if let mediaEditor {
+                        positionUpdated: { [weak state] position, apply in
+                            if let mediaEditor = state?.mediaEditor {
                                 mediaEditor.seek(position, andPlay: false)
                             }
                         },
-                        coverPositionUpdated: { [weak mediaEditor] position, tap, commit in
-                            if let mediaEditor {
+                        coverPositionUpdated: { [weak state] position, tap, commit in
+                            if let mediaEditor = state?.mediaEditor {
                                 if tap {
                                     mediaEditor.setOnNextDisplay {
                                         commit()
@@ -362,7 +357,7 @@ private final class MediaCoverScreenComponent: Component {
                     containerSize: CGSize(width: previewSize.width - scrubberInset * 2.0, height: availableSize.height)
                 )
                 
-                let scrubberFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - scrubberSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height + controlsBottomInset + 3.0 - 40.0), size: scrubberSize)
+                let scrubberFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - scrubberSize.width) / 2.0), y: min(previewContainerFrame.maxY, buttonCoverFrame.minY) - scrubberSize.height - 4.0), size: scrubberSize)
                 if let scrubberView = self.scrubber.view {
                     var animateIn = false
                     if scrubberView.superview == nil {
@@ -436,9 +431,6 @@ final class MediaCoverScreen: ViewController {
         }
         
         func animateOutToEditor(completion: @escaping () -> Void) {
-            if let mediaEditor = self.controller?.mediaEditor {
-                mediaEditor.play()
-            }
             if let view = self.componentHost.view as? MediaCoverScreenComponent.View {
                 view.animateOutToEditor(completion: completion)
             }
@@ -505,7 +497,8 @@ final class MediaCoverScreen: ViewController {
                 component: AnyComponent(
                     MediaCoverScreenComponent(
                         context: self.context,
-                        mediaEditor: controller.mediaEditor
+                        mediaEditor: controller.mediaEditor,
+                        exclusive: controller.exclusive
                     )
                 ),
                 environment: {
@@ -534,26 +527,36 @@ final class MediaCoverScreen: ViewController {
     }
     
     fileprivate let context: AccountContext
-    fileprivate let mediaEditor: MediaEditor
+    fileprivate let mediaEditor: Signal<MediaEditor?, NoError>
     fileprivate let previewView: MediaEditorPreviewView
     fileprivate let portalView: PortalView
+    fileprivate let exclusive: Bool
+    
+    func withMediaEditor(_ f: @escaping (MediaEditor) -> Void) {
+        let _ = (self.mediaEditor
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { mediaEditor in
+            if let mediaEditor {
+                f(mediaEditor)
+            }
+        })
+    }
     
     var completed: (Double, UIImage) -> Void = { _, _ in }
     var dismissed: () -> Void = {}
     
-    private var initialValues: MediaEditorValues
-    
     init(
         context: AccountContext,
-        mediaEditor: MediaEditor,
+        mediaEditor: Signal<MediaEditor?, NoError>,
         previewView: MediaEditorPreviewView,
-        portalView: PortalView
+        portalView: PortalView,
+        exclusive: Bool
     ) {
         self.context = context
         self.mediaEditor = mediaEditor
         self.previewView = previewView
         self.portalView = portalView
-        self.initialValues = mediaEditor.values.makeCopy()
+        self.exclusive = exclusive
         
         super.init(navigationBarPresentationData: nil)
         self.navigationPresentation = .flatModal
@@ -562,10 +565,12 @@ final class MediaCoverScreen: ViewController {
         
         self.statusBar.statusBarStyle = .White
         
-        if let coverImageTimestamp = mediaEditor.values.coverImageTimestamp {
-            mediaEditor.seek(coverImageTimestamp, andPlay: false)
-        } else {
-            mediaEditor.seek(0.0, andPlay: false)
+        self.withMediaEditor { mediaEditor in
+            if let coverImageTimestamp = mediaEditor.values.coverImageTimestamp {
+                mediaEditor.seek(coverImageTimestamp, andPlay: false)
+            } else {
+                mediaEditor.seek(mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, andPlay: false)
+            }
         }
     }
     
@@ -583,7 +588,9 @@ final class MediaCoverScreen: ViewController {
         self.dismissed()
         
         self.node.animateOutToEditor(completion: {
-            self.dismiss()
+            if !self.exclusive {
+                self.dismiss()
+            }
         })
     }
     

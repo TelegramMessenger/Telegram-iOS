@@ -124,6 +124,7 @@ final class NavigationToolbarContentComponent: CombinedComponent {
     let textColor: UIColor
     let canGoBack: Bool
     let canGoForward: Bool
+    let canOpenIn: Bool
     let performAction: ActionSlot<BrowserScreen.Action>
     let performHoldAction: (UIView, ContextGesture?, BrowserScreen.Action) -> Void
     
@@ -132,6 +133,7 @@ final class NavigationToolbarContentComponent: CombinedComponent {
         textColor: UIColor,
         canGoBack: Bool,
         canGoForward: Bool,
+        canOpenIn: Bool,
         performAction: ActionSlot<BrowserScreen.Action>,
         performHoldAction: @escaping (UIView, ContextGesture?, BrowserScreen.Action) -> Void
     ) {
@@ -139,6 +141,7 @@ final class NavigationToolbarContentComponent: CombinedComponent {
         self.textColor = textColor
         self.canGoBack = canGoBack
         self.canGoForward = canGoForward
+        self.canOpenIn = canOpenIn
         self.performAction = performAction
         self.performHoldAction = performHoldAction
     }
@@ -156,6 +159,9 @@ final class NavigationToolbarContentComponent: CombinedComponent {
         if lhs.canGoForward != rhs.canGoForward {
             return false
         }
+        if lhs.canOpenIn != rhs.canOpenIn {
+            return false
+        }
         return true
     }
     
@@ -170,10 +176,16 @@ final class NavigationToolbarContentComponent: CombinedComponent {
             let availableSize = context.availableSize
             let performAction = context.component.performAction
             let performHoldAction = context.component.performHoldAction
-            
+                        
             let sideInset: CGFloat = 5.0
             let buttonSize = CGSize(width: 50.0, height: availableSize.height)
-            let spacing = (availableSize.width - buttonSize.width * 5.0 - sideInset * 2.0) / 4.0
+            
+            var buttonCount = 4
+            if context.component.canOpenIn {
+                buttonCount += 1
+            }
+            
+            let spacing = (availableSize.width - buttonSize.width * CGFloat(buttonCount) - sideInset * 2.0) / CGFloat(buttonCount - 1)
             
             let canGoBack = context.component.canGoBack
             let back = back.update(
@@ -269,24 +281,26 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                 .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width + spacing + share.size.width + spacing + bookmark.size.width / 2.0, y: availableSize.height / 2.0))
             )
             
-            let openIn = openIn.update(
-                component: Button(
-                    content: AnyComponent(
-                        BundleIconComponent(
-                            name: "Instant View/Browser",
-                            tintColor: context.component.accentColor
-                        )
-                    ),
-                    action: {
-                        performAction.invoke(.openIn)
-                    }
-                ).minSize(buttonSize),
-                availableSize: buttonSize,
-                transition: .easeInOut(duration: 0.2)
-            )
-            context.add(openIn
-                .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width + spacing + share.size.width + spacing + bookmark.size.width + spacing + openIn.size.width / 2.0, y: availableSize.height / 2.0))
-            )
+            if context.component.canOpenIn {
+                let openIn = openIn.update(
+                    component: Button(
+                        content: AnyComponent(
+                            BundleIconComponent(
+                                name: "Instant View/Browser",
+                                tintColor: context.component.accentColor
+                            )
+                        ),
+                        action: {
+                            performAction.invoke(.openIn)
+                        }
+                    ).minSize(buttonSize),
+                    availableSize: buttonSize,
+                    transition: .easeInOut(duration: 0.2)
+                )
+                context.add(openIn
+                    .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width + spacing + share.size.width + spacing + bookmark.size.width + spacing + openIn.size.width / 2.0, y: availableSize.height / 2.0))
+                )
+            }
             
             return availableSize
         }

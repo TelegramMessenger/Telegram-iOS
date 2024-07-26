@@ -3,25 +3,39 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import ComponentFlow
+import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
 import BundleIconComponent
+import MultilineTextComponent
+import UrlEscaping
 
 final class AddressBarContentComponent: Component {
+    public typealias EnvironmentType = BrowserNavigationBarEnvironment
+    
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let metrics: LayoutMetrics
     let url: String
+    let isSecure: Bool
+    let isExpanded: Bool
     let performAction: ActionSlot<BrowserScreen.Action>
     
     init(
         theme: PresentationTheme,
         strings: PresentationStrings,
+        metrics: LayoutMetrics,
         url: String,
+        isSecure: Bool,
+        isExpanded: Bool,
         performAction: ActionSlot<BrowserScreen.Action>
     ) {
         self.theme = theme
         self.strings = strings
+        self.metrics = metrics
         self.url = url
+        self.isSecure = isSecure
+        self.isExpanded = isExpanded
         self.performAction = performAction
     }
     
@@ -32,7 +46,16 @@ final class AddressBarContentComponent: Component {
         if lhs.strings !== rhs.strings {
             return false
         }
+        if lhs.metrics != rhs.metrics {
+            return false
+        }
         if lhs.url != rhs.url {
+            return false
+        }
+        if lhs.isSecure != rhs.isSecure {
+            return false
+        }
+        if lhs.isExpanded != rhs.isExpanded {
             return false
         }
         return true
@@ -43,12 +66,25 @@ final class AddressBarContentComponent: Component {
             override func textRect(forBounds bounds: CGRect) -> CGRect {
                 return bounds.integral
             }
+            
+            override var canBecomeFirstResponder: Bool {
+                var canBecomeFirstResponder = super.canBecomeFirstResponder
+                if !canBecomeFirstResponder && self.alpha.isZero {
+                    canBecomeFirstResponder = true
+                }
+                return canBecomeFirstResponder
+            }
         }
         
         private struct Params: Equatable {
             var theme: PresentationTheme
             var strings: PresentationStrings
             var size: CGSize
+            var isActive: Bool
+            var title: String
+            var isSecure: Bool
+            var collapseFraction: CGFloat
+            var isTablet: Bool
             
             static func ==(lhs: Params, rhs: Params) -> Bool {
                 if lhs.theme !== rhs.theme {
@@ -60,14 +96,28 @@ final class AddressBarContentComponent: Component {
                 if lhs.size != rhs.size {
                     return false
                 }
+                if lhs.isActive != rhs.isActive {
+                    return false
+                }
+                if lhs.title != rhs.title {
+                    return false
+                }
+                if lhs.isSecure != rhs.isSecure {
+                    return false
+                }
+                if lhs.collapseFraction != rhs.collapseFraction {
+                    return false
+                }
+                if lhs.isTablet != rhs.isTablet {
+                    return false
+                }
                 return true
             }
         }
         
         private let activated: (Bool) -> Void = { _ in }
         private let deactivated: (Bool) -> Void = { _ in }
-        private let updateQuery: (String?) -> Void = { _ in }
-        
+    
         private let backgroundLayer: SimpleLayer
         
         private let iconView: UIImageView
@@ -79,10 +129,11 @@ final class AddressBarContentComponent: Component {
         private let cancelButton: HighlightTrackingButton
         
         private var placeholderContent = ComponentView<Empty>()
+        private var titleContent = ComponentView<Empty>()
         
         private var textFrame: CGRect?
         private var textField: TextField?
-        
+                
         private var tapRecognizer: UITapGestureRecognizer?
         
         private var params: Params?
@@ -99,12 +150,12 @@ final class AddressBarContentComponent: Component {
             
             self.clearIconView = UIImageView()
             self.clearIconButton = HighlightableButton()
-            self.clearIconView.isHidden = true
-            self.clearIconButton.isHidden = true
+            self.clearIconView.isHidden = false
+            self.clearIconButton.isHidden = false
             
             self.cancelButtonTitle = ComponentView()
             self.cancelButton = HighlightTrackingButton()
-            
+                        
             super.init(frame: CGRect())
             
             self.layer.addSublayer(self.backgroundLayer)
@@ -156,76 +207,50 @@ final class AddressBarContentComponent: Component {
         }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
-            if case .ended = recognizer.state {
-                self.activateTextInput()
+            if case .ended = recognizer.state, let component = self.component, !component.isExpanded {
+                component.performAction.invoke(.openAddressBar)
             }
         }
 
         private func activateTextInput() {
-            if self.textField == nil, let textFrame = self.textFrame {
-                let backgroundFrame = self.backgroundLayer.frame
-                let textFieldFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textFrame.minX, height: backgroundFrame.height))
-                
-                let textField = TextField(frame: textFieldFrame)
-                textField.autocorrectionType = .no
-                textField.returnKeyType = .search
-                self.textField = textField
-                self.insertSubview(textField, belowSubview: self.clearIconView)
-                textField.delegate = self
-                textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)
-            }
-            
-            guard !(self.textField?.isFirstResponder ?? false) else {
-                return
-            }
-                    
             self.activated(true)
-            
-            self.textField?.becomeFirstResponder()
+            if let textField = self.textField {
+                textField.becomeFirstResponder()
+                Queue.mainQueue().after(0.3, {
+                    textField.selectAll(nil)
+                })
+            }
+        }
+        
+        private func deactivateTextInput() {
+            self.textField?.endEditing(true)
         }
         
         @objc private func cancelPressed() {
-            self.updateQuery(nil)
+            self.deactivated(self.textField?.isFirstResponder ?? false)
             
-            self.clearIconView.isHidden = true
-            self.clearIconButton.isHidden = true
-                
-            let textField = self.textField
-            self.textField = nil
-            
-            self.deactivated(textField?.isFirstResponder ?? false)
-            
-            self.component?.performAction.invoke(.updateSearchActive(false))
-            
-            if let textField {
-                textField.resignFirstResponder()
-                textField.removeFromSuperview()
-            }
+            self.component?.performAction.invoke(.closeAddressBar)
         }
         
         @objc private func clearPressed() {
-            self.updateQuery(nil)
-            self.textField?.text = ""
-            
-            self.clearIconView.isHidden = true
-            self.clearIconButton.isHidden = true
-        }
-        
-        func deactivate() {
-            if let text = self.textField?.text, !text.isEmpty {
-                self.textField?.endEditing(true)
-            } else {
-                self.cancelPressed()
+            guard let textField = self.textField else {
+                return
             }
+            textField.text = ""
+            self.textFieldChanged(textField)
         }
-        
+                
         public func textFieldDidBeginEditing(_ textField: UITextField) {
         }
         
         public func textFieldDidEndEditing(_ textField: UITextField) {
         }
-        
+                
         public func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            if let component = self.component {
+                let finalUrl = explicitUrl(textField.text ?? "")
+                component.performAction.invoke(.navigateTo(finalUrl, true))
+            }
             textField.endEditing(true)
             return false
         }
@@ -237,38 +262,59 @@ final class AddressBarContentComponent: Component {
             self.clearIconButton.isHidden = text.isEmpty
             self.placeholderContent.view?.isHidden = !text.isEmpty
             
-            self.updateQuery(text)
-            
-            self.component?.performAction.invoke(.updateSearchQuery(text))
-            
             if let params = self.params {
-                self.update(theme: params.theme, strings: params.strings, size: params.size, transition: .immediate)
+                self.update(theme: params.theme, strings: params.strings, size: params.size, isActive: params.isActive, title: params.title, isSecure: params.isSecure, collapseFraction: params.collapseFraction, isTablet: params.isTablet, transition: .immediate)
             }
         }
         
-        func update(component: AddressBarContentComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+        func update(component: AddressBarContentComponent, availableSize: CGSize, environment: Environment<BrowserNavigationBarEnvironment>, transition: ComponentTransition) -> CGSize {
+            let collapseFraction = environment[BrowserNavigationBarEnvironment.self].fraction
+            
+            let wasExpanded = self.component?.isExpanded ?? false
             self.component = component
             
-            self.update(theme: component.theme, strings: component.strings, size: availableSize, transition: transition)
+            if !wasExpanded && component.isExpanded {
+                self.activateTextInput()
+            }
+            if wasExpanded && !component.isExpanded {
+                self.deactivateTextInput()
+            }
+            let isActive = self.textField?.isFirstResponder ?? false
+            
+            var title: String = ""
+            if let parsedUrl = URL(string: component.url) {
+                title = parsedUrl.host ?? component.url
+                if title.hasPrefix("www.") {
+                    title.removeSubrange(title.startIndex ..< title.index(title.startIndex, offsetBy: 4))
+                }
+                title = title.idnaDecoded ?? title
+            }
+            
+            self.update(theme: component.theme, strings: component.strings, size: availableSize, isActive: isActive, title: title.lowercased(), isSecure: component.isSecure, collapseFraction: collapseFraction, isTablet: component.metrics.isTablet, transition: transition)
             
             return availableSize
         }
         
-        public func update(theme: PresentationTheme, strings: PresentationStrings, size: CGSize, transition: ComponentTransition) {
+        public func update(theme: PresentationTheme, strings: PresentationStrings, size: CGSize, isActive: Bool, title: String, isSecure: Bool, collapseFraction: CGFloat, isTablet: Bool, transition: ComponentTransition) {
             let params = Params(
                 theme: theme,
                 strings: strings,
-                size: size
+                size: size,
+                isActive: isActive,
+                title: title,
+                isSecure: isSecure,
+                collapseFraction: collapseFraction,
+                isTablet: isTablet
             )
             
             if self.params == params {
                 return
             }
             
-            let isActiveWithText = true
+            let isActiveWithText = self.component?.isExpanded ?? false
             
             if self.params?.theme !== theme {
-                self.iconView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: .white)?.withRenderingMode(.alwaysTemplate)
+                self.iconView.image = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Lock"), color: .white)?.withRenderingMode(.alwaysTemplate)
                 self.iconView.tintColor = theme.rootController.navigationSearchBar.inputIconColor
                 self.clearIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: .white)?.withRenderingMode(.alwaysTemplate)
                 self.clearIconView.tintColor = theme.rootController.navigationSearchBar.inputClearButtonColor
@@ -280,10 +326,9 @@ final class AddressBarContentComponent: Component {
             let inputHeight: CGFloat = 36.0
             let topInset: CGFloat = (size.height - inputHeight) / 2.0
             
-            let sideTextInset: CGFloat = sideInset + 4.0 + 17.0
-
             self.backgroundLayer.backgroundColor = theme.rootController.navigationSearchBar.inputFillColor.cgColor
             self.backgroundLayer.cornerRadius = 10.5
+            transition.setAlpha(layer: self.backgroundLayer, alpha: max(0.0, min(1.0, 1.0 - collapseFraction * 1.5)))
             
             let cancelTextSize = self.cancelButtonTitle.update(
                 transition: .immediate,
@@ -299,42 +344,82 @@ final class AddressBarContentComponent: Component {
             let cancelButtonSpacing: CGFloat = 8.0
             
             var backgroundFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: CGSize(width: size.width - sideInset * 2.0, height: inputHeight))
-            if isActiveWithText {
+            if isActiveWithText && !isTablet {
                 backgroundFrame.size.width -= cancelTextSize.width + cancelButtonSpacing
             }
             transition.setFrame(layer: self.backgroundLayer, frame: backgroundFrame)
             
             transition.setFrame(view: self.cancelButton, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX, y: 0.0), size: CGSize(width: cancelButtonSpacing + cancelTextSize.width, height: size.height)))
+            self.cancelButton.isUserInteractionEnabled = isActiveWithText && !isTablet
             
-            let textX: CGFloat = backgroundFrame.minX + sideTextInset
+            let textX: CGFloat = backgroundFrame.minX + sideInset
             let textFrame = CGRect(origin: CGPoint(x: textX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textX, height: backgroundFrame.height))
-            self.textFrame = textFrame
-            
-            if let image = self.iconView.image {
-                let iconFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + 5.0, y: backgroundFrame.minY + floor((backgroundFrame.height - image.size.height) / 2.0)), size: image.size)
-                transition.setFrame(view: self.iconView, frame: iconFrame)
-            }
-                    
+                                
             let placeholderSize = self.placeholderContent.update(
                 transition: transition,
                 component: AnyComponent(
-                    Text(text: strings.Common_Search, font: Font.regular(17.0), color: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
+                    Text(text: strings.WebBrowser_AddressPlaceholder, font: Font.regular(17.0), color: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
                 ),
                 environment: {},
                 containerSize: size
             )
             if let placeholderContentView = self.placeholderContent.view {
                 if placeholderContentView.superview == nil {
+                    placeholderContentView.alpha = 0.0
+                    placeholderContentView.isHidden = true
                     self.addSubview(placeholderContentView)
                 }
                 let placeholderContentFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: backgroundFrame.midY - placeholderSize.height / 2.0), size: placeholderSize)
                 transition.setFrame(view: placeholderContentView, frame: placeholderContentFrame)
+                transition.setAlpha(view: placeholderContentView, alpha: isActiveWithText ? 1.0 : 0.0)
+            }
+            
+            let titleSize = self.titleContent.update(
+                transition: transition,
+                component: AnyComponent(
+                    MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: title, font: Font.regular(17.0), textColor: theme.rootController.navigationSearchBar.inputTextColor)),
+                        horizontalAlignment: .center,
+                        truncationType: .end,
+                        maximumNumberOfLines: 1
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: size.width - 36.0, height: size.height)
+            )
+            var titleContentFrame = CGRect(origin: CGPoint(x: isActiveWithText ? textFrame.minX : backgroundFrame.midX - titleSize.width / 2.0, y: backgroundFrame.midY - titleSize.height / 2.0), size: titleSize)
+            if isSecure && !isActiveWithText {
+                titleContentFrame.origin.x += 7.0
+            }
+            var titleSizeChanged = false
+            if let titleContentView = self.titleContent.view {
+                if titleContentView.superview == nil {
+                    self.addSubview(titleContentView)
+                }
+                if titleContentView.frame.width != titleContentFrame.size.width {
+                    titleSizeChanged = true
+                }
+                transition.setPosition(view: titleContentView, position: titleContentFrame.center)
+                titleContentView.bounds = CGRect(origin: .zero, size: titleContentFrame.size)
+                transition.setAlpha(view: titleContentView, alpha: isActiveWithText ? 0.0 : 1.0)
+            }
+            
+            if let image = self.iconView.image {
+                let iconFrame = CGRect(origin: CGPoint(x: titleContentFrame.minX - image.size.width - 3.0, y: backgroundFrame.minY + floor((backgroundFrame.height - image.size.height) / 2.0)), size: image.size)
+                var iconTransition = transition
+                if titleSizeChanged {
+                    iconTransition = .immediate
+                }
+                iconTransition.setFrame(view: self.iconView, frame: iconFrame)
+                transition.setAlpha(view: self.iconView, alpha: isActiveWithText || !isSecure ? 0.0 : 1.0)
             }
             
             if let image = self.clearIconView.image {
                 let iconFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - image.size.width - 4.0, y: backgroundFrame.minY + floor((backgroundFrame.height - image.size.height) / 2.0)), size: image.size)
                 transition.setFrame(view: self.clearIconView, frame: iconFrame)
                 transition.setFrame(view: self.clearIconButton, frame: iconFrame.insetBy(dx: -8.0, dy: -10.0))
+                transition.setAlpha(view: self.clearIconView, alpha: isActiveWithText ? 1.0 : 0.0)
+                self.clearIconButton.isUserInteractionEnabled = isActiveWithText
             }
             
             if let cancelButtonTitleComponentView = self.cancelButtonTitle.view {
@@ -343,12 +428,51 @@ final class AddressBarContentComponent: Component {
                     cancelButtonTitleComponentView.isUserInteractionEnabled = false
                 }
                 transition.setFrame(view: cancelButtonTitleComponentView, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX + cancelButtonSpacing, y: floor((size.height - cancelTextSize.height) / 2.0)), size: cancelTextSize))
+                transition.setAlpha(view: cancelButtonTitleComponentView, alpha: isActiveWithText && !isTablet ? 1.0 : 0.0)
+            }
+                        
+            let textFieldFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textFrame.minX, height: backgroundFrame.height))
+            
+            let textField: TextField
+            if let current = self.textField {
+                textField = current
+            } else {
+                textField = TextField(frame: textFieldFrame)
+                textField.autocapitalizationType = .none
+                textField.autocorrectionType = .no
+                textField.keyboardType = .URL
+                textField.returnKeyType = .go
+                self.insertSubview(textField, belowSubview: self.clearIconView)
+                self.textField = textField
+                
+                textField.delegate = self
+                textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)
+            }
+            
+            var address = self.component?.url ?? ""
+            if let components = URLComponents(string: address) {
+                if #available(iOS 16.0, *), let encodedHost = components.encodedHost {
+                    if let decodedHost = components.host, encodedHost != decodedHost {
+                        address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
+                    }
+                } else if let encodedHost = components.host {
+                    if let decodedHost = components.host?.idnaDecoded, encodedHost != decodedHost {
+                        address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
+                    }
+                }
             }
 
-            if let textField = self.textField {
-                textField.textColor = theme.rootController.navigationSearchBar.inputTextColor
-                transition.setFrame(view: textField, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + sideTextInset, y: backgroundFrame.minY - UIScreenPixel), size: CGSize(width: backgroundFrame.width - sideTextInset - 32.0, height: backgroundFrame.height)))
+            if textField.text != address {
+                textField.text = address
+                self.clearIconView.isHidden = address.isEmpty
+                self.clearIconButton.isHidden = address.isEmpty
+                self.placeholderContent.view?.isHidden = !address.isEmpty
             }
+            
+            textField.textColor = theme.rootController.navigationSearchBar.inputTextColor
+            transition.setFrame(view: textField, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + sideInset, y: backgroundFrame.minY - UIScreenPixel), size: CGSize(width: backgroundFrame.width - sideInset - 32.0, height: backgroundFrame.height)))
+            transition.setAlpha(view: textField, alpha: isActiveWithText ? 1.0 : 0.0)
+            textField.isUserInteractionEnabled = isActiveWithText
         }
     }
 
@@ -356,7 +480,7 @@ final class AddressBarContentComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<BrowserNavigationBarEnvironment>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }

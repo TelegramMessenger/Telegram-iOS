@@ -149,10 +149,13 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                 })
                             })))
                             items.append(.separator)
+                        case .popularApps:
+                            break
                         }
                     }
 
                     if case .search(.recentApps) = source {
+                    } else if case .search(.popularApps) = source {
                     } else {
                         let isSavedMessages = peerId == context.account.peerId
                         

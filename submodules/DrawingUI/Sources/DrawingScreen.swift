@@ -3212,10 +3212,12 @@ public final class DrawingToolsInteraction {
         self.isActive = false
     }
     
-    public func insertEntity(_ entity: DrawingEntity, scale: CGFloat? = nil, position: CGPoint? = nil) {
+    public func insertEntity(_ entity: DrawingEntity, scale: CGFloat? = nil, position: CGPoint? = nil, select: Bool = true) {
         self.entitiesView.prepareNewEntity(entity, scale: scale, position: position)
         self.entitiesView.add(entity)
-        self.entitiesView.selectEntity(entity, animate: !(entity is DrawingTextEntity))
+        if select {
+            self.entitiesView.selectEntity(entity, animate: !(entity is DrawingTextEntity))
+        }
         
         if let entityView = self.entitiesView.getView(for: entity.uuid) {
             if let textEntityView = entityView as? DrawingTextEntityView {

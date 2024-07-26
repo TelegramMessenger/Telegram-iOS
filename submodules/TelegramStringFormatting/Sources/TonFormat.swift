@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import TelegramPresentationData
 
 let walletAddressLength: Int = 48
 
@@ -9,9 +10,20 @@ public func formatTonAddress(_ address: String) -> String {
     return address
 }
 
-public func formatTonUsdValue(_ value: Int64, divide: Bool = true, rate: Double) -> String {
+public func formatTonUsdValue(_ value: Int64, divide: Bool = true, rate: Double, dateTimeFormat: PresentationDateTimeFormat) -> String {
+    let decimalSeparator = dateTimeFormat.decimalSeparator
     let normalizedValue: Double = divide ? Double(value) / 1000000000 : Double(value)
-    let formattedValue = String(format: "%0.2f", normalizedValue * rate)
+    var formattedValue = String(format: "%0.2f", normalizedValue * rate)
+    formattedValue = formattedValue.replacingOccurrences(of: ".", with: decimalSeparator)
+    if let dotIndex = formattedValue.firstIndex(of: decimalSeparator.first!) {
+        let integerPartString = formattedValue[..<dotIndex]
+        if let integerPart = Int32(integerPartString) {
+            let modifiedIntegerPart = presentationStringsFormattedNumber(integerPart, dateTimeFormat.groupingSeparator)
+            
+            let resultString = "$\(modifiedIntegerPart)\(formattedValue[dotIndex...])"
+            return resultString
+        }
+    }
     return "$\(formattedValue)"
 }
 

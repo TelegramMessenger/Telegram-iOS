@@ -592,7 +592,7 @@ func _internal_getAttachMenuBot(accountPeerId: PeerId, postbox: Postbox, network
     |> switchToLatest
 }
 
-public enum BotAppReference {
+public enum BotAppReference : Equatable {
     case id(id: Int64, accessHash: Int64)
     case shortName(peerId: PeerId, shortName: String)
 }

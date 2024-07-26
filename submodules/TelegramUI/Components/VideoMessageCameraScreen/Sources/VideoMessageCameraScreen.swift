@@ -645,28 +645,30 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                     )
                 }
                 
-                let flashButton = flashButton.update(
-                    component: CameraButton(
-                        content: flashContentComponent,
-                        minSize: CGSize(width: 44.0, height: 44.0),
-                        isExclusive: false,
-                        action: { [weak state] in
-                            if let state {
-                                state.toggleFlashMode()
-                                Queue.mainQueue().justDispatch {
-                                    flashAction.invoke(Void())
+                if !environment.metrics.isTablet {
+                    let flashButton = flashButton.update(
+                        component: CameraButton(
+                            content: flashContentComponent,
+                            minSize: CGSize(width: 44.0, height: 44.0),
+                            isExclusive: false,
+                            action: { [weak state] in
+                                if let state {
+                                    state.toggleFlashMode()
+                                    Queue.mainQueue().justDispatch {
+                                        flashAction.invoke(Void())
+                                    }
                                 }
                             }
-                        }
-                    ),
-                    availableSize: availableSize,
-                    transition: context.transition
-                )
-                context.add(flashButton
-                    .position(CGPoint(x: flipButton.size.width + 8.0 + flashButton.size.width / 2.0 + 11.0, y: availableSize.height - flashButton.size.height / 2.0 - 8.0))
-                    .appear(.default(scale: true, alpha: true))
-                    .disappear(.default(scale: true, alpha: true))
-                )
+                        ),
+                        availableSize: availableSize,
+                        transition: context.transition
+                    )
+                    context.add(flashButton
+                        .position(CGPoint(x: flipButton.size.width + 8.0 + flashButton.size.width / 2.0 + 11.0, y: availableSize.height - flashButton.size.height / 2.0 - 8.0))
+                        .appear(.default(scale: true, alpha: true))
+                        .disappear(.default(scale: true, alpha: true))
+                    )
+                }
             }
             
             if showViewOnce {

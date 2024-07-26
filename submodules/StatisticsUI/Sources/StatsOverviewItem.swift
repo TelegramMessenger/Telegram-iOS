@@ -774,7 +774,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.presentationData,
                         formatTonAmountText(stats.balances.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
                         item.presentationData.strings.Monetization_StarsProceeds_Available,
-                        (stats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.availableBalance, rate: stats.usdRate))", .generic),
+                        (stats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.availableBalance, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .ton
                     )
                     
@@ -784,7 +784,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.presentationData,
                         formatTonAmountText(stats.balances.currentBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
                         item.presentationData.strings.Monetization_StarsProceeds_Current,
-                        (stats.balances.currentBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.currentBalance, rate: stats.usdRate))", .generic),
+                        (stats.balances.currentBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.currentBalance, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .ton
                     )
                     
@@ -794,7 +794,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.presentationData,
                         formatTonAmountText(stats.balances.overallRevenue, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
                         item.presentationData.strings.Monetization_StarsProceeds_Total,
-                        (stats.balances.overallRevenue == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.overallRevenue, rate: stats.usdRate))", .generic),
+                        (stats.balances.overallRevenue == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.overallRevenue, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .ton
                     )
                     
@@ -804,7 +804,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.presentationData,
                         presentationStringsFormattedNumber(Int32(additionalStats.balances.availableBalance), item.presentationData.dateTimeFormat.groupingSeparator),
                         " ",
-                        (additionalStats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(additionalStats.balances.availableBalance, divide: false, rate: additionalStats.usdRate))", .generic),
+                        (additionalStats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(additionalStats.balances.availableBalance, divide: false, rate: additionalStats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .stars
                     )
                     
@@ -814,7 +814,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.presentationData,
                         presentationStringsFormattedNumber(Int32(additionalStats.balances.currentBalance), item.presentationData.dateTimeFormat.groupingSeparator),
                         " ",
-                        (additionalStats.balances.currentBalance == 0 ? "" : "≈\(formatTonUsdValue(additionalStats.balances.currentBalance, divide: false, rate: additionalStats.usdRate))", .generic),
+                        (additionalStats.balances.currentBalance == 0 ? "" : "≈\(formatTonUsdValue(additionalStats.balances.currentBalance, divide: false, rate: additionalStats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .stars
                     )
                     
@@ -824,7 +824,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.presentationData,
                         presentationStringsFormattedNumber(Int32(additionalStats.balances.overallRevenue), item.presentationData.dateTimeFormat.groupingSeparator),
                         " ",
-                        (additionalStats.balances.overallRevenue == 0 ? "" : "≈\(formatTonUsdValue(additionalStats.balances.overallRevenue, divide: false, rate: additionalStats.usdRate))", .generic),
+                        (additionalStats.balances.overallRevenue == 0 ? "" : "≈\(formatTonUsdValue(additionalStats.balances.overallRevenue, divide: false, rate: additionalStats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .stars
                     )
                     
@@ -838,7 +838,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.presentationData,
                         formatTonAmountText(stats.balances.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
                         item.presentationData.strings.Monetization_Overview_Available,
-                        (stats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.availableBalance, rate: stats.usdRate))", .generic),
+                        (stats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.availableBalance, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .ton
                     )
                     
@@ -848,7 +848,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.presentationData,
                         formatTonAmountText(stats.balances.currentBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
                         item.presentationData.strings.Monetization_Overview_Current,
-                        (stats.balances.currentBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.currentBalance, rate: stats.usdRate))", .generic),
+                        (stats.balances.currentBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.currentBalance, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .ton
                     )
                     
@@ -858,7 +858,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.presentationData,
                         formatTonAmountText(stats.balances.overallRevenue, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
                         item.presentationData.strings.Monetization_Overview_Total,
-                        (stats.balances.overallRevenue == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.overallRevenue, rate: stats.usdRate))", .generic),
+                        (stats.balances.overallRevenue == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.overallRevenue, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .ton
                     )
                     
@@ -873,7 +873,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.presentationData,
                     presentationStringsFormattedNumber(Int32(stats.balances.availableBalance), item.presentationData.dateTimeFormat.groupingSeparator),
                     item.presentationData.strings.Monetization_StarsProceeds_Available,
-                    (stats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.availableBalance, rate: stats.usdRate))", .generic),
+                    (stats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.availableBalance, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                     .stars
                 )
                 
@@ -883,7 +883,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.presentationData,
                     presentationStringsFormattedNumber(Int32(stats.balances.currentBalance), item.presentationData.dateTimeFormat.groupingSeparator),
                     item.presentationData.strings.Monetization_StarsProceeds_Current,
-                    (stats.balances.currentBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.currentBalance, rate: stats.usdRate))", .generic),
+                    (stats.balances.currentBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.currentBalance, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                     .stars
                 )
                 
@@ -893,7 +893,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.presentationData,
                     presentationStringsFormattedNumber(Int32(stats.balances.overallRevenue), item.presentationData.dateTimeFormat.groupingSeparator),
                     item.presentationData.strings.Monetization_StarsProceeds_Total,
-                    (stats.balances.overallRevenue == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.overallRevenue, rate: stats.usdRate))", .generic),
+                    (stats.balances.overallRevenue == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.overallRevenue, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                     .stars
                 )
                 

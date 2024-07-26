@@ -218,8 +218,7 @@ final class StarsTransactionsListPanelComponent: Component {
                         } else {
                             itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                             if item.flags.contains(.isGift) {
-                                //TODO:localize
-                                itemSubtitle = "Received Gift"
+                                itemSubtitle = environment.strings.Stars_Intro_Transaction_Gift_Title
                             } else {
                                 itemSubtitle = nil
                             }
@@ -233,8 +232,8 @@ final class StarsTransactionsListPanelComponent: Component {
                     case .fragment:
                         if component.isAccount {
                             if item.flags.contains(.isGift) {
-                                itemTitle = "Unknown User"
-                                itemSubtitle = "Received Gift"
+                                itemTitle = environment.strings.Stars_Intro_Transaction_Gift_UnknownUser
+                                itemSubtitle = environment.strings.Stars_Intro_Transaction_Gift_Title
                                 itemPeer = .fragment
                             } else {
                                 itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title

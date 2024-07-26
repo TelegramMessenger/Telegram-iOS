@@ -38,7 +38,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var enableVoipTcp: Bool
     public var experimentalCompatibility: Bool
     public var enableDebugDataDisplay: Bool
-    public var acceleratedStickers: Bool
+    public var rippleEffect: Bool
     public var inlineStickers: Bool
     public var localTranscription: Bool
     public var enableReactionOverrides: Bool
@@ -74,7 +74,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
             enableVoipTcp: false,
             experimentalCompatibility: false,
             enableDebugDataDisplay: false,
-            acceleratedStickers: false,
+            rippleEffect: false,
             inlineStickers: false,
             localTranscription: false,
             enableReactionOverrides: false,
@@ -111,7 +111,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         enableVoipTcp: Bool,
         experimentalCompatibility: Bool,
         enableDebugDataDisplay: Bool,
-        acceleratedStickers: Bool,
+        rippleEffect: Bool,
         inlineStickers: Bool,
         localTranscription: Bool,
         enableReactionOverrides: Bool,
@@ -145,7 +145,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.enableVoipTcp = enableVoipTcp
         self.experimentalCompatibility = experimentalCompatibility
         self.enableDebugDataDisplay = enableDebugDataDisplay
-        self.acceleratedStickers = acceleratedStickers
+        self.rippleEffect = rippleEffect
         self.inlineStickers = inlineStickers
         self.localTranscription = localTranscription
         self.enableReactionOverrides = enableReactionOverrides
@@ -183,7 +183,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.enableVoipTcp = (try container.decodeIfPresent(Int32.self, forKey: "enableVoipTcp") ?? 0) != 0
         self.experimentalCompatibility = (try container.decodeIfPresent(Int32.self, forKey: "experimentalCompatibility") ?? 0) != 0
         self.enableDebugDataDisplay = (try container.decodeIfPresent(Int32.self, forKey: "enableDebugDataDisplay") ?? 0) != 0
-        self.acceleratedStickers = (try container.decodeIfPresent(Int32.self, forKey: "acceleratedStickers") ?? 0) != 0
+        self.rippleEffect = (try container.decodeIfPresent(Int32.self, forKey: "rippleEffect") ?? 0) != 0
         self.inlineStickers = (try container.decodeIfPresent(Int32.self, forKey: "inlineStickers") ?? 0) != 0
         self.localTranscription = (try container.decodeIfPresent(Int32.self, forKey: "localTranscription") ?? 0) != 0
         self.enableReactionOverrides = try container.decodeIfPresent(Bool.self, forKey: "enableReactionOverrides") ?? false
@@ -221,7 +221,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode((self.enableVoipTcp ? 1 : 0) as Int32, forKey: "enableVoipTcp")
         try container.encode((self.experimentalCompatibility ? 1 : 0) as Int32, forKey: "experimentalCompatibility")
         try container.encode((self.enableDebugDataDisplay ? 1 : 0) as Int32, forKey: "enableDebugDataDisplay")
-        try container.encode((self.acceleratedStickers ? 1 : 0) as Int32, forKey: "acceleratedStickers")
+        try container.encode((self.rippleEffect ? 1 : 0) as Int32, forKey: "rippleEffect")
         try container.encode((self.inlineStickers ? 1 : 0) as Int32, forKey: "inlineStickers")
         try container.encode((self.localTranscription ? 1 : 0) as Int32, forKey: "localTranscription")
         try container.encode(self.enableReactionOverrides, forKey: "enableReactionOverrides")

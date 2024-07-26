@@ -437,7 +437,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     self.textNode.visibility = true
                 }
             
-                //TODO:localize
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
             
                 displayUndo = false

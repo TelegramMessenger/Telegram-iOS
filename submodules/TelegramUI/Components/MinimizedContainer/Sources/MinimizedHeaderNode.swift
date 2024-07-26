@@ -77,8 +77,12 @@ final class MinimizedHeaderNode: ASDisplayNode {
                         if titles.count == 1, let title = titles.first {
                             self.title = title
                         } else if let title = titles.last {
+                            var trimmedTitle = title
+                            if trimmedTitle.count > 20 {
+                                trimmedTitle = "\(trimmedTitle.prefix(20).trimmingCharacters(in: .whitespacesAndNewlines))\u{2026}"
+                            }
                             let othersString = self.strings.WebApp_MinimizedTitle_Others(Int32(titles.count - 1))
-                            self.title = self.strings.WebApp_MinimizedTitleFormat(title, othersString).string
+                            self.title = self.strings.WebApp_MinimizedTitleFormat(trimmedTitle, othersString).string
                         } else {
                             self.title = nil
                         }

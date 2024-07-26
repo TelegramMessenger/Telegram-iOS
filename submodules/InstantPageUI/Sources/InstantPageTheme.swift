@@ -264,6 +264,10 @@ private let darkTheme = InstantPageTheme(
 
 private func fontSizeMultiplierForVariant(_ variant: InstantPagePresentationFontSize) -> CGFloat {
     switch variant {
+        case .xxsmall:
+            return 0.5
+        case .xsmall:
+            return 0.75
         case .small:
             return 0.85
         case .standard:
@@ -271,7 +275,7 @@ private func fontSizeMultiplierForVariant(_ variant: InstantPagePresentationFont
         case .large:
             return 1.15
         case .xlarge:
-            return 1.3
+            return 1.25
         case .xxlarge:
             return 1.5
     }

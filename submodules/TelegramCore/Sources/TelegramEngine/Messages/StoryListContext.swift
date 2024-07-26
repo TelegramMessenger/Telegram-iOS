@@ -12,6 +12,11 @@ enum InternalStoryUpdate {
     case updateMyReaction(peerId: PeerId, id: Int32, reaction: MessageReaction.Reaction?)
 }
 
+enum InternalBotPreviewUpdate {
+    case added(peerId: PeerId, language: String?, item: CachedUserData.BotPreview.Item)
+    case deleted(peerId: PeerId, language: String?, ids: [MediaId])
+}
+
 public final class EngineStoryItem: Equatable {
     public final class Views: Equatable {
         public let seenCount: Int
@@ -563,8 +568,19 @@ public struct StoryListContextState: Equatable {
         }
     }
     
+    public struct Language: Equatable {
+        public let id: String
+        public let name: String
+        
+        public init(id: String, name: String) {
+            self.id = id
+            self.name = name
+        }
+    }
+    
     public var peerReference: PeerReference?
     public var items: [Item]
+    public var availableLanguages: [Language]
     public var pinnedIds: [Int32]
     public var totalCount: Int
     public var loadMoreToken: AnyHashable?
@@ -575,6 +591,7 @@ public struct StoryListContextState: Equatable {
     public init(
         peerReference: PeerReference?,
         items: [Item],
+        availableLanguages: [Language],
         pinnedIds: [Int32],
         totalCount: Int,
         loadMoreToken: AnyHashable?,
@@ -585,6 +602,7 @@ public struct StoryListContextState: Equatable {
     ) {
         self.peerReference = peerReference
         self.items = items
+        self.availableLanguages = availableLanguages
         self.pinnedIds = pinnedIds
         self.totalCount = totalCount
         self.loadMoreToken = loadMoreToken
@@ -633,7 +651,7 @@ public final class PeerStoryListContext: StoryListContext {
             self.peerId = peerId
             self.isArchived = isArchived
             
-            self.stateValue = State(peerReference: nil, items: [], pinnedIds: [], totalCount: 0, loadMoreToken: AnyHashable(0 as Int), isCached: true, hasCache: false, allEntityFiles: [:], isLoading: false)
+            self.stateValue = State(peerReference: nil, items: [], availableLanguages: [], pinnedIds: [], totalCount: 0, loadMoreToken: AnyHashable(0 as Int), isCached: true, hasCache: false, allEntityFiles: [:], isLoading: false)
             
             let _ = (account.postbox.transaction { transaction -> (PeerReference?, [State.Item], [Int32], Int, [MediaId: TelegramMediaFile], Bool) in
                 let key = ValueBoxKey(length: 8 + 1)
@@ -723,7 +741,7 @@ public final class PeerStoryListContext: StoryListContext {
                     return
                 }
                 
-                var updatedState = State(peerReference: peerReference, items: items, pinnedIds: pinnedIds, totalCount: totalCount, loadMoreToken: AnyHashable(0 as Int), isCached: true, hasCache: hasCache, allEntityFiles: allEntityFiles, isLoading: false)
+                var updatedState = State(peerReference: peerReference, items: items, availableLanguages: [], pinnedIds: pinnedIds, totalCount: totalCount, loadMoreToken: AnyHashable(0 as Int), isCached: true, hasCache: hasCache, allEntityFiles: allEntityFiles, isLoading: false)
                 updatedState.items.sort(by: { lhs, rhs in
                     let lhsPinned = updatedState.pinnedIds.firstIndex(of: lhs.storyItem.id)
                     let rhsPinned = updatedState.pinnedIds.firstIndex(of: rhs.storyItem.id)
@@ -746,6 +764,7 @@ public final class PeerStoryListContext: StoryListContext {
         
         deinit {
             self.requestDisposable?.dispose()
+            self.updatesDisposable?.dispose()
         }
         
         func loadMore(completion: (() -> Void)?) {
@@ -1313,7 +1332,7 @@ public final class SearchStoryListContext: StoryListContext {
             self.account = account
             self.source = source
             
-            self.stateValue = State(peerReference: nil, items: [], pinnedIds: [], totalCount: 0, loadMoreToken: AnyHashable(""), isCached: false, hasCache: false, allEntityFiles: [:], isLoading: false)
+            self.stateValue = State(peerReference: nil, items: [], availableLanguages: [], pinnedIds: [], totalCount: 0, loadMoreToken: AnyHashable(""), isCached: false, hasCache: false, allEntityFiles: [:], isLoading: false)
             self.statePromise.set(.single(self.stateValue))
                 
             self.loadMore(completion: nil)
@@ -2078,6 +2097,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
         private let account: Account
         private let engine: TelegramEngine
         private let peerId: EnginePeer.Id
+        private let language: String?
         private let isArchived: Bool
         
         private let statePromise = Promise<State>()
@@ -2093,6 +2113,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
         private var isLoadingMore: Bool = false
         private var requestDisposable: Disposable?
         private var updatesDisposable: Disposable?
+        private var eventsDisposable: Disposable?
         private let reorderDisposable = MetaDisposable()
         
         private var completionCallbacksByToken: [AnyHashable: [() -> Void]] = [:]
@@ -2102,36 +2123,305 @@ public final class BotPreviewStoryListContext: StoryListContext {
         private var idMapping: [MediaId: Int32] = [:]
         private var reverseIdMapping: [Int32: MediaId] = [:]
         
-        init(queue: Queue, account: Account, engine: TelegramEngine, peerId: EnginePeer.Id) {
+        private var localItems: [State.Item] = []
+        private var remoteItems: [State.Item] = []
+        
+        init(queue: Queue, account: Account, engine: TelegramEngine, peerId: EnginePeer.Id, language: String?, assumeEmpty: Bool) {
             self.queue = queue
             self.account = account
             self.engine = engine
             self.peerId = peerId
+            self.language = language
             
             let isArchived = false
             
             self.isArchived = isArchived
             
-            self.stateValue = State(peerReference: nil, items: [], pinnedIds: [], totalCount: 0, loadMoreToken: AnyHashable(0 as Int), isCached: true, hasCache: false, allEntityFiles: [:], isLoading: false)
+            self.stateValue = State(peerReference: nil, items: [], availableLanguages: [], pinnedIds: [], totalCount: 0, loadMoreToken: AnyHashable(0 as Int), isCached: true, hasCache: false, allEntityFiles: [:], isLoading: false)
             
             let localStateKey: PostboxViewKey = .storiesState(key: .local)
             
-            self.requestDisposable = (combineLatest(queue: queue,
-                engine.data.subscribe(
-                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
-                    TelegramEngine.EngineData.Item.Peer.BotPreview(id: peerId)
-                ),
-                account.postbox.combinedView(keys: [localStateKey])
-            )
-            |> deliverOn(self.queue)).start(next: { [weak self] peerAndBotPreview, combinedView in
+            if let language {
+                let _ = (account.postbox.transaction { transaction -> Peer? in
+                    return transaction.getPeer(peerId)
+                }
+                |> deliverOn(self.queue)).start(next: { [weak self] peer in
+                    guard let self else {
+                        return
+                    }
+                    
+                    self.stateValue = State(
+                        peerReference: peer.flatMap(PeerReference.init),
+                        items: [],
+                        availableLanguages: [],
+                        pinnedIds: [],
+                        totalCount: 0,
+                        loadMoreToken: AnyHashable(0),
+                        isCached: assumeEmpty,
+                        hasCache: assumeEmpty,
+                        allEntityFiles: [:],
+                        isLoading: !assumeEmpty
+                    )
+                    
+                    self.loadLanguage(language: language, assumeEmpty: assumeEmpty)
+                })
+            } else {
+                self.requestDisposable = (combineLatest(queue: queue,
+                    engine.data.subscribe(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                        TelegramEngine.EngineData.Item.Peer.BotPreview(id: peerId),
+                        TelegramEngine.EngineData.Item.Configuration.LocalizationList()
+                    ),
+                    account.postbox.combinedView(keys: [
+                        localStateKey
+                    ])
+                )
+                |> deliverOn(self.queue)).start(next: { [weak self] peerAndBotPreview, combinedView in
+                    guard let self else {
+                        return
+                    }
+                    
+                    let (peer, botPreview, localizationList) = peerAndBotPreview
+                    
+                    var items: [State.Item] = []
+                    var availableLanguages: [StoryListContextState.Language] = []
+                    
+                    if let stateView = combinedView.views[localStateKey] as? StoryStatesView, let localState = stateView.value?.get(Stories.LocalState.self) {
+                        for item in localState.items.reversed() {
+                            let mappedId: Int32
+                            if let current = self.pendingIdMapping[item.stableId] {
+                                mappedId = current
+                            } else {
+                                mappedId = self.nextId
+                                self.nextId += 1
+                                self.pendingIdMapping[item.stableId] = mappedId
+                            }
+                            if case let .botPreview(itemPeerId, itemLanguage) = item.target, itemPeerId == peerId, itemLanguage == language {
+                                items.append(State.Item(
+                                    id: StoryId(peerId: peerId, id: mappedId),
+                                    storyItem: EngineStoryItem(
+                                        id: mappedId,
+                                        timestamp: 0,
+                                        expirationTimestamp: Int32.max,
+                                        media: EngineMedia(item.media),
+                                        alternativeMedia: nil,
+                                        mediaAreas: [],
+                                        text: "",
+                                        entities: [],
+                                        views: nil,
+                                        privacy: nil,
+                                        isPinned: false,
+                                        isExpired: false,
+                                        isPublic: false,
+                                        isPending: true,
+                                        isCloseFriends: false,
+                                        isContacts: false,
+                                        isSelectedContacts: false,
+                                        isForwardingDisabled: false,
+                                        isEdited: false,
+                                        isMy: false,
+                                        myReaction: nil,
+                                        forwardInfo: nil,
+                                        author: nil
+                                    ),
+                                    peer: nil
+                                ))
+                            }
+                        }
+                    }
+                    
+                    if let botPreview {
+                        for item in botPreview.items {
+                            guard let mediaId = item.media.id else {
+                                continue
+                            }
+                            
+                            let id: Int32
+                            if let current = self.idMapping[mediaId] {
+                                id = current
+                            } else {
+                                id = self.nextId
+                                self.nextId += 1
+                                self.idMapping[mediaId] = id
+                                self.reverseIdMapping[id] = mediaId
+                            }
+                            
+                            items.append(State.Item(
+                                id: StoryId(peerId: peerId, id: id),
+                                storyItem: EngineStoryItem(
+                                    id: id,
+                                    timestamp: item.timestamp,
+                                    expirationTimestamp: Int32.max,
+                                    media: EngineMedia(item.media),
+                                    alternativeMedia: nil,
+                                    mediaAreas: [],
+                                    text: "",
+                                    entities: [],
+                                    views: nil,
+                                    privacy: nil,
+                                    isPinned: false,
+                                    isExpired: false,
+                                    isPublic: false,
+                                    isPending: false,
+                                    isCloseFriends: false,
+                                    isContacts: false,
+                                    isSelectedContacts: false,
+                                    isForwardingDisabled: false,
+                                    isEdited: false,
+                                    isMy: false,
+                                    myReaction: nil,
+                                    forwardInfo: nil,
+                                    author: nil
+                                ),
+                                peer: nil
+                            ))
+                        }
+                        
+                        for id in botPreview.alternativeLanguageCodes {
+                            inner: for localization in localizationList.availableOfficialLocalizations {
+                                if localization.languageCode == id {
+                                    availableLanguages.append(StoryListContextState.Language(
+                                        id: localization.languageCode,
+                                        name: localization.title
+                                    ))
+                                    break inner
+                                }
+                            }
+                        }
+                    }
+                    
+                    self.stateValue = State(
+                        peerReference: (peer?._asPeer()).flatMap(PeerReference.init),
+                        items: items,
+                        availableLanguages: availableLanguages,
+                        pinnedIds: [],
+                        totalCount: items.count,
+                        loadMoreToken: nil,
+                        isCached: botPreview != nil,
+                        hasCache: botPreview != nil,
+                        allEntityFiles: [:],
+                        isLoading: botPreview == nil
+                    )
+                })
+            }
+        }
+        
+        deinit {
+            self.requestDisposable?.dispose()
+            self.updatesDisposable?.dispose()
+            self.eventsDisposable?.dispose()
+            self.reorderDisposable.dispose()
+        }
+        
+        func loadMore(completion: (() -> Void)?) {
+        }
+        
+        private func loadLanguage(language: String, assumeEmpty: Bool) {
+            let account = self.account
+            let peerId = self.peerId
+            let signal: Signal<(CachedUserData.BotPreview?, Peer?), NoError> = (self.account.postbox.transaction { transaction -> Peer? in
+                return transaction.getPeer(peerId)
+            }
+            |> mapToSignal { peer -> Signal<(CachedUserData.BotPreview?, Peer?), NoError> in
+                guard let peer, let inputUser = apiInputUser(peer) else {
+                    return .single((nil, nil))
+                }
+                return _internal_requestBotPreview(network: account.network, peerId: peerId, inputUser: inputUser, language: language)
+                |> map { botPreview in
+                    return (botPreview, peer)
+                }
+            })
+            
+            self.requestDisposable?.dispose()
+            self.requestDisposable = (signal
+            |> deliverOn(self.queue)).startStrict(next: { [weak self] botPreview, peer in
+                guard let self, let peer else {
+                    return
+                }
+                
+                var items: [State.Item] = []
+                
+                if let botPreview {
+                    for item in botPreview.items {
+                        guard let mediaId = item.media.id else {
+                            continue
+                        }
+                        
+                        let id: Int32
+                        if let current = self.idMapping[mediaId] {
+                            id = current
+                        } else {
+                            id = self.nextId
+                            self.nextId += 1
+                            self.idMapping[mediaId] = id
+                            self.reverseIdMapping[id] = mediaId
+                        }
+                        
+                        items.append(State.Item(
+                            id: StoryId(peerId: peerId, id: id),
+                            storyItem: EngineStoryItem(
+                                id: id,
+                                timestamp: item.timestamp,
+                                expirationTimestamp: Int32.max,
+                                media: EngineMedia(item.media),
+                                alternativeMedia: nil,
+                                mediaAreas: [],
+                                text: "",
+                                entities: [],
+                                views: nil,
+                                privacy: nil,
+                                isPinned: false,
+                                isExpired: false,
+                                isPublic: false,
+                                isPending: false,
+                                isCloseFriends: false,
+                                isContacts: false,
+                                isSelectedContacts: false,
+                                isForwardingDisabled: false,
+                                isEdited: false,
+                                isMy: false,
+                                myReaction: nil,
+                                forwardInfo: nil,
+                                author: nil
+                            ),
+                            peer: nil
+                        ))
+                    }
+                }
+                
+                self.remoteItems = items
+                self.stateValue = State(
+                    peerReference: PeerReference(peer),
+                    items: items,
+                    availableLanguages: [],
+                    pinnedIds: [],
+                    totalCount: items.count,
+                    loadMoreToken: nil,
+                    isCached: botPreview != nil,
+                    hasCache: botPreview != nil,
+                    allEntityFiles: [:],
+                    isLoading: botPreview == nil
+                )
+                
+                if botPreview != nil {
+                    self.beginUpdates(language: language)
+                }
+            })
+        }
+        
+        private func beginUpdates(language: String) {
+            let localStateKey: PostboxViewKey = .storiesState(key: .local)
+            
+            self.updatesDisposable?.dispose()
+            self.updatesDisposable = (self.account.postbox.combinedView(keys: [
+                localStateKey
+            ])
+            |> deliverOn(self.queue)).startStrict(next: { [weak self] combinedView in
                 guard let self else {
                     return
                 }
                 
-                let (peer, botPreview) = peerAndBotPreview
-                
                 var items: [State.Item] = []
-                
                 if let stateView = combinedView.views[localStateKey] as? StoryStatesView, let localState = stateView.value?.get(Stories.LocalState.self) {
                     for item in localState.items.reversed() {
                         let mappedId: Int32
@@ -2142,7 +2432,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
                             self.nextId += 1
                             self.pendingIdMapping[item.stableId] = mappedId
                         }
-                        if case .botPreview(peerId) = item.target {
+                        if case let .botPreview(itemPeerId, itemLanguage) = item.target, itemPeerId == self.peerId, itemLanguage == language {
                             items.append(State.Item(
                                 id: StoryId(peerId: peerId, id: mappedId),
                                 storyItem: EngineStoryItem(
@@ -2176,130 +2466,160 @@ public final class BotPreviewStoryListContext: StoryListContext {
                     }
                 }
                 
-                if let botPreview {
-                    for media in botPreview.media {
-                        guard let mediaId = media.id else {
-                            continue
-                        }
-                        
-                        let id: Int32
-                        if let current = self.idMapping[mediaId] {
-                            id = current
-                        } else {
-                            id = self.nextId
-                            self.nextId += 1
-                            self.idMapping[mediaId] = id
-                            self.reverseIdMapping[id] = mediaId
-                        }
-                        
-                        items.append(State.Item(
-                            id: StoryId(peerId: peerId, id: id),
-                            storyItem: EngineStoryItem(
-                                id: id,
-                                timestamp: 0,
-                                expirationTimestamp: Int32.max,
-                                media: EngineMedia(media),
-                                alternativeMedia: nil,
-                                mediaAreas: [],
-                                text: "",
-                                entities: [],
-                                views: nil,
-                                privacy: nil,
-                                isPinned: false,
-                                isExpired: false,
-                                isPublic: false,
-                                isPending: false,
-                                isCloseFriends: false,
-                                isContacts: false,
-                                isSelectedContacts: false,
-                                isForwardingDisabled: false,
-                                isEdited: false,
-                                isMy: false,
-                                myReaction: nil,
-                                forwardInfo: nil,
-                                author: nil
-                            ),
-                            peer: nil
-                        ))
+                if self.localItems != items {
+                    self.localItems = items
+                    
+                    if self.stateValue.peerReference != nil {
+                        self.pushLanguageItems()
                     }
                 }
-                
-                self.stateValue = State(
-                    peerReference: (peer?._asPeer()).flatMap(PeerReference.init),
-                    items: items,
-                    pinnedIds: [],
-                    totalCount: items.count,
-                    loadMoreToken: nil,
-                    isCached: botPreview != nil,
-                    hasCache: botPreview != nil,
-                    allEntityFiles: [:],
-                    isLoading: botPreview == nil
-                )
+            })
+            
+            self.eventsDisposable?.dispose()
+            self.eventsDisposable = (self.account.stateManager.botPreviewUpdates
+            |> deliverOn(self.queue)).startStrict(next: { [weak self] events in
+                guard let self else {
+                    return
+                }
+                var remoteItems = self.remoteItems
+                for event in events {
+                    switch event {
+                    case let .added(peerId, language, item):
+                        if let mediaId = item.media.id, self.peerId == peerId, self.language == language {
+                            let id: Int32
+                            if let current = self.idMapping[mediaId] {
+                                id = current
+                            } else {
+                                id = self.nextId
+                                self.nextId += 1
+                                self.idMapping[mediaId] = id
+                                self.reverseIdMapping[id] = mediaId
+                            }
+                            
+                            let mappedItem = State.Item(
+                                id: StoryId(peerId: peerId, id: id),
+                                storyItem: EngineStoryItem(
+                                    id: id,
+                                    timestamp: item.timestamp,
+                                    expirationTimestamp: Int32.max,
+                                    media: EngineMedia(item.media),
+                                    alternativeMedia: nil,
+                                    mediaAreas: [],
+                                    text: "",
+                                    entities: [],
+                                    views: nil,
+                                    privacy: nil,
+                                    isPinned: false,
+                                    isExpired: false,
+                                    isPublic: false,
+                                    isPending: false,
+                                    isCloseFriends: false,
+                                    isContacts: false,
+                                    isSelectedContacts: false,
+                                    isForwardingDisabled: false,
+                                    isEdited: false,
+                                    isMy: false,
+                                    myReaction: nil,
+                                    forwardInfo: nil,
+                                    author: nil
+                                ),
+                                peer: nil
+                            )
+                            
+                            if let index = remoteItems.firstIndex(where: { $0.storyItem.media.id == item.media.id }) {
+                                remoteItems[index] = mappedItem
+                            } else {
+                                remoteItems.insert(mappedItem, at: 0)
+                            }
+                        }
+                    case let .deleted(peerId, language, ids):
+                        if self.peerId == peerId && self.language == language {
+                            remoteItems = remoteItems.filter { item in
+                                guard let id = item.storyItem.media.id else {
+                                    return false
+                                }
+                                return !ids.contains(id)
+                            }
+                        }
+                    }
+                }
+                if self.remoteItems != remoteItems {
+                    self.remoteItems = remoteItems
+                    self.pushLanguageItems()
+                }
             })
         }
         
-        deinit {
-            self.requestDisposable?.dispose()
-            self.updatesDisposable?.dispose()
-            self.reorderDisposable.dispose()
+        private func pushLanguageItems() {
+            var items = self.localItems
+            items.append(contentsOf: self.remoteItems)
+            self.stateValue = State(
+                peerReference: self.stateValue.peerReference,
+                items: items,
+                availableLanguages: [],
+                pinnedIds: [],
+                totalCount: items.count,
+                loadMoreToken: nil,
+                isCached: true,
+                hasCache: true,
+                allEntityFiles: [:],
+                isLoading: false
+            )
         }
         
-        func loadMore(completion: (() -> Void)?) {
-        }
-        
-        func reorderItems(ids: [StoryId]) {
+        func reorderItems(media: [Media]) {
             let peerId = self.peerId
-            let idMapping = self.idMapping
-            let reverseIdMapping = self.reverseIdMapping
+            let language = self.language
             
             let _ = (self.account.postbox.transaction({ transaction -> (Api.InputUser?, [Api.InputMedia]) in
                 let inputUser = transaction.getPeer(peerId).flatMap(apiInputUser)
                 
                 var inputMedia: [Api.InputMedia] = []
-                transaction.updatePeerCachedData(peerIds: Set([self.peerId]), update: { _, current in
-                    guard var current = current as? CachedUserData else {
+                for item in media {
+                    if let image = item as? TelegramMediaImage, let resource = image.representations.last?.resource as? CloudPhotoSizeMediaResource {
+                        inputMedia.append(.inputMediaPhoto(flags: 0, id: .inputPhoto(id: resource.photoId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), ttlSeconds: nil))
+                        inputMedia.append(Api.InputMedia.inputMediaPhoto(flags: 0, id: Api.InputPhoto.inputPhoto(id: resource.photoId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), ttlSeconds: nil))
+                    } else if let file = item as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource {
+                        inputMedia.append(.inputMediaDocument(flags: 0, id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), ttlSeconds: nil, query: nil))
+                    }
+                }
+                
+                if language == nil {
+                    transaction.updatePeerCachedData(peerIds: Set([self.peerId]), update: { _, current in
+                        guard var current = current as? CachedUserData else {
+                            return current
+                        }
+                        guard let currentBotPreview = current.botPreview else {
+                            return current
+                        }
+                        
+                        var items: [CachedUserData.BotPreview.Item] = []
+                        
+                        var seenIds = Set<MediaId>()
+                        for item in media {
+                            guard let mediaId = item.id else {
+                                continue
+                            }
+                            if let index = currentBotPreview.items.firstIndex(where: { $0.media.id == mediaId }) {
+                                seenIds.insert(mediaId)
+                                items.append(currentBotPreview.items[index])
+                            }
+                        }
+                        
+                        for item in currentBotPreview.items {
+                            guard let id = item.media.id else {
+                                continue
+                            }
+                            if !seenIds.contains(id) {
+                                items.append(item)
+                            }
+                        }
+                        
+                        let botPreview = CachedUserData.BotPreview(items: items, alternativeLanguageCodes: currentBotPreview.alternativeLanguageCodes)
+                        current = current.withUpdatedBotPreview(botPreview)
                         return current
-                    }
-                    guard let currentBotPreview = current.botPreview else {
-                        return current
-                    }
-                    
-                    var media: [Media] = []
-                    media = []
-                    
-                    var seenIds = Set<Int32>()
-                    for id in ids {
-                        guard let mediaId = reverseIdMapping[id.id] else {
-                            continue
-                        }
-                        if let index = currentBotPreview.media.firstIndex(where: { $0.id == mediaId }) {
-                            seenIds.insert(id.id)
-                            media.append(currentBotPreview.media[index])
-                        }
-                    }
-                    
-                    for item in currentBotPreview.media {
-                        guard let id = item.id, let storyId = idMapping[id] else {
-                            continue
-                        }
-                        if !seenIds.contains(storyId) {
-                            media.append(item)
-                        }
-                    }
-                    
-                    for item in media {
-                        if let image = item as? TelegramMediaImage, let resource = image.representations.last?.resource as? CloudPhotoSizeMediaResource {
-                            inputMedia.append(.inputMediaPhoto(flags: 0, id: .inputPhoto(id: resource.photoId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), ttlSeconds: nil))
-                            inputMedia.append(Api.InputMedia.inputMediaPhoto(flags: 0, id: Api.InputPhoto.inputPhoto(id: resource.photoId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), ttlSeconds: nil))
-                        } else if let file = item as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource {
-                            inputMedia.append(.inputMediaDocument(flags: 0, id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), ttlSeconds: nil, query: nil))
-                        }
-                    }
-                    
-                    let botPreview = CachedUserData.BotPreview(media: media)
-                    current = current.withUpdatedBotPreview(botPreview)
-                    return current
-                })
+                    })
+                }
                 
                 return (inputUser, inputMedia)
             })
@@ -2307,7 +2627,37 @@ public final class BotPreviewStoryListContext: StoryListContext {
                 guard let self, let inputUser else {
                     return
                 }
-                let signal = self.account.network.request(Api.functions.bots.reorderPreviewMedias(bot: inputUser, order: inputMedia))
+                
+                if language != nil {
+                    var updatedItems: [State.Item] = []
+                    
+                    var seenIds = Set<MediaId>()
+                    for item in media {
+                        guard let mediaId = item.id else {
+                            continue
+                        }
+                        if let index = self.remoteItems.firstIndex(where: { $0.storyItem.media.id == mediaId }) {
+                            seenIds.insert(mediaId)
+                            updatedItems.append(self.remoteItems[index])
+                        }
+                    }
+                    
+                    for item in self.remoteItems {
+                        guard let id = item.storyItem.media.id else {
+                            continue
+                        }
+                        if !seenIds.contains(id) {
+                            updatedItems.append(item)
+                        }
+                    }
+                    
+                    if self.remoteItems != updatedItems {
+                        self.remoteItems = updatedItems
+                        self.pushLanguageItems()
+                    }
+                }
+                
+                let signal = self.account.network.request(Api.functions.bots.reorderPreviewMedias(bot: inputUser, langCode: language ?? "", order: inputMedia))
                 self.reorderDisposable.set(signal.startStrict())
             })
         }
@@ -2322,11 +2672,15 @@ public final class BotPreviewStoryListContext: StoryListContext {
     private let queue: Queue
     private let impl: QueueLocalObject<Impl>
     
-    public init(account: Account, engine: TelegramEngine, peerId: EnginePeer.Id) {
+    public let language: String?
+    
+    public init(account: Account, engine: TelegramEngine, peerId: EnginePeer.Id, language: String?, assumeEmpty: Bool) {
+        self.language = language
+        
         let queue = Queue.mainQueue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, account: account, engine: engine, peerId: peerId)
+            return Impl(queue: queue, account: account, engine: engine, peerId: peerId, language: language, assumeEmpty: assumeEmpty)
         })
     }
     
@@ -2336,9 +2690,9 @@ public final class BotPreviewStoryListContext: StoryListContext {
         }
     }
     
-    public func reorderItems(ids: [StoryId]) {
+    public func reorderItems(media: [Media]) {
         self.impl.with { impl in
-            impl.reorderItems(ids: ids)
+            impl.reorderItems(media: media)
         }
     }
 }

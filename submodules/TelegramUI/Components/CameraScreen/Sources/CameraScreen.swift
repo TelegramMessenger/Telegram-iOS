@@ -1543,6 +1543,9 @@ public class CameraScreen: ViewController {
                     isDualCameraEnabled = isDualCameraEnabledValue.boolValue
                 }
             }
+            if case .sticker = controller.mode {
+                isDualCameraEnabled = false
+            }
             
             var dualCameraPosition: PIPPosition = .topRight
             if let dualCameraPositionValue = UserDefaults.standard.object(forKey: "TelegramStoryCameraDualPosition") as? NSNumber {

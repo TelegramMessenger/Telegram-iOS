@@ -46,7 +46,7 @@ extension MediaEditorScreen {
         return true
     }
     
-    func saveDraft(id: Int64?) {
+    func saveDraft(id: Int64?, edit: Bool = false) {
         guard let subject = self.node.subject, let actualSubject = self.node.actualSubject, let mediaEditor = self.node.mediaEditor else {
             return
         }
@@ -83,7 +83,9 @@ extension MediaEditorScreen {
         }
         
         if let resultImage = mediaEditor.resultImage {
-            mediaEditor.seek(0.0, andPlay: false)
+            if !edit {
+                mediaEditor.seek(0.0, andPlay: false)
+            }
             makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: resultImage, dimensions: storyDimensions, values: values, time: .zero, textScale: 2.0, completion: { resultImage in
                 guard let resultImage else {
                     return
