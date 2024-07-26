@@ -10,6 +10,7 @@ import AccountContext
 import TelegramPresentationData
 import ContextUI
 import UndoUI
+import ListActionItemComponent
 
 final class BrowserAddressListComponent: Component {
     let context: AccountContext
@@ -69,6 +70,7 @@ final class BrowserAddressListComponent: Component {
             var insets: UIEdgeInsets
             var itemHeight: CGFloat
             var itemCount: Int
+            var hasMore: Bool
             
             var totalHeight: CGFloat
             
@@ -76,14 +78,21 @@ final class BrowserAddressListComponent: Component {
                 id: Int,
                 insets: UIEdgeInsets,
                 itemHeight: CGFloat,
-                itemCount: Int
+                itemCount: Int,
+                hasMore: Bool
             ) {
                 self.id = id
                 self.insets = insets
                 self.itemHeight = itemHeight
                 self.itemCount = itemCount
+                self.hasMore = hasMore
                 
-                self.totalHeight = insets.top + itemHeight * CGFloat(itemCount) + insets.bottom
+                var totalHeight = insets.top + itemHeight * CGFloat(itemCount) + insets.bottom
+                if hasMore {
+                    totalHeight -= itemHeight
+                    totalHeight += 44.0
+                }
+                self.totalHeight = totalHeight
             }
         }
         
@@ -123,6 +132,7 @@ final class BrowserAddressListComponent: Component {
     final class View: UIView, UIScrollViewDelegate {
         struct State {
             let recent: [TelegramMediaWebpage]
+            let isRecentExpanded: Bool
             let bookmarks: [Message]
         }
         
@@ -145,6 +155,7 @@ final class BrowserAddressListComponent: Component {
         
         private var stateDisposable: Disposable?
         private var stateValue: State?
+        private let isRecentExpanded = ValuePromise<Bool>(false)
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -274,16 +285,28 @@ final class BrowserAddressListComponent: Component {
                 }
                 
                 for i in 0 ..< section.itemCount {
-                    let itemFrame = CGRect(origin: CGPoint(x: sideInset, y: sectionOffset + section.insets.top + CGFloat(i) * section.itemHeight), size: CGSize(width: itemLayout.containerSize.width, height: section.itemHeight))
+                    var itemFrame = CGRect(origin: CGPoint(x: sideInset, y: sectionOffset + section.insets.top + CGFloat(i) * section.itemHeight), size: CGSize(width: itemLayout.containerSize.width, height: section.itemHeight))
                     if !visibleBounds.intersects(itemFrame) {
                         continue
                     }
-
+                    
+                    var isMore = false
+                    if section.hasMore && i == 3 {
+                        isMore = true
+                        itemFrame.size.height = 44.0
+                    }
+                    
                     var id: String = ""
                     if section.id == 0 {
                         id = "recent_\(state.recent[i].content.url ?? "")"
+                        if isMore {
+                            id = "recent_more"
+                        }
                     } else if section.id == 1 {
                         id = "bookmark_\(state.bookmarks[i].id.id)"
+                        if isMore {
+                            id = "bookmark_more"
+                        }
                     }
                     
                     let itemId = AnyHashable(id)
@@ -301,99 +324,137 @@ final class BrowserAddressListComponent: Component {
                         self.visibleItems[itemId] = visibleItem
                     }
                     
-                    var webPage: TelegramMediaWebpage?
-                    var itemMessage: Message?
-                    
-                    if section.id == 0 {
-                        webPage = state.recent[i]
-                    } else if section.id == 1 {
-                        let message = state.bookmarks[i]
-                        if let primaryUrl = getPrimaryUrl(message: message) {
-                            if let media = message.media.first(where: { $0 is TelegramMediaWebpage }) as? TelegramMediaWebpage {
-                                webPage = media
+                    if isMore {
+                        let _ = visibleItem.update(
+                            transition: itemTransition,
+                            component: AnyComponent(
+                                ListActionItemComponent(
+                                    theme: component.theme,
+                                    title: AnyComponent(Text(
+                                        text: component.strings.WebBrowser_AddressBar_ShowMore,
+                                        font: Font.regular(17.0),
+                                        color: component.theme.list.itemAccentColor
+                                    )),
+                                    leftIcon: .custom(
+                                        AnyComponentWithIdentity(
+                                            id: "icon",
+                                            component: AnyComponent(Image(
+                                                image: PresentationResourcesItemList.downArrowImage(component.theme),
+                                                size: CGSize(width: 30.0, height: 30.0)
+                                            ))
+                                        ),
+                                        false
+                                    ),
+                                    accessory: nil,
+                                    action: { [weak self] _ in
+                                        self?.isRecentExpanded.set(true)
+                                    },
+                                    highlighting: .default,
+                                    updateIsHighlighted: { view, _ in
+                                        
+                                    })
+                            ),
+                            environment: {},
+                            containerSize: itemFrame.size
+                        )
+                    } else {
+                        var webPage: TelegramMediaWebpage?
+                        var itemMessage: Message?
+                        
+                        if section.id == 0 {
+                            webPage = state.recent[i]
+                        } else if section.id == 1 {
+                            let message = state.bookmarks[i]
+                            if let primaryUrl = getPrimaryUrl(message: message) {
+                                if let media = message.media.first(where: { $0 is TelegramMediaWebpage }) as? TelegramMediaWebpage {
+                                    webPage = media
+                                } else {
+                                    webPage = TelegramMediaWebpage(webpageId: MediaId(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(url: primaryUrl, displayUrl: "", hash: 0, type: nil, websiteName: "", title: message.text, text: "", embedUrl: nil, embedType: nil, embedSize: nil, duration: nil, author: nil, isMediaLargeByDefault: nil, image: nil, file: nil, story: nil, attributes: [], instantPage: nil)))
+                                }
+                                itemMessage = message
                             } else {
-                                webPage = TelegramMediaWebpage(webpageId: MediaId(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(url: primaryUrl, displayUrl: "", hash: 0, type: nil, websiteName: "", title: message.text, text: "", embedUrl: nil, embedType: nil, embedSize: nil, duration: nil, author: nil, isMediaLargeByDefault: nil, image: nil, file: nil, story: nil, attributes: [], instantPage: nil)))
+                                continue
                             }
-                            itemMessage = message
-                        } else {
-                            continue
                         }
-                    }
                     
-                    let performAction = component.performAction
-                    let _ = visibleItem.update(
-                        transition: itemTransition,
-                        component: AnyComponent(
-                            BrowserAddressListItemComponent(
-                                context: component.context,
-                                theme: component.theme,
-                                webPage: webPage!,
-                                message: itemMessage,
-                                hasNext: true,
-                                insets: component.insets,
-                                action: {
-                                    if let url = webPage?.content.url {
-                                        performAction.invoke(.navigateTo(url))
-                                    }
-                                },
-                                contextAction: { [weak self] webPage, message, sourceView, gesture in
-                                    guard let self, let component = self.component, let url = webPage.content.url else {
-                                        return
-                                    }
-                                    
-                                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                    
-                                    var itemList: [ContextMenuItem] = []
-                                    itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.WebBrowser_CopyLink, icon: { theme in
-                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor)
-                                    }, action: { [weak self] _, f in
-                                        f(.default)
-                                         
-                                        UIPasteboard.general.string = url
-                                        if let self, let component = self.component {
-                                            component.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
+                        let performAction = component.performAction
+                        let _ = visibleItem.update(
+                            transition: itemTransition,
+                            component: AnyComponent(
+                                BrowserAddressListItemComponent(
+                                    context: component.context,
+                                    theme: component.theme,
+                                    webPage: webPage!,
+                                    message: itemMessage,
+                                    hasNext: true,
+                                    insets: component.insets,
+                                    action: {
+                                        if let url = webPage?.content.url {
+                                            performAction.invoke(.navigateTo(url))
                                         }
-                                    })))
-                                    
-                                    if let message {
-                                        itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.WebBrowser_DeleteBookmark, textColor: .destructive, icon: { theme in
-                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                                    },
+                                    contextAction: { [weak self] webPage, message, sourceView, gesture in
+                                        guard let self, let component = self.component, let url = webPage.content.url else {
+                                            return
+                                        }
+                                        
+                                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                        
+                                        var itemList: [ContextMenuItem] = []
+                                        itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.WebBrowser_CopyLink, icon: { theme in
+                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor)
                                         }, action: { [weak self] _, f in
-                                            f(.dismissWithoutContent)
-                                             
+                                            f(.default)
+                                            
+                                            UIPasteboard.general.string = url
                                             if let self, let component = self.component {
-                                                let _ = component.context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forEveryone).startStandalone()
+                                                component.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
                                             }
                                         })))
-                                    } else {
-                                        itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.WebBrowser_RemoveRecent, textColor: .destructive, icon: { theme in
-                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
-                                        }, action: { [weak self] _, f in
-                                            f(.dismissWithoutContent)
-                                             
-                                            if let self, let component = self.component, let url = webPage.content.url {
-                                                let _ = removeRecentlyVisitedLink(engine: component.context.engine, url: url).startStandalone()
-                                            }
-                                        })))
-                                    }
-                                    
-                                    let items = ContextController.Items(content: .list(itemList))
-                                    let controller = ContextController(
-                                        presentationData: presentationData,
-                                        source: .extracted(BrowserAddressListContextExtractedContentSource(contentView: sourceView)),
-                                        items: .single(items),
-                                        recognizer: nil,
-                                        gesture: gesture
-                                    )
-                                    component.presentInGlobalOverlay(controller)
-                                })
-                        ),
-                        environment: {},
-                        containerSize: itemFrame.size
-                    )
+                                        
+                                        if let message {
+                                            itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.WebBrowser_DeleteBookmark, textColor: .destructive, icon: { theme in
+                                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                                            }, action: { [weak self] _, f in
+                                                f(.dismissWithoutContent)
+                                                
+                                                if let self, let component = self.component {
+                                                    let _ = component.context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forEveryone).startStandalone()
+                                                }
+                                            })))
+                                        } else {
+                                            itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.WebBrowser_RemoveRecent, textColor: .destructive, icon: { theme in
+                                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                                            }, action: { [weak self] _, f in
+                                                f(.dismissWithoutContent)
+                                                
+                                                if let self, let component = self.component, let url = webPage.content.url {
+                                                    let _ = removeRecentlyVisitedLink(engine: component.context.engine, url: url).startStandalone()
+                                                }
+                                            })))
+                                        }
+                                        
+                                        let items = ContextController.Items(content: .list(itemList))
+                                        let controller = ContextController(
+                                            presentationData: presentationData,
+                                            source: .extracted(BrowserAddressListContextExtractedContentSource(contentView: sourceView)),
+                                            items: .single(items),
+                                            recognizer: nil,
+                                            gesture: gesture
+                                        )
+                                        component.presentInGlobalOverlay(controller)
+                                    })
+                            ),
+                            environment: {},
+                            containerSize: itemFrame.size
+                        )
+                    }
                     if let itemView = visibleItem.view {
                         if itemView.superview == nil {
                             self.itemContainerView.addSubview(itemView)
+                            if !transition.animation.isImmediate {
+                                transition.animateAlpha(view: itemView, from: 0.0, to: 1.0)
+                            }
                         }
                         itemTransition.setFrame(view: itemView, frame: itemFrame)
                     }
@@ -447,8 +508,9 @@ final class BrowserAddressListComponent: Component {
             if self.component == nil {
                 self.stateDisposable = combineLatest(queue: Queue.mainQueue(),
                     recentlyVisitedLinks(engine: component.context.engine),
+                    self.isRecentExpanded.get(),
                     component.context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: component.context.account.peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil, tag: .tag(.webPage))
-                ).start(next: { [weak self] recent, view in
+                ).start(next: { [weak self] recent, isRecentExpanded, view in
                     guard let self else {
                         return
                     }
@@ -461,6 +523,7 @@ final class BrowserAddressListComponent: Component {
                     let isFirstTime = self.stateValue == nil
                     self.stateValue = State(
                         recent: recent,
+                        isRecentExpanded: isRecentExpanded,
                         bookmarks: bookmarks
                     )
                     self.state?.updated(transition: isFirstTime ? .immediate : .easeInOut(duration: 0.25))
@@ -510,11 +573,18 @@ final class BrowserAddressListComponent: Component {
             var sections: [ItemLayout.Section] = []
             if let state = self.stateValue {
                 if !state.recent.isEmpty {
+                    var recentCount = state.recent.count
+                    var hasMore = false
+                    if recentCount > 4 && !state.isRecentExpanded {
+                        recentCount = 4
+                        hasMore = true
+                    }
                     sections.append(ItemLayout.Section(
                         id: 0,
                         insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 0.0, right: 0.0),
                         itemHeight: addressItemSize.height,
-                        itemCount: state.recent.count
+                        itemCount: recentCount,
+                        hasMore: hasMore
                     ))
                 }
                 if !state.bookmarks.isEmpty {
@@ -522,7 +592,8 @@ final class BrowserAddressListComponent: Component {
                         id: 1,
                         insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 0.0, right: 0.0),
                         itemHeight: addressItemSize.height,
-                        itemCount: state.bookmarks.count
+                        itemCount: state.bookmarks.count,
+                        hasMore: false
                     ))
                 }
             }

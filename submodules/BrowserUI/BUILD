@@ -47,6 +47,7 @@ swift_library(
         "//submodules/SearchUI",
         "//submodules/SearchBarNode",
         "//submodules/TelegramUI/Components/SaveProgressScreen",
+        "//submodules/TelegramUI/Components/ListActionItemComponent",
     ],
     visibility = [
         "//visibility:public",
