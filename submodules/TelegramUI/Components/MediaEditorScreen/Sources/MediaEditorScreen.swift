@@ -6293,7 +6293,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         let content: UndoOverlayContent = .info(
             title: nil,
-            text: presentationData.strings.Story_Editor_TooltipWeatherLimitText.string,
+            text: presentationData.strings.Story_Editor_TooltipWeatherLimitText,
             timeout: nil,
             customUndoText: nil
         )
