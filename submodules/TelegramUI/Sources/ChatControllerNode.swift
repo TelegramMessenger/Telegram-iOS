@@ -88,38 +88,12 @@ private struct ChatControllerNodeDerivedLayoutState {
 }
 
 class ChatNodeContainer: ASDisplayNode {
-    private let contentNodeImpl: ASDisplayNode
-    
     var contentNode: ASDisplayNode {
-        if self.view is SpaceWarpView {
-            return self.contentNodeImpl
-        } else {
-            return self
-        }
+        return self
     }
     
-    init(rippleEffect: Bool) {
-        self.contentNodeImpl = ASDisplayNode()
-        
+    override init() {
         super.init()
-        
-        if rippleEffect {
-            self.setViewBlock({
-                return SpaceWarpView4(frame: CGRect())
-            })
-            self.contentNodeImpl.layer.allowsGroupOpacity = true
-        }
-        
-        (self.view as? SpaceWarpView)?.contentView.addSubnode(self.contentNodeImpl)
-    }
-    
-    func triggerRipple(at point: CGPoint) {
-        (self.view as? SpaceWarpView)?.trigger(at: point)
-    }
-    
-    func update(size: CGSize, transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(node: self.contentNodeImpl, frame: CGRect(origin: CGPoint(), size: size))
-        (self.view as? SpaceWarpView)?.update(size: size, transition: ComponentTransition(transition))
     }
 }
 
@@ -132,19 +106,11 @@ class HistoryNodeContainer: ASDisplayNode {
         }
     }
     
-    private let contentNodeImpl: ASDisplayNode
-    
     var contentNode: ASDisplayNode {
-        if self.view is SpaceWarpView {
-            return self.contentNodeImpl
-        } else {
-            return self
-        }
+        return self
     }
     
     init(isSecret: Bool) {
-        self.contentNodeImpl = ASDisplayNode()
-        
         self.isSecret = isSecret
         
         super.init()
@@ -152,23 +118,6 @@ class HistoryNodeContainer: ASDisplayNode {
         if self.isSecret {
             setLayerDisableScreenshots(self.layer, self.isSecret)
         }
-        
-        #if DEBUG && false
-        self.setViewBlock({
-            return SpaceWarpView1(frame: CGRect())
-        })
-        #endif
-
-        (self.view as? SpaceWarpView)?.contentView.addSubnode(self.contentNodeImpl)
-    }
-    
-    func triggerRipple(at point: CGPoint) {
-        (self.view as? SpaceWarpView)?.trigger(at: point)
-    }
-    
-    func update(size: CGSize, transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(node: self.contentNodeImpl, frame: CGRect(origin: CGPoint(), size: size))
-        (self.view as? SpaceWarpView)?.update(size: size, transition: ComponentTransition(transition))
     }
 }
 
@@ -193,6 +142,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
+    let wrappingNode: SpaceWarpNode
     let contentContainerNode: ChatNodeContainer
     let contentDimNode: ASDisplayNode
     let backgroundNode: WallpaperBackgroundNode
@@ -445,7 +395,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         self.backgroundNode = backgroundNode
         
-        self.contentContainerNode = ChatNodeContainer(rippleEffect: context.sharedContext.immediateExperimentalUISettings.rippleEffect)
+        self.wrappingNode = SpaceWarpNodeImpl()
+        
+        self.contentContainerNode = ChatNodeContainer()
         self.contentDimNode = ASDisplayNode()
         self.contentDimNode.isUserInteractionEnabled = false
         self.contentDimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.2)
@@ -852,7 +804,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         self.historyNode.enableExtractedBackgrounds = true
     
-        self.addSubnode(self.contentContainerNode)
+        self.addSubnode(self.wrappingNode)
+        self.wrappingNode.contentNode.addSubnode(self.contentContainerNode)
         self.contentContainerNode.contentNode.addSubnode(self.backgroundNode)
         self.contentContainerNode.contentNode.addSubnode(self.historyNodeContainer)
         
@@ -872,9 +825,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
         }
         
-        self.addSubnode(self.inputContextPanelContainer)
-        self.addSubnode(self.inputPanelContainerNode)
-        self.addSubnode(self.inputContextOverTextPanelContainer)
+        self.wrappingNode.contentNode.addSubnode(self.inputContextPanelContainer)
+        self.wrappingNode.contentNode.addSubnode(self.inputPanelContainerNode)
+        self.wrappingNode.contentNode.addSubnode(self.inputContextOverTextPanelContainer)
         
         self.inputPanelContainerNode.addSubnode(self.inputPanelClippingNode)
         self.inputPanelContainerNode.addSubnode(self.inputPanelOverlayNode)
@@ -882,9 +835,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.inputPanelClippingNode.addSubnode(self.inputPanelBackgroundSeparatorNode)
         self.inputPanelBackgroundNode.addSubnode(self.inputPanelBottomBackgroundSeparatorNode)
 
-        self.addSubnode(self.messageTransitionNode)
+        self.wrappingNode.contentNode.addSubnode(self.messageTransitionNode)
         self.contentContainerNode.contentNode.addSubnode(self.navigateButtons)
-        self.addSubnode(self.presentationContextMarker)
+        self.wrappingNode.contentNode.addSubnode(self.presentationContextMarker)
         self.contentContainerNode.contentNode.addSubnode(self.contentDimNode)
 
         self.navigationBar?.additionalContentNode.addSubnode(self.titleAccessoryPanelContainer)
@@ -1131,6 +1084,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             transition = protoTransition
         }
         
+        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        self.wrappingNode.update(size: layout.size, cornerRadius: layout.deviceMetrics.screenCornerRadius, transition: ComponentTransition(transition))
+        
         if let statusBar = self.statusBar {
             switch self.chatPresentationInterfaceState.mode {
             case .standard:
@@ -1159,9 +1115,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
 
         self.messageTransitionNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        
         self.contentContainerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.contentContainerNode.update(size: layout.size, transition: transition)
         
         let isOverlay: Bool
         switch self.chatPresentationInterfaceState.mode {
@@ -1186,7 +1140,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 animateFromFraction = 1.0
                 navigationModalFrame = NavigationModalFrame()
                 self.navigationModalFrame = navigationModalFrame
-                self.insertSubnode(navigationModalFrame, aboveSubnode: self.contentContainerNode)
+                self.wrappingNode.contentNode.insertSubnode(navigationModalFrame, aboveSubnode: self.contentContainerNode)
             }
             if transition.isAnimated, let animateFromFraction = animateFromFraction, animateFromFraction != 1.0 - self.inputPanelContainerNode.expansionFraction {
                 navigationModalFrame.update(layout: layout, transition: .immediate)
@@ -1240,7 +1194,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             if self.backgroundEffectNode == nil {
                 let backgroundEffectNode = ASDisplayNode()
                 backgroundEffectNode.backgroundColor = self.chatPresentationInterfaceState.theme.chatList.backgroundColor.withAlphaComponent(0.8)
-                self.insertSubnode(backgroundEffectNode, at: 0)
+                self.wrappingNode.contentNode.insertSubnode(backgroundEffectNode, at: 0)
                 self.backgroundEffectNode = backgroundEffectNode
                 backgroundEffectNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.backgroundEffectTap(_:))))
             }
@@ -1252,7 +1206,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                     scrollContainerNode.view.contentInsetAdjustmentBehavior = .never
                 }
-                self.insertSubnode(scrollContainerNode, aboveSubnode: self.backgroundEffectNode!)
+                self.wrappingNode.contentNode.insertSubnode(scrollContainerNode, aboveSubnode: self.backgroundEffectNode!)
                 self.scrollContainerNode = scrollContainerNode
             }
             if self.containerBackgroundNode == nil {
@@ -1797,7 +1751,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
 
         transition.updateBounds(node: self.historyNodeContainer, bounds: contentBounds)
         transition.updatePosition(node: self.historyNodeContainer, position: contentBounds.center)
-        self.historyNodeContainer.update(size: contentBounds.size, transition: transition)
         
         transition.updateBounds(node: self.historyNode, bounds: CGRect(origin: CGPoint(), size: contentBounds.size))
         transition.updatePosition(node: self.historyNode, position: CGPoint(x: contentBounds.size.width / 2.0, y: contentBounds.size.height / 2.0))
@@ -3345,8 +3298,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         if let view, let location {
-            self.contentContainerNode.triggerRipple(at: self.contentContainerNode.view.convert(location, from: view))
-            self.historyNodeContainer.triggerRipple(at: self.historyNodeContainer.view.convert(location, from: view))
+            if context.sharedContext.immediateExperimentalUISettings.rippleEffect {
+                self.wrappingNode.triggerRipple(at: self.contentContainerNode.view.convert(location, from: view))
+            }
         }
         
         switch self.chatPresentationInterfaceState.inputMode {

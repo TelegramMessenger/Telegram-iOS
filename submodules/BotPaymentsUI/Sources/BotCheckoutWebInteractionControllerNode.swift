@@ -146,6 +146,14 @@ final class BotCheckoutWebInteractionControllerNode: ViewControllerTracingNode, 
                 decisionHandler(.cancel)
                 completion(true)
             } else {
+                if let url = navigationAction.request.url, let scheme = url.scheme {
+                    let defaultSchemes: [String] = ["http", "https"]
+                    if !defaultSchemes.contains(scheme) {
+                        decisionHandler(.cancel)
+                        self.context.sharedContext.applicationBindings.openUrl(url.absoluteString)
+                        return
+                    }
+                }
                 decisionHandler(.allow)
             }
         } else {

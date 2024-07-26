@@ -34,7 +34,7 @@ import AvatarNode
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
-    case peerId(EnginePeer.Id)
+    case peerId(EnginePeer.Id, ChatListRecentEntry.Section)
 }
 
 private enum ChatListRecentEntry: Comparable, Identifiable {
@@ -51,8 +51,8 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
         switch self {
             case .topPeers:
                 return .topPeers
-            case let .peer(_, peer, _, _, _, _, _, _, _, _, _):
-                return .peerId(peer.peer.peerId)
+            case let .peer(_, peer, section, _, _, _, _, _, _, _, _):
+                return .peerId(peer.peer.peerId, section)
         }
     }
     
