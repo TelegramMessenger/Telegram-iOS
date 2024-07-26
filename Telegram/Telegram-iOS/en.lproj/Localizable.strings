@@ -12564,6 +12564,7 @@ Sorry for the inconvenience.";
 "WebBrowser.AddressBar.RecentlyVisited.Clear" = "Clear";
 
 "WebBrowser.AddressBar.Bookmarks" = "BOOKMARKS";
+"WebBrowser.AddressBar.ShowMore" = "Show More";
 
 "WebBrowser.OpenLinksIn.Title" = "OPEN LINKS IN";
 "WebBrowser.AutoLogin" = "Auto-Login via Telegram";
@@ -12656,3 +12657,6 @@ Sorry for the inconvenience.";
 "WebBrowser.CopyLink" = "Copy Link";
 "WebBrowser.DeleteBookmark" = "Delete Bookmark";
 "WebBrowser.RemoveRecent" = "Remove from Recent";
+
+"Stars.Intro.Transaction.Gift.Title" = "Received Gift";
+"Stars.Intro.Transaction.Gift.UnknownUser" = "Unknown User";

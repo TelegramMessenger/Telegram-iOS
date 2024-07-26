@@ -235,9 +235,9 @@ final class BrowserAddressListComponent: Component {
                         
                         let sectionTitle: String
                         if section.id == 0 {
-                            sectionTitle = "RECENTLY VISITED"
+                            sectionTitle = component.strings.WebBrowser_AddressBar_RecentlyVisited
                         } else if section.id == 1 {
-                            sectionTitle = "BOOKMARKS"
+                            sectionTitle = component.strings.WebBrowser_AddressBar_Bookmarks
                         } else {
                             sectionTitle = ""
                         }
@@ -249,7 +249,7 @@ final class BrowserAddressListComponent: Component {
                                 style: .plain,
                                 title: sectionTitle,
                                 insets: component.insets,
-                                actionTitle: section.id == 0 ? "Clear" : nil,
+                                actionTitle: section.id == 0 ? component.strings.WebBrowser_AddressBar_RecentlyVisited_Clear : nil,
                                 action: { [weak self] in
                                     if let self, let component = self.component {
                                         let _ = clearRecentlyVisitedLinks(engine: component.context.engine).start()
@@ -279,11 +279,11 @@ final class BrowserAddressListComponent: Component {
                         continue
                     }
 
-                    var id = 0
+                    var id: String = ""
                     if section.id == 0 {
-                        id += i
+                        id = "recent_\(state.recent[i].content.url ?? "")"
                     } else if section.id == 1 {
-                        id += 1000 + i
+                        id = "bookmark_\(state.bookmarks[i].id.id)"
                     }
                     
                     let itemId = AnyHashable(id)
@@ -458,11 +458,12 @@ final class BrowserAddressListComponent: Component {
                         bookmarks.append(entry.message)
                     }
                     
+                    let isFirstTime = self.stateValue == nil
                     self.stateValue = State(
                         recent: recent,
                         bookmarks: bookmarks
                     )
-                    self.state?.updated(transition: .immediate)
+                    self.state?.updated(transition: isFirstTime ? .immediate : .easeInOut(duration: 0.25))
                 })
             }
             

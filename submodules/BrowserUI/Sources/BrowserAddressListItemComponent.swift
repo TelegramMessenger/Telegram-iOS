@@ -116,6 +116,10 @@ final class BrowserAddressListItemComponent: Component {
                 self.containerButton.clipsToBounds = value
                 self.containerButton.backgroundColor = value ? component.theme.list.plainBackgroundColor : nil
                 self.containerButton.layer.cornerRadius = value ? 10.0 : 0.0
+                
+                if value {
+                    self.highlightedBackgroundLayer.opacity = 0.0
+                }
             }
             self.extractedContainerView.willUpdateIsExtractedToContextPreview = { [weak self] value, transition in
                 guard let self else {
