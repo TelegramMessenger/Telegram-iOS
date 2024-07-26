@@ -16,6 +16,7 @@ import UrlWhitelist
 import AccountContext
 import TelegramStringFormatting
 import WallpaperResources
+import UrlEscaping
 
 private let iconFont = Font.with(size: 30.0, design: .round, weight: .bold)
 
@@ -333,7 +334,21 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                 mutableDescriptionText.append(NSAttributedString(string: text + "\n", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor))
                             }
                             
-                            let plainUrlString = NSAttributedString(string: content.url.replacingOccurrences(of: "https://", with: ""), font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor)
+                            var address = content.url
+                            if let components = URLComponents(string: address) {
+                                if #available(iOS 16.0, *), let encodedHost = components.encodedHost {
+                                    if let decodedHost = components.host, encodedHost != decodedHost {
+                                        address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
+                                    }
+                                } else if let encodedHost = components.host {
+                                    if let decodedHost = components.host?.idnaDecoded, encodedHost != decodedHost {
+                                        address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
+                                    }
+                                }
+                            }
+                            address = address.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                            
+                            let plainUrlString = NSAttributedString(string: address.replacingOccurrences(of: "https://", with: ""), font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor)
                             let urlString = NSMutableAttributedString()
                             urlString.append(plainUrlString)
                             urlString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), value: content.url, range: NSMakeRange(0, urlString.length))
@@ -432,6 +447,21 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                             mutableDescriptionText.append(NSAttributedString(string: messageText + "\n", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor))
                                         }
                                         
+                                        var address = urlString
+                                        if let components = URLComponents(string: address) {
+                                            if #available(iOS 16.0, *), let encodedHost = components.encodedHost {
+                                                if let decodedHost = components.host, encodedHost != decodedHost {
+                                                    address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
+                                                }
+                                            } else if let encodedHost = components.host {
+                                                if let decodedHost = components.host?.idnaDecoded, encodedHost != decodedHost {
+                                                    address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
+                                                }
+                                            }
+                                        }
+                                        address = address.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                                        urlString = address
+                                        
                                         let urlAttributedString = NSMutableAttributedString()
                                         urlAttributedString.append(NSAttributedString(string: urlString.replacingOccurrences(of: "https://", with: ""), font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor))
                                         if item.presentationData.theme.theme.list.itemAccentColor.isEqual(item.presentationData.theme.theme.list.itemPrimaryTextColor) {
@@ -486,6 +516,21 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                         if messageTextUrl != rawUrlString, !item.isGlobalSearchResult {
                                             mutableDescriptionText.append(NSAttributedString(string: messageText + "\n", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor))
                                         }
+                                        
+                                        var address = urlString
+                                        if let components = URLComponents(string: address) {
+                                            if #available(iOS 16.0, *), let encodedHost = components.encodedHost {
+                                                if let decodedHost = components.host, encodedHost != decodedHost {
+                                                    address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
+                                                }
+                                            } else if let encodedHost = components.host {
+                                                if let decodedHost = components.host?.idnaDecoded, encodedHost != decodedHost {
+                                                    address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
+                                                }
+                                            }
+                                        }
+                                        address = address.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                                        urlString = address
                                         
                                         let urlAttributedString = NSMutableAttributedString()
                                         urlAttributedString.append(NSAttributedString(string: urlString.replacingOccurrences(of: "https://", with: ""), font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor))
