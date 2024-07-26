@@ -413,12 +413,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
         
         func checkBotIdAndUrl(_ url: String) {
-            //1985737506
-            if url.hasPrefix("https://walletbot.me"), let botId = self.controller?.botId.id._internalGetInt64Value(), botId != 1985737506 {
-                let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: "Bot id mismatch, please report steps to app developer", actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
-                })])
-                self.controller?.present(alertController, in: .window(.root))
-            }
+//            if url.hasPrefix("https://walletbot.me"), let botId = self.controller?.botId.id._internalGetInt64Value(), botId != 1985737506 {
+//                let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: "Bot id mismatch, please report steps to app developer", actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
+//                })])
+//                self.controller?.present(alertController, in: .window(.root))
+//            }
         }
         
         @objc fileprivate func mainButtonPressed() {

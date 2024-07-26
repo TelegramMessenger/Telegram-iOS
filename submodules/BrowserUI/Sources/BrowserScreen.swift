@@ -775,12 +775,18 @@ public class BrowserScreen: ViewController, MinimizableController {
             self.presentationState = f(self.presentationState)
             self.requestLayout(transition: transition)
         }
-
+        
         func pushContent(_ content: BrowserScreen.Subject, transition: ComponentTransition) {
             let browserContent: BrowserContent
             switch content {
             case let .webPage(url):
-                browserContent = BrowserWebContent(context: self.context, presentationData: self.presentationData, url: url)
+                let webContent = BrowserWebContent(context: self.context, presentationData: self.presentationData, url: url)
+                webContent.cancelInteractiveTransitionGestures = { [weak self] in
+                    if let self, let view = self.controller?.view {
+                        cancelInteractiveTransitionGestures(view: view)
+                    }
+                }
+                browserContent = webContent
             case let .instantPage(webPage, anchor, sourceLocation):
                 let instantPageContent = BrowserInstantPageContent(context: self.context, presentationData: self.presentationData, webPage: webPage, anchor: anchor, url: webPage.content.url ?? "", sourceLocation: sourceLocation)
                 instantPageContent.openPeer = { [weak self] peer in
@@ -1580,5 +1586,21 @@ private final class BrowserContentComponent: Component {
 
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
+    }
+}
+
+private func cancelInteractiveTransitionGestures(view: UIView) {
+    if let gestureRecognizers = view.gestureRecognizers {
+        for gesture in gestureRecognizers {
+            if let gesture = gesture as? InteractiveTransitionGestureRecognizer {
+                gesture.cancel()
+            } else if let scrollView = gesture.view as? UIScrollView, gesture.isEnabled, scrollView.tag == 0x5C4011 {
+                gesture.isEnabled = false
+                gesture.isEnabled = true
+            }
+        }
+    }
+    if let superview = view.superview {
+        cancelInteractiveTransitionGestures(view: superview)
     }
 }

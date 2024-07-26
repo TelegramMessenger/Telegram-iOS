@@ -12593,9 +12593,7 @@ Sorry for the inconvenience.";
 
 "AccessDenied.LocationWeather" = "Telegram needs access to your location so that you can add the weather widget to your stories.\n\nPlease go to Settings > Privacy > Location Services and set Telegram to ON.";
 
-"Story.Editor.TooltipWeatherLimitValue_1" = "**%@** weather stickers";
-"Story.Editor.TooltipWeatherLimitValue_any" = "**%@** weather stickers";
-"Story.Editor.TooltipWeatherLimitText" = "You can't add more than %@ to a story.";
+"Story.Editor.TooltipWeatherLimitText" = "You can't add more than one weather sticker to a story.";
 
 "WebBrowser.AddressPlaceholder" = "Enter URL";
 
