@@ -479,7 +479,7 @@ private func fetchDomainExceptionInfo(context: AccountContext, url: String) -> S
                     var image: TelegramMediaImage?
                     if let imageData, let parsedImage = UIImage(data: imageData) {
                         let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                        context.account.postbox.mediaBox.storeResourceData(resource.id, data: imageData)
+                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: imageData)
                         image = TelegramMediaImage(
                             imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: Int64.random(in: Int64.min ... Int64.max)),
                             representations: [
