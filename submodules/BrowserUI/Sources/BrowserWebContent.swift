@@ -681,7 +681,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
 //            })
 //        } else {
             if let url = navigationAction.request.url?.absoluteString {
-                if isTelegramMeLink(url) || isTelegraPhLink(url) {
+                if (navigationAction.targetFrame == nil || navigationAction.targetFrame?.isMainFrame == true) && (isTelegramMeLink(url) || isTelegraPhLink(url)) {
                     decisionHandler(.cancel, preferences)
                     self.minimize()
                     self.openAppUrl(url)
@@ -712,7 +712,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         if let url = navigationAction.request.url?.absoluteString {
-            if isTelegramMeLink(url) || isTelegraPhLink(url) {
+            if (navigationAction.targetFrame == nil || navigationAction.targetFrame?.isMainFrame == true) && (isTelegramMeLink(url) || isTelegraPhLink(url)) {
                 decisionHandler(.cancel)
                 self.minimize()
                 self.openAppUrl(url)

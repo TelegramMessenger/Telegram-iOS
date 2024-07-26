@@ -443,7 +443,20 @@ open class NavigationController: UINavigationController, ContainableController, 
             globalScrollToTopNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -1.0), size: CGSize(width: layout.size.width, height: 1.0))
         }
         
-        let overlayContainerLayout = layout
+        var overlayContainerLayout = layout
+        
+        var updatedSize = layout.size
+        var updatedIntrinsicInsets = layout.intrinsicInsets
+        var updatedAdditionalInsets = layout.additionalInsets
+        if let minimizedContainer = self.minimizedContainer {
+            if (layout.inputHeight ?? 0.0).isZero {
+                let minimizedContainerHeight = minimizedContainer.collapsedHeight(layout: layout)
+                updatedSize.height -= minimizedContainerHeight
+                updatedIntrinsicInsets.bottom = 0.0
+                updatedAdditionalInsets.bottom += minimizedContainerHeight
+            }
+        }
+        overlayContainerLayout = overlayContainerLayout.withUpdatedAdditionalInsets(updatedAdditionalInsets)
         
         if let inCallStatusBar = self.inCallStatusBar {
             let isLandscape = layout.size.width > layout.size.height
@@ -843,8 +856,6 @@ open class NavigationController: UINavigationController, ContainableController, 
         layout.additionalInsets.left = max(layout.intrinsicInsets.left, additionalSideInsets.left)
         layout.additionalInsets.right = max(layout.intrinsicInsets.right, additionalSideInsets.right)
         
-        var updatedSize = layout.size
-        var updatedIntrinsicInsets = layout.intrinsicInsets
         if case .flat = navigationLayout.root, let minimizedContainer = self.minimizedContainer {
             if minimizedContainer.supernode !== self.displayNode {
                 if let rootContainer = self.rootContainer, case let .flat(flatContainer) = rootContainer {
@@ -856,10 +867,6 @@ open class NavigationController: UINavigationController, ContainableController, 
                 } else {
                     self.displayNode.insertSubnode(minimizedContainer, at: 0)
                 }
-            }
-            if (layout.inputHeight ?? 0.0).isZero {
-                updatedSize.height -= minimizedContainer.collapsedHeight(layout: layout)
-                updatedIntrinsicInsets.bottom = 0.0
             }
         }
         
