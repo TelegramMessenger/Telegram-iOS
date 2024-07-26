@@ -12631,7 +12631,7 @@ Sorry for the inconvenience.";
 "BotPreviews.SubtitleLoading" = "loading";
 "BotPreviews.SubtitleEmpty" = "no preview added";
 "BotPreviews.SubtitleCount_1" = "1 preview";
-"BotPreviews.SubtitleCount_any" = "1 previews";
+"BotPreviews.SubtitleCount_any" = "%d previews";
 "BotPreviews.SheetDeleteTitle_1" = "Delete 1 Preview?";
 "BotPreviews.SheetDeleteTitle_any" = "Delete %d Previews?";
 "BotPreviews.LanguageTab.Main" = "Main";

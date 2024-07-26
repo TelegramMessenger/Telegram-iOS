@@ -3614,11 +3614,15 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         effectiveScrollingOffset = self.itemGrid.scrollingOffset
         botPreviewLanguageTabFrame.origin.y -= effectiveScrollingOffset
         
+        let isSelectingOrReordering = self.isReordering || self.itemInteraction.selectedIds != nil
+        
         if let botPreviewLanguageTabView = botPreviewLanguageTab.view {
             if botPreviewLanguageTabView.superview == nil {
                 self.view.addSubview(botPreviewLanguageTabView)
             }
             transition.updateFrame(view: botPreviewLanguageTabView, frame: botPreviewLanguageTabFrame)
+            transition.updateAlpha(layer: botPreviewLanguageTabView.layer, alpha: isSelectingOrReordering ? 0.5 : 1.0)
+            botPreviewLanguageTabView.isUserInteractionEnabled = !isSelectingOrReordering
         }
     }
     
@@ -4405,6 +4409,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: id, ids: updatedPinnedIds).startStandalone()
                 }
             }
+            
+            self.update(transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate)
         }
     }
 }

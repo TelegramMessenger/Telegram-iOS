@@ -124,7 +124,7 @@ private func rippleOffset(
     }
     
     if distance <= 60.0 {
-        rippleAmount *= 0.4
+        rippleAmount = 0.4 * rippleAmount
     }
 
     // A vector of length `amplitude` that points away from position.
@@ -368,7 +368,7 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         
         transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
         
-        let params = RippleParams(amplitude: 26.0, frequency: 15.0, decay: 8.0, speed: 1400.0)
+        let params = RippleParams(amplitude: 20.0, frequency: 15.0, decay: 8.0, speed: 1400.0)
         
         if let currentCloneView = self.currentCloneView {
             currentCloneView.removeFromSuperview()
