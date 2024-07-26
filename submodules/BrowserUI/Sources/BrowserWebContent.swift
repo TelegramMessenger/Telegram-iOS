@@ -127,6 +127,28 @@ final class WebView: WKWebView {
     override var safeAreaInsets: UIEdgeInsets {
         return UIEdgeInsets(top: 0.0, left: 0.0, bottom: self.customBottomInset, right: 0.0)
     }
+    
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        var result = super.point(inside: point, with: event)
+        if !result && point.x > 0.0 && point.y < self.frame.width && point.y > 0.0 && point.y < self.frame.height + 83.0 {
+            result = true
+        }
+        return result
+    }
+}
+
+private class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
+    private let f: (WKScriptMessage) -> ()
+    
+    init(_ f: @escaping (WKScriptMessage) -> ()) {
+        self.f = f
+        
+        super.init()
+    }
+    
+    func userContentController(_ controller: WKUserContentController, didReceive scriptMessage: WKScriptMessage) {
+        self.f(scriptMessage)
+    }
 }
 
 final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
@@ -160,6 +182,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     var present: (ViewController, Any?) -> Void = { _, _ in }
     var presentInGlobalOverlay: (ViewController) -> Void = { _ in }
     var getNavigationController: () -> NavigationController? = { return nil }
+    var cancelInteractiveTransitionGestures: () -> Void = {}
     
     private var tempFile: TempBoxFile?
     
@@ -185,7 +208,16 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         let contentController = WKUserContentController()
         let videoScript = WKUserScript(source: videoSource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
         contentController.addUserScript(videoScript)
+        let touchScript = WKUserScript(source: setupTouchObservers, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        contentController.addUserScript(touchScript)
         configuration.userContentController = contentController
+        
+        var handleScriptMessageImpl: ((WKScriptMessage) -> Void)?
+        let eventProxyScript = WKUserScript(source: eventProxySource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        contentController.addUserScript(eventProxyScript)
+        contentController.add(WeakScriptMessageHandler { message in
+            handleScriptMessageImpl?(message)
+        }, name: "performAction")
         
         self.webView = WebView(frame: CGRect(), configuration: configuration)
         self.webView.allowsLinkPreview = true
@@ -240,11 +272,27 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
         self.addSubview(self.webView)
         
-        self.webView.interactiveTransitionGestureRecognizerTest = { [weak self] point -> Bool in
+        self.webView.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
             if let self, self.webView.canGoBack {
                 return true
+            } else {
+                return false
             }
-            return point.x > 44.0
+        }
+        
+        self.webView.interactiveTransitionGestureRecognizerTest = { [weak self] point in
+            if let self {
+                if let result = self.webView.hitTest(point, with: nil), let scrollView = findScrollView(view: result), scrollView.isDescendant(of: self.webView) {
+                    if scrollView.contentSize.width > scrollView.frame.width, scrollView.contentOffset.x > -scrollView.contentInset.left {
+                        return true
+                    }
+                }
+            }
+            return false
+        }
+        
+        handleScriptMessageImpl = { [weak self] message in
+            self?.handleScriptMessage(message)
         }
     }
     
@@ -261,6 +309,22 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.hasOnlySecureContent))
         
         self.faviconDisposable.dispose()
+    }
+    
+    private func handleScriptMessage(_ message: WKScriptMessage) {
+        guard let body = message.body as? [String: Any] else {
+            return
+        }
+        guard let eventName = body["eventName"] as? String else {
+            return
+        }
+        
+        switch eventName {
+        case "cancellingTouch":
+            self.cancelInteractiveTransitionGestures()
+        default:
+            break
+        }
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -523,7 +587,6 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             self.updateState { $0.withUpdatedEstimatedProgress(self.webView.estimatedProgress) }
         } else if keyPath == "canGoBack" {
             self.updateState { $0.withUpdatedCanGoBack(self.webView.canGoBack) }
-            self.webView.disablesInteractiveTransitionGestureRecognizer = self.webView.canGoBack
         } else if keyPath == "canGoForward" {
             self.updateState { $0.withUpdatedCanGoForward(self.webView.canGoForward) }
         } else if keyPath == "hasOnlySecureContent" {
@@ -1200,6 +1263,76 @@ function disconnectObserver() {
   observer.disconnect();
 }
 """
+
+let setupTouchObservers =
+"""
+(function() {
+    function saveOriginalCssProperties(element) {
+        while (element) {
+            const computedStyle = window.getComputedStyle(element);
+            const propertiesToSave = ['transform', 'top', 'left'];
+            
+            element._originalProperties = {};
+
+            for (const property of propertiesToSave) {
+                element._originalProperties[property] = computedStyle.getPropertyValue(property);
+            }
+            
+            element = element.parentElement;
+        }
+    }
+
+    function checkForCssChanges(element) {
+        while (element) {
+            if (!element._originalProperties) return false;
+            const computedStyle = window.getComputedStyle(element);
+            const modifiedProperties = ['transform', 'top', 'left'];
+
+            for (const property of modifiedProperties) {
+                if (computedStyle.getPropertyValue(property) !== element._originalProperties[property]) {
+                    return true;
+                }
+            }
+            
+            element = element.parentElement;
+        }
+        
+        return false;
+    }
+
+    function clearOriginalCssProperties(element) {
+        while (element) {
+            delete element._originalProperties;
+            element = element.parentElement;
+        }
+    }
+
+    let touchedElement = null;
+
+    document.addEventListener('touchstart', function(event) {
+        touchedElement = event.target;
+        saveOriginalCssProperties(touchedElement);
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function(event) {
+        if (checkForCssChanges(touchedElement)) {
+            TelegramWebviewProxy.postEvent("cancellingTouch", {})
+            console.log('CSS properties changed during touchmove');
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', function() {
+        clearOriginalCssProperties(touchedElement);
+        touchedElement = null;
+    }, { passive: true });
+})();
+"""
+
+private let eventProxySource = "var TelegramWebviewProxyProto = function() {}; " +
+    "TelegramWebviewProxyProto.prototype.postEvent = function(eventName, eventData) { " +
+    "window.webkit.messageHandlers.performAction.postMessage({'eventName': eventName, 'eventData': eventData}); " +
+    "}; " +
+"var TelegramWebviewProxy = new TelegramWebviewProxyProto();"
 
 @available(iOS 16.0, *)
 final class BrowserSearchOptions: UITextSearchOptions {

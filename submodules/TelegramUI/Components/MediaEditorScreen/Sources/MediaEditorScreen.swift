@@ -4654,7 +4654,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
                 return
             }
-            let maxWeatherCount = 3
+            let maxWeatherCount = 1
             var currentWeatherCount = 0
             self.entitiesView.eachView { entityView in
                 if entityView.entity is DrawingWeatherEntity {
@@ -6290,12 +6290,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         let context = self.context
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let limit: Int32 = 3
         
-        let value = presentationData.strings.Story_Editor_TooltipWeatherLimitValue(limit)
         let content: UndoOverlayContent = .info(
             title: nil,
-            text: presentationData.strings.Story_Editor_TooltipWeatherLimitText(value).string,
+            text: presentationData.strings.Story_Editor_TooltipWeatherLimitText.string,
             timeout: nil,
             customUndoText: nil
         )
