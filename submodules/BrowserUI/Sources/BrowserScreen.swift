@@ -153,24 +153,24 @@ private final class BrowserScreenComponent: CombinedComponent {
                     ]
                                         
                     if isTablet {
-                        navigationLeftItems.append(
-                            AnyComponentWithIdentity(
-                                id: "minimize",
-                                component: AnyComponent(
-                                    Button(
-                                        content: AnyComponent(
-                                            BundleIconComponent(
-                                                name: "Media Gallery/PictureInPictureButton",
-                                                tintColor: environment.theme.rootController.navigationBar.accentTextColor
-                                            )
-                                        ),
-                                        action: {
-                                            performAction.invoke(.close)
-                                        }
-                                    )
-                                )
-                            )
-                        )
+//                        navigationLeftItems.append(
+//                            AnyComponentWithIdentity(
+//                                id: "minimize",
+//                                component: AnyComponent(
+//                                    Button(
+//                                        content: AnyComponent(
+//                                            BundleIconComponent(
+//                                                name: "Media Gallery/PictureInPictureButton",
+//                                                tintColor: environment.theme.rootController.navigationBar.accentTextColor
+//                                            )
+//                                        ),
+//                                        action: {
+//                                            performAction.invoke(.close)
+//                                        }
+//                                    )
+//                                )
+//                            )
+//                        )
                         
                         let canGoBack = context.component.contentState?.canGoBack ?? false
                         let canGoForward = context.component.contentState?.canGoForward ?? false

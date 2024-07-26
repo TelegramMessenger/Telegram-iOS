@@ -348,7 +348,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                             }
                             address = address.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                             
-                            let plainUrlString = NSAttributedString(string: address.replacingOccurrences(of: "https://", with: ""), font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor)
+                            let plainUrlString = NSAttributedString(string: address.replacingOccurrences(of: "https://", with: "").replacingOccurrences(of: "tonsite://", with: ""), font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor)
                             let urlString = NSMutableAttributedString()
                             urlString.append(plainUrlString)
                             urlString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), value: content.url, range: NSMakeRange(0, urlString.length))
@@ -412,8 +412,13 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                     let rawUrlString = urlString
                                     var parsedUrl = URL(string: urlString)
                                     if (parsedUrl == nil || parsedUrl!.host == nil || parsedUrl!.host!.isEmpty) && !urlString.contains("@") {
-                                        urlString = "http://" + urlString
-                                        parsedUrl = URL(string: urlString)
+                                        if let mappedURL = URL(string: "https://\(urlString)"), let host = mappedURL.host, host.lowercased().hasSuffix(".ton") {
+                                            urlString = "tonsite://" + urlString
+                                            parsedUrl = URL(string: urlString)
+                                        } else {
+                                            urlString = "http://" + urlString
+                                            parsedUrl = URL(string: urlString)
+                                        }
                                     }
                                     var host: String? = concealed ? urlString : parsedUrl?.host
                                     if host == nil {
@@ -463,7 +468,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                         urlString = address
                                         
                                         let urlAttributedString = NSMutableAttributedString()
-                                        urlAttributedString.append(NSAttributedString(string: urlString.replacingOccurrences(of: "https://", with: ""), font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor))
+                                        urlAttributedString.append(NSAttributedString(string: urlString.replacingOccurrences(of: "https://", with: "").replacingOccurrences(of: "tonsite://", with: ""), font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor))
                                         if item.presentationData.theme.theme.list.itemAccentColor.isEqual(item.presentationData.theme.theme.list.itemPrimaryTextColor) {
                                             urlAttributedString.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: NSMakeRange(0, urlAttributedString.length))
                                         }
@@ -495,8 +500,13 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                     let rawUrlString = urlString
                                     var parsedUrl = URL(string: urlString)
                                     if (parsedUrl == nil || parsedUrl!.host == nil || parsedUrl!.host!.isEmpty) && !urlString.contains("@") {
-                                        urlString = "http://" + urlString
-                                        parsedUrl = URL(string: urlString)
+                                        if let mappedURL = URL(string: "https://\(urlString)"), let host = mappedURL.host, host.lowercased().hasSuffix(".ton") {
+                                            urlString = "tonsite://" + urlString
+                                            parsedUrl = URL(string: urlString)
+                                        } else {
+                                            urlString = "http://" + urlString
+                                            parsedUrl = URL(string: urlString)
+                                        }
                                     }
                                     let host: String? = concealed ? urlString : parsedUrl?.host
                                     if let url = parsedUrl, let host = host {
@@ -533,7 +543,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                         urlString = address
                                         
                                         let urlAttributedString = NSMutableAttributedString()
-                                        urlAttributedString.append(NSAttributedString(string: urlString.replacingOccurrences(of: "https://", with: ""), font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor))
+                                        urlAttributedString.append(NSAttributedString(string: urlString.replacingOccurrences(of: "https://", with: "").replacingOccurrences(of: "tonsite://", with: ""), font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor))
                                         if item.presentationData.theme.theme.list.itemAccentColor.isEqual(item.presentationData.theme.theme.list.itemPrimaryTextColor) {
                                             urlAttributedString.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: NSMakeRange(0, urlAttributedString.length))
                                         }
