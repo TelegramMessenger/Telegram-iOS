@@ -9,6 +9,7 @@ import TelegramCore
 import AccountContext
 import TelegramPresentationData
 import ContextUI
+import UndoUI
 
 final class BrowserAddressListComponent: Component {
     let context: AccountContext
@@ -336,13 +337,23 @@ final class BrowserAddressListComponent: Component {
                                     }
                                 },
                                 contextAction: { [weak self] webPage, message, sourceView, gesture in
-                                    guard let self, let component = self.component else {
+                                    guard let self, let component = self.component, let url = webPage.content.url else {
                                         return
                                     }
                                     
                                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                                     
                                     var itemList: [ContextMenuItem] = []
+                                    itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.WebBrowser_CopyLink, icon: { theme in
+                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor)
+                                    }, action: { [weak self] _, f in
+                                        f(.default)
+                                         
+                                        UIPasteboard.general.string = url
+                                        if let self, let component = self.component {
+                                            component.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
+                                        }
+                                    })))
                                     
                                     if let message {
                                         itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.WebBrowser_DeleteBookmark, textColor: .destructive, icon: { theme in

@@ -16,6 +16,8 @@ import UrlWhitelist
 import SearchUI
 import SearchBarNode
 import ChatHistorySearchContainerNode
+import ContextUI
+import UndoUI
 
 public final class BrowserBookmarksScreen: ViewController {
     final class Node: ViewControllerTracingNode, ASScrollViewDelegate {
@@ -39,6 +41,7 @@ public final class BrowserBookmarksScreen: ViewController {
             self.presentationData = presentationData
         
             var openMessageImpl: ((Message) -> Bool)?
+            var openContextMenuImpl: ((Message, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void)?
             self.controllerInteraction = ChatControllerInteraction(openMessage: { message, _ in
                 if let openMessageImpl = openMessageImpl {
                     return openMessageImpl(message)
@@ -47,7 +50,8 @@ public final class BrowserBookmarksScreen: ViewController {
                 }
             }, openPeer: { _, _, _, _ in
             }, openPeerMention: { _, _ in
-            }, openMessageContextMenu: { _, _, _, _, _, _ in
+            }, openMessageContextMenu: { message, _, sourceView, rect, gesture, _ in
+                openContextMenuImpl?(message, sourceView, rect, gesture)
             }, openMessageReactionContextMenu: { _, _, _, _ in
             }, updateMessageReaction: { _, _, _, _ in
             }, activateMessagePinch: { _ in
@@ -219,6 +223,47 @@ public final class BrowserBookmarksScreen: ViewController {
                 if let (layout, navigationBarHeight, actualNavigationBarHeight) = self.validLayout {
                     self.containerLayoutUpdated(layout: layout, navigationBarHeight: navigationBarHeight, actualNavigationBarHeight: actualNavigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
                 }
+            }
+            
+            openContextMenuImpl = { [weak self] message, sourceNode, rect, gesture in
+                guard let self, let sourceNode = sourceNode as? ContextExtractedContentContainingNode else {
+                    return
+                }
+                
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                
+                var itemList: [ContextMenuItem] = []
+                if let webPage = message.media.first(where: { $0 is TelegramMediaWebpage }) as? TelegramMediaWebpage, let url = webPage.content.url {
+                    itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.WebBrowser_CopyLink, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, f in
+                        f(.default)
+                        
+                        UIPasteboard.general.string = url
+                        if let self  {
+                            self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                        }
+                    })))
+                }
+                itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.WebBrowser_DeleteBookmark, textColor: .destructive, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                }, action: { [weak self] _, f in
+                    f(.dismissWithoutContent)
+                     
+                    if let self {
+                        let _ = self.context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forEveryone).startStandalone()
+                    }
+                })))
+                
+                let items = ContextController.Items(content: .list(itemList))
+                let controller = ContextController(
+                    presentationData: presentationData,
+                    source: .extracted(BrowserBookmarksContextExtractedContentSource(contentNode: sourceNode)),
+                    items: .single(items),
+                    recognizer: nil,
+                    gesture: gesture as? ContextGesture
+                )
+                self.controller?.presentInGlobalOverlay(controller)
             }
         }
         
@@ -515,3 +560,23 @@ private class BottomPanelNode: ASDisplayNode {
     }
 }
 
+
+final class BrowserBookmarksContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = false
+    let blurBackground: Bool = true
+    
+    private let contentNode: ContextExtractedContentContainingNode
+    
+    init(contentNode: ContextExtractedContentContainingNode) {
+        self.contentNode = contentNode
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(containingItem: .node(self.contentNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}

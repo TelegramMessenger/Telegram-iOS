@@ -186,6 +186,7 @@ final class BrowserAddressListItemComponent: Component {
                 }
                 address = address.replacingOccurrences(of: "https://www.", with: "")
                 address = address.replacingOccurrences(of: "https://", with: "")
+                address = address.replacingOccurrences(of: "tonsite://", with: "")
                 address = address.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                 subtitle = address
                 

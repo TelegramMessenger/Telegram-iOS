@@ -261,6 +261,8 @@ final class BrowserNavigationBarComponent: CombinedComponent {
                 availableWidth -= itemSpacing * CGFloat(max(0, leftItemList.count - 1)) + itemSpacing * CGFloat(max(0, rightItemList.count - 1)) + 30.0
             }
             availableWidth -= context.component.sideInset * 2.0
+            
+            let canCenter = availableWidth > 660.0
             availableWidth = min(660.0, availableWidth)
             
             let environment = BrowserNavigationBarEnvironment(fraction: context.component.collapseFraction)
@@ -276,7 +278,11 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             
             var centerX = maxCenterInset + (context.availableSize.width - maxCenterInset * 2.0) / 2.0
             if "".isEmpty {
-                centerX = centerLeftInset + (context.availableSize.width - centerLeftInset - centerRightInset) / 2.0
+                if canCenter {
+                    centerX = context.availableSize.width / 2.0
+                } else {
+                    centerX = centerLeftInset + (context.availableSize.width - centerLeftInset - centerRightInset) / 2.0
+                }
             }
             if let centerItem = centerItem {
                 let centerItemPosition = CGPoint(x: centerX, y: context.component.topInset + contentHeight / 2.0 + verticalOffset)

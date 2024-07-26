@@ -12653,5 +12653,6 @@ Sorry for the inconvenience.";
 "Story.Cover" = "Story Cover";
 "Story.SaveCover" = "Save Cover";
 
+"WebBrowser.CopyLink" = "Copy Link";
 "WebBrowser.DeleteBookmark" = "Delete Bookmark";
 "WebBrowser.RemoveRecent" = "Remove from Recent";
