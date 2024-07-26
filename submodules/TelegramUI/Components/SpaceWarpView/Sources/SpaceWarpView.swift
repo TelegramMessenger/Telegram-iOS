@@ -92,7 +92,7 @@ private struct RippleParams {
     }
 }
 
-private func transformCoordinate(
+private func rippleOffset(
     position: CGPoint,
     origin: CGPoint,
     time: CGFloat,
@@ -122,6 +122,10 @@ private func transformCoordinate(
     } else {
         rippleAmount = absRippleAmount
     }
+    
+    if distance <= 60.0 {
+        rippleAmount *= 0.4
+    }
 
     // A vector of length `amplitude` that points away from position.
     let n: CGPoint
@@ -132,8 +136,7 @@ private func transformCoordinate(
     //
     // This new position moves toward or away from `origin` based on the
     // sign and magnitude of `rippleAmount`.
-    let newPosition = position - n * rippleAmount
-    return newPosition
+    return n * (-rippleAmount)
 }
 
 func transformToFitQuad2(frame: CGRect, topLeft tl: CGPoint, topRight tr: CGPoint, bottomLeft bl: CGPoint, bottomRight br: CGPoint) -> (frame: CGRect, transform: CATransform3D) {
@@ -147,7 +150,7 @@ func transformToFitQuad2(frame: CGRect, topLeft tl: CGPoint, topRight tr: CGPoin
         quadBR: CGPoint(x: br.x - frameTopLeft.x, y: br.y - frameTopLeft.y)
     )
     
-    let anchorPoint = frame.center
+    let anchorPoint = frame.origin
     let anchorOffset = CGPoint(x: anchorPoint.x - frame.origin.x, y: anchorPoint.y - frame.origin.y)
     let transPos = CATransform3DMakeTranslation(anchorOffset.x, anchorOffset.y, 0)
     let transNeg = CATransform3DMakeTranslation(-anchorOffset.x, -anchorOffset.y, 0)
@@ -196,21 +199,6 @@ private func boundingBox(forQuadWithTR tr: CGPoint, tl: CGPoint, bl: CGPoint, br
 }
 
 func rectToQuad(rect: CGRect, quadTL topLeft: CGPoint, quadTR topRight: CGPoint, quadBL bottomLeft: CGPoint, quadBR bottomRight: CGPoint) -> CATransform3D {
-    /*if "".isEmpty {
-        let destination = Perspective(Quadrilateral(
-            topLeft,
-            topRight,
-            bottomLeft,
-            bottomRight
-        ))
-
-        // Starting perspective is the current overlay frame or could be another 4 points.
-        let start = Perspective(Quadrilateral(rect.origin, rect.size))
-
-        // Caclulate CATransform3D from start to destination
-        return start.projectiveTransform(destination: destination)
-    }*/
-    
     return rectToQuad(rect: rect, quadTLX: topLeft.x, quadTLY: topLeft.y, quadTRX: topRight.x, quadTRY: topRight.y, quadBLX: bottomLeft.x, quadBLY: bottomLeft.y, quadBRX: bottomRight.x, quadBRY: bottomRight.y)
 }
 
@@ -263,6 +251,15 @@ public protocol SpaceWarpNode: ASDisplayNode {
 }
 
 open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
+    private final class Shockwave {
+        let startPoint: CGPoint
+        var timeValue: CGFloat = 0.0
+        
+        init(startPoint: CGPoint) {
+            self.startPoint = startPoint
+        }
+    }
+    
     public var contentNode: ASDisplayNode {
         return self.contentNodeSource
     }
@@ -281,9 +278,8 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
     #endif
     
     private var link: SharedDisplayLinkDriver.Link?
-    private var startPoint: CGPoint?
     
-    private var timeValue: CGFloat = 0.0
+    private var shockwaves: [Shockwave] = []
     
     private var resolution: (x: Int, y: Int)?
     private var layoutParams: (size: CGSize, cornerRadius: CGFloat)?
@@ -311,15 +307,19 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
     }
     
     public func triggerRipple(at point: CGPoint) {
-        self.startPoint = point
-        self.timeValue = 0.0
+        self.shockwaves.append(Shockwave(startPoint: point))
+        if self.shockwaves.count > 8 {
+            self.shockwaves.removeFirst()
+        }
         
         if self.link == nil {
             self.link = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] deltaTime in
                 guard let self else {
                     return
                 }
-                self.timeValue += deltaTime * (1.0 / CGFloat(UIView.animationDurationFactor()))
+                for shockwave in self.shockwaves {
+                    shockwave.timeValue += deltaTime * (1.0 / CGFloat(UIView.animationDurationFactor()))
+                }
                 
                 if let (size, cornerRadius) = self.layoutParams {
                     self.update(size: size, cornerRadius: cornerRadius, transition: .immediate)
@@ -377,9 +377,15 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         
         let maxEdge = (max(size.width, size.height) * 0.5) * 2.0
         let maxDistance = sqrt(maxEdge * maxEdge + maxEdge * maxEdge)
-        
         let maxDelay = maxDistance / params.speed
-        guard let startPoint = self.startPoint, self.timeValue < maxDelay else {
+        
+        for i in (0 ..< self.shockwaves.count).reversed() {
+            if self.shockwaves[i].timeValue >= maxDelay {
+                self.shockwaves.remove(at: i)
+            }
+        }
+        
+        guard !self.shockwaves.isEmpty else {
             if let link = self.link {
                 self.link = nil
                 link.invalidate()
@@ -396,7 +402,6 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
             self.debugLayers.removeAll()
             
             self.resolution = nil
-            self.startPoint = nil
             self.backgroundView.isHidden = true
             self.contentNodeSource.clipsToBounds = false
             self.contentNodeSource.layer.cornerRadius = 0.0
@@ -473,10 +478,16 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
                 var bottomLeft = initialBottomLeft
                 var bottomRight = initialBottomRight
                 
-                topLeft = transformCoordinate(position: topLeft, origin: startPoint, time: self.timeValue, params: params)
+                for shockwave in self.shockwaves {
+                    topLeft = topLeft + rippleOffset(position: initialTopLeft, origin: shockwave.startPoint, time: shockwave.timeValue, params: params)
+                    topRight = topRight + rippleOffset(position: initialTopRight, origin: shockwave.startPoint, time: shockwave.timeValue, params: params)
+                    bottomLeft = bottomLeft + rippleOffset(position: initialBottomLeft, origin: shockwave.startPoint, time: shockwave.timeValue, params: params)
+                    bottomRight = bottomRight + rippleOffset(position: initialBottomRight, origin: shockwave.startPoint, time: shockwave.timeValue, params: params)
+                }
+                /*topLeft = transformCoordinate(position: topLeft, origin: startPoint, time: self.timeValue, params: params)
                 topRight = transformCoordinate(position: topRight, origin: startPoint, time: self.timeValue, params: params)
                 bottomLeft = transformCoordinate(position: bottomLeft, origin: startPoint, time: self.timeValue, params: params)
-                bottomRight = transformCoordinate(position: bottomRight, origin: startPoint, time: self.timeValue, params: params)
+                bottomRight = transformCoordinate(position: bottomRight, origin: startPoint, time: self.timeValue, params: params)*/
                 
                 let distanceTopLeft = length(topLeft - initialTopLeft)
                 let distanceTopRight = length(topRight - initialTopRight)
@@ -493,7 +504,7 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
                 }
                 
                 instanceBounds.append(frame)
-                instancePositions.append(frame.center)
+                instancePositions.append(frame.origin)
                 
                 instanceTransforms.append(transform)
             }
