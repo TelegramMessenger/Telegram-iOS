@@ -390,7 +390,7 @@ final class BrowserAddressListComponent: Component {
                                     insets: component.insets,
                                     action: {
                                         if let url = webPage?.content.url {
-                                            performAction.invoke(.navigateTo(url))
+                                            performAction.invoke(.navigateTo(url, false))
                                         }
                                     },
                                     contextAction: { [weak self] webPage, message, sourceView, gesture in

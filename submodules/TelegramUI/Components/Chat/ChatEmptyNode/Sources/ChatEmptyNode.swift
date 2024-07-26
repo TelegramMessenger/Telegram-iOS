@@ -22,6 +22,7 @@ import ReactionSelectionNode
 import ChatMediaInputStickerGridItem
 import UndoUI
 import PremiumUI
+import LottieComponent
 
 private protocol ChatEmptyNodeContent {
     func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize
@@ -1203,7 +1204,7 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
     private let interaction: ChatPanelInterfaceInteraction?
     
     private let iconBackground: SimpleLayer
-    private let icon: UIImageView
+    private let icon =  ComponentView<Empty>()
     private let text = ComponentView<Empty>()
     private let buttonTitle = ComponentView<Empty>()
     private let button: HighlightTrackingButton
@@ -1219,8 +1220,7 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
         self.interaction = interaction
         
         self.iconBackground = SimpleLayer()
-        self.icon = UIImageView(image: UIImage(bundleImageName: "Chat/Empty Chat/PremiumRequiredIcon")?.withRenderingMode(.alwaysTemplate))
-        
+
         self.button = HighlightTrackingButton()
         self.button.clipsToBounds = true
         
@@ -1230,7 +1230,6 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
         super.init()
         
         self.layer.addSublayer(self.iconBackground)
-        self.view.addSubview(self.icon)
         
         if !self.isPremiumDisabled {
             self.view.addSubview(self.button)
@@ -1330,11 +1329,28 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
         contentsHeight += iconBackgroundSize
         contentsHeight += iconTextSpacing
         
-        self.icon.tintColor = serviceColor.primaryText
-        if let image = self.icon.image {
-            transition.updateFrame(view: self.icon, frame: CGRect(origin: CGPoint(x: iconBackgroundFrame.minX + floor((iconBackgroundFrame.width - image.size.width) * 0.5), y: iconBackgroundFrame.minY + floor((iconBackgroundFrame.height - image.size.height) * 0.5)), size: image.size))
+        let iconSize = self.icon.update(
+            transition: .immediate,
+            component: AnyComponent(
+                LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: "PremiumRequired"),
+                    color: serviceColor.primaryText,
+                    size: CGSize(width: 120.0, height: 120.0),
+                    loop: true
+                )
+            ),
+            environment: {},
+            containerSize: CGSize(width: maxWidth - sideInset * 2.0, height: 500.0)
+        )
+        let iconFrame = CGRect(origin: CGPoint(x: iconBackgroundFrame.minX + floor((iconBackgroundFrame.width - iconSize.width) * 0.5), y: iconBackgroundFrame.minY + floor((iconBackgroundFrame.height - iconSize.height) * 0.5)), size: iconSize)
+        if let iconView = self.icon.view {
+            if iconView.superview == nil {
+                iconView.isUserInteractionEnabled = false
+                self.view.addSubview(iconView)
+            }
+            iconView.frame = iconFrame
         }
-        
+
         let textFrame = CGRect(origin: CGPoint(x: floor((contentsWidth - textSize.width) * 0.5), y: contentsHeight), size: textSize)
         if let textView = self.text.view {
             if textView.superview == nil {

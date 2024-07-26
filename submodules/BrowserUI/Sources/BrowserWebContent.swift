@@ -752,7 +752,12 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil {
             if let url = navigationAction.request.url?.absoluteString {
-                self.open(url: url, new: true)
+                if isTelegramMeLink(url) || isTelegraPhLink(url) {
+                    self.minimize()
+                    self.openAppUrl(url)
+                } else {
+                    self.open(url: url, new: true)
+                }
             }
         }
         return nil

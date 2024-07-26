@@ -135,11 +135,11 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
                 }
             }, didDismiss: { [weak parentController] in
                 if let parentController = parentController as? ChatControllerImpl {
-                    let isFocused = parentController.chatDisplayNode.textInputPanelNode?.isFocused ?? false
-                    parentController.chatDisplayNode.insertSubnode(parentController.chatDisplayNode.inputPanelContainerNode, aboveSubnode: parentController.chatDisplayNode.inputContextPanelContainer)
-                    if isFocused {
-                        parentController.chatDisplayNode.textInputPanelNode?.ensureFocused()
-                    }
+//                    let isFocused = parentController.chatDisplayNode.textInputPanelNode?.isFocused ?? false
+//                    parentController.chatDisplayNode.insertSubnode(parentController.chatDisplayNode.inputPanelContainerNode, aboveSubnode: parentController.chatDisplayNode.inputContextPanelContainer)
+//                    if isFocused {
+//                        parentController.chatDisplayNode.textInputPanelNode?.ensureFocused()
+//                    }
                     
                     parentController.updateChatPresentationInterfaceState(interactive: false) { state in
                         return state.updatedForceInputCommandsHidden(false)

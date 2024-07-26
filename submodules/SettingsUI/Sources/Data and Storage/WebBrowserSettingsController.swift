@@ -21,6 +21,7 @@ private final class WebBrowserSettingsControllerArguments {
     let context: AccountContext
     let updateDefaultBrowser: (String?) -> Void
     let clearCookies: () -> Void
+    let clearCache: () -> Void
     let addException: () -> Void
     let removeException: (String) -> Void
     let clearExceptions: () -> Void
@@ -29,6 +30,7 @@ private final class WebBrowserSettingsControllerArguments {
         context: AccountContext,
         updateDefaultBrowser: @escaping (String?) -> Void,
         clearCookies: @escaping () -> Void,
+        clearCache: @escaping () -> Void,
         addException: @escaping () -> Void,
         removeException: @escaping (String) -> Void,
         clearExceptions: @escaping () -> Void
@@ -36,6 +38,7 @@ private final class WebBrowserSettingsControllerArguments {
         self.context = context
         self.updateDefaultBrowser = updateDefaultBrowser
         self.clearCookies = clearCookies
+        self.clearCache = clearCache
         self.addException = addException
         self.removeException = removeException
         self.clearExceptions = clearExceptions
@@ -53,6 +56,7 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
     case browser(PresentationTheme, String, OpenInApplication?, String?, Bool, Int32)
     
     case clearCookies(PresentationTheme, String)
+    case clearCache(PresentationTheme, String)
     case clearCookiesInfo(PresentationTheme, String)
     
     case exceptionsHeader(PresentationTheme, String)
@@ -65,7 +69,7 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
         switch self {
             case .browserHeader, .browser:
                 return WebBrowserSettingsSection.browsers.rawValue
-            case .clearCookies, .clearCookiesInfo:
+            case .clearCookies, .clearCache, .clearCookiesInfo:
                 return WebBrowserSettingsSection.clearCookies.rawValue
             case .exceptionsHeader, .exceptionsAdd, .exception, .exceptionsClear, .exceptionsInfo:
                 return WebBrowserSettingsSection.exceptions.rawValue
@@ -80,12 +84,14 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
                 return UInt64(1 + index)
             case .clearCookies:
                 return 102
-            case .clearCookiesInfo:
+            case .clearCache:
                 return 103
-            case .exceptionsHeader:
+            case .clearCookiesInfo:
                 return 104
-            case .exceptionsAdd:
+            case .exceptionsHeader:
                 return 105
+            case .exceptionsAdd:
+                return 106
             case let .exception(_, _, exception):
                 return 2000 + exception.domain.persistentHashValue
             case .exceptionsClear:
@@ -103,14 +109,16 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
                 return 1 + index
             case .clearCookies:
                 return 102
-            case .clearCookiesInfo:
+            case .clearCache:
                 return 103
-            case .exceptionsHeader:
+            case .clearCookiesInfo:
                 return 104
-            case .exceptionsAdd:
+            case .exceptionsHeader:
                 return 105
+            case .exceptionsAdd:
+                return 106
             case let .exception(index, _, _):
-                return 106 + index
+                return 107 + index
             case .exceptionsClear:
                 return 1000
             case .exceptionsInfo:
@@ -134,6 +142,12 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
                 }
             case let .clearCookies(lhsTheme, lhsText):
                 if case let .clearCookies(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .clearCache(lhsTheme, lhsText):
+                if case let .clearCache(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -194,6 +208,10 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.accentDeleteIconImage(presentationData.theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
                     arguments.clearCookies()
                 })
+            case let .clearCache(_, text):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.accentDeleteIconImage(presentationData.theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
+                    arguments.clearCache()
+                })
             case let .clearCookiesInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .exceptionsHeader(_, text):
@@ -232,6 +250,7 @@ private func webBrowserSettingsControllerEntries(context: AccountContext, presen
     
     if settings.defaultWebBrowser == nil {
         entries.append(.clearCookies(presentationData.theme, presentationData.strings.WebBrowser_ClearCookies))
+        entries.append(.clearCache(presentationData.theme, presentationData.strings.WebBrowser_ClearCache))
         entries.append(.clearCookiesInfo(presentationData.theme, presentationData.strings.WebBrowser_ClearCookies_Info))
         
         entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.WebBrowser_Exceptions_Title))
@@ -255,6 +274,7 @@ private func webBrowserSettingsControllerEntries(context: AccountContext, presen
 
 public func webBrowserSettingsController(context: AccountContext) -> ViewController {
     var clearCookiesImpl: (() -> Void)?
+    var clearCacheImpl: (() -> Void)?
     var addExceptionImpl: (() -> Void)?
     var removeExceptionImpl: ((String) -> Void)?
     var clearExceptionsImpl: (() -> Void)?
@@ -268,6 +288,9 @@ public func webBrowserSettingsController(context: AccountContext) -> ViewControl
         },
         clearCookies: {
             clearCookiesImpl?()
+        },
+        clearCache: {
+            clearCacheImpl?()
         },
         addException: {
             addExceptionImpl?()
@@ -320,7 +343,7 @@ public func webBrowserSettingsController(context: AccountContext) -> ViewControl
             actions: [
                 TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
                 TextAlertAction(type: .defaultAction, title: presentationData.strings.WebBrowser_ClearCookies_ClearConfirmation_Clear, action: {
-                    WKWebsiteDataStore.default().removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: Date(timeIntervalSince1970: 0), completionHandler:{})
+                    WKWebsiteDataStore.default().removeData(ofTypes: [WKWebsiteDataTypeCookies, WKWebsiteDataTypeLocalStorage, WKWebsiteDataTypeSessionStorage], modifiedSince: Date(timeIntervalSince1970: 0), completionHandler:{})
                             
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     controller?.present(UndoOverlayController(
@@ -328,6 +351,38 @@ public func webBrowserSettingsController(context: AccountContext) -> ViewControl
                         content: .info(
                             title: nil,
                             text: presentationData.strings.WebBrowser_ClearCookies_Succeed,
+                            timeout: nil,
+                            customUndoText: nil
+                        ),
+                        elevatedLayout: false,
+                        position: .bottom,
+                        action: { _ in return false }), in: .current
+                    )
+                })
+            ]
+        )
+        controller?.present(alertController, in: .window(.root))
+    }
+    
+    clearCacheImpl = { [weak controller] in
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        let alertController = textAlertController(
+            context: context,
+            updatedPresentationData: nil,
+            title: nil,
+            text: presentationData.strings.WebBrowser_ClearCache_ClearConfirmation_Text,
+            actions: [
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
+                TextAlertAction(type: .defaultAction, title: presentationData.strings.WebBrowser_ClearCache_ClearConfirmation_Clear, action: {
+                    WKWebsiteDataStore.default().removeData(ofTypes: [WKWebsiteDataTypeDiskCache, WKWebsiteDataTypeMemoryCache], modifiedSince: Date(timeIntervalSince1970: 0), completionHandler:{})
+                            
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    controller?.present(UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .info(
+                            title: nil,
+                            text: presentationData.strings.WebBrowser_ClearCache_Succeed,
                             timeout: nil,
                             customUndoText: nil
                         ),

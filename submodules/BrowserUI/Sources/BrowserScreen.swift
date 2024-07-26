@@ -153,24 +153,26 @@ private final class BrowserScreenComponent: CombinedComponent {
                     ]
                                         
                     if isTablet {
-//                        navigationLeftItems.append(
-//                            AnyComponentWithIdentity(
-//                                id: "minimize",
-//                                component: AnyComponent(
-//                                    Button(
-//                                        content: AnyComponent(
-//                                            BundleIconComponent(
-//                                                name: "Media Gallery/PictureInPictureButton",
-//                                                tintColor: environment.theme.rootController.navigationBar.accentTextColor
-//                                            )
-//                                        ),
-//                                        action: {
-//                                            performAction.invoke(.close)
-//                                        }
-//                                    )
-//                                )
-//                            )
-//                        )
+                        #if DEBUG
+                        navigationLeftItems.append(
+                            AnyComponentWithIdentity(
+                                id: "minimize",
+                                component: AnyComponent(
+                                    Button(
+                                        content: AnyComponent(
+                                            BundleIconComponent(
+                                                name: "Media Gallery/PictureInPictureButton",
+                                                tintColor: environment.theme.rootController.navigationBar.accentTextColor
+                                            )
+                                        ),
+                                        action: {
+                                            performAction.invoke(.close)
+                                        }
+                                    )
+                                )
+                            )
+                        )
+                        #endif
                         
                         let canGoBack = context.component.contentState?.canGoBack ?? false
                         let canGoForward = context.component.contentState?.canGoForward ?? false
@@ -483,7 +485,7 @@ public class BrowserScreen: ViewController, MinimizableController {
         case openBookmarks
         case openAddressBar
         case closeAddressBar
-        case navigateTo(String)
+        case navigateTo(String, Bool)
         case expand
     }
 
@@ -730,9 +732,12 @@ public class BrowserScreen: ViewController, MinimizableController {
                         updatedState.addressFocused = false
                         return updatedState
                     })
-                case let .navigateTo(address):
+                case let .navigateTo(address, addToRecent):
                     if let content = self.content.last as? BrowserWebContent {
                         content.navigateTo(address: address)
+                        if addToRecent {
+                            content.addToRecentlyVisited()
+                        }
                     }
                     self.updatePresentationState(transition: .spring(duration: 0.4), { state in
                         var updatedState = state
@@ -988,7 +993,7 @@ public class BrowserScreen: ViewController, MinimizableController {
             }
             let controller = BrowserBookmarksScreen(context: self.context, url: url, openUrl: { [weak self] url in
                 if let self {
-                    self.performAction.invoke(.navigateTo(url))
+                    self.performAction.invoke(.navigateTo(url, true))
                 }
             }, addBookmark: { [weak self] in
                 self?.addBookmark(url, showArrow: false)

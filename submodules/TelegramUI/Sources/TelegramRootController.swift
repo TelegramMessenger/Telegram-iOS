@@ -678,9 +678,9 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         var coverTime: Double?
                         if let coverImageTimestamp = values.coverImageTimestamp {
                             if let trimRange = values.videoTrimRange {
-                                coverTime = coverImageTimestamp - trimRange.lowerBound
+                                coverTime = min(duration, coverImageTimestamp - trimRange.lowerBound)
                             } else {
-                                coverTime = coverImageTimestamp
+                                coverTime = min(duration, coverImageTimestamp)
                             }
                         }
                         

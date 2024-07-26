@@ -12571,7 +12571,7 @@ Sorry for the inconvenience.";
 "WebBrowser.AutoLogin.Info" = "Use your Telegram account to automatically log in to websites opened in the in-app browser.";
 
 "WebBrowser.ClearCookies" = "Clear Cookies";
-"WebBrowser.ClearCookies.Info" = "Delete all cookies in the Telegram in-app browser. This action will sign you out of most websites.";
+"WebBrowser.ClearCookies.Info" = "Delete all cookies and cache in the Telegram in-app browser. This action will sign you out of most websites.";
 "WebBrowser.ClearCookies.Succeed" = "Cookies cleared.";
 
 "WebBrowser.Exceptions.Title" = "NEVER OPEN IN THE IN-APP BROWSER";
@@ -12588,6 +12588,12 @@ Sorry for the inconvenience.";
 
 "WebBrowser.ClearCookies.ClearConfirmation.Text" = "Are you sure you want to clear cookies?";
 "WebBrowser.ClearCookies.ClearConfirmation.Clear" = "Clear";
+
+"WebBrowser.ClearCache" = "Clear Cache";
+"WebBrowser.ClearCache.ClearConfirmation.Text" = "Are you sure you want to clear cookies?";
+"WebBrowser.ClearCache.ClearConfirmation.Clear" = "Clear";
+"WebBrowser.ClearCache.Succeed" = "Cookies cleared.";
+
 
 "WebBrowser.Done" = "Done";
 
@@ -12658,3 +12664,7 @@ Sorry for the inconvenience.";
 
 "Stars.Intro.Transaction.Gift.Title" = "Received Gift";
 "Stars.Intro.Transaction.Gift.UnknownUser" = "Unknown User";
+
+"WebApp.PrivacyPolicy" = "Privacy Policy";
+
+"Conversation.OpenProfile" = "OPEN PROFILE";

@@ -2069,6 +2069,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 self?.controllerNode.webView?.reload()
             })))
             
+//            items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_PrivacyPolicy, icon: { theme in
+//                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reload"), color: theme.contextMenu.primaryColor)
+//            }, action: { [weak self] c, _ in
+//                c?.dismiss(completion: nil)
+//                
+//                self?.controllerNode.webView?.reload()
+//            })))
+            
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_TermsOfUse, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] c, _ in
