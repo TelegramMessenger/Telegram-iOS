@@ -6553,9 +6553,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let _ = ChatControllerCount.modify { value in
             return value - 1
         }
-        
-        self.hasBrowserOrAppInFront.set(.single(false))
-        
+                
         let deallocate: () -> Void = {
             self.historyStateDisposable?.dispose()
             self.messageIndexDisposable.dispose()
@@ -7141,7 +7139,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        if case .standard(.default) = self.mode {
+        if case .standard(.default) = self.mode, !"".isEmpty {
             let hasBrowserOrWebAppInFront: Signal<Bool, NoError> = .single([])
             |> then(
                 self.effectiveNavigationController?.viewControllersSignal ?? .single([])
