@@ -82,13 +82,13 @@ final class BrowserAddressListItemComponent: Component {
         override init(frame: CGRect) {
             super.init(frame: frame)
             
+            self.layer.addSublayer(self.separatorLayer)
+            self.layer.addSublayer(self.highlightedBackgroundLayer)
+            
             self.addSubview(self.extractedContainerView)
             self.targetViewForActivationProgress = self.extractedContainerView.contentView
             
             self.highlightedBackgroundLayer.opacity = 0.0
-            
-            self.layer.addSublayer(self.separatorLayer)
-            self.layer.addSublayer(self.highlightedBackgroundLayer)
             
             self.extractedContainerView.contentView.addSubview(self.containerButton)
             
@@ -160,6 +160,7 @@ final class BrowserAddressListItemComponent: Component {
             let leftInset: CGFloat = component.insets.left + 11.0 + iconSize.width + 11.0
             let rightInset: CGFloat = 16.0
             let titleSpacing: CGFloat = 2.0
+            let contextInset: CGFloat = self.isExtractedToContextMenu ? 12.0 : 0.0
                 
             let title: String
             let subtitle: String
@@ -264,7 +265,7 @@ final class BrowserAddressListItemComponent: Component {
                 }
                 
                 if self.icon.supernode == nil {
-                    self.addSubview(self.icon.view)
+                    self.containerButton.addSubview(self.icon.view)
                     self.icon.frame = iconFrame
                 } else {
                     transition.setFrame(view: self.icon.view, frame: iconFrame)
@@ -293,7 +294,7 @@ final class BrowserAddressListItemComponent: Component {
                 } else {
                     icon = UIImageView()
                     icon.image = iconTextBackgroundImage
-                    self.addSubview(icon)
+                    self.containerButton.addSubview(icon)
                     
                     label = ComponentView()
                 }
@@ -319,21 +320,10 @@ final class BrowserAddressListItemComponent: Component {
                 let labelFrame = CGRect(origin: CGPoint(x: iconFrame.minX + floorToScreenPixels((iconFrame.width - labelSize.width) / 2.0), y: iconFrame.minY + floorToScreenPixels((iconFrame.height - labelSize.height) / 2.0)), size: labelSize)
                 if let labelView = label.view {
                     if labelView.superview == nil {
-                        self.addSubview(labelView)
+                        self.containerButton.addSubview(labelView)
                     }
                     labelView.frame = labelFrame
                 }
-                
-//                if strongSelf.iconTextBackgroundNode.supernode == nil {
-//                    strongSelf.iconTextBackgroundNode.image = applyIconTextBackgroundImage
-//                    strongSelf.offsetContainerNode.addSubnode(strongSelf.iconTextBackgroundNode)
-//                    strongSelf.iconTextBackgroundNode.frame = iconFrame
-//                } else {
-//                    transition.updateFrame(node: strongSelf.iconTextBackgroundNode, frame: iconFrame)
-//                }
-//                if strongSelf.iconTextNode.supernode == nil {
-//                    strongSelf.offsetContainerNode.addSubnode(strongSelf.iconTextNode)
-//                }
             }
             
             if themeUpdated {
@@ -345,7 +335,7 @@ final class BrowserAddressListItemComponent: Component {
             self.separatorLayer.isHidden = !component.hasNext
             
             let containerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: height))
-            transition.setFrame(view: self.containerButton, frame: containerFrame)
+            transition.setFrame(view: self.containerButton, frame: containerFrame.insetBy(dx: contextInset, dy: 0.0))
             
             transition.setFrame(view: self.extractedContainerView, frame: containerFrame)
             transition.setFrame(view: self.extractedContainerView.contentView, frame: containerFrame)
