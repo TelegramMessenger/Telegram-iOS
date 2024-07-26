@@ -250,7 +250,7 @@ private func webBrowserSettingsControllerEntries(context: AccountContext, presen
     
     if settings.defaultWebBrowser == nil {
         entries.append(.clearCookies(presentationData.theme, presentationData.strings.WebBrowser_ClearCookies))
-        entries.append(.clearCache(presentationData.theme, presentationData.strings.WebBrowser_ClearCache))
+//        entries.append(.clearCache(presentationData.theme, presentationData.strings.WebBrowser_ClearCache))
         entries.append(.clearCookiesInfo(presentationData.theme, presentationData.strings.WebBrowser_ClearCookies_Info))
         
         entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.WebBrowser_Exceptions_Title))
