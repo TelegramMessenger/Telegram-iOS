@@ -1772,7 +1772,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }) {
                             let _ = (strongSelf.context.engine.stickers.resolveInlineStickers(fileIds: [MessageReaction.starsReactionId])
-                            |> deliverOnMainQueue).start(next: { [weak strongSelf] files in
+                            |> deliverOnMainQueue).start(next: { [weak strongSelf, weak itemNode] files in
                                 guard let strongSelf, let file = files[MessageReaction.starsReactionId] else {
                                     return
                                 }
@@ -1780,6 +1780,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .starsSent(context: strongSelf.context, file: file, amount: 1, title: "Star Sent", text: "Long tap on {star} to select custom quantity of stars."), elevatedLayout: false, action: { _ in
                                     return false
                                 }), in: .current)
+                                
+                                if let itemNode = itemNode, let targetView = itemNode.targetReactionView(value: chosenReaction) {
+                                    strongSelf.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: strongSelf.chatDisplayNode.view))
+                                }
                             })
                         }
                     }
