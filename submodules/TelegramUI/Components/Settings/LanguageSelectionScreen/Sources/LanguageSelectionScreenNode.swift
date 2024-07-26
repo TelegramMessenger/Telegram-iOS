@@ -32,13 +32,13 @@ private enum LanguageListEntryType {
 
 private enum LanguageListEntry: Comparable, Identifiable {
     case localizationTitle(text: String, section: ItemListSectionId)
-    case localization(index: Int, info: LocalizationInfo?, type: LanguageListEntryType)
+    case localization(index: Int, info: LocalizationInfo?, type: LanguageListEntryType, isEnabled: Bool)
     
     var stableId: LanguageListEntryId {
         switch self {
         case .localizationTitle:
             return .localizationTitle
-        case let .localization(index, info, _):
+        case let .localization(index, info, _, _):
             return .localization(info?.languageCode ?? "\(index)")
         }
     }
@@ -47,7 +47,7 @@ private enum LanguageListEntry: Comparable, Identifiable {
         switch self {
         case .localizationTitle:
             return 1000
-        case let .localization(index, _, _):
+        case let .localization(index, _, _, _):
             return 1001 + index
         }
     }
@@ -60,8 +60,8 @@ private enum LanguageListEntry: Comparable, Identifiable {
         switch self {
         case let .localizationTitle(text, section):
             return ItemListSectionHeaderItem(presentationData: ItemListPresentationData(presentationData), text: text, sectionId: section)
-        case let .localization(_, info, type):
-            return LocalizationListItem(presentationData: ItemListPresentationData(presentationData), id: info?.languageCode ?? "", title: info?.title ?? " ", subtitle: info?.localizedTitle ?? " ", checked: false, activity: false, loading: info == nil, editing: LocalizationListItemEditing(editable: false, editing: false, revealed: false, reorderable: false), sectionId: type == .official ? LanguageListSection.official.rawValue : LanguageListSection.unofficial.rawValue, alwaysPlain: searchMode, action: {
+        case let .localization(_, info, type, isEnabled):
+            return LocalizationListItem(presentationData: ItemListPresentationData(presentationData), id: info?.languageCode ?? "", title: info?.title ?? " ", subtitle: info?.localizedTitle ?? " ", checked: false, activity: false, loading: info == nil, editing: LocalizationListItemEditing(editable: false, editing: false, revealed: false, reorderable: false), enabled: isEnabled, sectionId: type == .official ? LanguageListSection.official.rawValue : LanguageListSection.unofficial.rawValue, alwaysPlain: searchMode, action: {
                 if let info {
                     selectLocalization(info)
                 }
@@ -106,7 +106,7 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
         return true
     }
     
-    init(context: AccountContext, listState: LocalizationListState, selectLocalization: @escaping (LocalizationInfo) -> Void) {
+    init(context: AccountContext, listState: LocalizationListState, excludedIds: [String], selectLocalization: @escaping (LocalizationInfo) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
         
@@ -157,7 +157,7 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
             var entries: [LanguageListEntry] = []
             if let items = items {
                 for item in items {
-                    entries.append(.localization(index: entries.count, info: item, type: .official))
+                    entries.append(.localization(index: entries.count, info: item, type: .official, isEnabled: !excludedIds.contains(item.languageCode)))
                 }
             }
             let previousEntriesAndPresentationData = previousEntriesHolder.swap((entries, presentationData.theme, presentationData.strings))
@@ -364,38 +364,29 @@ final class LanguageSelectionScreenNode: ViewControllerTracingNode {
             var entries: [LanguageListEntry] = []
             var existingIds = Set<String>()
             
-            var localizationListState = localizationListState
-            localizationListState.availableOfficialLocalizations = localizationListState.availableOfficialLocalizations.filter {
-                !strongSelf.excludeIds.contains($0.languageCode)
-            }
-            localizationListState.availableSavedLocalizations = []
-            
             if !localizationListState.availableOfficialLocalizations.isEmpty {
                 strongSelf.currentListState = localizationListState
                 
                 let availableSavedLocalizations = localizationListState.availableSavedLocalizations.filter({ info in !localizationListState.availableOfficialLocalizations.contains(where: { $0.languageCode == info.languageCode }) })
                 if !availableSavedLocalizations.isEmpty {
-                    //entries.append(.localizationTitle(text: presentationData.strings.Localization_InterfaceLanguage.uppercased(), section: LanguageListSection.unofficial.rawValue))
                     for info in availableSavedLocalizations {
                         if existingIds.contains(info.languageCode) {
                             continue
                         }
                         existingIds.insert(info.languageCode)
-                        entries.append(.localization(index: entries.count, info: info, type: .unofficial))
+                        entries.append(.localization(index: entries.count, info: info, type: .unofficial, isEnabled: !strongSelf.excludeIds.contains(info.languageCode)))
                     }
-                } else {
-                    //entries.append(.localizationTitle(text: presentationData.strings.Localization_InterfaceLanguage.uppercased(), section: LanguageListSection.official.rawValue))
                 }
                 for info in localizationListState.availableOfficialLocalizations {
                     if existingIds.contains(info.languageCode) {
                         continue
                     }
                     existingIds.insert(info.languageCode)
-                    entries.append(.localization(index: entries.count, info: info, type: .official))
+                    entries.append(.localization(index: entries.count, info: info, type: .official, isEnabled: !strongSelf.excludeIds.contains(info.languageCode)))
                 }
             } else {
                 for _ in 0 ..< 15 {
-                    entries.append(.localization(index: entries.count, info: nil, type: .official))
+                    entries.append(.localization(index: entries.count, info: nil, type: .official, isEnabled: true))
                 }
             }
             
@@ -542,6 +533,7 @@ final class LanguageSelectionScreenNode: ViewControllerTracingNode {
             contentNode: LocalizationListSearchContainerNode(
                 context: self.context,
                 listState: self.currentListState ?? LocalizationListState.defaultSettings,
+                excludedIds: self.excludeIds,
                 selectLocalization: { [weak self] info in
                     self?.selectLocalization(info)
                 }),

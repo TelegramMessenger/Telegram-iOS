@@ -138,7 +138,7 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
         if self.editableControlNode != nil {
             return false
         }
-        if let _ = self.layoutParams?.0, let item = self.item, !item.loading {
+        if let _ = self.layoutParams?.0, let item = self.item, !item.loading, item.enabled {
             return super.canBeSelected
         } else {
             return false
@@ -333,6 +333,9 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                     
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + leftInset, y: 8.0), size: titleLayout.size))
                     transition.updateFrame(node: strongSelf.subtitleNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + leftInset, y: strongSelf.titleNode.frame.maxY + 1.0), size: subtitleLayout.size))
+                    
+                    strongSelf.titleNode.alpha = item.enabled ? 1.0 : 0.5
+                    strongSelf.subtitleNode.alpha = item.enabled ? 1.0 : 0.5
                     
                     if let editableControlSizeAndApply = editableControlSizeAndApply {
                         let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: CGSize(width: editableControlSizeAndApply.0, height: layout.contentSize.height))
