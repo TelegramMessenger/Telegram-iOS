@@ -6492,6 +6492,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         if self.isEmbeddedEditor && !(hasAnyChanges || hasEntityChanges) {
+            self.saveDraft(id: randomId, edit: true)
+            
             self.completion(MediaEditorScreen.Result(media: nil, mediaAreas: [], caption: caption, coverTimestamp: mediaEditor.values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                     self?.dismiss()

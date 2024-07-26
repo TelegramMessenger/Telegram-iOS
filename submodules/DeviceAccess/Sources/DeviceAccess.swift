@@ -353,24 +353,26 @@ public final class DeviceAccess {
                         } else {
                             completion(true)
                         }
-                    } else if [.restricted, .denied].contains(status), let presentationData = presentationData {
-                        let text: String
-                        if case .restricted = status {
-                            text = presentationData.strings.AccessDenied_CameraRestricted
-                        } else {
-                            switch cameraSubject {
-                                case .video:
-                                    text = presentationData.strings.AccessDenied_Camera
-                                case .videoCall:
-                                    text = presentationData.strings.AccessDenied_VideoCallCamera
-                                case .qrCode:
-                                    text = presentationData.strings.AccessDenied_QrCamera
-                            }
-                        }
+                    } else if [.restricted, .denied].contains(status) {
                         completion(false)
-                        present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                            openSettings()
-                        })]), nil)
+                        if let presentationData = presentationData {
+                            let text: String
+                            if case .restricted = status {
+                                text = presentationData.strings.AccessDenied_CameraRestricted
+                            } else {
+                                switch cameraSubject {
+                                    case .video:
+                                        text = presentationData.strings.AccessDenied_Camera
+                                    case .videoCall:
+                                        text = presentationData.strings.AccessDenied_VideoCallCamera
+                                    case .qrCode:
+                                        text = presentationData.strings.AccessDenied_QrCamera
+                                }
+                            }
+                            present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                openSettings()
+                            })]), nil)
+                        }
                     } else if case .authorized = status {
                         completion(true)
                     } else {

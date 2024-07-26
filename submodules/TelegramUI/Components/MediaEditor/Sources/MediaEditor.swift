@@ -1124,9 +1124,8 @@ public final class MediaEditor {
             self.initialSeekPosition = position
             return
         }
-        if play {
-            self.renderer.setRate(1.0)
-        } else {
+        self.renderer.setRate(1.0)
+        if !play {
             self.player?.pause()
             self.additionalPlayer?.pause()
             self.audioPlayer?.pause()

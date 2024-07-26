@@ -75,6 +75,8 @@ private final class BrowserScreenComponent: CombinedComponent {
         let toolbar = Child(BrowserToolbarComponent.self)
         let addressList = Child(BrowserAddressListComponent.self)
         
+        let navigationBarExternalState = BrowserNavigationBarComponent.ExternalState()
+        
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let performAction = context.component.performAction
@@ -311,6 +313,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                     height: environment.navigationHeight - environment.statusBarHeight,
                     sideInset: environment.safeInsets.left,
                     metrics: environment.metrics,
+                    externalState: navigationBarExternalState,
                     leftItems: navigationLeftItems,
                     rightItems: navigationRightItems,
                     centerItem: navigationContent,
@@ -401,18 +404,22 @@ private final class BrowserScreenComponent: CombinedComponent {
             if context.component.presentationState.addressFocused {
                 let addressListSize: CGSize
                 if isTablet {
-                    addressListSize = CGSize(width: 660.0, height: 420.0)
+                    addressListSize = context.availableSize
                 } else {
                     addressListSize = CGSize(width: context.availableSize.width, height: context.availableSize.height - navigationBar.size.height - toolbarSize)
                 }
+                let controller = environment.controller
                 let addressList = addressList.update(
                     component: BrowserAddressListComponent(
                         context: context.component.context,
                         theme: environment.theme,
                         strings: environment.strings,
                         insets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: 0.0, right: environment.safeInsets.right),
-                        navigateTo: { url in
-                            performAction.invoke(.navigateTo(url))
+                        metrics: environment.metrics,
+                        addressBarFrame: navigationBarExternalState.centerItemFrame,
+                        performAction: performAction,
+                        presentInGlobalOverlay: { c in
+                            controller()?.presentInGlobalOverlay(c)
                         }
                     ),
                     availableSize: addressListSize,
@@ -421,9 +428,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                 
                 if isTablet {
                     context.add(addressList
-                        .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height + addressList.size.height / 2.0 - 3.0))
-                        .cornerRadius(10.0)
-                        .clipsToBounds(true)
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
                         .appear(.default(alpha: true))
                         .disappear(.default(alpha: true))
                     )

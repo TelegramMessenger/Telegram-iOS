@@ -431,9 +431,6 @@ final class MediaCoverScreen: ViewController {
         }
         
         func animateOutToEditor(completion: @escaping () -> Void) {
-            self.controller?.withMediaEditor { mediaEditor in
-                mediaEditor.play()
-            }
             if let view = self.componentHost.view as? MediaCoverScreenComponent.View {
                 view.animateOutToEditor(completion: completion)
             }

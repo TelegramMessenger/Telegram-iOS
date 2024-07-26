@@ -9,6 +9,7 @@ import MultilineTextComponent
 import TelegramPresentationData
 import PhotoResources
 import AccountContext
+import ContextUI
 
 private let iconFont = Font.with(size: 30.0, design: .round, weight: .bold)
 private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radius: 6.0, color: UIColor(rgb: 0xFF9500))
@@ -21,6 +22,7 @@ final class BrowserAddressListItemComponent: Component {
     let hasNext: Bool
     let insets: UIEdgeInsets
     let action: () -> Void
+    let contextAction: ((TelegramMediaWebpage, Message?, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     
     init(
         context: AccountContext,
@@ -29,7 +31,8 @@ final class BrowserAddressListItemComponent: Component {
         message: Message?,
         hasNext: Bool,
         insets: UIEdgeInsets,
-        action: @escaping () -> Void
+        action: @escaping () -> Void,
+        contextAction: ((TelegramMediaWebpage, Message?, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     ) {
         self.context = context
         self.theme = theme
@@ -38,6 +41,7 @@ final class BrowserAddressListItemComponent: Component {
         self.hasNext = hasNext
         self.insets = insets
         self.action = action
+        self.contextAction = contextAction
     }
     
     static func ==(lhs: BrowserAddressListItemComponent, rhs: BrowserAddressListItemComponent) -> Bool {
@@ -56,16 +60,19 @@ final class BrowserAddressListItemComponent: Component {
         return true
     }
     
-    final class View: UIView {
-        private let containerButton: HighlightTrackingButton
+    final class View: ContextControllerSourceView {
+        private let extractedContainerView = ContextExtractedContentContainingView()
+        private let containerButton = HighlightTrackingButton()
         
+        private let separatorLayer = SimpleLayer()
+        private var highlightedBackgroundLayer = SimpleLayer()
         private var emptyIcon: UIImageView?
         private var emptyLabel: ComponentView<Empty>?
         private var icon = TransformImageNode()
         private let title = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
         
-        private let separatorLayer: SimpleLayer
+        private var isExtractedToContextMenu: Bool = false
         
         private var component: BrowserAddressListItemComponent?
         private weak var state: EmptyComponentState?
@@ -73,16 +80,64 @@ final class BrowserAddressListItemComponent: Component {
         private var currentIconImageRepresentation: TelegramMediaImageRepresentation?
         
         override init(frame: CGRect) {
-            self.separatorLayer = SimpleLayer()
-            
-            self.containerButton = HighlightTrackingButton()
-                        
             super.init(frame: frame)
             
+            self.addSubview(self.extractedContainerView)
+            self.targetViewForActivationProgress = self.extractedContainerView.contentView
+            
+            self.highlightedBackgroundLayer.opacity = 0.0
+            
             self.layer.addSublayer(self.separatorLayer)
-            self.addSubview(self.containerButton)
+            self.layer.addSublayer(self.highlightedBackgroundLayer)
+            
+            self.extractedContainerView.contentView.addSubview(self.containerButton)
             
             self.containerButton.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            
+            self.containerButton.highligthedChanged = { [weak self] highlighted in
+                guard let self else {
+                    return
+                }
+                if highlighted {
+                    self.superview?.bringSubviewToFront(self)
+                    self.highlightedBackgroundLayer.removeAnimation(forKey: "opacity")
+                    self.highlightedBackgroundLayer.opacity = 1.0
+                } else {
+                    self.highlightedBackgroundLayer.opacity = 0.0
+                    self.highlightedBackgroundLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                }
+            }
+            
+            self.extractedContainerView.isExtractedToContextPreviewUpdated = { [weak self] value in
+                guard let self, let component = self.component else {
+                    return
+                }
+                self.containerButton.clipsToBounds = value
+                self.containerButton.backgroundColor = value ? component.theme.list.plainBackgroundColor : nil
+                self.containerButton.layer.cornerRadius = value ? 10.0 : 0.0
+            }
+            self.extractedContainerView.willUpdateIsExtractedToContextPreview = { [weak self] value, transition in
+                guard let self else {
+                    return
+                }
+                self.isExtractedToContextMenu = value
+                
+                let mappedTransition: ComponentTransition
+                if value {
+                    mappedTransition = ComponentTransition(transition)
+                } else {
+                    mappedTransition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                }
+                self.state?.updated(transition: mappedTransition)
+            }
+            
+            self.activated = { [weak self] gesture, _ in
+                guard let self, let component = self.component else {
+                    gesture.cancel()
+                    return
+                }
+                component.contextAction?(component.webPage, component.message, self.extractedContainerView, gesture)
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -282,13 +337,21 @@ final class BrowserAddressListItemComponent: Component {
             }
             
             if themeUpdated {
+                self.highlightedBackgroundLayer.backgroundColor = component.theme.list.itemHighlightedBackgroundColor.cgColor
                 self.separatorLayer.backgroundColor = component.theme.list.itemPlainSeparatorColor.cgColor
             }
+            transition.setFrame(layer: self.highlightedBackgroundLayer, frame: CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: height + UIScreenPixel)))
             transition.setFrame(layer: self.separatorLayer, frame: CGRect(origin: CGPoint(x: leftInset, y: height), size: CGSize(width: availableSize.width - leftInset, height: UIScreenPixel)))
             self.separatorLayer.isHidden = !component.hasNext
             
             let containerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: height))
             transition.setFrame(view: self.containerButton, frame: containerFrame)
+            
+            transition.setFrame(view: self.extractedContainerView, frame: containerFrame)
+            transition.setFrame(view: self.extractedContainerView.contentView, frame: containerFrame)
+            self.extractedContainerView.contentRect = containerFrame
+            
+            self.isGestureEnabled = component.contextAction != nil
             
             return CGSize(width: availableSize.width, height: height)
         }

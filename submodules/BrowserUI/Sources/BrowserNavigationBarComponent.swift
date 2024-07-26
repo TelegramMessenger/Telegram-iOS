@@ -21,6 +21,14 @@ final class BrowserNavigationBarEnvironment: Equatable {
 }
 
 final class BrowserNavigationBarComponent: CombinedComponent {
+    public class ExternalState {
+        public fileprivate(set) var centerItemFrame: CGRect
+        
+        public init() {
+            self.centerItemFrame = .zero
+        }
+    }
+    
     let backgroundColor: UIColor
     let separatorColor: UIColor
     let textColor: UIColor
@@ -30,6 +38,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
     let height: CGFloat
     let sideInset: CGFloat
     let metrics: LayoutMetrics
+    let externalState: ExternalState?
     let leftItems: [AnyComponentWithIdentity<Empty>]
     let rightItems: [AnyComponentWithIdentity<Empty>]
     let centerItem: AnyComponentWithIdentity<BrowserNavigationBarEnvironment>?
@@ -48,6 +57,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         height: CGFloat,
         sideInset: CGFloat,
         metrics: LayoutMetrics,
+        externalState: ExternalState?,
         leftItems: [AnyComponentWithIdentity<Empty>],
         rightItems: [AnyComponentWithIdentity<Empty>],
         centerItem: AnyComponentWithIdentity<BrowserNavigationBarEnvironment>?,
@@ -65,6 +75,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         self.height = height
         self.sideInset = sideInset
         self.metrics = metrics
+        self.externalState = externalState
         self.leftItems = leftItems
         self.rightItems = rightItems
         self.centerItem = centerItem
@@ -135,14 +146,14 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         
         return { context in
             var availableWidth = context.availableSize.width
-            let sideInset: CGFloat = 16.0 + context.component.sideInset
+            let sideInset: CGFloat = (context.component.metrics.isTablet ? 20.0 : 16.0) + context.component.sideInset
             
             let collapsedHeight: CGFloat = 24.0
             let expandedHeight = context.component.height
             let contentHeight: CGFloat = expandedHeight * (1.0 - context.component.collapseFraction) + collapsedHeight * context.component.collapseFraction
             let size = CGSize(width: context.availableSize.width, height: context.component.topInset + contentHeight)
-            let verticalOffset: CGFloat = context.component.metrics.isTablet ? -3.0 : 0.0
-            let itemSpacing: CGFloat = context.component.metrics.isTablet ? 24.0 : 8.0
+            let verticalOffset: CGFloat = context.component.metrics.isTablet ? -2.0 : 0.0
+            let itemSpacing: CGFloat = context.component.metrics.isTablet ? 26.0 : 8.0
             
             let background = background.update(
                 component: Rectangle(color: context.component.backgroundColor.withAlphaComponent(1.0)),
@@ -268,12 +279,15 @@ final class BrowserNavigationBarComponent: CombinedComponent {
                 centerX = centerLeftInset + (context.availableSize.width - centerLeftInset - centerRightInset) / 2.0
             }
             if let centerItem = centerItem {
+                let centerItemPosition = CGPoint(x: centerX, y: context.component.topInset + contentHeight / 2.0 + verticalOffset)
                 context.add(centerItem
-                    .position(CGPoint(x: centerX, y: context.component.topInset + contentHeight / 2.0 + verticalOffset))
+                    .position(centerItemPosition)
                     .scale(1.0 - 0.35 * context.component.collapseFraction)
                     .appear(.default(scale: false, alpha: true))
                     .disappear(.default(scale: false, alpha: true))
                 )
+                
+                context.component.externalState?.centerItemFrame = centerItem.size.centered(around: centerItemPosition)
             }
             
             if context.component.collapseFraction == 1.0 {
