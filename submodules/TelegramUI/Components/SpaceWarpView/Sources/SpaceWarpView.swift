@@ -122,6 +122,10 @@ private func transformCoordinate(
     } else {
         rippleAmount = absRippleAmount
     }
+    
+    if distance <= 40.0 {
+        rippleAmount *= 0.5
+    }
 
     // A vector of length `amplitude` that points away from position.
     let n: CGPoint
@@ -147,7 +151,7 @@ func transformToFitQuad2(frame: CGRect, topLeft tl: CGPoint, topRight tr: CGPoin
         quadBR: CGPoint(x: br.x - frameTopLeft.x, y: br.y - frameTopLeft.y)
     )
     
-    let anchorPoint = frame.center
+    let anchorPoint = frame.origin
     let anchorOffset = CGPoint(x: anchorPoint.x - frame.origin.x, y: anchorPoint.y - frame.origin.y)
     let transPos = CATransform3DMakeTranslation(anchorOffset.x, anchorOffset.y, 0)
     let transNeg = CATransform3DMakeTranslation(-anchorOffset.x, -anchorOffset.y, 0)
@@ -196,21 +200,6 @@ private func boundingBox(forQuadWithTR tr: CGPoint, tl: CGPoint, bl: CGPoint, br
 }
 
 func rectToQuad(rect: CGRect, quadTL topLeft: CGPoint, quadTR topRight: CGPoint, quadBL bottomLeft: CGPoint, quadBR bottomRight: CGPoint) -> CATransform3D {
-    /*if "".isEmpty {
-        let destination = Perspective(Quadrilateral(
-            topLeft,
-            topRight,
-            bottomLeft,
-            bottomRight
-        ))
-
-        // Starting perspective is the current overlay frame or could be another 4 points.
-        let start = Perspective(Quadrilateral(rect.origin, rect.size))
-
-        // Caclulate CATransform3D from start to destination
-        return start.projectiveTransform(destination: destination)
-    }*/
-    
     return rectToQuad(rect: rect, quadTLX: topLeft.x, quadTLY: topLeft.y, quadTRX: topRight.x, quadTRY: topRight.y, quadBLX: bottomLeft.x, quadBLY: bottomLeft.y, quadBRX: bottomRight.x, quadBRY: bottomRight.y)
 }
 
@@ -493,7 +482,7 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
                 }
                 
                 instanceBounds.append(frame)
-                instancePositions.append(frame.center)
+                instancePositions.append(frame.origin)
                 
                 instanceTransforms.append(transform)
             }

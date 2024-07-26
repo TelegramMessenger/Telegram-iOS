@@ -254,7 +254,7 @@ static NSString *const STCMeshLayerInstanceDelayAnimationKey = @"STCMeshLayerIns
 
 - (CGPoint)_anchorPointAtIndex:(NSUInteger)index
 {
-  CGPoint anchorPoint = CGPointMake(0.5, 0.5);
+  CGPoint anchorPoint = CGPointMake(0.0, 0.0);
 
   if (_instanceAnchorPoints != NULL) {
     anchorPoint = _instanceAnchorPoints[index];
