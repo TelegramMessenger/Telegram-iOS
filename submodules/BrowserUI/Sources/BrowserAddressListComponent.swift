@@ -8,26 +8,36 @@ import Postbox
 import TelegramCore
 import AccountContext
 import TelegramPresentationData
+import ContextUI
 
 final class BrowserAddressListComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let insets: UIEdgeInsets
-    let navigateTo: (String) -> Void
+    let metrics: LayoutMetrics
+    let addressBarFrame: CGRect
+    let performAction: ActionSlot<BrowserScreen.Action>
+    let presentInGlobalOverlay: (ViewController) -> Void
     
     init(
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
         insets: UIEdgeInsets,
-        navigateTo: @escaping (String) -> Void
+        metrics: LayoutMetrics,
+        addressBarFrame: CGRect,
+        performAction: ActionSlot<BrowserScreen.Action>,
+        presentInGlobalOverlay: @escaping (ViewController) -> Void
     ) {
         self.context = context
         self.theme = theme
         self.strings = strings
         self.insets = insets
-        self.navigateTo = navigateTo
+        self.metrics = metrics
+        self.addressBarFrame = addressBarFrame
+        self.performAction = performAction
+        self.presentInGlobalOverlay = presentInGlobalOverlay
     }
     
     static func ==(lhs: BrowserAddressListComponent, rhs: BrowserAddressListComponent) -> Bool {
@@ -41,6 +51,12 @@ final class BrowserAddressListComponent: Component {
             return false
         }
         if lhs.insets != rhs.insets {
+            return false
+        }
+        if lhs.metrics != rhs.metrics {
+            return false
+        }
+        if lhs.addressBarFrame != rhs.addressBarFrame {
             return false
         }
         return true
@@ -109,6 +125,8 @@ final class BrowserAddressListComponent: Component {
             let bookmarks: [Message]
         }
         
+        private let outerView = UIButton()
+        private let shadowView = UIImageView()
         private let backgroundView = UIView()
         private let scrollView = ScrollView()
         private let itemContainerView = UIView()
@@ -130,13 +148,19 @@ final class BrowserAddressListComponent: Component {
         override init(frame: CGRect) {
             super.init(frame: frame)
             
+            self.backgroundView.clipsToBounds = true
+            
             self.scrollView.alwaysBounceVertical = true
             self.scrollView.delegate = self
             self.scrollView.showsVerticalScrollIndicator = false
             
+            self.addSubview(self.outerView)
+            self.addSubview(self.shadowView)
             self.addSubview(self.backgroundView)
-            self.addSubview(self.scrollView)
+            self.backgroundView.addSubview(self.scrollView)
             self.scrollView.addSubview(self.itemContainerView)
+            
+            self.outerView.addTarget(self, action: #selector(self.outerPressed), for: .touchUpInside)
         }
         
         required init?(coder: NSCoder) {
@@ -147,6 +171,10 @@ final class BrowserAddressListComponent: Component {
             self.stateDisposable?.dispose()
         }
         
+        @objc private func outerPressed() {
+            self.component?.performAction.invoke(.closeAddressBar)
+        }
+        
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
                 self.updateScrolling(transition: .immediate)
@@ -155,6 +183,8 @@ final class BrowserAddressListComponent: Component {
         
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             self.window?.endEditing(true)
+            
+            cancelContextGestures(view: scrollView)
         }
         
         private func updateScrolling(transition: ComponentTransition) {
@@ -230,7 +260,7 @@ final class BrowserAddressListComponent: Component {
                         )
                         if let sectionHeaderView = sectionHeader.view {
                             if sectionHeaderView.superview == nil {
-                                self.addSubview(sectionHeaderView)
+                                self.backgroundView.addSubview(sectionHeaderView)
                                 
                                 if !transition.animation.isImmediate {
                                     sectionHeaderView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
@@ -289,7 +319,7 @@ final class BrowserAddressListComponent: Component {
                         }
                     }
                     
-                    let navigateTo = component.navigateTo
+                    let performAction = component.performAction
                     let _ = visibleItem.update(
                         transition: itemTransition,
                         component: AnyComponent(
@@ -302,8 +332,49 @@ final class BrowserAddressListComponent: Component {
                                 insets: component.insets,
                                 action: {
                                     if let url = webPage?.content.url {
-                                        navigateTo(url)
+                                        performAction.invoke(.navigateTo(url))
                                     }
+                                },
+                                contextAction: { [weak self] webPage, message, sourceView, gesture in
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                    
+                                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                    
+                                    var itemList: [ContextMenuItem] = []
+                                    
+                                    if let message {
+                                        itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.WebBrowser_DeleteBookmark, textColor: .destructive, icon: { theme in
+                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                                        }, action: { [weak self] _, f in
+                                            f(.dismissWithoutContent)
+                                             
+                                            if let self, let component = self.component {
+                                                let _ = component.context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forEveryone).startStandalone()
+                                            }
+                                        })))
+                                    } else {
+                                        itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.WebBrowser_RemoveRecent, textColor: .destructive, icon: { theme in
+                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                                        }, action: { [weak self] _, f in
+                                            f(.dismissWithoutContent)
+                                             
+                                            if let self, let component = self.component, let url = webPage.content.url {
+                                                let _ = removeRecentlyVisitedLink(engine: component.context.engine, url: url).startStandalone()
+                                            }
+                                        })))
+                                    }
+                                    
+                                    let items = ContextController.Items(content: .list(itemList))
+                                    let controller = ContextController(
+                                        presentationData: presentationData,
+                                        source: .extracted(BrowserAddressListContextExtractedContentSource(contentView: sourceView)),
+                                        items: .single(items),
+                                        recognizer: nil,
+                                        gesture: gesture
+                                    )
+                                    component.presentInGlobalOverlay(controller)
                                 })
                         ),
                         environment: {},
@@ -387,7 +458,22 @@ final class BrowserAddressListComponent: Component {
             self.component = component
             self.state = state
             
-            let resetScrolling = self.scrollView.bounds.width != availableSize.width
+            self.outerView.isHidden = !component.metrics.isTablet
+            self.outerView.frame = CGRect(origin: .zero, size: availableSize)
+            
+            let containerFrame: CGRect
+            if component.metrics.isTablet {
+                let containerSize = CGSize(width: component.addressBarFrame.width + 32.0, height: 540.0)
+                containerFrame = CGRect(origin: CGPoint(x: floor(component.addressBarFrame.center.x - containerSize.width / 2.0), y: 72.0), size: containerSize)
+                
+                self.backgroundView.layer.cornerRadius = 10.0
+            } else {
+                containerFrame = CGRect(origin: .zero, size: availableSize)
+                
+                self.backgroundView.layer.cornerRadius = 0.0
+            }
+            
+            let resetScrolling = self.scrollView.bounds.width != containerFrame.width
             if themeUpdated {
                 self.backgroundView.backgroundColor = component.theme.list.plainBackgroundColor
             }
@@ -402,15 +488,12 @@ final class BrowserAddressListComponent: Component {
                     message: nil,
                     hasNext: true,
                     insets: .zero,
-                    action: {}
+                    action: {},
+                    contextAction: nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: itemsContainerWidth, height: 1000.0)
             )
-            
-            let _ = resetScrolling
-            let _ = addressItemSize
-            
             
             var sections: [ItemLayout.Section] = []
             if let state = self.stateValue {
@@ -432,36 +515,49 @@ final class BrowserAddressListComponent: Component {
                 }
             }
             
-            let itemLayout = ItemLayout(containerSize: availableSize, insets: .zero, sections: sections)
+            let itemLayout = ItemLayout(containerSize: containerFrame.size, insets: .zero, sections: sections)
             self.itemLayout = itemLayout
             
-            let containerWidth = availableSize.width
-            let scrollContentHeight = max(itemLayout.contentHeight, availableSize.height)
+            let containerWidth = containerFrame.size.width
+            let scrollContentHeight = max(itemLayout.contentHeight, containerFrame.size.height)
             
             self.ignoreScrolling = true
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: containerWidth, height: availableSize.height)))
+            transition.setFrame(view: self.scrollView, frame: CGRect(origin: .zero, size: containerFrame.size))
             let contentSize = CGSize(width: containerWidth, height: scrollContentHeight)
             if contentSize != self.scrollView.contentSize {
                 self.scrollView.contentSize = contentSize
             }
-//            let contentInset: UIEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomPanelHeight + bottomPanelInset, right: 0.0)
-//            let indicatorInset = UIEdgeInsets(top: max(itemLayout.containerInset, environment.safeInsets.top + navigationHeight), left: 0.0, bottom: contentInset.bottom, right: 0.0)
-//            if indicatorInset != self.scrollView.scrollIndicatorInsets {
-//                self.scrollView.scrollIndicatorInsets = indicatorInset
-//            }
-//            if contentInset != self.scrollView.contentInset {
-//                self.scrollView.contentInset = contentInset
-//            }
             if resetScrolling {
-                self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: containerWidth, height: availableSize.height))
+                self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: containerWidth, height: containerFrame.size.height))
             }
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
             
-            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: availableSize))
+            transition.setFrame(view: self.backgroundView, frame: containerFrame)
             transition.setFrame(view: self.itemContainerView, frame: CGRect(origin: .zero, size: CGSize(width: containerWidth, height: scrollContentHeight)))
             
+            if component.metrics.isTablet {
+                transition.setFrame(view: self.shadowView, frame: containerFrame.insetBy(dx: -60.0, dy: -60.0))
+                self.shadowView.isHidden = false
+                if self.shadowView.image == nil {
+                    self.shadowView.image = generateShadowImage()
+                }
+            } else {
+                self.shadowView.isHidden = true
+            }
+            
             return availableSize
+        }
+        
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            let result = super.hitTest(point, with: event)
+            if let component = self.component, component.metrics.isTablet {
+                let addressFrame = CGRect(origin: CGPoint(x: self.backgroundView.frame.minX, y: self.backgroundView.frame.minY - 48.0), size: CGSize(width: self.backgroundView.frame.width, height: 48.0))
+                if addressFrame.contains(point) {
+                    return nil
+                }
+            }
+            return result
         }
     }
     
@@ -471,5 +567,57 @@ final class BrowserAddressListComponent: Component {
     
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private func generateShadowImage() -> UIImage? {
+    return generateImage(CGSize(width: 140.0, height: 140.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.saveGState()
+        context.setShadow(offset: CGSize(), blur: 60.0, color: UIColor(white: 0.0, alpha: 0.4).cgColor)
+
+        let path = UIBezierPath(roundedRect: CGRect(x: 60.0, y: 60.0, width: 20.0, height: 20.0), cornerRadius: 10.0).cgPath
+        context.addPath(path)
+        context.fillPath()
+        
+        context.restoreGState()
+        
+        context.setBlendMode(.clear)
+        context.addPath(path)
+        context.fillPath()
+    })?.stretchableImage(withLeftCapWidth: 70, topCapHeight: 70)
+}
+
+private final class BrowserAddressListContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = false
+    let blurBackground: Bool = true
+    
+    private let contentView: ContextExtractedContentContainingView
+    
+    init(contentView: ContextExtractedContentContainingView) {
+        self.contentView = contentView
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(containingItem: .view(self.contentView), contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private func cancelContextGestures(view: UIView) {
+    if let gestureRecognizers = view.gestureRecognizers {
+        for gesture in gestureRecognizers {
+            if let gesture = gesture as? ContextGesture {
+                gesture.cancel()
+            }
+        }
+    }
+    for subview in view.subviews {
+        cancelContextGestures(view: subview)
     }
 }

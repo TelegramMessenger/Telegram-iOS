@@ -9,6 +9,11 @@ import MultilineTextComponent
 import TelegramPresentationData
 import PhotoResources
 import AccountContext
+import ContextUI
+import UrlEscaping
+
+private let iconFont = Font.with(size: 30.0, design: .round, weight: .bold)
+private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radius: 6.0, color: UIColor(rgb: 0xFF9500))
 
 final class BrowserAddressListItemComponent: Component {
     let context: AccountContext
@@ -18,6 +23,7 @@ final class BrowserAddressListItemComponent: Component {
     let hasNext: Bool
     let insets: UIEdgeInsets
     let action: () -> Void
+    let contextAction: ((TelegramMediaWebpage, Message?, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     
     init(
         context: AccountContext,
@@ -26,7 +32,8 @@ final class BrowserAddressListItemComponent: Component {
         message: Message?,
         hasNext: Bool,
         insets: UIEdgeInsets,
-        action: @escaping () -> Void
+        action: @escaping () -> Void,
+        contextAction: ((TelegramMediaWebpage, Message?, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     ) {
         self.context = context
         self.theme = theme
@@ -35,6 +42,7 @@ final class BrowserAddressListItemComponent: Component {
         self.hasNext = hasNext
         self.insets = insets
         self.action = action
+        self.contextAction = contextAction
     }
     
     static func ==(lhs: BrowserAddressListItemComponent, rhs: BrowserAddressListItemComponent) -> Bool {
@@ -53,15 +61,19 @@ final class BrowserAddressListItemComponent: Component {
         return true
     }
     
-    final class View: UIView {
-        private let containerButton: HighlightTrackingButton
+    final class View: ContextControllerSourceView {
+        private let extractedContainerView = ContextExtractedContentContainingView()
+        private let containerButton = HighlightTrackingButton()
         
+        private let separatorLayer = SimpleLayer()
+        private var highlightedBackgroundLayer = SimpleLayer()
         private var emptyIcon: UIImageView?
+        private var emptyLabel: ComponentView<Empty>?
         private var icon = TransformImageNode()
         private let title = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
         
-        private let separatorLayer: SimpleLayer
+        private var isExtractedToContextMenu: Bool = false
         
         private var component: BrowserAddressListItemComponent?
         private weak var state: EmptyComponentState?
@@ -69,16 +81,64 @@ final class BrowserAddressListItemComponent: Component {
         private var currentIconImageRepresentation: TelegramMediaImageRepresentation?
         
         override init(frame: CGRect) {
-            self.separatorLayer = SimpleLayer()
-            
-            self.containerButton = HighlightTrackingButton()
-                        
             super.init(frame: frame)
             
             self.layer.addSublayer(self.separatorLayer)
-            self.addSubview(self.containerButton)
+            self.layer.addSublayer(self.highlightedBackgroundLayer)
+            
+            self.addSubview(self.extractedContainerView)
+            self.targetViewForActivationProgress = self.extractedContainerView.contentView
+            
+            self.highlightedBackgroundLayer.opacity = 0.0
+            
+            self.extractedContainerView.contentView.addSubview(self.containerButton)
             
             self.containerButton.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            
+            self.containerButton.highligthedChanged = { [weak self] highlighted in
+                guard let self else {
+                    return
+                }
+                if highlighted {
+                    self.superview?.bringSubviewToFront(self)
+                    self.highlightedBackgroundLayer.removeAnimation(forKey: "opacity")
+                    self.highlightedBackgroundLayer.opacity = 1.0
+                } else {
+                    self.highlightedBackgroundLayer.opacity = 0.0
+                    self.highlightedBackgroundLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                }
+            }
+            
+            self.extractedContainerView.isExtractedToContextPreviewUpdated = { [weak self] value in
+                guard let self, let component = self.component else {
+                    return
+                }
+                self.containerButton.clipsToBounds = value
+                self.containerButton.backgroundColor = value ? component.theme.list.plainBackgroundColor : nil
+                self.containerButton.layer.cornerRadius = value ? 10.0 : 0.0
+            }
+            self.extractedContainerView.willUpdateIsExtractedToContextPreview = { [weak self] value, transition in
+                guard let self else {
+                    return
+                }
+                self.isExtractedToContextMenu = value
+                
+                let mappedTransition: ComponentTransition
+                if value {
+                    mappedTransition = ComponentTransition(transition)
+                } else {
+                    mappedTransition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                }
+                self.state?.updated(transition: mappedTransition)
+            }
+            
+            self.activated = { [weak self] gesture, _ in
+                guard let self, let component = self.component else {
+                    gesture.cancel()
+                    return
+                }
+                component.contextAction?(component.webPage, component.message, self.extractedContainerView, gesture)
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -101,15 +161,35 @@ final class BrowserAddressListItemComponent: Component {
             let leftInset: CGFloat = component.insets.left + 11.0 + iconSize.width + 11.0
             let rightInset: CGFloat = 16.0
             let titleSpacing: CGFloat = 2.0
+            let contextInset: CGFloat = self.isExtractedToContextMenu ? 12.0 : 0.0
                 
             let title: String
             let subtitle: String
+            var parsedUrl: URL?
             var iconImageReferenceAndRepresentation: (AnyMediaReference, TelegramMediaImageRepresentation)?
             var updateIconImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             
             if case let .Loaded(content) = component.webPage.content {
                 title = content.title ?? content.url
-                subtitle = content.url
+                
+                var address = content.url
+                if let components = URLComponents(string: address) {
+                    if #available(iOS 16.0, *), let encodedHost = components.encodedHost {
+                        if let decodedHost = components.host, encodedHost != decodedHost {
+                            address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
+                        }
+                    } else if let encodedHost = components.host {
+                        if let decodedHost = components.host?.idnaDecoded, encodedHost != decodedHost {
+                            address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
+                        }
+                    }
+                }
+                address = address.replacingOccurrences(of: "https://www.", with: "")
+                address = address.replacingOccurrences(of: "https://", with: "")
+                address = address.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                subtitle = address
+                
+                parsedUrl = URL(string: content.url)
                 
                 if let image = content.image {
                     if let representation = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 80, height: 80)) {
@@ -203,7 +283,7 @@ final class BrowserAddressListItemComponent: Component {
                 }
                 
                 if self.icon.supernode == nil {
-                    self.addSubview(self.icon.view)
+                    self.containerButton.addSubview(self.icon.view)
                     self.icon.frame = iconFrame
                 } else {
                     transition.setFrame(view: self.icon.view, frame: iconFrame)
@@ -211,37 +291,75 @@ final class BrowserAddressListItemComponent: Component {
                 
                 iconImageApply()
                 
-//                if strongSelf.iconTextBackgroundNode.supernode != nil {
-//                    strongSelf.iconTextBackgroundNode.removeFromSupernode()
-//                }
-//                if strongSelf.iconTextNode.supernode != nil {
-//                    strongSelf.iconTextNode.removeFromSupernode()
-//                }
+                if let emptyIcon = self.emptyIcon {
+                    self.emptyIcon = nil
+                    emptyIcon.removeFromSuperview()
+                }
+                if let emptyLabel = self.emptyLabel {
+                    self.emptyLabel = nil
+                    emptyLabel.view?.removeFromSuperview()
+                }
             } else {
                 if self.icon.supernode != nil {
                     self.icon.view.removeFromSuperview()
                 }
                 
-//                if strongSelf.iconTextBackgroundNode.supernode == nil {
-//                    strongSelf.iconTextBackgroundNode.image = applyIconTextBackgroundImage
-//                    strongSelf.offsetContainerNode.addSubnode(strongSelf.iconTextBackgroundNode)
-//                    strongSelf.iconTextBackgroundNode.frame = iconFrame
-//                } else {
-//                    transition.updateFrame(node: strongSelf.iconTextBackgroundNode, frame: iconFrame)
-//                }
-//                if strongSelf.iconTextNode.supernode == nil {
-//                    strongSelf.offsetContainerNode.addSubnode(strongSelf.iconTextNode)
-//                }
+                let icon: UIImageView
+                let label: ComponentView<Empty>
+                if let currentEmptyIcon = self.emptyIcon, let currentEmptyLabel = self.emptyLabel {
+                    icon = currentEmptyIcon
+                    label = currentEmptyLabel
+                } else {
+                    icon = UIImageView()
+                    icon.image = iconTextBackgroundImage
+                    self.containerButton.addSubview(icon)
+                    
+                    label = ComponentView()
+                }
+                icon.frame = iconFrame
+                
+                var iconText = ""
+                if let parsedUrl, let host = parsedUrl.host {
+                    if parsedUrl.path.hasPrefix("/addstickers/") {
+                        iconText = "S"
+                    } else if parsedUrl.path.hasPrefix("/addemoji/") {
+                        iconText = "E"
+                    } else {
+                        iconText = host[..<host.index(after: host.startIndex)].uppercased()
+                    }
+                }
+                
+                let labelSize = label.update(
+                    transition: .immediate,
+                    component: AnyComponent(Text(text: iconText, font: iconFont, color: .white)),
+                    environment: {},
+                    containerSize: iconSize
+                )
+                let labelFrame = CGRect(origin: CGPoint(x: iconFrame.minX + floorToScreenPixels((iconFrame.width - labelSize.width) / 2.0), y: iconFrame.minY + floorToScreenPixels((iconFrame.height - labelSize.height) / 2.0)), size: labelSize)
+                if let labelView = label.view {
+                    if labelView.superview == nil {
+                        self.containerButton.addSubview(labelView)
+                    }
+                    labelView.frame = labelFrame
+                }
             }
             
             if themeUpdated {
+                self.highlightedBackgroundLayer.backgroundColor = component.theme.list.itemHighlightedBackgroundColor.cgColor
                 self.separatorLayer.backgroundColor = component.theme.list.itemPlainSeparatorColor.cgColor
             }
+            transition.setFrame(layer: self.highlightedBackgroundLayer, frame: CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: height + UIScreenPixel)))
             transition.setFrame(layer: self.separatorLayer, frame: CGRect(origin: CGPoint(x: leftInset, y: height), size: CGSize(width: availableSize.width - leftInset, height: UIScreenPixel)))
             self.separatorLayer.isHidden = !component.hasNext
             
             let containerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: height))
-            transition.setFrame(view: self.containerButton, frame: containerFrame)
+            transition.setFrame(view: self.containerButton, frame: containerFrame.insetBy(dx: contextInset, dy: 0.0))
+            
+            transition.setFrame(view: self.extractedContainerView, frame: containerFrame)
+            transition.setFrame(view: self.extractedContainerView.contentView, frame: containerFrame)
+            self.extractedContainerView.contentRect = containerFrame
+            
+            self.isGestureEnabled = component.contextAction != nil
             
             return CGSize(width: availableSize.width, height: height)
         }

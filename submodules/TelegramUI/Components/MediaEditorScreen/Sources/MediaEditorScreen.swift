@@ -2810,7 +2810,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             })
             
             if controller.isEditingStoryCover {
-                self.openCoverSelection(immediate: true)
+                Queue.mainQueue().justDispatch {
+                    self.openCoverSelection(exclusive: true)
+                }
             }
         }
         
@@ -2985,7 +2987,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
                 self.controller?.stickerRecommendedEmoji = emojiForClasses(classes.map { $0.0 })
             }
-            mediaEditor.attachPreviewView(self.previewView)
+            mediaEditor.attachPreviewView(self.previewView, andPlay: !(self.controller?.isEditingStoryCover ?? false))
             
             if case .empty = effectiveSubject {
                 self.stickerMaskDrawingView?.emptyColor = .black
@@ -4705,7 +4707,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
         
-        func openCoverSelection(immediate: Bool) {
+        func openCoverSelection(exclusive: Bool) {
             guard let portalView = PortalView(matchPosition: false) else {
                 return
             }
@@ -4722,23 +4724,31 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 context: self.context,
                 mediaEditor: self.mediaEditorPromise.get(),
                 previewView: self.previewView,
-                portalView: portalView
+                portalView: portalView,
+                exclusive: exclusive
             )
             coverController.dismissed = { [weak self] in
                 if let self {
-                    self.animateInFromTool()
-                    self.requestCompletion(playHaptic: false)
+                    if exclusive {
+                        self.controller?.requestDismiss(saveDraft: false, animated: true)
+                    } else {
+                        self.animateInFromTool()
+                        self.requestCompletion(playHaptic: false)
+                    }
                 }
             }
             coverController.completed = { [weak self] position, image in
                 if let self {
                     self.controller?.currentCoverImage = image
+                    if exclusive {
+                        self.requestCompletion()
+                    }
                 }
             }
             self.controller?.present(coverController, in: .current)
             self.coverScreen = coverController
             
-            if immediate {
+            if exclusive {
                 self.isDisplayingTool = .cover
                 self.requestUpdate(transition: .immediate)
             } else {
@@ -5227,7 +5237,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     self.controller?.present(controller, in: .window(.root))
                                     self.animateOutToTool(tool: .tools)
                                 case .cover:
-                                    self.openCoverSelection(immediate: false)
+                                    self.openCoverSelection(exclusive: false)
                                 }
                             }
                         },
@@ -5541,6 +5551,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         public let media: MediaResult?
         public let mediaAreas: [MediaArea]
         public let caption: NSAttributedString
+        public let coverTimestamp: Double?
         public let options: MediaEditorResultPrivacy
         public let stickers: [TelegramMediaFile]
         public let randomId: Int64
@@ -5549,6 +5560,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.media = nil
             self.mediaAreas = []
             self.caption = NSAttributedString()
+            self.coverTimestamp = nil
             self.options = MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false)
             self.stickers = []
             self.randomId = 0
@@ -5558,6 +5570,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             media: MediaResult?,
             mediaAreas: [MediaArea] = [],
             caption: NSAttributedString = NSAttributedString(),
+            coverTimestamp: Double? = nil,
             options: MediaEditorResultPrivacy = MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false),
             stickers: [TelegramMediaFile] = [],
             randomId: Int64 = 0
@@ -5565,6 +5578,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.media = media
             self.mediaAreas = mediaAreas
             self.caption = caption
+            self.coverTimestamp = coverTimestamp
             self.options = options
             self.stickers = stickers
             self.randomId = randomId
@@ -5924,7 +5938,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             editCoverImpl = { [weak self, weak controller] in
                 if let self {
-                    self.node.openCoverSelection(immediate: false)
+                    self.node.openCoverSelection(exclusive: false)
                 }
                 if let controller {
                     controller.dismiss()
@@ -6472,8 +6486,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
         
-        if self.isEmbeddedEditor && !(self.node.hasAnyChanges || hasEntityChanges) {
-            self.completion(MediaEditorScreen.Result(media: nil, mediaAreas: [], caption: caption, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
+        var hasAnyChanges = self.node.hasAnyChanges
+        if self.isEditingStoryCover {
+            hasAnyChanges = false
+        }
+        
+        if self.isEmbeddedEditor && !(hasAnyChanges || hasEntityChanges) {
+            self.saveDraft(id: randomId, edit: true)
+            
+            self.completion(MediaEditorScreen.Result(media: nil, mediaAreas: [], caption: caption, coverTimestamp: mediaEditor.values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                     self?.dismiss()
                     Queue.mainQueue().justDispatch {
@@ -6481,7 +6502,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 })
             })
-            
             return
         }
         
@@ -6500,8 +6520,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.saveDraft(id: randomId)
             
             var firstFrame: Signal<(UIImage?, UIImage?), NoError>
-            let firstFrameTime = CMTime(seconds: mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, preferredTimescale: CMTimeScale(60))
-
+            let firstFrameTime: CMTime
+            if let coverImageTimestamp = mediaEditor.values.coverImageTimestamp {
+                firstFrameTime = CMTime(seconds: coverImageTimestamp, preferredTimescale: CMTimeScale(60))
+            } else {
+                firstFrameTime = CMTime(seconds: mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, preferredTimescale: CMTimeScale(60))
+            }
             let videoResult: Signal<MediaResult.VideoResult, NoError>
             var videoIsMirrored = false
             let duration: Double
@@ -6743,7 +6767,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: inputImage, dimensions: storyDimensions, values: mediaEditor.values, time: firstFrameTime, textScale: 2.0, completion: { [weak self] coverImage in
                         if let self {
                             Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
-                            self.completion(MediaEditorScreen.Result(media: .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), mediaAreas: mediaAreas, caption: caption, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
+                            self.completion(MediaEditorScreen.Result(media: .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), mediaAreas: mediaAreas, caption: caption, coverTimestamp: mediaEditor.values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
                                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                     self?.dismiss()
                                     Queue.mainQueue().justDispatch {
@@ -6766,7 +6790,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
                     if let self, let resultImage {
                         Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
-                        self.completion(MediaEditorScreen.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas: mediaAreas, caption: caption, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
+                        self.completion(MediaEditorScreen.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas: mediaAreas, caption: caption, coverTimestamp: nil, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
                             self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                 self?.dismiss()
                                 Queue.mainQueue().justDispatch {
@@ -6914,6 +6938,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 media: .sticker(file: file, emoji: self.effectiveStickerEmoji()),
                                 mediaAreas: [],
                                 caption: NSAttributedString(),
+                                coverTimestamp: nil,
                                 options: MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false),
                                 stickers: [],
                                 randomId: 0

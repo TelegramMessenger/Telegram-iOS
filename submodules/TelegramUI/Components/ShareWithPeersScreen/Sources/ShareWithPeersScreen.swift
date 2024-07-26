@@ -2919,7 +2919,7 @@ final class ShareWithPeersScreenComponent: Component {
             
             contentTransition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: containerWidth, height: itemLayout.contentHeight + footersTotalHeight)))
             
-            let scrollContentHeight = max(topInset + itemLayout.contentHeight + containerInset, availableSize.height - containerInset)
+            let scrollContentHeight = max(topInset + itemLayout.contentHeight + containerInset + bottomPanelHeight, availableSize.height - containerInset)
             
             transition.setFrame(view: self.scrollContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + containerInset), size: CGSize(width: containerWidth, height: itemLayout.contentHeight)))
             

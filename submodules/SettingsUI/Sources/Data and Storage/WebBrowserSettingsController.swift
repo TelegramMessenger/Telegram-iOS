@@ -310,21 +310,35 @@ public func webBrowserSettingsController(context: AccountContext) -> ViewControl
     let controller = ItemListController(context: context, state: signal)
     
     clearCookiesImpl = { [weak controller] in
-        WKWebsiteDataStore.default().removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: Date(timeIntervalSince1970: 0), completionHandler:{})
-                
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        controller?.present(UndoOverlayController(
-            presentationData: presentationData,
-            content: .info(
-                title: nil,
-                text: presentationData.strings.WebBrowser_ClearCookies_Succeed,
-                timeout: nil,
-                customUndoText: nil
-            ),
-            elevatedLayout: false,
-            position: .bottom,
-            action: { _ in return false }), in: .current
+        
+        let alertController = textAlertController(
+            context: context,
+            updatedPresentationData: nil,
+            title: nil,
+            text: presentationData.strings.WebBrowser_ClearCookies_ClearConfirmation_Text,
+            actions: [
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
+                TextAlertAction(type: .defaultAction, title: presentationData.strings.WebBrowser_ClearCookies_ClearConfirmation_Clear, action: {
+                    WKWebsiteDataStore.default().removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: Date(timeIntervalSince1970: 0), completionHandler:{})
+                            
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    controller?.present(UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .info(
+                            title: nil,
+                            text: presentationData.strings.WebBrowser_ClearCookies_Succeed,
+                            timeout: nil,
+                            customUndoText: nil
+                        ),
+                        elevatedLayout: false,
+                        position: .bottom,
+                        action: { _ in return false }), in: .current
+                    )
+                })
+            ]
         )
+        controller?.present(alertController, in: .window(.root))
     }
     
     addExceptionImpl = { [weak controller] in

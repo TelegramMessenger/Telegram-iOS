@@ -2049,6 +2049,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let peer = Promise<EnginePeer?>()
     peer.set(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
     
+    let canViewStatsValue = Atomic<Bool>(value: true)
     let peerData = context.engine.data.get(
         TelegramEngine.EngineData.Item.Peer.CanViewStats(id: peerId),
         TelegramEngine.EngineData.Item.Peer.AdsRestricted(id: peerId),
@@ -2080,6 +2081,8 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     |> deliverOnMainQueue
     |> map { presentationData, state, peer, data, messageView, stories, boostData, boostersState, giftsState, revenueState, revenueTransactions, starsState, starsTransactions, peerData, longLoading -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let (canViewStats, adsRestricted, canViewRevenue, canViewStarsRevenue) = peerData
+        
+        let _ = canViewStatsValue.swap(canViewStats)
         
         var isGroup = false
         if let peer, case let .channel(channel) = peer, case .group = channel.info {
@@ -2157,9 +2160,17 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
             case .stats:
                 index = 0
             case .boosts:
-                index = 1
+                if canViewStats {
+                    index = 1
+                } else {
+                    index = 0
+                }
             case .monetization:
-                index = 2
+                if canViewStats {
+                    index = 2
+                } else {
+                    index = 1
+                }
             }
             var tabs: [String] = []
             if canViewStats {
@@ -2195,12 +2206,21 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     }
     controller.titleControlValueChanged = { value in
         updateState { state in
+            let canViewStats = canViewStatsValue.with { $0 }
             let section: ChannelStatsSection
             switch value {
             case 0:
-                section = .stats
+                if canViewStats {
+                    section = .stats
+                } else {
+                    section = .boosts
+                }
             case 1:
-                section = .boosts
+                if canViewStats {
+                    section = .boosts
+                } else {
+                    section = .monetization
+                }
             case 2:
                 section = .monetization
                 let _ = (ApplicationSpecificNotice.monetizationIntroDismissed(accountManager: context.sharedContext.accountManager)

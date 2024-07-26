@@ -182,6 +182,11 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             configuration.mediaPlaybackRequiresUserAction = false
         }
         
+        let contentController = WKUserContentController()
+        let videoScript = WKUserScript(source: videoSource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        contentController.addUserScript(videoScript)
+        configuration.userContentController = contentController
+        
         self.webView = WebView(frame: CGRect(), configuration: configuration)
         self.webView.allowsLinkPreview = true
         
@@ -465,7 +470,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         self.webView.scrollView.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: fullInsets.bottom, right: 0.0)
         self.webView.customBottomInset = max(insets.bottom, safeInsets.bottom)
-//        self.webView.scrollView.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 34.0, right: 0.0)
+
         self.webView.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         self.webView.scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         
@@ -589,20 +594,22 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     private var ignoreUpdatesUntilScrollingStopped = false
     func resetScrolling() {
         self.updateScrollingOffset(isReset: true, transition: .spring(duration: 0.4))
-        self.ignoreUpdatesUntilScrollingStopped = true
+        if self.webView.scrollView.isDecelerating {
+            self.ignoreUpdatesUntilScrollingStopped = true
+        }
     }
     
     @available(iOS 13.0, *)
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, preferences: WKWebpagePreferences, decisionHandler: @escaping (WKNavigationActionPolicy, WKWebpagePreferences) -> Void) {
-        if #available(iOS 14.5, *), navigationAction.shouldPerformDownload {
-            self.presentDownloadConfirmation(fileName: navigationAction.request.mainDocumentURL?.lastPathComponent ?? "file", proceed: { download in
-                if download {
-                    decisionHandler(.download, preferences)
-                } else {
-                    decisionHandler(.cancel, preferences)
-                }
-            })
-        } else {
+//        if #available(iOS 14.5, *), navigationAction.shouldPerformDownload {
+//            self.presentDownloadConfirmation(fileName: navigationAction.request.mainDocumentURL?.lastPathComponent ?? "file", proceed: { download in
+//                if download {
+//                    decisionHandler(.download, preferences)
+//                } else {
+////                    decisionHandler(.cancel, preferences)
+//                }
+//            })
+//        } else {
             if let url = navigationAction.request.url?.absoluteString {
                 if isTelegramMeLink(url) || isTelegraPhLink(url) {
                     decisionHandler(.cancel, preferences)
@@ -614,18 +621,24 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             } else {
                 decisionHandler(.allow, preferences)
             }
-        }
+//        }
     }
     
-    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
-        if navigationResponse.canShowMIMEType {
-            decisionHandler(.allow)
-        } else if #available(iOS 14.5, *) {
-            decisionHandler(.download)
-        } else {
-            decisionHandler(.cancel)
-        }
-    }
+//    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+//        if navigationResponse.canShowMIMEType {
+//            decisionHandler(.allow)
+//        } else if #available(iOS 14.5, *) {
+//            self.presentDownloadConfirmation(fileName: navigationResponse.response.suggestedFilename ?? "file", proceed: { download in
+//                if download {
+//                    decisionHandler(.download)
+//                } else {
+//                    decisionHandler(.cancel)
+//                }
+//            })
+//        } else {
+//            decisionHandler(.cancel)
+//        }
+//    }
     
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         if let url = navigationAction.request.url?.absoluteString {
@@ -1137,6 +1150,48 @@ let setupFontFunctions = """
   }
   window.setTelegramFontOverrides = setTelegramFontOverrides;
 })();
+"""
+
+private let videoSource = """
+function disableWebkitEnterFullscreen(videoElement) {
+  if (videoElement && videoElement.webkitEnterFullscreen) {
+    Object.defineProperty(videoElement, 'webkitEnterFullscreen', {
+      value: undefined
+    });
+  }
+}
+
+function disableFullscreenOnExistingVideos() {
+  document.querySelectorAll('video').forEach(disableWebkitEnterFullscreen);
+}
+
+function handleMutations(mutations) {
+  mutations.forEach((mutation) => {
+    if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+      mutation.addedNodes.forEach((newNode) => {
+        if (newNode.tagName === 'VIDEO') {
+          disableWebkitEnterFullscreen(newNode);
+        }
+        if (newNode.querySelectorAll) {
+          newNode.querySelectorAll('video').forEach(disableWebkitEnterFullscreen);
+        }
+      });
+    }
+  });
+}
+
+disableFullscreenOnExistingVideos();
+
+const observer = new MutationObserver(handleMutations);
+
+observer.observe(document.body, {
+  childList: true,
+  subtree: true
+});
+
+function disconnectObserver() {
+  observer.disconnect();
+}
 """
 
 @available(iOS 16.0, *)

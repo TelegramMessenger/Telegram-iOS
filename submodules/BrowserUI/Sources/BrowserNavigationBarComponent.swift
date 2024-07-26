@@ -21,6 +21,14 @@ final class BrowserNavigationBarEnvironment: Equatable {
 }
 
 final class BrowserNavigationBarComponent: CombinedComponent {
+    public class ExternalState {
+        public fileprivate(set) var centerItemFrame: CGRect
+        
+        public init() {
+            self.centerItemFrame = .zero
+        }
+    }
+    
     let backgroundColor: UIColor
     let separatorColor: UIColor
     let textColor: UIColor
@@ -29,6 +37,8 @@ final class BrowserNavigationBarComponent: CombinedComponent {
     let topInset: CGFloat
     let height: CGFloat
     let sideInset: CGFloat
+    let metrics: LayoutMetrics
+    let externalState: ExternalState?
     let leftItems: [AnyComponentWithIdentity<Empty>]
     let rightItems: [AnyComponentWithIdentity<Empty>]
     let centerItem: AnyComponentWithIdentity<BrowserNavigationBarEnvironment>?
@@ -46,6 +56,8 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         topInset: CGFloat,
         height: CGFloat,
         sideInset: CGFloat,
+        metrics: LayoutMetrics,
+        externalState: ExternalState?,
         leftItems: [AnyComponentWithIdentity<Empty>],
         rightItems: [AnyComponentWithIdentity<Empty>],
         centerItem: AnyComponentWithIdentity<BrowserNavigationBarEnvironment>?,
@@ -62,6 +74,8 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         self.topInset = topInset
         self.height = height
         self.sideInset = sideInset
+        self.metrics = metrics
+        self.externalState = externalState
         self.leftItems = leftItems
         self.rightItems = rightItems
         self.centerItem = centerItem
@@ -94,6 +108,9 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             return false
         }
         if lhs.sideInset != rhs.sideInset {
+            return false
+        }
+        if lhs.metrics != rhs.metrics {
             return false
         }
         if lhs.leftItems != rhs.leftItems {
@@ -129,12 +146,14 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         
         return { context in
             var availableWidth = context.availableSize.width
-            let sideInset: CGFloat = 16.0 + context.component.sideInset
+            let sideInset: CGFloat = (context.component.metrics.isTablet ? 20.0 : 16.0) + context.component.sideInset
             
             let collapsedHeight: CGFloat = 24.0
             let expandedHeight = context.component.height
             let contentHeight: CGFloat = expandedHeight * (1.0 - context.component.collapseFraction) + collapsedHeight * context.component.collapseFraction
             let size = CGSize(width: context.availableSize.width, height: context.component.topInset + contentHeight)
+            let verticalOffset: CGFloat = context.component.metrics.isTablet ? -2.0 : 0.0
+            let itemSpacing: CGFloat = context.component.metrics.isTablet ? 26.0 : 8.0
             
             let background = background.update(
                 component: Rectangle(color: context.component.backgroundColor.withAlphaComponent(1.0)),
@@ -164,7 +183,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
                 availableSize: CGSize(width: size.width, height: size.height),
                 transition: context.transition
             )
-            
+                        
             var leftItemList: [_UpdatedChildComponent] = []
             for item in context.component.leftItems {
                 let item = leftItems[item.id].update(
@@ -186,11 +205,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
                 rightItemList.append(item)
                 availableWidth -= item.size.width
             }
-            
-            if !leftItemList.isEmpty || !rightItemList.isEmpty {
-                availableWidth -= 14.0
-            }
-                        
+                    
             context.add(background
                 .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
             )
@@ -216,36 +231,37 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             var leftItemX = sideInset
             for item in leftItemList {
                 context.add(item
-                    .position(CGPoint(x: leftItemX + item.size.width / 2.0 - (item.size.width / 2.0 * 0.35 * context.component.collapseFraction), y: context.component.topInset + contentHeight / 2.0))
+                    .position(CGPoint(x: leftItemX + item.size.width / 2.0 - (item.size.width / 2.0 * 0.35 * context.component.collapseFraction), y: context.component.topInset + contentHeight / 2.0 + verticalOffset))
                     .scale(1.0 - 0.35 * context.component.collapseFraction)
                     .opacity(1.0 - context.component.collapseFraction)
                     .appear(.default(scale: true, alpha: true))
                     .disappear(.default(scale: true, alpha: true))
                 )
-                leftItemX += item.size.width + 8.0
-                centerLeftInset += item.size.width + 8.0
+                leftItemX += item.size.width + itemSpacing
+                centerLeftInset += item.size.width + itemSpacing
             }
     
             var centerRightInset = sideInset - 5.0
             var rightItemX = context.availableSize.width - (sideInset - 5.0)
             for item in rightItemList.reversed() {
                 context.add(item
-                    .position(CGPoint(x: rightItemX - item.size.width / 2.0 + (item.size.width / 2.0 * 0.35 * context.component.collapseFraction), y: context.component.topInset + contentHeight / 2.0))
+                    .position(CGPoint(x: rightItemX - item.size.width / 2.0 + (item.size.width / 2.0 * 0.35 * context.component.collapseFraction), y: context.component.topInset + contentHeight / 2.0 + verticalOffset))
                     .scale(1.0 - 0.35 * context.component.collapseFraction)
                     .opacity(1.0 - context.component.collapseFraction)
                     .appear(.default(scale: true, alpha: true))
                     .disappear(.default(scale: true, alpha: true))
                 )
-                rightItemX -= item.size.width + 8.0
-                centerRightInset += item.size.width + 8.0
+                rightItemX -= item.size.width + itemSpacing
+                centerRightInset += item.size.width + itemSpacing
             }
             
             let maxCenterInset = max(centerLeftInset, centerRightInset)
             
             if !leftItemList.isEmpty || !rightItemList.isEmpty {
-                availableWidth -= 20.0
+                availableWidth -= itemSpacing * CGFloat(max(0, leftItemList.count - 1)) + itemSpacing * CGFloat(max(0, rightItemList.count - 1)) + 30.0
             }
             availableWidth -= context.component.sideInset * 2.0
+            availableWidth = min(660.0, availableWidth)
             
             let environment = BrowserNavigationBarEnvironment(fraction: context.component.collapseFraction)
             
@@ -263,12 +279,15 @@ final class BrowserNavigationBarComponent: CombinedComponent {
                 centerX = centerLeftInset + (context.availableSize.width - centerLeftInset - centerRightInset) / 2.0
             }
             if let centerItem = centerItem {
+                let centerItemPosition = CGPoint(x: centerX, y: context.component.topInset + contentHeight / 2.0 + verticalOffset)
                 context.add(centerItem
-                    .position(CGPoint(x: centerX, y: context.component.topInset + contentHeight / 2.0))
+                    .position(centerItemPosition)
                     .scale(1.0 - 0.35 * context.component.collapseFraction)
                     .appear(.default(scale: false, alpha: true))
                     .disappear(.default(scale: false, alpha: true))
                 )
+                
+                context.component.externalState?.centerItemFrame = centerItem.size.centered(around: centerItemPosition)
             }
             
             if context.component.collapseFraction == 1.0 {
