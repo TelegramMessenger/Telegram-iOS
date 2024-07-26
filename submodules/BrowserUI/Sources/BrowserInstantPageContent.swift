@@ -46,6 +46,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     private var pendingAnchor: String?
     private var initialState: InstantPageStoredState?
     
+    private let wrapperNode: ASDisplayNode
     fileprivate let scrollNode: ASScrollNode
     private let scrollNodeFooter: ASDisplayNode
     private var linkHighlightingNode: LinkHighlightingNode?
@@ -109,6 +110,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.0, readingProgress: 0.0, contentType: .instantPage)
         self.statePromise = Promise<BrowserContentState>(self._state)
         
+        self.wrapperNode = ASDisplayNode()
         self.scrollNode = ASScrollNode()
         self.scrollNode.backgroundColor = self.theme.pageBackgroundColor
         
@@ -128,7 +130,8 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
             }
         ))
         
-        self.addSubnode(self.scrollNode)
+        self.addSubnode(self.wrapperNode)
+        self.wrapperNode.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.scrollNodeFooter)
         
         self.scrollNode.view.delaysContentTouches = false
@@ -391,6 +394,8 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
             self.scrollNode.view.contentInset = scrollInsets
             self.scrollNode.view.scrollIndicatorInsets = scrollInsets
         }
+        
+        self.wrapperNode.frame = CGRect(origin: .zero, size: size)
         
         let scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top))
         let scrollFrameUpdated = self.scrollNode.bounds.size != scrollFrame.size
@@ -1108,12 +1113,12 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
             }
         })], catchTapsOutside: true)
         self.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
-            if let _ = self {
-//                for (_, itemNode) in self.visibleItemsWithNodes {
-//                    if let (node, _, _) = itemNode.transitionNode(media: media) {
-//                        return (self.scrollNode, node.convert(node.bounds, to: self.scrollNode), self, self.bounds)
-//                    }
-//                }
+            if let self {
+                for (_, itemNode) in self.visibleItemsWithNodes {
+                    if let (node, _, _) = itemNode.transitionNode(media: media) {
+                        return (self.scrollNode, node.convert(node.bounds, to: self.scrollNode), self.wrapperNode, self.wrapperNode.bounds)
+                    }
+                }
             }
             return nil
         }))
@@ -1201,84 +1206,84 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     }
     
     private func updateTextSelectionRects(_ rects: [CGRect], text: String?) {
-//        if let text = text, !rects.isEmpty {
-//            let textSelectionNode: LinkHighlightingNode
-//            if let current = self.textSelectionNode {
-//                textSelectionNode = current
-//            } else {
-//                textSelectionNode = LinkHighlightingNode(color: UIColor.lightGray.withAlphaComponent(0.4))
-//                textSelectionNode.isUserInteractionEnabled = false
-//                self.textSelectionNode = textSelectionNode
-//                self.scrollNode.addSubnode(textSelectionNode)
-//            }
-//            textSelectionNode.frame = CGRect(origin: CGPoint(), size: self.scrollNode.bounds.size)
-//            textSelectionNode.updateRects(rects)
-//            
-////            var coveringRect = rects[0]
-////            for i in 1 ..< rects.count {
-////                coveringRect = coveringRect.union(rects[i])
-////            }
-//            
-////            let context = self.context
-////            let strings = self.presentationData.strings
-////            let _ = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
-////            |> take(1)
-////            |> deliverOnMainQueue).start(next: { [weak self] sharedData in
-////                let translationSettings: TranslationSettings
-////                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
-////                    translationSettings = current
-////                } else {
-////                    translationSettings = TranslationSettings.defaultSettings
-////                }
-////                
-////                var actions: [ContextMenuAction] = [ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuCopy, accessibilityLabel: strings.Conversation_ContextMenuCopy), action: { [weak self] in
-////                    UIPasteboard.general.string = text
-////                    
-////                    if let strongSelf = self {
-////                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-////                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
-////                    }
-////                }), ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuShare, accessibilityLabel: strings.Conversation_ContextMenuShare), action: { [weak self] in
-////                    if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-////                        strongSelf.present(ShareController(context: strongSelf.context, subject: .quote(text: text, url: content.url)), nil)
-////                    }
-////                })]
-////                
-////                let (canTranslate, language) = canTranslateText(context: context, text: text, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: false, ignoredLanguages: translationSettings.ignoredLanguages)
-////                if canTranslate {
-////                    actions.append(ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuTranslate, accessibilityLabel: strings.Conversation_ContextMenuTranslate), action: { [weak self] in
-////                        let controller = TranslateScreen(context: context, text: text, canCopy: true, fromLanguage: language)
-////                        controller.pushController = { [weak self] c in
-////                            (self?.controller?.navigationController as? NavigationController)?._keepModalDismissProgress = true
-////                            self?.controller?.push(c)
-////                        }
-////                        controller.presentController = { [weak self] c in
-////                            self?.controller?.present(c, in: .window(.root))
-////                        }
-////                        self?.present(controller, nil)
-////                    }))
-////                }
-////                
-////                let controller = makeContextMenuController(actions: actions)
-////                controller.dismissed = { [weak self] in
-////                    self?.updateTextSelectionRects([], text: nil)
-////                }
-////                self?.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
-////                    if let strongSelf = self {
-////                        return (strongSelf.scrollNode, coveringRect.insetBy(dx: -3.0, dy: -3.0), strongSelf, strongSelf.bounds)
-////                    } else {
-////                        return nil
-////                    }
-////                }))
-////            })
-//            
-//            textSelectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
-//        } else if let textSelectionNode = self.textSelectionNode {
-//            self.textSelectionNode = nil
-//            textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
-//                textSelectionNode?.removeFromSupernode()
-//            })
-//        }
+        if let text = text, !rects.isEmpty {
+            let textSelectionNode: LinkHighlightingNode
+            if let current = self.textSelectionNode {
+                textSelectionNode = current
+            } else {
+                textSelectionNode = LinkHighlightingNode(color: UIColor.lightGray.withAlphaComponent(0.4))
+                textSelectionNode.isUserInteractionEnabled = false
+                self.textSelectionNode = textSelectionNode
+                self.scrollNode.addSubnode(textSelectionNode)
+            }
+            textSelectionNode.frame = CGRect(origin: CGPoint(), size: self.scrollNode.bounds.size)
+            textSelectionNode.updateRects(rects)
+            
+            var coveringRect = rects[0]
+            for i in 1 ..< rects.count {
+                coveringRect = coveringRect.union(rects[i])
+            }
+            
+            let context = self.context
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let strings = self.presentationData.strings
+            let _ = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+                let translationSettings: TranslationSettings
+                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
+                    translationSettings = current
+                } else {
+                    translationSettings = TranslationSettings.defaultSettings
+                }
+                
+                var actions: [ContextMenuAction] = [ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuCopy, accessibilityLabel: strings.Conversation_ContextMenuCopy), action: { [weak self] in
+                    UIPasteboard.general.string = text
+                    
+                    if let strongSelf = self {
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                    }
+                }), ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuShare, accessibilityLabel: strings.Conversation_ContextMenuShare), action: { [weak self] in
+                    if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
+                        strongSelf.present(ShareController(context: strongSelf.context, subject: .quote(text: text, url: content.url)), nil)
+                    }
+                })]
+                
+                let (canTranslate, language) = canTranslateText(context: context, text: text, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: false, ignoredLanguages: translationSettings.ignoredLanguages)
+                if canTranslate {
+                    actions.append(ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuTranslate, accessibilityLabel: strings.Conversation_ContextMenuTranslate), action: { [weak self] in
+                        let controller = TranslateScreen(context: context, text: text, canCopy: true, fromLanguage: language)
+                        controller.pushController = { [weak self] c in
+                            self?.getNavigationController()?._keepModalDismissProgress = true
+                            self?.push(c)
+                        }
+                        controller.presentController = { [weak self] c in
+                            self?.present(c, nil)
+                        }
+                        self?.present(controller, nil)
+                    }))
+                }
+                
+                let controller = makeContextMenuController(actions: actions)
+                controller.dismissed = { [weak self] in
+                    self?.updateTextSelectionRects([], text: nil)
+                }
+                self?.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                    if let strongSelf = self {
+                        return (strongSelf.scrollNode, coveringRect.insetBy(dx: -3.0, dy: -3.0), strongSelf.wrapperNode, strongSelf.wrapperNode.bounds)
+                    } else {
+                        return nil
+                    }
+                }))
+            })
+            
+            textSelectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+        } else if let textSelectionNode = self.textSelectionNode {
+            self.textSelectionNode = nil
+            textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                textSelectionNode?.removeFromSupernode()
+            })
+        }
     }
     
     private func findAnchorItem(_ anchor: String, items: [InstantPageItem]) -> (InstantPageItem, CGFloat, Bool, [InstantPageDetailsItem])? {
