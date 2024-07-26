@@ -239,6 +239,13 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             self.webView.isInspectable = true
         }
         self.addSubview(self.webView)
+        
+        self.webView.interactiveTransitionGestureRecognizerTest = { [weak self] point -> Bool in
+            if let self, self.webView.canGoBack {
+                return true
+            }
+            return point.x > 44.0
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -1202,5 +1209,16 @@ final class BrowserSearchOptions: UITextSearchOptions {
 
     override var stringCompareOptions: NSString.CompareOptions {
         return .caseInsensitive
+    }
+}
+
+private func findScrollView(view: UIView?) -> UIScrollView? {
+    if let view = view {
+        if let view = view as? UIScrollView {
+            return view
+        }
+        return findScrollView(view: view.superview)
+    } else {
+        return nil
     }
 }
