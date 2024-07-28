@@ -1,4 +1,4 @@
-        # Telegram iOS Source Code Compilation Guide
+                # Telegram iOS Source Code Compilation Guide
 
 We welcome all developers to use our API and source code to create applications on our platform.
 There are several things we require from **all developers** for the moment.
