@@ -1,12 +1,12 @@
 public extension Api.bots {
     enum PreviewInfo: TypeConstructorDescription {
-        case previewInfo(media: [Api.MessageMedia], langCodes: [String])
+        case previewInfo(media: [Api.BotPreviewMedia], langCodes: [String])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .previewInfo(let media, let langCodes):
                     if boxed {
-                        buffer.appendInt32(1357069389)
+                        buffer.appendInt32(212278628)
                     }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(media.count))
@@ -30,9 +30,9 @@ public extension Api.bots {
     }
     
         public static func parse_previewInfo(_ reader: BufferReader) -> PreviewInfo? {
-            var _1: [Api.MessageMedia]?
+            var _1: [Api.BotPreviewMedia]?
             if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageMedia.self)
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotPreviewMedia.self)
             }
             var _2: [String]?
             if let _ = reader.readInt32() {

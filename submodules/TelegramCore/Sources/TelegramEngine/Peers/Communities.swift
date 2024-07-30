@@ -280,7 +280,7 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 var memberCounts: [PeerId: Int] = [:]
                 
                 for chat in chats {
-                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _) = chat {
+                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _) = chat {
                         if let participantsCount = participantsCount {
                             memberCounts[chat.peerId] = Int(participantsCount)
                         }
@@ -307,7 +307,7 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 var memberCounts: [PeerId: Int] = [:]
                 
                 for chat in chats {
-                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _) = chat {
+                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _) = chat {
                         if let participantsCount = participantsCount {
                             memberCounts[chat.peerId] = Int(participantsCount)
                         }
@@ -621,7 +621,7 @@ func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> S
                     var memberCounts: [ChatListFiltersState.ChatListFilterUpdates.MemberCount] = []
                     
                     for chat in chats {
-                        if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _) = chat {
+                        if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _) = chat {
                             if let participantsCount = participantsCount {
                                 memberCounts.append(ChatListFiltersState.ChatListFilterUpdates.MemberCount(id: chat.peerId, count: participantsCount))
                             }

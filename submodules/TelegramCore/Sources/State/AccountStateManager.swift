@@ -287,6 +287,11 @@ public final class AccountStateManager {
             return self.storyUpdatesPipe.signal()
         }
         
+        fileprivate let botPreviewUpdatesPipe = ValuePipe<[InternalBotPreviewUpdate]>()
+        public var botPreviewUpdates: Signal<[InternalBotPreviewUpdate], NoError> {
+            return self.botPreviewUpdatesPipe.signal()
+        }
+        
         private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
         private var updatedPeersNearbyContext = UpdatedPeersNearbySubscriberContext()
         private var updatedRevenueBalancesContext = UpdatedRevenueBalancesSubscriberContext()
@@ -1853,6 +1858,18 @@ public final class AccountStateManager {
     func injectStoryUpdates(updates: [InternalStoryUpdate]) {
         self.impl.with { impl in
             impl.storyUpdatesPipe.putNext(updates)
+        }
+    }
+    
+    var botPreviewUpdates: Signal<[InternalBotPreviewUpdate], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.botPreviewUpdates.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    func injectBotPreviewUpdates(updates: [InternalBotPreviewUpdate]) {
+        self.impl.with { impl in
+            impl.botPreviewUpdatesPipe.putNext(updates)
         }
     }
     

@@ -1365,4 +1365,13 @@ public class AttachmentController: ViewController, MinimizableController {
         })
         return disposableSet
     }
+    
+    public func makeContentSnapshotView() -> UIView? {
+        let snapshotView = self.view.snapshotView(afterScreenUpdates: false)
+        if let contentSnapshotView = self.mainController.makeContentSnapshotView() {
+            contentSnapshotView.frame = contentSnapshotView.frame.offsetBy(dx: 0.0, dy: 64.0 + 56.0)
+            snapshotView?.addSubview(contentSnapshotView)
+        }
+        return snapshotView
+    }
 }

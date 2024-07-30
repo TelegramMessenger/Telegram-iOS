@@ -90,8 +90,8 @@ public extension TelegramEngine {
             return _internal_sendStarsPaymentForm(account: self.account, formId: formId, source: source)
         }
         
-        public func cancelStarsSubscription(subscriptionId: String, reason: String) -> Signal<Never, CancelStarsSubsciptionError> {
-            return _internal_cancelStarsSubscription(account: self.account, subscriptionId: subscriptionId, reason: reason)
+        public func updateStarsSubscription(peerId: EnginePeer.Id, subscriptionId: String, cancel: Bool) -> Signal<Never, UpdateStarsSubsciptionError> {
+            return _internal_updateStarsSubscription(account: self.account, peerId: peerId, subscriptionId: subscriptionId, cancel: cancel)
         }
     }
 }

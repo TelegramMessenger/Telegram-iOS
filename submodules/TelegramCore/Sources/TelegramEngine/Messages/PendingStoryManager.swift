@@ -8,11 +8,12 @@ public extension Stories {
         private enum CodingKeys: String, CodingKey {
             case discriminator = "tt"
             case peerId = "peerId"
+            case language = "language"
         }
         
         case myStories
         case peer(PeerId)
-        case botPreview(PeerId)
+        case botPreview(id: PeerId, language: String?)
         
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -23,7 +24,7 @@ public extension Stories {
             case 1:
                 self = .peer(try container.decode(PeerId.self, forKey: .peerId))
             case 2:
-                self = .botPreview(try container.decode(PeerId.self, forKey: .peerId))
+                self = .botPreview(id: try container.decode(PeerId.self, forKey: .peerId), language: try container.decodeIfPresent(String.self, forKey: .language))
             default:
                 self = .myStories
             }
@@ -38,9 +39,10 @@ public extension Stories {
             case let .peer(peerId):
                 try container.encode(1 as Int32, forKey: .discriminator)
                 try container.encode(peerId, forKey: .peerId)
-            case let .botPreview(peerId):
+            case let .botPreview(peerId, language):
                 try container.encode(2 as Int32, forKey: .discriminator)
                 try container.encode(peerId, forKey: .peerId)
+                try container.encodeIfPresent(language, forKey: .language)
             }
         }
     }
@@ -406,13 +408,15 @@ final class PendingStoryManager {
                 
                 let toPeerId: PeerId
                 var isBotPreview = false
+                var botPreviewLanguage: String?
                 switch firstItem.target {
                 case .myStories:
                     toPeerId = self.accountPeerId
                 case let .peer(peerId):
                     toPeerId = peerId
-                case let .botPreview(peerId):
+                case let .botPreview(peerId, language):
                     toPeerId = peerId
+                    botPreviewLanguage = language
                     isBotPreview = true
                 }
                                 
@@ -427,6 +431,7 @@ final class PendingStoryManager {
                         revalidationContext: self.revalidationContext,
                         auxiliaryMethods: self.auxiliaryMethods,
                         toPeerId: toPeerId,
+                        language: botPreviewLanguage,
                         stableId: stableId,
                         media: firstItem.media,
                         mediaAreas: firstItem.mediaAreas,

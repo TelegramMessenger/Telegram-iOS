@@ -43,6 +43,7 @@ import TelegramUIPreferences
 import StoryFooterPanelComponent
 import TelegramNotices
 import SliderContextItem
+import SaveProgressScreen
 
 public final class StoryAvailableReactions: Equatable {
     let reactionItems: [ReactionItem]
@@ -5340,7 +5341,7 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         private let updateDisposable = MetaDisposable()
-        func openStoryEditing(repost: Bool = false) {
+        func openStoryEditing(repost: Bool = false, cover: Bool = false) {
             guard let component = self.component else {
                 return
             }
@@ -5351,7 +5352,17 @@ public final class StoryItemSetContainerComponent: Component {
             
             var videoPlaybackPosition: Double?
             if let visibleItem = self.visibleItems[component.slice.item.id], let view = visibleItem.view.view as? StoryItemContentComponent.View {
-                videoPlaybackPosition = view.videoPlaybackPosition
+                if cover {
+                    if case let .file(file) = component.slice.item.storyItem.media {
+                        for attribute in file.attributes {
+                            if case let .Video(_, _, _, _, coverTime) = attribute {
+                                videoPlaybackPosition = coverTime
+                            }
+                        }
+                    }
+                } else {
+                    videoPlaybackPosition = view.videoPlaybackPosition
+                }
             }
             
             guard let controller = MediaEditorScreen.makeEditStoryController(
@@ -5359,6 +5370,7 @@ public final class StoryItemSetContainerComponent: Component {
                 peer: component.slice.effectivePeer,
                 storyItem: component.slice.item.storyItem,
                 videoPlaybackPosition: videoPlaybackPosition,
+                cover: cover,
                 repost: repost,
                 transitionIn: .noAnimation,
                 transitionOut: nil,
@@ -5644,8 +5656,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let deleteTitle: String
             if case let .user(user) = component.slice.peer, user.botInfo != nil {
-                //TODO:localize
-                deleteTitle = "Delete Preview"
+                deleteTitle = component.strings.BotPreview_ViewContextDelete
             } else {
                 deleteTitle = component.strings.Story_ContextDeleteStory
             }
@@ -6107,6 +6118,19 @@ public final class StoryItemSetContainerComponent: Component {
                     self.openStoryEditing()
                 })))
                 
+                if case .file = component.slice.item.storyItem.media {
+                    items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_EditCover, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Stories/Context Menu/EditCover"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, a in
+                        a(.default)
+                        
+                        guard let self else {
+                            return
+                        }
+                        self.openStoryEditing(cover: true)
+                    })))
+                }
+                
                 items.append(.separator)
 
                 items.append(.action(ContextMenuActionItem(text: component.slice.item.storyItem.isPinned ? component.strings.Story_Context_RemoveFromProfile : component.strings.Story_Context_SaveToProfile, icon: { theme in
@@ -6291,6 +6315,19 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         self.openStoryEditing()
                     })))
+                    
+                    if case .file = component.slice.item.storyItem.media {
+                        items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_EditCover, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Stories/Context Menu/EditCover"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
+                            guard let self else {
+                                return
+                            }
+                            self.openStoryEditing(cover: true)
+                        })))
+                    }
                 }
                 
                 if !items.isEmpty {
@@ -6567,8 +6604,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 if case let .user(user) = component.slice.peer, let botInfo = user.botInfo {
                     if botInfo.flags.contains(.canEdit) {
-                        //TODO:localize
-                        items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.BotPreviews_MenuReorder, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, a in
                             a(.default)
@@ -6579,19 +6615,8 @@ public final class StoryItemSetContainerComponent: Component {
                             
                             component.reorder()
                         })))
-                        items.append(.action(ContextMenuActionItem(text: "Edit Preview", icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, a in
-                            a(.default)
-                            
-                            guard let self, let component = self.component else {
-                                return
-                            }
-                            
-                            let _ = component
-                        })))
-                        items.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.destructiveColor)
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                         }, action: { [weak self] _, a in
                             a(.default)
                             

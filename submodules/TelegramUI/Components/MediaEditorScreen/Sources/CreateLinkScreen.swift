@@ -466,14 +466,21 @@ private final class CreateLinkSheetComponent: CombinedComponent {
             let text = !self.name.isEmpty ? self.name : self.link
             
             var effectiveMedia: TelegramMediaWebpage?
-            if let webpage = self.webpage, case .Loaded = webpage.content, !self.dismissed {
+            var webpageHasLargeMedia = false
+            if let webpage = self.webpage, case let .Loaded(content) = webpage.content, !self.dismissed {
                 effectiveMedia = webpage
+                
+                if let isMediaLargeByDefault = content.isMediaLargeByDefault, isMediaLargeByDefault {
+                    webpageHasLargeMedia = true
+                } else {
+                    webpageHasLargeMedia = true
+                }
             }
             
             var attributes: [MessageAttribute] = []
             attributes.append(TextEntitiesMessageAttribute(entities: [.init(range: 0 ..< (text as NSString).length, type: .Url)]))
             if !self.dismissed {
-                attributes.append(WebpagePreviewMessageAttribute(leadingPreview: !self.positionBelowText, forceLargeMedia: self.largeMedia, isManuallyAdded: false, isSafe: true))
+                attributes.append(WebpagePreviewMessageAttribute(leadingPreview: !self.positionBelowText, forceLargeMedia: self.largeMedia ?? webpageHasLargeMedia, isManuallyAdded: false, isSafe: true))
             }
             
             let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))

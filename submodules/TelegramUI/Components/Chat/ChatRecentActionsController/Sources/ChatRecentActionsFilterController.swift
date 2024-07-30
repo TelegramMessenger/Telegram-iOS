@@ -442,7 +442,7 @@ public func channelRecentActionsFilterController(context: AccountContext, update
         antiSpamBotPeerPromise.set(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: antiSpamBotId))
         |> map { peer in
             if let peer = peer, case let .user(user) = peer {
-                return RenderedChannelParticipant(participant: .member(id: user.id, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil), peer: user)
+                return RenderedChannelParticipant(participant: .member(id: user.id, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil, subscriptionUntilDate: nil), peer: user)
             } else {
                 return nil
             }

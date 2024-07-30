@@ -826,7 +826,7 @@ public extension Api {
     switch self {
                 case .starsTransaction(let flags, let id, let stars, let date, let peer, let title, let description, let photo, let transactionDate, let transactionUrl, let botPayload, let msgId, let extendedMedia, let subscriptionPeriod):
                     if boxed {
-                        buffer.appendInt32(455361027)
+                        buffer.appendInt32(1127934763)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(id, buffer: buffer, boxed: false)
@@ -845,7 +845,7 @@ public extension Api {
                     for item in extendedMedia! {
                         item.serialize(buffer, true)
                     }}
-                    if Int(flags) & Int(1 << 11) != 0 {serializeInt32(subscriptionPeriod!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 12) != 0 {serializeInt32(subscriptionPeriod!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -891,7 +891,7 @@ public extension Api {
                 _13 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageMedia.self)
             } }
             var _14: Int32?
-            if Int(_1!) & Int(1 << 11) != 0 {_14 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 12) != 0 {_14 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -905,7 +905,7 @@ public extension Api {
             let _c11 = (Int(_1!) & Int(1 << 7) == 0) || _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 8) == 0) || _12 != nil
             let _c13 = (Int(_1!) & Int(1 << 9) == 0) || _13 != nil
-            let _c14 = (Int(_1!) & Int(1 << 11) == 0) || _14 != nil
+            let _c14 = (Int(_1!) & Int(1 << 12) == 0) || _14 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 {
                 return Api.StarsTransaction.starsTransaction(flags: _1!, id: _2!, stars: _3!, date: _4!, peer: _5!, title: _6, description: _7, photo: _8, transactionDate: _9, transactionUrl: _10, botPayload: _11, msgId: _12, extendedMedia: _13, subscriptionPeriod: _14)
             }

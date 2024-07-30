@@ -196,7 +196,7 @@ extension ChatControllerImpl {
                             restrictedBy: self.context.account.peerId,
                             timestamp: 0,
                             isMember: false
-                        ), rank: nil)
+                        ), rank: nil, subscriptionUntilDate: nil)
                     }
                     
                     let peer = author
@@ -207,7 +207,7 @@ extension ChatControllerImpl {
                     switch participant {
                     case .creator:
                         break
-                    case let .member(_, _, _, banInfo, _):
+                    case let .member(_, _, _, banInfo, _, _):
                         if let banInfo {
                             initialUserBannedRights[participant.peerId] = InitialBannedRights(value: banInfo.rights)
                         } else {
@@ -294,7 +294,7 @@ extension ChatControllerImpl {
                     restrictedBy: self.context.account.peerId,
                     timestamp: 0,
                     isMember: false
-                ), rank: nil)
+                ), rank: nil, subscriptionUntilDate: nil)
             }
             
             let _ = (self.context.engine.data.get(
@@ -312,7 +312,7 @@ extension ChatControllerImpl {
                 switch participant {
                 case .creator:
                     break
-                case let .member(_, _, _, banInfo, _):
+                case let .member(_, _, _, banInfo, _, _):
                     if let banInfo {
                         initialUserBannedRights[participant.peerId] = InitialBannedRights(value: banInfo.rights)
                     } else {

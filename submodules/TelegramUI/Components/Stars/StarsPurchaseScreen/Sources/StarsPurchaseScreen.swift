@@ -86,6 +86,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
     let peers: [EnginePeer.Id: EnginePeer]
     let stateUpdated: (ComponentTransition) -> Void
     let buy: (StarsProduct) -> Void
+    let openAppExamples: () -> Void
     
     init(
         context: AccountContext,
@@ -100,7 +101,8 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
         expanded: Bool,
         peers: [EnginePeer.Id: EnginePeer],
         stateUpdated: @escaping (ComponentTransition) -> Void,
-        buy: @escaping (StarsProduct) -> Void
+        buy: @escaping (StarsProduct) -> Void,
+        openAppExamples: @escaping () -> Void
     ) {
         self.context = context
         self.externalState = externalState
@@ -115,6 +117,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
         self.peers = peers
         self.stateUpdated = stateUpdated
         self.buy = buy
+        self.openAppExamples = openAppExamples
     }
     
     static func ==(lhs: StarsPurchaseScreenContentComponent, rhs: StarsPurchaseScreenContentComponent) -> Bool {
@@ -225,15 +228,16 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                 state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: accentColor)!, theme)
             }
             
-            let titleAttributedString = parseMarkdownIntoAttributedString(textString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
+            let textAttributedString = parseMarkdownIntoAttributedString(textString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
             
-            if let range = titleAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
-                titleAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: titleAttributedString.string))
+            if let range = textAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
+                textAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: textAttributedString.string))
             }
             
+            let openAppExamples = component.openAppExamples
             let text = text.update(
                 component: BalancedTextComponent(
-                    text: .plain(titleAttributedString),
+                    text: .plain(textAttributedString),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2,
@@ -246,6 +250,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                         }
                     },
                     tapAction: { _, _ in
+                        openAppExamples()
                     }
                 ),
                 environment: {},
@@ -473,6 +478,7 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
     let options: [Any]
     let purpose: StarsPurchasePurpose
     let forceDark: Bool
+    let openAppExamples: () -> Void
     let updateInProgress: (Bool) -> Void
     let present: (ViewController) -> Void
     let completion: (Int64) -> Void
@@ -483,6 +489,7 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
         options: [Any],
         purpose: StarsPurchasePurpose,
         forceDark: Bool,
+        openAppExamples: @escaping () -> Void,
         updateInProgress: @escaping (Bool) -> Void,
         present: @escaping (ViewController) -> Void,
         completion: @escaping (Int64) -> Void
@@ -492,6 +499,7 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
         self.options = options
         self.purpose = purpose
         self.forceDark = forceDark
+        self.openAppExamples = openAppExamples
         self.updateInProgress = updateInProgress
         self.present = present
         self.completion = completion
@@ -872,7 +880,8 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                         },
                         buy: { [weak state] product in
                             state?.buy(product: product)
-                        }
+                        },
+                        openAppExamples: context.component.openAppExamples
                     )),
                     contentInsets: UIEdgeInsets(top: environment.navigationHeight, left: 0.0, bottom: environment.safeInsets.bottom, right: 0.0),
                     contentOffsetUpdated: { [weak state] topContentOffset, bottomContentOffset in
@@ -985,6 +994,7 @@ public final class StarsPurchaseScreen: ViewControllerComponentContainer {
         self.context = context
         self.starsContext = starsContext
             
+        var openAppExamplesImpl: (() -> Void)?
         var updateInProgressImpl: ((Bool) -> Void)?
         var presentImpl: ((ViewController) -> Void)?
         var completionImpl: ((Int64) -> Void)?
@@ -994,6 +1004,9 @@ public final class StarsPurchaseScreen: ViewControllerComponentContainer {
             options: options,
             purpose: purpose,
             forceDark: false,
+            openAppExamples: {
+                openAppExamplesImpl?()
+            },
             updateInProgress: { inProgress in
                 updateInProgressImpl?(inProgress)
             },
@@ -1010,6 +1023,19 @@ public final class StarsPurchaseScreen: ViewControllerComponentContainer {
         let cancelItem = UIBarButtonItem(title: presentationData.strings.Common_Close, style: .plain, target: self, action: #selector(self.cancelPressed))
         self.navigationItem.setLeftBarButton(cancelItem, animated: false)
         self.navigationPresentation = .modal
+        
+        openAppExamplesImpl = { [weak self] in
+            guard let self else {
+                return
+            }
+            let _ = (context.sharedContext.makeMiniAppListScreenInitialData(context: context)
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
+                guard let self, let navigationController = self.navigationController as? NavigationController else {
+                    return
+                }
+                navigationController.pushViewController(context.sharedContext.makeMiniAppListScreen(context: context, initialData: initialData))
+            })
+        }
         
         updateInProgressImpl = { [weak self] inProgress in
             if let strongSelf = self {

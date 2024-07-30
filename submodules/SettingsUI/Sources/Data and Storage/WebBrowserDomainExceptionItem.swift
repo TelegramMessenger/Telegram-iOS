@@ -7,32 +7,43 @@ import TelegramPresentationData
 import TelegramCore
 import AccountContext
 import ItemListUI
+import PhotoResources
 
-public class WebBrowserDomainExceptionItem: ListViewItem, ItemListItem {
+private enum RevealOptionKey: Int32 {
+    case delete
+}
+
+final class WebBrowserDomainExceptionItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
-    let context: AccountContext?
+    let context: AccountContext
     let title: String
     let label: String
-    public let sectionId: ItemListSectionId
+    let icon: TelegramMediaImage?
+    let sectionId: ItemListSectionId
     let style: ItemListStyle
+    let deleted: (() -> Void)?
     
-    public init(
+    init(
         presentationData: ItemListPresentationData,
-        context: AccountContext? = nil,
+        context: AccountContext,
         title: String,
         label: String,
+        icon: TelegramMediaImage?,
         sectionId: ItemListSectionId,
-        style: ItemListStyle
+        style: ItemListStyle,
+        deleted: (() -> Void)?
     ) {
         self.presentationData = presentationData
         self.context = context
         self.title = title
         self.label = label
+        self.icon = icon
         self.sectionId = sectionId
         self.style = style
+        self.deleted = deleted
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = WebBrowserDomainExceptionItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -48,7 +59,7 @@ public class WebBrowserDomainExceptionItem: ListViewItem, ItemListItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? WebBrowserDomainExceptionItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -65,33 +76,34 @@ public class WebBrowserDomainExceptionItem: ListViewItem, ItemListItem {
         }
     }
     
-    public var selectable: Bool = false
+    var selectable: Bool = false
     
-    public func selected(listView: ListView){
+    func selected(listView: ListView){
     }
 }
 
-public class WebBrowserDomainExceptionItemNode: ListViewItemNode, ItemListItemNode {
+final class WebBrowserDomainExceptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    let iconNode: ASImageNode
+    let iconNode: TransformImageNode
     let titleNode: TextNode
     let labelNode: TextNode
     
     private let activateArea: AccessibilityAreaNode
     
     private var item: WebBrowserDomainExceptionItem?
+    private var layoutParams: ListViewItemLayoutParams?
     
     override public var canBeSelected: Bool {
         return false
     }
     
-    public var tag: ItemListItemTag? = nil
+    var tag: ItemListItemTag? = nil
     
-    public init() {
+    init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.backgroundColor = .white
@@ -105,7 +117,7 @@ public class WebBrowserDomainExceptionItemNode: ListViewItemNode, ItemListItemNo
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
         
-        self.iconNode = ASImageNode()
+        self.iconNode = TransformImageNode()
         self.iconNode.isLayerBacked = true
         self.iconNode.displaysAsynchronously = false
         
@@ -117,15 +129,16 @@ public class WebBrowserDomainExceptionItemNode: ListViewItemNode, ItemListItemNo
         
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
+        self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.labelNode)
         
         self.addSubnode(self.activateArea)
     }
 
-    public func asyncLayout() -> (_ item: WebBrowserDomainExceptionItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: WebBrowserDomainExceptionItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
                       
@@ -143,7 +156,7 @@ public class WebBrowserDomainExceptionItemNode: ListViewItemNode, ItemListItemNo
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
             
-            let leftInset = 16.0 + params.leftInset + 43.0
+            let leftInset = 16.0 + params.leftInset + 46.0
             
             let titleColor: UIColor = item.presentationData.theme.list.itemPrimaryTextColor
             let labelColor: UIColor = item.presentationData.theme.list.itemAccentColor
@@ -180,6 +193,7 @@ public class WebBrowserDomainExceptionItemNode: ListViewItemNode, ItemListItemNo
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    strongSelf.layoutParams = params
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     strongSelf.activateArea.accessibilityLabel = item.title
@@ -189,6 +203,15 @@ public class WebBrowserDomainExceptionItemNode: ListViewItemNode, ItemListItemNo
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
+                    }
+                    
+                    let iconSize = CGSize(width: 40.0, height: 40.0)
+                    var imageSize = iconSize
+                    if currentItem?.icon?.id != item.icon?.id, let icon = item.icon {
+                        strongSelf.iconNode.setSignal(chatMessagePhoto(mediaBox: item.context.sharedContext.accountManager.mediaBox, userLocation: .other, photoReference: .standalone(media: icon)))
+                    }
+                    if let icon = item.icon, let dimensions = largestImageRepresentation(icon.representations)?.dimensions.cgSize {
+                        imageSize = dimensions.aspectFilled(imageSize)
                     }
                     
                     let _ = titleApply()
@@ -256,25 +279,69 @@ public class WebBrowserDomainExceptionItemNode: ListViewItemNode, ItemListItemNo
                     centralContentHeight += titleSpacing
                     centralContentHeight += labelLayout.size.height
                        
-                    let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - centralContentHeight) / 2.0)), size: titleLayout.size)
+                    let titleFrame = CGRect(origin: CGPoint(x: leftInset + strongSelf.revealOffset, y: floor((height - centralContentHeight) / 2.0)), size: titleLayout.size)
                     strongSelf.titleNode.frame = titleFrame
                     
-                    let labelFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + titleSpacing), size: labelLayout.size)
+                    let labelFrame = CGRect(origin: CGPoint(x: leftInset + strongSelf.revealOffset, y: titleFrame.maxY + titleSpacing), size: labelLayout.size)
                     strongSelf.labelNode.frame = labelFrame
+                    
+                    let iconFrame = CGRect(origin: CGPoint(x: params.leftInset + 11.0 + strongSelf.revealOffset, y: floorToScreenPixels((contentSize.height - iconSize.height) / 2.0)), size: iconSize)
+                    strongSelf.iconNode.frame = iconFrame
+                    
+                    strongSelf.iconNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 7.0), imageSize: imageSize, boundingSize: iconSize, intrinsicInsets: .zero))()
+                    
+                    strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
+                    
+                    var revealOptions: [ItemListRevealOption] = []
+                    revealOptions.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor))
+                    strongSelf.setRevealOptions((left: [], right: revealOptions))
                 }
             })
         }
     }
     
-    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
+    override func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        super.updateRevealOffset(offset: offset, transition: transition)
+        
+        if let params = self.layoutParams {
+            let leftInset: CGFloat = 16.0 + params.leftInset + 46.0
+            
+            var iconFrame = self.iconNode.frame
+            iconFrame.origin.x = params.leftInset + 11.0 + offset
+            transition.updateFrame(node: self.iconNode, frame: iconFrame)
+            
+            var titleFrame = self.titleNode.frame
+            titleFrame.origin.x = leftInset + offset
+            transition.updateFrame(node: self.titleNode, frame: titleFrame)
+            
+            var subtitleFrame = self.labelNode.frame
+            subtitleFrame.origin.x = leftInset + offset
+            transition.updateFrame(node: self.labelNode, frame: subtitleFrame)
+        }
+    }
+    
+    override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+        if let item = self.item {
+            switch option.key {
+                case RevealOptionKey.delete.rawValue:
+                    item.deleted?()
+                default:
+                    break
+            }
+        }
+        self.setRevealOptionsOpened(false, animated: true)
+        self.revealOptionsInteractivelyClosed()
     }
 }

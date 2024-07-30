@@ -87,7 +87,7 @@ private func filterOriginalMessageFlags(_ message: Message) -> Message {
 
 private func filterMessageChannelPeer(_ peer: Peer) -> Peer {
     if let peer = peer as? TelegramChannel {
-        return TelegramChannel(id: peer.id, accessHash: peer.accessHash, title: peer.title, username: peer.username, photo: peer.photo, creationDate: peer.creationDate, version: peer.version, participationStatus: peer.participationStatus, info: .group(TelegramChannelGroupInfo(flags: [])), flags: peer.flags, restrictionInfo: peer.restrictionInfo, adminRights: peer.adminRights, bannedRights: peer.bannedRights, defaultBannedRights: peer.defaultBannedRights, usernames: peer.usernames, storiesHidden: peer.storiesHidden, nameColor: peer.nameColor, backgroundEmojiId: peer.backgroundEmojiId, profileColor: peer.profileColor, profileBackgroundEmojiId: peer.profileBackgroundEmojiId, emojiStatus: peer.emojiStatus, approximateBoostLevel: peer.approximateBoostLevel)
+        return TelegramChannel(id: peer.id, accessHash: peer.accessHash, title: peer.title, username: peer.username, photo: peer.photo, creationDate: peer.creationDate, version: peer.version, participationStatus: peer.participationStatus, info: .group(TelegramChannelGroupInfo(flags: [])), flags: peer.flags, restrictionInfo: peer.restrictionInfo, adminRights: peer.adminRights, bannedRights: peer.bannedRights, defaultBannedRights: peer.defaultBannedRights, usernames: peer.usernames, storiesHidden: peer.storiesHidden, nameColor: peer.nameColor, backgroundEmojiId: peer.backgroundEmojiId, profileColor: peer.profileColor, profileBackgroundEmojiId: peer.profileBackgroundEmojiId, emojiStatus: peer.emojiStatus, approximateBoostLevel: peer.approximateBoostLevel, subscriptionUntilDate: peer.subscriptionUntilDate)
     }
     return peer
 }
@@ -690,8 +690,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     isBroadcast = false
                 }
                 
-                if case let .member(_, _, _, prevBanInfo, _) = prev.participant {
-                    if case let .member(_, _, _, newBanInfo, _) = new.participant {
+                if case let .member(_, _, _, prevBanInfo, _, _) = prev.participant {
+                    if case let .member(_, _, _, newBanInfo, _, _) = new.participant {
                         let newFlags = newBanInfo?.rights.flags ?? []
                         
                         var addedRights = newBanInfo?.rights.flags ?? []
@@ -876,8 +876,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 }
                             }
                         }
-                    } else if case let .member(_, _, prevAdminRights, _, prevRank) = prev.participant {
-                        if case let .member(_, _, newAdminRights, _, newRank) = new.participant {
+                    } else if case let .member(_, _, prevAdminRights, _, prevRank, _) = prev.participant {
+                        if case let .member(_, _, newAdminRights, _, newRank, _) = new.participant {
                             var prevFlags = prevAdminRights?.rights.rights ?? []
                             var newFlags = newAdminRights?.rights.rights ?? []
                             

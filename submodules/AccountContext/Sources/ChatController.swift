@@ -1187,4 +1187,6 @@ public protocol ChatHistoryListNode: ListView {
     func scrollToEndOfHistory()
     func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets)
     func messageInCurrentHistoryView(_ id: MessageId) -> Message?
+    
+    var contentPositionChanged: (ListViewVisibleContentOffset) -> Void { get set }
 }

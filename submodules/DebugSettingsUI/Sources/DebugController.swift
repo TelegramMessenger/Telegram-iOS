@@ -93,7 +93,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case knockoutWallpaper(PresentationTheme, Bool)
     case experimentalCompatibility(Bool)
     case enableDebugDataDisplay(Bool)
-    case acceleratedStickers(Bool)
+    case rippleEffect(Bool)
     case browserExperiment(Bool)
     case localTranscription(Bool)
     case enableReactionOverrides(Bool)
@@ -127,7 +127,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .dustEffect, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -216,7 +216,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 37
         case .enableDebugDataDisplay:
             return 38
-        case .acceleratedStickers:
+        case .rippleEffect:
             return 39
         case .browserExperiment:
             return 40
@@ -1228,12 +1228,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .acceleratedStickers(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Accelerated Stickers", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .rippleEffect(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Ripple", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.acceleratedStickers = value
+                        settings.rippleEffect = value
                         return PreferencesEntry(settings)
                     })
                 }).start()
@@ -1452,7 +1452,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
         entries.append(.experimentalCompatibility(experimentalSettings.experimentalCompatibility))
         entries.append(.enableDebugDataDisplay(experimentalSettings.enableDebugDataDisplay))
-        entries.append(.acceleratedStickers(experimentalSettings.acceleratedStickers))
+        entries.append(.rippleEffect(experimentalSettings.rippleEffect))
         #if DEBUG
         entries.append(.browserExperiment(experimentalSettings.browserExperiment))
         #else

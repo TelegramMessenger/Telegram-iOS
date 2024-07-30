@@ -147,6 +147,7 @@ func _internal_starsGiftOptions(account: Account, peerId: EnginePeer.Id?) -> Sig
 
 struct InternalStarsStatus {
     let balance: Int64
+    let subscriptionsMissingBalance: Int64?
     let subscriptions: [StarsContext.State.Subscription]
     let nextSubscriptionsOffset: String?
     let transactions: [StarsContext.State.Transaction]
@@ -157,7 +158,7 @@ private enum RequestStarsStateError {
     case generic
 }
 
-private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, mode: StarsTransactionsContext.Mode, offset: String?, limit: Int32) -> Signal<InternalStarsStatus, RequestStarsStateError> {
+private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, mode: StarsTransactionsContext.Mode, subscriptionId: String?, offset: String?, limit: Int32) -> Signal<InternalStarsStatus, RequestStarsStateError> {
     return account.postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     } 
@@ -178,7 +179,10 @@ private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id
             default:
                 break
             }
-            signal = account.network.request(Api.functions.payments.getStarsTransactions(flags: flags, peer: inputPeer, offset: offset, limit: limit))
+            if let _ = subscriptionId {
+                flags = 1 << 3
+            }
+            signal = account.network.request(Api.functions.payments.getStarsTransactions(flags: flags, subscriptionId: subscriptionId, peer: inputPeer, offset: offset, limit: limit))
         } else {
             signal = account.network.request(Api.functions.payments.getStarsStatus(peer: inputPeer))
         }
@@ -189,7 +193,7 @@ private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id
         |> mapToSignal { result -> Signal<InternalStarsStatus, RequestStarsStateError> in
             return account.postbox.transaction { transaction -> InternalStarsStatus in
                 switch result {
-                case let .starsStatus(_, balance, _, _, transactions, nextTransactionsOffset, chats, users):
+                case let .starsStatus(_, balance, _, _, subscriptionsMissingBalance, transactions, nextTransactionsOffset, chats, users):
                     let peers = AccumulatedPeers(chats: chats, users: users)
                     updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: peers)
                 
@@ -203,6 +207,7 @@ private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id
                     }
                     return InternalStarsStatus(
                         balance: balance,
+                        subscriptionsMissingBalance: subscriptionsMissingBalance,
                         subscriptions: [],
                         nextSubscriptionsOffset: nil,
                         transactions: parsedTransactions,
@@ -219,7 +224,7 @@ private enum RequestStarsSubscriptionsError {
     case generic
 }
 
-private func _internal_requestStarsSubscriptions(account: Account, peerId: EnginePeer.Id, offset: String) -> Signal<InternalStarsStatus, RequestStarsSubscriptionsError> {
+private func _internal_requestStarsSubscriptions(account: Account, peerId: EnginePeer.Id, offset: String, missingBalance: Bool) -> Signal<InternalStarsStatus, RequestStarsSubscriptionsError> {
     return account.postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     }
@@ -228,13 +233,17 @@ private func _internal_requestStarsSubscriptions(account: Account, peerId: Engin
         guard let peer, let inputPeer = apiInputPeer(peer) else {
             return .fail(.generic)
         }
-        return account.network.request(Api.functions.payments.getStarsSubscriptions(peer: inputPeer, offset: offset))
+        var flags: Int32 = 0
+        if missingBalance {
+            flags |= (1 << 0)
+        }
+        return account.network.request(Api.functions.payments.getStarsSubscriptions(flags: flags, peer: inputPeer, offset: offset))
         |> retryRequest
         |> castError(RequestStarsSubscriptionsError.self)
         |> mapToSignal { result -> Signal<InternalStarsStatus, RequestStarsSubscriptionsError> in
             return account.postbox.transaction { transaction -> InternalStarsStatus in
                 switch result {
-                case let .starsStatus(_, balance, subscriptions, subscriptionsNextOffset, _, _, chats, users):
+                case let .starsStatus(_, balance, subscriptions, subscriptionsNextOffset, subscriptionsMissingBalance, _, _, chats, users):
                     let peers = AccumulatedPeers(chats: chats, users: users)
                     updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: peers)
                     
@@ -248,6 +257,7 @@ private func _internal_requestStarsSubscriptions(account: Account, peerId: Engin
                     }
                     return InternalStarsStatus(
                         balance: balance,
+                        subscriptionsMissingBalance: subscriptionsMissingBalance,
                         subscriptions: parsedSubscriptions,
                         nextSubscriptionsOffset: subscriptionsNextOffset,
                         transactions: [],
@@ -310,7 +320,7 @@ private final class StarsContextImpl {
         }
         self.previousLoadTimestamp = currentTimestamp
         
-        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, mode: .all, offset: nil, limit: 5)
+        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, mode: .all, subscriptionId: nil, offset: nil, limit: 5)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             guard let self else {
                 return
@@ -413,6 +423,12 @@ private extension StarsContext.State.Subscription {
             var flags: Flags = []
             if (apiFlags & (1 << 0)) != 0 {
                 flags.insert(.isCancelled)
+            }
+            if (apiFlags & (1 << 1)) != 0 {
+                flags.insert(.canRefulfill)
+            }
+            if (apiFlags & (1 << 2)) != 0 {
+                flags.insert(.missingBalance)
             }
             self.init(flags: flags, id: id, peer: EnginePeer(peer), untilDate: untilDate, pricing: StarsSubscriptionPricing(apiStarsSubscriptionPricing: pricing))
         }
@@ -537,6 +553,8 @@ public final class StarsContext {
                 }
                 
                 public static let isCancelled = Flags(rawValue: 1 << 0)
+                public static let canRefulfill = Flags(rawValue: 1 << 1)
+                public static let missingBalance = Flags(rawValue: 1 << 2)
             }
             
             public let flags: Flags
@@ -790,7 +808,7 @@ private final class StarsTransactionsContextImpl {
         updatedState.isLoading = true
         self.updateState(updatedState)
                 
-        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, mode: self.mode, offset: nextOffset, limit: self.nextOffset == "" ? 25 : 50)
+        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, mode: self.mode, subscriptionId: nil, offset: nextOffset, limit: self.nextOffset == "" ? 25 : 50)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             guard let self else {
                 return
@@ -918,7 +936,7 @@ private final class StarsSubscriptionsContextImpl {
         updatedState.isLoading = true
         self.updateState(updatedState)
                 
-        self.disposable.set((_internal_requestStarsSubscriptions(account: self.account, peerId: self.account.peerId, offset: nextOffset)
+        self.disposable.set((_internal_requestStarsSubscriptions(account: self.account, peerId: self.account.peerId, offset: nextOffset, missingBalance: false)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             guard let self else {
                 return
@@ -1102,7 +1120,7 @@ func _internal_getStarsTransaction(accountPeerId: PeerId, postbox: Postbox, netw
         }
         |> mapToSignal { result -> Signal<StarsContext.State.Transaction?, NoError> in
             return postbox.transaction { transaction -> StarsContext.State.Transaction? in
-                guard let result, case let .starsStatus(_, _, _, _, transactions, _, chats, users) = result, let matchingTransaction = transactions?.first else {
+                guard let result, case let .starsStatus(_, _, _, _, _, transactions, _, chats, users) = result, let matchingTransaction = transactions?.first else {
                     return nil
                 }
                 let peers = AccumulatedPeers(chats: chats, users: users)
@@ -1159,22 +1177,43 @@ extension StarsSubscriptionPricing {
     }
 }
 
-public enum CancelStarsSubsciptionError {
+public enum UpdateStarsSubsciptionError {
     case generic
 }
 
-func _internal_cancelStarsSubscription(account: Account, subscriptionId: String, reason: String) -> Signal<Never, CancelStarsSubsciptionError> {
+func _internal_updateStarsSubscription(account: Account, peerId: EnginePeer.Id, subscriptionId: String, cancel: Bool) -> Signal<Never, UpdateStarsSubsciptionError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
-        return transaction.getPeer(account.peerId).flatMap(apiInputPeer)
+        return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
-    |> castError(CancelStarsSubsciptionError.self)
-    |> mapToSignal { inputPeer -> Signal<Never, CancelStarsSubsciptionError> in
+    |> castError(UpdateStarsSubsciptionError.self)
+    |> mapToSignal { inputPeer -> Signal<Never, UpdateStarsSubsciptionError> in
         guard let inputPeer else {
             return .complete()
         }
         let flags: Int32 = (1 << 0)
         return account.network.request(Api.functions.payments.changeStarsSubscription(flags: flags, peer: inputPeer, subscriptionId: subscriptionId, canceled: .boolTrue))
-        |> mapError { _ -> CancelStarsSubsciptionError in
+        |> mapError { _ -> UpdateStarsSubsciptionError in
+            return .generic
+        }
+        |> ignoreValues
+    }
+}
+
+public enum FulfillStarsSubsciptionError {
+    case generic
+}
+
+func _internal_fulfillStarsSubscription(account: Account, peerId: EnginePeer.Id, subscriptionId: String) -> Signal<Never, FulfillStarsSubsciptionError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+    }
+    |> castError(FulfillStarsSubsciptionError.self)
+    |> mapToSignal { inputPeer -> Signal<Never, FulfillStarsSubsciptionError> in
+        guard let inputPeer else {
+            return .complete()
+        }
+        return account.network.request(Api.functions.payments.fulfillStarsSubscription(peer: inputPeer, subscriptionId: subscriptionId))
+        |> mapError { _ -> FulfillStarsSubsciptionError in
             return .generic
         }
         |> ignoreValues

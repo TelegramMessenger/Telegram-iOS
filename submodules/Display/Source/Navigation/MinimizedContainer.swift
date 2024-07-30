@@ -30,6 +30,10 @@ public protocol MinimizableController: ViewController {
     
     func requestMinimize(topEdgeOffset: CGFloat?, initialVelocity: CGFloat?)
     func makeContentSnapshotView() -> UIView?
+    
+    func prepareContentSnapshotView()
+    func resetContentSnapshotView()
+    
     func shouldDismissImmediately() -> Bool
 }
 
@@ -66,6 +70,14 @@ public extension MinimizableController {
         return self.displayNode.view.snapshotView(afterScreenUpdates: false)
     }
     
+    func prepareContentSnapshotView() {
+        
+    }
+    
+    func resetContentSnapshotView() {
+        
+    }
+        
     func shouldDismissImmediately() -> Bool {
         return true
     }

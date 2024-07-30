@@ -682,7 +682,7 @@ func _internal_updatePeerReactionSettings(account: Account, peerId: PeerId, reac
             reactionLimitValue = maxReactionCount
         }
         
-        return account.network.request(Api.functions.messages.setChatAvailableReactions(flags: flags, peer: inputPeer, availableReactions: mappedReactions, reactionsLimit: reactionLimitValue))
+        return account.network.request(Api.functions.messages.setChatAvailableReactions(flags: flags, peer: inputPeer, availableReactions: mappedReactions, reactionsLimit: reactionLimitValue, paidEnabled: nil))
         |> map(Optional.init)
         |> `catch` { error -> Signal<Api.Updates?, UpdatePeerAllowedReactionsError> in
             if error.errorDescription == "CHAT_NOT_MODIFIED" {

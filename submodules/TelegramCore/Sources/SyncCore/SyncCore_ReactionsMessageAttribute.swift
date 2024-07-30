@@ -157,6 +157,8 @@ extension MessageReaction.Reaction {
             self = .builtin(emoticon)
         case let .reactionCustomEmoji(documentId):
             self = .custom(documentId)
+        case .reactionPaid:
+            return nil
         }
     }
     

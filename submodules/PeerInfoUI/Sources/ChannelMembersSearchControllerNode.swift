@@ -399,11 +399,11 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                             var peers: [EnginePeer.Id: EnginePeer] = [:]
                             peers[creator.id] = creator
                             peers[peer.id] = EnginePeer(peer)
-                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: TelegramChatAdminRightsFlags.peerSpecific(peer: EnginePeer(mainPeer))), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers.mapValues({ $0._asPeer() }), presences: peerView.peerPresences)
+                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: TelegramChatAdminRightsFlags.peerSpecific(peer: EnginePeer(mainPeer))), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil, subscriptionUntilDate: nil), peer: peer, peers: peers.mapValues({ $0._asPeer() }), presences: peerView.peerPresences)
                         case .member:
                             var peers: [EnginePeer.Id: EnginePeer] = [:]
                             peers[peer.id] = EnginePeer(peer)
-                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil), peer: peer, peers: peers.mapValues({ $0._asPeer() }), presences: peerView.peerPresences)
+                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil, subscriptionUntilDate: nil), peer: peer, peers: peers.mapValues({ $0._asPeer() }), presences: peerView.peerPresences)
                     }
                     
                     entries.append(.peer(index, renderedParticipant, ContactsPeerItemEditing(editable: false, editing: false, revealed: false), label, enabled, false, false))

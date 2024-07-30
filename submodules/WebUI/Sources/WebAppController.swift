@@ -28,6 +28,7 @@ import OpenInExternalAppUI
 import ShareController
 import UndoUI
 import AvatarNode
+import OverlayStatusController
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -412,12 +413,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
         
         func checkBotIdAndUrl(_ url: String) {
-            //1985737506
-            if url.hasPrefix("https://walletbot.me"), let botId = self.controller?.botId.id._internalGetInt64Value(), botId != 1985737506 {
-                let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: "Bot id mismatch, please report steps to app developer", actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
-                })])
-                self.controller?.present(alertController, in: .window(.root))
-            }
+//            if url.hasPrefix("https://walletbot.me"), let botId = self.controller?.botId.id._internalGetInt64Value(), botId != 1985737506 {
+//                let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: "Bot id mismatch, please report steps to app developer", actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
+//                })])
+//                self.controller?.present(alertController, in: .window(.root))
+//            }
         }
         
         @objc fileprivate func mainButtonPressed() {
@@ -1099,6 +1099,94 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_setup_swipe_behavior":
                     if let json = json, let isPanGestureEnabled = json["allow_vertical_swipe"] as? Bool {
                         self.controller?._isPanGestureEnabled = isPanGestureEnabled
+                    }
+                case "web_app_share_to_story":
+                    if let json = json, let mediaUrl = json["media_url"] as? String {
+                        let text = json["text"] as? String
+                        let link = json["widget_link"] as? [String: Any]
+                        
+                        var linkUrl: String?
+                        var linkName: String?
+                        if let link {
+                            if let url = link["url"] as? String {
+                                linkUrl = url
+                                if let name = link["name"] as? String {
+                                    linkName = name
+                                }
+                            }
+                        }
+                        
+                        enum FetchResult {
+                            case result(Data)
+                            case progress(Float)
+                        }
+                        
+                        let controller = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: {
+                        }))
+                        self.controller?.present(controller, in: .window(.root))
+                        
+                        let _ = (fetchHttpResource(url: mediaUrl)
+                        |> map(Optional.init)
+                        |> `catch` { error in
+                            return .single(nil)
+                        }
+                        |> mapToSignal { value -> Signal<FetchResult, NoError> in
+                            if case let .dataPart(_, data, _, complete) = value, complete {
+                                return .single(.result(data))
+                            } else if case let .progressUpdated(progress) = value {
+                                return .single(.progress(progress))
+                            } else {
+                                return .complete()
+                            }
+                        }
+                        |> deliverOnMainQueue).start(next: { [weak self, weak controller] next in
+                            guard let self else {
+                                return
+                            }
+                            controller?.dismiss()
+                            
+                            switch next {
+                            case let .result(data):
+                                var source: Any?
+                                if let image = UIImage(data: data) {
+                                    source = image
+                                } else {
+                                    let tempFile = TempBox.shared.tempFile(fileName: "image.mp4")
+                                    if let _ = try? data.write(to: URL(fileURLWithPath: tempFile.path), options: .atomic) {
+                                        source = tempFile.path
+                                    }
+                                }
+                                if let source {
+                                    let externalState = MediaEditorTransitionOutExternalState(
+                                        storyTarget: nil,
+                                        isForcedTarget: false,
+                                        isPeerArchived: false,
+                                        transitionOut: nil
+                                    )
+                                    let controller = self.context.sharedContext.makeStoryMediaEditorScreen(context: self.context, source: source, text: text, link: linkUrl.flatMap { ($0, linkName) }, completion: { result, commit in
+//                                        let targetPeerId: EnginePeer.Id
+                                        let target: Stories.PendingTarget
+//                                        if let sendAsPeerId = result.options.sendAsPeerId {
+//                                            target = .peer(sendAsPeerId)
+//                                            targetPeerId = sendAsPeerId
+//                                        } else {
+                                            target = .myStories
+//                                            targetPeerId = self.context.account.peerId
+//                                        }
+                                        externalState.storyTarget = target
+                                        
+                                        if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                                            rootController.proceedWithStoryUpload(target: target, result: result, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                                        }
+                                    })
+                                    if let navigationController = self.controller?.getNavigationController() {
+                                        navigationController.pushViewController(controller)
+                                    }
+                                }
+                            default:
+                                break
+                            }
+                        })
                     }
                 default:
                     break
@@ -1899,7 +1987,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     @objc private func morePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {
         let context = self.context
-        let presentationData = self.presentationData
+        var presentationData = self.presentationData
+        if !presentationData.theme.overallDarkAppearance, let headerColor = self.controllerNode.headerColor {
+            if headerColor.lightness < 0.5 {
+                presentationData = presentationData.withUpdated(theme: defaultDarkPresentationTheme)
+            }
+        }
         
         let peerId = self.peerId
         let botId = self.botId
@@ -1910,10 +2003,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         let items = combineLatest(queue: Queue.mainQueue(),
             context.engine.messages.attachMenuBots(),
-            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.botId))
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.botId)),
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.BotCommands(id: self.botId))
         )
         |> take(1)
-        |> map { [weak self] attachMenuBots, botPeer -> ContextController.Items in
+        |> map { [weak self] attachMenuBots, botPeer, botCommands -> ContextController.Items in
             var items: [ContextMenuItem] = []
             
             let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId && !$0.flags.contains(.notActivated) })
@@ -1980,7 +2074,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 self?.controllerNode.webView?.reload()
             })))
-            
+                        
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_TermsOfUse, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] c, _ in
@@ -1999,6 +2093,28 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
                 })
             })))
+            
+            if let botCommands {
+                for command in botCommands {
+                    if command.text == "privacy" {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_PrivacyPolicy, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Privacy"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] c, _ in
+                            c?.dismiss(completion: nil)
+                            
+                            guard let self else {
+                                return
+                            }
+                            let _ = enqueueMessages(account: self.context.account, peerId: self.botId, messages: [.message(text: "/privacy", attributes: [], inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).startStandalone()
+                            
+                            if let botPeer, let navigationController = self.getNavigationController() {
+                                (self.parentController() as? AttachmentController)?.minimizeIfNeeded()
+                                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(botPeer)))
+                            }
+                        })))
+                    }
+                }
+            }
             
             if let _ = attachMenuBot, [.attachMenu, .settings, .generic].contains(source) {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_RemoveBot, textColor: .destructive, icon: { theme in
@@ -2021,7 +2137,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             return ContextController.Items(content: .list(items))
         }
         
-        let contextController = ContextController(presentationData: self.presentationData, source: .reference(WebAppContextReferenceContentSource(controller: self, sourceNode: node)), items: items, gesture: gesture)
+        let contextController = ContextController(presentationData: presentationData, source: .reference(WebAppContextReferenceContentSource(controller: self, sourceNode: node)), items: items, gesture: gesture)
         self.presentInGlobalOverlay(contextController)
     }
     
@@ -2035,8 +2151,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public func isContainerPanningUpdated(_ isPanning: Bool) {
         self.controllerNode.isContainerPanningUpdated(isPanning)
     }
-        
+     
+    private var validLayout: ContainerViewLayout?
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.validLayout = layout
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
@@ -2092,6 +2210,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.controllerNode.webView?.hideScrollIndicators()
                 } else {
                     self.requestLayout(transition: .immediate)
+                    self.controllerNode.webView?.setNeedsLayout()
                 }
             }
         }
@@ -2125,6 +2244,22 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     public var minimizedIcon: UIImage? {
         return self.controllerNode.icon
+    }
+    
+    public func makeContentSnapshotView() -> UIView? {
+        guard let webView = self.controllerNode.webView, let _ = self.validLayout else {
+            return nil
+        }
+        
+        let configuration = WKSnapshotConfiguration()
+        configuration.rect = CGRect(origin: .zero, size: webView.frame.size)
+
+        let imageView = UIImageView()
+        imageView.frame = CGRect(origin: .zero, size: webView.frame.size)
+        webView.takeSnapshot(with: configuration, completionHandler: { image, _ in
+            imageView.image = image
+        })
+        return imageView
     }
 }
 

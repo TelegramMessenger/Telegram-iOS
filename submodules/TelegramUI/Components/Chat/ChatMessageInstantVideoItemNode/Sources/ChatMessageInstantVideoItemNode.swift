@@ -961,7 +961,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
                         break
                     }
                 } else if case .tap = gesture {
-                    self.item?.controllerInteraction.clickThroughMessage()
+                    self.item?.controllerInteraction.clickThroughMessage(self.view, location)
                 }
             }
         default:

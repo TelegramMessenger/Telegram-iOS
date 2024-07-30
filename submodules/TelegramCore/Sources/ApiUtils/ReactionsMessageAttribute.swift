@@ -5,7 +5,8 @@ import TelegramApi
 extension ReactionsMessageAttribute {
     func withUpdatedResults(_ reactions: Api.MessageReactions) -> ReactionsMessageAttribute {
         switch reactions {
-        case let .messageReactions(flags, results, recentReactions):
+        case let .messageReactions(flags, results, recentReactions, topReactors):
+            let _ = topReactors
             let min = (flags & (1 << 0)) != 0
             let canViewList = (flags & (1 << 2)) != 0
             let isTags = (flags & (1 << 3)) != 0
@@ -205,7 +206,8 @@ public func mergedMessageReactions(attributes: [MessageAttribute], isTags: Bool)
 extension ReactionsMessageAttribute {
     convenience init(apiReactions: Api.MessageReactions) {
         switch apiReactions {
-        case let .messageReactions(flags, results, recentReactions):
+        case let .messageReactions(flags, results, recentReactions, topReactors):
+            let _ = topReactors
             let canViewList = (flags & (1 << 2)) != 0
             let isTags = (flags & (1 << 3)) != 0
             let parsedRecentReactions: [ReactionsMessageAttribute.RecentPeer]

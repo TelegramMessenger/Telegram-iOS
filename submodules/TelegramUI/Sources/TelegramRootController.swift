@@ -393,7 +393,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         return nil
                     case let .peer(id):
                         return id
-                    case let .botPreview(id):
+                    case let .botPreview(id, _):
                         return id
                     }
                 }
@@ -674,7 +674,17 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 return nil
                             }
                         }
-                        media = .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: result.stickers, coverTime: values.coverImageTimestamp)
+                        
+                        var coverTime: Double?
+                        if let coverImageTimestamp = values.coverImageTimestamp {
+                            if let trimRange = values.videoTrimRange {
+                                coverTime = min(duration, coverImageTimestamp - trimRange.lowerBound)
+                            } else {
+                                coverTime = min(duration, coverImageTimestamp)
+                            }
+                        }
+                        
+                        media = .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: result.stickers, coverTime: coverTime)
                     }
                 default:
                     break

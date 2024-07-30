@@ -1246,13 +1246,13 @@ public extension Api.payments {
 }
 public extension Api.payments {
     enum StarsStatus: TypeConstructorDescription {
-        case starsStatus(flags: Int32, balance: Int64, subscriptions: [Api.StarsSubscription]?, subscriptionsNextOffset: String?, history: [Api.StarsTransaction]?, nextOffset: String?, chats: [Api.Chat], users: [Api.User])
+        case starsStatus(flags: Int32, balance: Int64, subscriptions: [Api.StarsSubscription]?, subscriptionsNextOffset: String?, subscriptionsMissingBalance: Int64?, history: [Api.StarsTransaction]?, nextOffset: String?, chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .starsStatus(let flags, let balance, let subscriptions, let subscriptionsNextOffset, let history, let nextOffset, let chats, let users):
+                case .starsStatus(let flags, let balance, let subscriptions, let subscriptionsNextOffset, let subscriptionsMissingBalance, let history, let nextOffset, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-2064727699)
+                        buffer.appendInt32(-1141231252)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(balance, buffer: buffer, boxed: false)
@@ -1262,6 +1262,7 @@ public extension Api.payments {
                         item.serialize(buffer, true)
                     }}
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(subscriptionsNextOffset!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt64(subscriptionsMissingBalance!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(history!.count))
                     for item in history! {
@@ -1284,8 +1285,8 @@ public extension Api.payments {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .starsStatus(let flags, let balance, let subscriptions, let subscriptionsNextOffset, let history, let nextOffset, let chats, let users):
-                return ("starsStatus", [("flags", flags as Any), ("balance", balance as Any), ("subscriptions", subscriptions as Any), ("subscriptionsNextOffset", subscriptionsNextOffset as Any), ("history", history as Any), ("nextOffset", nextOffset as Any), ("chats", chats as Any), ("users", users as Any)])
+                case .starsStatus(let flags, let balance, let subscriptions, let subscriptionsNextOffset, let subscriptionsMissingBalance, let history, let nextOffset, let chats, let users):
+                return ("starsStatus", [("flags", flags as Any), ("balance", balance as Any), ("subscriptions", subscriptions as Any), ("subscriptionsNextOffset", subscriptionsNextOffset as Any), ("subscriptionsMissingBalance", subscriptionsMissingBalance as Any), ("history", history as Any), ("nextOffset", nextOffset as Any), ("chats", chats as Any), ("users", users as Any)])
     }
     }
     
@@ -1300,30 +1301,33 @@ public extension Api.payments {
             } }
             var _4: String?
             if Int(_1!) & Int(1 << 2) != 0 {_4 = parseString(reader) }
-            var _5: [Api.StarsTransaction]?
+            var _5: Int64?
+            if Int(_1!) & Int(1 << 4) != 0 {_5 = reader.readInt64() }
+            var _6: [Api.StarsTransaction]?
             if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarsTransaction.self)
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarsTransaction.self)
             } }
-            var _6: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_6 = parseString(reader) }
-            var _7: [Api.Chat]?
+            var _7: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_7 = parseString(reader) }
+            var _8: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
             }
-            var _8: [Api.User]?
+            var _9: [Api.User]?
             if let _ = reader.readInt32() {
-                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _9 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
-            let _c7 = _7 != nil
+            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 0) == 0) || _7 != nil
             let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.payments.StarsStatus.starsStatus(flags: _1!, balance: _2!, subscriptions: _3, subscriptionsNextOffset: _4, history: _5, nextOffset: _6, chats: _7!, users: _8!)
+            let _c9 = _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.payments.StarsStatus.starsStatus(flags: _1!, balance: _2!, subscriptions: _3, subscriptionsNextOffset: _4, subscriptionsMissingBalance: _5, history: _6, nextOffset: _7, chats: _8!, users: _9!)
             }
             else {
                 return nil

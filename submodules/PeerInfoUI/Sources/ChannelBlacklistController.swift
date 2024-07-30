@@ -160,7 +160,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
             case let .peerItem(_, strings, dateTimeFormat, nameDisplayOrder, _, participant, editing, enabled):
                 var text: ItemListPeerItemText = .none
                 switch participant.participant {
-                    case let .member(_, _, _, banInfo, _):
+                    case let .member(_, _, _, banInfo, _, _):
                         if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
                             text = .text(strings.Channel_Management_RemovedBy(EnginePeer(peer).displayTitle(strings: strings, displayOrder: nameDisplayOrder)).string, .secondary)
                         }
@@ -306,7 +306,7 @@ public func channelBlacklistController(context: AccountContext, updatedPresentat
                 switch participant.participant {
                     case .creator:
                         return
-                    case let .member(_, _, adminInfo, _, _):
+                    case let .member(_, _, adminInfo, _, _, _):
                         if let adminInfo = adminInfo, adminInfo.promotedBy != context.account.peerId {
                             presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_Members_AddBannedErrorAdmin, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             return

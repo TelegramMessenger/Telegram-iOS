@@ -2067,6 +2067,7 @@ public class StickerPickerScreen: ViewController {
         case none
         case notDetermined
         case notAllowed
+        case notPreloaded
         case fetching
         case loaded(StickerPickerScreen.Weather.LoadedWeather)
     }
@@ -2727,7 +2728,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
             
             let weatherButtonContent: AnyComponent<Empty>
             switch self.weather {
-            case .notAllowed, .notDetermined:
+            case .notAllowed, .notDetermined, .notPreloaded:
                 weatherButtonContent = AnyComponent(
                     InteractiveStickerButtonContent(
                         context: self.context,

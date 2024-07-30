@@ -11,6 +11,8 @@ public enum InstantPageThemeType: Int32 {
 }
 
 public enum InstantPagePresentationFontSize: Int32 {
+    case xxsmall = -2
+    case xsmall = -1
     case small = 0
     case standard = 1
     case large = 2
