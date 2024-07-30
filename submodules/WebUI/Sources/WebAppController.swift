@@ -1987,7 +1987,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     @objc private func morePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {
         let context = self.context
-        let presentationData = self.presentationData
+        var presentationData = self.presentationData
+        if !presentationData.theme.overallDarkAppearance, let headerColor = self.controllerNode.headerColor {
+            if headerColor.lightness < 0.5 {
+                presentationData = presentationData.withUpdated(theme: defaultDarkPresentationTheme)
+            }
+        }
         
         let peerId = self.peerId
         let botId = self.botId
@@ -1998,10 +2003,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         let items = combineLatest(queue: Queue.mainQueue(),
             context.engine.messages.attachMenuBots(),
-            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.botId))
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.botId)),
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.BotCommands(id: self.botId))
         )
         |> take(1)
-        |> map { [weak self] attachMenuBots, botPeer -> ContextController.Items in
+        |> map { [weak self] attachMenuBots, botPeer, botCommands -> ContextController.Items in
             var items: [ContextMenuItem] = []
             
             let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId && !$0.flags.contains(.notActivated) })
@@ -2068,7 +2074,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 self?.controllerNode.webView?.reload()
             })))
-            
+                        
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_TermsOfUse, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] c, _ in
@@ -2087,6 +2093,28 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
                 })
             })))
+            
+            if let botCommands {
+                for command in botCommands {
+                    if command.text == "privacy" {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_PrivacyPolicy, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Privacy"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] c, _ in
+                            c?.dismiss(completion: nil)
+                            
+                            guard let self else {
+                                return
+                            }
+                            let _ = enqueueMessages(account: self.context.account, peerId: self.botId, messages: [.message(text: "/privacy", attributes: [], inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).startStandalone()
+                            
+                            if let botPeer, let navigationController = self.getNavigationController() {
+                                (self.parentController() as? AttachmentController)?.minimizeIfNeeded()
+                                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(botPeer)))
+                            }
+                        })))
+                    }
+                }
+            }
             
             if let _ = attachMenuBot, [.attachMenu, .settings, .generic].contains(source) {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_RemoveBot, textColor: .destructive, icon: { theme in
@@ -2109,7 +2137,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             return ContextController.Items(content: .list(items))
         }
         
-        let contextController = ContextController(presentationData: self.presentationData, source: .reference(WebAppContextReferenceContentSource(controller: self, sourceNode: node)), items: items, gesture: gesture)
+        let contextController = ContextController(presentationData: presentationData, source: .reference(WebAppContextReferenceContentSource(controller: self, sourceNode: node)), items: items, gesture: gesture)
         self.presentInGlobalOverlay(contextController)
     }
     

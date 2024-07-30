@@ -395,7 +395,11 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                                 actionTitle = item.presentationData.strings.Conversation_ViewMessage
                             }
                         case "telegram_user":
-                            actionTitle = item.presentationData.strings.Conversation_UserSendMessage
+                            if webpage.displayUrl.contains("?profile") {
+                                actionTitle = item.presentationData.strings.Conversation_OpenProfile
+                            } else {
+                                actionTitle = item.presentationData.strings.Conversation_UserSendMessage
+                            }
                         case "telegram_channel_request":
                             actionTitle = item.presentationData.strings.Conversation_RequestToJoinChannel
                         case "telegram_chat_request", "telegram_megagroup_request":

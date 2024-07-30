@@ -538,7 +538,7 @@ final class StarsTransactionsScreenComponent: Component {
                                 component.buy()
                             },
                             buyAds: nil,
-                            additionalAction: AnyComponent(
+                            additionalAction: premiumConfiguration.starsGiftsPurchaseAvailable ? AnyComponent(
                                 Button(
                                     content: AnyComponent(
                                         HStack([
@@ -548,7 +548,7 @@ final class StarsTransactionsScreenComponent: Component {
                                             ),
                                             AnyComponentWithIdentity(
                                                 id: "label",
-                                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Gift Stars to Friends", font: Font.regular(17.0), textColor: environment.theme.list.itemAccentColor))))
+                                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Stars_Intro_GiftStars, font: Font.regular(17.0), textColor: environment.theme.list.itemAccentColor))))
                                             )
                                         ],
                                         spacing: 6.0)
@@ -557,7 +557,7 @@ final class StarsTransactionsScreenComponent: Component {
                                         component.gift()
                                     }
                                 )
-                            )
+                            ) : nil
                         )
                     ))]
                 )),

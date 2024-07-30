@@ -208,7 +208,7 @@ final class WebBrowserDomainExceptionItemNode: ItemListRevealOptionsItemNode, It
                     let iconSize = CGSize(width: 40.0, height: 40.0)
                     var imageSize = iconSize
                     if currentItem?.icon?.id != item.icon?.id, let icon = item.icon {
-                        strongSelf.iconNode.setSignal(chatMessagePhoto(postbox: item.context.account.postbox, userLocation: .other, photoReference: .standalone(media: icon)))
+                        strongSelf.iconNode.setSignal(chatMessagePhoto(mediaBox: item.context.sharedContext.accountManager.mediaBox, userLocation: .other, photoReference: .standalone(media: icon)))
                     }
                     if let icon = item.icon, let dimensions = largestImageRepresentation(icon.representations)?.dimensions.cgSize {
                         imageSize = dimensions.aspectFilled(imageSize)

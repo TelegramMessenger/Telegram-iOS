@@ -355,6 +355,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1690108678] = { return Api.InputEncryptedFile.parse_inputEncryptedFileUploaded($0) }
     dict[-181407105] = { return Api.InputFile.parse_inputFile($0) }
     dict[-95482955] = { return Api.InputFile.parse_inputFileBig($0) }
+    dict[1658620744] = { return Api.InputFile.parse_inputFileStoryDocument($0) }
     dict[-1160743548] = { return Api.InputFileLocation.parse_inputDocumentFileLocation($0) }
     dict[-182231723] = { return Api.InputFileLocation.parse_inputEncryptedFileLocation($0) }
     dict[-539317279] = { return Api.InputFileLocation.parse_inputFileLocation($0) }
@@ -1401,7 +1402,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
                 return nil
             }
         }

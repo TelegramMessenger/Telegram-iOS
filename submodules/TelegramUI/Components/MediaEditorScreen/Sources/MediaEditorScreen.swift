@@ -2945,7 +2945,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         
             let mediaEditor = MediaEditor(context: self.context, mode: isStickerEditor ? .sticker : .default, subject: effectiveSubject.editorSubject, values: initialValues, hasHistogram: true)
             if let initialVideoPosition = controller.initialVideoPosition {
-                mediaEditor.seek(initialVideoPosition, andPlay: true)
+                if controller.isEditingStoryCover {
+                    mediaEditor.setCoverImageTimestamp(initialVideoPosition)
+                } else {
+                    mediaEditor.seek(initialVideoPosition, andPlay: true)
+                }
             }
             if case .message = subject, self.context.sharedContext.currentPresentationData.with({$0}).autoNightModeTriggered {
                 mediaEditor.setNightTheme(true)

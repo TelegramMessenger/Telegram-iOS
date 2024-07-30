@@ -12589,6 +12589,12 @@ Sorry for the inconvenience.";
 "WebBrowser.ClearCookies.ClearConfirmation.Text" = "Are you sure you want to clear cookies?";
 "WebBrowser.ClearCookies.ClearConfirmation.Clear" = "Clear";
 
+"WebBrowser.ClearCache" = "Clear Cache";
+"WebBrowser.ClearCache.ClearConfirmation.Text" = "Are you sure you want to clear cookies?";
+"WebBrowser.ClearCache.ClearConfirmation.Clear" = "Clear";
+"WebBrowser.ClearCache.Succeed" = "Cookies cleared.";
+
+
 "WebBrowser.Done" = "Done";
 
 "AccessDenied.LocationWeather" = "Telegram needs access to your location so that you can add the weather widget to your stories.\n\nPlease go to Settings > Privacy > Location Services and set Telegram to ON.";
@@ -12658,3 +12664,11 @@ Sorry for the inconvenience.";
 
 "Stars.Intro.Transaction.Gift.Title" = "Received Gift";
 "Stars.Intro.Transaction.Gift.UnknownUser" = "Unknown User";
+
+"WebApp.PrivacyPolicy" = "Privacy Policy";
+
+"Conversation.OpenProfile" = "OPEN PROFILE";
+
+"Stars.Intro.GiftStars" = "Gift Stars to Friends";
+
+"MediaPicker.CreateSticker" = "Create a sticker from a photo";

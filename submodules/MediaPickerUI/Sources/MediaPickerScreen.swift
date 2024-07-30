@@ -1799,8 +1799,12 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self.titleView.title = collection.localizedTitle ?? presentationData.strings.Attachment_Gallery
             } else {
                 switch mode {
-                case .default, .createSticker:
+                case .default:
                     self.titleView.title = presentationData.strings.MediaPicker_Recents
+                    self.titleView.isEnabled = true
+                case .createSticker:
+                    self.titleView.title = presentationData.strings.MediaPicker_Recents
+                    self.titleView.subtitle = presentationData.strings.MediaPicker_CreateSticker
                     self.titleView.isEnabled = true
                 case .story:
                     self.titleView.title = presentationData.strings.MediaPicker_Recents

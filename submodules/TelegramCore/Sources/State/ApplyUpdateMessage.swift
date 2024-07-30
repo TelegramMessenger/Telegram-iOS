@@ -14,7 +14,7 @@ private func copyOrMoveResourceData(from fromResource: MediaResource, to toResou
     }
 }
 
-func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: Bool) {
+func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: Bool, skipPreviews: Bool = false) {
     if let fromImage = from as? TelegramMediaImage, let toImage = to as? TelegramMediaImage {
         let fromSmallestRepresentation = smallestImageRepresentation(fromImage.representations)
         if let fromSmallestRepresentation = fromSmallestRepresentation, let toSmallestRepresentation = smallestImageRepresentation(toImage.representations) {
@@ -32,11 +32,13 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
             }
         }
     } else if let fromFile = from as? TelegramMediaFile, let toFile = to as? TelegramMediaFile {
-        if let fromPreview = smallestImageRepresentation(fromFile.previewRepresentations), let toPreview = smallestImageRepresentation(toFile.previewRepresentations) {
-            copyOrMoveResourceData(from: fromPreview.resource, to: toPreview.resource, mediaBox: postbox.mediaBox)
-        }
-        if let fromVideoThumbnail = fromFile.videoThumbnails.first, let toVideoThumbnail = toFile.videoThumbnails.first, fromVideoThumbnail.resource.id != toVideoThumbnail.resource.id {
-            copyOrMoveResourceData(from: fromVideoThumbnail.resource, to: toVideoThumbnail.resource, mediaBox: postbox.mediaBox)
+        if !skipPreviews {
+            if let fromPreview = smallestImageRepresentation(fromFile.previewRepresentations), let toPreview = smallestImageRepresentation(toFile.previewRepresentations) {
+                copyOrMoveResourceData(from: fromPreview.resource, to: toPreview.resource, mediaBox: postbox.mediaBox)
+            }
+            if let fromVideoThumbnail = fromFile.videoThumbnails.first, let toVideoThumbnail = toFile.videoThumbnails.first, fromVideoThumbnail.resource.id != toVideoThumbnail.resource.id {
+                copyOrMoveResourceData(from: fromVideoThumbnail.resource, to: toVideoThumbnail.resource, mediaBox: postbox.mediaBox)
+            }
         }
         let videoFirstFrameFromPath = postbox.mediaBox.cachedRepresentationCompletePath(fromFile.resource.id, keepDuration: .general, representationId: "first-frame")
         let videoFirstFrameToPath = postbox.mediaBox.cachedRepresentationCompletePath(toFile.resource.id, keepDuration: .general, representationId: "first-frame")

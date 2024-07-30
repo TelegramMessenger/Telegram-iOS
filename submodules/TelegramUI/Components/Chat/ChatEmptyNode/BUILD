@@ -31,6 +31,7 @@ swift_library(
         "//submodules/ReactionSelectionNode",
         "//submodules/TelegramUI/Components/Chat/ChatMediaInputStickerGridItem",
         "//submodules/PremiumUI",
+        "//submodules/TelegramUI/Components/LottieComponent",
     ],
     visibility = [
         "//visibility:public",

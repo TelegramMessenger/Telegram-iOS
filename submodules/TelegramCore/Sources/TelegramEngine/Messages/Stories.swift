@@ -1498,9 +1498,13 @@ func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: Eng
             return .single(.progress(progress.progress))
         }
         
+        var updatingCoverTime = false
         let inputMedia: Api.InputMedia?
         if let result = result, case let .content(uploadedContent) = result, case let .media(media, _) = uploadedContent.content {
             inputMedia = media
+        } else if case let .existing(media) = media, let file = media as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource {
+            inputMedia = .inputMediaUploadedDocument(flags: 0, file: .inputFileStoryDocument(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))), thumb: nil, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), stickers: nil, ttlSeconds: nil)
+            updatingCoverTime = true
         } else {
             inputMedia = nil
         }
@@ -1566,7 +1570,7 @@ func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: Eng
                             case let .storyItem(_, _, _, _, _, _, _, _, media, _, _, _, _):
                                 let (parsedMedia, _, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
                                 if let parsedMedia = parsedMedia, let originalMedia = originalMedia {
-                                    applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false)
+                                    applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false, skipPreviews: updatingCoverTime)
                                 }
                             default:
                                 break

@@ -249,8 +249,7 @@ final class AddressBarContentComponent: Component {
         public func textFieldShouldReturn(_ textField: UITextField) -> Bool {
             if let component = self.component {
                 let finalUrl = explicitUrl(textField.text ?? "")
-//                finalUrl = finalUrl.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed) ?? finalUrl
-                component.performAction.invoke(.navigateTo(finalUrl))
+                component.performAction.invoke(.navigateTo(finalUrl, true))
             }
             textField.endEditing(true)
             return false

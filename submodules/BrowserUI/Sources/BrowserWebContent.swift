@@ -681,7 +681,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
 //            })
 //        } else {
             if let url = navigationAction.request.url?.absoluteString {
-                if isTelegramMeLink(url) || isTelegraPhLink(url) {
+                if (navigationAction.targetFrame == nil || navigationAction.targetFrame?.isMainFrame == true) && (isTelegramMeLink(url) || isTelegraPhLink(url)) {
                     decisionHandler(.cancel, preferences)
                     self.minimize()
                     self.openAppUrl(url)
@@ -712,7 +712,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         if let url = navigationAction.request.url?.absoluteString {
-            if isTelegramMeLink(url) || isTelegraPhLink(url) {
+            if (navigationAction.targetFrame == nil || navigationAction.targetFrame?.isMainFrame == true) && (isTelegramMeLink(url) || isTelegraPhLink(url)) {
                 decisionHandler(.cancel)
                 self.minimize()
                 self.openAppUrl(url)
@@ -752,7 +752,12 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil {
             if let url = navigationAction.request.url?.absoluteString {
-                self.open(url: url, new: true)
+                if isTelegramMeLink(url) || isTelegraPhLink(url) {
+                    self.minimize()
+                    self.openAppUrl(url)
+                } else {
+                    self.open(url: url, new: true)
+                }
             }
         }
         return nil
