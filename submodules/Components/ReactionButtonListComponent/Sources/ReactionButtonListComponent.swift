@@ -175,6 +175,10 @@ public final class ReactionIconView: PortalSourceView {
                 iconSize = CGSize(width: floor(size.width * 1.25), height: floor(size.height * 1.25))
                 animationLayer.masksToBounds = true
                 animationLayer.cornerRadius = floor(size.width * 0.2)
+            case .stars:
+                iconSize = CGSize(width: floor(size.width * 2.0), height: floor(size.height * 2.0))
+                animationLayer.masksToBounds = false
+                animationLayer.cornerRadius = 0.0
             }
             
             transition.updateFrame(layer: animationLayer, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize))
@@ -207,6 +211,8 @@ public final class ReactionIconView: PortalSourceView {
             iconSize = CGSize(width: floor(size.width * 2.0), height: floor(size.height * 2.0))
         case .custom:
             iconSize = CGSize(width: floor(size.width * 1.25), height: floor(size.height * 1.25))
+        case .stars:
+            iconSize = CGSize(width: floor(size.width * 2.0), height: floor(size.height * 2.0))
         }
         
         let animationLayer = InlineStickerItemLayer(
@@ -234,6 +240,9 @@ public final class ReactionIconView: PortalSourceView {
         case .custom:
             animationLayer.masksToBounds = true
             animationLayer.cornerRadius = floor(size.width * 0.3)
+        case .stars:
+            animationLayer.masksToBounds = false
+            animationLayer.cornerRadius = 0.0
         }
         
         animationLayer.frame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
@@ -766,7 +775,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
             
             let backgroundColors: ReactionButtonAsyncNode.ContainerButtonNode.Colors
             
-            if case .custom(MessageReaction.starsReactionId) = spec.component.reaction.value {
+            if case .stars = spec.component.reaction.value {
                 backgroundColors = ReactionButtonAsyncNode.ContainerButtonNode.Colors(
                     background: spec.component.chosenOrder != nil ? spec.component.colors.selectedStarsBackground : spec.component.colors.deselectedStarsBackground,
                     foreground: spec.component.chosenOrder != nil ? spec.component.colors.selectedStarsForeground : spec.component.colors.deselectedStarsForeground,
@@ -820,6 +829,8 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
     private var avatarsView: AnimatedAvatarSetView?
     
     private let iconImageDisposable = MetaDisposable()
+    
+    private var ignoreButtonTap: Bool = false
     
     public var activateAfterCompletion: Bool = false {
         didSet {
@@ -881,6 +892,20 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                 }
             }
         }
+        
+        self.contextGesture?.cancelGesturesOnActivation = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.buttonNode.isUserInteractionEnabled = false
+            self.buttonNode.cancelTracking(with: nil)
+            DispatchQueue.main.async { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.buttonNode.isUserInteractionEnabled = true
+            }
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -902,6 +927,9 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
         guard let layout = self.layout else {
             return
         }
+        if self.ignoreButtonTap {
+            return
+        }
         layout.spec.component.action(self, layout.spec.component.reaction.value, self.containerView)
     }
     
@@ -911,7 +939,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
         self.containerView.contentRect = CGRect(origin: CGPoint(), size: layout.size)
         animation.animator.updateFrame(layer: self.buttonNode.layer, frame: CGRect(origin: CGPoint(), size: layout.size), completion: nil)
         
-        if case .custom(MessageReaction.starsReactionId) = layout.spec.component.reaction.value {
+        if case .stars = layout.spec.component.reaction.value {
             let starsEffectLayer: StarsButtonEffectLayer
             if let current = self.starsEffectLayer {
                 starsEffectLayer = current
@@ -1319,7 +1347,7 @@ public final class ReactionButtonsAsyncLayoutContainer {
         })
         
         if let index = reactions.firstIndex(where: {
-            if case .custom(MessageReaction.starsReactionId) = $0.reaction.value {
+            if case .stars = $0.reaction.value {
                 return true
             } else {
                 return false

@@ -159,6 +159,15 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                     }
                 case let .custom(fileId):
                     animationFileId = fileId
+                case .stars:
+                    if let availableReactions = availableReactions {
+                        for availableReaction in availableReactions.reactions {
+                            if availableReaction.value == reaction.value {
+                                centerAnimation = availableReaction.centerAnimation
+                                break
+                            }
+                        }
+                    }
                 }
                 
                 var peers: [EnginePeer] = []

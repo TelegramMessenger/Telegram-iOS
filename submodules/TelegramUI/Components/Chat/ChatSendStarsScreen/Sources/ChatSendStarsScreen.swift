@@ -94,7 +94,7 @@ private final class BalanceComponent: CombinedComponent {
                     animationCache: context.component.context.animationCache,
                     animationRenderer: context.component.context.animationRenderer,
                     content: .animation(
-                        content: .customEmoji(fileId: MessageReaction.starsReactionId),
+                        content: .customEmoji(fileId: MessageReaction.starsReactionId), //TODO:release
                         size: iconSize,
                         placeholderColor: .gray,
                         themeColor: nil,

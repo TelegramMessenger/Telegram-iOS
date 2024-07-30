@@ -164,6 +164,16 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                             strongSelf.file = file
                             strongSelf.updateReactionLayer()
                         }).strict()
+                    case .stars:
+                        if let availableReactions = availableReactions {
+                            for availableReaction in availableReactions.reactions {
+                                if availableReaction.value == reaction {
+                                    self.file = availableReaction.centerAnimation
+                                    self.updateReactionLayer()
+                                    break
+                                }
+                            }
+                        }
                     }
                 } else {
                     let iconNode = ASImageNode()
@@ -574,6 +584,17 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                                 strongSelf.updateReactionLayer()
                                 strongSelf.updateReactionAccentColor(theme: presentationData.theme)
                             }).strict()
+                        case .stars:
+                            if let availableReactions = self.availableReactions {
+                                for availableReaction in availableReactions.reactions {
+                                    if availableReaction.value == reaction {
+                                        self.file = availableReaction.centerAnimation
+                                        self.updateReactionLayer()
+                                        self.updateReactionAccentColor(theme: presentationData.theme)
+                                        break
+                                    }
+                                }
+                            }
                         }
                     } else {
                         self.file = nil
@@ -598,6 +619,8 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                             reactionStringValue = value
                         case .custom:
                             reactionStringValue = ""
+                        case .stars:
+                            reactionStringValue = "Star"
                         }
                     } else {
                         reactionStringValue = ""

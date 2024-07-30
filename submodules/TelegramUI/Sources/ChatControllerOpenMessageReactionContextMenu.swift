@@ -41,7 +41,7 @@ extension ChatControllerImpl {
             
             let reactionFile: Signal<TelegramMediaFile?, NoError>
             switch value {
-            case .builtin:
+            case .builtin, .stars:
                 reactionFile = self.context.engine.stickers.availableReactions()
                 |> take(1)
                 |> map { availableReactions -> TelegramMediaFile? in
@@ -161,24 +161,20 @@ extension ChatControllerImpl {
                 self.window?.presentInGlobalOverlay(controller)
             })
         } else {
-            var debug = false
-            #if DEBUG
-            debug = true
-            #endif
-            if self.context.sharedContext.applicationBindings.appBuildType == .internal {
-                debug = true
-            }
-                
-            if debug, case .custom(MessageReaction.starsReactionId) = value {
+            if case .stars = value {
+                gesture?.cancel()
+                cancelParentGestures(view: sourceView)
                 let _ = (ChatSendStarsScreen.initialData(context: self.context, peerId: message.id.peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] initialData in
                     guard let self, let initialData else {
                         return
                     }
                     self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount in
-                        guard let self else {
+                        guard let self, amount > 0 else {
                             return
                         }
+                        
+                        let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount))
                         
                         let _ = (self.context.engine.stickers.resolveInlineStickers(fileIds: [MessageReaction.starsReactionId])
                         |> deliverOnMainQueue).start(next: { [weak self] files in
@@ -369,7 +365,7 @@ extension ChatControllerImpl {
                 
                 let reactionFile: TelegramMediaFile?
                 switch value {
-                case .builtin:
+                case .builtin, .stars:
                     reactionFile = availableReactions?.reactions.first(where: { $0.value == value })?.selectAnimation
                 case let .custom(fileId):
                     reactionFile = customEmoji[fileId]

@@ -44,7 +44,7 @@ func _internal_revokePersistentPeerExportedInvitation(account: Account, peerId: 
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let flags: Int32 = (1 << 2)
             if let _ = peer as? TelegramChannel {
-                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil, title: nil))
+                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil, title: nil, subscriptionPricing: nil))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
                     return account.postbox.transaction { transaction -> ExportedInvitation? in
@@ -61,7 +61,7 @@ func _internal_revokePersistentPeerExportedInvitation(account: Account, peerId: 
                     }
                 }
             } else if let _ = peer as? TelegramGroup {
-                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil, title: nil))
+                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil, title: nil, subscriptionPricing: nil))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
                     return account.postbox.transaction { transaction -> ExportedInvitation? in
@@ -106,7 +106,7 @@ func _internal_createPeerExportedInvitation(account: Account, peerId: PeerId, ti
             if let _ = title {
                 flags |= (1 << 4)
             }
-            return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: expireDate, usageLimit: usageLimit, title: title))
+            return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: expireDate, usageLimit: usageLimit, title: title, subscriptionPricing: nil))
             |> mapError { _ in return CreatePeerExportedInvitationError.generic }
             |> map { result -> ExportedInvitation? in
                 return ExportedInvitation(apiExportedInvite: result)

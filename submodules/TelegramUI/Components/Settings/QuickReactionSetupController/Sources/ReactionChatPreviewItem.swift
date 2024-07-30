@@ -207,6 +207,31 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                             strongSelf.beginReactionAnimation(reactionItem: reactionItem)
                         }
                     })
+                case .stars:
+                    for reaction in availableReactions.reactions {
+                        guard let centerAnimation = reaction.centerAnimation else {
+                            continue
+                        }
+                        guard let aroundAnimation = reaction.aroundAnimation else {
+                            continue
+                        }
+                        
+                        if reaction.value == updatedReaction {
+                            let reactionItem = ReactionItem(
+                                reaction: ReactionItem.Reaction(rawValue: reaction.value),
+                                appearAnimation: reaction.appearAnimation,
+                                stillAnimation: reaction.selectAnimation,
+                                listAnimation: centerAnimation,
+                                largeListAnimation: reaction.activateAnimation,
+                                applicationAnimation: aroundAnimation,
+                                largeApplicationAnimation: reaction.effectAnimation,
+                                isCustom: false
+                            )
+                            self.beginReactionAnimation(reactionItem: reactionItem)
+                            
+                            break
+                        }
+                    }
                 }
             }
         }

@@ -318,6 +318,8 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                             return .builtin(value)
                         case let .custom(fileId):
                             return .custom(fileId: fileId, file: nil)
+                        case .stars:
+                            return .stars
                         }
                     }
                     if let selectionState = presentationInterfaceState.interfaceState.selectionState {

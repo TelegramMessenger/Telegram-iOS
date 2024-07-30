@@ -69,6 +69,8 @@ public final class ReactionItem {
             return .builtin(value)
         case let .custom(fileId):
             return .custom(fileId: fileId, file: self.listAnimation)
+        case .stars:
+            return .stars
         }
     }
 }
@@ -965,6 +967,8 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                     break
                 case .custom:
                     loopIdle = true
+                case .stars:
+                    break
                 }
             }
         }
@@ -1668,6 +1672,8 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                             updateReaction = .builtin(value)
                         case let .custom(fileId):
                             updateReaction = .custom(fileId: fileId, file: nil)
+                        case .stars:
+                            updateReaction = .stars
                         }
                         
                         let reactionItem = ReactionItem(
@@ -2604,7 +2610,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
-    public func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, forceSwitchToInlineImmediately: Bool = false, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
+    public func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, forceSwitchToInlineImmediately: Bool = false, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, onHit: (() -> Void)?, completion: @escaping () -> Void) {
         self.isAnimatingOutToReaction = true
         
         var foundItemNode: ReactionNode?
@@ -2639,6 +2645,8 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                 switchToInlineImmediately = forceSwitchToInlineImmediately
             case .custom:
                 switchToInlineImmediately = !self.didTriggerExpandedReaction
+            case .stars:
+                switchToInlineImmediately = forceSwitchToInlineImmediately
             }
         } else {
             switchToInlineImmediately = !self.didTriggerExpandedReaction
@@ -2853,6 +2861,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                     strongSelf.hapticFeedback = HapticFeedback()
                 }
                 strongSelf.hapticFeedback?.tap()
+                onHit?()
                 
                 if let targetView = targetView as? ReactionIconView {
                     if switchToInlineImmediately {
@@ -3283,13 +3292,13 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         self.isUserInteractionEnabled = false
     }
     
-    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, customEffectResource: MediaResource? = nil, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, playCenterReaction: Bool = true, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
-        self.animateReactionSelection(context: context, theme: theme, animationCache: animationCache, reaction: reaction, customEffectResource: customEffectResource, avatarPeers: avatarPeers, playHaptic: playHaptic, isLarge: isLarge, playCenterReaction: playCenterReaction, forceSmallEffectAnimation: forceSmallEffectAnimation, hideCenterAnimation: hideCenterAnimation, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, completion: completion)
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, customEffectResource: MediaResource? = nil, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, playCenterReaction: Bool = true, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, onHit: (() -> Void)? = nil, completion: @escaping () -> Void) {
+        self.animateReactionSelection(context: context, theme: theme, animationCache: animationCache, reaction: reaction, customEffectResource: customEffectResource, avatarPeers: avatarPeers, playHaptic: playHaptic, isLarge: isLarge, playCenterReaction: playCenterReaction, forceSmallEffectAnimation: forceSmallEffectAnimation, hideCenterAnimation: hideCenterAnimation, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, onHit: onHit, completion: completion)
     }
         
     public var currentDismissAnimation: (() -> Void)?
     
-    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, customEffectResource: MediaResource? = nil, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, playCenterReaction: Bool = true, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, customEffectResource: MediaResource? = nil, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, playCenterReaction: Bool = true, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, onHit: (() -> Void)? = nil, completion: @escaping () -> Void) {
         guard let sourceSnapshotView = targetView.snapshotContentTree() else {
             completion()
             return
@@ -3298,6 +3307,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         if playHaptic {
             self.hapticFeedback.tap()
         }
+        onHit?()
         
         self.targetView = targetView
         
@@ -3322,6 +3332,8 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                     switchToInlineImmediately = false
                 case .custom:
                     switchToInlineImmediately = true
+                case .stars:
+                    switchToInlineImmediately = false
                 }
             } else {
                 switchToInlineImmediately = false
@@ -3708,11 +3720,15 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         var selfTargetBounds = targetView.bounds
         if let itemNode = self.itemNode, case .builtin = itemNode.item.reaction.rawValue {
             selfTargetBounds = selfTargetBounds.insetBy(dx: -selfTargetBounds.width * 0.5, dy: -selfTargetBounds.height * 0.5)
+        } else if let itemNode = self.itemNode, case .stars = itemNode.item.reaction.rawValue {
+            selfTargetBounds = selfTargetBounds.insetBy(dx: -selfTargetBounds.width * 0.5, dy: -selfTargetBounds.height * 0.5)
         }
         
         var targetFrame = self.view.convert(targetView.convert(selfTargetBounds, to: nil), from: nil)
         
         if let itemNode = self.itemNode, case .builtin = itemNode.item.reaction.rawValue {
+            targetFrame = targetFrame.insetBy(dx: -targetFrame.width * 0.5, dy: -targetFrame.height * 0.5)
+        } else if let itemNode = self.itemNode, case .stars = itemNode.item.reaction.rawValue {
             targetFrame = targetFrame.insetBy(dx: -targetFrame.width * 0.5, dy: -targetFrame.height * 0.5)
         }
         
