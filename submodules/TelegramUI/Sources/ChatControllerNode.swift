@@ -3671,6 +3671,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     if let textNode = node as? TextAccessibilityOverlayNode {
                         let _ = textNode
                         return result
+                    } else if let _ = node as? LinkHighlightingNode {
+                        return result
                     }
                 }
             }
