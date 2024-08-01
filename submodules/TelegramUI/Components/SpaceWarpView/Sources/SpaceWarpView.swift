@@ -368,7 +368,7 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         
         transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
         
-        let params = RippleParams(amplitude: 20.0, frequency: 15.0, decay: 8.0, speed: 1400.0)
+        let params = RippleParams(amplitude: 10.0, frequency: 15.0, decay: 8.0, speed: 1400.0)
         
         if let currentCloneView = self.currentCloneView {
             currentCloneView.removeFromSuperview()
@@ -418,26 +418,6 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         self.contentNodeSource.clipsToBounds = true
         self.contentNodeSource.layer.cornerRadius = cornerRadius
         
-        /*let gradientLayer: SimpleGradientLayer
-        if let current = self.gradientLayer {
-            gradientLayer = current
-        } else {
-            gradientLayer = SimpleGradientLayer()
-            self.gradientLayer = gradientLayer
-            self.layer.addSublayer(gradientLayer)
-            
-            gradientLayer.type = .radial
-            gradientLayer.colors = [UIColor.clear.cgColor, UIColor.clear.cgColor, UIColor.white.cgColor, UIColor.clear.cgColor, UIColor.clear.cgColor]
-        }
-        gradientLayer.frame = CGRect(origin: CGPoint(), size: size)
-        
-        gradientLayer.startPoint = CGPoint(x: startPoint.x / size.width, y: startPoint.x / size.height)
-        let radius = CGSize(width: maxEdge, height: maxEdge)
-        let endEndPoint = CGPoint(x: (gradientLayer.startPoint.x + radius.width) * 1.0, y: (gradientLayer.startPoint.y + radius.height) * 1.0)
-        gradientLayer.endPoint = endEndPoint
-        
-        let progress = max(0.0, min(1.0, self.timeValue / maxDelay))*/
-        
         #if DEBUG
         if let fpsView = self.fpsView {
             fpsView.update()
@@ -455,6 +435,49 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         }
         
         meshView.frame = CGRect(origin: CGPoint(), size: size)
+        
+        if let shockwave = self.shockwaves.first {
+            let gradientLayer: SimpleGradientLayer
+            if let current = self.gradientLayer {
+                gradientLayer = current
+            } else {
+                gradientLayer = SimpleGradientLayer()
+                self.gradientLayer = gradientLayer
+                self.layer.addSublayer(gradientLayer)
+                
+                gradientLayer.type = .radial
+                //gradientLayer.colors = [UIColor.clear.cgColor, UIColor.clear.cgColor, UIColor.red.cgColor, UIColor.clear.cgColor]
+                gradientLayer.colors = [UIColor(white: 1.0, alpha: 0.0).cgColor, UIColor(white: 1.0, alpha: 0.0).cgColor, UIColor(white: 1.0, alpha: 0.2).cgColor, UIColor(white: 1.0, alpha: 0.0).cgColor]
+            }
+            gradientLayer.frame = CGRect(origin: CGPoint(), size: size)
+            
+            gradientLayer.startPoint = CGPoint(x: shockwave.startPoint.x / size.width, y: shockwave.startPoint.y / size.height)
+            
+            let distance = shockwave.timeValue * params.speed
+            let progress = max(0.0, distance / min(size.width, size.height))
+            
+            let radius = CGSize(width: 1.0 * progress, height: (size.width / size.height) * progress)
+            let endEndPoint = CGPoint(x: (gradientLayer.startPoint.x + radius.width), y: (gradientLayer.startPoint.y + radius.height))
+            gradientLayer.endPoint = endEndPoint
+            
+            let maxWavefrontNorm: CGFloat = 0.3
+            
+            let normProgress = max(0.0, min(1.0, progress))
+            let interpolatedNorm: CGFloat = 1.0 * (1.0 - normProgress) + maxWavefrontNorm * normProgress
+            let wavefrontNorm: CGFloat = max(0.01, min(0.99, interpolatedNorm))
+            
+            gradientLayer.locations = ([0.0, 1.0 - wavefrontNorm, 1.0 - wavefrontNorm * 0.5, 1.0] as [CGFloat]).map { $0 as NSNumber }
+            
+            let alphaProgress: CGFloat = max(0.0, min(1.0, normProgress / 0.15))
+            var interpolatedAlpha: CGFloat = alphaProgress
+            interpolatedAlpha = max(0.0, min(1.0, interpolatedAlpha))
+            gradientLayer.opacity = Float(interpolatedAlpha)
+        } else {
+            if let gradientLayer = self.gradientLayer {
+                self.gradientLayer = nil
+                gradientLayer.removeFromSuperlayer()
+            }
+        }
         
         let itemSize = CGSize(width: size.width / CGFloat(resolution.x), height: size.height / CGFloat(resolution.y))
         
