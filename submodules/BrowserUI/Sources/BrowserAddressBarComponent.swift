@@ -281,15 +281,7 @@ final class AddressBarContentComponent: Component {
             }
             let isActive = self.textField?.isFirstResponder ?? false
             
-            var title: String = ""
-            if let parsedUrl = URL(string: component.url) {
-                title = parsedUrl.host ?? component.url
-                if title.hasPrefix("www.") {
-                    title.removeSubrange(title.startIndex ..< title.index(title.startIndex, offsetBy: 4))
-                }
-                title = title.idnaDecoded ?? title
-            }
-            
+            let title = getDisplayUrl(component.url, hostOnly: true)
             self.update(theme: component.theme, strings: component.strings, size: availableSize, isActive: isActive, title: title.lowercased(), isSecure: component.isSecure, collapseFraction: collapseFraction, isTablet: component.metrics.isTablet, transition: transition)
             
             return availableSize
@@ -449,19 +441,7 @@ final class AddressBarContentComponent: Component {
                 textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)
             }
             
-            var address = self.component?.url ?? ""
-            if let components = URLComponents(string: address) {
-                if #available(iOS 16.0, *), let encodedHost = components.encodedHost {
-                    if let decodedHost = components.host, encodedHost != decodedHost {
-                        address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
-                    }
-                } else if let encodedHost = components.host {
-                    if let decodedHost = components.host?.idnaDecoded, encodedHost != decodedHost {
-                        address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
-                    }
-                }
-            }
-
+            let address = getDisplayUrl(self.component?.url ?? "")
             if textField.text != address {
                 textField.text = address
                 self.clearIconView.isHidden = address.isEmpty

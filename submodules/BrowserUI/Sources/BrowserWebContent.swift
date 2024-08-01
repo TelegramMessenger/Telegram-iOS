@@ -239,7 +239,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             let request = URLRequest(url: parsedUrl)
             self.webView.load(request)
             
-            title = parsedUrl.host ?? ""
+            title = getDisplayUrl(url, hostOnly: true)
         }
         
         self.errorView = ComponentHostView()
@@ -744,7 +744,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        if [-1003, -1100].contains((error as NSError).code) {
+        if [-1003, -1100, 102].contains((error as NSError).code) {
             self.currentError = error
         } else {
             self.currentError = nil
