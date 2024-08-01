@@ -1047,7 +1047,14 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 
                 let _ = (settings
                 |> deliverOnMainQueue).startStandalone(next: { settings in
-                    if let defaultWebBrowser = settings.defaultWebBrowser, defaultWebBrowser != "inApp" {
+                    var isTonSite = false
+                    if let host = parsedUrl.host, host.lowercased().hasSuffix(".ton") {
+                        isTonSite = true
+                    } else if let scheme = parsedUrl.scheme, scheme.lowercased().hasPrefix("tonsite") {
+                        isTonSite = true
+                    }
+                    
+                    if let defaultWebBrowser = settings.defaultWebBrowser, defaultWebBrowser != "inApp" && !isTonSite {
                         let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))
                         if let option = openInOptions.first(where: { $0.identifier == settings.defaultWebBrowser }) {
                             if case let .openUrl(openInUrl) = option.action() {
@@ -1067,14 +1074,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 break
                             }
                         }
-                        
-                        var isTonSite = false
-                        if let host = parsedUrl.host, host.lowercased().hasSuffix(".ton") {
-                            isTonSite = true
-                        } else if let scheme = parsedUrl.scheme, scheme.lowercased().hasPrefix("tonsite") {
-                            isTonSite = true
-                        }
-                        
+
                         if (settings.defaultWebBrowser == nil && !isExceptedDomain) || isTonSite {
                             let controller = BrowserScreen(context: context, subject: .webPage(url: parsedUrl.absoluteString))
                             navigationController?.pushViewController(controller)
