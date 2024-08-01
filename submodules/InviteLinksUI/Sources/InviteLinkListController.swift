@@ -239,7 +239,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                     arguments.createLink()
                 })
             case let .link(_, _, invite, canEdit, _):
-                return ItemListInviteLinkItem(presentationData: presentationData, invite: invite, share: false, sectionId: self.section, style: .blocks) { invite in
+                return ItemListInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, share: false, sectionId: self.section, style: .blocks) { invite in
                     arguments.openLink(invite)
                 } contextAction: { invite, node, gesture in
                     arguments.linkContextAction(invite, canEdit, node, gesture)
@@ -253,7 +253,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                     arguments.deleteAllRevokedLinks()
                 })
             case let .revokedLink(_, _, invite):
-                return ItemListInviteLinkItem(presentationData: presentationData, invite: invite, share: false, sectionId: self.section, style: .blocks) { invite in
+                return ItemListInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, share: false, sectionId: self.section, style: .blocks) { invite in
                     arguments.openLink(invite)
                 } contextAction: { invite, node, gesture in
                     arguments.linkContextAction(invite, false, node, gesture)

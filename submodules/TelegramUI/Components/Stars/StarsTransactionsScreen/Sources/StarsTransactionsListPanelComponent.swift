@@ -219,6 +219,9 @@ final class StarsTransactionsListPanelComponent: Component {
                             itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                             if item.flags.contains(.isGift) {
                                 itemSubtitle = environment.strings.Stars_Intro_Transaction_Gift_Title
+                            } else if let _ = item.subscriptionPeriod {
+                                //TODO:localize
+                                itemSubtitle = "Monthly subscription fee"
                             } else {
                                 itemSubtitle = nil
                             }

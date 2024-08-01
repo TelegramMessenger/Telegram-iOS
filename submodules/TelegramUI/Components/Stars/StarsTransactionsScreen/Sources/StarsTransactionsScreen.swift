@@ -18,6 +18,8 @@ import ListSectionComponent
 import BundleIconComponent
 import TextFormat
 import UndoUI
+import ListActionItemComponent
+import StarsAvatarComponent
 
 final class StarsTransactionsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -574,7 +576,44 @@ final class StarsTransactionsScreenComponent: Component {
             contentHeight += balanceSize.height
             contentHeight += 44.0
             
-            let subscriptionsItems: [AnyComponentWithIdentity<Empty>] = []
+            let fontBaseDisplaySize = 17.0
+            var subscriptionsItems: [AnyComponentWithIdentity<Empty>] = []
+            if let starsState = self.starsState {
+                for subscription in starsState.subscriptions {
+                    var titleComponents: [AnyComponentWithIdentity<Empty>] = []
+                    titleComponents.append(
+                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: subscription.peer.compactDisplayTitle,
+                                font: Font.semibold(fontBaseDisplaySize),
+                                textColor: environment.theme.list.itemPrimaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        )))
+                    )
+                    let itemLabel = NSAttributedString(string: "\(subscription.pricing.amount)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor)
+                    
+                    subscriptionsItems.append(AnyComponentWithIdentity(
+                        id: subscription.id,
+                        component: AnyComponent(
+                            ListActionItemComponent(
+                                theme: environment.theme,
+                                title: AnyComponent(VStack(titleComponents, alignment: .left, spacing: 2.0)),
+                                contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 8.0, right: 0.0),
+                                leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: .peer(subscription.peer), photo: nil, media: [], backgroundColor: environment.theme.list.plainBackgroundColor))), false),
+                                icon: nil,
+                                accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
+                                action: { [weak self] _ in
+                                    guard let self, let _ = self.component else {
+                                        return
+                                    }
+
+                                }
+                            )
+                        )
+                    ))
+                }
+            }
             
             if !subscriptionsItems.isEmpty {
                 //TODO:localize

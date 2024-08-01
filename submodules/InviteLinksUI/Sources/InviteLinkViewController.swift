@@ -20,6 +20,30 @@ import PresentationDataUtils
 import DirectionalPanGesture
 import UndoUI
 import QrCodeUI
+import TextFormat
+
+private var subscriptionLinkIcon: UIImage? = {
+    return generateImage(CGSize(width: 40.0, height: 40.0), contextGenerator: { size, context in
+        let bounds = CGRect(origin: .zero, size: size)
+        context.clear(bounds)
+        
+        let pathBounds = CGRect(origin: .zero, size: CGSize(width: 40.0, height: 40.0))
+        context.addPath(CGPath(ellipseIn: pathBounds, transform: nil))
+        context.clip()
+        
+        var locations: [CGFloat] = [1.0, 0.0]
+        let colors: [CGColor] = [UIColor(rgb: 0x87d93b).cgColor, UIColor(rgb: 0x31b73b).cgColor]
+        
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+        
+        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+        
+        if let image = generateTintedImage(image: UIImage(bundleImageName: "Item List/SubscriptionLink"), color: .white), let cgImage = image.cgImage {
+            context.draw(cgImage, in: pathBounds)
+        }
+    })
+}()
 
 class InviteLinkViewInteraction {
     let context: AccountContext
@@ -50,6 +74,8 @@ private struct InviteLinkViewTransaction {
 
 private enum InviteLinkViewEntryId: Hashable {
     case link
+    case subscriptionHeader
+    case subscriptionPricing
     case creatorHeader
     case creator
     case requestHeader
@@ -60,6 +86,8 @@ private enum InviteLinkViewEntryId: Hashable {
 
 private enum InviteLinkViewEntry: Comparable, Identifiable {
     case link(PresentationTheme, ExportedInvitation)
+    case subscriptionHeader(PresentationTheme, String)
+    case subscriptionPricing(PresentationTheme, String, String)
     case creatorHeader(PresentationTheme, String)
     case creator(PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32)
     case requestHeader(PresentationTheme, String, String, Bool)
@@ -71,6 +99,10 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
         switch self {
             case .link:
                 return .link
+            case .subscriptionHeader:
+                return .subscriptionHeader
+            case .subscriptionPricing:
+                return .subscriptionPricing
             case .creatorHeader:
                 return .creatorHeader
             case .creator:
@@ -90,6 +122,18 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
         switch lhs {
             case let .link(lhsTheme, lhsInvitation):
                 if case let .link(rhsTheme, rhsInvitation) = rhs, lhsTheme === rhsTheme, lhsInvitation == rhsInvitation {
+                    return true
+                } else {
+                    return false
+                }
+            case let .subscriptionHeader(lhsTheme, lhsTitle):
+                if case let .subscriptionHeader(rhsTheme, rhsTitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle {
+                    return true
+                } else {
+                    return false
+                }
+            case let .subscriptionPricing(lhsTheme, lhsTitle, lhsSubtitle):
+                if case let .subscriptionPricing(rhsTheme, rhsTitle, rhsSubtitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle {
                     return true
                 } else {
                     return false
@@ -139,33 +183,47 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 switch rhs {
                     case .link:
                         return false
+                    case .subscriptionHeader, .subscriptionPricing, .creatorHeader, .creator, .requestHeader, .request, .importerHeader, .importer:
+                        return true
+                }
+            case .subscriptionHeader:
+                switch rhs {
+                    case .link, .subscriptionHeader:
+                        return false
+                    case .subscriptionPricing, .creatorHeader, .creator, .requestHeader, .request, .importerHeader, .importer:
+                        return true
+                }
+            case .subscriptionPricing:
+                switch rhs {
+                    case .link, .subscriptionHeader, .subscriptionPricing:
+                        return false
                     case .creatorHeader, .creator, .requestHeader, .request, .importerHeader, .importer:
                         return true
                 }
             case .creatorHeader:
                 switch rhs {
-                    case .link, .creatorHeader:
+                    case .link, .subscriptionHeader, .subscriptionPricing, .creatorHeader:
                         return false
                     case .creator, .requestHeader, .request, .importerHeader, .importer:
                         return true
                 }
             case .creator:
                 switch rhs {
-                    case .link, .creatorHeader, .creator:
+                    case .link, .subscriptionHeader, .subscriptionPricing, .creatorHeader, .creator:
                         return false
                     case .requestHeader, .request, .importerHeader, .importer:
                         return true
             }
             case .requestHeader:
                 switch rhs {
-                    case .link, .creatorHeader, .creator, .requestHeader:
+                    case .link, .subscriptionHeader, .subscriptionPricing, .creatorHeader, .creator, .requestHeader:
                         return false
                     case .request, .importerHeader, .importer:
                         return true
                 }
             case let .request(lhsIndex, _, _, _, _, _):
                 switch rhs {
-                    case .link, .creatorHeader, .creator, .requestHeader:
+                    case .link, .subscriptionHeader, .subscriptionPricing, .creatorHeader, .creator, .requestHeader:
                         return false
                     case let .request(rhsIndex, _, _, _, _, _):
                         return lhsIndex < rhsIndex
@@ -174,14 +232,14 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 }
             case .importerHeader:
                 switch rhs {
-                    case .link, .creatorHeader, .creator, .requestHeader, .request, .importerHeader:
+                    case .link, .subscriptionHeader, .subscriptionPricing, .creatorHeader, .creator, .requestHeader, .request, .importerHeader:
                         return false
                     case .importer:
                         return true
                 }
             case let .importer(lhsIndex, _, _, _, _, _, _):
                 switch rhs {
-                    case .link, .creatorHeader, .creator, .importerHeader, .request, .requestHeader:
+                    case .link, .subscriptionHeader, .subscriptionPricing, .creatorHeader, .creator, .importerHeader, .request, .requestHeader:
                         return false
                     case let .importer(rhsIndex, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
@@ -204,13 +262,22 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                     interaction.contextAction(invite, node, gesture)
                 }, viewAction: {
                 })
+            case let .subscriptionHeader(_, title):
+                return SectionHeaderItem(presentationData: ItemListPresentationData(presentationData), title: title)
+            case let .subscriptionPricing(_, title, subtitle):
+                let attributedTitle = NSMutableAttributedString(string: title, font: Font.semibold(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemPrimaryTextColor)
+                if let range = attributedTitle.string.range(of: "⭐️") {
+                    attributedTitle.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedTitle.string))
+                    attributedTitle.addAttribute(.baselineOffset, value: -1.0, range: NSRange(range, in: attributedTitle.string))
+                }
+                return ItemListDisclosureItem(presentationData: ItemListPresentationData(presentationData), icon: subscriptionLinkIcon, context: interaction.context, title: "", attributedTitle: attributedTitle, enabled: false, label: subtitle, labelStyle: .detailText, sectionId: 0, style: .plain, disclosureStyle: .none, noInsets: true, action: nil, clearHighlightAutomatically: true, tag: nil, shimmeringIndex: nil)
             case let .creatorHeader(_, title):
                 return SectionHeaderItem(presentationData: ItemListPresentationData(presentationData), title: title)
             case let .creator(_, dateTimeFormat, peer, date):
                 let dateString = stringForFullDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
-                return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .generic, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: peer.id != account.peerId, sectionId: 0, action: {
+                return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .peerList, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: peer.id != account.peerId, sectionId: 0, action: {
                     interaction.openPeer(peer.id)
-                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, hasTopStripe: false, noInsets: true, tag: nil)
+                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, hasTopStripe: false, noInsets: true, style: .plain, tag: nil)
             case let .importerHeader(_, title, subtitle, expired), let .requestHeader(_, title, subtitle, expired):
                 let additionalText: SectionHeaderAdditionalText
                 if !subtitle.isEmpty {
@@ -230,14 +297,14 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 } else {
                     dateString = stringForFullDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
                 }
-                return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .generic, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: peer.id != account.peerId, sectionId: 0, action: {
+                return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .peerList, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: peer.id != account.peerId, sectionId: 0, action: {
                     interaction.openPeer(peer.id)
-                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, hasTopStripe: false, noInsets: true, tag: nil, shimmering: loading ? ItemListPeerItemShimmering(alternationIndex: 0) : nil)
+                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, hasTopStripe: false, noInsets: true, style: .plain, tag: nil, shimmering: loading ? ItemListPeerItemShimmering(alternationIndex: 0) : nil)
             case let .request(_, _, dateTimeFormat, peer, date, loading):
                 let dateString = stringForFullDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
-                return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .generic, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: peer.id != account.peerId, sectionId: 0, action: {
+                return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .peerList, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: peer.id != account.peerId, sectionId: 0, action: {
                     interaction.openPeer(peer.id)
-                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, hasTopStripe: false, noInsets: true, tag: nil, shimmering: loading ? ItemListPeerItemShimmering(alternationIndex: 0) : nil)
+                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, hasTopStripe: false, noInsets: true, style: .plain, tag: nil, shimmering: loading ? ItemListPeerItemShimmering(alternationIndex: 0) : nil)
         }
     }
 }
@@ -727,6 +794,13 @@ public final class InviteLinkViewController: ViewController {
                         var entries: [InviteLinkViewEntry] = []
                         
                         entries.append(.link(presentationData.theme, invite))
+                        
+                        if let pricing = invite.pricing {
+                            //TODO:localize
+                            entries.append(.subscriptionHeader(presentationData.theme, "SUBSCRIPTION FEE"))
+                            entries.append(.subscriptionPricing(presentationData.theme, "⭐️\(pricing.amount) / month x \(state.count)", "You get approximately $\(Float(pricing.amount * Int64(state.count)) * 0.01) monthly"))
+                        }
+                        
                         entries.append(.creatorHeader(presentationData.theme, presentationData.strings.InviteLink_CreatedBy.uppercased()))
                         entries.append(.creator(presentationData.theme, presentationData.dateTimeFormat, EnginePeer(creatorPeer), date))
                                             

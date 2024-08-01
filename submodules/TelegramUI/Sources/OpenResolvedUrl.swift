@@ -250,12 +250,7 @@ func openResolvedUrlImpl(
                 present(controller, nil)
         case let .instantView(webpage, anchor):
             let sourceLocation = InstantPageSourceLocation(userLocation: .other, peerType: .channel)
-            let pageController: ViewController
-            if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
-                pageController = BrowserScreen(context: context, subject: .instantPage(webPage: webpage, anchor: anchor, sourceLocation: sourceLocation))
-            } else {
-                pageController = InstantPageController(context: context, webPage: webpage, sourceLocation: sourceLocation, anchor: anchor)
-            }
+            let pageController = BrowserScreen(context: context, subject: .instantPage(webPage: webpage, anchor: anchor, sourceLocation: sourceLocation))
             navigationController?.pushViewController(pageController)
         case let .join(link):
             dismissInput()
@@ -288,6 +283,55 @@ func openResolvedUrlImpl(
                         openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
                     case let .peek(peer, deadline):
                         openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: ChatPeekTimeout(deadline: deadline, linkData: link)))
+                    case let .invite(invite):
+                        if let subscriptionPricing = invite.subscriptionPricing, let subscriptionFormId = invite.subscriptionFormId, let starsContext = context.starsContext {
+                            let inputData = Promise<BotCheckoutController.InputData?>()
+                            var photo: [TelegramMediaImageRepresentation] = []
+                            if let photoRepresentation = invite.photoRepresentation {
+                                photo.append(photoRepresentation)
+                            }
+                            let channel = TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(0)), accessHash: .genericPublic(0), title: invite.title, username: nil, photo: photo, creationDate: 0, version: 0, participationStatus: .left, info: .broadcast(TelegramChannelBroadcastInfo(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, usernames: [], storiesHidden: nil, nameColor: invite.nameColor, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, emojiStatus: nil, approximateBoostLevel: nil, subscriptionUntilDate: nil)
+                            let invoice = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: subscriptionPricing.amount, startParam: "", extendedMedia: nil, flags: [], version: 0)
+                            
+                            inputData.set(.single(BotCheckoutController.InputData(
+                                form: BotPaymentForm(
+                                    id: subscriptionFormId,
+                                    canSaveCredentials: false,
+                                    passwordMissing: false,
+                                    invoice: BotPaymentInvoice(isTest: false, requestedFields: [], currency: "XTR", prices: [BotPaymentPrice(label: "", amount: subscriptionPricing.amount)], tip: nil, termsInfo: nil),
+                                    paymentBotId: channel.id,
+                                    providerId: nil,
+                                    url: nil,
+                                    nativeProvider: nil,
+                                    savedInfo: nil,
+                                    savedCredentials: [],
+                                    additionalPaymentMethods: []
+                                ),
+                                validatedFormInfo: nil,
+                                botPeer: EnginePeer(channel)
+                            )))
+                            
+                            let starsInputData = combineLatest(
+                                inputData.get(),
+                                starsContext.state
+                            )
+                            |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
+                                if let data, let state {
+                                    return (state, data.form, data.botPeer)
+                                } else {
+                                    return nil
+                                }
+                            }
+                            let _ = (starsInputData |> filter { $0 != nil } |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                                let controller = context.sharedContext.makeStarsTransferScreen(context: context, starsContext: starsContext, invoice: invoice, source: .starsChatSubscription(hash: link), extendedMedia: [], inputData: starsInputData, completion: { _ in
+                                })
+                                navigationController?.pushViewController(controller)
+                            })
+                        } else {
+                            present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
+                                openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: peekData))
+                            }, parentNavigationController: navigationController, resolvedState: resolvedState), nil)
+                        }
                     default:
                         present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
                             openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: peekData))

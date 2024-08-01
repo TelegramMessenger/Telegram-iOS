@@ -341,7 +341,7 @@ private final class StarsContextImpl {
             return
         }
         var transactions = state.transactions
-        transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, media: []), at: 0)
+        transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, media: [], subscriptionPeriod: nil), at: 0)
         
         self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: state.balance + balance, subscriptions: state.subscriptions, canLoadMoreSubscriptions: state.canLoadMoreSubscriptions, transactions: transactions, canLoadMoreTransactions: state.canLoadMoreTransactions, isLoading: state.isLoading))
     }
@@ -408,7 +408,7 @@ private extension StarsContext.State.Transaction {
             
             let media = extendedMedia.flatMap({ $0.compactMap { textMediaAndExpirationTimerFromApiMedia($0, PeerId(0)).media } }) ?? []
             let _ = subscriptionPeriod
-            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId, media: media)
+            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId, media: media, subscriptionPeriod: subscriptionPeriod)
         }
     }
 }
@@ -474,6 +474,7 @@ public final class StarsContext {
             public let transactionUrl: String?
             public let paidMessageId: MessageId?
             public let media: [Media]
+            public let subscriptionPeriod: Int32?
             
             public init(
                 flags: Flags,
@@ -487,7 +488,8 @@ public final class StarsContext {
                 transactionDate: Int32?,
                 transactionUrl: String?,
                 paidMessageId: MessageId?,
-                media: [Media]
+                media: [Media],
+                subscriptionPeriod: Int32?
             ) {
                 self.flags = flags
                 self.id = id
@@ -501,6 +503,7 @@ public final class StarsContext {
                 self.transactionUrl = transactionUrl
                 self.paidMessageId = paidMessageId
                 self.media = media
+                self.subscriptionPeriod = subscriptionPeriod
             }
             
             public static func == (lhs: Transaction, rhs: Transaction) -> Bool {
@@ -538,6 +541,9 @@ public final class StarsContext {
                     return false
                 }
                 if !areMediaArraysEqual(lhs.media, rhs.media) {
+                    return false
+                }
+                if lhs.subscriptionPeriod != rhs.subscriptionPeriod {
                     return false
                 }
                 return true
@@ -1160,8 +1166,8 @@ public struct StarsSubscriptionPricing: Codable, Equatable {
         try container.encode(self.amount, forKey: .amount)
     }
     
-    public static let monthPeriod = 2592000
-    public static let testPeriod = 300
+    public static let monthPeriod: Int32 = 2592000
+    public static let testPeriod: Int32 = 300
 }
 
 extension StarsSubscriptionPricing {

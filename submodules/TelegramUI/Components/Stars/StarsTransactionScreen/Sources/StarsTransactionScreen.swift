@@ -203,7 +203,27 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var delayedCloseOnOpenPeer = true
             switch subject {
             case let .transaction(transaction, parentPeer):
-                if transaction.flags.contains(.isGift) {
+                if let _ = transaction.subscriptionPeriod {
+                    //TODO:localize
+                    titleText = "Monthly Subscription Fee"
+                    descriptionText = ""
+                    count = transaction.count
+                    countOnTop = false
+                    transactionId = transaction.id
+                    via = nil
+                    messageId = nil
+                    date = transaction.date
+                    if case let .peer(peer) = transaction.peer {
+                        toPeer = peer
+                    } else {
+                        toPeer = nil
+                    }
+                    transactionPeer = transaction.peer
+                    media = []
+                    photo = nil
+                    isRefund = false
+                    isGift = false
+                } else if transaction.flags.contains(.isGift) {
                     titleText = strings.Stars_Gift_Received_Title
                     descriptionText = strings.Stars_Gift_Received_Text
                     count = transaction.count
