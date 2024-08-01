@@ -441,7 +441,7 @@ final class AddressBarContentComponent: Component {
                 textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)
             }
             
-            let address = getDisplayUrl(self.component?.url ?? "")
+            let address = getDisplayUrl(self.component?.url ?? "", trim: false)
             if textField.text != address {
                 textField.text = address
                 self.clearIconView.isHidden = address.isEmpty

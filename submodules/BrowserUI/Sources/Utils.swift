@@ -111,7 +111,7 @@ func getPrimaryUrl(message: Message) -> String? {
 
 private let asciiChars = CharacterSet(charactersIn: "a".unicodeScalars.first! ... "z".unicodeScalars.first!)
 
-func getDisplayUrl(_ url: String, hostOnly: Bool = false) -> String {
+func getDisplayUrl(_ url: String, hostOnly: Bool = false, trim: Bool = true) -> String {
     if hostOnly {
         var title = url
         if let parsedUrl = URL(string: url) {
@@ -143,10 +143,12 @@ func getDisplayUrl(_ url: String, hostOnly: Bool = false) -> String {
                 }
             }
         }
-        address = address.replacingOccurrences(of: "https://www.", with: "")
-        address = address.replacingOccurrences(of: "https://", with: "")
-        address = address.replacingOccurrences(of: "tonsite://", with: "")
-        address = address.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        if trim {
+            address = address.replacingOccurrences(of: "https://www.", with: "")
+            address = address.replacingOccurrences(of: "https://", with: "")
+            address = address.replacingOccurrences(of: "tonsite://", with: "")
+            address = address.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        }
         return address
     }
 }

@@ -1390,6 +1390,16 @@ public class BrowserScreen: ViewController, MinimizableController {
     ]
     
     public init(context: AccountContext, subject: Subject, openPreviousOnClose: Bool = false) {
+        var subject = subject
+        if case let .webPage(url) = subject, let parsedUrl = URL(string: url) {
+            if parsedUrl.host?.hasSuffix(".ton") == true {
+                var urlComponents = URLComponents(string: url)
+                urlComponents?.scheme = "tonsite"
+                if let updatedUrl = urlComponents?.url?.absoluteString {
+                    subject = .webPage(url: updatedUrl)
+                }
+            }
+        }
         self.context = context
         self.subject = subject
         self.openPreviousOnClose = openPreviousOnClose
