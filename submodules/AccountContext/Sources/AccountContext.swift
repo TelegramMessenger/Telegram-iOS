@@ -755,7 +755,7 @@ public class MediaEditorTransitionOutExternalState {
 }
 
 public protocol MediaEditorScreenResult {
-    
+    var target: Stories.PendingTarget { get }
 }
 
 public protocol TelegramRootControllerInterface: NavigationController {

@@ -384,13 +384,13 @@ private final class BrowserScreenComponent: CombinedComponent {
                         bottomInset: toolbarBottomInset,
                         sideInset: environment.safeInsets.left,
                         item: toolbarContent,
-                        collapseFraction: collapseFraction
+                        collapseFraction: 0.0
                     ),
                     availableSize: context.availableSize,
                     transition: context.transition
                 )
                 context.add(toolbar
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - toolbar.size.height / 2.0))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - toolbar.size.height / 2.0 + toolbar.size.height * collapseFraction))
                     .appear(ComponentTransition.Appear { _, view, transition in
                         transition.animatePosition(view: view, from: CGPoint(x: 0.0, y: view.frame.height), to: CGPoint(), additive: true)
                     })

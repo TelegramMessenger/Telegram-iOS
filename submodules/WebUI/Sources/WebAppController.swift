@@ -1164,15 +1164,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                         transitionOut: nil
                                     )
                                     let controller = self.context.sharedContext.makeStoryMediaEditorScreen(context: self.context, source: source, text: text, link: linkUrl.flatMap { ($0, linkName) }, completion: { result, commit in
-//                                        let targetPeerId: EnginePeer.Id
-                                        let target: Stories.PendingTarget
-//                                        if let sendAsPeerId = result.options.sendAsPeerId {
-//                                            target = .peer(sendAsPeerId)
-//                                            targetPeerId = sendAsPeerId
-//                                        } else {
-                                            target = .myStories
-//                                            targetPeerId = self.context.account.peerId
-//                                        }
+                                        let target: Stories.PendingTarget = result.target
                                         externalState.storyTarget = target
                                         
                                         if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {

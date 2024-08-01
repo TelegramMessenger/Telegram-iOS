@@ -120,7 +120,7 @@ private final class SheetContent: CombinedComponent {
             
             let explicitLink = explicitUrl(context.component.link)
             var isValidLink = false
-            if isValidUrl(explicitLink) {
+            if isValidUrl(explicitLink, validSchemes: ["http": true, "https": true, "tonsite": true]) {
                 isValidLink = true
             }
             
