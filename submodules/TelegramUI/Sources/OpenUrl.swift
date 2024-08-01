@@ -1068,7 +1068,14 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             }
                         }
                         
-                        if settings.defaultWebBrowser == nil && !isExceptedDomain {
+                        var isTonSite = false
+                        if let host = parsedUrl.host, host.lowercased().hasSuffix(".ton") {
+                            isTonSite = true
+                        } else if let scheme = parsedUrl.scheme, scheme.lowercased().hasPrefix("tonsite") {
+                            isTonSite = true
+                        }
+                        
+                        if (settings.defaultWebBrowser == nil && !isExceptedDomain) || isTonSite {
                             let controller = BrowserScreen(context: context, subject: .webPage(url: parsedUrl.absoluteString))
                             navigationController?.pushViewController(controller)
                         } else {
