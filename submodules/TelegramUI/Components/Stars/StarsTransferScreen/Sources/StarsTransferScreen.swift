@@ -248,6 +248,7 @@ private final class SheetContent: CombinedComponent {
         let balanceTitle = Child(MultilineTextComponent.self)
         let balanceValue = Child(MultilineTextComponent.self)
         let balanceIcon = Child(BundleIconComponent.self)
+        let info = Child(BalancedTextComponent.self)
         
         return { context in
             let environment = context.environment[EnvironmentType.self]
@@ -269,6 +270,7 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: background.size.height / 2.0))
             )
             
+            var isSubscription = false
             let subject: StarsImageComponent.Subject
             if !component.extendedMedia.isEmpty {
                 subject = .extendedMedia(component.extendedMedia)
@@ -321,8 +323,17 @@ private final class SheetContent: CombinedComponent {
             
             contentSize.height += 126.0
             
+            let titleString: String
+            if case .starsChatSubscription = context.component.source {
+                //TODO:localize
+                titleString = "Subscribe to the Channel"
+                isSubscription = true
+            } else {
+                titleString = strings.Stars_Transfer_Title
+            }
+            
             let title = title.update(
-                component: Text(text: strings.Stars_Transfer_Title, font: Font.bold(24.0), color: theme.list.itemPrimaryTextColor),
+                component: Text(text: titleString, font: Font.bold(24.0), color: theme.list.itemPrimaryTextColor),
                 availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
                 transition: .immediate
             )
@@ -342,7 +353,9 @@ private final class SheetContent: CombinedComponent {
             
             let amount = component.invoice.totalAmount
             let infoText: String
-            if !component.extendedMedia.isEmpty {
+            if case .starsChatSubscription = context.component.source {
+                infoText = "Do you want to subscribe to **\(state.botPeer?.compactDisplayTitle ?? "")** for **\(strings.Stars_Transfer_Info_Stars(Int32(amount)))** per month?"
+            } else if !component.extendedMedia.isEmpty {
                 var description: String = ""
                 var photoCount: Int32 = 0
                 var videoCount: Int32 = 0
@@ -446,7 +459,12 @@ private final class SheetContent: CombinedComponent {
             }
             
             let amountString = presentationStringsFormattedNumber(Int32(amount), presentationData.dateTimeFormat.groupingSeparator)
-            let buttonAttributedString = NSMutableAttributedString(string: "\(strings.Stars_Transfer_Pay)   #  \(amountString)", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
+            let buttonAttributedString: NSMutableAttributedString
+            if case .starsChatSubscription = component.source {
+                buttonAttributedString = NSMutableAttributedString(string: "Subscribe", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
+            } else {
+                buttonAttributedString = NSMutableAttributedString(string: "\(strings.Stars_Transfer_Pay)   #  \(amountString)", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
+            }
             if let range = buttonAttributedString.string.range(of: "#"), let starImage = state.cachedStarImage?.0 {
                 buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
                 buttonAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xffffff), range: NSRange(range, in: buttonAttributedString.string))
@@ -506,8 +524,13 @@ private final class SheetContent: CombinedComponent {
                         }, completion: { [weak controller] success in
                             if success {
                                 let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
+                                var title = presentationData.strings.Stars_Transfer_PurchasedTitle
                                 let text: String
-                                if let _ = component.invoice.extendedMedia {
+                                if isSubscription {
+                                    //TODO:localize
+                                    title = "Subscription successful!"
+                                    text = "\(presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))) transferred to \(botTitle)."
+                                } else if let _ = component.invoice.extendedMedia {
                                     text = presentationData.strings.Stars_Transfer_UnlockedText( presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string
                                 } else {
                                     text = presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string
@@ -518,18 +541,11 @@ private final class SheetContent: CombinedComponent {
                                         if let lastController = navigationController.viewControllers.last as? ViewController {
                                             let resultController = UndoOverlayController(
                                                 presentationData: presentationData,
-//                                                content: .image(
-//                                                    image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
-//                                                    title: presentationData.strings.Stars_Transfer_PurchasedTitle,
-//                                                    text: text,
-//                                                    round: false,
-//                                                    undoText: nil
-//                                                ),
                                                 content: .universal(
                                                     animation: "StarsSend",
                                                     scale: 0.066,
                                                     colors: [:],
-                                                    title: presentationData.strings.Stars_Transfer_PurchasedTitle,
+                                                    title: title,
                                                     text: text,
                                                     customUndoText: nil,
                                                     timeout: nil
@@ -559,6 +575,36 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + button.size.height / 2.0))
             )
             contentSize.height += button.size.height
+
+            if isSubscription  {
+                contentSize.height += 14.0
+                
+                let termsTextFont = Font.regular(13.0)
+                let termsTextColor = theme.actionSheet.secondaryTextColor
+                let termsLinkColor = theme.actionSheet.controlAccentColor
+                let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsTextFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsTextFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsTextFont, textColor: termsLinkColor), linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
+                })
+                let info = info.update(
+                    component: BalancedTextComponent(
+                        text: .markdown(
+                            text: "By subscribing you agree to the [Terms of Service]()",
+                            attributes: termsMarkdownAttributes
+                        ),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.2
+                    ),
+                    availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
+                    transition: .immediate
+                )
+                context.add(info
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + info.size.height / 2.0))
+                )
+                contentSize.height += info.size.height
+
+            }
+            
             contentSize.height += 48.0
             
             return contentSize
@@ -681,7 +727,7 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
         starsContext: StarsContext,
         invoice: TelegramMediaInvoice,
         source: BotPaymentInvoiceSource,
-        extendedMedia: [TelegramExtendedMedia],
+        extendedMedia: [TelegramExtendedMedia] = [],
         inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>,
         completion: @escaping (Bool) -> Void
     ) {
