@@ -17,6 +17,7 @@ public final class AvailableReactions: Equatable, Codable {
             case effectAnimation
             case aroundAnimation
             case centerAnimation
+            case isStars
         }
         
         public let isEnabled: Bool
@@ -100,7 +101,12 @@ public final class AvailableReactions: Equatable, Codable {
             self.isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
             self.isPremium = try container.decodeIfPresent(Bool.self, forKey: .isPremium) ?? false
             
-            self.value = .builtin(try container.decode(String.self, forKey: .value))
+            let isStars = try container.decodeIfPresent(Bool.self, forKey: .isStars) ?? false
+            if isStars {
+                self.value = .stars
+            } else {
+                self.value = .builtin(try container.decode(String.self, forKey: .value))
+            }
             self.title = try container.decode(String.self, forKey: .title)
             
             let staticIconData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .staticIcon)
@@ -143,7 +149,7 @@ public final class AvailableReactions: Equatable, Codable {
             case .custom:
                 break
             case .stars:
-                break
+                try container.encode(true, forKey: .isStars)
             }
             try container.encode(self.title, forKey: .title)
             
