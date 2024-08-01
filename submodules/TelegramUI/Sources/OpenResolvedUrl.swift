@@ -248,10 +248,10 @@ func openResolvedUrlImpl(
                 }
             })
                 present(controller, nil)
-        case let .instantView(webpage, anchor):
+        case let .instantView(webPage, anchor):
             let sourceLocation = InstantPageSourceLocation(userLocation: .other, peerType: .channel)
-            let pageController = BrowserScreen(context: context, subject: .instantPage(webPage: webpage, anchor: anchor, sourceLocation: sourceLocation))
-            navigationController?.pushViewController(pageController)
+            let browserController = context.sharedContext.makeInstantPageController(context: context, webPage: webPage, anchor: anchor, sourceLocation: sourceLocation)
+            navigationController?.pushViewController(browserController)
         case let .join(link):
             dismissInput()
         

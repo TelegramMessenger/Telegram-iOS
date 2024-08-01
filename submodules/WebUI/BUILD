@@ -40,6 +40,7 @@ swift_library(
         "//submodules/ShareController",
         "//submodules/UndoUI",
         "//submodules/OverlayStatusController",
+        "//submodules/TelegramUIPreferences",
     ],
     visibility = [
         "//visibility:public",

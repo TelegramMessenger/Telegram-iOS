@@ -8,16 +8,6 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 
-public struct InstantPageSourceLocation {
-    public var userLocation: MediaResourceUserLocation
-    public var peerType: MediaAutoDownloadPeerType
-    
-    public init(userLocation: MediaResourceUserLocation, peerType: MediaAutoDownloadPeerType) {
-        self.userLocation = userLocation
-        self.peerType = peerType
-    }
-}
-
 public func instantPageAndAnchor(message: Message) -> (TelegramMediaWebpage, String?)? {
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {

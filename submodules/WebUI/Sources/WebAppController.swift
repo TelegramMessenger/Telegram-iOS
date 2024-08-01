@@ -29,6 +29,7 @@ import ShareController
 import UndoUI
 import AvatarNode
 import OverlayStatusController
+import TelegramUIPreferences
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -830,7 +831,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     }
                                     switch result {
                                     case let .instantView(webPage, anchor):
-                                        let controller = InstantPageController(context: strongSelf.context, webPage: webPage, sourceLocation: InstantPageSourceLocation(userLocation: .other, peerType: .otherPrivate), anchor: anchor)
+                                        let controller = strongSelf.context.sharedContext.makeInstantPageController(context: strongSelf.context, webPage: webPage, anchor: anchor, sourceLocation: InstantPageSourceLocation(userLocation: .other, peerType: .otherPrivate))
                                         strongSelf.controller?.getNavigationController()?.pushViewController(controller)
                                     default:
                                         strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})

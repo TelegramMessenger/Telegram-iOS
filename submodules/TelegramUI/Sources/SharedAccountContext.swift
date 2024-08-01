@@ -1846,8 +1846,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
     }
     
-    public func openChatInstantPage(context: AccountContext, message: Message, sourcePeerType: MediaAutoDownloadPeerType?, navigationController: NavigationController) {
-        openChatInstantPageImpl(context: context, message: message, sourcePeerType: sourcePeerType, navigationController: navigationController)
+    public func makeInstantPageController(context: AccountContext, message: Message, sourcePeerType: MediaAutoDownloadPeerType?, navigationController: NavigationController) -> ViewController? {
+        return makeInstantPageControllerImpl(context: context, message: message, sourcePeerType: sourcePeerType, navigationController: navigationController)
+    }
+    
+    public func makeInstantPageController(context: AccountContext, webPage: TelegramMediaWebpage, anchor: String?, sourceLocation: InstantPageSourceLocation, navigationController: NavigationController) -> ViewController {
+        return makeInstantPageControllerImpl(context: context, webPage: webPage, anchor: anchor, sourceLocation: sourceLocation, navigationController: navigationController)
     }
     
     public func openChatWallpaper(context: AccountContext, message: Message, present: @escaping (ViewController, Any?) -> Void) {
