@@ -1299,3 +1299,18 @@ public func resolveInstantViewUrl(account: Account, url: String) -> Signal<Resol
         }
     }
 }
+
+public func cleanDomain(url: String) -> (domain: String, fullUrl: String) {
+    if let parsedUrl = URL(string: url) {
+        let host: String?
+        let scheme = parsedUrl.scheme ?? "https"
+        if #available(iOS 16.0, *) {
+            host = parsedUrl.host(percentEncoded: true)?.lowercased()
+        } else {
+            host = parsedUrl.host?.lowercased()
+        }
+        return (host ?? url, "\(scheme)://\(host ?? "")")
+    } else {
+        return (url, url)
+    }
+}
