@@ -6,7 +6,9 @@ public protocol MinimizedContainer: ASDisplayNode {
     var controllers: [MinimizableController] { get }
     var isExpanded: Bool { get }
     
-    var willMaximize: (() -> Void)? { get set }
+    var willMaximize: ((MinimizedContainer) -> Void)? { get set }
+    var willDismiss: ((MinimizedContainer) -> Void)? { get set }
+    var didDismiss: ((MinimizedContainer) -> Void)? { get set }
     
     var statusBarStyle: StatusBarStyle { get }
     var statusBarStyleUpdated: (() -> Void)? { get set }
