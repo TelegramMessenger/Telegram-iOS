@@ -6,9 +6,6 @@ extension ReactionsMessageAttribute {
     func withUpdatedResults(_ reactions: Api.MessageReactions) -> ReactionsMessageAttribute {
         switch reactions {
         case let .messageReactions(flags, results, recentReactions, topReactors):
-            //TODO:release
-            let _ = topReactors
-            
             let min = (flags & (1 << 0)) != 0
             let canViewList = (flags & (1 << 2)) != 0
             let isTags = (flags & (1 << 3)) != 0
@@ -57,7 +54,23 @@ extension ReactionsMessageAttribute {
                     }
                 }
             }
-            return ReactionsMessageAttribute(canViewList: canViewList, isTags: isTags, reactions: reactions, recentPeers: parsedRecentReactions)
+            
+            var topPeers: [ReactionsMessageAttribute.TopPeer] = []
+            if let topReactors {
+                for item in topReactors {
+                    switch item {
+                    case let .messageReactor(flags, peerId, count):
+                        topPeers.append(ReactionsMessageAttribute.TopPeer(
+                            peerId: peerId.peerId,
+                            count: count,
+                            isTop: (flags & (1 << 0)) != 0,
+                            isMy: (flags & (1 << 1)) != 0)
+                        )
+                    }
+                }
+            }
+            
+            return ReactionsMessageAttribute(canViewList: canViewList, isTags: isTags, reactions: reactions, recentPeers: parsedRecentReactions, topPeers: topPeers)
         }
     }
 }
@@ -179,7 +192,7 @@ public func mergedMessageReactions(attributes: [MessageAttribute], isTags: Bool)
         recentPeers = updatedRecentPeers
         
         if !reactions.isEmpty {
-            result = ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, isTags: current?.isTags ?? isTags, reactions: reactions, recentPeers: recentPeers)
+            result = ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, isTags: current?.isTags ?? isTags, reactions: reactions, recentPeers: recentPeers, topPeers: current?.topPeers ?? [])
         } else {
             result = nil
         }
@@ -198,9 +211,9 @@ public func mergedMessageReactions(attributes: [MessageAttribute], isTags: Bool)
                 reactions.remove(at: index)
             }
             reactions.insert(MessageReaction(value: .stars, count: updatedCount, chosenOrder: -1), at: 0)
-            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, isTags: current?.isTags ?? isTags, reactions: reactions, recentPeers: result.recentPeers)
+            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, isTags: current?.isTags ?? isTags, reactions: reactions, recentPeers: result.recentPeers, topPeers: result.topPeers)
         } else {
-            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, isTags: current?.isTags ?? isTags, reactions: [MessageReaction(value: .stars, count: pendingStars.count, chosenOrder: -1)], recentPeers: [])
+            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, isTags: current?.isTags ?? isTags, reactions: [MessageReaction(value: .stars, count: pendingStars.count, chosenOrder: -1)], recentPeers: [], topPeers: [])
         }
     } else {
         return result
@@ -211,8 +224,6 @@ extension ReactionsMessageAttribute {
     convenience init(apiReactions: Api.MessageReactions) {
         switch apiReactions {
         case let .messageReactions(flags, results, recentReactions, topReactors):
-            //TODO:release
-            let _ = topReactors
             let canViewList = (flags & (1 << 2)) != 0
             let isTags = (flags & (1 << 3)) != 0
             let parsedRecentReactions: [ReactionsMessageAttribute.RecentPeer]
@@ -234,6 +245,21 @@ extension ReactionsMessageAttribute {
                 parsedRecentReactions = []
             }
             
+            var topPeers: [ReactionsMessageAttribute.TopPeer] = []
+            if let topReactors {
+                for item in topReactors {
+                    switch item {
+                    case let .messageReactor(flags, peerId, count):
+                        topPeers.append(ReactionsMessageAttribute.TopPeer(
+                            peerId: peerId.peerId,
+                            count: count,
+                            isTop: (flags & (1 << 0)) != 0,
+                            isMy: (flags & (1 << 1)) != 0)
+                        )
+                    }
+                }
+            }
+            
             self.init(
                 canViewList: canViewList,
                 isTags: isTags,
@@ -247,7 +273,8 @@ extension ReactionsMessageAttribute {
                         }
                     }
                 },
-                recentPeers: parsedRecentReactions
+                recentPeers: parsedRecentReactions,
+                topPeers: topPeers
             )
         }
     }

@@ -328,10 +328,39 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         }
     }
     
+    public struct TopPeer: Equatable, PostboxCoding {
+        public var peerId: PeerId
+        public var count: Int32
+        public var isTop: Bool
+        public var isMy: Bool
+        
+        public init(peerId: PeerId, count: Int32, isTop: Bool, isMy: Bool) {
+            self.peerId = peerId
+            self.count = count
+            self.isMy = isMy
+            self.isTop = isTop
+        }
+        
+        public init(decoder: PostboxDecoder) {
+            self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
+            self.count = decoder.decodeInt32ForKey("c", orElse: 0)
+            self.isTop = decoder.decodeBoolForKey("t", orElse: false)
+            self.isMy = decoder.decodeBoolForKey("m", orElse: false)
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
+            encoder.encodeInt32(self.count, forKey: "c")
+            encoder.encodeBool(self.isTop, forKey: "t")
+            encoder.encodeBool(self.isMy, forKey: "m")
+        }
+    }
+    
     public let canViewList: Bool
     public let isTags: Bool
     public let reactions: [MessageReaction]
     public let recentPeers: [RecentPeer]
+    public let topPeers: [TopPeer]
     
     public var associatedPeerIds: [PeerId] {
         return self.recentPeers.map(\.peerId)
@@ -357,11 +386,12 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         return result
     }
     
-    public init(canViewList: Bool, isTags: Bool, reactions: [MessageReaction], recentPeers: [RecentPeer]) {
+    public init(canViewList: Bool, isTags: Bool, reactions: [MessageReaction], recentPeers: [RecentPeer], topPeers: [TopPeer]) {
         self.canViewList = canViewList
         self.isTags = isTags
         self.reactions = reactions
         self.recentPeers = recentPeers
+        self.topPeers = topPeers
     }
     
     required public init(decoder: PostboxDecoder) {
@@ -369,6 +399,7 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         self.isTags = decoder.decodeBoolForKey("tg", orElse: false)
         self.reactions = decoder.decodeObjectArrayWithDecoderForKey("r")
         self.recentPeers = decoder.decodeObjectArrayWithDecoderForKey("rp")
+        self.topPeers = decoder.decodeObjectArrayWithDecoderForKey("tp")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -376,6 +407,7 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         encoder.encodeBool(self.isTags, forKey: "tg")
         encoder.encodeObjectArray(self.reactions, forKey: "r")
         encoder.encodeObjectArray(self.recentPeers, forKey: "rp")
+        encoder.encodeObjectArray(self.topPeers, forKey: "tp")
     }
     
     public static func ==(lhs: ReactionsMessageAttribute, rhs: ReactionsMessageAttribute) -> Bool {
@@ -389,6 +421,9 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
             return false
         }
         if lhs.recentPeers != rhs.recentPeers {
+            return false
+        }
+        if lhs.topPeers != rhs.topPeers {
             return false
         }
         return true
@@ -412,7 +447,8 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
                 var recentPeer = recentPeer
                 recentPeer.isUnseen = false
                 return recentPeer
-            }
+            },
+            topPeers: self.topPeers
         )
     }
 }

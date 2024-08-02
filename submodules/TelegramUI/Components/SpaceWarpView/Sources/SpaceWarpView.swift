@@ -313,10 +313,16 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         }
         
         if self.link == nil {
-            self.link = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] deltaTime in
+            var previousTimestamp = CACurrentMediaTime()
+            self.link = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] _ in
                 guard let self else {
                     return
                 }
+                
+                let timestamp = CACurrentMediaTime()
+                let deltaTime = max(0.0, min(10.0 / 60.0, timestamp - previousTimestamp))
+                previousTimestamp = timestamp
+                
                 for shockwave in self.shockwaves {
                     shockwave.timeValue += deltaTime * (1.0 / CGFloat(UIView.animationDurationFactor()))
                 }

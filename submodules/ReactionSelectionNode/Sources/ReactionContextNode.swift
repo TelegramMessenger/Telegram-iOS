@@ -2671,6 +2671,8 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         var selfTargetBounds = targetView.bounds
         if case .builtin = itemNode.item.reaction.rawValue {
             selfTargetBounds = selfTargetBounds.insetBy(dx: -selfTargetBounds.width * 0.5, dy: -selfTargetBounds.height * 0.5)
+        } else if case .stars = itemNode.item.reaction.rawValue {
+            selfTargetBounds = selfTargetBounds.insetBy(dx: -selfTargetBounds.width * 0.5, dy: -selfTargetBounds.height * 0.5)
         }
         
         let selfTargetRect = self.view.convert(selfTargetBounds, from: targetView)
@@ -3773,6 +3775,308 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         })
         
         itemNode.layer.animateScale(from: 1.0, to: (targetSnapshotView.bounds.width * 1.0) / itemNode.bounds.width, duration: duration, removeOnCompletion: false)
+    }
+    
+    public func animateOutToReaction(context: AccountContext, theme: PresentationTheme, item: ReactionItem, value: MessageReaction.Reaction, sourceView: UIView, targetView: UIView, hideNode: Bool, forceSwitchToInlineImmediately: Bool = false, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, onHit: (() -> Void)?, completion: @escaping () -> Void) {
+        let didTriggerExpandedReaction = !"".isEmpty
+        
+        let itemNode = ReactionNode(context: context, theme: theme, item: item, icon: .none, animationCache: context.animationCache, animationRenderer: context.animationRenderer, loopIdle: false, isLocked: false, useDirectRendering: true)
+        if let contents = sourceView.layer.contents {
+            itemNode.setCustomContents(contents: contents)
+        }
+        self.addSubnode(itemNode)
+        itemNode.frame = sourceView.convert(sourceView.bounds, to: self.view)
+        itemNode.updateLayout(size: itemNode.frame.size, isExpanded: false, largeExpanded: false, isPreviewing: false, transition: .immediate)
+        sourceView.layer.isHidden = true
+        
+        let switchToInlineImmediately: Bool
+        if itemNode.item.listAnimation.isVideoEmoji || itemNode.item.listAnimation.isVideoSticker || itemNode.item.listAnimation.isAnimatedSticker || itemNode.item.listAnimation.isStaticEmoji {
+            switch itemNode.item.reaction.rawValue {
+            case .builtin:
+                switchToInlineImmediately = forceSwitchToInlineImmediately
+            case .custom:
+                switchToInlineImmediately = !didTriggerExpandedReaction
+            case .stars:
+                switchToInlineImmediately = forceSwitchToInlineImmediately
+            }
+        } else {
+            switchToInlineImmediately = !didTriggerExpandedReaction
+        }
+        
+        if hideNode {
+            if let animateTargetContainer = animateTargetContainer {
+                animateTargetContainer.isHidden = true
+                targetView.isHidden = true
+            } else {
+                targetView.alpha = 0.0
+                targetView.layer.animateAlpha(from: targetView.alpha, to: 0.0, duration: 0.2)
+            }
+        }
+        
+        itemNode.isExtracted = true
+        let selfSourceRect = itemNode.view.convert(itemNode.view.bounds, to: self.view)
+        
+        var selfTargetBounds = targetView.bounds
+        if case .builtin = itemNode.item.reaction.rawValue {
+            selfTargetBounds = selfTargetBounds.insetBy(dx: -selfTargetBounds.width * 0.5, dy: -selfTargetBounds.height * 0.5)
+        } else if case .stars = itemNode.item.reaction.rawValue {
+            selfTargetBounds = selfTargetBounds.insetBy(dx: -selfTargetBounds.width * 0.5, dy: -selfTargetBounds.height * 0.5)
+        }
+        
+        let selfTargetRect = self.view.convert(selfTargetBounds, from: targetView)
+        
+        var expandedSize: CGSize = selfTargetRect.size
+        if didTriggerExpandedReaction {
+            if itemNode.item.listAnimation.isVideoEmoji || itemNode.item.listAnimation.isVideoSticker || itemNode.item.listAnimation.isStaticEmoji {
+                expandedSize = CGSize(width: 80.0, height: 80.0)
+            } else {
+                expandedSize = CGSize(width: 120.0, height: 120.0)
+            }
+        }
+        
+        let expandedFrame = CGRect(origin: CGPoint(x: selfTargetRect.midX - expandedSize.width / 2.0, y: selfTargetRect.midY - expandedSize.height / 2.0), size: expandedSize)
+        
+        var effectFrame: CGRect
+        let incomingMessage: Bool = expandedFrame.midX < self.bounds.width / 2.0
+        if didTriggerExpandedReaction {
+            let expandFactor: CGFloat = 0.5
+            effectFrame = expandedFrame.insetBy(dx: -expandedFrame.width * expandFactor, dy: -expandedFrame.height * expandFactor).offsetBy(dx: incomingMessage ? (expandedFrame.width - 50.0) : (-expandedFrame.width + 50.0), dy: 0.0)
+        } else {
+            effectFrame = expandedFrame.insetBy(dx: -expandedSize.width, dy: -expandedSize.height)
+            if itemNode.item.isCustom {
+                effectFrame = effectFrame.insetBy(dx: -expandedSize.width, dy: -expandedSize.height)
+            }
+        }
+        
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .linear)
+        
+        self.addSubnode(itemNode)
+        itemNode.position = expandedFrame.center
+        transition.updateBounds(node: itemNode, bounds: CGRect(origin: CGPoint(), size: expandedFrame.size))
+        itemNode.updateLayout(size: expandedFrame.size, isExpanded: true, largeExpanded: didTriggerExpandedReaction, isPreviewing: false, transition: transition)
+        
+        let additionalAnimationNode: DefaultAnimatedStickerNodeImpl?
+        var genericAnimationView: AnimationView?
+        
+        var additionalAnimation: TelegramMediaFile?
+        if didTriggerExpandedReaction {
+            additionalAnimation = itemNode.item.largeApplicationAnimation
+        } else {
+            additionalAnimation = itemNode.item.applicationAnimation
+        }
+        
+        if let additionalAnimation = additionalAnimation {
+            let additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl()
+            additionalAnimationNode = additionalAnimationNodeValue
+            if didTriggerExpandedReaction {
+                if incomingMessage {
+                    additionalAnimationNodeValue.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                }
+            }
+            
+            additionalAnimationNodeValue.setup(source: AnimatedStickerResourceSource(account: itemNode.context.account, resource: additionalAnimation.resource), width: Int(effectFrame.width * 2.0), height: Int(effectFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(additionalAnimation.resource.id)))
+            additionalAnimationNodeValue.frame = effectFrame
+            additionalAnimationNodeValue.updateLayout(size: effectFrame.size)
+            self.addSubnode(additionalAnimationNodeValue)
+        } else if itemNode.item.isCustom {
+            additionalAnimationNode = nil
+            
+            var effectData: Data?
+            if didTriggerExpandedReaction {
+                if let url = getAppBundle().url(forResource: "generic_reaction_effect", withExtension: "json") {
+                    effectData = try? Data(contentsOf: url)
+                }
+            } else if let genericReactionEffect = self.genericReactionEffect, let data = try? Data(contentsOf: URL(fileURLWithPath: genericReactionEffect)) {
+                effectData = TGGUnzipData(data, 5 * 1024 * 1024) ?? data
+            } else {
+                if let url = getAppBundle().url(forResource: "generic_reaction_small_effect", withExtension: "json") {
+                    effectData = try? Data(contentsOf: url)
+                }
+            }
+            
+            if let effectData = effectData, let composition = try? Animation.from(data: effectData) {
+                let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
+                view.animationSpeed = 1.0
+                view.backgroundColor = nil
+                view.isOpaque = false
+                
+                if incomingMessage {
+                    view.layer.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                }
+                
+                genericAnimationView = view
+                
+                let animationCache = itemNode.context.animationCache
+                let animationRenderer = itemNode.context.animationRenderer
+                
+                for i in 1 ... 32 {
+                    let allLayers = view.allLayers(forKeypath: AnimationKeypath(keypath: "placeholder_\(i)"))
+                    for animationLayer in allLayers {
+                        let baseItemLayer = InlineStickerItemLayer(
+                            context: itemNode.context,
+                            userLocation: .other,
+                            attemptSynchronousLoad: false,
+                            emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
+                            file: itemNode.item.listAnimation,
+                            cache: animationCache,
+                            renderer: animationRenderer,
+                            placeholderColor: UIColor(white: 0.0, alpha: 0.0),
+                            pointSize: CGSize(width: didTriggerExpandedReaction ? 64.0 : 32.0, height: didTriggerExpandedReaction ? 64.0 : 32.0)
+                        )
+                        
+                        if let sublayers = animationLayer.sublayers {
+                            for sublayer in sublayers {
+                                sublayer.isHidden = true
+                            }
+                        }
+                        
+                        baseItemLayer.isVisibleForAnimations = true
+                        baseItemLayer.frame = CGRect(origin: CGPoint(x: -0.0, y: -0.0), size: CGSize(width: 500.0, height: 500.0))
+                        animationLayer.addSublayer(baseItemLayer)
+                    }
+                }
+                
+                if didTriggerExpandedReaction {
+                    view.frame = effectFrame.insetBy(dx: -10.0, dy: -10.0).offsetBy(dx: incomingMessage ? 22.0 : -22.0, dy: 0.0)
+                } else {
+                    view.frame = effectFrame.insetBy(dx: -20.0, dy: -20.0)
+                }
+                self.view.addSubview(view)
+            }
+        } else {
+            additionalAnimationNode = nil
+        }
+        
+        var mainAnimationCompleted = false
+        var additionalAnimationCompleted = false
+        let intermediateCompletion: () -> Void = {
+            if mainAnimationCompleted && additionalAnimationCompleted {
+                completion()
+            }
+        }
+        
+        if let additionalAnimationNode = additionalAnimationNode {
+            additionalAnimationNode.completed = { _ in
+                additionalAnimationCompleted = true
+                intermediateCompletion()
+            }
+        } else if let genericAnimationView = genericAnimationView {
+            genericAnimationView.play(completion: { _ in
+                additionalAnimationCompleted = true
+                intermediateCompletion()
+            })
+        } else {
+            additionalAnimationCompleted = true
+        }
+        
+        transition.animatePositionWithKeyframes(node: itemNode, keyframes: generateParabollicMotionKeyframes(from: selfSourceRect.center, to: expandedFrame.center, elevation: 30.0), completion: { [weak itemNode, weak targetView, weak animateTargetContainer] _ in
+            let afterCompletion: () -> Void = {
+                if didTriggerExpandedReaction {
+                    return
+                }
+                guard let itemNode = itemNode else {
+                    return
+                }
+                if let animateTargetContainer = animateTargetContainer {
+                    animateTargetContainer.isHidden = false
+                }
+                
+                if let targetView = targetView {
+                    targetView.isHidden = false
+                    targetView.alpha = 1.0
+                    targetView.layer.removeAnimation(forKey: "opacity")
+                }
+                
+                HapticFeedback().tap()
+                onHit?()
+                
+                if let targetView = targetView as? ReactionIconView {
+                    if switchToInlineImmediately {
+                        targetView.updateIsAnimationHidden(isAnimationHidden: false, transition: .immediate)
+                        itemNode.isHidden = true
+                    } else {
+                        targetView.updateIsAnimationHidden(isAnimationHidden: true, transition: .immediate)
+                        targetView.addSubnode(itemNode)
+                        itemNode.frame = selfTargetBounds
+                    }
+                } else if let targetView = targetView as? UIImageView {
+                    itemNode.isHidden = true
+                    targetView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
+                    targetView.layer.animateScale(from: 0.2, to: 1.0, duration: 0.12)
+                }
+                
+                if switchToInlineImmediately {
+                    mainAnimationCompleted = true
+                    intermediateCompletion()
+                }
+            }
+            
+            if switchToInlineImmediately {
+                afterCompletion()
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: afterCompletion)
+            }
+        })
+        
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.15 * UIView.animationDurationFactor(), execute: {
+            additionalAnimationNode?.visibility = true
+            if let animateTargetContainer = animateTargetContainer {
+                animateTargetContainer.isHidden = false
+                animateTargetContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                animateTargetContainer.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+            }
+        })
+        
+        if !switchToInlineImmediately {
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + min(5.0, 2.0 * UIView.animationDurationFactor()), execute: {
+                if didTriggerExpandedReaction {
+                    self.animateFromItemNodeToReaction(itemNode: itemNode, targetView: targetView, hideNode: hideNode, completion: { [weak self] in
+                        if let strongSelf = self, didTriggerExpandedReaction, let addStandaloneReactionAnimation = addStandaloneReactionAnimation {
+                            let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: strongSelf.genericReactionEffect)
+                            
+                            addStandaloneReactionAnimation(standaloneReactionAnimation)
+                            
+                            standaloneReactionAnimation.animateReactionSelection(
+                                context: context,
+                                theme: theme,
+                                animationCache: context.animationCache,
+                                reaction: itemNode.item,
+                                avatarPeers: [],
+                                playHaptic: false,
+                                isLarge: false,
+                                targetView: targetView,
+                                addStandaloneReactionAnimation: nil,
+                                completion: { [weak standaloneReactionAnimation] in
+                                    if let _ = standaloneReactionAnimation?.supernode {
+                                        standaloneReactionAnimation?.removeFromSupernode()
+                                    } else {
+                                        standaloneReactionAnimation?.view.removeFromSuperview()
+                                    }
+                                }
+                            )
+                        }
+                        
+                        mainAnimationCompleted = true
+                        intermediateCompletion()
+                    })
+                } else {
+                    if hideNode {
+                        targetView.alpha = 1.0
+                        targetView.isHidden = false
+                        if let targetView = targetView as? ReactionIconView {
+                            targetView.updateIsAnimationHidden(isAnimationHidden: false, transition: .immediate)
+                            if let _ = itemNode.supernode {
+                                itemNode.removeFromSupernode()
+                            } else {
+                                itemNode.view.removeFromSuperview()
+                            }
+                        }
+                    }
+                    mainAnimationCompleted = true
+                    intermediateCompletion()
+                }
+            })
+        }
     }
     
     public func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {
