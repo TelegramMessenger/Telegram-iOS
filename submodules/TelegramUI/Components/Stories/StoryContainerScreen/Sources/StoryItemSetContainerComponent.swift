@@ -6118,7 +6118,7 @@ public final class StoryItemSetContainerComponent: Component {
                     self.openStoryEditing()
                 })))
                 
-                if case .file = component.slice.item.storyItem.media {
+                if case .file = component.slice.item.storyItem.media, component.slice.item.storyItem.isPinned {
                     items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_EditCover, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Stories/Context Menu/EditCover"), color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] _, a in
@@ -6316,7 +6316,7 @@ public final class StoryItemSetContainerComponent: Component {
                         self.openStoryEditing()
                     })))
                     
-                    if case .file = component.slice.item.storyItem.media {
+                    if case .file = component.slice.item.storyItem.media, component.slice.item.storyItem.isPinned {
                         items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_EditCover, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Stories/Context Menu/EditCover"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, a in

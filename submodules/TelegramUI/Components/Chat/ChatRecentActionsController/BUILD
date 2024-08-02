@@ -51,6 +51,7 @@ swift_library(
         "//submodules/TextFormat",
         "//submodules/CounterControllerTitleView",
         "//submodules/TelegramUI/Components/AdminUserActionsSheet",
+        "//submodules/BrowserUI",
     ],
     visibility = [
         "//visibility:public",

@@ -433,7 +433,7 @@ public func chatTextLinkEditController(sharedContext: SharedAccountContext, upda
             return
         }
         let updatedLink = explicitUrl(contentNode.link)
-        if !updatedLink.isEmpty && isValidUrl(updatedLink, validSchemes: ["http": true, "https": true, "tg": false, "ton": false]) {
+        if !updatedLink.isEmpty && isValidUrl(updatedLink, validSchemes: ["http": true, "https": true, "tg": false, "ton": false, "tonsite": true]) {
             dismissImpl?(true)
             apply(updatedLink)
         } else if allowEmpty && contentNode.link.isEmpty {

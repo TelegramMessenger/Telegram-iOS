@@ -176,23 +176,7 @@ final class BrowserAddressListItemComponent: Component {
             if case let .Loaded(content) = component.webPage.content {
                 title = content.title ?? content.url
                 
-                var address = content.url
-                if let components = URLComponents(string: address) {
-                    if #available(iOS 16.0, *), let encodedHost = components.encodedHost {
-                        if let decodedHost = components.host, encodedHost != decodedHost {
-                            address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
-                        }
-                    } else if let encodedHost = components.host {
-                        if let decodedHost = components.host?.idnaDecoded, encodedHost != decodedHost {
-                            address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
-                        }
-                    }
-                }
-                address = address.replacingOccurrences(of: "https://www.", with: "")
-                address = address.replacingOccurrences(of: "https://", with: "")
-                address = address.replacingOccurrences(of: "tonsite://", with: "")
-                address = address.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-                subtitle = address
+                subtitle = getDisplayUrl(content.url)
                 
                 parsedUrl = URL(string: content.url)
                 
