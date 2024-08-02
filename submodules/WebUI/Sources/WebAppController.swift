@@ -29,6 +29,7 @@ import ShareController
 import UndoUI
 import AvatarNode
 import OverlayStatusController
+import TelegramUIPreferences
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -333,9 +334,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if let parsedUrl = URL(string: url) {
                     self.webView?.load(URLRequest(url: parsedUrl))
                 }
-                
-                self.checkBotIdAndUrl(url)
-                
                 if let keepAliveSignal = controller.keepAliveSignal {
                     self.keepAliveDisposable = (keepAliveSignal
                     |> deliverOnMainQueue).start(error: { [weak self] _ in
@@ -355,7 +353,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.checkBotIdAndUrl(result.url)
                         if let parsedUrl = URL(string: result.url) {
                             strongSelf.queryId = result.queryId
                             strongSelf.webView?.load(URLRequest(url: parsedUrl))
@@ -368,17 +365,16 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             guard let self, let controller = self.controller else {
                                 return
                             }
-                            guard case let .peer(peer, params) = result, let peer, case let .withBotApp(appStart) = params else {
+                            guard case let .peer(peer, params) = result, let peer, case let .withBotApp(appStart) = params, let botApp = appStart.botApp else {
                                 controller.dismiss()
                                 return
                             }
-                            let _ = (self.context.engine.messages.requestAppWebView(peerId: peer.id, appReference: .id(id: appStart.botApp.id, accessHash: appStart.botApp.accessHash), payload: appStart.payload, themeParams: generateWebAppThemeParams(self.presentationData.theme), compact: appStart.compact, allowWrite: true)
+                            let _ = (self.context.engine.messages.requestAppWebView(peerId: peer.id, appReference: .id(id: botApp.id, accessHash: botApp.accessHash), payload: appStart.payload, themeParams: generateWebAppThemeParams(self.presentationData.theme), compact: appStart.compact, allowWrite: true)
                             |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
                                 guard let self, let parsedUrl = URL(string: result.url) else {
                                     return
                                 }
-                                self.checkBotIdAndUrl(result.url)
-                                self.controller?.titleView?.title = WebAppTitle(title: appStart.botApp.title, counter: self.presentationData.strings.WebApp_Miniapp, isVerified: controller.botVerified)
+                                self.controller?.titleView?.title = WebAppTitle(title: botApp.title, counter: self.presentationData.strings.WebApp_Miniapp, isVerified: controller.botVerified)
                                 self.webView?.load(URLRequest(url: parsedUrl))
                             })
                         })
@@ -390,9 +386,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             }
                             strongSelf.queryId = result.queryId
                             strongSelf.webView?.load(URLRequest(url: parsedUrl))
-                            
-                            strongSelf.checkBotIdAndUrl(result.url)
-                            
+                                                        
                             if let keepAliveSignal = result.keepAliveSignal {
                                 strongSelf.keepAliveDisposable = (keepAliveSignal
                                 |> deliverOnMainQueue).start(error: { [weak self] _ in
@@ -410,14 +404,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 }
             }
-        }
-        
-        func checkBotIdAndUrl(_ url: String) {
-//            if url.hasPrefix("https://walletbot.me"), let botId = self.controller?.botId.id._internalGetInt64Value(), botId != 1985737506 {
-//                let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: "Bot id mismatch, please report steps to app developer", actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
-//                })])
-//                self.controller?.present(alertController, in: .window(.root))
-//            }
         }
         
         @objc fileprivate func mainButtonPressed() {
@@ -845,7 +831,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     }
                                     switch result {
                                     case let .instantView(webPage, anchor):
-                                        let controller = InstantPageController(context: strongSelf.context, webPage: webPage, sourceLocation: InstantPageSourceLocation(userLocation: .other, peerType: .otherPrivate), anchor: anchor)
+                                        let controller = strongSelf.context.sharedContext.makeInstantPageController(context: strongSelf.context, webPage: webPage, anchor: anchor, sourceLocation: InstantPageSourceLocation(userLocation: .other, peerType: .otherPrivate))
                                         strongSelf.controller?.getNavigationController()?.pushViewController(controller)
                                     default:
                                         strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
@@ -1164,15 +1150,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                         transitionOut: nil
                                     )
                                     let controller = self.context.sharedContext.makeStoryMediaEditorScreen(context: self.context, source: source, text: text, link: linkUrl.flatMap { ($0, linkName) }, completion: { result, commit in
-//                                        let targetPeerId: EnginePeer.Id
-                                        let target: Stories.PendingTarget
-//                                        if let sendAsPeerId = result.options.sendAsPeerId {
-//                                            target = .peer(sendAsPeerId)
-//                                            targetPeerId = sendAsPeerId
-//                                        } else {
-                                            target = .myStories
-//                                            targetPeerId = self.context.account.peerId
-//                                        }
+                                        let target: Stories.PendingTarget = result.target
                                         externalState.storyTarget = target
                                         
                                         if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {

@@ -5940,12 +5940,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
             self.push(controller)
             
-            editCoverImpl = { [weak self, weak controller] in
+            editCoverImpl = { [weak self] in
                 if let self {
                     self.node.openCoverSelection(exclusive: false)
-                }
-                if let controller {
-                    controller.dismiss()
                 }
             }
         })

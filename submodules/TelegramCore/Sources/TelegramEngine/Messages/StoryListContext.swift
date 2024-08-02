@@ -2326,7 +2326,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
                 guard let peer, let inputUser = apiInputUser(peer) else {
                     return .single((nil, nil))
                 }
-                return _internal_requestBotPreview(network: account.network, peerId: peerId, inputUser: inputUser, language: language)
+                return _internal_requestBotAdminPreview(network: account.network, peerId: peerId, inputUser: inputUser, language: language)
                 |> map { botPreview in
                     return (botPreview, peer)
                 }
