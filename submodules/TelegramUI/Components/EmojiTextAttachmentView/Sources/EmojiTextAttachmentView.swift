@@ -776,7 +776,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
 }
 
 public final class EmojiTextAttachmentView: UIView {
-    private let contentLayer: InlineStickerItemLayer
+    public let contentLayer: InlineStickerItemLayer
     
     public var isActive: Bool = true {
         didSet {
@@ -826,7 +826,7 @@ public final class EmojiTextAttachmentView: UIView {
 public final class CustomEmojiContainerView: UIView {
     private let emojiViewProvider: (ChatTextInputTextCustomEmojiAttribute) -> UIView?
     
-    private var emojiLayers: [InlineStickerItemLayer.Key: UIView] = [:]
+    public private(set) var emojiLayers: [InlineStickerItemLayer.Key: UIView] = [:]
     
     public init(emojiViewProvider: @escaping (ChatTextInputTextCustomEmojiAttribute) -> UIView?) {
         self.emojiViewProvider = emojiViewProvider
