@@ -2196,6 +2196,13 @@ public final class BotPreviewStoryListContext: StoryListContext {
                                 self.nextId += 1
                                 self.pendingIdMapping[item.stableId] = mappedId
                             }
+                            
+                            if let mediaId = _internal_lookUpPendingBotPreviewIdMapping(peerId: self.peerId, stableId: item.stableId) {
+                                if let botPreview, botPreview.items.contains(where: { $0.media.id == mediaId }) {
+                                    continue
+                                }
+                            }
+                            
                             if case let .botPreview(itemPeerId, itemLanguage) = item.target, itemPeerId == peerId, itemLanguage == language {
                                 items.append(State.Item(
                                     id: StoryId(peerId: peerId, id: mappedId),
@@ -2551,8 +2558,24 @@ public final class BotPreviewStoryListContext: StoryListContext {
         }
         
         private func pushLanguageItems() {
-            var items = self.localItems
+            var items: [State.Item] = []
+            for item in self.localItems {
+                var stableId: Int32?
+                inner: for (from, to) in self.pendingIdMapping {
+                    if to == item.id.id {
+                        stableId = from
+                        break inner
+                    }
+                }
+                if let stableId, let mediaId = _internal_lookUpPendingBotPreviewIdMapping(peerId: self.peerId, stableId: stableId) {
+                    if self.remoteItems.contains(where: { $0.storyItem.media.id == mediaId }) {
+                        continue
+                    }
+                }
+                items.append(item)
+            }
             items.append(contentsOf: self.remoteItems)
+            
             self.stateValue = State(
                 peerReference: self.stateValue.peerReference,
                 items: items,
