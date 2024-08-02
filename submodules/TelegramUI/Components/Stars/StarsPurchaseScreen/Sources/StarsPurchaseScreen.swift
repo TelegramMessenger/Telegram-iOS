@@ -208,7 +208,8 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             
             let textString: String
             switch context.component.purpose {
-            case .generic:
+            case let .generic(requiredStars):
+                let _ = requiredStars
                 textString = strings.Stars_Purchase_GetStarsInfo
             case .gift:
                 textString = strings.Stars_Purchase_GiftInfo(component.peers.first?.value.compactDisplayTitle ?? "").string
@@ -299,8 +300,13 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             if let products = state.products, let balance = context.component.balance {
                 var minimumCount: Int64?
                 if let requiredStars = context.component.purpose.requiredStars {
-                    minimumCount = requiredStars - balance
+                    if case .generic = context.component.purpose {
+                        minimumCount = requiredStars
+                    } else {
+                        minimumCount = requiredStars - balance
+                    }
                 }
+                
                 for product in products {
                     if let minimumCount, minimumCount > product.count && !(items.isEmpty && product.id == products.last?.id) {
                         continue
@@ -810,8 +816,12 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
             
             let titleText: String
             switch context.component.purpose {
-            case .generic:
-                titleText = strings.Stars_Purchase_GetStars
+            case let .generic(requiredStars):
+                if let requiredStars {
+                    titleText = strings.Stars_Purchase_StarsNeeded(Int32(requiredStars))
+                } else {
+                    titleText = strings.Stars_Purchase_GetStars
+                }
             case .gift:
                 titleText = strings.Stars_Purchase_GiftStars
             case let .transfer(_, requiredStars), let .subscription(_, requiredStars, _), let .unlockMedia(requiredStars):
@@ -1216,6 +1226,8 @@ private extension StarsPurchasePurpose {
     
     var requiredStars: Int64? {
         switch self {
+        case let .generic(requiredStars):
+            return requiredStars
         case let .transfer(_, requiredStars):
             return requiredStars
         case let .subscription(_, requiredStars, _):

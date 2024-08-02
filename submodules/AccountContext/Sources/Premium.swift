@@ -123,7 +123,7 @@ public enum BoostSubject: Equatable {
 }
 
 public enum StarsPurchasePurpose: Equatable {
-    case generic
+    case generic(requiredStars: Int64?)
     case transfer(peerId: EnginePeer.Id, requiredStars: Int64)
     case subscription(peerId: EnginePeer.Id, requiredStars: Int64, renew: Bool)
     case gift(peerId: EnginePeer.Id)

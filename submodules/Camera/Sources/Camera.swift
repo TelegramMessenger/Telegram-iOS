@@ -4,6 +4,7 @@ import SwiftSignalKit
 import AVFoundation
 import CoreImage
 import TelegramCore
+import DeviceModel
 
 final class CameraSession {
     private let singleSession: AVCaptureSession?

@@ -656,6 +656,14 @@ func openResolvedUrlImpl(
             if let navigationController = navigationController {
                 navigationController.pushViewController(controller, animated: true)
             }
+        case let .starsTopup(amount):
+            dismissInput()
+            if let starsContext = context.starsContext {
+                let controller = context.sharedContext.makeStarsPurchaseScreen(context: context, starsContext: starsContext, options: [], purpose: .generic(requiredStars: amount), completion: { _ in })
+                if let navigationController = navigationController {
+                    navigationController.pushViewController(controller, animated: true)
+                }
+            }
         case let .joinVoiceChat(peerId, invite):
             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             |> deliverOnMainQueue).start(next: { peer in
