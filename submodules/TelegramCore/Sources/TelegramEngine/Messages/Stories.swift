@@ -1028,6 +1028,7 @@ private struct PendingStoryIdMappingKey: Hashable {
 }
 
 private let pendingStoryIdMapping = Atomic<[PendingStoryIdMappingKey: Int32]>(value: [:])
+private let pendingBotPreviewIdMapping = Atomic<[PendingStoryIdMappingKey: MediaId]>(value: [:])
 
 func _internal_lookUpPendingStoryIdMapping(peerId: PeerId, stableId: Int32) -> Int32? {
     return pendingStoryIdMapping.with { dict in
@@ -1037,6 +1038,22 @@ func _internal_lookUpPendingStoryIdMapping(peerId: PeerId, stableId: Int32) -> I
 
 private func _internal_putPendingStoryIdMapping(peerId: PeerId, stableId: Int32, id: Int32) {
     let _ = pendingStoryIdMapping.modify { dict in
+        var dict = dict
+        
+        dict[PendingStoryIdMappingKey(peerId: peerId, stableId: stableId)] = id
+        
+        return dict
+    }
+}
+
+func _internal_lookUpPendingBotPreviewIdMapping(peerId: PeerId, stableId: Int32) -> MediaId? {
+    return pendingBotPreviewIdMapping.with { dict in
+        return dict[PendingStoryIdMappingKey(peerId: peerId, stableId: stableId)]
+    }
+}
+
+private func _internal_putPendingBotPreviewIdMapping(peerId: PeerId, stableId: Int32, id: MediaId) {
+    let _ = pendingBotPreviewIdMapping.modify { dict in
         var dict = dict
         
         dict[PendingStoryIdMappingKey(peerId: peerId, stableId: stableId)] = id
@@ -1328,6 +1345,10 @@ func _internal_uploadBotPreviewImpl(
                                         applyMediaResourceChanges(from: originalMedia, to: resultMediaValue, postbox: postbox, force: originalMedia is TelegramMediaFile && resultMediaValue is TelegramMediaFile)
                                         
                                         let addedItem = CachedUserData.BotPreview.Item(media: resultMediaValue, timestamp: date)
+                                        
+                                        if let mediaId = resultMediaValue.id {
+                                            _internal_putPendingBotPreviewIdMapping(peerId: toPeerId, stableId: stableId, id: mediaId)
+                                        }
                                         
                                         if language == nil {
                                             transaction.updatePeerCachedData(peerIds: Set([toPeerId]), update: { _, current in

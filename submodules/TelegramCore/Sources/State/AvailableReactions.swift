@@ -181,7 +181,7 @@ public final class AvailableReactions: Equatable, Codable {
     ) {
         self.hash = hash
         
-        #if DEBUG
+        //TODO:release
         var reactions = reactions
         reactions.removeAll(where: { if case .stars = $0.value { return true } else { return false } })
         if let item = reactions.first(where: { if case .builtin("🤩") = $0.value { return true } else { return false } }) {
@@ -200,9 +200,6 @@ public final class AvailableReactions: Equatable, Codable {
             ))
         }
         self.reactions = reactions
-        #else
-        self.reactions = reactions
-        #endif
     }
     
     public static func ==(lhs: AvailableReactions, rhs: AvailableReactions) -> Bool {
@@ -219,7 +216,8 @@ public final class AvailableReactions: Equatable, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
         self.hash = try container.decodeIfPresent(Int32.self, forKey: .newHash) ?? 0
-        #if DEBUG
+        
+        //TODO:release
         var reactions = try container.decode([Reaction].self, forKey: .reactions)
         reactions.removeAll(where: { if case .stars = $0.value { return true } else { return false } })
         if let item = reactions.first(where: { if case .builtin("🤩") = $0.value { return true } else { return false } }) {
@@ -238,9 +236,6 @@ public final class AvailableReactions: Equatable, Codable {
             ))
         }
         self.reactions = reactions
-        #else
-        self.reactions = try container.decode([Reaction].self, forKey: .reactions)
-        #endif
     }
     
     public func encode(to encoder: Encoder) throws {
