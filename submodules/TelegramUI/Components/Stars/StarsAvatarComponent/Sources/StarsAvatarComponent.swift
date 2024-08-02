@@ -309,15 +309,21 @@ public final class StarsAvatarComponent: Component {
 
 public final class StarsLabelComponent: CombinedComponent {
     let text: NSAttributedString
+    let subtext: NSAttributedString?
     
     public init(
-        text: NSAttributedString
+        text: NSAttributedString,
+        subtext: NSAttributedString? = nil
     ) {
         self.text = text
+        self.subtext = subtext
     }
     
     public static func ==(lhs: StarsLabelComponent, rhs: StarsLabelComponent) -> Bool {
         if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.subtext != rhs.subtext {
             return false
         }
         return true
@@ -336,6 +342,15 @@ public final class StarsLabelComponent: CombinedComponent {
                 transition: context.transition
             )
             
+            let subtext: _UpdatedChildComponent? = nil
+//            if let sublabel = component.subtext {
+//                subtext = text.update(
+//                    component: MultilineTextComponent(text: .plain(sublabel)),
+//                    availableSize: CGSize(width: 100.0, height: 40.0),
+//                    transition: context.transition
+//                )
+//            }
+                        
             let iconSize = CGSize(width: 20.0, height: 20.0)
             let icon = icon.update(
                 component: BundleIconComponent(
@@ -348,13 +363,27 @@ public final class StarsLabelComponent: CombinedComponent {
             
             let spacing: CGFloat = 3.0
             let totalWidth = text.size.width + spacing + iconSize.width
-            let size = CGSize(width: totalWidth, height: iconSize.height)
+            var size = CGSize(width: totalWidth, height: iconSize.height)
+            let firstLineSize = size.height
+            if let _ = subtext {
+                size.height += 20.0
+            }
+            
+            let iconPosition: CGFloat
+            let textPosition: CGFloat
+            if let _ = component.subtext {
+                iconPosition = iconSize.width / 2.0
+                textPosition = totalWidth - text.size.width / 2.0
+            } else {
+                textPosition = text.size.width / 2.0
+                iconPosition = totalWidth - iconSize.width / 2.0
+            }
             
             context.add(text
-                .position(CGPoint(x: text.size.width / 2.0, y: size.height / 2.0))
+                .position(CGPoint(x: textPosition, y: firstLineSize / 2.0))
             )
             context.add(icon
-                .position(CGPoint(x: totalWidth - iconSize.width / 2.0, y: size.height / 2.0 - UIScreenPixel))
+                .position(CGPoint(x: iconPosition, y: firstLineSize / 2.0 - UIScreenPixel))
             )
             return size
         }

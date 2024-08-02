@@ -118,6 +118,10 @@ final class StarsTransactionsScreenComponent: Component {
         
         private var previousBalance: Int64?
         
+        private var subscriptionsContext: StarsSubscriptionsContext?
+        private var subscriptionsStateDisposable: Disposable?
+        private var subscriptionsState: StarsSubscriptionsContext.State?
+        
         private var allTransactionsContext: StarsTransactionsContext?
         private var incomingTransactionsContext: StarsTransactionsContext?
         private var outgoingTransactionsContext: StarsTransactionsContext?
@@ -298,6 +302,20 @@ final class StarsTransactionsScreenComponent: Component {
                         return
                     }
                     self.starsState = state
+                    
+                    if !self.isUpdating {
+                        self.state?.updated()
+                    }
+                })
+                
+                let subscriptionsContext = component.context.engine.payments.peerStarsSubscriptionsContext(starsContext: component.starsContext)
+                self.subscriptionsContext = subscriptionsContext
+                self.subscriptionsStateDisposable = (subscriptionsContext.state
+                |> deliverOnMainQueue).start(next: { [weak self] state in
+                    guard let self else {
+                        return
+                    }
+                    self.subscriptionsState = state
                     
                     if !self.isUpdating {
                         self.state?.updated()
@@ -578,8 +596,8 @@ final class StarsTransactionsScreenComponent: Component {
             
             let fontBaseDisplaySize = 17.0
             var subscriptionsItems: [AnyComponentWithIdentity<Empty>] = []
-            if let starsState = self.starsState {
-                for subscription in starsState.subscriptions {
+            if let subscriptionsState = self.subscriptionsState {
+                for subscription in subscriptionsState.subscriptions {
                     var titleComponents: [AnyComponentWithIdentity<Empty>] = []
                     titleComponents.append(
                         AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
@@ -591,7 +609,18 @@ final class StarsTransactionsScreenComponent: Component {
                             maximumNumberOfLines: 1
                         )))
                     )
+                    titleComponents.append(
+                        AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "renews on 2 Aug",
+                                font: Font.regular(floor(fontBaseDisplaySize * 15.0 / 17.0)),
+                                textColor: environment.theme.list.itemSecondaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        )))
+                    )
                     let itemLabel = NSAttributedString(string: "\(subscription.pricing.amount)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor)
+                    let itemSublabel = NSAttributedString(string: "per month", font: Font.regular(floor(fontBaseDisplaySize * 14.0 / 17.0)), textColor: environment.theme.list.itemPrimaryTextColor)
                     
                     subscriptionsItems.append(AnyComponentWithIdentity(
                         id: subscription.id,
@@ -602,7 +631,7 @@ final class StarsTransactionsScreenComponent: Component {
                                 contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 8.0, right: 0.0),
                                 leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: .peer(subscription.peer), photo: nil, media: [], backgroundColor: environment.theme.list.plainBackgroundColor))), false),
                                 icon: nil,
-                                accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
+                                accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel, subtext: itemSublabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
                                 action: { [weak self] _ in
                                     guard let self, let _ = self.component else {
                                         return

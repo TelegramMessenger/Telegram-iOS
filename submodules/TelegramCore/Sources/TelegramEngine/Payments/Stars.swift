@@ -923,6 +923,8 @@ private final class StarsSubscriptionsContextImpl {
         
         self._state = StarsSubscriptionsContext.State(subscriptions: currentSubscriptions, canLoadMore: canLoadMore, isLoading: false)
         self._statePromise.set(.single(self._state))
+        
+        self.loadMore()
     }
     
     deinit {
@@ -954,6 +956,10 @@ private final class StarsSubscriptionsContextImpl {
             updatedState.isLoading = false
             updatedState.canLoadMore = self.nextOffset != nil
             self.updateState(updatedState)
+            
+            if updatedState.canLoadMore {
+                self.loadMore()
+            }
         }))
     }
     

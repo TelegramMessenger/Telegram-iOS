@@ -828,28 +828,18 @@ public final class StarsImageComponent: Component {
             
             if let _ = component.icon {
                 let smallIconView: UIImageView
-                let smallIconOutlineView: UIImageView
-                if let current = self.smallIconView, let currentOutline = self.smallIconOutlineView {
+                if let current = self.smallIconView {
                     smallIconView = current
-                    smallIconOutlineView = currentOutline
                 } else {
-                    smallIconOutlineView = UIImageView()
-                    containerNode.view.addSubview(smallIconOutlineView)
-                    
                     smallIconView = UIImageView()
                     containerNode.view.addSubview(smallIconView)
                 }
                 
-                smallIconView.image = UIImage(bundleImageName: "Premium/Stars/BalanceStar")
-                if smallIconOutlineView.image == nil {
-                    smallIconOutlineView.image = generateTintedImage(image: smallIconView.image, color: .white)?.withRenderingMode(.alwaysTemplate)
-                }
-                smallIconOutlineView.tintColor = component.backgroundColor
+                smallIconView.image = UIImage(bundleImageName: "Premium/Stars/MockBigStar")
                 
                 if let icon = smallIconView.image {
-                    let smallIconFrame = CGRect(origin: CGPoint(x: imageFrame.maxX - icon.size.width - 5.0, y: imageFrame.maxY - icon.size.height - 5.0), size: icon.size)
+                    let smallIconFrame = CGRect(origin: CGPoint(x: imageFrame.maxX - icon.size.width, y: imageFrame.maxY - icon.size.height), size: icon.size)
                     smallIconView.frame = smallIconFrame
-                    smallIconOutlineView.frame = smallIconFrame.insetBy(dx: -3.0 + UIScreenPixel, dy: -3.0 + UIScreenPixel)
                 }
             } else if let smallIconView = self.smallIconView {
                 self.smallIconView = nil
