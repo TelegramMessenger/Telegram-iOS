@@ -97,6 +97,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 peerIds.append(receipt.botPaymentId)
             case let .gift(message):
                 peerIds.append(message.id.peerId)
+            case let .subscription(subscription):
+                peerIds.append(subscription.peer.id)
             }
             
             self.disposable = (context.engine.data.get(
@@ -195,17 +197,30 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let messageId: EngineMessage.Id?
             let toPeer: EnginePeer?
             let transactionPeer: StarsContext.State.Transaction.Peer?
-            let media: [AnyMediaReference]
-            let photo: TelegramMediaWebFile?
-            let isRefund: Bool
-            let isGift: Bool
+            var media: [AnyMediaReference] = []
+            var photo: TelegramMediaWebFile?
+            var isRefund = false
+            var isGift = false
+            var isSubscription = false
+            var isSubscriptionFee = false
             
             var delayedCloseOnOpenPeer = true
             switch subject {
+            case let .subscription(subscription):
+                titleText = "Subscription"
+                descriptionText = ""
+                count = subscription.pricing.amount
+                transactionId = nil
+                date = subscription.untilDate
+                via = nil
+                messageId = nil
+                toPeer = subscription.peer
+                transactionPeer = .peer(subscription.peer)
+                isSubscription = true
             case let .transaction(transaction, parentPeer):
                 if let _ = transaction.subscriptionPeriod {
                     //TODO:localize
-                    titleText = "Monthly Subscription Fee"
+                    titleText = "Monthly subscription fee"
                     descriptionText = ""
                     count = transaction.count
                     countOnTop = false
@@ -219,10 +234,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         toPeer = nil
                     }
                     transactionPeer = transaction.peer
-                    media = []
-                    photo = nil
-                    isRefund = false
-                    isGift = false
+                    isSubscriptionFee = true
                 } else if transaction.flags.contains(.isGift) {
                     titleText = strings.Stars_Gift_Received_Title
                     descriptionText = strings.Stars_Gift_Received_Text
@@ -238,9 +250,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         toPeer = nil
                     }
                     transactionPeer = transaction.peer
-                    media = []
-                    photo = nil
-                    isRefund = false
                     isGift = true
                 } else {
                     switch transaction.peer {
@@ -319,7 +328,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     transactionPeer = transaction.peer
                     media = transaction.media.map { AnyMediaReference.starsTransaction(transaction: StarsTransactionReference(peerId: parentPeer.id, id: transaction.id, isRefund: transaction.flags.contains(.isRefund)), media: $0) }
                     photo = transaction.photo
-                    isGift = false
                     isRefund = transaction.flags.contains(.isRefund)
                 }
             case let .receipt(receipt):
@@ -336,10 +344,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     toPeer = nil
                 }
                 transactionPeer = nil
-                media = []
                 photo = receipt.invoiceMedia.photo
-                isRefund = false
-                isGift = false
                 delayedCloseOnOpenPeer = false
             case let .gift(message):
                 let incoming = message.flags.contains(.Incoming)
@@ -365,9 +370,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     toPeer = state.peerMap[message.id.peerId]
                 }
                 transactionPeer = nil
-                media = []
-                photo = nil
-                isRefund = false
                 isGift = true
                 delayedCloseOnOpenPeer = false
             }
@@ -416,6 +418,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             )
             
             let imageSubject: StarsImageComponent.Subject
+            let imageIcon: StarsImageComponent.Icon?
             if isGift {
                 imageSubject = .gift(count)
             } else if !media.isEmpty {
@@ -429,6 +432,11 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             } else {
                 imageSubject = .none
             }
+            if isSubscription || isSubscriptionFee {
+                imageIcon = .star
+            } else {
+                imageIcon = nil
+            }
             let star = star.update(
                 component: StarsImageComponent(
                     context: component.context,
@@ -436,6 +444,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     theme: theme,
                     diameter: 90.0,
                     backgroundColor: theme.actionSheet.opaqueItemBackgroundColor,
+                    icon: imageIcon,
                     action: !media.isEmpty ? { transitionNode, addToTransitionSurface in
                         component.openMedia(media.map { $0.media }, transitionNode, addToTransitionSurface)
                     } : nil
@@ -939,6 +948,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
         case transaction(StarsContext.State.Transaction, EnginePeer)
         case receipt(BotPaymentReceipt)
         case gift(EngineMessage)
+        case subscription(StarsContext.State.Subscription)
     }
     
     private let context: AccountContext

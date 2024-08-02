@@ -12674,3 +12674,5 @@ Sorry for the inconvenience.";
 "MediaPicker.CreateSticker" = "Create a sticker from a photo";
 
 "Stickers.CreateSticker" = "Create\nSticker";
+
+"InviteLink.CreateNewInfo" = "You can create additional invite links that are limited by time, number of users, or require a paid subscription.";

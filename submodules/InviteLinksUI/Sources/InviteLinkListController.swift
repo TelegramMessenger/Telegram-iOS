@@ -351,7 +351,7 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
         }
     }
     if admin == nil {
-        entries.append(.linksInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+        entries.append(.linksInfo(presentationData.theme, presentationData.strings.InviteLink_CreateNewInfo))
     }
     
     if let revokedInvites = revokedInvites {

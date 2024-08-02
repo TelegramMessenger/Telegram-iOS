@@ -297,11 +297,16 @@ public final class StarsImageComponent: Component {
         }
     }
     
+    public enum Icon {
+        case star
+    }
+    
     public let context: AccountContext
     public let subject: Subject
     public let theme: PresentationTheme
     public let diameter: CGFloat
     public let backgroundColor: UIColor
+    public let icon: Icon?
     public let action: ((@escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)?
     
     public init(
@@ -310,6 +315,7 @@ public final class StarsImageComponent: Component {
         theme: PresentationTheme,
         diameter: CGFloat,
         backgroundColor: UIColor,
+        icon: Icon? = nil,
         action: ((@escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)? = nil
     ) {
         self.context = context
@@ -317,6 +323,7 @@ public final class StarsImageComponent: Component {
         self.theme = theme
         self.diameter = diameter
         self.backgroundColor = backgroundColor
+        self.icon = icon
         self.action = action
     }
     
@@ -336,6 +343,9 @@ public final class StarsImageComponent: Component {
         if lhs.backgroundColor != rhs.backgroundColor {
             return false
         }
+        if lhs.icon != rhs.icon {
+            return false
+        }
         return true
     }
     
@@ -353,6 +363,8 @@ public final class StarsImageComponent: Component {
         private var avatarNode: ImageNode?
         private var iconBackgroundView: UIImageView?
         private var iconView: UIImageView?
+        private var smallIconOutlineView: UIImageView?
+        private var smallIconView: UIImageView?
         private var dustNode: MediaDustNode?
         private var button: UIControl?
         
@@ -812,6 +824,36 @@ public final class StarsImageComponent: Component {
                 let animationFrame = imageFrame.insetBy(dx: -imageFrame.width * 0.19, dy: -imageFrame.height * 0.19).offsetBy(dx: 0.0, dy: -14.0)
                 animationNode.frame = animationFrame
                 animationNode.updateLayout(size: animationFrame.size)
+            }
+            
+            if let _ = component.icon {
+                let smallIconView: UIImageView
+                let smallIconOutlineView: UIImageView
+                if let current = self.smallIconView, let currentOutline = self.smallIconOutlineView {
+                    smallIconView = current
+                    smallIconOutlineView = currentOutline
+                } else {
+                    smallIconOutlineView = UIImageView()
+                    containerNode.view.addSubview(smallIconOutlineView)
+                    
+                    smallIconView = UIImageView()
+                    containerNode.view.addSubview(smallIconView)
+                }
+                
+                smallIconView.image = UIImage(bundleImageName: "Premium/Stars/BalanceStar")
+                if smallIconOutlineView.image == nil {
+                    smallIconOutlineView.image = generateTintedImage(image: smallIconView.image, color: .white)?.withRenderingMode(.alwaysTemplate)
+                }
+                smallIconOutlineView.tintColor = component.backgroundColor
+                
+                if let icon = smallIconView.image {
+                    let smallIconFrame = CGRect(origin: CGPoint(x: imageFrame.maxX - icon.size.width - 5.0, y: imageFrame.maxY - icon.size.height - 5.0), size: icon.size)
+                    smallIconView.frame = smallIconFrame
+                    smallIconOutlineView.frame = smallIconFrame.insetBy(dx: -3.0 + UIScreenPixel, dy: -3.0 + UIScreenPixel)
+                }
+            } else if let smallIconView = self.smallIconView {
+                self.smallIconView = nil
+                smallIconView.removeFromSuperview()
             }
             
             if let _ = component.action {

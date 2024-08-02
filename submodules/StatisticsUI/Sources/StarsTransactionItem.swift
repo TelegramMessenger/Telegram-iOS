@@ -231,15 +231,19 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                     var itemDate: String
                     switch item.transaction.peer {
                     case let .peer(peer):
-                        if !item.transaction.media.isEmpty {
+                         if !item.transaction.media.isEmpty {
                             itemTitle = item.presentationData.strings.Stars_Intro_Transaction_MediaPurchase
                             itemSubtitle = peer.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast)
                         } else if let title = item.transaction.title {
                             itemTitle = title
                             itemSubtitle = peer.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast)
                         } else {
+                            if let _ = item.transaction.subscriptionPeriod {
+                                itemSubtitle = "Monthly subscription fee"
+                            } else {
+                                itemSubtitle = nil
+                            }
                             itemTitle = peer.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast)
-                            itemSubtitle = nil
                         }
                     case .appStore:
                         itemTitle = item.presentationData.strings.Stars_Intro_Transaction_AppleTopUp_Title

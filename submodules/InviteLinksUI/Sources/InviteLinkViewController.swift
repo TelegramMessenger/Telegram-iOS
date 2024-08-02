@@ -798,7 +798,13 @@ public final class InviteLinkViewController: ViewController {
                         if let pricing = invite.pricing {
                             //TODO:localize
                             entries.append(.subscriptionHeader(presentationData.theme, "SUBSCRIPTION FEE"))
-                            entries.append(.subscriptionPricing(presentationData.theme, "⭐️\(pricing.amount) / month x \(state.count)", "You get approximately $\(Float(pricing.amount * Int64(state.count)) * 0.01) monthly"))
+                            var title = "⭐️\(pricing.amount) / month"
+                            var subtitle = "No one joined yet"
+                            if state.count > 0 {
+                                title += " x \(state.count)"
+                                subtitle = "You get approximately $\(Float(pricing.amount * Int64(state.count)) * 0.01) monthly"
+                            }
+                            entries.append(.subscriptionPricing(presentationData.theme, title, subtitle))
                         }
                         
                         entries.append(.creatorHeader(presentationData.theme, presentationData.strings.InviteLink_CreatedBy.uppercased()))
