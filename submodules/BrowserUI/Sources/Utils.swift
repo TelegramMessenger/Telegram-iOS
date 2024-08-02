@@ -108,3 +108,47 @@ func getPrimaryUrl(message: Message) -> String? {
     }
     return primaryUrl
 }
+
+private let asciiChars = CharacterSet(charactersIn: "a".unicodeScalars.first! ... "z".unicodeScalars.first!)
+
+func getDisplayUrl(_ url: String, hostOnly: Bool = false, trim: Bool = true) -> String {
+    if hostOnly {
+        var title = url
+        if let parsedUrl = URL(string: url) {
+            title = parsedUrl.host ?? url
+            if title.hasPrefix("www.") {
+                title.removeSubrange(title.startIndex ..< title.index(title.startIndex, offsetBy: 4))
+            }
+            if let decoded = title.idnaDecoded, title != decoded {
+                if decoded.lowercased().rangeOfCharacter(from: asciiChars) == nil {
+                    title = decoded
+                }
+            }
+        }
+        return title
+    } else {
+        var address = url
+        if let components = URLComponents(string: address) {
+            if #available(iOS 16.0, *), let encodedHost = components.encodedHost {
+                if let decodedHost = components.host, encodedHost != decodedHost {
+                    if decodedHost.lowercased().rangeOfCharacter(from: asciiChars) == nil {
+                        address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
+                    }
+                }
+            } else if let encodedHost = components.host {
+                if let decodedHost = components.host?.idnaDecoded, encodedHost != decodedHost {
+                    if decodedHost.lowercased().rangeOfCharacter(from: asciiChars) == nil {
+                        address = address.replacingOccurrences(of: encodedHost, with: decodedHost)
+                    }
+                }
+            }
+        }
+        if trim {
+            address = address.replacingOccurrences(of: "https://www.", with: "")
+            address = address.replacingOccurrences(of: "https://", with: "")
+            address = address.replacingOccurrences(of: "tonsite://", with: "")
+            address = address.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        }
+        return address
+    }
+}

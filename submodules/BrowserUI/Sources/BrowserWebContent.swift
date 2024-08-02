@@ -239,12 +239,12 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             let request = URLRequest(url: parsedUrl)
             self.webView.load(request)
             
-            title = parsedUrl.host ?? ""
+            title = getDisplayUrl(url, hostOnly: true)
         }
         
         self.errorView = ComponentHostView()
         
-        self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.0, readingProgress: 0.0, contentType: .webPage)
+        self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.1, readingProgress: 0.0, contentType: .webPage)
         self.statePromise = Promise<BrowserContentState>(self._state)
         
         super.init(frame: .zero)
@@ -725,7 +725,12 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-        self.currentError = nil
+        if let _ = self.currentError {
+            self.currentError = nil
+            if let (size, insets, fullInsets, safeInsets) = self.validLayout {
+                self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, safeInsets: safeInsets, transition: .immediate)
+            }
+        }
         self.updateFontState(self.currentFontState, force: true)
     }
     
@@ -739,7 +744,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        if [-1003, -1100].contains((error as NSError).code) {
+        if [-1003, -1100, 102].contains((error as NSError).code) {
             self.currentError = error
         } else {
             self.currentError = nil
