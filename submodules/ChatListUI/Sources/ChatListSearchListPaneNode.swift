@@ -742,7 +742,8 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     if case .channels = key {
                         headerType = .channels
                     } else if case .apps = key {
-                        headerType = .channels
+                        //TODO:localize
+                        headerType = .text("APPS", AnyHashable("apps"))
                     } else {
                         if filter.contains(.onlyGroups) {
                             headerType = .chats
@@ -762,8 +763,17 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                 if case .savedMessagesChats = location {
                     isSavedMessages = true
                 }
+            
+                var status: ContactsPeerItemStatus = .none
+                if case let .user(user) = primaryPeer, let _ = user.botInfo {
+                    if let subscriberCount = user.subscriberCount {
+                        status = .custom(string: presentationData.strings.Conversation_StatusBotSubscribers(subscriberCount), multiline: false, isActive: false, icon: nil)
+                    } else {
+                        status = .custom(string: presentationData.strings.Bot_GenericBotStatus, multiline: false, isActive: false, icon: nil)
+                    }
+                }
                 
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch(isSavedMessages: isSavedMessages), peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: .none, badge: badge, requiresPremiumForMessaging: requiresPremiumForMessaging, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { contactPeer in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch(isSavedMessages: isSavedMessages), peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: status, badge: badge, requiresPremiumForMessaging: requiresPremiumForMessaging, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { contactPeer in
                     if case let .peer(maybePeer, maybeChatPeer) = contactPeer, let peer = maybePeer, let chatPeer = maybeChatPeer {
                         interaction.peerSelected(chatPeer, peer, nil, nil)
                     } else {
@@ -1946,8 +1956,108 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                 }
             } else if let query, key == .apps {
-                let _ = query
-                foundLocalPeers = .single(([], [:], Set()))
+                foundLocalPeers = combineLatest(
+                    context.engine.peers.recentApps(),
+                    context.engine.peers.recommendedAppPeerIds()
+                )
+                |> mapToSignal { local, recommended -> Signal<(peers: [EngineRenderedPeer], unread: [EnginePeer.Id: (Int32, Bool)], recentlySearchedPeerIds: Set<EnginePeer.Id>), NoError> in
+                    var peerIds: [EnginePeer.Id] = []
+                    
+                    for peer in local {
+                        if !peerIds.contains(peer) {
+                            peerIds.append(peer)
+                        }
+                    }
+                    if let recommended {
+                        for id in recommended {
+                            if !peerIds.contains(id) {
+                                peerIds.append(id)
+                            }
+                        }
+                    }
+                    
+                    return context.engine.data.subscribe(
+                        EngineDataMap(
+                            peerIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.Peer in
+                                return TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                            }
+                        ),
+                        EngineDataMap(
+                            peerIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.NotificationSettings in
+                                return TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId)
+                            }
+                        ),
+                        EngineDataMap(
+                            peerIds.map { peerId -> TelegramEngine.EngineData.Item.Messages.PeerUnreadCount in
+                                return TelegramEngine.EngineData.Item.Messages.PeerUnreadCount(id: peerId)
+                            }
+                        ),
+                        TelegramEngine.EngineData.Item.NotificationSettings.Global()
+                    )
+                    |> map { peers, notificationSettings, unreadCounts, globalNotificationSettings -> (peers: [EngineRenderedPeer], unread: [EnginePeer.Id: (Int32, Bool)], recentlySearchedPeerIds: Set<EnginePeer.Id>) in
+                        var resultPeers: [EngineRenderedPeer] = []
+                        var unread: [EnginePeer.Id: (Int32, Bool)] = [:]
+                        
+                        let queryTokens = stringIndexTokens(query.lowercased(), transliteration: .combined)
+                        
+                        var matchingIds: [EnginePeer.Id] = []
+                        for peerId in local {
+                            guard let maybePeer = peers[peerId], let peer = maybePeer else {
+                                continue
+                            }
+                            if peer.indexName.matchesByTokens(queryTokens) {
+                                if !matchingIds.contains(peerId) {
+                                    matchingIds.append(peerId)
+                                }
+                            }
+                        }
+                        
+                        if let recommended {
+                            for id in recommended {
+                                guard let maybePeer = peers[id], let peer = maybePeer else {
+                                    continue
+                                }
+                                
+                                if peer.indexName.matchesByTokens(queryTokens) {
+                                    if !matchingIds.contains(id) {
+                                        matchingIds.append(id)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        for id in matchingIds {
+                            guard let maybePeer = peers[id], let peer = maybePeer else {
+                                continue
+                            }
+                            resultPeers.append(EngineRenderedPeer(peer: peer))
+                            var isMuted = false
+                            if let peerNotificationSettings = notificationSettings[peer.id] {
+                                if case let .muted(until) = peerNotificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                                    isMuted = true
+                                } else if case .default = peerNotificationSettings.muteState {
+                                    if case .user = peer {
+                                        isMuted = !globalNotificationSettings.privateChats.enabled
+                                    } else if case .legacyGroup = peer {
+                                        isMuted = !globalNotificationSettings.groupChats.enabled
+                                    } else if case let .channel(channel) = peer {
+                                        switch channel.info {
+                                        case .group:
+                                            isMuted = !globalNotificationSettings.groupChats.enabled
+                                        case .broadcast:
+                                            isMuted = !globalNotificationSettings.channels.enabled
+                                        }
+                                    }
+                                }
+                            }
+                            let unreadCount = unreadCounts[peer.id]
+                            if let unreadCount = unreadCount, unreadCount > 0 {
+                                unread[peer.id] = (Int32(unreadCount), isMuted)
+                            }
+                        }
+                        return (peers: resultPeers, unread: unread, recentlySearchedPeerIds: Set())
+                    }
+                }
             } else {
                 foundLocalPeers = .single((peers: [], unread: [:], recentlySearchedPeerIds: Set()))
                 
@@ -2028,6 +2138,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             if case .savedMessagesChats = location {
                 foundRemoteMessages = .single(([FoundRemoteMessages(messages: [], readCounters: [:], threadsData: [:], totalCount: 0)], false))
             } else if peersFilter.contains(.doNotSearchMessages) {
+                foundRemoteMessages = .single(([FoundRemoteMessages(messages: [], readCounters: [:], threadsData: [:], totalCount: 0)], false))
+            } else if key == .apps {
                 foundRemoteMessages = .single(([FoundRemoteMessages(messages: [], readCounters: [:], threadsData: [:], totalCount: 0)], false))
             } else {
                 if !finalQuery.isEmpty {
