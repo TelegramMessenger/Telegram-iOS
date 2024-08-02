@@ -2171,6 +2171,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                         messageText = item.presentationData.strings.ChatList_UserReacted(value).string
                                     case .custom:
                                         break
+                                    case .stars:
+                                        break
                                     }
                                     break loop
                                 }

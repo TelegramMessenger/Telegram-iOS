@@ -3577,6 +3577,15 @@ final class StoryItemSetContainerSendMessage {
                     animateWithReactionItem(reactionItem)
                 }
             })
+        case .stars:
+            if let availableReactions = component.availableReactions {
+                for reactionItem in availableReactions.reactionItems {
+                    if reactionItem.reaction.rawValue == reaction {
+                        animateWithReactionItem(reactionItem)
+                        break
+                    }
+                }
+            }
         }
     }
 }

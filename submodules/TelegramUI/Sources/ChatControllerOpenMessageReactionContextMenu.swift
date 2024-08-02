@@ -17,6 +17,8 @@ import SavedTagNameAlertController
 import PremiumUI
 import ChatSendStarsScreen
 import ChatMessageItemCommon
+import ChatMessageItemView
+import ReactionSelectionNode
 
 extension ChatControllerImpl {
     func presentTagPremiumPaywall() {
@@ -41,7 +43,7 @@ extension ChatControllerImpl {
             
             let reactionFile: Signal<TelegramMediaFile?, NoError>
             switch value {
-            case .builtin:
+            case .builtin, .stars:
                 reactionFile = self.context.engine.stickers.availableReactions()
                 |> take(1)
                 |> map { availableReactions -> TelegramMediaFile? in
@@ -161,24 +163,124 @@ extension ChatControllerImpl {
                 self.window?.presentInGlobalOverlay(controller)
             })
         } else {
-            var debug = false
-            #if DEBUG
-            debug = true
-            #endif
-            if self.context.sharedContext.applicationBindings.appBuildType == .internal {
-                debug = true
-            }
-                
-            if debug, case .custom(MessageReaction.starsReactionId) = value {
-                let _ = (ChatSendStarsScreen.initialData(context: self.context, peerId: message.id.peerId)
+            if case .stars = value, let reactionsAttribute = mergedMessageReactions(attributes: message.attributes, isTags: false) {
+                gesture?.cancel()
+                cancelParentGestures(view: sourceView)
+                let _ = (ChatSendStarsScreen.initialData(context: self.context, peerId: message.id.peerId, topPeers: reactionsAttribute.topPeers)
                 |> deliverOnMainQueue).start(next: { [weak self] initialData in
                     guard let self, let initialData else {
                         return
                     }
-                    self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount in
-                        guard let self else {
+                    self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount, transitionOut in
+                        guard let self, amount > 0 else {
                             return
                         }
+                        
+                        var sourceItemNode: ChatMessageItemView?
+                        self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                            if let itemNode = itemNode as? ChatMessageItemView {
+                                if itemNode.item?.message.id == message.id {
+                                    sourceItemNode = itemNode
+                                    return
+                                }
+                            }
+                        }
+                        
+                        if let itemNode = sourceItemNode, let item = itemNode.item, let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: .stars) {
+                            var reactionItem: ReactionItem?
+                            
+                            for reaction in availableReactions.reactions {
+                                guard let centerAnimation = reaction.centerAnimation else {
+                                    continue
+                                }
+                                guard let aroundAnimation = reaction.aroundAnimation else {
+                                    continue
+                                }
+                                if reaction.value == .stars {
+                                    reactionItem = ReactionItem(
+                                        reaction: ReactionItem.Reaction(rawValue: reaction.value),
+                                        appearAnimation: reaction.appearAnimation,
+                                        stillAnimation: reaction.selectAnimation,
+                                        listAnimation: centerAnimation,
+                                        largeListAnimation: reaction.activateAnimation,
+                                        applicationAnimation: aroundAnimation,
+                                        largeApplicationAnimation: reaction.effectAnimation,
+                                        isCustom: false
+                                    )
+                                    break
+                                }
+                            }
+                            
+                            if let reactionItem {
+                                let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: self.chatDisplayNode.historyNode.takeGenericReactionEffect())
+                                
+                                self.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                                
+                                self.chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                                standaloneReactionAnimation.frame = self.chatDisplayNode.bounds
+                                standaloneReactionAnimation.animateOutToReaction(
+                                    context: self.context,
+                                    theme: self.presentationData.theme,
+                                    item: reactionItem,
+                                    value: .stars,
+                                    sourceView: transitionOut.sourceView,
+                                    targetView: targetView,
+                                    hideNode: false,
+                                    forceSwitchToInlineImmediately: false,
+                                    animateTargetContainer: nil,
+                                    addStandaloneReactionAnimation: { [weak self] standaloneReactionAnimation in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                                        standaloneReactionAnimation.frame = self.chatDisplayNode.bounds
+                                        self.chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                                    },
+                                    onHit: { [weak self, weak itemNode] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        if let itemNode, let targetView = itemNode.targetReactionView(value: .stars) {
+                                            self.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: self.chatDisplayNode.view))
+                                        }
+                                    },
+                                    completion: { [weak standaloneReactionAnimation] in
+                                        standaloneReactionAnimation?.removeFromSupernode()
+                                    }
+                                )
+                                /*standaloneReactionAnimation.animateReactionSelection(
+                                    context: strongSelf.context,
+                                    theme: strongSelf.presentationData.theme,
+                                    animationCache: strongSelf.controllerInteraction!.presentationContext.animationCache,
+                                    reaction: reactionItem,
+                                    avatarPeers: [],
+                                    playHaptic: false,
+                                    isLarge: false,
+                                    targetView: targetView,
+                                    addStandaloneReactionAnimation: { standaloneReactionAnimation in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                                        standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
+                                        strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                                    },
+                                    onHit: { [weak itemNode] in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        if let itemNode = itemNode, let targetView = itemNode.targetReactionView(value: chosenReaction) {
+                                            strongSelf.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: strongSelf.chatDisplayNode.view))
+                                        }
+                                    },
+                                    completion: { [weak standaloneReactionAnimation] in
+                                        standaloneReactionAnimation?.removeFromSupernode()
+                                    }
+                                )*/
+                            }
+                        }
+                        
+                        let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount))
                         
                         let _ = (self.context.engine.stickers.resolveInlineStickers(fileIds: [MessageReaction.starsReactionId])
                         |> deliverOnMainQueue).start(next: { [weak self] files in
@@ -369,7 +471,7 @@ extension ChatControllerImpl {
                 
                 let reactionFile: TelegramMediaFile?
                 switch value {
-                case .builtin:
+                case .builtin, .stars:
                     reactionFile = availableReactions?.reactions.first(where: { $0.value == value })?.selectAnimation
                 case let .custom(fileId):
                     reactionFile = customEmoji[fileId]

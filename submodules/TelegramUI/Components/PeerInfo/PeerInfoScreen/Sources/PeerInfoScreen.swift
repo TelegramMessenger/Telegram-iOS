@@ -10922,7 +10922,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             
             if pane.canReorder() {
-                items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.BotPreviews_MenuReorder, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak pane] _, a in
                     if ignoreNextActions {
@@ -10937,7 +10937,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 })))
             }
             
-            items.append(.action(ContextMenuActionItem(text: "Select", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuSelect, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, a in
                 if ignoreNextActions {

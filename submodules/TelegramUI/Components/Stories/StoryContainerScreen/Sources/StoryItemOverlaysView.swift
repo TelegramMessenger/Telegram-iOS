@@ -98,6 +98,8 @@ public func storyPreviewWithAddedReactions(
                 if !customFileIds.contains(fileId) {
                     customFileIds.append(fileId)
                 }
+            case .stars:
+                break
             }
         }
     }
@@ -359,6 +361,15 @@ final class StoryItemOverlaysView: UIView {
                                     self.requestUpdate?()
                                 }
                             })
+                        }
+                    }
+                case .stars:
+                    if let availableReactions {
+                        for reactionItem in availableReactions.reactionItems {
+                            if reactionItem.reaction.rawValue == reaction {
+                                file = reactionItem.stillAnimation
+                                break
+                            }
                         }
                     }
                 }

@@ -100,6 +100,13 @@ public final class ChatShareMessageTagView: UIView, UndoOverlayControllerAdditio
                     }
                 case let .custom(_, fileValue):
                     file = fileValue
+                case .stars:
+                    for reaction in availableReactions.reactions {
+                        if reaction.value == updateReaction.reaction {
+                            file = reaction.centerAnimation
+                            break
+                        }
+                    }
                 }
                 
                 guard let file else {

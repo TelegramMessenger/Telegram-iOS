@@ -176,7 +176,7 @@ private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id
             default:
                 break
             }
-            signal = account.network.request(Api.functions.payments.getStarsTransactions(flags: flags, peer: inputPeer, offset: offset, limit: limit))
+            signal = account.network.request(Api.functions.payments.getStarsTransactions(flags: flags, subscriptionId: nil, peer: inputPeer, offset: offset, limit: limit))
         } else {
             signal = account.network.request(Api.functions.payments.getStarsStatus(peer: inputPeer))
         }
@@ -187,12 +187,12 @@ private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id
         |> mapToSignal { result -> Signal<InternalStarsStatus, RequestStarsStateError> in
             return account.postbox.transaction { transaction -> InternalStarsStatus in
                 switch result {
-                case let .starsStatus(_, balance, history, nextOffset, chats, users):
+                case let .starsStatus(_, balance, _, _, _, history, nextOffset, chats, users):
                     let peers = AccumulatedPeers(chats: chats, users: users)
                     updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: peers)
                     
                     var parsedTransactions: [StarsContext.State.Transaction] = []
-                    for entry in history {
+                    for entry in history ?? [] {
                         if let parsedTransaction = StarsContext.State.Transaction(apiTransaction: entry, peerId: peerId != account.peerId ? peerId : nil, transaction: transaction) {
                             parsedTransactions.append(parsedTransaction)
                         }
@@ -317,7 +317,7 @@ private final class StarsContextImpl {
 private extension StarsContext.State.Transaction {
     init?(apiTransaction: Api.StarsTransaction, peerId: EnginePeer.Id?, transaction: Transaction) {
         switch apiTransaction {
-        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId, extendedMedia):
+        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId, extendedMedia, _):
             let parsedPeer: StarsContext.State.Transaction.Peer
             var paidMessageId: MessageId?
             switch transactionPeer {
@@ -889,7 +889,7 @@ func _internal_getStarsTransaction(accountPeerId: PeerId, postbox: Postbox, netw
         }
         |> mapToSignal { result -> Signal<StarsContext.State.Transaction?, NoError> in
             return postbox.transaction { transaction -> StarsContext.State.Transaction? in
-                guard let result, case let .starsStatus(_, _, transactions, _, chats, users) = result, let matchingTransaction = transactions.first else {
+                guard let result, case let .starsStatus(_, _, _, _, _, transactions, _, chats, users) = result, let matchingTransaction = transactions?.first else {
                     return nil
                 }
                 let peers = AccumulatedPeers(chats: chats, users: users)

@@ -727,7 +727,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                             var animationFileId: Int64?
                             
                             switch reaction.value {
-                            case .builtin:
+                            case .builtin, .stars:
                                 if let availableReactions = arguments.availableReactions {
                                     for availableReaction in availableReactions.reactions {
                                         if availableReaction.value == reaction.value {

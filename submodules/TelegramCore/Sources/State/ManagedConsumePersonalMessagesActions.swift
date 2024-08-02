@@ -656,6 +656,8 @@ func synchronizeSavedMessageTags(postbox: Postbox, network: Network, peerId: Pee
                     reactionId = UInt64(bitPattern: id)
                 case let .builtin(string):
                     reactionId = md5StringHash(string)
+                case .stars:
+                    reactionId = md5StringHash("star")
                 }
                 
                 var titleId: UInt64?
