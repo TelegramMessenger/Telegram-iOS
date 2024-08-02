@@ -1311,7 +1311,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     }
     
     private func presentReferenceView(item: InstantPageTextItem, referenceAnchor: String) {
-        guard let theme = self.theme, let webPage = self.webPage else {
+        guard let webPage = self.webPage else {
             return
         }
         
