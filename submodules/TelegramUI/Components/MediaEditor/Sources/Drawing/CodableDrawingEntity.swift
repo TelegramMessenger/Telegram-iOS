@@ -1,5 +1,6 @@
 import Foundation
 import TelegramCore
+import UrlEscaping
 
 public func decodeCodableDrawingEntities(data: Data) -> [CodableDrawingEntity] {
     if let codableEntities = try? JSONDecoder().decode([CodableDrawingEntity].self, from: data) {
@@ -183,13 +184,9 @@ public enum CodableDrawingEntity: Equatable {
                 return nil
             }
         case let .link(entity):
-            var url = entity.url
-            if !url.hasPrefix("http://") && !url.hasPrefix("https://") {
-                url = "https://\(url)"
-            }
             return .link(
                 coordinates: coordinates,
-                url: url
+                url: explicitUrl(entity.url)
             )
         case let .weather(entity):
             let color: UInt32
