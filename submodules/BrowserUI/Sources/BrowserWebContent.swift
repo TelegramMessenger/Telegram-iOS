@@ -20,6 +20,7 @@ import MultilineTextComponent
 import UrlEscaping
 import UrlHandling
 import SaveProgressScreen
+import DeviceModel
 
 private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
     private final class PendingTask {
@@ -151,6 +152,22 @@ private class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
     }
 }
 
+private func computedUserAgent() -> String {
+    func getFirmwareVersion() -> String? {
+        var size = 0
+        sysctlbyname("kern.osversion", nil, &size, nil, 0)
+        
+        var str = [CChar](repeating: 0, count: size)
+        sysctlbyname("kern.osversion", &str, &size, nil, 0)
+        
+        return String(cString: str)
+    }
+    
+    let osVersion = UIDevice.current.systemVersion
+    let firmwareVersion = getFirmwareVersion() ?? "15E148"
+    return DeviceModel.current.isIpad ? "Version/\(osVersion) Safari/605.1.15" : "Version/\(osVersion) Mobile/\(firmwareVersion) Safari/604.1"
+}
+
 final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
@@ -211,6 +228,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         let touchScript = WKUserScript(source: setupTouchObservers, injectionTime: .atDocumentStart, forMainFrameOnly: false)
         contentController.addUserScript(touchScript)
         configuration.userContentController = contentController
+        configuration.applicationNameForUserAgent = computedUserAgent()
         
         var handleScriptMessageImpl: ((WKScriptMessage) -> Void)?
         let eventProxyScript = WKUserScript(source: eventProxySource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
@@ -221,7 +239,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         self.webView = WebView(frame: CGRect(), configuration: configuration)
         self.webView.allowsLinkPreview = true
-        
+                
         if #available(iOS 11.0, *) {
             self.webView.scrollView.contentInsetAdjustmentBehavior = .never
         }
@@ -529,7 +547,14 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         self.previousScrollingOffset = ScrollingOffsetState(value: self.webView.scrollView.contentOffset.y, isDraggingOrDecelerating: self.webView.scrollView.isDragging || self.webView.scrollView.isDecelerating)
         
-        let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top))
+        let currentBounds = self.webView.scrollView.bounds
+        let offsetToBottomEdge = max(0.0, self.webView.scrollView.contentSize.height - currentBounds.maxY)
+        var bottomInset = insets.bottom
+        if offsetToBottomEdge < 128.0 {
+            bottomInset = fullInsets.bottom
+        }
+        
+        let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - bottomInset))
         var refresh = false
         if self.webView.frame.width > 0 && webViewFrame.width != self.webView.frame.width {
             refresh = true
@@ -540,11 +565,10 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             self.webView.reloadInputViews()
         }
         
-        self.webView.scrollView.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: fullInsets.bottom, right: 0.0)
-        self.webView.customBottomInset = max(insets.bottom, safeInsets.bottom)
+        self.webView.customBottomInset = safeInsets.bottom * (1.0 - insets.bottom / fullInsets.bottom)
 
-        self.webView.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
-        self.webView.scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
+//        self.webView.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
+//        self.webView.scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         
         if let error = self.currentError {
             let errorSize = self.errorView.update(
@@ -682,7 +706,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
 //            })
 //        } else {
             if let url = navigationAction.request.url?.absoluteString {
-                if (navigationAction.targetFrame == nil || navigationAction.targetFrame?.isMainFrame == true) && (isTelegramMeLink(url) || isTelegraPhLink(url)) {
+                if (navigationAction.targetFrame == nil || navigationAction.targetFrame?.isMainFrame == true) && (isTelegramMeLink(url) || isTelegraPhLink(url)) && !url.contains("/auth/push?") && !self._state.url.contains("/auth/push?") {
                     decisionHandler(.cancel, preferences)
                     self.minimize()
                     self.openAppUrl(url)
@@ -770,7 +794,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     func webViewDidClose(_ webView: WKWebView) {
-        self.close()
+        Queue.mainQueue().after(0.5, {
+            self.close()
+        })
     }
     
     @available(iOS 15.0, *)
