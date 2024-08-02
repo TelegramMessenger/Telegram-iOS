@@ -558,6 +558,15 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         self.requestUpdate(transition: transition)
     }
     
+    public func removeController(_ viewController: MinimizableController) {
+        guard let item = self.items.first(where: { $0.controller === viewController }) else {
+            return
+        }
+        
+        self.items.removeAll(where: { $0.id == item.id })
+        self.requestUpdate(transition: .animated(duration: 0.25, curve: .easeInOut))
+    }
+    
     private enum Transition: Equatable {
         case minimize(itemId: AnyHashable)
         case maximize(itemId: AnyHashable)

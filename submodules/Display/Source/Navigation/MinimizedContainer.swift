@@ -12,6 +12,7 @@ public protocol MinimizedContainer: ASDisplayNode {
     var statusBarStyleUpdated: (() -> Void)? { get set }
     
     func addController(_ viewController: MinimizableController, topEdgeOffset: CGFloat?, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, transition: ContainedViewLayoutTransition)
+    func removeController(_ viewController: MinimizableController)
     func maximizeController(_ viewController: MinimizableController, animated: Bool, completion: @escaping (Bool) -> Void)
     func collapse()
     func dismissAll(completion: @escaping () -> Void)
