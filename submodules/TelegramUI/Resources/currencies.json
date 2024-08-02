@@ -1447,5 +1447,14 @@
 		"symbolOnLeft": true,
 		"spaceBetweenAmountAndSymbol": false,
 		"decimalDigits": 2
-	}
+	},
+    "BYN": {
+        "code": "BYN",
+        "symbol": "BYN",
+        "thousandsSeparator": " ",
+        "decimalSeparator": ",",
+        "symbolOnLeft": false,
+        "spaceBetweenAmountAndSymbol": true,
+        "decimalDigits": 2
+    }
 }
