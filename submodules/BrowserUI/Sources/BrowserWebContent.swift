@@ -251,6 +251,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         self.backgroundColor = presentationData.theme.list.plainBackgroundColor
         self.webView.backgroundColor = presentationData.theme.list.plainBackgroundColor
+        self.webView.isOpaque = false
         
         self.webView.allowsBackForwardNavigationGestures = true
         self.webView.scrollView.delegate = self
