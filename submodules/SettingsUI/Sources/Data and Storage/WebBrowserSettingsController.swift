@@ -16,6 +16,7 @@ import WebKit
 import LinkPresentation
 import CoreServices
 import PersistentStringHash
+import UrlHandling
 
 private final class WebBrowserSettingsControllerArguments {
     let context: AccountContext
@@ -451,21 +452,6 @@ public func webBrowserSettingsController(context: AccountContext) -> ViewControl
     }
     
     return controller
-}
-
-private func cleanDomain(url: String) -> (domain: String, fullUrl: String) {
-    if let parsedUrl = URL(string: url) {
-        let host: String?
-        let scheme = parsedUrl.scheme ?? "https"
-        if #available(iOS 16.0, *) {
-            host = parsedUrl.host(percentEncoded: true)?.lowercased()
-        } else {
-            host = parsedUrl.host?.lowercased()
-        }
-        return (host ?? url, "\(scheme)://\(host ?? "")")
-    } else {
-        return (url, url)
-    }
 }
 
 private func fetchDomainExceptionInfo(context: AccountContext, url: String) -> Signal<WebBrowserException, NoError> {

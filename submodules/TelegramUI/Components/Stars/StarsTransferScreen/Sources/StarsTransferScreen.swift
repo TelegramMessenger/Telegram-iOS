@@ -484,7 +484,7 @@ private final class SheetContent: CombinedComponent {
                                 } else if let peerId = state?.botPeer?.id {
                                     purpose = .transfer(peerId: peerId, requiredStars: invoice.totalAmount)
                                 } else {
-                                    purpose = .generic
+                                    purpose = .generic(requiredStars: nil)
                                 }
                                 let purchaseController = accountContext.sharedContext.makeStarsPurchaseScreen(
                                     context: accountContext,

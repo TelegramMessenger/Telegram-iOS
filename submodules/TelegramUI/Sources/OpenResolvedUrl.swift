@@ -248,15 +248,10 @@ func openResolvedUrlImpl(
                 }
             })
                 present(controller, nil)
-        case let .instantView(webpage, anchor):
+        case let .instantView(webPage, anchor):
             let sourceLocation = InstantPageSourceLocation(userLocation: .other, peerType: .channel)
-            let pageController: ViewController
-            if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
-                pageController = BrowserScreen(context: context, subject: .instantPage(webPage: webpage, anchor: anchor, sourceLocation: sourceLocation))
-            } else {
-                pageController = InstantPageController(context: context, webPage: webpage, sourceLocation: sourceLocation, anchor: anchor)
-            }
-            navigationController?.pushViewController(pageController)
+            let browserController = context.sharedContext.makeInstantPageController(context: context, webPage: webPage, anchor: anchor, sourceLocation: sourceLocation)
+            navigationController?.pushViewController(browserController)
         case let .join(link):
             dismissInput()
         
@@ -660,6 +655,14 @@ func openResolvedUrlImpl(
             let controller = context.sharedContext.makePremiumGiftController(context: context, source: .deeplink(reference), completion: nil)
             if let navigationController = navigationController {
                 navigationController.pushViewController(controller, animated: true)
+            }
+        case let .starsTopup(amount):
+            dismissInput()
+            if let starsContext = context.starsContext {
+                let controller = context.sharedContext.makeStarsPurchaseScreen(context: context, starsContext: starsContext, options: [], purpose: .generic(requiredStars: amount), completion: { _ in })
+                if let navigationController = navigationController {
+                    navigationController.pushViewController(controller, animated: true)
+                }
             }
         case let .joinVoiceChat(peerId, invite):
             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))

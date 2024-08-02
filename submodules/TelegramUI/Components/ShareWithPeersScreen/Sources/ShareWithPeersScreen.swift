@@ -1690,8 +1690,12 @@ final class ShareWithPeersScreenComponent: Component {
                                 title: item.title,
                                 image: item.image,
                                 hasNext: false,
-                                action: {
+                                action: { [weak self] in
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
                                     component.editCover()
+                                    self.saveAndDismiss()
                                 }
                             )),
                             environment: {},
@@ -1992,6 +1996,36 @@ final class ShareWithPeersScreenComponent: Component {
         
         private var currentHasChannels: Bool?
         private var currentHasCover: Bool?
+        
+        func saveAndDismiss() {
+            guard let component = self.component, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
+                return
+            }
+            let base: EngineStoryPrivacy.Base
+            if self.selectedCategories.contains(.everyone) {
+                base = .everyone
+            } else if self.selectedCategories.contains(.closeFriends) {
+                base = .closeFriends
+            } else if self.selectedCategories.contains(.contacts) {
+                base = .contacts
+            } else if self.selectedCategories.contains(.selectedContacts) {
+                base = .nobody
+            } else {
+                base = .nobody
+            }
+            component.completion(
+                self.sendAsPeerId,
+                EngineStoryPrivacy(
+                    base: base,
+                    additionallyIncludePeers: self.selectedPeers
+                ),
+                self.selectedOptions.contains(.screenshot),
+                self.selectedOptions.contains(.pin),
+                self.component?.stateContext.stateValue?.peers.filter { self.selectedPeers.contains($0.id) } ?? [],
+                false
+            )
+            controller.requestDismiss()
+        }
         
         func update(component: ShareWithPeersScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             guard !self.isDismissed else {
@@ -2475,33 +2509,10 @@ final class ShareWithPeersScreenComponent: Component {
                 component: AnyComponent(Button(
                     content: AnyComponent(Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: environment.theme.rootController.navigationBar.accentTextColor)),
                     action: { [weak self] in
-                        guard let self, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
+                        guard let self else {
                             return
                         }
-                        let base: EngineStoryPrivacy.Base
-                        if self.selectedCategories.contains(.everyone) {
-                            base = .everyone
-                        } else if self.selectedCategories.contains(.closeFriends) {
-                            base = .closeFriends
-                        } else if self.selectedCategories.contains(.contacts) {
-                            base = .contacts
-                        } else if self.selectedCategories.contains(.selectedContacts) {
-                            base = .nobody
-                        } else {
-                            base = .nobody
-                        }
-                        component.completion(
-                            self.sendAsPeerId,
-                            EngineStoryPrivacy(
-                                base: base,
-                                additionallyIncludePeers: self.selectedPeers
-                            ),
-                            self.selectedOptions.contains(.screenshot),
-                            self.selectedOptions.contains(.pin),
-                            self.component?.stateContext.stateValue?.peers.filter { self.selectedPeers.contains($0.id) } ?? [],
-                            false
-                        )
-                        controller.requestDismiss()
+                        self.saveAndDismiss()
                     }
                 ).minSize(CGSize(width: navigationHeight, height: navigationHeight))),
                 environment: {},

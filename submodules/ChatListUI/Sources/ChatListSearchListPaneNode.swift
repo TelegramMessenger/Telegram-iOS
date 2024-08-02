@@ -2908,9 +2908,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }, openUrl: { url, _, _, message in
             interaction.openUrl(url)
         }, openInstantPage: { [weak self] message, data in
-            if let (webpage, anchor) = instantPageAndAnchor(message: message) {
-                let pageController = InstantPageController(context: context, webPage: webpage, sourceLocation: InstantPageSourceLocation(userLocation: .peer(message.id.peerId), peerType: .channel), anchor: anchor)
-                self?.navigationController?.pushViewController(pageController)
+            if let self, let navigationController = self.navigationController {
+                if let controller = self.context.sharedContext.makeInstantPageController(context: self.context, message: message, sourcePeerType: .channel) {
+                    navigationController.pushViewController(controller)
+                }
             }
         }, longTap: { action, message in
         }, getHiddenMedia: {

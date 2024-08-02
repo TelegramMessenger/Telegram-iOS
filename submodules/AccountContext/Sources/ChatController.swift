@@ -292,12 +292,12 @@ public struct ChatControllerInitialAttachBotStart {
 }
 
 public struct ChatControllerInitialBotAppStart {
-    public let botApp: BotApp
+    public let botApp: BotApp?
     public let payload: String?
     public let justInstalled: Bool
     public let compact: Bool
     
-    public init(botApp: BotApp, payload: String?, justInstalled: Bool, compact: Bool) {
+    public init(botApp: BotApp?, payload: String?, justInstalled: Bool, compact: Bool) {
         self.botApp = botApp
         self.payload = payload
         self.justInstalled = justInstalled

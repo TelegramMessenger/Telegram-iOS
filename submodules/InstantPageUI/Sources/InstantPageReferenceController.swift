@@ -7,7 +7,7 @@ import SwiftSignalKit
 import AccountContext
 import TelegramUIPreferences
 
-final class InstantPageReferenceController: ViewController {
+public final class InstantPageReferenceController: ViewController {
     private var controllerNode: InstantPageReferenceControllerNode {
         return self.displayNode as! InstantPageReferenceControllerNode
     }
@@ -23,7 +23,7 @@ final class InstantPageReferenceController: ViewController {
     private let openUrlIn: (InstantPageUrlItem) -> Void
     private let present: (ViewController, Any?) -> Void
     
-    init(context: AccountContext, sourceLocation: InstantPageSourceLocation, theme: InstantPageTheme, webPage: TelegramMediaWebpage, anchorText: NSAttributedString, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    public init(context: AccountContext, sourceLocation: InstantPageSourceLocation, theme: InstantPageTheme, webPage: TelegramMediaWebpage, anchorText: NSAttributedString, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.sourceLocation = sourceLocation
         self.theme = theme

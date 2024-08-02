@@ -653,7 +653,7 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
                             
                             strongSelf.frameUpdated(frame.index, frame.totalFrames)
                             strongSelf.currentFrameIndex = frame.index
-                            strongSelf.currentFrameCount = frame.totalFrames;
+                            strongSelf.currentFrameCount = frame.totalFrames
                             strongSelf.currentFrameRate = frameRate
                             
                             if frame.isLastFrame {

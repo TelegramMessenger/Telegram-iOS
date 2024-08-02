@@ -153,12 +153,22 @@ open class NavigationController: UINavigationController, ContainableController, 
     open var minimizedContainer: MinimizedContainer? {
         didSet {
             self.minimizedContainer?.navigationController = self
-            self.minimizedContainer?.willMaximize = { [weak self] in
+            self.minimizedContainer?.willMaximize = { [weak self] _ in
                 guard let self else {
                     return
                 }
                 self.isMaximizing = true
                 self.updateContainersNonReentrant(transition: .animated(duration: 0.4, curve: .spring))
+            }
+            self.minimizedContainer?.willDismiss = { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.minimizedContainer = nil
+                self.updateContainersNonReentrant(transition: .animated(duration: 0.4, curve: .spring))
+            }
+            self.minimizedContainer?.didDismiss = { minimizedContainer in
+                minimizedContainer.removeFromSupernode()
             }
             self.minimizedContainer?.statusBarStyleUpdated = { [weak self] in
                 guard let self else {

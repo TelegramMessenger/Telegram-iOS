@@ -414,8 +414,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
             if let state = self.initialState {
                 didSetScrollOffset = true
                 contentOffset = CGPoint(x: 0.0, y: CGFloat(state.contentOffset))
-            }
-            else if let anchor = self.initialAnchor, !anchor.isEmpty {
+            } else if let anchor = self.initialAnchor, !anchor.isEmpty {
                 self.initialAnchor = nil
                 if let items = self.currentLayout?.items {
                     didSetScrollOffset = true
@@ -1312,35 +1311,35 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     }
     
     private func presentReferenceView(item: InstantPageTextItem, referenceAnchor: String) {
-//        guard let theme = self.theme, let webPage = self.webPage else {
-//            return
-//        }
-//        
-//        var targetAnchor: InstantPageTextAnchorItem?
-//        for (name, (line, _)) in item.anchors {
-//            if name == referenceAnchor {
-//                let anchors = item.lines[line].anchorItems
-//                for anchor in anchors {
-//                    if anchor.name == referenceAnchor {
-//                        targetAnchor = anchor
-//                        break
-//                    }
-//                }
-//            }
-//        }
-//        
-//        guard let anchorText = targetAnchor?.anchorText else {
-//            return
-//        }
-//        
-//        let controller = InstantPageReferenceController(context: self.context, sourceLocation: self.sourceLocation, theme: theme, webPage: webPage, anchorText: anchorText, openUrl: { [weak self] url in
-//            self?.openUrl(url)
-//        }, openUrlIn: { [weak self] url in
-//            self?.openUrlIn(url)
-//        }, present: { [weak self] c, a in
-//            self?.present(c, a)
-//        })
-//        self.present(controller, nil)
+        guard let webPage = self.webPage else {
+            return
+        }
+        
+        var targetAnchor: InstantPageTextAnchorItem?
+        for (name, (line, _)) in item.anchors {
+            if name == referenceAnchor {
+                let anchors = item.lines[line].anchorItems
+                for anchor in anchors {
+                    if anchor.name == referenceAnchor {
+                        targetAnchor = anchor
+                        break
+                    }
+                }
+            }
+        }
+        
+        guard let anchorText = targetAnchor?.anchorText else {
+            return
+        }
+        
+        let controller = InstantPageReferenceController(context: self.context, sourceLocation: self.sourceLocation, theme: theme, webPage: webPage, anchorText: anchorText, openUrl: { [weak self] url in
+            self?.openUrl(url)
+        }, openUrlIn: { [weak self] url in
+            self?.openUrlIn(url)
+        }, present: { [weak self] c, a in
+            self?.present(c, a)
+        })
+        self.present(controller, nil)
     }
     
     private func scrollToAnchor(_ anchor: String) {

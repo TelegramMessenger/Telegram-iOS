@@ -292,7 +292,20 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                                         }
                                     }
                                     return .startAttach(peerName, value, choose)
-                                } else if queryItem.name == "story" {
+                                 } else if queryItem.name == "startapp" {
+                                     var compact = false
+                                     if let queryItems = components.queryItems {
+                                         for queryItem in queryItems {
+                                             if let value = queryItem.value {
+                                                 if queryItem.name == "mode", value == "compact" {
+                                                     compact = true
+                                                     break
+                                                 }
+                                             }
+                                         }
+                                     }
+                                     return .peer(.name(peerName), .appStart("", queryItem.value, compact))
+                                 } else if queryItem.name == "story" {
                                     if let id = Int32(value) {
                                         return .peer(.name(peerName), .story(id))
                                     }
@@ -321,6 +334,19 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                                 return .peer(.name(peerName), .boost)
                             } else if queryItem.name == "profile" {
                                 return .peer(.name(peerName), .profile)
+                            } else if queryItem.name == "startapp" {
+                                var compact = false
+                                if let queryItems = components.queryItems {
+                                    for queryItem in queryItems {
+                                        if let value = queryItem.value {
+                                            if queryItem.name == "mode", value == "compact" {
+                                                compact = true
+                                                break
+                                            }
+                                        }
+                                    }
+                                }
+                                return .peer(.name(peerName), .appStart("", nil, compact))
                             }
                         }
                     }
@@ -720,18 +746,26 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                     }
                                 }
                             case let .appStart(name, payload, compact):
-                                return .single(.progress) |> then(context.engine.messages.getBotApp(botId: peer.id, shortName: name, cached: false)
-                                |> map(Optional.init)
-                                |> `catch` { _ -> Signal<BotApp?, NoError> in
-                                    return .single(nil)
-                                }
-                                |> mapToSignal { botApp -> Signal<ResolveInternalUrlResult, NoError> in
-                                    if let botApp {
-                                        return .single(.result(.peer(peer._asPeer(), .withBotApp(ChatControllerInitialBotAppStart(botApp: botApp, payload: payload, justInstalled: false, compact: compact)))))
+                                if name.isEmpty {
+                                    if case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp) {
+                                        return .single(.result(.peer(peer._asPeer(), .withBotApp(ChatControllerInitialBotAppStart(botApp: nil, payload: payload, justInstalled: false, compact: compact)))))
                                     } else {
                                         return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
                                     }
-                                })
+                                } else {
+                                    return .single(.progress) |> then(context.engine.messages.getBotApp(botId: peer.id, shortName: name, cached: false)
+                                    |> map(Optional.init)
+                                    |> `catch` { _ -> Signal<BotApp?, NoError> in
+                                        return .single(nil)
+                                    }
+                                    |> mapToSignal { botApp -> Signal<ResolveInternalUrlResult, NoError> in
+                                        if let botApp {
+                                            return .single(.result(.peer(peer._asPeer(), .withBotApp(ChatControllerInitialBotAppStart(botApp: botApp, payload: payload, justInstalled: false, compact: compact)))))
+                                        } else {
+                                            return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
+                                        }
+                                    })
+                                }
                             case let .channelMessage(id, timecode):
                                 if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
                                     let messageId = MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: id)
@@ -1297,5 +1331,20 @@ public func resolveInstantViewUrl(account: Account, url: String) -> Signal<Resol
                 return .single(.result(.externalUrl(url)))
             }
         }
+    }
+}
+
+public func cleanDomain(url: String) -> (domain: String, fullUrl: String) {
+    if let parsedUrl = URL(string: url) {
+        let host: String?
+        let scheme = parsedUrl.scheme ?? "https"
+        if #available(iOS 16.0, *) {
+            host = parsedUrl.host(percentEncoded: true)?.lowercased()
+        } else {
+            host = parsedUrl.host?.lowercased()
+        }
+        return (host ?? url, "\(scheme)://\(host ?? "")")
+    } else {
+        return (url, url)
     }
 }

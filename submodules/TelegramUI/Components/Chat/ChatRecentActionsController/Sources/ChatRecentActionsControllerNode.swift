@@ -320,7 +320,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             self?.openUrl(url.url)
         }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
-                strongSelf.context.sharedContext.openChatInstantPage(context: strongSelf.context, message: message, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
+                if let controller = strongSelf.context.sharedContext.makeInstantPageController(context: strongSelf.context, message: message, sourcePeerType: associatedData?.automaticDownloadPeerType) {
+                    navigationController.pushViewController(controller)
+                }
             }
         }, openWallpaper: { [weak self] message in
             if let strongSelf = self{
@@ -1223,8 +1225,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         }
                     case .chatFolder:
                         break
-                    case let .instantView(webpage, anchor):
-                        strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourceLocation: InstantPageSourceLocation(userLocation: .peer(strongSelf.peer.id), peerType: .channel), anchor: anchor))
+                    case let .instantView(webPage, anchor):
+                        let browserController = strongSelf.context.sharedContext.makeInstantPageController(context: strongSelf.context, webPage: webPage, anchor: anchor, sourceLocation: InstantPageSourceLocation(userLocation: .peer(strongSelf.peer.id), peerType: .channel))
+                        strongSelf.pushController(browserController)
                     case let .join(link):
                         strongSelf.presentController(JoinLinkPreviewController(context: strongSelf.context, link: link, navigateToPeer: { peer, peekData in
                             if let strongSelf = self {
@@ -1256,6 +1259,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     case .settings:
                         break
                     case .premiumOffer:
+                        break
+                    case .starsTopup:
                         break
                     case let .joinVoiceChat(peerId, invite):
                         strongSelf.presentController(VoiceChatJoinScreen(context: strongSelf.context, peerId: peerId, invite: invite, join: { call in

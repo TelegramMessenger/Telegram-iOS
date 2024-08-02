@@ -1104,7 +1104,7 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
             self.hideButtonNode.isHidden = confirmation
         case .email:
             self.inputNode.textField.keyboardType = .emailAddress
-            self.inputNode.textField.returnKeyType = .done
+            self.inputNode.textField.returnKeyType = .next
             self.hideButtonNode.isHidden = true
             
             if #available(iOS 12.0, *) {
@@ -1134,7 +1134,7 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
             }
         case .hint:
             self.inputNode.textField.keyboardType = .asciiCapable
-            self.inputNode.textField.returnKeyType = .done
+            self.inputNode.textField.returnKeyType = .next
             self.hideButtonNode.isHidden = true
             
             self.inputNode.textField.autocorrectionType = .no

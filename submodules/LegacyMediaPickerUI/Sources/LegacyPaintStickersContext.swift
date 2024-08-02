@@ -477,16 +477,18 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
         }
         
         func lcm(_ x: Int64, _ y: Int64) -> Int64 {
+            let x = max(x, 1)
+            let y = max(y, 1)
             return x / gcd(x, y) * y
         }
-        
+                
         return combineLatest(durations)
         |> map { durations in
             var result: Double
             let minDuration: Double = 3.0
             if durations.count > 1 {
                 let reduced = durations.reduce(1.0) { lhs, rhs -> Double in
-                    return Double(lcm(Int64(lhs * 10.0), Int64(rhs * 10.0)))
+                    return Double(lcm(Int64(lhs * 100.0), Int64(rhs * 100.0)))
                 }
                 result = min(6.0, Double(reduced) / 10.0)
             } else if let duration = durations.first {
