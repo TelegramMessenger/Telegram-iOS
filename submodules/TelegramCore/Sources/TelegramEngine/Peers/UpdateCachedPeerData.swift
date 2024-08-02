@@ -198,8 +198,12 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                 }
                 
                 let botPreview: Signal<CachedUserData.BotPreview?, NoError>
-                if let user = maybePeer as? TelegramUser, let _ = user.botInfo {
-                    botPreview = _internal_requestBotPreview(network: network, peerId: user.id, inputUser: inputUser, language: nil)
+                if let user = maybePeer as? TelegramUser, let botInfo = user.botInfo {
+                    if botInfo.flags.contains(.canEdit) {
+                        botPreview = _internal_requestBotAdminPreview(network: network, peerId: user.id, inputUser: inputUser, language: nil)
+                    } else {
+                        botPreview = _internal_requestBotUserPreview(network: network, peerId: user.id, inputUser: inputUser)
+                    }
                 } else {
                     botPreview = .single(nil)
                 }
@@ -835,7 +839,7 @@ extension CachedPeerAutoremoveTimeout.Value {
     }
 }
 
-func _internal_requestBotPreview(network: Network, peerId: PeerId, inputUser: Api.InputUser, language: String?) -> Signal<CachedUserData.BotPreview?, NoError> {
+func _internal_requestBotAdminPreview(network: Network, peerId: PeerId, inputUser: Api.InputUser, language: String?) -> Signal<CachedUserData.BotPreview?, NoError> {
     return network.request(Api.functions.bots.getPreviewInfo(bot: inputUser, langCode: language ?? ""))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.bots.PreviewInfo?, NoError> in
@@ -862,5 +866,32 @@ func _internal_requestBotPreview(network: Network, peerId: PeerId, inputUser: Ap
                 alternativeLanguageCodes: langCodes
             )
         }
+    }
+}
+
+func _internal_requestBotUserPreview(network: Network, peerId: PeerId, inputUser: Api.InputUser) -> Signal<CachedUserData.BotPreview?, NoError> {
+    return network.request(Api.functions.bots.getPreviewMedias(bot: inputUser))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<[Api.BotPreviewMedia]?, NoError> in
+        return .single(nil)
+    }
+    |> map { result -> CachedUserData.BotPreview? in
+        guard let result else {
+            return nil
+        }
+        return CachedUserData.BotPreview(
+            items: result.compactMap { item -> CachedUserData.BotPreview.Item? in
+                switch item {
+                case let .botPreviewMedia(date, media):
+                    let value = textMediaAndExpirationTimerFromApiMedia(media, peerId)
+                    if let media = value.media {
+                        return CachedUserData.BotPreview.Item(media: media, timestamp: date)
+                    } else {
+                        return nil
+                    }
+                }
+            },
+            alternativeLanguageCodes: []
+        )
     }
 }
