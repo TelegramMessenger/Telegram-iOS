@@ -197,7 +197,7 @@ public final class CachedChannelParticipants: PostboxCoding, Equatable {
 extension ChannelParticipant {
     init(apiParticipant: Api.ChannelParticipant) {
         switch apiParticipant {
-            case let .channelParticipant(userId, date):
+            case let .channelParticipant(_, userId, date, _):
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), invitedAt: date, adminInfo: nil, banInfo: nil, rank: nil)
             case let .channelParticipantCreator(_, userId, adminRights, rank):
                 self = .creator(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(apiAdminRights: adminRights) ?? TelegramChatAdminRights(rights: []), promotedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), canBeEditedByAccountPeer: true), rank: rank)
@@ -207,7 +207,7 @@ extension ChannelParticipant {
                 self = .member(id: userId.peerId, invitedAt: date, adminInfo: nil, banInfo: banInfo, rank: nil)
             case let .channelParticipantAdmin(flags, userId, _, promotedBy, date, adminRights, rank: rank):
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(apiAdminRights: adminRights) ?? TelegramChatAdminRights(rights: []), promotedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(promotedBy)), canBeEditedByAccountPeer: (flags & (1 << 0)) != 0), banInfo: nil, rank: rank)
-            case let .channelParticipantSelf(_, userId, _, date):
+            case let .channelParticipantSelf(_, userId, _, date, _):
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), invitedAt: date, adminInfo: nil, banInfo: nil, rank: nil)
             case let .channelParticipantLeft(userId):
                 self = .member(id: userId.peerId, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil)

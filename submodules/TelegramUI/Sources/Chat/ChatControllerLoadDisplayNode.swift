@@ -1627,7 +1627,7 @@ extension ChatControllerImpl {
                                             var reactionItem: ReactionItem?
                                             
                                             switch updatedReaction {
-                                            case .builtin:
+                                            case .builtin, .stars:
                                                 for reaction in availableReactions.reactions {
                                                     guard let centerAnimation = reaction.centerAnimation else {
                                                         continue

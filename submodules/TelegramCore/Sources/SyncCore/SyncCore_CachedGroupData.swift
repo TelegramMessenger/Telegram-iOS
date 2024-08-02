@@ -100,10 +100,12 @@ extension PeerAllowedReactions {
 public final class PeerReactionSettings: Equatable, Codable {
     public let allowedReactions: PeerAllowedReactions
     public let maxReactionCount: Int32?
+    public let starsAllowed: Bool?
     
-    public init(allowedReactions: PeerAllowedReactions, maxReactionCount: Int32?) {
+    public init(allowedReactions: PeerAllowedReactions, maxReactionCount: Int32?, starsAllowed: Bool?) {
         self.allowedReactions = allowedReactions
         self.maxReactionCount = maxReactionCount
+        self.starsAllowed = starsAllowed
     }
     
     public static func ==(lhs: PeerReactionSettings, rhs: PeerReactionSettings) -> Bool {
@@ -114,6 +116,9 @@ public final class PeerReactionSettings: Equatable, Codable {
             return false
         }
         if lhs.maxReactionCount != rhs.maxReactionCount {
+            return false
+        }
+        if lhs.starsAllowed != rhs.starsAllowed {
             return false
         }
         return true
@@ -266,10 +271,10 @@ public final class CachedGroupData: CachedPeerData {
             self.reactionSettings = .known(reactionSettings)
         } else if let legacyAllowedReactions = decoder.decodeOptionalStringArrayForKey("allowedReactions") {
             let allowedReactions: PeerAllowedReactions = .limited(legacyAllowedReactions.map(MessageReaction.Reaction.builtin))
-            self.reactionSettings = .known(PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: nil))
+            self.reactionSettings = .known(PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: nil, starsAllowed: nil))
         } else if let allowedReactions = decoder.decode(PeerAllowedReactions.self, forKey: "allowedReactionSet") {
             let allowedReactions = allowedReactions
-            self.reactionSettings = .known(PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: nil))
+            self.reactionSettings = .known(PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: nil, starsAllowed: nil))
         } else {
             self.reactionSettings = .unknown
         }

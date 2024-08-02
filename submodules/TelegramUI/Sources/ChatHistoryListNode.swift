@@ -4031,7 +4031,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             var reactionItem: ReactionItem?
             
             switch updatedReaction {
-            case .builtin:
+            case .builtin, .stars:
                 if let availableReactions = item.associatedData.availableReactions {
                     for reaction in availableReactions.reactions {
                         guard let centerAnimation = reaction.centerAnimation else {

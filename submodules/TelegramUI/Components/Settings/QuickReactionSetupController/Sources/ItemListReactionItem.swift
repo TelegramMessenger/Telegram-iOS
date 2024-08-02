@@ -338,6 +338,15 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
                         }
                     case let .custom(fileId):
                         animationContent = .customEmoji(fileId: fileId)
+                    case .stars:
+                        if let availableReactions = item.availableReactions {
+                            for reaction in availableReactions.reactions {
+                                if reaction.value == item.reaction {
+                                    animationContent = .file(file: reaction.selectAnimation)
+                                    break
+                                }
+                            }
+                        }
                     }
                     
                     

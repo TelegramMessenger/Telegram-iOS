@@ -636,10 +636,10 @@ public final class CachedChannelData: CachedPeerData {
             self.reactionSettings = .known(reactionSettings)
         } else if let legacyAllowedReactions = decoder.decodeOptionalStringArrayForKey("allowedReactions") {
             let allowedReactions: PeerAllowedReactions = .limited(legacyAllowedReactions.map(MessageReaction.Reaction.builtin))
-            self.reactionSettings = .known(PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: nil))
+            self.reactionSettings = .known(PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: nil, starsAllowed: nil))
         } else if let allowedReactions = decoder.decode(PeerAllowedReactions.self, forKey: "allowedReactionSet") {
             let allowedReactions = allowedReactions
-            self.reactionSettings = .known(PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: nil))
+            self.reactionSettings = .known(PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: nil, starsAllowed: nil))
         } else {
             self.reactionSettings = .unknown
         }

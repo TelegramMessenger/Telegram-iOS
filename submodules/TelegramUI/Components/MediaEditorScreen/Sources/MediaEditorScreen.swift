@@ -8220,6 +8220,8 @@ private func allowedStoryReactions(context: AccountContext) -> Signal<[ReactionI
                     largeApplicationAnimation: nil,
                     isCustom: true
                 ))
+            case .stars:
+                break
             }
         }
         
