@@ -38,10 +38,10 @@ struct InstantPageTextImageItem {
     let id: EngineMedia.Id
 }
 
-struct InstantPageTextAnchorItem {
-    let name: String
-    let anchorText: NSAttributedString?
-    let empty: Bool
+public struct InstantPageTextAnchorItem {
+    public let name: String
+    public let anchorText: NSAttributedString?
+    public let empty: Bool
 }
 
 public struct InstantPageTextRangeRectEdge: Equatable {
@@ -63,7 +63,7 @@ public final class InstantPageTextLine {
     let strikethroughItems: [InstantPageTextStrikethroughItem]
     let markedItems: [InstantPageTextMarkedItem]
     let imageItems: [InstantPageTextImageItem]
-    let anchorItems: [InstantPageTextAnchorItem]
+    public let anchorItems: [InstantPageTextAnchorItem]
     let isRTL: Bool
     
     init(line: CTLine, range: NSRange, frame: CGRect, strikethroughItems: [InstantPageTextStrikethroughItem], markedItems: [InstantPageTextMarkedItem], imageItems: [InstantPageTextImageItem], anchorItems: [InstantPageTextAnchorItem], isRTL: Bool) {
