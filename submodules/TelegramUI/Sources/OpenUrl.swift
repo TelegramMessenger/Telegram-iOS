@@ -918,6 +918,20 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         }
                     }
                     handleResolvedUrl(.premiumMultiGift(reference: reference))
+                } else if parsedUrl.host == "stars_topup" {
+                    var amount: Int64?
+                    if let components = URLComponents(string: "/?" + query) {
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "amount" {
+                                        amount = Int64(value)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    handleResolvedUrl(.starsTopup(amount: amount))
                 } else if parsedUrl.host == "addlist" {
                     if let components = URLComponents(string: "/?" + query) {
                         var slug: String?

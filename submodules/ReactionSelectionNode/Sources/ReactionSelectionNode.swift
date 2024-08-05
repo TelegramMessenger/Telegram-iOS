@@ -60,7 +60,7 @@ private final class StarsReactionEffectLayer: SimpleLayer {
     override init() {
         super.init()
         
-        self.backgroundColor = UIColor.lightGray.withAlphaComponent(0.2).cgColor
+        //self.backgroundColor = UIColor.lightGray.withAlphaComponent(0.2).cgColor
     }
     
     override init(layer: Any) {
@@ -150,7 +150,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         
         super.init()
         
-        if case .custom(MessageReaction.starsReactionId) = item.reaction.rawValue {
+        if case .stars = item.reaction.rawValue {
             let starsEffectLayer = StarsReactionEffectLayer()
             self.starsEffectLayer = starsEffectLayer
             self.layer.addSublayer(starsEffectLayer)

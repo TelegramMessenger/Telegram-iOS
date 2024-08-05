@@ -494,6 +494,9 @@ public final class InteractiveTextNodeLayout: NSObject {
     public var trailingLineWidth: CGFloat {
         if let lastSegment = self.segments.last, let lastLine = lastSegment.lines.last {
             var width = lastLine.frame.maxX
+            if let additionalTrailingLine = lastLine.additionalTrailingLine {
+                width += additionalTrailingLine.1
+            }
             
             if let blockQuote = lastSegment.blockQuote {
                 if lastLine.frame.intersects(blockQuote.frame) {
@@ -1606,7 +1609,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                         spoilerWords: [],
                         embeddedItems: [],
                         attachments: [],
-                        additionalTrailingLine: (truncationToken, 0.0)
+                        additionalTrailingLine: (truncationToken, truncationTokenWidth)
                     )
                 }
             }

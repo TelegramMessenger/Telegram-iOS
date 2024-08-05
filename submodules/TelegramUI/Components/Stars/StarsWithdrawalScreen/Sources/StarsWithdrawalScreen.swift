@@ -295,7 +295,7 @@ private final class SheetContent: CombinedComponent {
             if case .paidMedia = component.mode {
                 buttonString = environment.strings.Stars_PaidContent_Create
             } else if let amount = state.amount {
-                buttonString = "\(environment.strings.Stars_Withdraw_Withdraw)   #  \(amount)"
+                buttonString = "\(environment.strings.Stars_Withdraw_Withdraw)   #  \(presentationStringsFormattedNumber(Int32(amount), environment.dateTimeFormat.groupingSeparator))"
             } else {
                 buttonString = environment.strings.Stars_Withdraw_Withdraw
             }

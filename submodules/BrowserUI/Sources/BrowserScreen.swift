@@ -18,6 +18,7 @@ import MinimizedContainer
 import InstantPageUI
 import NavigationStackComponent
 import LottieComponent
+import WebKit
 
 private let settingsTag = GenericComponentViewTag()
 
@@ -489,13 +490,13 @@ public class BrowserScreen: ViewController, MinimizableController {
         case expand
     }
 
-    fileprivate final class Node: ViewControllerTracingNode {
+    final class Node: ViewControllerTracingNode {
         private weak var controller: BrowserScreen?
         private let context: AccountContext
         
         private let contentContainerView = UIView()
         fileprivate let contentNavigationContainer = ComponentView<Empty>()
-        fileprivate var content: [BrowserContent] = []
+        private(set) var content: [BrowserContent] = []
         fileprivate var contentState: BrowserContentState?
         private var contentStateDisposable = MetaDisposable()
         
@@ -785,13 +786,14 @@ public class BrowserScreen: ViewController, MinimizableController {
             let browserContent: BrowserContent
             switch content {
             case let .webPage(url):
-                let webContent = BrowserWebContent(context: self.context, presentationData: self.presentationData, url: url)
+                let webContent = BrowserWebContent(context: self.context, presentationData: self.presentationData, url: url, preferredConfiguration: self.controller?.preferredConfiguration)
                 webContent.cancelInteractiveTransitionGestures = { [weak self] in
                     if let self, let view = self.controller?.view {
                         cancelInteractiveTransitionGestures(view: view)
                     }
                 }
                 browserContent = webContent
+                self.controller?.preferredConfiguration = nil
             case let .instantPage(webPage, anchor, sourceLocation):
                 let instantPageContent = BrowserInstantPageContent(context: self.context, presentationData: self.presentationData, webPage: webPage, anchor: anchor, url: webPage.content.url ?? "", sourceLocation: sourceLocation)
                 instantPageContent.openPeer = { [weak self] peer in
@@ -846,7 +848,9 @@ public class BrowserScreen: ViewController, MinimizableController {
                     return
                 }
                 if controller.isMinimized {
-                    
+                    if let navigationController = controller.navigationController as? NavigationController, let minimizedContainer = navigationController.minimizedContainer {
+                        minimizedContainer.removeController(controller)
+                    }
                 } else {
                     controller.dismiss()
                 }
@@ -1328,7 +1332,8 @@ public class BrowserScreen: ViewController, MinimizableController {
                                 right: layout.safeInsets.right
                             ),
                             navigationBarHeight: navigationBarHeight,
-                            scrollingPanelOffsetFraction: self.scrollingPanelOffsetFraction
+                            scrollingPanelOffsetFraction: self.scrollingPanelOffsetFraction,
+                            hasBottomPanel: !layout.metrics.isTablet || self.presentationState.isSearching
                         )
                     ))
                 )
@@ -1372,7 +1377,7 @@ public class BrowserScreen: ViewController, MinimizableController {
     
     private let context: AccountContext
     private let subject: Subject
-    
+    private var preferredConfiguration: WKWebViewConfiguration?
     private var openPreviousOnClose = false
     
     private var validLayout: ContainerViewLayout?
@@ -1389,7 +1394,7 @@ public class BrowserScreen: ViewController, MinimizableController {
 //        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     ]
     
-    public init(context: AccountContext, subject: Subject, openPreviousOnClose: Bool = false) {
+    public init(context: AccountContext, subject: Subject, preferredConfiguration: WKWebViewConfiguration? = nil, openPreviousOnClose: Bool = false) {
         var subject = subject
         if case let .webPage(url) = subject, let parsedUrl = URL(string: url) {
             if parsedUrl.host?.hasSuffix(".ton") == true {
@@ -1402,6 +1407,7 @@ public class BrowserScreen: ViewController, MinimizableController {
         }
         self.context = context
         self.subject = subject
+        self.preferredConfiguration = preferredConfiguration
         self.openPreviousOnClose = openPreviousOnClose
         
         super.init(navigationBarPresentationData: nil)
@@ -1419,7 +1425,7 @@ public class BrowserScreen: ViewController, MinimizableController {
         preconditionFailure()
     }
     
-    private var node: Node {
+    var node: Node {
         return self.displayNode as! Node
     }
     
@@ -1539,17 +1545,20 @@ private final class BrowserContentComponent: Component {
     let insets: UIEdgeInsets
     let navigationBarHeight: CGFloat
     let scrollingPanelOffsetFraction: CGFloat
+    let hasBottomPanel: Bool
     
     init(
         content: BrowserContent,
         insets: UIEdgeInsets,
         navigationBarHeight: CGFloat,
-        scrollingPanelOffsetFraction: CGFloat
+        scrollingPanelOffsetFraction: CGFloat,
+        hasBottomPanel: Bool
     ) {
         self.content = content
         self.insets = insets
         self.navigationBarHeight = navigationBarHeight
         self.scrollingPanelOffsetFraction = scrollingPanelOffsetFraction
+        self.hasBottomPanel = hasBottomPanel
     }
     
     static func ==(lhs: BrowserContentComponent, rhs: BrowserContentComponent) -> Bool {
@@ -1563,6 +1572,9 @@ private final class BrowserContentComponent: Component {
             return false
         }
         if lhs.scrollingPanelOffsetFraction != rhs.scrollingPanelOffsetFraction {
+            return false
+        }
+        if lhs.hasBottomPanel != rhs.hasBottomPanel {
             return false
         }
         return true
@@ -1584,9 +1596,9 @@ private final class BrowserContentComponent: Component {
             
             let collapsedHeight: CGFloat = 24.0
             let topInset: CGFloat = component.navigationBarHeight * (1.0 - component.scrollingPanelOffsetFraction) + (component.insets.top + collapsedHeight) * component.scrollingPanelOffsetFraction
-            let bottomInset = (49.0 + component.insets.bottom) * (1.0 - component.scrollingPanelOffsetFraction)
+            let bottomInset = component.hasBottomPanel ? (49.0 + component.insets.bottom) * (1.0 - component.scrollingPanelOffsetFraction) : 0.0
             let insets = UIEdgeInsets(top: topInset, left: component.insets.left, bottom: bottomInset, right: component.insets.right)
-            let fullInsets = UIEdgeInsets(top: component.insets.top + component.navigationBarHeight, left: component.insets.left, bottom: 49.0 + component.insets.bottom, right: component.insets.right)
+            let fullInsets = UIEdgeInsets(top: component.insets.top + component.navigationBarHeight, left: component.insets.left, bottom: component.hasBottomPanel ? 49.0 + component.insets.bottom : 0.0, right: component.insets.right)
                         
             component.content.updateLayout(size: availableSize, insets: insets, fullInsets: fullInsets, safeInsets: component.insets, transition: transition)
             transition.setFrame(view: component.content, frame: CGRect(origin: .zero, size: availableSize))

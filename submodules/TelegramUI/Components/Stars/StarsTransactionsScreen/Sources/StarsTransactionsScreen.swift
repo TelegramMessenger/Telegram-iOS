@@ -20,6 +20,7 @@ import TextFormat
 import UndoUI
 import ListActionItemComponent
 import StarsAvatarComponent
+import TelegramStringFormatting
 
 final class StarsTransactionsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -27,6 +28,7 @@ final class StarsTransactionsScreenComponent: Component {
     let context: AccountContext
     let starsContext: StarsContext
     let openTransaction: (StarsContext.State.Transaction) -> Void
+    let openSubscription: (StarsContext.State.Subscription) -> Void
     let buy: () -> Void
     let gift: () -> Void
     
@@ -34,12 +36,14 @@ final class StarsTransactionsScreenComponent: Component {
         context: AccountContext,
         starsContext: StarsContext,
         openTransaction: @escaping (StarsContext.State.Transaction) -> Void,
+        openSubscription: @escaping (StarsContext.State.Subscription) -> Void,
         buy: @escaping () -> Void,
         gift: @escaping () -> Void
     ) {
         self.context = context
         self.starsContext = starsContext
         self.openTransaction = openTransaction
+        self.openSubscription = openSubscription
         self.buy = buy
         self.gift = gift
     }
@@ -609,18 +613,29 @@ final class StarsTransactionsScreenComponent: Component {
                             maximumNumberOfLines: 1
                         )))
                     )
+                    //TODO:localize
                     titleComponents.append(
                         AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "renews on 2 Aug",
+                                string: "renews on \(stringForDateWithoutYear(date: Date(timeIntervalSince1970: Double(subscription.untilDate)), strings: environment.strings))",
                                 font: Font.regular(floor(fontBaseDisplaySize * 15.0 / 17.0)),
                                 textColor: environment.theme.list.itemSecondaryTextColor
                             )),
                             maximumNumberOfLines: 1
                         )))
                     )
-                    let itemLabel = NSAttributedString(string: "\(subscription.pricing.amount)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor)
-                    let itemSublabel = NSAttributedString(string: "per month", font: Font.regular(floor(fontBaseDisplaySize * 14.0 / 17.0)), textColor: environment.theme.list.itemPrimaryTextColor)
+                    
+                    let labelComponent: AnyComponentWithIdentity<Empty>
+                    if "".isEmpty {
+                        let itemLabel = NSAttributedString(string: "\(subscription.pricing.amount)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor)
+                        let itemSublabel = NSAttributedString(string: "per month", font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemSecondaryTextColor)
+                        
+                        labelComponent = AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel, subtext: itemSublabel)))
+                    } else {
+                        labelComponent = AnyComponentWithIdentity(id: "cancelledLabel", component: AnyComponent(
+                            MultilineTextComponent(text: .plain(NSAttributedString(string: "cancelled", font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemDestructiveColor)))
+                        ))
+                    }
                     
                     subscriptionsItems.append(AnyComponentWithIdentity(
                         id: subscription.id,
@@ -631,12 +646,12 @@ final class StarsTransactionsScreenComponent: Component {
                                 contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 8.0, right: 0.0),
                                 leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: .peer(subscription.peer), photo: nil, media: [], backgroundColor: environment.theme.list.plainBackgroundColor))), false),
                                 icon: nil,
-                                accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel, subtext: itemSublabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
+                                accessory: .custom(ListActionItemComponent.CustomAccessory(component: labelComponent, insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
                                 action: { [weak self] _ in
-                                    guard let self, let _ = self.component else {
+                                    guard let self, let component = self.component else {
                                         return
                                     }
-
+                                    component.openSubscription(subscription)
                                 }
                             )
                         )
@@ -832,11 +847,15 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         var buyImpl: (() -> Void)?
         var giftImpl: (() -> Void)?
         var openTransactionImpl: ((StarsContext.State.Transaction) -> Void)?
+        var openSubscriptionImpl: ((StarsContext.State.Subscription) -> Void)?
         super.init(context: context, component: StarsTransactionsScreenComponent(
             context: context,
             starsContext: starsContext,
             openTransaction: { transaction in
                 openTransactionImpl?(transaction)
+            },
+            openSubscription: { subscription in
+                openSubscriptionImpl?(subscription)
             },
             buy: {
                 buyImpl?()
@@ -864,6 +883,14 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
             })
         }
         
+        openSubscriptionImpl = { [weak self] subscription in
+            guard let self else {
+                return
+            }
+            let controller = context.sharedContext.makeStarsSubscriptionScreen(context: context, subscription: subscription)
+            self.push(controller)
+        }
+        
         buyImpl = { [weak self] in
             guard let self else {
                 return
@@ -874,7 +901,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                 guard let self else {
                     return
                 }
-                let controller = context.sharedContext.makeStarsPurchaseScreen(context: context, starsContext: starsContext, options: options, purpose: .generic, completion: { [weak self] stars in
+                let controller = context.sharedContext.makeStarsPurchaseScreen(context: context, starsContext: starsContext, options: options, purpose: .generic(requiredStars: nil), completion: { [weak self] stars in
                     guard let self else {
                         return
                     }

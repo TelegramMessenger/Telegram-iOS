@@ -569,6 +569,15 @@ final class StoryItemSetViewListComponent: Component {
                                     if case let .view(view) = item {
                                         animationFile = view.reactionFile
                                     }
+                                case .stars:
+                                    if let availableReactions = component.availableReactions {
+                                        for availableReaction in availableReactions.reactionItems {
+                                            if availableReaction.reaction.rawValue == reaction {
+                                                animationFile = availableReaction.listAnimation
+                                                break
+                                            }
+                                        }
+                                    }
                                 }
                                 return PeerListItemComponent.Reaction(
                                     reaction: reaction,

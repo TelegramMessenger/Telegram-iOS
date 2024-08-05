@@ -20,6 +20,7 @@ import MultilineTextComponent
 import UrlEscaping
 import UrlHandling
 import SaveProgressScreen
+import DeviceModel
 
 private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
     private final class PendingTask {
@@ -151,6 +152,22 @@ private class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
     }
 }
 
+private func computedUserAgent() -> String {
+    func getFirmwareVersion() -> String? {
+        var size = 0
+        sysctlbyname("kern.osversion", nil, &size, nil, 0)
+        
+        var str = [CChar](repeating: 0, count: size)
+        sysctlbyname("kern.osversion", &str, &size, nil, 0)
+        
+        return String(cString: str)
+    }
+    
+    let osVersion = UIDevice.current.systemVersion
+    let firmwareVersion = getFirmwareVersion() ?? "15E148"
+    return DeviceModel.current.isIpad ? "Version/\(osVersion) Safari/605.1.15" : "Version/\(osVersion) Mobile/\(firmwareVersion) Safari/604.1"
+}
+
 final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
@@ -186,42 +203,49 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     
     private var tempFile: TempBoxFile?
     
-    init(context: AccountContext, presentationData: PresentationData, url: String) {
+    init(context: AccountContext, presentationData: PresentationData, url: String, preferredConfiguration: WKWebViewConfiguration? = nil) {
         self.context = context
         self.uuid = UUID()
         self.presentationData = presentationData
         
-        let configuration = WKWebViewConfiguration()
-        
-        var proxyServerHost = "magic.org"
-        if let data = context.currentAppConfiguration.with({ $0 }).data, let hostValue = data["ton_proxy_address"] as? String {
-            proxyServerHost = hostValue
-        }
-        configuration.setURLSchemeHandler(TonSchemeHandler(proxyServerHost: proxyServerHost), forURLScheme: "tonsite")
-        configuration.allowsInlineMediaPlayback = true
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            configuration.mediaTypesRequiringUserActionForPlayback = []
-        } else {
-            configuration.mediaPlaybackRequiresUserAction = false
-        }
-        
-        let contentController = WKUserContentController()
-        let videoScript = WKUserScript(source: videoSource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
-        contentController.addUserScript(videoScript)
-        let touchScript = WKUserScript(source: setupTouchObservers, injectionTime: .atDocumentStart, forMainFrameOnly: false)
-        contentController.addUserScript(touchScript)
-        configuration.userContentController = contentController
-        
         var handleScriptMessageImpl: ((WKScriptMessage) -> Void)?
-        let eventProxyScript = WKUserScript(source: eventProxySource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
-        contentController.addUserScript(eventProxyScript)
-        contentController.add(WeakScriptMessageHandler { message in
-            handleScriptMessageImpl?(message)
-        }, name: "performAction")
         
+        let configuration: WKWebViewConfiguration
+        if let preferredConfiguration {
+            configuration = preferredConfiguration
+        } else {
+            configuration = WKWebViewConfiguration()
+            var proxyServerHost = "magic.org"
+            if let data = context.currentAppConfiguration.with({ $0 }).data, let hostValue = data["ton_proxy_address"] as? String {
+                proxyServerHost = hostValue
+            }
+            configuration.setURLSchemeHandler(TonSchemeHandler(proxyServerHost: proxyServerHost), forURLScheme: "tonsite")
+            configuration.allowsInlineMediaPlayback = true
+            if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                configuration.mediaTypesRequiringUserActionForPlayback = []
+            } else {
+                configuration.mediaPlaybackRequiresUserAction = false
+            }
+            
+            let contentController = WKUserContentController()
+            let videoScript = WKUserScript(source: videoSource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+            contentController.addUserScript(videoScript)
+            let touchScript = WKUserScript(source: setupTouchObservers, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+            contentController.addUserScript(touchScript)
+            
+            let eventProxyScript = WKUserScript(source: eventProxySource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+            contentController.addUserScript(eventProxyScript)
+            contentController.add(WeakScriptMessageHandler { message in
+                handleScriptMessageImpl?(message)
+            }, name: "performAction")
+
+            configuration.userContentController = contentController
+            configuration.applicationNameForUserAgent = computedUserAgent()
+        }
+                
         self.webView = WebView(frame: CGRect(), configuration: configuration)
         self.webView.allowsLinkPreview = true
-        
+                
         if #available(iOS 11.0, *) {
             self.webView.scrollView.contentInsetAdjustmentBehavior = .never
         }
@@ -251,12 +275,12 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         self.backgroundColor = presentationData.theme.list.plainBackgroundColor
         self.webView.backgroundColor = presentationData.theme.list.plainBackgroundColor
-        self.webView.isOpaque = false
+        self.webView.alpha = 0.0
         
         self.webView.allowsBackForwardNavigationGestures = true
         self.webView.scrollView.delegate = self
         self.webView.scrollView.clipsToBounds = false
-//        self.webView.translatesAutoresizingMaskIntoConstraints = false
+
         self.webView.navigationDelegate = self
         self.webView.uiDelegate = self
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.title), options: [], context: nil)
@@ -529,7 +553,14 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         self.previousScrollingOffset = ScrollingOffsetState(value: self.webView.scrollView.contentOffset.y, isDraggingOrDecelerating: self.webView.scrollView.isDragging || self.webView.scrollView.isDecelerating)
         
-        let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top))
+        let currentBounds = self.webView.scrollView.bounds
+        let offsetToBottomEdge = max(0.0, self.webView.scrollView.contentSize.height - currentBounds.maxY)
+        var bottomInset = insets.bottom
+        if offsetToBottomEdge < 128.0 {
+            bottomInset = fullInsets.bottom
+        }
+        
+        let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - bottomInset))
         var refresh = false
         if self.webView.frame.width > 0 && webViewFrame.width != self.webView.frame.width {
             refresh = true
@@ -540,11 +571,10 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             self.webView.reloadInputViews()
         }
         
-        self.webView.scrollView.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: fullInsets.bottom, right: 0.0)
-        self.webView.customBottomInset = max(insets.bottom, safeInsets.bottom)
+        self.webView.customBottomInset = safeInsets.bottom * (1.0 - insets.bottom / fullInsets.bottom)
 
-        self.webView.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
-        self.webView.scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
+//        self.webView.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
+//        self.webView.scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         
         if let error = self.currentError {
             let errorSize = self.errorView.update(
@@ -585,6 +615,10 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             }
             self.didSetupSearch = false
         }  else if keyPath == "estimatedProgress" {
+            if self.webView.estimatedProgress >= 0.1 && self.webView.alpha.isZero {
+                self.webView.alpha = 1.0
+                self.webView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
             self.updateState { $0.withUpdatedEstimatedProgress(self.webView.estimatedProgress) }
         } else if keyPath == "canGoBack" {
             self.updateState { $0.withUpdatedCanGoBack(self.webView.canGoBack) }
@@ -682,12 +716,17 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
 //            })
 //        } else {
             if let url = navigationAction.request.url?.absoluteString {
-                if (navigationAction.targetFrame == nil || navigationAction.targetFrame?.isMainFrame == true) && (isTelegramMeLink(url) || isTelegraPhLink(url)) {
+                if (navigationAction.targetFrame == nil || navigationAction.targetFrame?.isMainFrame == true) && (isTelegramMeLink(url) || isTelegraPhLink(url)) && !url.contains("/auth/push?") && !self._state.url.contains("/auth/push?") {
                     decisionHandler(.cancel, preferences)
                     self.minimize()
                     self.openAppUrl(url)
                 } else {
-                    decisionHandler(.allow, preferences)
+                    if let scheme = navigationAction.request.url?.scheme, !["http", "https", "tonsite", "about"].contains(scheme.lowercased()) {
+                        decisionHandler(.cancel, preferences)
+                        self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: true, presentationData: self.presentationData, navigationController: nil, dismissInput: {})
+                    } else {
+                        decisionHandler(.allow, preferences)
+                    }
                 }
             } else {
                 decisionHandler(.allow, preferences)
@@ -724,7 +763,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             decisionHandler(.allow)
         }
     }
-    
+        
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         if let _ = self.currentError {
             self.currentError = nil
@@ -736,10 +775,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        self.updateState {
-            $0
-                .withUpdatedBackList(webView.backForwardList.backList.map { BrowserContentState.HistoryItem(webItem: $0) })
-                .withUpdatedForwardList(webView.backForwardList.forwardList.map { BrowserContentState.HistoryItem(webItem: $0) })
+        self.updateState {$0
+            .withUpdatedBackList(webView.backForwardList.backList.map { BrowserContentState.HistoryItem(webItem: $0) })
+            .withUpdatedForwardList(webView.backForwardList.forwardList.map { BrowserContentState.HistoryItem(webItem: $0) })
         }
         self.parseFavicon()
     }
@@ -762,7 +800,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                     self.minimize()
                     self.openAppUrl(url)
                 } else {
-                    self.open(url: url, new: true)
+                    return self.open(url: url, configuration: configuration, new: true)
                 }
             }
         }
@@ -770,7 +808,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     func webViewDidClose(_ webView: WKWebView) {
-        self.close()
+        Queue.mainQueue().after(0.5, {
+            self.close()
+        })
     }
     
     @available(iOS 15.0, *)
@@ -901,17 +941,19 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.present(alertController, nil)
     }
     
-    private func open(url: String, new: Bool) {
+    @discardableResult private func open(url: String, configuration: WKWebViewConfiguration? = nil, new: Bool) -> WKWebView? {
         let subject: BrowserScreen.Subject = .webPage(url: url)
         if new, let navigationController = self.getNavigationController() {
             navigationController._keepModalDismissProgress = true
             self.minimize()
-            let controller = BrowserScreen(context: self.context, subject: subject, openPreviousOnClose: true)
+            let controller = BrowserScreen(context: self.context, subject: subject, preferredConfiguration: configuration, openPreviousOnClose: true)
             navigationController._keepModalDismissProgress = true
             navigationController.pushViewController(controller)
+            return (controller.node.content.last as? BrowserWebContent)?.webView
         } else {
             self.pushContent(subject)
         }
+        return nil
     }
     
     private func share(url: String) {

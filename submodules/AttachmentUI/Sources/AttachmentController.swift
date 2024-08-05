@@ -713,7 +713,7 @@ public class AttachmentController: ViewController, MinimizableController {
             }
             if case .ended = recognizer.state {
                 if let lastController = self.currentControllers.last {
-                    if let controller = self.controller, controller.shouldMinimizeOnSwipe?(self.currentType) == true {
+                    if let controller = self.controller, let layout = self.validLayout, !layout.metrics.isTablet, controller.shouldMinimizeOnSwipe?(self.currentType) == true {
                         self.minimize()
                         return
                     }

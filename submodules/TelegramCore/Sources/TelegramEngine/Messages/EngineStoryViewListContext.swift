@@ -505,6 +505,8 @@ public final class EngineStoryViewListContext {
                                                         return nil
                                                     case let .custom(fileId):
                                                         return transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile
+                                                    case .stars:
+                                                        return nil
                                                     }
                                                 }
                                             )))
@@ -696,6 +698,8 @@ public final class EngineStoryViewListContext {
                                                     reactionFile = nil
                                                 case let .custom(fileId):
                                                     reactionFile = transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile
+                                                case .stars:
+                                                    reactionFile = nil
                                                 }
                                                 items.append(.view(Item.View(
                                                     peer: EnginePeer(peer),

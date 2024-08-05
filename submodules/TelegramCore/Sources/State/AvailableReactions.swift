@@ -17,6 +17,7 @@ public final class AvailableReactions: Equatable, Codable {
             case effectAnimation
             case aroundAnimation
             case centerAnimation
+            case isStars
         }
         
         public let isEnabled: Bool
@@ -100,7 +101,12 @@ public final class AvailableReactions: Equatable, Codable {
             self.isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
             self.isPremium = try container.decodeIfPresent(Bool.self, forKey: .isPremium) ?? false
             
-            self.value = .builtin(try container.decode(String.self, forKey: .value))
+            let isStars = try container.decodeIfPresent(Bool.self, forKey: .isStars) ?? false
+            if isStars {
+                self.value = .stars
+            } else {
+                self.value = .builtin(try container.decode(String.self, forKey: .value))
+            }
             self.title = try container.decode(String.self, forKey: .title)
             
             let staticIconData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .staticIcon)
@@ -142,6 +148,8 @@ public final class AvailableReactions: Equatable, Codable {
                 try container.encode(value, forKey: .value)
             case .custom:
                 break
+            case .stars:
+                try container.encode(true, forKey: .isStars)
             }
             try container.encode(self.title, forKey: .title)
             
@@ -172,6 +180,25 @@ public final class AvailableReactions: Equatable, Codable {
         reactions: [Reaction]
     ) {
         self.hash = hash
+        
+        //TODO:release
+        var reactions = reactions
+        reactions.removeAll(where: { if case .stars = $0.value { return true } else { return false } })
+        if let item = reactions.first(where: { if case .builtin("🤩") = $0.value { return true } else { return false } }) {
+            reactions.append(Reaction(
+                isEnabled: false,
+                isPremium: false,
+                value: .stars,
+                title: "Star",
+                staticIcon: item.staticIcon,
+                appearAnimation: item.appearAnimation,
+                selectAnimation: item.selectAnimation,
+                activateAnimation: item.activateAnimation,
+                effectAnimation: item.effectAnimation,
+                aroundAnimation: item.aroundAnimation,
+                centerAnimation: item.centerAnimation
+            ))
+        }
         self.reactions = reactions
     }
     
@@ -189,7 +216,26 @@ public final class AvailableReactions: Equatable, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
         self.hash = try container.decodeIfPresent(Int32.self, forKey: .newHash) ?? 0
-        self.reactions = try container.decode([Reaction].self, forKey: .reactions)
+        
+        //TODO:release
+        var reactions = try container.decode([Reaction].self, forKey: .reactions)
+        reactions.removeAll(where: { if case .stars = $0.value { return true } else { return false } })
+        if let item = reactions.first(where: { if case .builtin("🤩") = $0.value { return true } else { return false } }) {
+            reactions.append(Reaction(
+                isEnabled: false,
+                isPremium: false,
+                value: .stars,
+                title: "Star",
+                staticIcon: item.staticIcon,
+                appearAnimation: item.appearAnimation,
+                selectAnimation: item.selectAnimation,
+                activateAnimation: item.activateAnimation,
+                effectAnimation: item.effectAnimation,
+                aroundAnimation: item.aroundAnimation,
+                centerAnimation: item.centerAnimation
+            ))
+        }
+        self.reactions = reactions
     }
     
     public func encode(to encoder: Encoder) throws {

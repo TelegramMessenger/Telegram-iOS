@@ -1636,6 +1636,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     reactionText = "."
                                     entities.append(MessageTextEntity(range: (text as NSString).length ..< (text as NSString).length + (reactionText as NSString).length, type: .CustomEmoji(stickerPack: nil, fileId: fileId)))
                                     text.append(reactionText)
+                                case .stars:
+                                    break
                                 }
                             }
                         }

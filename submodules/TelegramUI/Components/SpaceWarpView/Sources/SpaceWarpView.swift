@@ -250,6 +250,44 @@ public protocol SpaceWarpNode: ASDisplayNode {
     func update(size: CGSize, cornerRadius: CGFloat, transition: ComponentTransition)
 }
 
+private final class MaskGridLayer: SimpleLayer {
+    private var itemLayers: [SimpleLayer] = []
+    
+    private var resolution: (x: Int, y: Int)?
+    
+    func updateGrid(resolutionX: Int, resolutionY: Int) {
+        if let resolution = self.resolution, resolution.x == resolutionX, resolution.y == resolutionY {
+            return
+        }
+        self.resolution = (resolutionX, resolutionY)
+        
+        for itemLayer in self.itemLayers {
+            itemLayer.removeFromSuperlayer()
+        }
+        self.itemLayers.removeAll()
+        
+        for _ in 0 ..< resolutionX * resolutionY {
+            let itemLayer = SimpleLayer()
+            itemLayer.backgroundColor = UIColor.black.cgColor
+            itemLayer.opacity = 1.0
+            itemLayer.anchorPoint = CGPoint()
+            self.addSublayer(itemLayer)
+            self.itemLayers.append(itemLayer)
+        }
+    }
+    
+    func update(positions: [CGPoint], bounds: [CGRect], transforms: [CATransform3D]) {
+        for i in 0 ..< self.itemLayers.count {
+            if i < positions.count && i < bounds.count && i < transforms.count {
+                let itemLayer = self.itemLayers[i]
+                itemLayer.position = positions[i]
+                itemLayer.bounds = bounds[i]
+                itemLayer.transform = transforms[i]
+            }
+        }
+    }
+}
+
 open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
     private final class Shockwave {
         let startPoint: CGPoint
@@ -270,8 +308,7 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
     private var meshView: STCMeshView?
     
     private var gradientLayer: SimpleGradientLayer?
-    
-    private var debugLayers: [SimpleLayer] = []
+    private var gradientMaskLayer: MaskGridLayer?
     
     #if DEBUG
     private var fpsView: FPSView?
@@ -313,10 +350,16 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         }
         
         if self.link == nil {
-            self.link = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] deltaTime in
+            var previousTimestamp = CACurrentMediaTime()
+            self.link = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] _ in
                 guard let self else {
                     return
                 }
+                
+                let timestamp = CACurrentMediaTime()
+                let deltaTime = max(0.0, min(10.0 / 60.0, timestamp - previousTimestamp))
+                previousTimestamp = timestamp
+                
                 for shockwave in self.shockwaves {
                     shockwave.timeValue += deltaTime * (1.0 / CGFloat(UIView.animationDurationFactor()))
                 }
@@ -338,24 +381,12 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
             self.meshView = nil
             meshView.removeFromSuperview()
         }
-        for debugLayer in self.debugLayers {
-            debugLayer.removeFromSuperlayer()
-        }
-        self.debugLayers.removeAll()
         
         let meshView = STCMeshView(frame: CGRect())
         self.meshView = meshView
         self.view.insertSubview(meshView, aboveSubview: self.backgroundView)
         
         meshView.instanceCount = resolutionX * resolutionY
-        
-        /*for _ in 0 ..< resolutionX * resolutionY {
-            let debugLayer = SimpleLayer()
-            debugLayer.backgroundColor = UIColor.red.cgColor
-            debugLayer.opacity = 1.0
-            self.layer.addSublayer(debugLayer)
-            self.debugLayers.append(debugLayer)
-        }*/
     }
     
     public func update(size: CGSize, cornerRadius: CGFloat, transition: ComponentTransition) {
@@ -396,11 +427,6 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
                 meshView.removeFromSuperview()
             }
             
-            for debugLayer in self.debugLayers {
-                debugLayer.removeFromSuperlayer()
-            }
-            self.debugLayers.removeAll()
-            
             self.resolution = nil
             self.backgroundView.isHidden = true
             self.contentNodeSource.clipsToBounds = false
@@ -409,6 +435,10 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
             if let gradientLayer = self.gradientLayer {
                 self.gradientLayer = nil
                 gradientLayer.removeFromSuperlayer()
+            }
+            if let gradientMaskLayer = self.gradientMaskLayer {
+                self.gradientMaskLayer = nil
+                gradientMaskLayer.removeFromSuperlayer()
             }
             
             return
@@ -424,7 +454,9 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         }
         #endif
         
-        self.updateGrid(resolutionX: max(2, Int(size.width / 40.0)), resolutionY: max(2, Int(size.height / 40.0)))
+        let resolutionX = max(2, Int(size.width / 40.0))
+        let resolutionY = max(2, Int(size.height / 40.0))
+        self.updateGrid(resolutionX: resolutionX, resolutionY: resolutionY)
         guard let resolution = self.resolution, let meshView = self.meshView else {
             return
         }
@@ -437,6 +469,14 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         meshView.frame = CGRect(origin: CGPoint(), size: size)
         
         if let shockwave = self.shockwaves.first {
+            let gradientMaskLayer: MaskGridLayer
+            if let current = self.gradientMaskLayer {
+                gradientMaskLayer = current
+            } else {
+                gradientMaskLayer = MaskGridLayer()
+                self.gradientMaskLayer = gradientMaskLayer
+            }
+            
             let gradientLayer: SimpleGradientLayer
             if let current = self.gradientLayer {
                 gradientLayer = current
@@ -446,10 +486,13 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
                 self.layer.addSublayer(gradientLayer)
                 
                 gradientLayer.type = .radial
-                //gradientLayer.colors = [UIColor.clear.cgColor, UIColor.clear.cgColor, UIColor.red.cgColor, UIColor.clear.cgColor]
                 gradientLayer.colors = [UIColor(white: 1.0, alpha: 0.0).cgColor, UIColor(white: 1.0, alpha: 0.0).cgColor, UIColor(white: 1.0, alpha: 0.2).cgColor, UIColor(white: 1.0, alpha: 0.0).cgColor]
+                
+                gradientLayer.mask = gradientMaskLayer
             }
+            
             gradientLayer.frame = CGRect(origin: CGPoint(), size: size)
+            gradientMaskLayer.frame = CGRect(origin: CGPoint(), size: size)
             
             gradientLayer.startPoint = CGPoint(x: shockwave.startPoint.x / size.width, y: shockwave.startPoint.y / size.height)
             
@@ -543,10 +586,9 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
             meshView.instanceTransforms = buffer.baseAddress!
         }
         
-        for i in 0 ..< self.debugLayers.count {
-            self.debugLayers[i].bounds = instanceBounds[i]
-            self.debugLayers[i].position = instancePositions[i]
-            self.debugLayers[i].transform = instanceTransforms[i]
+        if let gradientMaskLayer = self.gradientMaskLayer {
+            gradientMaskLayer.updateGrid(resolutionX: resolutionX, resolutionY: resolutionY)
+            gradientMaskLayer.update(positions: instancePositions, bounds: instanceBounds, transforms: instanceTransforms)
         }
     }
     

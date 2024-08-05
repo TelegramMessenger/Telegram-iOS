@@ -331,6 +331,7 @@ public final class StarsLabelComponent: CombinedComponent {
     
     public static var body: Body {
         let text = Child(MultilineTextComponent.self)
+        let subLabel = Child(MultilineTextComponent.self)
         let icon = Child(BundleIconComponent.self)
 
         return { context in
@@ -338,35 +339,36 @@ public final class StarsLabelComponent: CombinedComponent {
         
             let text = text.update(
                 component: MultilineTextComponent(text: .plain(component.text)),
-                availableSize: CGSize(width: 100.0, height: 40.0),
+                availableSize: CGSize(width: 140.0, height: 40.0),
                 transition: context.transition
             )
             
-            let subtext: _UpdatedChildComponent? = nil
-//            if let sublabel = component.subtext {
-//                subtext = text.update(
-//                    component: MultilineTextComponent(text: .plain(sublabel)),
-//                    availableSize: CGSize(width: 100.0, height: 40.0),
-//                    transition: context.transition
-//                )
-//            }
+
+            var subtext: _UpdatedChildComponent? = nil
+            if let sublabel = component.subtext {
+                subtext = subLabel.update(
+                    component: MultilineTextComponent(text: .plain(sublabel)),
+                    availableSize: CGSize(width: 100.0, height: 40.0),
+                    transition: context.transition
+                )
+            }
                         
             let iconSize = CGSize(width: 20.0, height: 20.0)
             let icon = icon.update(
                 component: BundleIconComponent(
-                    name: "Premium/Stars/StarLarge",
+                    name: "Premium/Stars/StarMedium",
                     tintColor: nil
                 ),
                 availableSize: iconSize,
                 transition: context.transition
             )
             
-            let spacing: CGFloat = 3.0
+            let spacing: CGFloat = 0.0
             let totalWidth = text.size.width + spacing + iconSize.width
             var size = CGSize(width: totalWidth, height: iconSize.height)
             let firstLineSize = size.height
-            if let _ = subtext {
-                size.height += 20.0
+            if let subtext {
+                size.height += subtext.size.height
             }
             
             let iconPosition: CGFloat
@@ -385,6 +387,11 @@ public final class StarsLabelComponent: CombinedComponent {
             context.add(icon
                 .position(CGPoint(x: iconPosition, y: firstLineSize / 2.0 - UIScreenPixel))
             )
+            if let subtext {
+                context.add(subtext
+                    .position(CGPoint(x: size.width - subtext.size.width / 2.0, y: firstLineSize + subtext.size.height / 2.0))
+                )
+            }
             return size
         }
     }

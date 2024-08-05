@@ -6,7 +6,6 @@ extension ReactionsMessageAttribute {
     func withUpdatedResults(_ reactions: Api.MessageReactions) -> ReactionsMessageAttribute {
         switch reactions {
         case let .messageReactions(flags, results, recentReactions, topReactors):
-            let _ = topReactors
             let min = (flags & (1 << 0)) != 0
             let canViewList = (flags & (1 << 2)) != 0
             let isTags = (flags & (1 << 3)) != 0
@@ -55,7 +54,23 @@ extension ReactionsMessageAttribute {
                     }
                 }
             }
-            return ReactionsMessageAttribute(canViewList: canViewList, isTags: isTags, reactions: reactions, recentPeers: parsedRecentReactions)
+            
+            var topPeers: [ReactionsMessageAttribute.TopPeer] = []
+            if let topReactors {
+                for item in topReactors {
+                    switch item {
+                    case let .messageReactor(flags, peerId, count):
+                        topPeers.append(ReactionsMessageAttribute.TopPeer(
+                            peerId: peerId.peerId,
+                            count: count,
+                            isTop: (flags & (1 << 0)) != 0,
+                            isMy: (flags & (1 << 1)) != 0)
+                        )
+                    }
+                }
+            }
+            
+            return ReactionsMessageAttribute(canViewList: canViewList, isTags: isTags, reactions: reactions, recentPeers: parsedRecentReactions, topPeers: topPeers)
         }
     }
 }
@@ -95,26 +110,7 @@ public func mergedMessageReactionsAndPeers(accountPeerId: EnginePeer.Id, account
         }
     }
     
-    #if DEBUG
-    var reactions = attribute.reactions
-    if "".isEmpty {
-        if let index = reactions.firstIndex(where: {
-            if case .custom(MessageReaction.starsReactionId) = $0.value {
-                return true
-            } else {
-                return false
-            }
-        }) {
-            let value = reactions[index]
-            reactions.remove(at: index)
-            reactions.insert(value, at: 0)
-        } else {
-            reactions.insert(MessageReaction(value: .custom(MessageReaction.starsReactionId), count: 1000000, chosenOrder: nil), at: 0)
-        }
-    }
-    #else
     let reactions = attribute.reactions
-    #endif
     
     return (reactions, recentPeers)
 }
@@ -175,14 +171,18 @@ private func mergeReactions(reactions: [MessageReaction], recentPeers: [Reaction
 public func mergedMessageReactions(attributes: [MessageAttribute], isTags: Bool) -> ReactionsMessageAttribute? {
     var current: ReactionsMessageAttribute?
     var pending: PendingReactionsMessageAttribute?
+    var pendingStars: PendingStarsReactionsMessageAttribute?
     for attribute in attributes {
         if let attribute = attribute as? ReactionsMessageAttribute {
             current = attribute
         } else if let attribute = attribute as? PendingReactionsMessageAttribute {
             pending = attribute
+        } else if let attribute = attribute as? PendingStarsReactionsMessageAttribute {
+            pendingStars = attribute
         }
     }
     
+    let result: ReactionsMessageAttribute?
     if let pending = pending, let accountPeerId = pending.accountPeerId {
         var reactions = current?.reactions ?? []
         var recentPeers = current?.recentPeers ?? []
@@ -192,14 +192,31 @@ public func mergedMessageReactions(attributes: [MessageAttribute], isTags: Bool)
         recentPeers = updatedRecentPeers
         
         if !reactions.isEmpty {
-            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, isTags: current?.isTags ?? isTags, reactions: reactions, recentPeers: recentPeers)
+            result = ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, isTags: current?.isTags ?? isTags, reactions: reactions, recentPeers: recentPeers, topPeers: current?.topPeers ?? [])
         } else {
-            return nil
+            result = nil
         }
-    } else if let current = current {
-        return current
+    } else if let current {
+        result = current
     } else {
-        return nil
+        result = nil
+    }
+    
+    if let pendingStars {
+        if let result {
+            var reactions = result.reactions
+            var updatedCount: Int32 = pendingStars.count
+            if let index = reactions.firstIndex(where: { $0.value == .stars }) {
+                updatedCount += reactions[index].count
+                reactions.remove(at: index)
+            }
+            reactions.insert(MessageReaction(value: .stars, count: updatedCount, chosenOrder: -1), at: 0)
+            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, isTags: current?.isTags ?? isTags, reactions: reactions, recentPeers: result.recentPeers, topPeers: result.topPeers)
+        } else {
+            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, isTags: current?.isTags ?? isTags, reactions: [MessageReaction(value: .stars, count: pendingStars.count, chosenOrder: -1)], recentPeers: [], topPeers: [])
+        }
+    } else {
+        return result
     }
 }
 
@@ -207,7 +224,6 @@ extension ReactionsMessageAttribute {
     convenience init(apiReactions: Api.MessageReactions) {
         switch apiReactions {
         case let .messageReactions(flags, results, recentReactions, topReactors):
-            let _ = topReactors
             let canViewList = (flags & (1 << 2)) != 0
             let isTags = (flags & (1 << 3)) != 0
             let parsedRecentReactions: [ReactionsMessageAttribute.RecentPeer]
@@ -229,6 +245,21 @@ extension ReactionsMessageAttribute {
                 parsedRecentReactions = []
             }
             
+            var topPeers: [ReactionsMessageAttribute.TopPeer] = []
+            if let topReactors {
+                for item in topReactors {
+                    switch item {
+                    case let .messageReactor(flags, peerId, count):
+                        topPeers.append(ReactionsMessageAttribute.TopPeer(
+                            peerId: peerId.peerId,
+                            count: count,
+                            isTop: (flags & (1 << 0)) != 0,
+                            isMy: (flags & (1 << 1)) != 0)
+                        )
+                    }
+                }
+            }
+            
             self.init(
                 canViewList: canViewList,
                 isTags: isTags,
@@ -242,7 +273,8 @@ extension ReactionsMessageAttribute {
                         }
                     }
                 },
-                recentPeers: parsedRecentReactions
+                recentPeers: parsedRecentReactions,
+                topPeers: topPeers
             )
         }
     }

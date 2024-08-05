@@ -411,6 +411,8 @@ func managedRecentReactions(postbox: Postbox, network: Network) -> Signal<Void, 
             return 0
         case let .custom(fileId):
             return fileId.id
+        case .stars:
+            return 0
         }
     }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.messages.getRecentReactions(limit: 100, hash: hash))
@@ -428,6 +430,8 @@ func managedRecentReactions(postbox: Postbox, network: Network) -> Signal<Void, 
                         return nil
                     case let .custom(fileId):
                         return fileId
+                    case .stars:
+                        return nil
                     }
                 })
                 |> map { files -> [OrderedItemListEntry] in
@@ -442,6 +446,8 @@ func managedRecentReactions(postbox: Postbox, network: Network) -> Signal<Void, 
                                 continue
                             }
                             item = RecentReactionItem(.custom(file))
+                        case .stars:
+                            item = RecentReactionItem(.stars)
                         }
                         if let entry = CodableEntry(item) {
                             items.append(OrderedItemListEntry(id: item.id.rawValue, contents: entry))
@@ -462,6 +468,8 @@ func managedTopReactions(postbox: Postbox, network: Network) -> Signal<Void, NoE
             return 0
         case let .custom(fileId):
             return fileId.id
+        case .stars:
+            return 0
         }
     }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.messages.getTopReactions(limit: 32, hash: hash))
@@ -479,6 +487,8 @@ func managedTopReactions(postbox: Postbox, network: Network) -> Signal<Void, NoE
                         return nil
                     case let .custom(fileId):
                         return fileId
+                    case .stars:
+                        return nil
                     }
                 })
                 |> map { files -> [OrderedItemListEntry] in
@@ -493,6 +503,8 @@ func managedTopReactions(postbox: Postbox, network: Network) -> Signal<Void, NoE
                                 continue
                             }
                             item = RecentReactionItem(.custom(file))
+                        case .stars:
+                            item = RecentReactionItem(.stars)
                         }
                         if let entry = CodableEntry(item) {
                             items.append(OrderedItemListEntry(id: item.id.rawValue, contents: entry))
@@ -513,6 +525,8 @@ func managedDefaultTagReactions(postbox: Postbox, network: Network) -> Signal<Vo
             return 0
         case let .custom(fileId):
             return fileId.id
+        case .stars:
+            return 0
         }
     }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.messages.getDefaultTagReactions(hash: hash))
@@ -530,6 +544,8 @@ func managedDefaultTagReactions(postbox: Postbox, network: Network) -> Signal<Vo
                         return nil
                     case let .custom(fileId):
                         return fileId
+                    case .stars:
+                        return nil
                     }
                 })
                 |> map { files -> [OrderedItemListEntry] in
@@ -544,6 +560,8 @@ func managedDefaultTagReactions(postbox: Postbox, network: Network) -> Signal<Vo
                                 continue
                             }
                             item = RecentReactionItem(.custom(file))
+                        case .stars:
+                            item = RecentReactionItem(.stars)
                         }
                         if let entry = CodableEntry(item) {
                             items.append(OrderedItemListEntry(id: item.id.rawValue, contents: entry))

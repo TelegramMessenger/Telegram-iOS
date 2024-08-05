@@ -157,7 +157,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 allowedReactions = .empty
             }
             
-            let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: self.allowedReactionCount >= 11 ? nil : Int32(self.allowedReactionCount))
+            let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: self.allowedReactionCount >= 11 ? nil : Int32(self.allowedReactionCount), starsAllowed: self.areStarsReactionsEnabled)
             
             if self.appliedReactionSettings != reactionSettings {
                 if case .empty = allowedReactions {
@@ -223,6 +223,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     return true
                 case .builtin:
                     return false
+                case .stars:
+                    return false
                 }
             })
             
@@ -248,7 +250,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
             } else {
                 allowedReactions = .empty
             }
-            let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: self.allowedReactionCount == 11 ? nil : Int32(self.allowedReactionCount))
+            let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: self.allowedReactionCount == 11 ? nil : Int32(self.allowedReactionCount), starsAllowed: self.areStarsReactionsEnabled)
             
             let applyDisposable = (component.context.engine.peers.updatePeerReactionSettings(peerId: component.peerId, reactionSettings: reactionSettings)
             |> deliverOnMainQueue).start(error: { [weak self] error in
@@ -362,10 +364,16 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 self.appliedReactionSettings = component.initialContent.reactionSettings.flatMap { reactionSettings in
                     return PeerReactionSettings(
                         allowedReactions: reactionSettings.allowedReactions,
-                        maxReactionCount: reactionSettings.maxReactionCount == 11 ? nil : reactionSettings.maxReactionCount
+                        maxReactionCount: reactionSettings.maxReactionCount == 11 ? nil : reactionSettings.maxReactionCount,
+                        starsAllowed: reactionSettings.starsAllowed
                     )
                 }
                 self.allowedReactionCount = (component.initialContent.reactionSettings?.maxReactionCount).flatMap(Int.init) ?? 11
+                if let value = component.initialContent.reactionSettings?.starsAllowed {
+                    self.areStarsReactionsEnabled = value
+                } else {
+                    self.areStarsReactionsEnabled = component.initialContent.isStarReactionAvailable
+                }
             }
             var caretPosition = self.caretPosition ?? enabledReactions.count
             caretPosition = max(0, min(enabledReactions.count, caretPosition))
@@ -442,6 +450,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                             case .custom:
                                                 return true
                                             case .builtin:
+                                                return false
+                                            case .stars:
                                                 return false
                                             }
                                         })
@@ -868,7 +878,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 }
                 contentHeight += reactionCountSectionSize.height
                 
-                if !"".isEmpty {
+                if component.initialContent.isStarReactionAvailable {
                     contentHeight += 32.0
                     
                     let paidReactionsSection: ComponentView<Empty>
@@ -926,7 +936,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                 AnyComponentWithIdentity(id: 0, component: AnyComponent(ListSwitchItemComponent(
                                     theme: environment.theme,
                                     title: "Enable Paid Reactions",
-                                    value: areStarsReactionsEnabled,
+                                    value: self.areStarsReactionsEnabled,
                                     valueUpdated: { [weak self] value in
                                         guard let self else {
                                             return
@@ -1048,6 +1058,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 case .custom:
                     return true
                 case .builtin:
+                    return false
+                case .stars:
                     return false
                 }
             }).count : 0
@@ -1231,17 +1243,20 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
         public let enabledReactions: [EmojiComponentReactionItem]
         public let availableReactions: AvailableReactions?
         public let reactionSettings: PeerReactionSettings?
+        public let isStarReactionAvailable: Bool
         
         init(
             isEnabled: Bool,
             enabledReactions: [EmojiComponentReactionItem],
             availableReactions: AvailableReactions?,
-            reactionSettings: PeerReactionSettings?
+            reactionSettings: PeerReactionSettings?,
+            isStarReactionAvailable: Bool
         ) {
             self.isEnabled = isEnabled
             self.enabledReactions = enabledReactions
             self.availableReactions = availableReactions
             self.reactionSettings = reactionSettings
+            self.isStarReactionAvailable = isStarReactionAvailable
         }
         
         public static func ==(lhs: Content, rhs: Content) -> Bool {
@@ -1258,6 +1273,9 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
                 return false
             }
             if lhs.reactionSettings != rhs.reactionSettings {
+                return false
+            }
+            if lhs.isStarReactionAvailable != rhs.isStarReactionAvailable {
                 return false
             }
             return true
@@ -1370,7 +1388,7 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
                     }
                 }
                 
-                return Content(isEnabled: isEnabled, enabledReactions: result, availableReactions: availableReactions, reactionSettings: reactionSettings)
+                return Content(isEnabled: isEnabled, enabledReactions: result, availableReactions: availableReactions, reactionSettings: reactionSettings, isStarReactionAvailable: cachedData.flags.contains(.paidMediaAllowed))
             }
         }
         |> distinctUntilChanged

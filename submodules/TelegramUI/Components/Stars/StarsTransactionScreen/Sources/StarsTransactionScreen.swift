@@ -30,7 +30,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     
     let context: AccountContext
     let subject: StarsTransactionScreen.Subject
-    let action: () -> Void
     let cancel: (Bool) -> Void
     let openPeer: (EnginePeer) -> Void
     let openMessage: (EngineMessage.Id) -> Void
@@ -41,7 +40,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     init(
         context: AccountContext,
         subject: StarsTransactionScreen.Subject,
-        action: @escaping () -> Void,
         cancel: @escaping  (Bool) -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
@@ -51,7 +49,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     ) {
         self.context = context
         self.subject = subject
-        self.action = action
         self.cancel = cancel
         self.openPeer = openPeer
         self.openMessage = openMessage
@@ -728,7 +725,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 originY += description.size.height + 10.0
             }
             
-            let amountSpacing: CGFloat = 3.0
+            let amountSpacing: CGFloat = 1.0
             var totalAmountWidth: CGFloat = amount.size.width + amountSpacing + amountStar.size.width
             var amountOriginX: CGFloat = floor(context.availableSize.width - totalAmountWidth) / 2.0
             if isRefund {
@@ -775,8 +772,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             context.add(amountStar
                 .position(CGPoint(x: amountOriginX + amount.size.width + amountSpacing + amountStar.size.width / 2.0, y: amountOrigin + amountStar.size.height / 2.0))
             )
-            
-                        
+               
             context.add(table
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + table.size.height / 2.0))
             )
@@ -808,7 +804,6 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     
     let context: AccountContext
     let subject: StarsTransactionScreen.Subject
-    let action: () -> Void
     let openPeer: (EnginePeer) -> Void
     let openMessage: (EngineMessage.Id) -> Void
     let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
@@ -818,7 +813,6 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     init(
         context: AccountContext,
         subject: StarsTransactionScreen.Subject,
-        action: @escaping () -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
@@ -827,7 +821,6 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     ) {
         self.context = context
         self.subject = subject
-        self.action = action
         self.openPeer = openPeer
         self.openMessage = openMessage
         self.openMedia = openMedia
@@ -860,7 +853,6 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
                     content: AnyComponent<EnvironmentType>(StarsTransactionSheetContent(
                         context: context.component.context,
                         subject: context.component.subject,
-                        action: context.component.action,
                         cancel: { animate in
                             if animate {
                                 if let controller = controller() as? StarsTransactionScreen {
@@ -959,8 +951,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
     public init(
         context: AccountContext,
         subject: StarsTransactionScreen.Subject,
-        forceDark: Bool = false,
-        action: @escaping () -> Void
+        forceDark: Bool = false
     ) {
         self.context = context
         
@@ -974,7 +965,6 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             component: StarsTransactionSheetComponent(
                 context: context,
                 subject: subject,
-                action: action,
                 openPeer: { peerId in
                     openPeerImpl?(peerId)
                 },

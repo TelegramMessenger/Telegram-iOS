@@ -2743,11 +2743,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeStarsTransactionScreen(context: AccountContext, transaction: StarsContext.State.Transaction, peer: EnginePeer) -> ViewController {
-        return StarsTransactionScreen(context: context, subject: .transaction(transaction, peer), action: {})
+        return StarsTransactionScreen(context: context, subject: .transaction(transaction, peer))
     }
     
     public func makeStarsReceiptScreen(context: AccountContext, receipt: BotPaymentReceipt) -> ViewController {
-        return StarsTransactionScreen(context: context, subject: .receipt(receipt), action: {})
+        return StarsTransactionScreen(context: context, subject: .receipt(receipt))
+    }
+    
+    public func makeStarsSubscriptionScreen(context: AccountContext, subscription: StarsContext.State.Subscription) -> ViewController {
+        return StarsTransactionScreen(context: context, subject: .subscription(subscription))
     }
     
     public func makeStarsStatisticsScreen(context: AccountContext, peerId: EnginePeer.Id, revenueContext: StarsRevenueStatsContext) -> ViewController {
@@ -2763,7 +2767,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController {
-        return StarsTransactionScreen(context: context, subject: .gift(message), action: {})
+        return StarsTransactionScreen(context: context, subject: .gift(message))
     }
     
     public func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError> {

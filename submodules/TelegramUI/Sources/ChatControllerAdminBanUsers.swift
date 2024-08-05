@@ -340,6 +340,20 @@ extension ChatControllerImpl {
     }
     
     func beginDeleteMessagesWithUndo(messageIds: Set<MessageId>, type: InteractiveMessagesDeletionType) {
+        var deleteImmediately = false
+        if case .forEveryone = type {
+            deleteImmediately = true
+        } else if case .scheduledMessages = self.presentationInterfaceState.subject {
+            deleteImmediately = true
+        } else if case .peer(self.context.account.peerId) = self.chatLocation {
+            deleteImmediately = true
+        }
+        
+        if deleteImmediately {
+            let _ = self.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: type).startStandalone()
+            return
+        }
+        
         self.chatDisplayNode.historyNode.ignoreMessageIds = Set(messageIds)
         
         let undoTitle = self.presentationData.strings.Chat_MessagesDeletedToast_Text(Int32(messageIds.count))
