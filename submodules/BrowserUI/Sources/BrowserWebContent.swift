@@ -717,7 +717,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                     self.minimize()
                     self.openAppUrl(url)
                 } else {
-                    if let scheme = navigationAction.request.url?.scheme, !["http", "https", "tonsite"].contains(scheme.lowercased()) {
+                    if let scheme = navigationAction.request.url?.scheme, !["http", "https", "tonsite", "about"].contains(scheme.lowercased()) {
+                        decisionHandler(.cancel, preferences)
                         self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: true, presentationData: self.presentationData, navigationController: nil, dismissInput: {})
                     } else {
                         decisionHandler(.allow, preferences)
