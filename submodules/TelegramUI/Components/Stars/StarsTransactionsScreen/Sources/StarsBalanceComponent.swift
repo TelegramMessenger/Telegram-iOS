@@ -161,7 +161,7 @@ final class StarsBalanceComponent: Component {
                     let titleFrame = CGRect(origin: CGPoint(x: origin + icon.size.width + spacing, y: contentHeight - 3.0), size: titleSize)
                     titleView.frame = titleFrame
                     
-                    self.icon.frame = CGRect(origin: CGPoint(x: origin, y: contentHeight + 2.0), size: icon.size)
+                    self.icon.frame = CGRect(origin: CGPoint(x: origin, y: contentHeight), size: icon.size)
                 }
             }
             contentHeight += titleSize.height
