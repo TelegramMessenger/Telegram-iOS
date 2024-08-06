@@ -3793,7 +3793,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                 ]
             )),
             environment: {},
-            containerSize: CGSize(width: 200.0, height: 200.0)
+            containerSize: CGSize(width: 240.0, height: 240.0)
         )
         guard let starView = star.view else {
             return
