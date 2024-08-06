@@ -471,8 +471,8 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
         entries.append(.subscriptionFeeToggle(presentationData.theme, "Require Monthly Fee", state.subscriptionEnabled, isEditingEnabled))
         if state.subscriptionEnabled {
             var label: String = ""
-            if let subscriptionFee, subscriptionFee > 0, let starsState {
-                label = formatTonUsdValue(state.subscriptionFee, divide: false, rate: starsState.usdRate, dateTimeFormat: presentationData.dateTimeFormat)
+            if let subscriptionFee = state.subscriptionFee, subscriptionFee > 0, let starsState {
+                label = formatTonUsdValue(subscriptionFee, divide: false, rate: starsState.usdRate, dateTimeFormat: presentationData.dateTimeFormat)
             }
             entries.append(.subscriptionFee(presentationData.theme, "Stars amount per month", isEditingEnabled, state.subscriptionFee, label))
         }
