@@ -624,6 +624,15 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     }
     
     func getRenderSubEntities() -> [DrawingEntity] {
+        var explicitlyStaticStickers = Set<Int64>()
+        if let customEmojiContainerView = self.customEmojiContainerView {
+            for (key, view) in customEmojiContainerView.emojiLayers {
+                if let view = view as? EmojiTextAttachmentView, let numFrames = view.contentLayer.numFrames, numFrames == 1 {
+                    explicitlyStaticStickers.insert(key.id)
+                }
+            }
+        }
+        
         let textSize = self.textView.bounds.size
         let textPosition = self.textEntity.position
         let scale = self.textEntity.scale
@@ -638,6 +647,9 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             let emojiTextPosition = emojiRect.center.offsetBy(dx: -textSize.width / 2.0, dy: -textSize.height / 2.0)
                         
             let entity = DrawingStickerEntity(content: .file(.standalone(media: file), .sticker))
+            if explicitlyStaticStickers.contains(file.fileId.id) {
+                entity.isExplicitlyStatic = true
+            }
             entity.referenceDrawingSize = CGSize(width: itemSize * 4.0, height: itemSize * 4.0)
             entity.scale = scale
             entity.position = textPosition.offsetBy(

@@ -699,7 +699,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 originY += description.size.height + 10.0
             }
             
-            let amountSpacing: CGFloat = 3.0
+            let amountSpacing: CGFloat = 1.0
             var totalAmountWidth: CGFloat = amount.size.width + amountSpacing + amountStar.size.width
             var amountOriginX: CGFloat = floor(context.availableSize.width - totalAmountWidth) / 2.0
             if isRefund {
@@ -746,8 +746,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             context.add(amountStar
                 .position(CGPoint(x: amountOriginX + amount.size.width + amountSpacing + amountStar.size.width / 2.0, y: amountOrigin + amountStar.size.height / 2.0))
             )
-            
-                        
+               
             context.add(table
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + table.size.height / 2.0))
             )

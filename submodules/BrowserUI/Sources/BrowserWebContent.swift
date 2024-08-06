@@ -203,40 +203,46 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     
     private var tempFile: TempBoxFile?
     
-    init(context: AccountContext, presentationData: PresentationData, url: String) {
+    init(context: AccountContext, presentationData: PresentationData, url: String, preferredConfiguration: WKWebViewConfiguration? = nil) {
         self.context = context
         self.uuid = UUID()
         self.presentationData = presentationData
         
-        let configuration = WKWebViewConfiguration()
-        
-        var proxyServerHost = "magic.org"
-        if let data = context.currentAppConfiguration.with({ $0 }).data, let hostValue = data["ton_proxy_address"] as? String {
-            proxyServerHost = hostValue
-        }
-        configuration.setURLSchemeHandler(TonSchemeHandler(proxyServerHost: proxyServerHost), forURLScheme: "tonsite")
-        configuration.allowsInlineMediaPlayback = true
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            configuration.mediaTypesRequiringUserActionForPlayback = []
-        } else {
-            configuration.mediaPlaybackRequiresUserAction = false
-        }
-        
-        let contentController = WKUserContentController()
-        let videoScript = WKUserScript(source: videoSource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
-        contentController.addUserScript(videoScript)
-        let touchScript = WKUserScript(source: setupTouchObservers, injectionTime: .atDocumentStart, forMainFrameOnly: false)
-        contentController.addUserScript(touchScript)
-        configuration.userContentController = contentController
-        configuration.applicationNameForUserAgent = computedUserAgent()
-        
         var handleScriptMessageImpl: ((WKScriptMessage) -> Void)?
-        let eventProxyScript = WKUserScript(source: eventProxySource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
-        contentController.addUserScript(eventProxyScript)
-        contentController.add(WeakScriptMessageHandler { message in
-            handleScriptMessageImpl?(message)
-        }, name: "performAction")
         
+        let configuration: WKWebViewConfiguration
+        if let preferredConfiguration {
+            configuration = preferredConfiguration
+        } else {
+            configuration = WKWebViewConfiguration()
+            var proxyServerHost = "magic.org"
+            if let data = context.currentAppConfiguration.with({ $0 }).data, let hostValue = data["ton_proxy_address"] as? String {
+                proxyServerHost = hostValue
+            }
+            configuration.setURLSchemeHandler(TonSchemeHandler(proxyServerHost: proxyServerHost), forURLScheme: "tonsite")
+            configuration.allowsInlineMediaPlayback = true
+            if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                configuration.mediaTypesRequiringUserActionForPlayback = []
+            } else {
+                configuration.mediaPlaybackRequiresUserAction = false
+            }
+            
+            let contentController = WKUserContentController()
+            let videoScript = WKUserScript(source: videoSource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+            contentController.addUserScript(videoScript)
+            let touchScript = WKUserScript(source: setupTouchObservers, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+            contentController.addUserScript(touchScript)
+            
+            let eventProxyScript = WKUserScript(source: eventProxySource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+            contentController.addUserScript(eventProxyScript)
+            contentController.add(WeakScriptMessageHandler { message in
+                handleScriptMessageImpl?(message)
+            }, name: "performAction")
+
+            configuration.userContentController = contentController
+            configuration.applicationNameForUserAgent = computedUserAgent()
+        }
+                
         self.webView = WebView(frame: CGRect(), configuration: configuration)
         self.webView.allowsLinkPreview = true
                 
@@ -711,7 +717,12 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                     self.minimize()
                     self.openAppUrl(url)
                 } else {
-                    decisionHandler(.allow, preferences)
+                    if let scheme = navigationAction.request.url?.scheme, !["http", "https", "tonsite", "about"].contains(scheme.lowercased()) {
+                        decisionHandler(.cancel, preferences)
+                        self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: true, presentationData: self.presentationData, navigationController: nil, dismissInput: {})
+                    } else {
+                        decisionHandler(.allow, preferences)
+                    }
                 }
             } else {
                 decisionHandler(.allow, preferences)
@@ -786,7 +797,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                     self.minimize()
                     self.openAppUrl(url)
                 } else {
-                    self.open(url: url, new: true)
+                    return self.open(url: url, configuration: configuration, new: true)
                 }
             }
         }
@@ -927,17 +938,19 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.present(alertController, nil)
     }
     
-    private func open(url: String, new: Bool) {
+    @discardableResult private func open(url: String, configuration: WKWebViewConfiguration? = nil, new: Bool) -> WKWebView? {
         let subject: BrowserScreen.Subject = .webPage(url: url)
         if new, let navigationController = self.getNavigationController() {
             navigationController._keepModalDismissProgress = true
             self.minimize()
-            let controller = BrowserScreen(context: self.context, subject: subject, openPreviousOnClose: true)
+            let controller = BrowserScreen(context: self.context, subject: subject, preferredConfiguration: configuration, openPreviousOnClose: true)
             navigationController._keepModalDismissProgress = true
             navigationController.pushViewController(controller)
+            return (controller.node.content.last as? BrowserWebContent)?.webView
         } else {
             self.pushContent(subject)
         }
+        return nil
     }
     
     private func share(url: String) {

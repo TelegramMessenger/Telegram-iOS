@@ -73,7 +73,7 @@ final class MinimizedHeaderNode: ASDisplayNode {
                         guard let self else {
                             return
                         }
-                        let titles = titles.compactMap { $0 }
+                        let titles = titles.compactMap { $0 }.filter { !$0.isEmpty }
                         if titles.count == 1, let title = titles.first {
                             self.title = title
                         } else if let title = titles.last {

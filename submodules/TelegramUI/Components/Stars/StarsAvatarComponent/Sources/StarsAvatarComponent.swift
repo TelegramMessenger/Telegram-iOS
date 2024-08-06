@@ -336,7 +336,7 @@ public final class StarsLabelComponent: CombinedComponent {
                 transition: context.transition
             )
             
-            let iconSize = CGSize(width: 20.0, height: 20.0)
+            let iconSize = CGSize(width: 24.0, height: 24.0)
             let icon = icon.update(
                 component: BundleIconComponent(
                     name: "Premium/Stars/StarLarge",

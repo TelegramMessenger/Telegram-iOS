@@ -10,6 +10,7 @@ import UIKitRuntimeUtils
 
 private let minimizedNavigationHeight: CGFloat = 44.0
 private let minimizedTopMargin: CGFloat = 3.0
+private let maximizeLastStandingController = false
 
 final class ScrollViewImpl: UIScrollView {
     var shouldPassthrough: () -> Bool = { return false }
@@ -112,7 +113,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             self.snapshotContainerView.isUserInteractionEnabled = false
             
             super.init()
-                        
+
             self.clipsToBounds = true
             self.cornerRadius = 10.0
             applySmoothRoundedCorners(self.layer)
@@ -308,7 +309,9 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     private var presentationDataDisposable: Disposable?
     
     public private(set) var isExpanded: Bool = false
-    public var willMaximize: (() -> Void)?
+    public var willMaximize: ((MinimizedContainer) -> Void)?
+    public var willDismiss: ((MinimizedContainer) -> Void)?
+    public var didDismiss: ((MinimizedContainer) -> Void)?
     
     public private(set) var statusBarStyle: StatusBarStyle = .White
     public var statusBarStyleUpdated: (() -> Void)?
@@ -500,10 +503,13 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                             self.currentTransition = .dismiss(itemId: itemId)
                             
                             self.items.removeAll(where: { $0.id == itemId })
-                            if self.items.count == 1 {
+                            if self.items.count == 1, maximizeLastStandingController {
                                 self.isExpanded = false
-                                self.willMaximize?()
+                                self.willMaximize?(self)
                                 needsLayout = false
+                            } else if self.items.count == 0 {
+                                self.willDismiss?(self)
+                                self.isExpanded = false
                             }
                         }
                         if let item = self.items.first(where: { $0.id == itemId }), !item.controller.shouldDismissImmediately() {
@@ -556,6 +562,15 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         
         self.currentTransition = .minimize(itemId: item.id)
         self.requestUpdate(transition: transition)
+    }
+    
+    public func removeController(_ viewController: MinimizableController) {
+        guard let item = self.items.first(where: { $0.controller === viewController }) else {
+            return
+        }
+        
+        self.items.removeAll(where: { $0.id == item.id })
+        self.requestUpdate(transition: .animated(duration: 0.25, curve: .easeInOut))
     }
     
     private enum Transition: Equatable {
@@ -759,7 +774,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             if let currentTransition = self.currentTransition {
                 if currentTransition.matches(item: item) {
                     continue
-                } else if case .dismiss = currentTransition, self.items.count == 1 {
+                } else if case .dismiss = currentTransition, self.items.count == 1 && maximizeLastStandingController {
                     continue
                 }
             }
@@ -789,10 +804,13 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                         self.currentTransition = .dismiss(itemId: item.id)
                         
                         self.items.removeAll(where: { $0.id == item.id })
-                        if self.items.count == 1 {
+                        if self.items.count == 1, maximizeLastStandingController {
                             self.isExpanded = false
-                            self.willMaximize?()
+                            self.willMaximize?(self)
                             needsLayout = false
+                        } else if self.items.count == 0 {
+                            self.isExpanded = false
+                            self.willDismiss?(self)
                         }
                         if needsLayout {
                             self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
@@ -1097,7 +1115,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 guard let dismissedItemNode = self.itemNodes[itemId] else {
                     return
                 }
-                if self.items.count == 1 {
+                if self.items.count == 1, maximizeLastStandingController {
                     if let itemNode = self.itemNodes.first(where: { $0.0 != itemId })?.value, let navigationController = self.navigationController {
                         itemNode.item.beforeMaximize(navigationController, { [weak self] in
                             guard let self else {
@@ -1137,6 +1155,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                     }
                     transition.updatePosition(node: dismissedItemNode, position: CGPoint(x: -layout.size.width, y: dismissedItemNode.position.y))
                 } else {
+                    let isLast = self.items.isEmpty
                     transition.updatePosition(node: dismissedItemNode, position: CGPoint(x: -layout.size.width, y: dismissedItemNode.position.y), completion: { _ in
                         self.isApplyingTransition = false
                         if self.currentTransition == currentTransition {
@@ -1146,7 +1165,15 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                         
                         self.itemNodes[itemId] = nil
                         dismissedItemNode.removeFromSupernode()
+                        
+                        if isLast {
+                            self.didDismiss?(self)
+                        }
                     })
+                    if isLast {
+                        let dismissOffset = collapsedHeight(layout: layout)
+                        transition.updatePosition(layer: self.bottomEdgeView.layer, position: self.bottomEdgeView.layer.position.offsetBy(dx: 0.0, dy: dismissOffset))
+                    }
                 }
             case .dismissAll:
                 let dismissOffset = collapsedHeight(layout: layout)
