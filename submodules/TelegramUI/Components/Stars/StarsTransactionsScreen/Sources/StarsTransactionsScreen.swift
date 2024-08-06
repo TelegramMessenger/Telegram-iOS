@@ -27,6 +27,7 @@ final class StarsTransactionsScreenComponent: Component {
     
     let context: AccountContext
     let starsContext: StarsContext
+    let subscriptionsContext: StarsSubscriptionsContext
     let openTransaction: (StarsContext.State.Transaction) -> Void
     let openSubscription: (StarsContext.State.Subscription) -> Void
     let buy: () -> Void
@@ -35,6 +36,7 @@ final class StarsTransactionsScreenComponent: Component {
     init(
         context: AccountContext,
         starsContext: StarsContext,
+        subscriptionsContext: StarsSubscriptionsContext,
         openTransaction: @escaping (StarsContext.State.Transaction) -> Void,
         openSubscription: @escaping (StarsContext.State.Subscription) -> Void,
         buy: @escaping () -> Void,
@@ -42,6 +44,7 @@ final class StarsTransactionsScreenComponent: Component {
     ) {
         self.context = context
         self.starsContext = starsContext
+        self.subscriptionsContext = subscriptionsContext
         self.openTransaction = openTransaction
         self.openSubscription = openSubscription
         self.buy = buy
@@ -122,7 +125,6 @@ final class StarsTransactionsScreenComponent: Component {
         
         private var previousBalance: Int64?
         
-        private var subscriptionsContext: StarsSubscriptionsContext?
         private var subscriptionsStateDisposable: Disposable?
         private var subscriptionsState: StarsSubscriptionsContext.State?
         
@@ -312,9 +314,7 @@ final class StarsTransactionsScreenComponent: Component {
                     }
                 })
                 
-                let subscriptionsContext = component.context.engine.payments.peerStarsSubscriptionsContext(starsContext: component.starsContext)
-                self.subscriptionsContext = subscriptionsContext
-                self.subscriptionsStateDisposable = (subscriptionsContext.state
+                self.subscriptionsStateDisposable = (component.subscriptionsContext.state
                 |> deliverOnMainQueue).start(next: { [weak self] state in
                     guard let self else {
                         return
@@ -614,10 +614,21 @@ final class StarsTransactionsScreenComponent: Component {
                         )))
                     )
                     //TODO:localize
+                    let dateText: String
+                    let dateValue = stringForDateWithoutYear(date: Date(timeIntervalSince1970: Double(subscription.untilDate)), strings: environment.strings)
+                    if subscription.flags.contains(.isCancelled) {
+                        if subscription.untilDate > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
+                            dateText = "expires on \(dateValue)"
+                        } else {
+                            dateText = "expired on \(dateValue)"
+                        }
+                    } else {
+                        dateText = "renews on \(dateValue)"
+                    }
                     titleComponents.append(
                         AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "renews on \(stringForDateWithoutYear(date: Date(timeIntervalSince1970: Double(subscription.untilDate)), strings: environment.strings))",
+                                string: dateText,
                                 font: Font.regular(floor(fontBaseDisplaySize * 15.0 / 17.0)),
                                 textColor: environment.theme.list.itemSecondaryTextColor
                             )),
@@ -626,15 +637,15 @@ final class StarsTransactionsScreenComponent: Component {
                     )
                     
                     let labelComponent: AnyComponentWithIdentity<Empty>
-                    if "".isEmpty {
+                    if subscription.flags.contains(.isCancelled) {
+                        labelComponent = AnyComponentWithIdentity(id: "cancelledLabel", component: AnyComponent(
+                            MultilineTextComponent(text: .plain(NSAttributedString(string: "cancelled", font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemDestructiveColor)))
+                        ))
+                    } else {
                         let itemLabel = NSAttributedString(string: "\(subscription.pricing.amount)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor)
                         let itemSublabel = NSAttributedString(string: "per month", font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemSecondaryTextColor)
                         
                         labelComponent = AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel, subtext: itemSublabel)))
-                    } else {
-                        labelComponent = AnyComponentWithIdentity(id: "cancelledLabel", component: AnyComponent(
-                            MultilineTextComponent(text: .plain(NSAttributedString(string: "cancelled", font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemDestructiveColor)))
-                        ))
                     }
                     
                     subscriptionsItems.append(AnyComponentWithIdentity(
@@ -654,6 +665,38 @@ final class StarsTransactionsScreenComponent: Component {
                                     component.openSubscription(subscription)
                                 }
                             )
+                        )
+                    ))
+                }
+                if subscriptionsState.canLoadMore {
+                    subscriptionsItems.append(AnyComponentWithIdentity(
+                        id: "showMore",
+                        component: AnyComponent(
+                            ListActionItemComponent(
+                                theme: environment.theme,
+                                title: AnyComponent(Text(
+                                    text: "Show More",
+                                    font: Font.regular(17.0),
+                                    color: environment.theme.list.itemAccentColor
+                                )),
+                                leftIcon: .custom(
+                                    AnyComponentWithIdentity(
+                                        id: "icon",
+                                        component: AnyComponent(Image(
+                                            image: PresentationResourcesItemList.downArrowImage(environment.theme),
+                                            size: CGSize(width: 30.0, height: 30.0)
+                                        ))
+                                    ),
+                                    false
+                                ),
+                                accessory: nil,
+                                action: { _ in
+                                    
+                                },
+                                highlighting: .default,
+                                updateIsHighlighted: { view, _ in
+                                    
+                                })
                         )
                     ))
                 }
@@ -837,12 +880,15 @@ final class StarsTransactionsScreenComponent: Component {
 public final class StarsTransactionsScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     private let starsContext: StarsContext
+    private let subscriptionsContext: StarsSubscriptionsContext
     
     private let options = Promise<[StarsTopUpOption]>()
     
     public init(context: AccountContext, starsContext: StarsContext, forceDark: Bool = false) {
         self.context = context
         self.starsContext = starsContext
+        
+        self.subscriptionsContext = context.engine.payments.peerStarsSubscriptionsContext(starsContext: starsContext)
         
         var buyImpl: (() -> Void)?
         var giftImpl: (() -> Void)?
@@ -851,6 +897,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         super.init(context: context, component: StarsTransactionsScreenComponent(
             context: context,
             starsContext: starsContext,
+            subscriptionsContext: self.subscriptionsContext,
             openTransaction: { transaction in
                 openTransactionImpl?(transaction)
             },
@@ -887,7 +934,12 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
             guard let self else {
                 return
             }
-            let controller = context.sharedContext.makeStarsSubscriptionScreen(context: context, subscription: subscription)
+            let controller = context.sharedContext.makeStarsSubscriptionScreen(context: context, subscription: subscription, update: { [weak self] cancel in
+                guard let self else {
+                    return
+                }
+                self.subscriptionsContext.updateSubscription(id: subscription.id, cancel: cancel)
+            })
             self.push(controller)
         }
         

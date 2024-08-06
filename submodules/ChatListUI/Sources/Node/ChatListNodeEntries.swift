@@ -90,7 +90,7 @@ public enum ChatListNotice: Equatable {
     case birthdayPremiumGift(peers: [EnginePeer], birthdays: [EnginePeer.Id: TelegramBirthday])
     case reviewLogin(newSessionReview: NewSessionReview, totalCount: Int)
     case premiumGrace
-    case starsSubscriptionLowBalance
+    case starsSubscriptionLowBalance(amount: Int64)
 }
 
 enum ChatListNodeEntry: Comparable, Identifiable {

@@ -828,22 +828,35 @@ public final class StarsImageComponent: Component {
             
             if let _ = component.icon {
                 let smallIconView: UIImageView
-                if let current = self.smallIconView {
+                let smallIconOutlineView: UIImageView
+                if let current = self.smallIconView, let currentOutline = self.smallIconOutlineView {
                     smallIconView = current
+                    smallIconOutlineView = currentOutline
                 } else {
+                    smallIconOutlineView = UIImageView()
+                    containerNode.view.addSubview(smallIconOutlineView)
+                    self.smallIconOutlineView = smallIconOutlineView
+                    
                     smallIconView = UIImageView()
                     containerNode.view.addSubview(smallIconView)
+                    self.smallIconView = smallIconView
+                    
+                    smallIconOutlineView.image = UIImage(bundleImageName: "Premium/Stars/TransactionStarOutline")?.withRenderingMode(.alwaysTemplate)
+                    smallIconView.image = UIImage(bundleImageName: "Premium/Stars/TransactionStar")
                 }
                 
-                smallIconView.image = UIImage(bundleImageName: "Premium/Stars/MockBigStar")
+                smallIconOutlineView.tintColor = component.backgroundColor
                 
                 if let icon = smallIconView.image {
                     let smallIconFrame = CGRect(origin: CGPoint(x: imageFrame.maxX - icon.size.width, y: imageFrame.maxY - icon.size.height), size: icon.size)
                     smallIconView.frame = smallIconFrame
+                    smallIconOutlineView.frame = smallIconFrame
                 }
-            } else if let smallIconView = self.smallIconView {
+            } else if let smallIconView = self.smallIconView, let smallIconOutlineView = self.smallIconOutlineView {
                 self.smallIconView = nil
                 smallIconView.removeFromSuperview()
+                self.smallIconOutlineView = nil
+                smallIconOutlineView.removeFromSuperview()
             }
             
             if let _ = component.action {

@@ -2750,8 +2750,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsTransactionScreen(context: context, subject: .receipt(receipt))
     }
     
-    public func makeStarsSubscriptionScreen(context: AccountContext, subscription: StarsContext.State.Subscription) -> ViewController {
-        return StarsTransactionScreen(context: context, subject: .subscription(subscription))
+    public func makeStarsSubscriptionScreen(context: AccountContext, subscription: StarsContext.State.Subscription, update: @escaping (Bool) -> Void) -> ViewController {
+        return StarsTransactionScreen(context: context, subject: .subscription(subscription), updateSubscription: update)
+    }
+    
+    public func makeStarsSubscriptionScreen(context: AccountContext, peer: EnginePeer, pricing: StarsSubscriptionPricing, importer: PeerInvitationImportersState.Importer, usdRate: Double) -> ViewController {
+        return StarsTransactionScreen(context: context, subject: .importer(peer, pricing, importer, usdRate))
     }
     
     public func makeStarsStatisticsScreen(context: AccountContext, peerId: EnginePeer.Id, revenueContext: StarsRevenueStatsContext) -> ViewController {

@@ -50,6 +50,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let title: NSAttributedString
     let text: String
     let placeholder: String
+    let label: String?
     let type: ItemListSingleLineInputItemType
     let returnKeyType: UIReturnKeyType
     let alignment: ItemListSingleLineInputAlignment
@@ -68,12 +69,13 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let cleared: (() -> Void)?
     public let tag: ItemListItemTag?
     
-    public init(context: AccountContext? = nil, presentationData: ItemListPresentationData, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, alignment: ItemListSingleLineInputAlignment = .default, spacing: CGFloat = 0.0, clearType: ItemListSingleLineInputClearType = .none, maxLength: Int = 0, enabled: Bool = true, selectAllOnFocus: Bool = false, secondaryStyle: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void, cleared: (() -> Void)? = nil) {
+    public init(context: AccountContext? = nil, presentationData: ItemListPresentationData, title: NSAttributedString, text: String, placeholder: String, label: String? = nil, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, alignment: ItemListSingleLineInputAlignment = .default, spacing: CGFloat = 0.0, clearType: ItemListSingleLineInputClearType = .none, maxLength: Int = 0, enabled: Bool = true, selectAllOnFocus: Bool = false, secondaryStyle: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void, cleared: (() -> Void)? = nil) {
         self.context = context
         self.presentationData = presentationData
         self.title = title
         self.text = text
         self.placeholder = placeholder
+        self.label = label
         self.type = type
         self.returnKeyType = returnKeyType
         self.alignment = alignment

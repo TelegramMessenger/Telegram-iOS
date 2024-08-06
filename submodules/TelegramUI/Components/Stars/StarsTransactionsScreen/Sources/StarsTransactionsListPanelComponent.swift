@@ -268,9 +268,15 @@ final class StarsTransactionsListPanelComponent: Component {
                     }
                     itemLabel = NSAttributedString(string: labelString, font: Font.medium(fontBaseDisplaySize), textColor: labelString.hasPrefix("-") ? environment.theme.list.itemDestructiveColor : environment.theme.list.itemDisclosureActions.constructive.fillColor)
                     
+                    var itemDateColor = environment.theme.list.itemSecondaryTextColor
                     itemDate = stringForMediumCompactDate(timestamp: item.date, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
                     if item.flags.contains(.isRefund) {
                         itemDate += " – \(environment.strings.Stars_Intro_Transaction_Refund)"
+                    } else if item.flags.contains(.isPending) {
+                        itemDate += " – \(environment.strings.Monetization_Transaction_Pending)"
+                    } else if item.flags.contains(.isFailed) {
+                        itemDate += " – \(environment.strings.Monetization_Transaction_Failed)"
+                        itemDateColor = environment.theme.list.itemDestructiveColor
                     }
                     
                     var titleComponents: [AnyComponentWithIdentity<Empty>] = []
@@ -301,7 +307,7 @@ final class StarsTransactionsListPanelComponent: Component {
                             text: .plain(NSAttributedString(
                                 string: itemDate,
                                 font: Font.regular(floor(fontBaseDisplaySize * 14.0 / 17.0)),
-                                textColor: environment.theme.list.itemSecondaryTextColor
+                                textColor: itemDateColor
                             )),
                             maximumNumberOfLines: 1
                         )))

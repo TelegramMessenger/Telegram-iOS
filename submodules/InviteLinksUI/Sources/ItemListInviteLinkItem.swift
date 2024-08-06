@@ -45,7 +45,7 @@ private enum ItemBackgroundColor: Equatable {
             case .blue:
                 return (UIColor(rgb: 0x00b5f7), UIColor(rgb: 0x00b2f6), UIColor(rgb: 0xa7f4ff))
             case .green:
-                return (UIColor(rgb: 0x4aca62), UIColor(rgb: 0x43c85c), UIColor(rgb: 0xc5ffe6))
+                return (UIColor(rgb: 0x31b73b), UIColor(rgb: 0x88d93b), UIColor(rgb: 0xc5ffe6))
             case .yellow:
                 return (UIColor(rgb: 0xf8a953), UIColor(rgb: 0xf7a64e), UIColor(rgb: 0xfeffd7))
             case .red:
@@ -208,7 +208,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
         
         self.iconBackgroundNode = ASDisplayNode()
         self.iconBackgroundNode.setLayerBlock { () -> CALayer in
-            return CAShapeLayer()
+            return CAGradientLayer()
         }
         
         self.iconNode = ASImageNode()
@@ -283,8 +283,11 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
     public override func didLoad() {
         super.didLoad()
         
-        if let shapeLayer = self.iconBackgroundNode.layer as? CAShapeLayer {
-            shapeLayer.path = UIBezierPath(ovalIn: CGRect(x: 0.0, y: 0.0, width: 40.0, height: 40.0)).cgPath
+        self.iconBackgroundNode.cornerRadius = 20.0
+        if let iconBackgroundLayer = self.iconBackgroundNode.layer as? CAGradientLayer {
+            iconBackgroundLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
+            iconBackgroundLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
+            iconBackgroundLayer.type = .axial
         }
     }
     
@@ -344,17 +347,24 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                 transitionFraction = 0.0
             }
             
-            let topColor = color.colors.top
-            let nextTopColor = nextColor.colors.top
-            let iconColor: UIColor
+            let colors = color.colors
+            let nextColors = nextColor.colors
+            let topIconColor: UIColor
+            let bottomIconColor: UIColor
             if let _ = item.invite {
-                if case .blue = color {
-                    iconColor = item.presentationData.theme.list.itemAccentColor
+                if case .green = color, item.invite?.pricing != nil {
+                    topIconColor = color.colors.bottom
+                    bottomIconColor = color.colors.top
+                } else if case .blue = color {
+                    topIconColor = item.presentationData.theme.list.itemAccentColor
+                    bottomIconColor = topIconColor
                 } else {
-                    iconColor = nextTopColor.mixedWith(topColor, alpha: transitionFraction)
+                    topIconColor = nextColors.top.mixedWith(colors.top, alpha: transitionFraction)
+                    bottomIconColor = topIconColor
                 }
             } else {
-                iconColor = item.presentationData.theme.list.mediaPlaceholderColor
+                topIconColor = item.presentationData.theme.list.mediaPlaceholderColor
+                bottomIconColor = topIconColor
             }
             
             let inviteLink = item.invite?.link?.replacingOccurrences(of: "https://", with: "") ?? ""
@@ -400,7 +410,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                     if let range = text.string.range(of: "⭐️") {
                         text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: text.string))
                         text.addAttribute(NSAttributedString.Key.font, value: Font.semibold(15.0), range: NSRange(range, in: text.string))
-                        text.addAttribute(.baselineOffset, value: 2.5, range: NSRange(range, in: text.string))
+                        text.addAttribute(.baselineOffset, value: 3.5, range: NSRange(range, in: text.string))
                     }
                     pricingAttributedText = text
                 }
@@ -526,8 +536,11 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     strongSelf.contextSourceNode.contentRect = extractedRect
                      
-                    if let layer = strongSelf.iconBackgroundNode.layer as? CAShapeLayer {
-                        layer.fillColor = iconColor.cgColor
+                    if let iconBackgroundLayer = strongSelf.iconBackgroundNode.layer as? CAGradientLayer {
+                        iconBackgroundLayer.colors = [
+                            topIconColor.cgColor,
+                            bottomIconColor.cgColor
+                        ]
                     }
                     
                     if let _ = updatedTheme {
@@ -633,7 +646,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.timerNode = timerNode
                             strongSelf.offsetContainerNode.addSubnode(timerNode)
                         }
-                        timerNode.update(color: iconColor, value: timerValue)
+                        timerNode.update(color: topIconColor, value: timerValue)
                     } else if let timerNode = strongSelf.timerNode {
                         strongSelf.timerNode = nil
                         timerNode.removeFromSupernode()

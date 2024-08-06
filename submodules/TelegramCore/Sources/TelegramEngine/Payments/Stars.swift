@@ -956,16 +956,28 @@ private final class StarsSubscriptionsContextImpl {
             updatedState.isLoading = false
             updatedState.canLoadMore = self.nextOffset != nil
             self.updateState(updatedState)
-            
-            if updatedState.canLoadMore {
-                self.loadMore()
-            }
         }))
     }
     
     private func updateState(_ state: StarsSubscriptionsContext.State) {
         self._state = state
         self._statePromise.set(.single(state))
+    }
+    
+    func updateSubscription(id: String, cancel: Bool) {
+        var updatedState = self._state
+        if let index = updatedState.subscriptions.firstIndex(where: { $0.id == id }) {
+            let subscription = updatedState.subscriptions[index]
+            var updatedFlags = subscription.flags
+            if cancel {
+                updatedFlags.insert(.isCancelled)
+            } else {
+                updatedFlags.remove(.isCancelled)
+            }
+            let updatedSubscription = StarsContext.State.Subscription(flags: updatedFlags, id: subscription.id, peer: subscription.peer, untilDate: subscription.untilDate, pricing: subscription.pricing)
+            updatedState.subscriptions[index] = updatedSubscription
+        }
+        self.updateState(updatedState)
     }
 }
     
@@ -1006,6 +1018,12 @@ public final class StarsSubscriptionsContext {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
             return StarsSubscriptionsContextImpl(account: account, starsContext: starsContext)
         })
+    }
+    
+    public func updateSubscription(id: String, cancel: Bool) {
+        self.impl.with {
+            $0.updateSubscription(id: id, cancel: cancel)
+        }
     }
 }
 
@@ -1203,7 +1221,7 @@ func _internal_updateStarsSubscription(account: Account, peerId: EnginePeer.Id, 
             return .complete()
         }
         let flags: Int32 = (1 << 0)
-        return account.network.request(Api.functions.payments.changeStarsSubscription(flags: flags, peer: inputPeer, subscriptionId: subscriptionId, canceled: .boolTrue))
+        return account.network.request(Api.functions.payments.changeStarsSubscription(flags: flags, peer: inputPeer, subscriptionId: subscriptionId, canceled: cancel ? .boolTrue : .boolFalse))
         |> mapError { _ -> UpdateStarsSubsciptionError in
             return .generic
         }

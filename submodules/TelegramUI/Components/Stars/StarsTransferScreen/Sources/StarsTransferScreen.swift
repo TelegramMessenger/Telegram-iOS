@@ -262,7 +262,7 @@ private final class SheetContent: CombinedComponent {
             var contentSize = CGSize(width: context.availableSize.width, height: 18.0)
                         
             let background = background.update(
-                component: RoundedRectangle(color: theme.list.blocksBackgroundColor, cornerRadius: 8.0),
+                component: RoundedRectangle(color: theme.actionSheet.opaqueItemBackgroundColor, cornerRadius: 8.0),
                 availableSize: CGSize(width: context.availableSize.width, height: 1000.0),
                 transition: .immediate
             )
@@ -270,7 +270,6 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: background.size.height / 2.0))
             )
             
-            var isSubscription = false
             let subject: StarsImageComponent.Subject
             if !component.extendedMedia.isEmpty {
                 subject = .extendedMedia(component.extendedMedia)
@@ -283,13 +282,19 @@ private final class SheetContent: CombinedComponent {
             } else {
                 subject = .none
             }
+            
+            var isSubscription = false
+            if case .starsChatSubscription = context.component.source {
+                isSubscription = true
+            }
             let star = star.update(
                 component: StarsImageComponent(
                     context: component.context,
                     subject: subject,
                     theme: theme,
                     diameter: 90.0,
-                    backgroundColor: theme.list.blocksBackgroundColor
+                    backgroundColor: theme.actionSheet.opaqueItemBackgroundColor,
+                    icon: isSubscription ? .star : nil
                 ),
                 availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                 transition: context.transition
@@ -324,10 +329,9 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += 126.0
             
             let titleString: String
-            if case .starsChatSubscription = context.component.source {
+            if isSubscription {
                 //TODO:localize
                 titleString = "Subscribe to the Channel"
-                isSubscription = true
             } else {
                 titleString = strings.Stars_Transfer_Title
             }
@@ -588,12 +592,26 @@ private final class SheetContent: CombinedComponent {
                 let info = info.update(
                     component: BalancedTextComponent(
                         text: .markdown(
-                            text: "By subscribing you agree to the [Terms of Service]()",
+                            text: strings.Stars_Subscription_Terms,
                             attributes: termsMarkdownAttributes
                         ),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 0,
-                        lineSpacing: 0.2
+                        lineSpacing: 0.2,
+                        highlightColor: linkColor.withAlphaComponent(0.2),
+                        highlightAction: { attributes in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                            } else {
+                                return nil
+                            }
+                        },
+                        tapAction: { [weak controller] attributes, _ in
+                            if let controller, let navigationController = controller.navigationController as? NavigationController {
+                                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_Subscription_Terms_URL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                            }
+                        }
                     ),
                     availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
                     transition: .immediate

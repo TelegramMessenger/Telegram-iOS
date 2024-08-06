@@ -36,6 +36,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
     let openAppExamples: () -> Void
     let copyTransactionId: (String) -> Void
+    let updateSubscription: (StarsTransactionScreen.SubscriptionAction) -> Void
     
     init(
         context: AccountContext,
@@ -45,7 +46,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         openMessage: @escaping (EngineMessage.Id) -> Void,
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
         openAppExamples: @escaping () -> Void,
-        copyTransactionId: @escaping (String) -> Void
+        copyTransactionId: @escaping (String) -> Void,
+        updateSubscription: @escaping (StarsTransactionScreen.SubscriptionAction) -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -55,6 +57,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         self.openMedia = openMedia
         self.openAppExamples = openAppExamples
         self.copyTransactionId = copyTransactionId
+        self.updateSubscription = updateSubscription
     }
     
     static func ==(lhs: StarsTransactionSheetContent, rhs: StarsTransactionSheetContent) -> Bool {
@@ -96,6 +99,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 peerIds.append(message.id.peerId)
             case let .subscription(subscription):
                 peerIds.append(subscription.peer.id)
+            case let .importer(_, _, importer, _):
+                peerIds.append(importer.peer.peerId)
             }
             
             self.disposable = (context.engine.data.get(
@@ -138,10 +143,11 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         let description = Child(MultilineTextComponent.self)
         let table = Child(TableComponent.self)
         let additional = Child(BalancedTextComponent.self)
+        let status = Child(BalancedTextComponent.self)
         let button = Child(SolidRoundedButtonComponent.self)
         
-        let refundBackgound = Child(RoundedRectangle.self)
-        let refundText = Child(MultilineTextComponent.self)
+        let transactionStatusBackgound = Child(RoundedRectangle.self)
+        let transactionStatusText = Child(MultilineTextComponent.self)
         
         let spaceRegex = try? NSRegularExpression(pattern: "\\[(.*?)\\]", options: [])
         
@@ -182,8 +188,11 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let titleText: String
             let amountText: String
             var descriptionText: String
-            let additionalText: String
-            let buttonText: String
+            let additionalText = strings.Stars_Transaction_Terms
+            var buttonText: String? = strings.Common_OK
+            var buttonIsDestructive = false
+            var statusText: String?
+            var statusIsDestructive = false
             
             let count: Int64
             var countIsGeneric = false
@@ -196,13 +205,28 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let transactionPeer: StarsContext.State.Transaction.Peer?
             var media: [AnyMediaReference] = []
             var photo: TelegramMediaWebFile?
-            var isRefund = false
+            var transactionStatus: (String, UIColor)? = nil
             var isGift = false
             var isSubscription = false
+            var isSubscriber = false
             var isSubscriptionFee = false
+            var isCancelled = false
             
             var delayedCloseOnOpenPeer = true
             switch subject {
+            case let .importer(peer, pricing, importer, usdRate):
+                let usdValue = formatTonUsdValue(pricing.amount, divide: false, rate: usdRate, dateTimeFormat: environment.dateTimeFormat)
+                titleText = "Subscription"
+                descriptionText = "appx. \(usdValue) per month"
+                count = pricing.amount
+                countOnTop = true
+                transactionId = nil
+                date = importer.date
+                via = nil
+                messageId = nil
+                toPeer = importer.peer.peer.flatMap(EnginePeer.init)
+                transactionPeer = .peer(peer)
+                isSubscriber = true
             case let .subscription(subscription):
                 titleText = "Subscription"
                 descriptionText = ""
@@ -214,6 +238,17 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 toPeer = subscription.peer
                 transactionPeer = .peer(subscription.peer)
                 isSubscription = true
+                                
+                if subscription.flags.contains(.isCancelled) {
+                    statusText = "You have cancelled your subscription"
+                    statusIsDestructive = true
+                    buttonText = "Renew Subscription"
+                    isCancelled = true
+                } else {
+                    statusText = "If you cancel now, you can still access your subscription until \(stringForMediumDate(timestamp: subscription.untilDate, strings: strings, dateTimeFormat: dateTimeFormat, withTime: false))"
+                    buttonText = "Cancel Subscription"
+                    buttonIsDestructive = true
+                }
             case let .transaction(transaction, parentPeer):
                 if let _ = transaction.subscriptionPeriod {
                     //TODO:localize
@@ -325,7 +360,12 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     transactionPeer = transaction.peer
                     media = transaction.media.map { AnyMediaReference.starsTransaction(transaction: StarsTransactionReference(peerId: parentPeer.id, id: transaction.id, isRefund: transaction.flags.contains(.isRefund)), media: $0) }
                     photo = transaction.photo
-                    isRefund = transaction.flags.contains(.isRefund)
+                    
+                    if transaction.flags.contains(.isRefund) {
+                        transactionStatus = (strings.Stars_Transaction_Refund, theme.list.itemDisclosureActions.constructive.fillColor)
+                    } else if transaction.flags.contains(.isPending) {
+                        transactionStatus = (strings.Monetization_Transaction_Pending, theme.list.itemDisclosureActions.warning.fillColor)
+                    }
                 }
             case let .receipt(receipt):
                 titleText = receipt.invoiceMedia.title
@@ -386,7 +426,10 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             
             let formattedAmount = presentationStringsFormattedNumber(abs(Int32(count)), dateTimeFormat.groupingSeparator)
             let countColor: UIColor
-            if countIsGeneric {
+            if isSubscription || isSubscriber {
+                amountText = "\(formattedAmount) / month"
+                countColor = theme.list.itemSecondaryTextColor
+            } else if countIsGeneric {
                 amountText = "\(formattedAmount)"
                 countColor = theme.list.itemPrimaryTextColor
             } else if count < 0 {
@@ -396,8 +439,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 amountText = "+ \(formattedAmount)"
                 countColor = theme.list.itemDisclosureActions.constructive.fillColor
             }
-            additionalText = strings.Stars_Transaction_Terms
-            buttonText = strings.Common_OK
             
             let title = title.update(
                 component: MultilineTextComponent(
@@ -429,7 +470,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             } else {
                 imageSubject = .none
             }
-            if isSubscription || isSubscriptionFee {
+            if isSubscription || isSubscriber || isSubscriptionFee {
                 imageIcon = .star
             } else {
                 imageIcon = nil
@@ -450,7 +491,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 transition: .immediate
             )
             
-            let amountAttributedText = NSMutableAttributedString(string: amountText, font: Font.semibold(17.0), textColor: countColor)
+            let amountAttributedText = NSMutableAttributedString(string: amountText, font: isSubscription || isSubscriber ? Font.regular(17.0) : Font.semibold(17.0), textColor: countColor)
             let amount = amount.update(
                 component: BalancedTextComponent(
                     text: .plain(amountAttributedText),
@@ -500,9 +541,17 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     )
                 ))
             } else if let toPeer {
+                let title: String
+                if isSubscription {
+                    title = "Subscription"
+                } else if isSubscriber {
+                    title = "Subscriber"
+                } else {
+                    title = count < 0 || countIsGeneric ? strings.Stars_Transaction_To : strings.Stars_Transaction_From
+                }
                 tableItems.append(.init(
                     id: "to",
-                    title: count < 0 || countIsGeneric ? strings.Stars_Transaction_To : strings.Stars_Transaction_From,
+                    title: title,
                     component: AnyComponent(
                         Button(
                             content: AnyComponent(
@@ -594,9 +643,25 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 ))
             }
             
+            let dateTitle: String
+            if isSubscription {
+                if isCancelled {
+                    if date > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
+                        dateTitle = "Expires"
+                    } else {
+                        dateTitle = "Expired"
+                    }
+                } else {
+                    dateTitle = "Renews"
+                }
+            } else if isSubscriber {
+                dateTitle = "Subscribed"
+            } else {
+                dateTitle = strings.Stars_Transaction_Date
+            }
             tableItems.append(.init(
                 id: "date",
-                title: strings.Stars_Transaction_Date,
+                title: dateTitle,
                 component: AnyComponent(
                     MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
                 )
@@ -615,6 +680,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let boldTextFont = Font.semibold(15.0)
             let textColor = theme.actionSheet.secondaryTextColor
             let linkColor = theme.actionSheet.controlAccentColor
+            let destructiveColor = theme.actionSheet.destructiveActionTextColor
             let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
                 return (TelegramTextAttributes.URL, contents)
             })
@@ -623,7 +689,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     text: .markdown(text: additionalText, attributes: markdownAttributes),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
-                    lineSpacing: 0.1,
+                    lineSpacing: 0.2,
                     highlightColor: linkColor.withAlphaComponent(0.2),
                     highlightAction: { attributes in
                         if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
@@ -643,28 +709,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
                 transition: .immediate
             )
-          
-            let button = button.update(
-                component: SolidRoundedButtonComponent(
-                    title: buttonText,
-                    theme: SolidRoundedButtonComponent.Theme(theme: theme),
-                    font: .bold,
-                    fontSize: 17.0,
-                    height: 50.0,
-                    cornerRadius: 10.0,
-                    gloss: false,
-                    iconName: nil,
-                    animationName: nil,
-                    iconPosition: .left,
-                    isLoading: state.inProgress,
-                    action: {
-                        component.cancel(true)
-                    }
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
-                transition: context.transition
-            )
-            
+        
             context.add(title
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: 31.0 + 125.0))
             )
@@ -684,8 +729,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
                 }
                 
-                let textFont = Font.regular(15.0)
-                let textColor = countOnTop ? theme.list.itemPrimaryTextColor : textColor
+                let textColor = countOnTop && !isSubscriber ? theme.list.itemPrimaryTextColor : textColor
                 let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
                     return (TelegramTextAttributes.URL, contents)
                 })
@@ -728,21 +772,21 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let amountSpacing: CGFloat = 1.0
             var totalAmountWidth: CGFloat = amount.size.width + amountSpacing + amountStar.size.width
             var amountOriginX: CGFloat = floor(context.availableSize.width - totalAmountWidth) / 2.0
-            if isRefund {
-                let refundText = refundText.update(
+            if let (statusText, statusColor) = transactionStatus {
+                let refundText = transactionStatusText.update(
                     component: MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: strings.Stars_Transaction_Refund,
+                            string: statusText,
                             font: Font.medium(14.0),
-                            textColor: theme.list.itemDisclosureActions.constructive.fillColor
+                            textColor: statusColor
                         ))
                     ),
                     availableSize: context.availableSize,
                     transition: .immediate
                 )
-                let refundBackground = refundBackgound.update(
+                let refundBackground = transactionStatusBackgound.update(
                     component: RoundedRectangle(
-                        color: theme.list.itemDisclosureActions.constructive.fillColor.withAlphaComponent(0.1),
+                        color: statusColor.withAlphaComponent(0.1),
                         cornerRadius: 6.0
                     ),
                     availableSize: CGSize(width: refundText.size.width + 10.0, height: refundText.size.height + 4.0),
@@ -766,11 +810,22 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             } else {
                 originY += amount.size.height + 20.0
             }
+            
+            let amountLabelOriginX: CGFloat
+            let amountStarOriginX: CGFloat
+            if isSubscription || isSubscriber {
+                amountStarOriginX = amountOriginX + amountStar.size.width / 2.0
+                amountLabelOriginX = amountOriginX + amountStar.size.width + amountSpacing + amount.size.width / 2.0
+            } else {
+                amountLabelOriginX = amountOriginX + amount.size.width / 2.0
+                amountStarOriginX = amountOriginX + amount.size.width + amountSpacing + amountStar.size.width / 2.0
+            }
+            
             context.add(amount
-                .position(CGPoint(x: amountOriginX + amount.size.width / 2.0, y: amountOrigin + amount.size.height / 2.0))
+                .position(CGPoint(x: amountLabelOriginX, y: amountOrigin + amount.size.height / 2.0))
             )
             context.add(amountStar
-                .position(CGPoint(x: amountOriginX + amount.size.width + amountSpacing + amountStar.size.width / 2.0, y: amountOrigin + amountStar.size.height / 2.0))
+                .position(CGPoint(x: amountStarOriginX, y: amountOrigin + amountStar.size.height / 2.0 - UIScreenPixel))
             )
                
             context.add(table
@@ -783,16 +838,66 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             )
             originY += additional.size.height + 23.0
             
-            let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: originY), size: button.size)
-            context.add(button
-                .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
-            )
+            if let statusText {
+                originY += 7.0
+                let status = status.update(
+                    component: BalancedTextComponent(
+                        text: .plain(NSAttributedString(string: statusText, font: textFont, textColor: statusIsDestructive ? destructiveColor : textColor)),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.1
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
+                    transition: .immediate
+                )
+                context.add(status
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + status.size.height / 2.0))
+                )
+                originY += status.size.height + (statusIsDestructive ? 23.0 : 13.0)
+            }
+            
+            if let buttonText {
+                let button = button.update(
+                    component: SolidRoundedButtonComponent(
+                        title: buttonText,
+                        theme: buttonIsDestructive ? SolidRoundedButtonComponent.Theme(backgroundColor: .clear, foregroundColor: destructiveColor) : SolidRoundedButtonComponent.Theme(theme: theme),
+                        font: buttonIsDestructive ? .regular : .bold,
+                        fontSize: 17.0,
+                        height: 50.0,
+                        cornerRadius: 10.0,
+                        gloss: false,
+                        iconName: nil,
+                        animationName: nil,
+                        iconPosition: .left,
+                        isLoading: state.inProgress,
+                        action: {
+                            component.cancel(true)
+                            
+                            if isSubscription {
+                                if buttonIsDestructive {
+                                    component.updateSubscription(.cancel)
+                                } else {
+                                    component.updateSubscription(.renew)
+                                }
+                            }
+                        }
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                    transition: context.transition
+                )
+                
+                let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: originY), size: button.size)
+                context.add(button
+                    .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
+                )
+                originY += button.size.height
+            }
             
             context.add(closeButton
                 .position(CGPoint(x: context.availableSize.width - environment.safeInsets.left - closeButton.size.width, y: 28.0))
             )
             
-            let contentSize = CGSize(width: context.availableSize.width, height: buttonFrame.maxY + 5.0 + environment.safeInsets.bottom)
+            let contentSize = CGSize(width: context.availableSize.width, height: originY + 5.0 + environment.safeInsets.bottom)
         
             return contentSize
         }
@@ -809,6 +914,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
     let openAppExamples: () -> Void
     let copyTransactionId: (String) -> Void
+    let updateSubscription: (StarsTransactionScreen.SubscriptionAction) -> Void
     
     init(
         context: AccountContext,
@@ -817,7 +923,8 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         openMessage: @escaping (EngineMessage.Id) -> Void,
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
         openAppExamples: @escaping () -> Void,
-        copyTransactionId: @escaping (String) -> Void
+        copyTransactionId: @escaping (String) -> Void,
+        updateSubscription: @escaping (StarsTransactionScreen.SubscriptionAction) -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -826,6 +933,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         self.openMedia = openMedia
         self.openAppExamples = openAppExamples
         self.copyTransactionId = copyTransactionId
+        self.updateSubscription = updateSubscription
     }
     
     static func ==(lhs: StarsTransactionSheetComponent, rhs: StarsTransactionSheetComponent) -> Bool {
@@ -869,7 +977,8 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
                         openMessage: context.component.openMessage,
                         openMedia: context.component.openMedia,
                         openAppExamples: context.component.openAppExamples,
-                        copyTransactionId: context.component.copyTransactionId
+                        copyTransactionId: context.component.copyTransactionId,
+                        updateSubscription: context.component.updateSubscription
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     followContentSizeChanges: true,
@@ -936,11 +1045,17 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
 }
 
 public class StarsTransactionScreen: ViewControllerComponentContainer {
+    enum SubscriptionAction {
+        case cancel
+        case renew
+    }
+    
     public enum Subject: Equatable {
         case transaction(StarsContext.State.Transaction, EnginePeer)
         case receipt(BotPaymentReceipt)
         case gift(EngineMessage)
         case subscription(StarsContext.State.Subscription)
+        case importer(EnginePeer, StarsSubscriptionPricing, PeerInvitationImportersState.Importer, Double)
     }
     
     private let context: AccountContext
@@ -951,7 +1066,8 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
     public init(
         context: AccountContext,
         subject: StarsTransactionScreen.Subject,
-        forceDark: Bool = false
+        forceDark: Bool = false,
+        updateSubscription: @escaping (Bool) -> Void = { _ in }
     ) {
         self.context = context
         
@@ -960,6 +1076,8 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
         var openMediaImpl: (([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)?
         var openAppExamplesImpl: (() -> Void)?
         var copyTransactionIdImpl: ((String) -> Void)?
+        var updateSubscriptionImpl: ((StarsTransactionScreen.SubscriptionAction) -> Void)?
+        
         super.init(
             context: context,
             component: StarsTransactionSheetComponent(
@@ -979,6 +1097,9 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 },
                 copyTransactionId: { transactionId in
                     copyTransactionIdImpl?(transactionId)
+                },
+                updateSubscription: { action in
+                    updateSubscriptionImpl?(action)
                 }
             ),
             navigationBarAppearance: .none,
@@ -1089,6 +1210,30 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             self.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Stars_Transaction_CopiedId), elevatedLayout: false, position: .bottom, action: { _ in return true }), in: .current)
             
             HapticFeedback().tap()
+        }
+        
+        updateSubscriptionImpl = { [weak self] action in
+            guard let self, case let .subscription(subscription) = subject, let navigationController = self.navigationController as? NavigationController else {
+                return
+            }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            updateSubscription(action == .cancel)
+            
+            let title: String
+            let text: String
+            switch action {
+            case .cancel:
+                title = "Subscription cancelled"
+                text = "You will still have access top [\(subscription.peer.compactDisplayTitle)]() until \(stringForMediumDate(timestamp: subscription.untilDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat))."
+            case .renew:
+                title = "Subscription renewed"
+                text = "You renewed your subscription to [\(subscription.peer.compactDisplayTitle)]()."
+            }
+
+            let controller = UndoOverlayController(presentationData: presentationData, content: .invitedToVoiceChat(context: context, peer: subscription.peer, title: title, text: text, action: nil, duration: 3.0), elevatedLayout: false, position: .bottom, action: { _ in return true })
+            Queue.mainQueue().after(0.6) {
+                navigationController.presentOverlay(controller: controller)
+            }
         }
     }
     

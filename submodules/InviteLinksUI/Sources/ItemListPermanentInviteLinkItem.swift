@@ -32,6 +32,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
     let count: Int32
     let peers: [EnginePeer]
     let displayButton: Bool
+    let separateButtons: Bool
     let displayImporters: Bool
     let buttonColor: UIColor?
     public let sectionId: ItemListSectionId
@@ -49,6 +50,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
         count: Int32,
         peers: [EnginePeer],
         displayButton: Bool,
+        separateButtons: Bool = false,
         displayImporters: Bool,
         buttonColor: UIColor?,
         sectionId: ItemListSectionId,
@@ -65,6 +67,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
         self.count = count
         self.peers = peers
         self.displayButton = displayButton
+        self.separateButtons = separateButtons
         self.displayImporters = displayImporters
         self.buttonColor = buttonColor
         self.sectionId = sectionId
@@ -126,6 +129,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
     private let addressButtonNode: HighlightTrackingButtonNode
     private let addressButtonIconNode: ASImageNode
     private var addressShimmerNode: ShimmerEffectNode?
+    private var copyButtonNode: SolidRoundedButtonNode?
     private var shareButtonNode: SolidRoundedButtonNode?
     
     private let avatarsButtonNode: HighlightTrackingButtonNode
@@ -232,6 +236,11 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     strongSelf.addressButtonIconNode.alpha = 1.0
                     strongSelf.addressButtonIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
+            }
+        }
+        self.copyButtonNode?.pressed = { [weak self] in
+            if let strongSelf = self, let item = strongSelf.item {
+                item.copyAction?()
             }
         }
         self.shareButtonNode?.pressed = { [weak self] in
@@ -444,7 +453,31 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     
                     strongSelf.addressButtonNode.isHidden = item.contextAction == nil
                     strongSelf.addressButtonIconNode.isHidden = item.contextAction == nil
-                                        
+                      
+                    var effectiveSeparateButtons = item.separateButtons
+                    if let invite = item.invite, invitationAvailability(invite).isZero {
+                        effectiveSeparateButtons = false
+                    }
+                    
+                    let copyButtonNode: SolidRoundedButtonNode
+                    if let currentCopyButtonNode = strongSelf.copyButtonNode {
+                        copyButtonNode = currentCopyButtonNode
+                    } else {
+                        let buttonTheme: SolidRoundedButtonTheme
+                        if let buttonColor = item.buttonColor {
+                            buttonTheme = SolidRoundedButtonTheme(backgroundColor: buttonColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
+                        } else {
+                            buttonTheme = SolidRoundedButtonTheme(theme: item.presentationData.theme)
+                        }
+                        copyButtonNode = SolidRoundedButtonNode(theme: buttonTheme, height: 50.0, cornerRadius: 11.0)
+                        copyButtonNode.title = item.presentationData.strings.InviteLink_CopyShort
+                        copyButtonNode.pressed = { [weak self] in
+                            self?.item?.copyAction?()
+                        }
+                        strongSelf.addSubnode(copyButtonNode)
+                        strongSelf.copyButtonNode = copyButtonNode
+                    }
+                    
                     let shareButtonNode: SolidRoundedButtonNode
                     if let currentShareButtonNode = strongSelf.shareButtonNode {
                         shareButtonNode = currentShareButtonNode
@@ -459,7 +492,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                         if let invite = item.invite, invitationAvailability(invite).isZero {
                             shareButtonNode.title = item.presentationData.strings.InviteLink_ReactivateLink
                         } else {
-                            shareButtonNode.title = item.presentationData.strings.InviteLink_Share
+                            shareButtonNode.title = effectiveSeparateButtons ? item.presentationData.strings.InviteLink_ShareShort : item.presentationData.strings.InviteLink_Share
                         }
                         shareButtonNode.pressed = { [weak self] in
                             self?.item?.shareAction?()
@@ -468,9 +501,19 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                         strongSelf.shareButtonNode = shareButtonNode
                     }
                     
-                    let buttonWidth = contentSize.width - leftInset - rightInset
+                    let buttonSpacing: CGFloat = 8.0
+                    var buttonWidth = contentSize.width - leftInset - rightInset
+                    var shareButtonOriginX = leftInset
+                    if effectiveSeparateButtons {
+                        buttonWidth = (buttonWidth - buttonSpacing) / 2.0
+                        shareButtonOriginX = leftInset + buttonWidth + buttonSpacing
+                    }
+                    
+                    let _ = copyButtonNode.updateLayout(width: buttonWidth, transition: .immediate)
+                    copyButtonNode.frame = CGRect(x: leftInset, y: verticalInset + fieldHeight + fieldSpacing, width: buttonWidth, height: buttonHeight)
+                    
                     let _ = shareButtonNode.updateLayout(width: buttonWidth, transition: .immediate)
-                    shareButtonNode.frame = CGRect(x: leftInset, y: verticalInset + fieldHeight + fieldSpacing, width: buttonWidth, height: buttonHeight)
+                    shareButtonNode.frame = CGRect(x: shareButtonOriginX, y: verticalInset + fieldHeight + fieldSpacing, width: buttonWidth, height: buttonHeight)
                     
                     var totalWidth = invitedPeersLayout.size.width
                     var leftOrigin: CGFloat = floorToScreenPixels((params.width - invitedPeersLayout.size.width) / 2.0)
@@ -498,9 +541,15 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     strongSelf.fieldButtonNode.isUserInteractionEnabled = item.invite != nil
                     strongSelf.addressButtonIconNode.alpha = item.invite != nil ? 1.0 : 0.0
                     
+                    
+                    strongSelf.copyButtonNode?.isUserInteractionEnabled = item.invite != nil
+                    strongSelf.copyButtonNode?.alpha = item.invite != nil ? 1.0 : 0.4
+                    strongSelf.copyButtonNode?.isHidden = !item.displayButton || !effectiveSeparateButtons
+                    
                     strongSelf.shareButtonNode?.isUserInteractionEnabled = item.invite != nil
                     strongSelf.shareButtonNode?.alpha = item.invite != nil ? 1.0 : 0.4
                     strongSelf.shareButtonNode?.isHidden = !item.displayButton
+                    
                     strongSelf.avatarsButtonNode.isHidden = !item.displayImporters
                     strongSelf.avatarsNode.isHidden = !item.displayImporters || item.invite == nil
                     strongSelf.invitedPeersNode.isHidden = !item.displayImporters || item.invite == nil
