@@ -217,7 +217,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         if let textField = self.textField, let text = textField.text, text.isEmpty {
             if self.bounds.contains(point), let placeholderContentView = self.placeholderContent.view as? EmojiSearchSearchBarComponent.View {
                 let leftTextPosition = placeholderContentView.leftTextPosition()
-                if point.x >= 0.0 && point.x <= placeholderContentView.frame.minX + leftTextPosition {
+                if point.x >= placeholderContentView.frame.minX + leftTextPosition {
                     if let result = placeholderContentView.hitTest(self.convert(point, to: placeholderContentView), with: event) {
                         return result
                     }
@@ -278,9 +278,6 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             textField.resignFirstResponder()
             textField.removeFromSuperview()
         }
-
-        /*self.tintTextView.view?.isHidden = false
-        self.textView.view?.isHidden = false*/
     }
     
     @objc private func clearPressed() {
@@ -519,8 +516,20 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
                         if let term {
                             self.update(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                             
+                            let textField = self.textField
+                            self.textField = nil
+                            
+                            self.clearIconView.isHidden = true
+                            self.clearIconTintView.isHidden = true
+                            self.clearIconButton.isHidden = true
+                            
                             self.updateQuery(.category(value: term))
                             self.activated(false)
+                            
+                            if let textField {
+                                textField.resignFirstResponder()
+                                textField.removeFromSuperview()
+                            }
                         } else {
                             self.deactivated(self.textField?.isFirstResponder ?? false)
                             self.updateQuery(nil)
