@@ -25,8 +25,9 @@ private final class ChannelAdminsControllerArguments {
     let openAdmin: (ChannelParticipant) -> Void
     let updateAntiSpamEnabled: (Bool) -> Void
     let updateSignMessagesEnabled: (Bool) -> Void
+    let updateShowAuthorProfilesEnabled: (Bool) -> Void
     
-    init(context: AccountContext, openRecentActions: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removeAdmin: @escaping (EnginePeer.Id) -> Void, addAdmin: @escaping () -> Void, openAdmin: @escaping (ChannelParticipant) -> Void, updateAntiSpamEnabled: @escaping (Bool) -> Void, updateSignMessagesEnabled: @escaping (Bool) -> Void) {
+    init(context: AccountContext, openRecentActions: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removeAdmin: @escaping (EnginePeer.Id) -> Void, addAdmin: @escaping () -> Void, openAdmin: @escaping (ChannelParticipant) -> Void, updateAntiSpamEnabled: @escaping (Bool) -> Void, updateSignMessagesEnabled: @escaping (Bool) -> Void, updateShowAuthorProfilesEnabled: @escaping (Bool) -> Void) {
         self.context = context
         self.openRecentActions = openRecentActions
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -35,6 +36,7 @@ private final class ChannelAdminsControllerArguments {
         self.openAdmin = openAdmin
         self.updateAntiSpamEnabled = updateAntiSpamEnabled
         self.updateSignMessagesEnabled = updateSignMessagesEnabled
+        self.updateShowAuthorProfilesEnabled = updateShowAuthorProfilesEnabled
     }
 }
 
@@ -60,6 +62,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
     case adminsInfo(PresentationTheme, String)
     
     case signMessages(PresentationTheme, String, Bool)
+    case showAuthorProfiles(PresentationTheme, String, Bool)
     case signMessagesInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -68,7 +71,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
             return ChannelAdminsSection.administration.rawValue
         case .adminsHeader, .adminPeerItem, .addAdmin, .adminsInfo:
             return ChannelAdminsSection.admins.rawValue
-        case .signMessages, .signMessagesInfo:
+        case .signMessages, .showAuthorProfiles, .signMessagesInfo:
             return ChannelAdminsSection.signMessages.rawValue
         }
     }
@@ -91,8 +94,10 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
             return .peer(participant.peer.id)
         case .signMessages:
             return .index(6)
-        case .signMessagesInfo:
+        case .showAuthorProfiles:
             return .index(7)
+        case .signMessagesInfo:
+            return .index(9)
         }
     }
     
@@ -176,6 +181,12 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .showAuthorProfiles(lhsTheme, lhsText, lhsValue):
+                if case let .showAuthorProfiles(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
             case let .signMessagesInfo(lhsTheme, lhsText):
                 if case let .signMessagesInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -240,6 +251,13 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
+            case .showAuthorProfiles:
+                switch rhs {
+                    case .recentActions, .antiSpam, .antiSpamInfo, .adminsHeader, .addAdmin, .adminPeerItem, .adminsInfo, .signMessages, .showAuthorProfiles:
+                        return false
+                    default:
+                        return true
+                }
             case .signMessagesInfo:
                 return false
         }
@@ -300,6 +318,10 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
             case let .signMessages(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updateSignMessagesEnabled(value)
+                })
+            case let .showAuthorProfiles(_, text, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.updateShowAuthorProfilesEnabled(value)
                 })
             case let .signMessagesInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
@@ -381,7 +403,7 @@ private struct ChannelAdminsControllerState: Equatable {
     }
 }
 
-private func channelAdminsControllerEntries(presentationData: PresentationData, accountPeerId: EnginePeer.Id, peer: EnginePeer?, state: ChannelAdminsControllerState, participants: [RenderedChannelParticipant]?, antiSpamAvailable: Bool, antiSpamEnabled: Bool, signMessagesEnabled: Bool) -> [ChannelAdminsEntry] {
+private func channelAdminsControllerEntries(presentationData: PresentationData, accountPeerId: EnginePeer.Id, peer: EnginePeer?, state: ChannelAdminsControllerState, participants: [RenderedChannelParticipant]?, antiSpamAvailable: Bool, antiSpamEnabled: Bool, signMessagesEnabled: Bool, showAuthorProfilesEnabled: Bool) -> [ChannelAdminsEntry] {
     if participants == nil || participants?.count == nil {
         return []
     }
@@ -476,7 +498,9 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
             
             if !isGroup && peer.hasPermission(.sendSomething) {
                 entries.append(.signMessages(presentationData.theme, presentationData.strings.Channel_SignMessages, signMessagesEnabled))
-                entries.append(.signMessagesInfo(presentationData.theme, presentationData.strings.Channel_SignMessages_Help))
+                //TODO:localize
+                entries.append(.showAuthorProfiles(presentationData.theme, "Show Authors' Profiles", showAuthorProfilesEnabled))
+                entries.append(.signMessagesInfo(presentationData.theme, "Add names and photos of admins to the messages they post, linking to their profiles."))
             }
         }
     } else if case let .legacyGroup(peer) = peer {
@@ -587,6 +611,9 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
     
     let updateSignMessagesDisposable = MetaDisposable()
     actionsDisposable.add(updateSignMessagesDisposable)
+    
+    let updateShowAuthorProfilesDisposable = MetaDisposable()
+    actionsDisposable.add(updateShowAuthorProfilesDisposable)
     
     let adminsPromise = Promise<[RenderedChannelParticipant]?>(nil)
         
@@ -790,6 +817,12 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
         |> deliverOnMainQueue).start(next: { peerId in
             updateSignMessagesDisposable.set(context.engine.peers.toggleShouldChannelMessagesSignatures(peerId: peerId, enabled: value).start())
         })
+    }, updateShowAuthorProfilesEnabled: { value in
+        let _ = (currentPeerId.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { peerId in
+            updateSignMessagesDisposable.set(context.engine.peers.toggleShouldChannelMessagesSignatures(peerId: peerId, enabled: value).start())
+        })
     })
     
     let membersAndLoadMoreControlValue = Atomic<(Disposable, PeerChannelMemberCategoryControl?)?>(value: nil)
@@ -911,8 +944,10 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
         }
         
         var signMessagesEnabled = false
+        var showAuthorProfilesEnabled = false
         if case let .channel(channel) = view.peer, case let .broadcast(info) = channel.info {
             signMessagesEnabled = info.flags.contains(.messagesShouldHaveSignatures)
+            showAuthorProfilesEnabled = info.flags.contains(.messagesShouldHaveSignatures)
         }
         
         var rightNavigationButton: ItemListNavigationButton?
@@ -986,7 +1021,7 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(isGroup ? presentationData.strings.ChatAdmins_Title : presentationData.strings.Channel_Management_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelAdminsControllerEntries(presentationData: presentationData, accountPeerId: context.account.peerId, peer: view.peer, state: state, participants: admins, antiSpamAvailable: antiSpamAvailable, antiSpamEnabled: antiSpamEnabled, signMessagesEnabled: signMessagesEnabled), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && admins != nil && previous!.count >= admins!.count)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelAdminsControllerEntries(presentationData: presentationData, accountPeerId: context.account.peerId, peer: view.peer, state: state, participants: admins, antiSpamAvailable: antiSpamAvailable, antiSpamEnabled: antiSpamEnabled, signMessagesEnabled: signMessagesEnabled, showAuthorProfilesEnabled: showAuthorProfilesEnabled), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && admins != nil && previous!.count >= admins!.count)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

@@ -3,6 +3,45 @@ import TelegramApi
 import Postbox
 import SwiftSignalKit
 
+private func generateStarsReactionFile(kind: Int, isAnimatedSticker: Bool) -> TelegramMediaFile {
+    let baseId: Int64 = 52343278047832950
+    let fileId = baseId + Int64(kind)
+    
+    var attributes: [TelegramMediaFileAttribute] = []
+    attributes.append(TelegramMediaFileAttribute.FileName(fileName: isAnimatedSticker ? "sticker.tgs" : "sticker.webp"))
+    if !isAnimatedSticker {
+        attributes.append(.CustomEmoji(isPremium: false, isSingleColor: false, alt: ".", packReference: nil))
+    }
+    
+    return TelegramMediaFile(
+        fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: fileId),
+        partialReference: nil,
+        resource: LocalFileMediaResource(fileId: fileId),
+        previewRepresentations: [],
+        videoThumbnails: [],
+        immediateThumbnailData: nil,
+        mimeType: isAnimatedSticker ? "application/x-tgsticker" : "image/webp",
+        size: nil,
+        attributes: attributes
+    )
+}
+
+private func generateStarsReaction() -> AvailableReactions.Reaction {
+    return AvailableReactions.Reaction(
+        isEnabled: false,
+        isPremium: false,
+        value: .stars,
+        title: "Star",
+        staticIcon: generateStarsReactionFile(kind: 0, isAnimatedSticker: true),
+        appearAnimation: generateStarsReactionFile(kind: 1, isAnimatedSticker: true),
+        selectAnimation: generateStarsReactionFile(kind: 2, isAnimatedSticker: true),
+        activateAnimation: generateStarsReactionFile(kind: 3, isAnimatedSticker: true),
+        effectAnimation: generateStarsReactionFile(kind: 4, isAnimatedSticker: true),
+        aroundAnimation: generateStarsReactionFile(kind: 5, isAnimatedSticker: true),
+        centerAnimation: generateStarsReactionFile(kind: 6, isAnimatedSticker: true)
+    )
+}
+
 public final class AvailableReactions: Equatable, Codable {
     public final class Reaction: Equatable, Codable {
         private enum CodingKeys: String, CodingKey {
@@ -181,24 +220,10 @@ public final class AvailableReactions: Equatable, Codable {
     ) {
         self.hash = hash
         
-        //TODO:release
         var reactions = reactions
         reactions.removeAll(where: { if case .stars = $0.value { return true } else { return false } })
-        if let item = reactions.first(where: { if case .builtin("🤩") = $0.value { return true } else { return false } }) {
-            reactions.append(Reaction(
-                isEnabled: false,
-                isPremium: false,
-                value: .stars,
-                title: "Star",
-                staticIcon: item.staticIcon,
-                appearAnimation: item.appearAnimation,
-                selectAnimation: item.selectAnimation,
-                activateAnimation: item.activateAnimation,
-                effectAnimation: item.effectAnimation,
-                aroundAnimation: item.aroundAnimation,
-                centerAnimation: item.centerAnimation
-            ))
-        }
+        //TODO:release
+        reactions.append(generateStarsReaction())
         self.reactions = reactions
     }
     
@@ -220,21 +245,7 @@ public final class AvailableReactions: Equatable, Codable {
         //TODO:release
         var reactions = try container.decode([Reaction].self, forKey: .reactions)
         reactions.removeAll(where: { if case .stars = $0.value { return true } else { return false } })
-        if let item = reactions.first(where: { if case .builtin("🤩") = $0.value { return true } else { return false } }) {
-            reactions.append(Reaction(
-                isEnabled: false,
-                isPremium: false,
-                value: .stars,
-                title: "Star",
-                staticIcon: item.staticIcon,
-                appearAnimation: item.appearAnimation,
-                selectAnimation: item.selectAnimation,
-                activateAnimation: item.activateAnimation,
-                effectAnimation: item.effectAnimation,
-                aroundAnimation: item.aroundAnimation,
-                centerAnimation: item.centerAnimation
-            ))
-        }
+        reactions.append(generateStarsReaction())
         self.reactions = reactions
     }
     
@@ -314,6 +325,31 @@ func _internal_setCachedAvailableReactions(transaction: Transaction, availableRe
 }
 
 func managedSynchronizeAvailableReactions(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
+    let starsReaction = generateStarsReaction()
+    let mapping: [String: KeyPath<AvailableReactions.Reaction, TelegramMediaFile>] = [
+        "star_reaction_activate.tgs": \.activateAnimation,
+        "star_reaction_appear.tgs": \.appearAnimation,
+        "star_reaction_effect.tgs": \.effectAnimation,
+        "star_reaction_select.tgs": \.selectAnimation,
+        "star_reaction_static_icon.webp": \.staticIcon
+    ]
+    let optionalMapping: [String: KeyPath<AvailableReactions.Reaction, TelegramMediaFile?>] = [
+        "star_reaction_center.tgs": \.centerAnimation,
+        "star_reaction_effect.tgs": \.aroundAnimation
+    ]
+    for (key, path) in mapping {
+        if let filePath = Bundle.main.path(forResource: key, ofType: nil), let data = try? Data(contentsOf: URL(fileURLWithPath: filePath)) {
+            postbox.mediaBox.storeResourceData(starsReaction[keyPath: path].resource.id, data: data)
+        }
+    }
+    for (key, path) in optionalMapping {
+        if let filePath = Bundle.main.path(forResource: key, ofType: nil), let data = try? Data(contentsOf: URL(fileURLWithPath: filePath)) {
+            if let file = starsReaction[keyPath: path] {
+                postbox.mediaBox.storeResourceData(file.resource.id, data: data)
+            }
+        }
+    }
+    
     let poll = Signal<Never, NoError> { subscriber in
         let signal: Signal<Never, NoError> = _internal_cachedAvailableReactions(postbox: postbox)
         |> mapToSignal { current in
@@ -327,6 +363,7 @@ func managedSynchronizeAvailableReactions(postbox: Postbox, network: Network) ->
                     guard let result = result else {
                         return .complete()
                     }
+                    
                     switch result {
                     case let .availableReactions(hash, reactions):
                         let availableReactions = AvailableReactions(

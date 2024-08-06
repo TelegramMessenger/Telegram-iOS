@@ -171,7 +171,7 @@ extension ChatControllerImpl {
                     guard let self, let initialData else {
                         return
                     }
-                    self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount, transitionOut in
+                    self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount, isBecomingTop, transitionOut in
                         guard let self, amount > 0 else {
                             return
                         }
@@ -216,7 +216,7 @@ extension ChatControllerImpl {
                                 
                                 self.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
                                 
-                                self.chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                                self.view.window?.addSubview(standaloneReactionAnimation.view)
                                 standaloneReactionAnimation.frame = self.chatDisplayNode.bounds
                                 standaloneReactionAnimation.animateOutToReaction(
                                     context: self.context,
@@ -240,47 +240,23 @@ extension ChatControllerImpl {
                                         guard let self else {
                                             return
                                         }
+                                        
+                                        if isBecomingTop {
+                                            self.chatDisplayNode.animateQuizCorrectOptionSelected()
+                                        }
+                                        
                                         if let itemNode, let targetView = itemNode.targetReactionView(value: .stars) {
                                             self.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: self.chatDisplayNode.view))
                                         }
                                     },
                                     completion: { [weak standaloneReactionAnimation] in
-                                        standaloneReactionAnimation?.removeFromSupernode()
+                                        standaloneReactionAnimation?.view.removeFromSuperview()
                                     }
                                 )
-                                /*standaloneReactionAnimation.animateReactionSelection(
-                                    context: strongSelf.context,
-                                    theme: strongSelf.presentationData.theme,
-                                    animationCache: strongSelf.controllerInteraction!.presentationContext.animationCache,
-                                    reaction: reactionItem,
-                                    avatarPeers: [],
-                                    playHaptic: false,
-                                    isLarge: false,
-                                    targetView: targetView,
-                                    addStandaloneReactionAnimation: { standaloneReactionAnimation in
-                                        guard let strongSelf = self else {
-                                            return
-                                        }
-                                        strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
-                                        standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
-                                        strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
-                                    },
-                                    onHit: { [weak itemNode] in
-                                        guard let strongSelf = self else {
-                                            return
-                                        }
-                                        if let itemNode = itemNode, let targetView = itemNode.targetReactionView(value: chosenReaction) {
-                                            strongSelf.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: strongSelf.chatDisplayNode.view))
-                                        }
-                                    },
-                                    completion: { [weak standaloneReactionAnimation] in
-                                        standaloneReactionAnimation?.removeFromSupernode()
-                                    }
-                                )*/
                             }
                         }
                         
-                        let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount))
+                        //let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount))
                         
                         let _ = (self.context.engine.stickers.resolveInlineStickers(fileIds: [MessageReaction.starsReactionId])
                         |> deliverOnMainQueue).start(next: { [weak self] files in

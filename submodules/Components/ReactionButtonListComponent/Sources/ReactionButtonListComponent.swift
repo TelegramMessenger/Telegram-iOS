@@ -176,7 +176,7 @@ public final class ReactionIconView: PortalSourceView {
                 animationLayer.masksToBounds = true
                 animationLayer.cornerRadius = floor(size.width * 0.2)
             case .stars:
-                iconSize = CGSize(width: floor(size.width * 2.0), height: floor(size.height * 2.0))
+                iconSize = CGSize(width: floor(size.width * 1.25), height: floor(size.height * 1.25))
                 animationLayer.masksToBounds = false
                 animationLayer.cornerRadius = 0.0
             }
@@ -212,7 +212,7 @@ public final class ReactionIconView: PortalSourceView {
         case .custom:
             iconSize = CGSize(width: floor(size.width * 1.25), height: floor(size.height * 1.25))
         case .stars:
-            iconSize = CGSize(width: floor(size.width * 2.0), height: floor(size.height * 2.0))
+            iconSize = CGSize(width: floor(size.width * 1.25), height: floor(size.height * 1.25))
         }
         
         let animationLayer = InlineStickerItemLayer(

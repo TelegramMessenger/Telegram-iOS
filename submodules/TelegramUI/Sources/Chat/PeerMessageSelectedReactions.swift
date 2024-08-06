@@ -17,6 +17,9 @@ func peerMessageSelectedReactions(context: AccountContext, message: Message) -> 
                 if !reaction.isSelected {
                     continue
                 }
+                if case .stars = reaction.value {
+                    continue
+                }
                 reactions.insert(reaction.value)
                 switch reaction.value {
                 case .builtin, .stars:

@@ -530,6 +530,15 @@ public extension Message {
     var paidContent: TelegramMediaPaidContent? {
         return self.media.first(where: { $0 is TelegramMediaPaidContent }) as? TelegramMediaPaidContent
     }
+    
+    var authorSignatureAttribute: AuthorSignatureMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? AuthorSignatureMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
 }
 
 public extension Message {

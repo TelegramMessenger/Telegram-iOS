@@ -745,14 +745,14 @@ private final class ChatSendStarsScreenComponent: Component {
     let peer: EnginePeer
     let balance: Int64?
     let topPeers: [ChatSendStarsScreen.TopPeer]
-    let completion: (Int64, ChatSendStarsScreen.TransitionOut) -> Void
+    let completion: (Int64, Bool, ChatSendStarsScreen.TransitionOut) -> Void
     
     init(
         context: AccountContext,
         peer: EnginePeer,
         balance: Int64?,
         topPeers: [ChatSendStarsScreen.TopPeer],
-        completion: @escaping (Int64, ChatSendStarsScreen.TransitionOut) -> Void
+        completion: @escaping (Int64, Bool, ChatSendStarsScreen.TransitionOut) -> Void
     ) {
         self.context = context
         self.peer = peer
@@ -1104,9 +1104,11 @@ private final class ChatSendStarsScreenComponent: Component {
             
             let progressFraction: CGFloat = CGFloat(self.amount) / CGFloat(1000 - 1)
             
+            let topCount = component.topPeers.max(by: { $0.count < $1.count })?.count
+            
             var topCutoffFraction: CGFloat?
-            if let maxCount = component.topPeers.max(by: { $0.count < $1.count })?.count {
-                let topCutoffFractionValue = CGFloat(maxCount) / CGFloat(1000 - 1)
+            if let topCount {
+                let topCutoffFractionValue = CGFloat(topCount) / CGFloat(1000 - 1)
                 topCutoffFraction = topCutoffFractionValue
                 
                 let isPastCutoff = progressFraction >= topCutoffFractionValue
@@ -1470,8 +1472,15 @@ private final class ChatSendStarsScreenComponent: Component {
                         guard let badgeView = self.badge.view as? BadgeComponent.View else {
                             return
                         }
+                        let isBecomingTop: Bool
+                        if let topCount {
+                            isBecomingTop = self.amount > topCount
+                        } else {
+                            isBecomingTop = true
+                        }
                         component.completion(
                             self.amount,
+                            isBecomingTop,
                             ChatSendStarsScreen.TransitionOut(
                                 sourceView: badgeView.badgeIcon
                             )
@@ -1617,7 +1626,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
     
     private var presenceDisposable: Disposable?
     
-    public init(context: AccountContext, initialData: InitialData, completion: @escaping (Int64, TransitionOut) -> Void) {
+    public init(context: AccountContext, initialData: InitialData, completion: @escaping (Int64, Bool, TransitionOut) -> Void) {
         self.context = context
         
         super.init(context: context, component: ChatSendStarsScreenComponent(

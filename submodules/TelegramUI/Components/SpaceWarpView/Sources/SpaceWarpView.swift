@@ -255,7 +255,7 @@ private final class MaskGridLayer: SimpleLayer {
     
     private var resolution: (x: Int, y: Int)?
     
-    func updateGrid(resolutionX: Int, resolutionY: Int) {
+    func updateGrid(size: CGSize, resolutionX: Int, resolutionY: Int, cornerRadius: CGFloat) {
         if let resolution = self.resolution, resolution.x == resolutionX, resolution.y == resolutionY {
             return
         }
@@ -266,13 +266,52 @@ private final class MaskGridLayer: SimpleLayer {
         }
         self.itemLayers.removeAll()
         
-        for _ in 0 ..< resolutionX * resolutionY {
-            let itemLayer = SimpleLayer()
-            itemLayer.backgroundColor = UIColor.black.cgColor
-            itemLayer.opacity = 1.0
-            itemLayer.anchorPoint = CGPoint()
-            self.addSublayer(itemLayer)
-            self.itemLayers.append(itemLayer)
+        let itemSize = CGSize(width: size.width / CGFloat(resolutionX), height: size.height / CGFloat(resolutionY))
+        
+        let topLeftCorner = CGRect(origin: CGPoint(), size: CGSize(width: cornerRadius, height: cornerRadius))
+        let topRightCorner = CGRect(origin: CGPoint(x: size.width - cornerRadius, y: 0.0), size: CGSize(width: cornerRadius, height: cornerRadius))
+        let bottomLeftCorner = CGRect(origin: CGPoint(x: 0.0, y: size.height - cornerRadius), size: CGSize(width: cornerRadius, height: cornerRadius))
+        let bottomRightCorner = CGRect(origin: CGPoint(x: size.width - cornerRadius, y: size.height - cornerRadius), size: CGSize(width: cornerRadius, height: cornerRadius))
+        
+        var cornersImage: UIImage?
+        if cornerRadius > 0.0 {
+            cornersImage = generateImage(CGSize(width: cornerRadius * 2.0 + 200.0, height: cornerRadius * 2.0 + 200.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(UIColor.black.cgColor)
+                context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: cornerRadius).cgPath)
+                context.fillPath()
+            })
+        }
+        
+        for y in 0 ..< resolutionY {
+            for x in 0 ..< resolutionX {
+                let itemLayer = SimpleLayer()
+                itemLayer.backgroundColor = UIColor.black.cgColor
+                itemLayer.isOpaque = true
+                itemLayer.opacity = 1.0
+                itemLayer.anchorPoint = CGPoint()
+                self.addSublayer(itemLayer)
+                self.itemLayers.append(itemLayer)
+                
+                if cornerRadius > 0.0, let cornersImage {
+                    let gridPosition = CGPoint(x: CGFloat(x) / CGFloat(resolutionX), y: CGFloat(y) / CGFloat(resolutionY))
+                    let sourceRect = CGRect(origin: CGPoint(x: gridPosition.x * (size.width), y: gridPosition.y * (size.height)), size: itemSize)
+                    if sourceRect.intersects(topLeftCorner) || sourceRect.intersects(topRightCorner) || sourceRect.intersects(bottomLeftCorner) || sourceRect.intersects(bottomRightCorner) {
+                        var clippedCornersRect = sourceRect
+                        if clippedCornersRect.maxX > cornersImage.size.width {
+                            clippedCornersRect.origin.x -= size.width - cornersImage.size.width
+                        }
+                        if clippedCornersRect.maxY > cornersImage.size.height {
+                            clippedCornersRect.origin.y -= size.height - cornersImage.size.height
+                        }
+                        
+                        itemLayer.contents = cornersImage.cgImage
+                        itemLayer.contentsRect = CGRect(origin: CGPoint(x: clippedCornersRect.minX / cornersImage.size.width, y: clippedCornersRect.minY / cornersImage.size.height), size: CGSize(width: clippedCornersRect.width / cornersImage.size.width, height: clippedCornersRect.height / cornersImage.size.height))
+                        itemLayer.backgroundColor = nil
+                        itemLayer.isOpaque = false
+                    }
+                }
+            }
         }
     }
     
@@ -503,7 +542,7 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
             let endEndPoint = CGPoint(x: (gradientLayer.startPoint.x + radius.width), y: (gradientLayer.startPoint.y + radius.height))
             gradientLayer.endPoint = endEndPoint
             
-            let maxWavefrontNorm: CGFloat = 0.3
+            let maxWavefrontNorm: CGFloat = 0.4
             
             let normProgress = max(0.0, min(1.0, progress))
             let interpolatedNorm: CGFloat = 1.0 * (1.0 - normProgress) + maxWavefrontNorm * normProgress
@@ -587,7 +626,7 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         }
         
         if let gradientMaskLayer = self.gradientMaskLayer {
-            gradientMaskLayer.updateGrid(resolutionX: resolutionX, resolutionY: resolutionY)
+            gradientMaskLayer.updateGrid(size: size, resolutionX: resolutionX, resolutionY: resolutionY, cornerRadius: cornerRadius)
             gradientMaskLayer.update(positions: instancePositions, bounds: instanceBounds, transforms: instanceTransforms)
         }
     }
