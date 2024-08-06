@@ -8,6 +8,7 @@ import ShimmerEffect
 import AvatarNode
 import TelegramCore
 import AccountContext
+import TextNodeWithEntities
 
 private let avatarFont = avatarPlaceholderFont(size: 16.0)
 
@@ -64,12 +65,13 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let disclosureStyle: ItemListDisclosureStyle
+    let noInsets: Bool
     let action: (() -> Void)?
     let clearHighlightAutomatically: Bool
     public let tag: ItemListItemTag?
     public let shimmeringIndex: Int?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, context: AccountContext? = nil, iconPeer: EnginePeer? = nil, title: String, attributedTitle: NSAttributedString? = nil, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, titleFont: ItemListDisclosureItemTitleFont = .regular, titleIcon: UIImage? = nil, label: String, attributedLabel: NSAttributedString? = nil, labelStyle: ItemListDisclosureLabelStyle = .text, additionalDetailLabel: String? = nil, additionalDetailLabelColor: ItemListDisclosureItemDetailLabelColor = .generic, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil, shimmeringIndex: Int? = nil) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, context: AccountContext? = nil, iconPeer: EnginePeer? = nil, title: String, attributedTitle: NSAttributedString? = nil, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, titleFont: ItemListDisclosureItemTitleFont = .regular, titleIcon: UIImage? = nil, label: String, attributedLabel: NSAttributedString? = nil, labelStyle: ItemListDisclosureLabelStyle = .text, additionalDetailLabel: String? = nil, additionalDetailLabelColor: ItemListDisclosureItemDetailLabelColor = .generic, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, noInsets: Bool = false, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil, shimmeringIndex: Int? = nil) {
         self.presentationData = presentationData
         self.icon = icon
         self.context = context
@@ -88,6 +90,7 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.style = style
         self.disclosureStyle = disclosureStyle
+        self.noInsets = noInsets
         self.action = action
         self.clearHighlightAutomatically = clearHighlightAutomatically
         self.tag = tag
@@ -151,7 +154,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     
     var avatarNode: AvatarNode?
     let iconNode: ASImageNode
-    let titleNode: TextNode
+    let titleNode: TextNodeWithEntities
     let titleIconNode: ASImageNode
     public let labelNode: TextNode
     var additionalDetailLabelNode: TextNode?
@@ -196,8 +199,8 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         self.iconNode.isLayerBacked = true
         self.iconNode.displaysAsynchronously = false
         
-        self.titleNode = TextNode()
-        self.titleNode.isUserInteractionEnabled = false
+        self.titleNode = TextNodeWithEntities()
+        self.titleNode.textNode.isUserInteractionEnabled = false
         
         self.titleIconNode = ASImageNode()
         self.titleIconNode.displayWithoutProcessing = true
@@ -224,7 +227,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.addSubnode(self.titleNode)
+        self.addSubnode(self.titleNode.textNode)
         self.addSubnode(self.labelNode)
         self.addSubnode(self.arrowNode)
         
@@ -252,7 +255,8 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     public func asyncLayout() -> (_ item: ItemListDisclosureItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeTitleLayout = TextNode.asyncLayout(self.titleNode.textNode)
+        let makeTitleWithEntitiesLayout = TextNodeWithEntities.asyncLayout(self.titleNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let makeAdditionalDetailLabelLayout = TextNode.asyncLayout(self.additionalDetailLabelNode)
         
@@ -329,14 +333,14 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             }
             
             let contentSize: CGSize
-            let insets: UIEdgeInsets
+            var insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
             
             var leftInset = 16.0 + params.leftInset
             if item.icon != nil {
-                leftInset += 43.0
+                leftInset += item.noInsets ? 49.0 : 43.0
             } else if item.iconPeer != nil {
                 leftInset += 46.0
             }
@@ -370,7 +374,11 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                 maxTitleWidth -= 12.0
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: item.attributedTitle ?? NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: item.attributedTitle != nil ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: maxTitleWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let titleArguments = TextNodeLayoutArguments(attributedString: item.attributedTitle ?? NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: item.attributedTitle != nil ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: maxTitleWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets())
+            let (titleLayoutAndApply) = item.context == nil ? makeTitleLayout(titleArguments) : nil
+            let (titleWithEntitiesLayoutAndApply) = item.context != nil ? makeTitleWithEntitiesLayout(titleArguments) : nil
+            
+            let titleLayout: TextNodeLayout = (titleWithEntitiesLayoutAndApply?.0 ?? titleLayoutAndApply?.0)!
             
             let detailFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
             
@@ -455,6 +463,10 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                 itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
                 contentSize = CGSize(width: params.width, height: height)
                 insets = itemListNeighborsPlainInsets(neighbors)
+                if item.noInsets {
+                    insets.top = 0.0
+                    insets.bottom = 0.0
+                }
             case .blocks:
                 itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                 itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
@@ -531,8 +543,21 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
+                                        
+                    if let titleWithEntitiesApply = titleWithEntitiesLayoutAndApply?.1, let context = item.context {
+                        let _ = titleWithEntitiesApply(
+                            TextNodeWithEntities.Arguments(
+                                context: context,
+                                cache: context.animationCache,
+                                renderer: context.animationRenderer,
+                                placeholderColor: item.presentationData.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12),
+                                attemptSynchronous: false
+                            )
+                        )
+                    } else if let titleApply = titleLayoutAndApply?.1 {
+                        let _ = titleApply()
+                    }
                     
-                    let _ = titleApply()
                     let _ = labelApply()
                     
                     switch item.style {
@@ -607,7 +632,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - centralContentHeight) / 2.0)), size: titleLayout.size)
-                    strongSelf.titleNode.frame = titleFrame
+                    strongSelf.titleNode.textNode.frame = titleFrame
                     
                     if let updateBadgeImage = updatedLabelBadgeImage {
                         if strongSelf.labelBadgeNode.supernode == nil {
@@ -746,7 +771,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                         let titleLineWidth: CGFloat = (shimmeringIndex % 2 == 0) ? 120.0 : 80.0
                         let lineDiameter: CGFloat = 8.0
 
-                        let titleFrame = strongSelf.titleNode.frame
+                        let titleFrame = strongSelf.titleNode.textNode.frame
                         shapes.append(.roundedRectLine(startPoint: CGPoint(x: titleFrame.minX, y: titleFrame.minY + floor((titleFrame.height - lineDiameter) / 2.0)), width: titleLineWidth, diameter: lineDiameter))
 
                         shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: contentSize)

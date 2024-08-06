@@ -86,7 +86,7 @@ func _internal_updateChannelOwnership(account: Account, channelId: PeerId, membe
                 let flags: TelegramChatAdminRightsFlags = TelegramChatAdminRightsFlags.peerSpecific(peer: .channel(channel))
                     
                 let updatedParticipant = ChannelParticipant.creator(id: user.id, adminInfo: nil, rank: currentParticipant?.rank)
-                let updatedPreviousCreator = ChannelParticipant.member(id: accountUser.id, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: flags), promotedBy: accountUser.id, canBeEditedByAccountPeer: false), banInfo: nil, rank: currentCreator?.rank)
+                let updatedPreviousCreator = ChannelParticipant.member(id: accountUser.id, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: flags), promotedBy: accountUser.id, canBeEditedByAccountPeer: false), banInfo: nil, rank: currentCreator?.rank, subscriptionUntilDate: nil)
                 
                 let checkPassword = _internal_twoStepAuthData(account.network)
                 |> mapError { error -> ChannelOwnershipTransferError in
@@ -152,7 +152,7 @@ func _internal_updateChannelOwnership(account: Account, channelId: PeerId, membe
                                         switch currentParticipant {
                                             case .creator:
                                                 wasAdmin = true
-                                            case let .member(_, _, adminInfo, _, _):
+                                            case let .member(_, _, adminInfo, _, _, _):
                                                 if let _ = adminInfo {
                                                     wasAdmin = true
                                                 }

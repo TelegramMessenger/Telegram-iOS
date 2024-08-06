@@ -284,7 +284,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 switch participant.participant {
                     case .creator:
                         peerText = strings.Channel_Management_LabelOwner
-                    case let .member(_, _, adminInfo, _, _):
+                    case let .member(_, _, adminInfo, _, _, _):
                         if let adminInfo = adminInfo {
                             if let peer = participant.peers[adminInfo.promotedBy] {
                                 if peer.id == participant.peer.id {
@@ -446,14 +446,14 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                 switch lhs.participant {
                     case .creator:
                         lhsInvitedAt = Int32.min
-                    case let .member(_, invitedAt, _, _, _):
+                    case let .member(_, invitedAt, _, _, _, _):
                         lhsInvitedAt = invitedAt
                 }
                 let rhsInvitedAt: Int32
                 switch rhs.participant {
                     case .creator:
                         rhsInvitedAt = Int32.min
-                    case let .member(_, invitedAt, _, _, _):
+                    case let .member(_, invitedAt, _, _, _, _):
                         rhsInvitedAt = invitedAt
                 }
                 return lhsInvitedAt < rhsInvitedAt
@@ -465,7 +465,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                         case .creator:
                             canEdit = false
                             canOpen = isGroup && peer.flags.contains(.isCreator)
-                        case let .member(id, _, adminInfo, _, _):
+                        case let .member(id, _, adminInfo, _, _, _):
                             if id == accountPeerId {
                                 canEdit = false
                             } else if let adminInfo = adminInfo {
@@ -532,14 +532,14 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                 switch lhs.participant {
                     case .creator:
                         lhsInvitedAt = Int32.min
-                    case let .member(_, invitedAt, _, _, _):
+                    case let .member(_, invitedAt, _, _, _, _):
                         lhsInvitedAt = invitedAt
                 }
                 let rhsInvitedAt: Int32
                 switch rhs.participant {
                     case .creator:
                         rhsInvitedAt = Int32.min
-                    case let .member(_, invitedAt, _, _, _):
+                    case let .member(_, invitedAt, _, _, _, _):
                         rhsInvitedAt = invitedAt
                 }
                 return lhsInvitedAt < rhsInvitedAt
@@ -554,7 +554,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                             } else {
                                 canEdit = false
                             }
-                        case let .member(id, _, adminInfo, _, _):
+                        case let .member(id, _, adminInfo, _, _, _):
                             if id == accountPeerId {
                                 editable = false
                             } else if let adminInfo = adminInfo {
@@ -768,7 +768,7 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
                             switch participant.participant {
                             case .creator:
                                 return
-                            case let .member(_, _, _, banInfo, _):
+                            case let .member(_, _, _, banInfo, _, _):
                                 if let banInfo = banInfo {
                                     var canUnban = false
                                     if banInfo.restrictedBy != context.account.peerId {
@@ -903,7 +903,7 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
                                 var peers: [EnginePeer.Id: EnginePeer] = [:]
                                 peers[creator.id] = creator
                                 peers[peer.id] = peer
-                                result.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: .internal_groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer._asPeer(), peers: peers.mapValues({ $0._asPeer() })))
+                                result.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: .internal_groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil, subscriptionUntilDate: nil), peer: peer._asPeer(), peers: peers.mapValues({ $0._asPeer() })))
                             case .member:
                                 break
                             }

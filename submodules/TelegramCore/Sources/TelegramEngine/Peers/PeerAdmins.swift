@@ -158,14 +158,14 @@ func _internal_updateChannelAdminRights(account: Account, peerId: PeerId, adminI
             if let peer = transaction.getPeer(peerId), let adminPeer = transaction.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
                 if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
                     let updatedParticipant: ChannelParticipant
-                    if let currentParticipant = currentParticipant, case let .member(_, invitedAt, currentAdminInfo, _, _) = currentParticipant {
+                    if let currentParticipant = currentParticipant, case let .member(_, invitedAt, currentAdminInfo, _, _, subscriptionUntilDate) = currentParticipant {
                         let adminInfo: ChannelParticipantAdminInfo?
                         if let rights = rights {
                             adminInfo = ChannelParticipantAdminInfo(rights: rights, promotedBy: currentAdminInfo?.promotedBy ?? account.peerId, canBeEditedByAccountPeer: true)
                         } else {
                             adminInfo = nil
                         }
-                        updatedParticipant = .member(id: adminId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil, rank: rank)
+                        updatedParticipant = .member(id: adminId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil, rank: rank, subscriptionUntilDate: subscriptionUntilDate)
                     } else if let currentParticipant = currentParticipant, case .creator = currentParticipant {
                         let adminInfo: ChannelParticipantAdminInfo?
                         if let rights = rights {
@@ -181,7 +181,7 @@ func _internal_updateChannelAdminRights(account: Account, peerId: PeerId, adminI
                         } else {
                             adminInfo = nil
                         }
-                        updatedParticipant = .member(id: adminId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: adminInfo, banInfo: nil, rank: rank)
+                        updatedParticipant = .member(id: adminId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: adminInfo, banInfo: nil, rank: rank, subscriptionUntilDate: nil)
                     }
                     return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights?.apiAdminRights ?? .chatAdminRights(flags: 0), rank: rank ?? ""))
                     |> map { [$0] }
@@ -225,7 +225,7 @@ func _internal_updateChannelAdminRights(account: Account, peerId: PeerId, adminI
                                         switch currentParticipant {
                                             case .creator:
                                                 wasAdmin = true
-                                            case let .member(_, _, adminInfo, _, _):
+                                            case let .member(_, _, adminInfo, _, _, _):
                                                 if let _ = adminInfo {
                                                     wasAdmin = true
                                                 }
@@ -248,7 +248,7 @@ func _internal_updateChannelAdminRights(account: Account, peerId: PeerId, adminI
                             if let presence = transaction.getPeerPresence(peerId: adminPeer.id) {
                                 presences[adminPeer.id] = presence
                             }
-                            if case let .member(_, _, maybeAdminInfo, _, _) = updatedParticipant, let adminInfo = maybeAdminInfo {
+                            if case let .member(_, _, maybeAdminInfo, _, _, _) = updatedParticipant, let adminInfo = maybeAdminInfo {
                                 if let peer = transaction.getPeer(adminInfo.promotedBy) {
                                     peers[peer.id] = peer
                                 }

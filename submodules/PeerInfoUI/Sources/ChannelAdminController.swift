@@ -580,7 +580,7 @@ private func canEditAdminRights(accountPeerId: EnginePeer.Id, channelPeer: Engin
             switch initialParticipant {
                 case .creator:
                     return false
-                case let .member(_, _, adminInfo, _, _):
+                case let .member(_, _, adminInfo, _, _, _):
                     if let adminInfo = adminInfo {
                         return adminInfo.canBeEditedByAccountPeer || adminInfo.promotedBy == accountPeerId
                     } else {
@@ -703,7 +703,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 let currentRightsFlags: TelegramChatAdminRightsFlags
                 if let updatedFlags = state.updatedFlags {
                     currentRightsFlags = updatedFlags
-                } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminRights, _, _) = initialParticipant, let adminRights = maybeAdminRights {
+                } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminRights, _, _, _) = initialParticipant, let adminRights = maybeAdminRights {
                     currentRightsFlags = adminRights.rights.rights
                 } else if let initialParticipant = initialParticipant, case let .creator(_, maybeAdminRights, _) = initialParticipant, let adminRights = maybeAdminRights {
                     currentRightsFlags = adminRights.rights.rights
@@ -761,7 +761,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             }
         } else {
             if case let .user(adminPeer) = adminPeer, adminPeer.botInfo != nil, case .group = channel.info, invite, let channelPeer = channelPeer, canEditAdminRights(accountPeerId: accountPeerId, channelPeer: channelPeer, initialParticipant: initialParticipant) {
-                if let initialParticipant = initialParticipant, case let .member(_, _, adminInfo, _, _) = initialParticipant, adminInfo != nil {
+                if let initialParticipant = initialParticipant, case let .member(_, _, adminInfo, _, _, _) = initialParticipant, adminInfo != nil {
                     
                 } else {
                     entries.append(.adminRights(presentationData.theme, presentationData.strings.Bot_AddToChat_Add_AdminRights, state.adminRights))
@@ -784,7 +784,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     let currentRightsFlags: TelegramChatAdminRightsFlags
                     if let updatedFlags = state.updatedFlags {
                         currentRightsFlags = updatedFlags
-                    } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminRights, _, _) = initialParticipant, let adminRights = maybeAdminRights {
+                    } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminRights, _, _, _) = initialParticipant, let adminRights = maybeAdminRights {
                         currentRightsFlags = adminRights.rights.rights
                     } else {
                         currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
@@ -846,14 +846,14 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                         canTransfer = true
                     }
                 
-                    if let initialParticipant = initialParticipant, case let .member(_, _, adminInfo, _, _) = initialParticipant, admin.id != accountPeerId, adminInfo != nil {
+                    if let initialParticipant = initialParticipant, case let .member(_, _, adminInfo, _, _, _) = initialParticipant, admin.id != accountPeerId, adminInfo != nil {
                         if channel.flags.contains(.isCreator) {
                             canDismiss = true
                         } else {
                             switch initialParticipant {
                                 case .creator:
                                     break
-                                case let .member(_, _, adminInfo, _, _):
+                                case let .member(_, _, adminInfo, _, _, _):
                                     if let adminInfo = adminInfo {
                                         if adminInfo.promotedBy == accountPeerId || adminInfo.canBeEditedByAccountPeer {
                                             canDismiss = true
@@ -862,7 +862,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                             }
                         }
                     }
-                } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminInfo, _, _) = initialParticipant, let adminInfo = maybeAdminInfo {
+                } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminInfo, _, _, _) = initialParticipant, let adminInfo = maybeAdminInfo {
                     var index = 0
                     rightsLoop: for right in rightsOrder {
                         let enabled: Bool = false
@@ -955,7 +955,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             entries.append(.rank(presentationData.theme, presentationData.strings, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", rankEnabled))
         } else {
             if case let .user(adminPeer) = adminPeer, adminPeer.botInfo != nil, invite {
-                if let initialParticipant = initialParticipant, case let .member(_, _, adminRights, _, _) = initialParticipant, adminRights != nil {
+                if let initialParticipant = initialParticipant, case let .member(_, _, adminRights, _, _, _) = initialParticipant, adminRights != nil {
                 } else {
                     entries.append(.adminRights(presentationData.theme, presentationData.strings.Bot_AddToChat_Add_AdminRights, state.adminRights))
                 }
@@ -988,7 +988,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 let currentRightsFlags: TelegramChatAdminRightsFlags
                 if let updatedFlags = state.updatedFlags {
                     currentRightsFlags = updatedFlags
-                } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminRights, _, _) = initialParticipant, let adminRights = maybeAdminRights {
+                } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminRights, _, _, _) = initialParticipant, let adminRights = maybeAdminRights {
                     currentRightsFlags = adminRights.rights.rights.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
                 } else {
                     currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
@@ -1016,7 +1016,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).string, invite))
             }
             
-            if let initialParticipant = initialParticipant, case let .member(_, _, adminInfo, _, _) = initialParticipant, admin.id != accountPeerId, let adminInfo {
+            if let initialParticipant = initialParticipant, case let .member(_, _, adminInfo, _, _, _) = initialParticipant, admin.id != accountPeerId, let adminInfo {
                 var canDismiss = false
                 if accountIsCreator {
                     canDismiss = true
@@ -1319,7 +1319,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                         case let .creator(_, adminInfo, rank):
                             currentRank = rank
                             currentFlags = adminInfo?.rights.rights ?? maskRightsFlags.subtracting(.canBeAnonymous)
-                        case let .member(_, _, adminInfo, _, rank):
+                        case let .member(_, _, adminInfo, _, rank, _):
                             if updateFlags == nil {
                                 if adminInfo?.rights == nil {
                                     if channel.flags.contains(.isCreator) {

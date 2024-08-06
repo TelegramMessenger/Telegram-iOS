@@ -64,7 +64,7 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?) -> S
                             case let .channelParticipant(participant, _, _):
                                 updatedParticipant = ChannelParticipant(apiParticipant: participant)
                         }
-                        if case let .member(_, _, maybeAdminInfo, _, _) = updatedParticipant {
+                        if case let .member(_, _, maybeAdminInfo, _, _, _) = updatedParticipant {
                             if let adminInfo = maybeAdminInfo {
                                 if let peer = transaction.getPeer(adminInfo.promotedBy) {
                                     peers[peer.id] = peer

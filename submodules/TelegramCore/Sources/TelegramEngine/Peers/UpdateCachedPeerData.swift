@@ -450,7 +450,6 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                 let participants = CachedGroupParticipants(apiParticipants: chatFullParticipants)
                                 
                                 let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(CachedPeerAutoremoveTimeout.Value(chatTtlPeriod))
-
                                 
                                 var invitedBy: PeerId?
                                 if let participants = participants {

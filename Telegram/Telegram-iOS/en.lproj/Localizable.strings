@@ -12672,3 +12672,13 @@ Sorry for the inconvenience.";
 "Stars.Intro.GiftStars" = "Gift Stars to Friends";
 
 "MediaPicker.CreateSticker" = "Create a sticker from a photo";
+
+"Stickers.CreateSticker" = "Create\nSticker";
+
+"InviteLink.CreateNewInfo" = "You can create additional invite links that are limited by time, number of users, or require a paid subscription.";
+
+"InviteLink.CopyShort" = "Copy";
+"InviteLink.ShareShort" = "Share";
+
+"Stars.Subscription.Terms" = "By subscribing you agree to the [Terms of Service]().";
+"Stars.Subscription.Terms_URL" = "https://telegram.org/tos/stars";

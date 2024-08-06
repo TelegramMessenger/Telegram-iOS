@@ -531,7 +531,7 @@ private final class AdminUserActionsSheetComponent: Component {
                         allowedParticipantRights = []
                         allowedMediaRights = []
                         break loop
-                    case let .member(_, _, adminInfo, banInfo, _):
+                    case let .member(_, _, adminInfo, banInfo, _, _):
                         if adminInfo != nil {
                             (allowedParticipantRights, allowedMediaRights) = rightsFromBannedRights([])
                             break loop
@@ -625,7 +625,7 @@ private final class AdminUserActionsSheetComponent: Component {
                             switch peer.participant {
                             case .creator:
                                 canBanEveryone = false
-                            case let .member(_, _, adminInfo, banInfo, _):
+                            case let .member(_, _, adminInfo, banInfo, _, _):
                                 let _ = banInfo
                                 if let adminInfo {
                                     if channel.flags.contains(.isCreator) {

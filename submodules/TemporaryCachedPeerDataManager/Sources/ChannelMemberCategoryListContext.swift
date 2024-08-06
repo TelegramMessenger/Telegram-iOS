@@ -18,7 +18,7 @@ public extension ChannelParticipant {
         switch self {
             case .creator:
                 return nil
-            case let .member(_, _, adminInfo, _, _):
+            case let .member(_, _, adminInfo, _, _, _):
                 return adminInfo
         }
     }
@@ -27,7 +27,7 @@ public extension ChannelParticipant {
         switch self {
             case .creator:
                 return nil
-            case let .member(_, _, _, banInfo, _):
+            case let .member(_, _, _, banInfo, _, _):
                 return banInfo
         }
     }
@@ -36,7 +36,7 @@ public extension ChannelParticipant {
         switch self {
             case .creator:
                 return false
-            case let .member(_, _, adminInfo, _, _):
+            case let .member(_, _, adminInfo, _, _, _):
                 if let adminInfo = adminInfo {
                     if adminInfo.promotedBy != peerId {
                         return false
@@ -92,7 +92,7 @@ private extension CachedChannelAdminRank {
                 } else {
                     self = .owner
                 }
-            case let .member(_, _, _, _, rank):
+            case let .member(_, _, _, _, rank, _):
                 if let rank = rank {
                     self = .custom(rank)
                 } else {
@@ -366,7 +366,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
             switch self.category {
                 case let .admins(query):
                     if let updated = updated, (query == nil || updated.peer.indexName.matchesByTokens(query!)) {
-                        if case let .member(_, _, adminInfo, _, _) = updated.participant, adminInfo == nil {
+                        if case let .member(_, _, adminInfo, _, _, _) = updated.participant, adminInfo == nil {
                             loop: for i in 0 ..< list.count {
                                 if list[i].peer.id == updated.peer.id {
                                     list.remove(at: i)

@@ -275,12 +275,12 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         
         self.backgroundColor = presentationData.theme.list.plainBackgroundColor
         self.webView.backgroundColor = presentationData.theme.list.plainBackgroundColor
-        self.webView.isOpaque = false
+        self.webView.alpha = 0.0
         
         self.webView.allowsBackForwardNavigationGestures = true
         self.webView.scrollView.delegate = self
         self.webView.scrollView.clipsToBounds = false
-//        self.webView.translatesAutoresizingMaskIntoConstraints = false
+
         self.webView.navigationDelegate = self
         self.webView.uiDelegate = self
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.title), options: [], context: nil)
@@ -615,6 +615,10 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             }
             self.didSetupSearch = false
         }  else if keyPath == "estimatedProgress" {
+            if self.webView.estimatedProgress >= 0.1 && self.webView.alpha.isZero {
+                self.webView.alpha = 1.0
+                self.webView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
             self.updateState { $0.withUpdatedEstimatedProgress(self.webView.estimatedProgress) }
         } else if keyPath == "canGoBack" {
             self.updateState { $0.withUpdatedCanGoBack(self.webView.canGoBack) }
@@ -759,7 +763,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             decisionHandler(.allow)
         }
     }
-    
+        
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         if let _ = self.currentError {
             self.currentError = nil
@@ -771,10 +775,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        self.updateState {
-            $0
-                .withUpdatedBackList(webView.backForwardList.backList.map { BrowserContentState.HistoryItem(webItem: $0) })
-                .withUpdatedForwardList(webView.backForwardList.forwardList.map { BrowserContentState.HistoryItem(webItem: $0) })
+        self.updateState {$0
+            .withUpdatedBackList(webView.backForwardList.backList.map { BrowserContentState.HistoryItem(webItem: $0) })
+            .withUpdatedForwardList(webView.backForwardList.forwardList.map { BrowserContentState.HistoryItem(webItem: $0) })
         }
         self.parseFavicon()
     }

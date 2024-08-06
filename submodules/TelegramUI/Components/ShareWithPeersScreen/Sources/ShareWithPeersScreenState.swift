@@ -539,7 +539,7 @@ public extension ShareWithPeersScreen {
                             continue
                         }
                         
-                        if case let .member(_, date, _, _, _) = participant.participant {
+                        if case let .member(_, date, _, _, _, _) = participant.participant {
                             invitedAt[participant.peer.id] = date
                         } else {
                             continue
@@ -557,7 +557,7 @@ public extension ShareWithPeersScreen {
                             continue
                         }
                         
-                        if case let .member(_, date, _, _, _) = participant.participant {
+                        if case let .member(_, date, _, _, _, _) = participant.participant {
                             invitedAt[participant.peer.id] = date
                         } else {
                             continue

@@ -747,6 +747,8 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPremiumGift(birthdays)
                         case .reviewLogin:
                             break
+                        case .starsSubscriptionLowBalance:
+                            break
                         }
                     case .hide:
                         nodeInteraction?.dismissNotice(notice)
@@ -1084,6 +1086,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         case let .birthdayPremiumGift(_, birthdays):
                             nodeInteraction?.openPremiumGift(birthdays)
                         case .reviewLogin:
+                            break
+                        case .starsSubscriptionLowBalance:
                             break
                         }
                     case .hide:
