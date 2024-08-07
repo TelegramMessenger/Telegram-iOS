@@ -915,6 +915,7 @@ private final class StarsSubscriptionsContextImpl {
     
     private let disposable = MetaDisposable()
     private var stateDisposable: Disposable?
+    private let updateDisposable = MetaDisposable()
     
     init(account: Account, starsContext: StarsContext) {
         assert(Queue.mainQueue().isCurrent())
@@ -935,6 +936,7 @@ private final class StarsSubscriptionsContextImpl {
         assert(Queue.mainQueue().isCurrent())
         self.disposable.dispose()
         self.stateDisposable?.dispose()
+        self.updateDisposable.dispose()
     }
     
     func loadMore() {
@@ -982,6 +984,7 @@ private final class StarsSubscriptionsContextImpl {
             updatedState.subscriptions[index] = updatedSubscription
         }
         self.updateState(updatedState)
+        self.updateDisposable.set(_internal_updateStarsSubscription(account: self.account, peerId: self.account.peerId, subscriptionId: id, cancel: cancel).startStrict())
     }
 }
     

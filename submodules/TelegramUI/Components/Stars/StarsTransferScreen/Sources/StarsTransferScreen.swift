@@ -29,6 +29,7 @@ private final class SheetContent: CombinedComponent {
     let source: BotPaymentInvoiceSource
     let extendedMedia: [TelegramExtendedMedia]
     let inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
+    let navigateToPeer: (EnginePeer) -> Void
     let dismiss: () -> Void
     
     init(
@@ -38,6 +39,7 @@ private final class SheetContent: CombinedComponent {
         source: BotPaymentInvoiceSource,
         extendedMedia: [TelegramExtendedMedia],
         inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>,
+        navigateToPeer: @escaping (EnginePeer) -> Void,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
@@ -46,6 +48,7 @@ private final class SheetContent: CombinedComponent {
         self.source = source
         self.extendedMedia = extendedMedia
         self.inputData = inputData
+        self.navigateToPeer = navigateToPeer
         self.dismiss = dismiss
     }
     
@@ -77,6 +80,7 @@ private final class SheetContent: CombinedComponent {
         private var peerDisposable: Disposable?
         private(set) var balance: Int64?
         private(set) var form: BotPaymentForm?
+        private(set) var navigateToPeer: (EnginePeer) -> Void
         
         private var stateDisposable: Disposable?
         
@@ -96,13 +100,15 @@ private final class SheetContent: CombinedComponent {
             source: BotPaymentInvoiceSource,
             extendedMedia: [TelegramExtendedMedia],
             invoice: TelegramMediaInvoice,
-            inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
+            inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>,
+            navigateToPeer: @escaping (EnginePeer) -> Void
         ) {
             self.context = context
             self.starsContext = starsContext
             self.source = source
             self.extendedMedia = extendedMedia
             self.invoice = invoice
+            self.navigateToPeer = navigateToPeer
             
             super.init()
             
@@ -159,6 +165,7 @@ private final class SheetContent: CombinedComponent {
                 return
             }
             
+            let navigateToPeer = self.navigateToPeer
             let action = { [weak self] in
                 guard let self else {
                     return
@@ -167,8 +174,19 @@ private final class SheetContent: CombinedComponent {
                 self.updated()
                 
                 let _ = (self.context.engine.payments.sendStarsPaymentForm(formId: form.id, source: self.source)
-                |> deliverOnMainQueue).start(next: { _ in
+                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
                     completion(true)
+                    if case let .starsChatSubscription(link) = self.source {
+                        let _ = (self.context.engine.peers.joinLinkInformation(link)
+                        |> deliverOnMainQueue).startStandalone(next: { result in
+                            if case let .alreadyJoined(peer) = result {
+                                navigateToPeer(peer)
+                            }
+                        })
+                    }
                 }, error: { [weak self] error in
                     guard let self else {
                         return
@@ -235,7 +253,7 @@ private final class SheetContent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, starsContext: self.starsContext, source: self.source, extendedMedia: self.extendedMedia, invoice: self.invoice, inputData: self.inputData)
+        return State(context: self.context, starsContext: self.starsContext, source: self.source, extendedMedia: self.extendedMedia, invoice: self.invoice, inputData: self.inputData, navigateToPeer: self.navigateToPeer)
     }
         
     static var body: Body {
@@ -639,6 +657,7 @@ private final class StarsTransferSheetComponent: CombinedComponent {
     private let source: BotPaymentInvoiceSource
     private let extendedMedia: [TelegramExtendedMedia]
     private let inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
+    private let navigateToPeer: (EnginePeer) -> Void
     
     init(
         context: AccountContext,
@@ -646,7 +665,8 @@ private final class StarsTransferSheetComponent: CombinedComponent {
         invoice: TelegramMediaInvoice,
         source: BotPaymentInvoiceSource,
         extendedMedia: [TelegramExtendedMedia],
-        inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
+        inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>,
+        navigateToPeer: @escaping (EnginePeer) -> Void
     ) {
         self.context = context
         self.starsContext = starsContext
@@ -654,6 +674,7 @@ private final class StarsTransferSheetComponent: CombinedComponent {
         self.source = source
         self.extendedMedia = extendedMedia
         self.inputData = inputData
+        self.navigateToPeer = navigateToPeer
     }
     
     static func ==(lhs: StarsTransferSheetComponent, rhs: StarsTransferSheetComponent) -> Bool {
@@ -687,6 +708,7 @@ private final class StarsTransferSheetComponent: CombinedComponent {
                         source: context.component.source,
                         extendedMedia: context.component.extendedMedia,
                         inputData: context.component.inputData,
+                        navigateToPeer: context.component.navigateToPeer,
                         dismiss: {
                             animateOut.invoke(Action { _ in
                                 if let controller = controller() {
@@ -747,6 +769,7 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
         source: BotPaymentInvoiceSource,
         extendedMedia: [TelegramExtendedMedia] = [],
         inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>,
+        navigateToPeer: @escaping (EnginePeer) -> Void = { _ in },
         completion: @escaping (Bool) -> Void
     ) {
         self.context = context
@@ -761,7 +784,8 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
                 invoice: invoice,
                 source: source,
                 extendedMedia: extendedMedia,
-                inputData: inputData
+                inputData: inputData,
+                navigateToPeer: navigateToPeer
             ),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,

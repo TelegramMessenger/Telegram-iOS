@@ -141,6 +141,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
     private let textNode: TextFieldNode
     private let clearIconNode: ASImageNode
     private let clearButtonNode: HighlightableButtonNode
+    private let labelNode: TextNode
     
     private var item: ItemListSingleLineInputItem?
     
@@ -171,12 +172,17 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
         
         self.clearButtonNode = HighlightableButtonNode()
         
+        self.labelNode = TextNode()
+        self.labelNode.isUserInteractionEnabled = false
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode.textNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.clearIconNode)
         self.addSubnode(self.clearButtonNode)
+        self.addSubnode(self.textNode)
+        self.addSubnode(self.labelNode)
         
         self.clearButtonNode.addTarget(self, action: #selector(self.clearButtonPressed), forControlEvents: .touchUpInside)
         self.clearButtonNode.highligthedChanged = { [weak self] highlighted in
@@ -218,6 +224,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
         let makeTitleLayout =  TextNode.asyncLayout(self.titleNode.textNode)
         let makeTitleWithEntitiesLayout =  TextNodeWithEntities.asyncLayout(self.titleNode)
         let makeMeasureTitleSizeLayout = TextNode.asyncLayout(self.measureTitleSizeNode)
+        let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
         let currentItem = self.item
         
@@ -261,6 +268,8 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
             let titleLayout: TextNodeLayout = (titleWithEntitiesLayoutAndApply?.0 ?? titleLayoutAndApply?.0)!
             
             let (measureTitleLayout, measureTitleSizeApply) = makeMeasureTitleSizeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "A", font: Font.regular(item.presentationData.fontSize.itemListBaseFontSize)), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - 32.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label ?? "", font: Font.regular(item.presentationData.fontSize.itemListBaseFontSize), textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - 32.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
                         
@@ -310,6 +319,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                     strongSelf.titleNode.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((layout.contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
                     
                     let _ = measureTitleSizeApply()
+                    let _ = labelApply()
                     
                     let secureEntry: Bool
                     let capitalizationType: UITextAutocapitalizationType
@@ -378,6 +388,8 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                     }
                     
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width + item.spacing, y: 0.0), size: CGSize(width: max(1.0, params.width - (leftInset + rightInset + titleLayout.size.width + item.spacing)), height: layout.contentSize.height - 2.0))
+                    
+                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: layoutSize.width - rightInset - labelLayout.size.width, y: floorToScreenPixels((layout.contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
                     
                     switch item.alignment {
                         case .default:
