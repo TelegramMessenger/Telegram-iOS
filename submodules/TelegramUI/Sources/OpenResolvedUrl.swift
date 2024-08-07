@@ -323,7 +323,8 @@ func openResolvedUrlImpl(
                                 }
                             }
                             let _ = (starsInputData |> filter { $0 != nil } |> take(1) |> deliverOnMainQueue).start(next: { _ in
-                                let controller = context.sharedContext.makeStarsTransferScreen(context: context, starsContext: starsContext, invoice: invoice, source: .starsChatSubscription(hash: link), extendedMedia: [], inputData: starsInputData, completion: { _ in
+                                let controller = context.sharedContext.makeStarsSubscriptionTransferScreen(context: context, starsContext: starsContext, invoice: invoice, link: link, inputData: starsInputData, navigateToPeer: { peer in
+                                    openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
                                 })
                                 navigationController?.pushViewController(controller)
                             })

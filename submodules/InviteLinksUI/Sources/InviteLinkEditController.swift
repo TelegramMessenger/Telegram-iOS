@@ -22,13 +22,25 @@ import TextFormat
 private final class InviteLinkEditControllerArguments {
     let context: AccountContext
     let updateState: ((InviteLinkEditControllerState) -> InviteLinkEditControllerState) -> Void
+    let focusOnItem: (InviteLinksEditEntryTag) -> Void
+    let errorWithItem: (InviteLinksEditEntryTag) -> Void
     let scrollToUsage: () -> Void
     let dismissInput: () -> Void
     let revoke: () -> Void
     
-    init(context: AccountContext, updateState: @escaping ((InviteLinkEditControllerState) -> InviteLinkEditControllerState) -> Void,  scrollToUsage: @escaping () -> Void, dismissInput: @escaping () -> Void, revoke: @escaping () -> Void) {
+    init(
+        context: AccountContext, 
+        updateState: @escaping ((InviteLinkEditControllerState) -> InviteLinkEditControllerState) -> Void,
+        focusOnItem: @escaping (InviteLinksEditEntryTag) -> Void,
+        errorWithItem: @escaping (InviteLinksEditEntryTag) -> Void,
+        scrollToUsage: @escaping () -> Void,
+        dismissInput: @escaping () -> Void,
+        revoke: @escaping () -> Void)
+    {
         self.context = context
         self.updateState = updateState
+        self.focusOnItem = focusOnItem
+        self.errorWithItem = errorWithItem
         self.scrollToUsage = scrollToUsage
         self.dismissInput = dismissInput
         self.revoke = revoke
@@ -45,6 +57,7 @@ private enum InviteLinksEditSection: Int32 {
 }
 
 private enum InviteLinksEditEntryTag: ItemListItemTag {
+    case subscriptionFee
     case usage
 
     func isEqual(to other: ItemListItemTag) -> Bool {
@@ -79,7 +92,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     
     
     case subscriptionFeeToggle(PresentationTheme, String, Bool, Bool)
-    case subscriptionFee(PresentationTheme, String, Bool, Int64?, String)
+    case subscriptionFee(PresentationTheme, String, Bool, Int64?, String, Int64?)
     case subscriptionFeeInfo(PresentationTheme, String)
     
     case requestApproval(PresentationTheme, String, Bool, Bool)
@@ -182,8 +195,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .subscriptionFee(lhsTheme, lhsText, lhsValue, lhsEnabled, lhsLabel):
-                if case let .subscriptionFee(rhsTheme, rhsText, rhsValue, rhsEnabled, rhsLabel) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsEnabled == rhsEnabled, lhsLabel == rhsLabel {
+            case let .subscriptionFee(lhsTheme, lhsText, lhsValue, lhsEnabled, lhsLabel, lhsMaxValue):
+                if case let .subscriptionFee(rhsTheme, rhsText, rhsValue, rhsEnabled, rhsLabel, rhsMaxValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsEnabled == rhsEnabled, lhsLabel == rhsLabel, lhsMaxValue == rhsMaxValue {
                     return true
                 } else {
                     return false
@@ -300,17 +313,26 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                         }
                         return updatedState
                     }
+                    if value {
+                        Queue.mainQueue().after(0.1) {
+                            arguments.focusOnItem(.subscriptionFee)
+                        }
+                    }
                 })
-            case let .subscriptionFee(_, placeholder, enabled, value, label):
+            case let .subscriptionFee(_, placeholder, enabled, value, label, maxValue):
                 let title = NSMutableAttributedString(string: "⭐️", font: Font.semibold(18.0), textColor: .white)
                 if let range = title.string.range(of: "⭐️") {
                     title.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: title.string))
                     title.addAttribute(.baselineOffset, value: -1.0, range: NSRange(range, in: title.string))
                 }
-                return ItemListSingleLineInputItem(context: arguments.context, presentationData: presentationData, title: title, text: value.flatMap { "\($0)" } ?? "", placeholder: placeholder, label: label, type: .number, spacing: 3.0, enabled: enabled, sectionId: self.section, textUpdated: { text in
+                return ItemListSingleLineInputItem(context: arguments.context, presentationData: presentationData, title: title, text: value.flatMap { "\($0)" } ?? "", placeholder: placeholder, label: label, type: .number, spacing: 3.0, enabled: enabled, tag: InviteLinksEditEntryTag.subscriptionFee, sectionId: self.section, textUpdated: { text in
                     arguments.updateState { state in
                         var updatedState = state
-                        if let value = Int64(text) {
+                        if var value = Int64(text) {
+                            if let maxValue, value > maxValue {
+                                value = maxValue
+                                arguments.errorWithItem(.subscriptionFee)
+                            }
                             updatedState.subscriptionFee = value
                         } else {
                             updatedState.subscriptionFee = nil
@@ -457,7 +479,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     }
 }
 
-private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state: InviteLinkEditControllerState, isGroup: Bool, isPublic: Bool, presentationData: PresentationData, starsState: StarsRevenueStats?) -> [InviteLinksEditEntry] {
+private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state: InviteLinkEditControllerState, isGroup: Bool, isPublic: Bool, presentationData: PresentationData, starsState: StarsRevenueStats?, configuration: StarsSubscriptionConfiguration) -> [InviteLinksEditEntry] {
     var entries: [InviteLinksEditEntry] = []
     
     entries.append(.titleHeader(presentationData.theme, presentationData.strings.InviteLink_Create_LinkNameTitle.uppercased()))
@@ -472,9 +494,9 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
         if state.subscriptionEnabled {
             var label: String = ""
             if let subscriptionFee = state.subscriptionFee, subscriptionFee > 0, let starsState {
-                label = formatTonUsdValue(subscriptionFee, divide: false, rate: starsState.usdRate, dateTimeFormat: presentationData.dateTimeFormat)
+                label = "≈\(formatTonUsdValue(subscriptionFee, divide: false, rate: starsState.usdRate, dateTimeFormat: presentationData.dateTimeFormat)) / month"
             }
-            entries.append(.subscriptionFee(presentationData.theme, "Stars amount per month", isEditingEnabled, state.subscriptionFee, label))
+            entries.append(.subscriptionFee(presentationData.theme, "Stars amount per month", isEditingEnabled, state.subscriptionFee, label, configuration.maxFee))
         }
         let infoText: String
         if let _ = invite, state.subscriptionEnabled {
@@ -585,9 +607,15 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
     var dismissImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
     var scrollToUsageImpl: (() -> Void)?
+    var focusImpl: ((InviteLinksEditEntryTag) -> Void)?
+    var errorImpl: ((InviteLinksEditEntryTag) -> Void)?
     
     let arguments = InviteLinkEditControllerArguments(context: context, updateState: { f in
         updateState(f)
+    }, focusOnItem: { tag in
+        focusImpl?(tag)
+    }, errorWithItem: { tag in
+        errorImpl?(tag)
     }, scrollToUsage: {
         scrollToUsageImpl?()
     }, dismissInput: {
@@ -647,6 +675,8 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
     })
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    
+    let configuration = StarsSubscriptionConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
     
     let previousState = Atomic<InviteLinkEditControllerState?>(value: nil)
     let signal = combineLatest(
@@ -762,7 +792,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(invite == nil ? presentationData.strings.InviteLink_Create_Title : presentationData.strings.InviteLink_Create_EditTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkEditControllerEntries(invite: invite, state: state, isGroup: isGroup, isPublic: isPublic, presentationData: presentationData, starsState: starsState), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkEditControllerEntries(invite: invite, state: state, isGroup: isGroup, isPublic: isPublic, presentationData: presentationData, starsState: starsState, configuration: configuration), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }
@@ -806,5 +836,41 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
     dismissImpl = { [weak controller] in
         controller?.dismiss()
     }
+    focusImpl = { [weak controller] targetTag in
+        controller?.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ItemListSingleLineInputItemNode, let tag = itemNode.tag, tag.isEqual(to: targetTag) {
+                itemNode.focus()
+            }
+        }
+    }
+    let hapticFeedback = HapticFeedback()
+    errorImpl = { [weak controller] targetTag in
+        hapticFeedback.error()
+        controller?.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ItemListSingleLineInputItemNode, let tag = itemNode.tag, tag.isEqual(to: targetTag) {
+                itemNode.animateError()
+            }
+        }
+    }
     return controller
+}
+
+private struct StarsSubscriptionConfiguration {
+    static var defaultValue: StarsSubscriptionConfiguration {
+        return StarsSubscriptionConfiguration(maxFee: 2500)
+    }
+    
+    let maxFee: Int64?
+    
+    fileprivate init(maxFee: Int64?) {
+        self.maxFee = maxFee
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> StarsSubscriptionConfiguration {
+        if let data = appConfiguration.data, let value = data["stars_subscription_amount_max"] as? Double {
+            return StarsSubscriptionConfiguration(maxFee: Int64(value))
+        } else {
+            return .defaultValue
+        }
+    }
 }
