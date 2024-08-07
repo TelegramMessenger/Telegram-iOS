@@ -986,6 +986,31 @@ private final class StarsSubscriptionsContextImpl {
         self.updateState(updatedState)
         self.updateDisposable.set(_internal_updateStarsSubscription(account: self.account, peerId: self.account.peerId, subscriptionId: id, cancel: cancel).startStrict())
     }
+    
+    private var previousLoadTimestamp: Double?
+    func load(force: Bool) {
+        assert(Queue.mainQueue().isCurrent())
+        
+        let currentTimestamp = CFAbsoluteTimeGetCurrent()
+        if let previousLoadTimestamp = self.previousLoadTimestamp, currentTimestamp - previousLoadTimestamp < 60 && !force {
+            return
+        }
+        self.previousLoadTimestamp = currentTimestamp
+        
+        self.disposable.set((_internal_requestStarsSubscriptions(account: self.account, peerId: self.account.peerId, offset: "", missingBalance: false)
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            guard let self else {
+                return
+            }
+            self.nextOffset = status.nextSubscriptionsOffset
+            
+            var updatedState = self._state
+            updatedState.subscriptions = status.subscriptions
+            updatedState.isLoading = false
+            updatedState.canLoadMore = self.nextOffset != nil
+            self.updateState(updatedState)
+        }))
+    }
 }
     
 public final class StarsSubscriptionsContext {
@@ -1030,6 +1055,12 @@ public final class StarsSubscriptionsContext {
     public func updateSubscription(id: String, cancel: Bool) {
         self.impl.with {
             $0.updateSubscription(id: id, cancel: cancel)
+        }
+    }
+    
+    public func load(force: Bool) {
+        self.impl.with {
+            $0.load(force: force)
         }
     }
 }
