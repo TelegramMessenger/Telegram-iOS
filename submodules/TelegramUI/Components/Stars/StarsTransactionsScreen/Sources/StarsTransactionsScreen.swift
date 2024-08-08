@@ -22,6 +22,8 @@ import ListActionItemComponent
 import StarsAvatarComponent
 import TelegramStringFormatting
 
+private let initialSubscriptionsDisplayedLimit: Int32 = 3
+
 final class StarsTransactionsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -127,6 +129,8 @@ final class StarsTransactionsScreenComponent: Component {
         
         private var subscriptionsStateDisposable: Disposable?
         private var subscriptionsState: StarsSubscriptionsContext.State?
+        private var subscriptionsExpanded = false
+        private var subscriptionsMoreDisplayed: Int32 = 0
         
         private var allTransactionsContext: StarsTransactionsContext?
         private var incomingTransactionsContext: StarsTransactionsContext?
@@ -601,7 +605,16 @@ final class StarsTransactionsScreenComponent: Component {
             let fontBaseDisplaySize = 17.0
             var subscriptionsItems: [AnyComponentWithIdentity<Empty>] = []
             if let subscriptionsState = self.subscriptionsState {
-                for subscription in subscriptionsState.subscriptions {
+                var subscriptions = subscriptionsState.subscriptions
+                var limit: Int32
+                if self.subscriptionsExpanded {
+                    limit = 25 + self.subscriptionsMoreDisplayed
+                } else {
+                    limit = initialSubscriptionsDisplayedLimit
+                }
+                subscriptions = Array(subscriptions.prefix(Int(limit)))
+                
+                for subscription in subscriptions {
                     var titleComponents: [AnyComponentWithIdentity<Empty>] = []
                     titleComponents.append(
                         AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
@@ -618,12 +631,12 @@ final class StarsTransactionsScreenComponent: Component {
                     let dateValue = stringForDateWithoutYear(date: Date(timeIntervalSince1970: Double(subscription.untilDate)), strings: environment.strings)
                     if subscription.flags.contains(.isCancelled) {
                         if subscription.untilDate > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
-                            dateText = "expires on \(dateValue)"
+                            dateText = environment.strings.Stars_Intro_Subscriptions_Expires(dateValue).string
                         } else {
-                            dateText = "expired on \(dateValue)"
+                            dateText = environment.strings.Stars_Intro_Subscriptions_Expired(dateValue).string
                         }
                     } else {
-                        dateText = "renews on \(dateValue)"
+                        dateText = environment.strings.Stars_Intro_Subscriptions_Renews(dateValue).string
                     }
                     titleComponents.append(
                         AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
@@ -635,15 +648,14 @@ final class StarsTransactionsScreenComponent: Component {
                             maximumNumberOfLines: 1
                         )))
                     )
-                    
                     let labelComponent: AnyComponentWithIdentity<Empty>
                     if subscription.flags.contains(.isCancelled) {
                         labelComponent = AnyComponentWithIdentity(id: "cancelledLabel", component: AnyComponent(
-                            MultilineTextComponent(text: .plain(NSAttributedString(string: "cancelled", font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemDestructiveColor)))
+                            MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Stars_Intro_Subscriptions_Cancelled, font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemDestructiveColor)))
                         ))
                     } else {
                         let itemLabel = NSAttributedString(string: "\(subscription.pricing.amount)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor)
-                        let itemSublabel = NSAttributedString(string: "per month", font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemSecondaryTextColor)
+                        let itemSublabel = NSAttributedString(string: environment.strings.Stars_Intro_Subscriptions_PerMonth, font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemSecondaryTextColor)
                         
                         labelComponent = AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel, subtext: itemSublabel)))
                     }
@@ -675,7 +687,7 @@ final class StarsTransactionsScreenComponent: Component {
                             ListActionItemComponent(
                                 theme: environment.theme,
                                 title: AnyComponent(Text(
-                                    text: "Show More",
+                                    text: environment.strings.Stars_Intro_Subscriptions_ShowMore,
                                     font: Font.regular(17.0),
                                     color: environment.theme.list.itemAccentColor
                                 )),
@@ -690,8 +702,16 @@ final class StarsTransactionsScreenComponent: Component {
                                     false
                                 ),
                                 accessory: nil,
-                                action: { _ in
-                                    
+                                action: { [weak self] _ in
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                    if self.subscriptionsExpanded {
+                                        self.subscriptionsMoreDisplayed += 10
+                                    } else {
+                                        self.subscriptionsExpanded = true
+                                    }
+                                    component.subscriptionsContext.loadMore()
                                 },
                                 highlighting: .default,
                                 updateIsHighlighted: { view, _ in
@@ -703,14 +723,13 @@ final class StarsTransactionsScreenComponent: Component {
             }
             
             if !subscriptionsItems.isEmpty {
-                //TODO:localize
                 let subscriptionsSize = self.subscriptionsView.update(
                     transition: .immediate,
                     component: AnyComponent(ListSectionComponent(
                         theme: environment.theme,
                         header: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "My Subscriptions".uppercased(),
+                                string: environment.strings.Stars_Intro_Subscriptions_Title.uppercased(),
                                 font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -1049,6 +1068,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         }
         
         self.starsContext.load(force: false)
+        self.subscriptionsContext.loadMore()
     }
     
     required public init(coder aDecoder: NSCoder) {

@@ -54,10 +54,7 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.presentationData = presentationData
         
         self.webView = PDFView()
-        self.webView.maxScaleFactor = 4.0;
-        self.webView.minScaleFactor = self.webView.scaleFactorForSizeToFit
-        self.webView.autoScales = true
-        
+
         var scrollView: UIScrollView?
         for view in self.webView.subviews {
             if let view = view as? UIScrollView {
@@ -72,16 +69,11 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
         self.scrollView = scrollView
         
+        self.webView.displayDirection = .vertical
+        self.webView.autoScales = true
+        
         var title: String = "file"
         if let path = self.context.account.postbox.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe) {
-//            var updatedPath = path
-//            if let fileName = file.fileName {
-//                let tempFile = TempBox.shared.file(path: path, fileName: fileName)
-//                updatedPath = tempFile.path
-//                self.tempFile = tempFile
-//                title = fileName
-//            }
-
             self.webView.document = PDFDocument(data: data)
             title = file.fileName ?? "file"
         }
@@ -96,9 +88,11 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
         self.addSubview(self.webView)
         
-        Queue.mainQueue().after(1.0) {
-            scrollView?.delegate = self
-        }
+//        Queue.mainQueue().after(1.0) {
+//            if let scrollView = self.scrollView {
+//                scrollView.delegate = self
+//            }
+//        }
     }
     
     required init?(coder: NSCoder) {
@@ -251,42 +245,20 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     
     private var validLayout: (CGSize, UIEdgeInsets, UIEdgeInsets)?
     func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, transition: ComponentTransition) {
+        let isFirstTime = self.validLayout == nil
         self.validLayout = (size, insets, fullInsets)
         
         self.previousScrollingOffset = ScrollingOffsetState(value: self.scrollView.contentOffset.y, isDraggingOrDecelerating: self.scrollView.isDragging || self.scrollView.isDecelerating)
         
         let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - insets.bottom))
-        var refresh = false
-        if self.webView.frame.width > 0 && webViewFrame.width != self.webView.frame.width {
-            refresh = true
-        }
         transition.setFrame(view: self.webView, frame: webViewFrame)
         
-        if refresh {
-            self.webView.reloadInputViews()
+        if isFirstTime {
+            self.webView.setNeedsLayout()
+            self.webView.layoutIfNeeded()
+            self.webView.minScaleFactor = self.webView.scaleFactorForSizeToFit
+
         }
-        
-//        if let error = self.currentError {
-//            let errorSize = self.errorView.update(
-//                transition: .immediate,
-//                component: AnyComponent(
-//                    ErrorComponent(
-//                        theme: self.presentationData.theme,
-//                        title: self.presentationData.strings.Browser_ErrorTitle,
-//                        text: error.localizedDescription
-//                    )
-//                ),
-//                environment: {},
-//                containerSize: CGSize(width: size.width - insets.left - insets.right - 72.0, height: size.height)
-//            )
-//            if self.errorView.superview == nil {
-//                self.addSubview(self.errorView)
-//                self.errorView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-//            }
-//            self.errorView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - errorSize.width) / 2.0), y: insets.top + floorToScreenPixels((size.height - insets.top - insets.bottom - errorSize.height) / 2.0)), size: errorSize)
-//        } else if self.errorView.superview != nil {
-//            self.errorView.removeFromSuperview()
-//        }
     }
     
     private func updateState(_ f: (BrowserContentState) -> BrowserContentState) {
@@ -302,22 +274,46 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     
     private var previousScrollingOffset: ScrollingOffsetState?
     
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        self.updateScrollingOffset(isReset: false, transition: .immediate)
-    }
-    
     private func snapScrollingOffsetToInsets() {
         let transition = ComponentTransition(animation: .curve(duration: 0.4, curve: .spring))
         self.updateScrollingOffset(isReset: false, transition: transition)
     }
     
+    func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
+        if let scrollViewDelegate = scrollView as? UIScrollViewDelegate {
+            scrollViewDelegate.scrollViewWillBeginZooming?(scrollView, with: view)
+        }
+    }
+    
+    func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+        if let scrollViewDelegate = scrollView as? UIScrollViewDelegate {
+            scrollViewDelegate.scrollViewDidEndZooming?(scrollView, with: view, atScale: scale)
+        }
+    }
+    
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        if let scrollViewDelegate = scrollView as? UIScrollViewDelegate {
+            scrollViewDelegate.scrollViewDidZoom?(scrollView)
+        }
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        self.updateScrollingOffset(isReset: false, transition: .immediate)
+    }
+    
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if let scrollViewDelegate = scrollView as? UIScrollViewDelegate {
+            scrollViewDelegate.scrollViewDidEndDragging?(scrollView, willDecelerate: decelerate)
+        }
         if !decelerate {
             self.snapScrollingOffsetToInsets()
         }
     }
     
     public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        if let scrollViewDelegate = scrollView as? UIScrollViewDelegate {
+            scrollViewDelegate.scrollViewDidEndDecelerating?(scrollView)
+        }
         self.snapScrollingOffsetToInsets()
     }
     

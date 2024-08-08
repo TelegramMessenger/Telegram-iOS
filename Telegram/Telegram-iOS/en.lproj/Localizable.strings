@@ -12711,5 +12711,13 @@ Sorry for the inconvenience.";
 "Stars.Transaction.Subscription.Renewed.Title" = "Subscription renewed";
 "Stars.Transaction.Subscription.Renewed.Text" = "You renewed your subscription to [%1$@]().";
 
+"Stars.Intro.Subscriptions.Title" = "MY SUBSCRIPTIONS";
+"Stars.Intro.Subscriptions.PerMonth" = "per month";
+"Stars.Intro.Subscriptions.Renews" = "renews on %@";
+"Stars.Intro.Subscriptions.Expires" = "expires on %@";
+"Stars.Intro.Subscriptions.Expired" = "expired on %@";
+"Stars.Intro.Subscriptions.Cancelled" = "cancelled";
+"Stars.Intro.Subscriptions.ShowMore" = "Show More";
+
 "Stars.Intro.Transaction.SubscriptionFee.Title" = "Monthly Subscription Fee";
 "Stars.Intro.Transaction.Reaction.Title" = "Star Reaction";

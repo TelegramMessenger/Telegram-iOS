@@ -231,7 +231,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     params.present(controller, nil)
                 } else if let rootController = params.navigationController?.view.window?.rootViewController {
                     let proceed = {
-                        if params.context.sharedContext.immediateExperimentalUISettings.browserExperiment && BrowserScreen.supportedDocumentMimeTypes.contains(file.mimeType) {
+                        if BrowserScreen.supportedDocumentMimeTypes.contains(file.mimeType) {
                             let subject: BrowserScreen.Subject
                             if file.mimeType == "application/pdf" {
                                 subject = .pdfDocument(file: file)

@@ -359,6 +359,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                             canGoBack: context.component.contentState?.canGoBack ?? false,
                             canGoForward: context.component.contentState?.canGoForward ?? false,
                             canOpenIn: canOpenIn,
+                            isDocument: context.component.contentState?.contentType == .document,
                             performAction: performAction,
                             performHoldAction: performHoldAction
                         )
@@ -1090,16 +1091,19 @@ public class BrowserScreen: ViewController, MinimizableController {
                 var items: [ContextMenuItem] = []
                 items.append(.custom(fontItem, false))
                 
+                if contentState.contentType == .document, contentState.title.lowercased().hasSuffix(".pdf") {
                     
-                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontSanFrancisco, icon: forceIsSerif ? emptyIcon : checkIcon, action: { (controller, action) in
+                } else {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontSanFrancisco, icon: forceIsSerif ? emptyIcon : checkIcon, action: { (controller, action) in
                         performAction.invoke(.updateFontIsSerif(false))
                         action(.default)
-                })))
-                
-                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontNewYork, textFont: .custom(font: Font.with(size: 17.0, design: .serif, traits: []), height: nil, verticalOffset: nil), icon: forceIsSerif ? checkIcon : emptyIcon, action: { (controller, action) in
+                    })))
+                    
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontNewYork, textFont: .custom(font: Font.with(size: 17.0, design: .serif, traits: []), height: nil, verticalOffset: nil), icon: forceIsSerif ? checkIcon : emptyIcon, action: { (controller, action) in
                         performAction.invoke(.updateFontIsSerif(true))
                         action(.default)
-                })))
+                    })))
+                }
                 
                 items.append(.separator)
                 
@@ -1383,15 +1387,15 @@ public class BrowserScreen: ViewController, MinimizableController {
     private var validLayout: ContainerViewLayout?
     
     public static let supportedDocumentMimeTypes: [String] = [
-//        "text/plain",
-//        "text/rtf",
-//        "application/pdf",
-//        "application/msword",
-//        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-//        "application/vnd.ms-excel",
-//        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-//        "application/vnd.openxmlformats-officedocument.spreadsheetml.template",
-//        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        "text/plain",
+        "text/rtf",
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.template",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     ]
     
     public init(context: AccountContext, subject: Subject, preferredConfiguration: WKWebViewConfiguration? = nil, openPreviousOnClose: Bool = false) {
