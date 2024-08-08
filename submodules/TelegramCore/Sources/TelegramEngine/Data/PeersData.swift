@@ -48,13 +48,13 @@ extension EnginePeerCachedInfoItem: Equatable where T: Equatable {
 
 public enum EngineChannelParticipant: Equatable {
     case creator(id: EnginePeer.Id, adminInfo: ChannelParticipantAdminInfo?, rank: String?)
-    case member(id: EnginePeer.Id, invitedAt: Int32, adminInfo: ChannelParticipantAdminInfo?, banInfo: ChannelParticipantBannedInfo?, rank: String?)
+    case member(id: EnginePeer.Id, invitedAt: Int32, adminInfo: ChannelParticipantAdminInfo?, banInfo: ChannelParticipantBannedInfo?, rank: String?, subscriptionUntilDate: Int32?)
     
     public var peerId: EnginePeer.Id {
         switch self {
         case let .creator(id, _, _):
             return id
-        case let .member(id, _, _, _, _):
+        case let .member(id, _, _, _, _, _):
             return id
         }
     }
@@ -65,8 +65,8 @@ public extension EngineChannelParticipant {
         switch participant {
         case let .creator(id, adminInfo, rank):
             self = .creator(id: id, adminInfo: adminInfo, rank: rank)
-        case let .member(id, invitedAt, adminInfo, banInfo, rank):
-            self = .member(id: id, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: banInfo, rank: rank)
+        case let .member(id, invitedAt, adminInfo, banInfo, rank, subscriptionUntilDate):
+            self = .member(id: id, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: banInfo, rank: rank, subscriptionUntilDate: subscriptionUntilDate)
         }
     }
     
@@ -74,8 +74,8 @@ public extension EngineChannelParticipant {
         switch self {
         case let .creator(id, adminInfo, rank):
             return .creator(id: id, adminInfo: adminInfo, rank: rank)
-        case let .member(id, invitedAt, adminInfo, banInfo, rank):
-            return .member(id: id, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: banInfo, rank: rank)
+        case let .member(id, invitedAt, adminInfo, banInfo, rank, subscriptionUntilDate):
+            return .member(id: id, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: banInfo, rank: rank, subscriptionUntilDate: subscriptionUntilDate)
         }
     }
 }

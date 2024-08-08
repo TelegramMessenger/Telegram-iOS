@@ -321,7 +321,7 @@ public final class PeerChannelMemberCategoriesContextsManager {
         self.impl.with { impl in
             for (contextPeerId, context) in impl.contexts {
                 if contextPeerId == peerId {
-                    context.replayUpdates([(.member(id: memberId, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil), nil, nil)])
+                    context.replayUpdates([(.member(id: memberId, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil, subscriptionUntilDate: nil), nil, nil)])
                 }
             }
         }

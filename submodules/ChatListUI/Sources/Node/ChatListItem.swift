@@ -1225,6 +1225,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
     var avatarBadgeBackground: ASImageNode?
     let onlineNode: PeerOnlineMarkerNode
     var avatarTimerBadge: AvatarBadgeView?
+    private var starView: StarView?
     let pinnedIconNode: ASImageNode
     var secretIconNode: ASImageNode?
     var verifiedIconView: ComponentHostView<Empty>?
@@ -1827,6 +1828,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             if let item = self.item, case .chatList = item.index {
                 self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted, voiceChat: self.onlineIsVoiceChat), color: nil, transition: transition)
+                self.starView?.setOutlineColor(item.presentationData.theme.chatList.itemHighlightedBackgroundColor, transition: transition)
             }
         } else {
             if self.highlightedBackgroundNode.supernode != nil {
@@ -1845,12 +1847,16 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             if let item = self.item {
                 let onlineIcon: UIImage?
+                let effectiveBackgroundColor: UIColor
                 if item.isPinned {
                     onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .pinned, voiceChat: self.onlineIsVoiceChat)
+                    effectiveBackgroundColor = item.presentationData.theme.chatList.pinnedItemBackgroundColor
                 } else {
                     onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular, voiceChat: self.onlineIsVoiceChat)
+                    effectiveBackgroundColor = item.presentationData.theme.chatList.itemBackgroundColor
                 }
                 self.onlineNode.setImage(onlineIcon, color: nil, transition: transition)
+                self.starView?.setOutlineColor(effectiveBackgroundColor, transition: transition)
             }
         }
     }
@@ -2934,6 +2940,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 titleIconsWidth += currentMutedIconImage.size.width
             }
     
+            var isSubscription = false
             var isSecret = false
             if !isPeerGroup {
                 if case let .chatList(index) = item.index, index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat {
@@ -2978,6 +2985,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         break
                     }
                 } else if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
+                    if peer.isSubscription {
+                        isSubscription = true
+                    }
                     if case let .peer(peerData) = item.content, peerData.customMessageListData?.hidePeerStatus == true {
                         currentCredibilityIconContent = nil
                     } else if case .savedMessagesChats = item.chatListLocation, peer.id == item.context.account.peerId {
@@ -3635,14 +3645,38 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     transition.updateSublayerTransformScale(node: strongSelf.onlineNode, scale: (1.0 - onlineInlineNavigationFraction) * 1.0 + onlineInlineNavigationFraction * 0.00001)
                     
                     let onlineIcon: UIImage?
+                    let effectiveBackgroundColor: UIColor
                     if strongSelf.reallyHighlighted {
                         onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted, voiceChat: onlineIsVoiceChat)
+                        effectiveBackgroundColor = item.presentationData.theme.chatList.itemHighlightedBackgroundColor
                     } else if case let .chatList(index) = item.index, index.pinningIndex != nil {
                         onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .pinned, voiceChat: onlineIsVoiceChat)
+                        effectiveBackgroundColor = item.presentationData.theme.chatList.pinnedItemBackgroundColor
                     } else {
                         onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular, voiceChat: onlineIsVoiceChat)
+                        effectiveBackgroundColor = item.presentationData.theme.chatList.itemBackgroundColor
                     }
                     strongSelf.onlineNode.setImage(onlineIcon, color: item.presentationData.theme.list.itemCheckColors.foregroundColor, transition: .immediate)
+                    
+                    if isSubscription {
+                        let starView: StarView
+                        if let current = strongSelf.starView {
+                            starView = current
+                        } else {
+                            starView = StarView()
+                            strongSelf.starView = starView
+                            strongSelf.view.addSubview(starView)
+//                            strongSelf.mainContentContainerNode.view.addSubview(starView)
+                        }
+                        starView.outlineColor = effectiveBackgroundColor
+                        
+                        let starSize = CGSize(width: 20.0, height: 20.0)
+                        let starFrame = CGRect(origin: CGPoint(x: avatarFrame.maxX - starSize.width + 1.0, y: avatarFrame.maxY - starSize.height + 1.0), size: starSize)
+                        transition.updateFrame(view: starView, frame: starFrame)
+                    } else if let starView = strongSelf.starView {
+                        strongSelf.starView = nil
+                        starView.removeFromSuperview()
+                    }
                     
                     let autoremoveTimeoutFraction: CGFloat
                     if online {
@@ -4744,5 +4778,49 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 item.interaction.openStories(.archive, self)
             }
         }
+    }
+}
+
+private class StarView: UIView {
+    let outline = SimpleLayer()
+    let foreground = SimpleLayer()
+    
+    var outlineColor: UIColor = .white {
+        didSet {
+            self.outline.layerTintColor = self.outlineColor.cgColor
+        }
+    }
+    
+    override init(frame: CGRect) {
+        self.outline.contents = UIImage(bundleImageName: "Premium/Stars/StarMediumOutline")?.cgImage
+        self.foreground.contents = UIImage(bundleImageName: "Premium/Stars/StarMedium")?.cgImage
+        
+        super.init(frame: frame)
+        
+        self.layer.addSublayer(self.outline)
+        self.layer.addSublayer(self.foreground)
+    }
+    
+    required init?(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
+    func setOutlineColor(_ color: UIColor, transition: ContainedViewLayoutTransition) {
+        if case let .animated(duration, curve) = transition, color != self.outlineColor {
+            let snapshotLayer = SimpleLayer()
+            snapshotLayer.layerTintColor = self.outlineColor.cgColor
+            snapshotLayer.contents = self.outline.contents
+            snapshotLayer.frame = self.outline.bounds
+            self.layer.insertSublayer(snapshotLayer, above: self.outline)
+            snapshotLayer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
+                snapshotLayer?.removeFromSuperlayer()
+            })
+        }
+        self.outlineColor = color
+    }
+    
+    override func layoutSubviews() {
+        self.outline.frame = self.bounds
+        self.foreground.frame = self.bounds
     }
 }

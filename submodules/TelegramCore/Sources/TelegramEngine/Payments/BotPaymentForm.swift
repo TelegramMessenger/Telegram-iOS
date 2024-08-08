@@ -11,6 +11,7 @@ public enum BotPaymentInvoiceSource {
     case giftCode(users: [PeerId], currency: String, amount: Int64, option: PremiumGiftCodeOption)
     case stars(option: StarsTopUpOption)
     case starsGift(peerId: EnginePeer.Id, count: Int64, currency: String, amount: Int64)
+    case starsChatSubscription(hash: String)
 }
 
 public struct BotPaymentInvoiceFields: OptionSet {
@@ -314,6 +315,8 @@ func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInv
             return nil
         }
         return .inputInvoiceStars(purpose: .inputStorePaymentStarsGift(userId: inputUser, stars: count, currency: currency, amount: amount))
+    case let .starsChatSubscription(hash):
+        return .inputInvoiceChatInviteSubscription(hash: hash)
     }
 }
 
@@ -612,7 +615,7 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                                                     receiptMessageId = id
                                                 }
                                             }
-                                        case .giftCode, .stars, .starsGift:
+                                        case .giftCode, .stars, .starsGift, .starsChatSubscription:
                                             receiptMessageId = nil
                                         }
                                     }

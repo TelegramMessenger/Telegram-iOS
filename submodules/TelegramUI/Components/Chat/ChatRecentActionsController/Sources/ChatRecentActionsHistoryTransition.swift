@@ -87,7 +87,7 @@ private func filterOriginalMessageFlags(_ message: Message) -> Message {
 
 private func filterMessageChannelPeer(_ peer: Peer) -> Peer {
     if let peer = peer as? TelegramChannel {
-        return TelegramChannel(id: peer.id, accessHash: peer.accessHash, title: peer.title, username: peer.username, photo: peer.photo, creationDate: peer.creationDate, version: peer.version, participationStatus: peer.participationStatus, info: .group(TelegramChannelGroupInfo(flags: [])), flags: peer.flags, restrictionInfo: peer.restrictionInfo, adminRights: peer.adminRights, bannedRights: peer.bannedRights, defaultBannedRights: peer.defaultBannedRights, usernames: peer.usernames, storiesHidden: peer.storiesHidden, nameColor: peer.nameColor, backgroundEmojiId: peer.backgroundEmojiId, profileColor: peer.profileColor, profileBackgroundEmojiId: peer.profileBackgroundEmojiId, emojiStatus: peer.emojiStatus, approximateBoostLevel: peer.approximateBoostLevel)
+        return TelegramChannel(id: peer.id, accessHash: peer.accessHash, title: peer.title, username: peer.username, photo: peer.photo, creationDate: peer.creationDate, version: peer.version, participationStatus: peer.participationStatus, info: .group(TelegramChannelGroupInfo(flags: [])), flags: peer.flags, restrictionInfo: peer.restrictionInfo, adminRights: peer.adminRights, bannedRights: peer.bannedRights, defaultBannedRights: peer.defaultBannedRights, usernames: peer.usernames, storiesHidden: peer.storiesHidden, nameColor: peer.nameColor, backgroundEmojiId: peer.backgroundEmojiId, profileColor: peer.profileColor, profileBackgroundEmojiId: peer.profileBackgroundEmojiId, emojiStatus: peer.emojiStatus, approximateBoostLevel: peer.approximateBoostLevel, subscriptionUntilDate: peer.subscriptionUntilDate)
     }
     return peer
 }
@@ -704,8 +704,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     isBroadcast = false
                 }
                 
-                if case let .member(_, _, _, prevBanInfo, _) = prev.participant {
-                    if case let .member(_, _, _, newBanInfo, _) = new.participant {
+                if case let .member(_, _, _, prevBanInfo, _, _) = prev.participant {
+                    if case let .member(_, _, _, newBanInfo, _, _) = new.participant {
                         let newFlags = newBanInfo?.rights.flags ?? []
                         
                         var addedRights = newBanInfo?.rights.flags ?? []
@@ -890,8 +890,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 }
                             }
                         }
-                    } else if case let .member(_, _, prevAdminRights, _, prevRank) = prev.participant {
-                        if case let .member(_, _, newAdminRights, _, newRank) = new.participant {
+                    } else if case let .member(_, _, prevAdminRights, _, prevRank, _) = prev.participant {
+                        if case let .member(_, _, newAdminRights, _, newRank, _) = new.participant {
                             var prevFlags = prevAdminRights?.rights.rights ?? []
                             var newFlags = newAdminRights?.rights.rights ?? []
                             
@@ -1474,7 +1474,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_DeletedInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link_?.replacingOccurrences(of: "https://", with: "") ?? "")
+                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_DeletedInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link?.replacingOccurrences(of: "https://", with: "") ?? "")
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
@@ -1500,7 +1500,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_RevokedInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link_?.replacingOccurrences(of: "https://", with: "") ?? "")
+                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_RevokedInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link?.replacingOccurrences(of: "https://", with: "") ?? "")
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
@@ -1526,7 +1526,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_EditedInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", updatedInvite.link_?.replacingOccurrences(of: "https://", with: "") ?? "")
+                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_EditedInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", updatedInvite.link?.replacingOccurrences(of: "https://", with: "") ?? "")
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
@@ -1554,9 +1554,9 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 
                 let rawText: PresentationStrings.FormattedString
                 if joinedViaFolderLink {
-                    rawText = self.presentationData.strings.Channel_AdminLog_JoinedViaFolderInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link_?.replacingOccurrences(of: "https://", with: "") ?? "")
+                    rawText = self.presentationData.strings.Channel_AdminLog_JoinedViaFolderInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link?.replacingOccurrences(of: "https://", with: "") ?? "")
                 } else {
-                    rawText = self.presentationData.strings.Channel_AdminLog_JoinedViaInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link_?.replacingOccurrences(of: "https://", with: "") ?? "")
+                    rawText = self.presentationData.strings.Channel_AdminLog_JoinedViaInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link?.replacingOccurrences(of: "https://", with: "") ?? "")
                 }
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
@@ -1725,7 +1725,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 
                 let rawText: PresentationStrings.FormattedString
                 switch invite {
-                    case let .link(link, _, _, _, _, _, _, _, _, _, _, _):
+                    case let .link(link, _, _, _, _, _, _, _, _, _, _, _, _):
                         rawText = self.presentationData.strings.Channel_AdminLog_JoinedViaRequest(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", link.replacingOccurrences(of: "https://", with: ""), approver.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
                     case .publicJoinRequest:
                         rawText = self.presentationData.strings.Channel_AdminLog_JoinedViaPublicRequest(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", approver.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
@@ -2341,15 +2341,4 @@ func chatRecentActionsHistoryPreparedTransition(from fromEntries: [ChatRecentAct
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, peer: peer, controllerInteraction: controllerInteraction, chatThemes: chatThemes, availableReactions: availableReactions, availableMessageEffects: nil), directionHint: nil) }
     
     return ChatRecentActionsHistoryTransition(filteredEntries: toEntries, type: type, deletions: deletions, insertions: insertions, updates: updates, canLoadEarlier: canLoadEarlier, displayingResults: displayingResults, searchResultsState: searchResultsState, synchronous: !toggledDeletedMessageIds.isEmpty, isEmpty: toEntries.isEmpty)
-}
-
-private extension ExportedInvitation {
-    var link_: String? {
-        switch self {
-        case let .link(link, _, _, _, _, _, _, _, _, _, _, _):
-            return link
-        case .publicJoinRequest:
-            return nil
-        }
-    }
 }

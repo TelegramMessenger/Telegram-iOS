@@ -90,7 +90,7 @@ public enum CreatePeerExportedInvitationError {
     case generic
 }
 
-func _internal_createPeerExportedInvitation(account: Account, peerId: PeerId, title: String?, expireDate: Int32?, usageLimit: Int32?, requestNeeded: Bool?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
+func _internal_createPeerExportedInvitation(account: Account, peerId: PeerId, title: String?, expireDate: Int32?, usageLimit: Int32?, requestNeeded: Bool?, subscriptionPricing: StarsSubscriptionPricing?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
     return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var flags: Int32 = 0
@@ -106,7 +106,10 @@ func _internal_createPeerExportedInvitation(account: Account, peerId: PeerId, ti
             if let _ = title {
                 flags |= (1 << 4)
             }
-            return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: expireDate, usageLimit: usageLimit, title: title, subscriptionPricing: nil))
+            if let _ = subscriptionPricing {
+                flags |= (1 << 5)
+            }
+            return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: expireDate, usageLimit: usageLimit, title: title, subscriptionPricing: subscriptionPricing?.apiStarsSubscriptionPricing))
             |> mapError { _ in return CreatePeerExportedInvitationError.generic }
             |> map { result -> ExportedInvitation? in
                 return ExportedInvitation(apiExportedInvite: result)
@@ -817,7 +820,7 @@ private final class PeerInvitationImportersContextImpl {
         
         var link: String?
         var count: Int32 = 0
-        if let invite = invite, case let .link(inviteLink, _, _, _, _, _, _, _, _, _, inviteCount, _) = invite {
+        if let invite = invite, case let .link(inviteLink, _, _, _, _, _, _, _, _, _, inviteCount, _, _) = invite {
             link = inviteLink
             if let inviteCount = inviteCount {
                 count = inviteCount

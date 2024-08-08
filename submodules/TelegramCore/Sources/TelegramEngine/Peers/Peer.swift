@@ -510,6 +510,10 @@ public extension EnginePeer {
     var isPremium: Bool {
         return self._asPeer().isPremium
     }
+    
+    var isSubscription: Bool {
+        return self._asPeer().isSubscription
+    }
 
     var isService: Bool {
         if case let .user(peer) = self {

@@ -686,7 +686,7 @@ private func canEditAdminRights(accountPeerId: EnginePeer.Id, channelPeer: Engin
             switch initialParticipant {
                 case .creator:
                     return false
-                case let .member(_, _, adminInfo, _, _):
+                case let .member(_, _, adminInfo, _, _, _):
                     if let adminInfo = adminInfo {
                         return adminInfo.canBeEditedByAccountPeer || adminInfo.promotedBy == accountPeerId
                     } else {

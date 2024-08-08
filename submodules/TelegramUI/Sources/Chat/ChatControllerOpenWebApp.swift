@@ -163,7 +163,7 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
             var botId = peer.id
             var botName = botName
             var botAddress = ""
-            var botVerified = false
+            var botVerified = peer.isVerified
             if case let .inline(bot) = source {
                 isInline = true
                 botId = bot.id

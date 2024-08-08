@@ -905,7 +905,7 @@ private let starImage: UIImage? = {
         context.clear(CGRect(origin: .zero, size: size))
         
         if let image = UIImage(bundleImageName: "Premium/Stars/StarLarge"), let cgImage = image.cgImage {
-            context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 4.0, dy: 4.0), byTiling: false)
+            context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 1.0, dy: 1.0), byTiling: false)
         }
     })?.withRenderingMode(.alwaysTemplate)
 }()
