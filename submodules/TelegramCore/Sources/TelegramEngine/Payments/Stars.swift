@@ -419,7 +419,7 @@ private extension StarsContext.State.Transaction {
 private extension StarsContext.State.Subscription {
     init?(apiSubscription: Api.StarsSubscription, transaction: Transaction) {
         switch apiSubscription {
-        case let .starsSubscription(apiFlags, id, apiPeer, untilDate, pricing):
+        case let .starsSubscription(apiFlags, id, apiPeer, untilDate, pricing, inviteHash):
             guard let peer = transaction.getPeer(apiPeer.peerId) else {
                 return nil
             }
@@ -433,7 +433,7 @@ private extension StarsContext.State.Subscription {
             if (apiFlags & (1 << 2)) != 0 {
                 flags.insert(.missingBalance)
             }
-            self.init(flags: flags, id: id, peer: EnginePeer(peer), untilDate: untilDate, pricing: StarsSubscriptionPricing(apiStarsSubscriptionPricing: pricing))
+            self.init(flags: flags, id: id, peer: EnginePeer(peer), untilDate: untilDate, pricing: StarsSubscriptionPricing(apiStarsSubscriptionPricing: pricing), inviteHash: inviteHash)
         }
     }
 }
@@ -572,19 +572,22 @@ public final class StarsContext {
             public let peer: EnginePeer
             public let untilDate: Int32
             public let pricing: StarsSubscriptionPricing
+            public let inviteHash: String?
             
             public init(
                 flags: Flags,
                 id: String,
                 peer: EnginePeer,
                 untilDate: Int32,
-                pricing: StarsSubscriptionPricing
+                pricing: StarsSubscriptionPricing,
+                inviteHash: String?
             ) {
                 self.flags = flags
                 self.id = id
                 self.peer = peer
                 self.untilDate = untilDate
                 self.pricing = pricing
+                self.inviteHash = inviteHash
             }
             
             public static func == (lhs: Subscription, rhs: Subscription) -> Bool {
@@ -601,6 +604,9 @@ public final class StarsContext {
                     return false
                 }
                 if lhs.pricing != rhs.pricing {
+                    return false
+                }
+                if lhs.inviteHash != rhs.inviteHash {
                     return false
                 }
                 return true
@@ -980,7 +986,7 @@ private final class StarsSubscriptionsContextImpl {
             } else {
                 updatedFlags.remove(.isCancelled)
             }
-            let updatedSubscription = StarsContext.State.Subscription(flags: updatedFlags, id: subscription.id, peer: subscription.peer, untilDate: subscription.untilDate, pricing: subscription.pricing)
+            let updatedSubscription = StarsContext.State.Subscription(flags: updatedFlags, id: subscription.id, peer: subscription.peer, untilDate: subscription.untilDate, pricing: subscription.pricing, inviteHash: subscription.inviteHash)
             updatedState.subscriptions[index] = updatedSubscription
         }
         self.updateState(updatedState)
