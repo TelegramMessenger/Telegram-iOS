@@ -170,6 +170,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[460916654] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionToggleInvites($0) }
     dict[-886388890] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionToggleNoForwards($0) }
     dict[1599903217] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionTogglePreHistoryHidden($0) }
+    dict[1621597305] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionToggleSignatureProfiles($0) }
     dict[648939889] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionToggleSignatures($0) }
     dict[1401984889] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionToggleSlowMode($0) }
     dict[-370660328] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionUpdatePinned($0) }

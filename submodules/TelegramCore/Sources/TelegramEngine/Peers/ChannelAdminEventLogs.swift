@@ -50,6 +50,7 @@ public enum AdminLogEventAction {
     case changePhoto(prev: ([TelegramMediaImageRepresentation], [TelegramMediaImage.VideoRepresentation]), new: ([TelegramMediaImageRepresentation], [TelegramMediaImage.VideoRepresentation]))
     case toggleInvites(Bool)
     case toggleSignatures(Bool)
+    case toggleSignatureProfiles(Bool)
     case updatePinned(Message?)
     case editMessage(prev: Message, new: Message)
     case deleteMessage(Message)
@@ -446,6 +447,8 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                     action = .changeStatus(prev: PeerEmojiStatus(apiStatus: prevValue), new: PeerEmojiStatus(apiStatus: newValue))
                                 case let .channelAdminLogEventActionChangeEmojiStickerSet(prevStickerset, newStickerset):
                                     action = .changeEmojiPack(prev: StickerPackReference(apiInputSet: prevStickerset), new: StickerPackReference(apiInputSet: newStickerset))
+                                case let .channelAdminLogEventActionToggleSignatureProfiles(newValue):
+                                    action = .toggleSignatureProfiles(boolFromApiValue(newValue))
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

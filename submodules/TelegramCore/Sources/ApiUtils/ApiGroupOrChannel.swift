@@ -85,6 +85,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
             if (flags & Int32(1 << 11)) != 0 {
                 infoFlags.insert(.messagesShouldHaveSignatures)
             }
+            if (flags2 & Int32(1 << 12)) != 0 {
+                infoFlags.insert(.messagesShouldHaveProfiles)
+            }
             if (flags & Int32(1 << 20)) != 0 {
                 infoFlags.insert(.hasDiscussionGroup)
             }

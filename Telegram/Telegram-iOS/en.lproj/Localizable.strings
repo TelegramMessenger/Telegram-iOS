@@ -12672,3 +12672,6 @@ Sorry for the inconvenience.";
 "Stars.Intro.GiftStars" = "Gift Stars to Friends";
 
 "MediaPicker.CreateSticker" = "Create a sticker from a photo";
+
+"Channel.AdminLog.MessageToggleProfileSignaturesOn" = "%@ enabled admin profiles";
+"Channel.AdminLog.MessageToggleProfileSignaturesOff" = "%@ disabled admin profiles";

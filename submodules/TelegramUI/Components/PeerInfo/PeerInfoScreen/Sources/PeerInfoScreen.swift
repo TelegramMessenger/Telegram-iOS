@@ -559,7 +559,6 @@ private final class PeerInfoInteraction {
     let editingOpenInviteLinksSetup: () -> Void
     let editingOpenDiscussionGroupSetup: () -> Void
     let editingOpenStars: () -> Void
-    let editingToggleMessageSignatures: (Bool) -> Void
     let openParticipantsSection: (PeerInfoParticipantsSection) -> Void
     let openRecentActions: () -> Void
     let openStats: (ChannelStatsSection) -> Void
@@ -627,7 +626,6 @@ private final class PeerInfoInteraction {
         editingOpenInviteLinksSetup: @escaping () -> Void,
         editingOpenDiscussionGroupSetup: @escaping () -> Void,
         editingOpenStars: @escaping () -> Void,
-        editingToggleMessageSignatures: @escaping (Bool) -> Void,
         openParticipantsSection: @escaping (PeerInfoParticipantsSection) -> Void,
         openRecentActions: @escaping () -> Void,
         openStats: @escaping (ChannelStatsSection) -> Void,
@@ -694,7 +692,6 @@ private final class PeerInfoInteraction {
         self.editingOpenInviteLinksSetup = editingOpenInviteLinksSetup
         self.editingOpenDiscussionGroupSetup = editingOpenDiscussionGroupSetup
         self.editingOpenStars = editingOpenStars
-        self.editingToggleMessageSignatures = editingToggleMessageSignatures
         self.openParticipantsSection = openParticipantsSection
         self.openRecentActions = openRecentActions
         self.openStats = openStats
@@ -2761,9 +2758,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             },
             editingOpenStars: { [weak self] in
                 self?.editingOpenStars()
-            },
-            editingToggleMessageSignatures: { [weak self] value in
-                self?.editingToggleMessageSignatures(value: value)
             },
             openParticipantsSection: { [weak self] section in
                 self?.openParticipantsSection(section: section)
@@ -8564,10 +8558,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         } else {
             let _ = self.context.engine.peers.setChannelForumMode(id: self.peerId, isForum: isEnabled).startStandalone()
         }
-    }
-    
-    private func editingToggleMessageSignatures(value: Bool) {
-        self.toggleShouldChannelMessagesSignaturesDisposable.set(self.context.engine.peers.toggleShouldChannelMessagesSignatures(peerId: self.peerId, enabled: value).startStrict())
     }
         
     private func openParticipantsSection(section: PeerInfoParticipantsSection) {

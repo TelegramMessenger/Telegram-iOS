@@ -458,8 +458,8 @@ public extension TelegramEngine {
             }
         }
 
-        public func toggleShouldChannelMessagesSignatures(peerId: PeerId, enabled: Bool) -> Signal<Void, NoError> {
-            return _internal_toggleShouldChannelMessagesSignatures(account: self.account, peerId: peerId, enabled: enabled)
+        public func toggleShouldChannelMessagesSignatures(peerId: PeerId, signaturesEnabled: Bool, profilesEnabled: Bool) -> Signal<Void, NoError> {
+            return _internal_toggleShouldChannelMessagesSignatures(account: self.account, peerId: peerId, signaturesEnabled: signaturesEnabled, profilesEnabled: profilesEnabled)
         }
 
         public func toggleMessageCopyProtection(peerId: PeerId, enabled: Bool) -> Signal<Void, NoError> {
