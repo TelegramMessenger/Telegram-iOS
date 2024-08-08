@@ -12682,3 +12682,31 @@ Sorry for the inconvenience.";
 
 "Stars.Subscription.Terms" = "By subscribing you agree to the [Terms of Service]().";
 "Stars.Subscription.Terms_URL" = "https://telegram.org/tos/stars";
+
+"Stars.Transaction.Reaction.Title" = "Star reaction";
+"Stars.Transaction.Reaction.Post" = "Post";
+
+"Stars.Transaction.SubscriptionFee" = "Monthly Subscription Fee";
+"Stars.Transaction.Subscription.Title" = "Subscription";
+"Stars.Transaction.Subscription.Active" = "If you cancel now, you can still access your subscription until %@";
+"Stars.Transaction.Subscription.Cancelled" = "You have cancelled your subscription.";
+"Stars.Transaction.Subscription.Renew" = "Renew Subscription";
+"Stars.Transaction.Subscription.Cancel" = "Cancel Subscription";
+"Stars.Transaction.Subscription.PerMonth" = "%@ / month";
+"Stars.Transaction.Subscription.PerMonthUsd" = "appx. %@ per month";
+"Stars.Transaction.Subscription.Subscription" = "Subscription";
+"Stars.Transaction.Subscription.Subscriber" = "Subscriber";
+
+"Stars.Transaction.Subscription.Status.Expires" = "Expires";
+"Stars.Transaction.Subscription.Status.Expired" = "Expired";
+"Stars.Transaction.Subscription.Status.Renews" = "Renews";
+"Stars.Transaction.Subscription.Status.Subscribed" = "Subscribed";
+
+"Stars.Transaction.Subscription.Cancelled.Title" = "Subscription cancelled";
+"Stars.Transaction.Subscription.Cancelled.Text" = "You will still have access to [%1$@]() until %2$@.";
+
+"Stars.Transaction.Subscription.Renewed.Title" = "Subscription renewed";
+"Stars.Transaction.Subscription.Renewed.Text" = "You renewed your subscription to [%1$@]().";
+
+"Stars.Intro.Transaction.SubscriptionFee.Title" = "Monthly Subscription Fee";
+"Stars.Intro.Transaction.Reaction.Title" = "Star Reaction";
