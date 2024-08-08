@@ -344,13 +344,13 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             if !hasActionMedia {
                 if !isBroadcastChannel {
                     hasAvatar = true
-                } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.messagesShouldHaveSignatures) {
+                }/* else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.messagesShouldHaveProfiles) {
                     //TODO:release
                     hasAvatar = true
                     if let authorSignatureAttribute = message.authorSignatureAttribute {
                         effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignatureAttribute.signature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignatureAttribute.signature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil)
                     }
-                }
+                }*/
             }
             
             if hasAvatar {

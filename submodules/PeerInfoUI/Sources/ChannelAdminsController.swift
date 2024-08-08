@@ -24,10 +24,9 @@ private final class ChannelAdminsControllerArguments {
     let addAdmin: () -> Void
     let openAdmin: (ChannelParticipant) -> Void
     let updateAntiSpamEnabled: (Bool) -> Void
-    let updateSignMessagesEnabled: (Bool) -> Void
-    let updateShowAuthorProfilesEnabled: (Bool) -> Void
+    let updateSignaturesAndProfilesEnabled: (Bool, Bool) -> Void
     
-    init(context: AccountContext, openRecentActions: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removeAdmin: @escaping (EnginePeer.Id) -> Void, addAdmin: @escaping () -> Void, openAdmin: @escaping (ChannelParticipant) -> Void, updateAntiSpamEnabled: @escaping (Bool) -> Void, updateSignMessagesEnabled: @escaping (Bool) -> Void, updateShowAuthorProfilesEnabled: @escaping (Bool) -> Void) {
+    init(context: AccountContext, openRecentActions: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removeAdmin: @escaping (EnginePeer.Id) -> Void, addAdmin: @escaping () -> Void, openAdmin: @escaping (ChannelParticipant) -> Void, updateAntiSpamEnabled: @escaping (Bool) -> Void, updateSignaturesAndProfilesEnabled: @escaping (Bool, Bool) -> Void) {
         self.context = context
         self.openRecentActions = openRecentActions
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -35,8 +34,7 @@ private final class ChannelAdminsControllerArguments {
         self.addAdmin = addAdmin
         self.openAdmin = openAdmin
         self.updateAntiSpamEnabled = updateAntiSpamEnabled
-        self.updateSignMessagesEnabled = updateSignMessagesEnabled
-        self.updateShowAuthorProfilesEnabled = updateShowAuthorProfilesEnabled
+        self.updateSignaturesAndProfilesEnabled = updateSignaturesAndProfilesEnabled
     }
 }
 
@@ -61,8 +59,8 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
     case addAdmin(PresentationTheme, String, Bool)
     case adminsInfo(PresentationTheme, String)
     
-    case signMessages(PresentationTheme, String, Bool)
-    case showAuthorProfiles(PresentationTheme, String, Bool)
+    case signMessages(PresentationTheme, String, Bool, Bool)
+    case showAuthorProfiles(PresentationTheme, String, Bool, Bool)
     case signMessagesInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -175,14 +173,14 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .signMessages(lhsTheme, lhsText, lhsValue):
-                if case let .signMessages(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .signMessages(lhsTheme, lhsText, lhsValue, lhsOtherValue):
+                if case let .signMessages(rhsTheme, rhsText, rhsValue, rhsOtherValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsOtherValue == rhsOtherValue {
                     return true
                 } else {
                     return false
                 }
-            case let .showAuthorProfiles(lhsTheme, lhsText, lhsValue):
-                if case let .showAuthorProfiles(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .showAuthorProfiles(lhsTheme, lhsText, lhsValue, lhsOtherValue):
+                if case let .showAuthorProfiles(rhsTheme, rhsText, rhsValue, rhsOtherValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsOtherValue == rhsOtherValue {
                     return true
                 } else {
                     return false
@@ -315,13 +313,13 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 })
             case let .adminsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .signMessages(_, text, value):
+            case let .signMessages(_, text, value, profiles):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.updateSignMessagesEnabled(value)
+                    arguments.updateSignaturesAndProfilesEnabled(value, profiles)
                 })
-            case let .showAuthorProfiles(_, text, value):
+            case let .showAuthorProfiles(_, text, value, signatures):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.updateShowAuthorProfilesEnabled(value)
+                    arguments.updateSignaturesAndProfilesEnabled(signatures, value)
                 })
             case let .signMessagesInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
@@ -497,9 +495,9 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
             }
             
             if !isGroup && peer.hasPermission(.sendSomething) {
-                entries.append(.signMessages(presentationData.theme, presentationData.strings.Channel_SignMessages, signMessagesEnabled))
+                entries.append(.signMessages(presentationData.theme, presentationData.strings.Channel_SignMessages, signMessagesEnabled, showAuthorProfilesEnabled))
                 //TODO:localize
-                entries.append(.showAuthorProfiles(presentationData.theme, "Show Authors' Profiles", showAuthorProfilesEnabled))
+                entries.append(.showAuthorProfiles(presentationData.theme, "Show Authors' Profiles", showAuthorProfilesEnabled, signMessagesEnabled))
                 entries.append(.signMessagesInfo(presentationData.theme, "Add names and photos of admins to the messages they post, linking to their profiles."))
             }
         }
@@ -611,9 +609,6 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
     
     let updateSignMessagesDisposable = MetaDisposable()
     actionsDisposable.add(updateSignMessagesDisposable)
-    
-    let updateShowAuthorProfilesDisposable = MetaDisposable()
-    actionsDisposable.add(updateShowAuthorProfilesDisposable)
     
     let adminsPromise = Promise<[RenderedChannelParticipant]?>(nil)
         
@@ -811,17 +806,11 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
         |> deliverOnMainQueue).start(next: { peerId in
             updateAntiSpamDisposable.set(context.engine.peers.toggleAntiSpamProtection(peerId: peerId, enabled: value).start())
         })
-    }, updateSignMessagesEnabled: { value in
+    }, updateSignaturesAndProfilesEnabled: { signatures, profiles in
         let _ = (currentPeerId.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { peerId in
-            updateSignMessagesDisposable.set(context.engine.peers.toggleShouldChannelMessagesSignatures(peerId: peerId, enabled: value).start())
-        })
-    }, updateShowAuthorProfilesEnabled: { value in
-        let _ = (currentPeerId.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { peerId in
-            updateSignMessagesDisposable.set(context.engine.peers.toggleShouldChannelMessagesSignatures(peerId: peerId, enabled: value).start())
+            updateSignMessagesDisposable.set(context.engine.peers.toggleShouldChannelMessagesSignatures(peerId: peerId, signaturesEnabled: signatures, profilesEnabled: profiles).start())
         })
     })
     
@@ -947,7 +936,7 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
         var showAuthorProfilesEnabled = false
         if case let .channel(channel) = view.peer, case let .broadcast(info) = channel.info {
             signMessagesEnabled = info.flags.contains(.messagesShouldHaveSignatures)
-            showAuthorProfilesEnabled = info.flags.contains(.messagesShouldHaveSignatures)
+            showAuthorProfilesEnabled = info.flags.contains(.messagesShouldHaveProfiles)
         }
         
         var rightNavigationButton: ItemListNavigationButton?

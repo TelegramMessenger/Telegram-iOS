@@ -1480,7 +1480,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         var effectiveAuthor: Peer?
-        var overrideEffectiveAuthor = false
+        let overrideEffectiveAuthor = false
         var ignoreForward = false
         var displayAuthorInfo: Bool
         var ignoreNameHiding = false
@@ -1551,7 +1551,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             
             //TODO:release
-            if let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.messagesShouldHaveSignatures) {
+            /*if let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.messagesShouldHaveProfiles) {
                 hasAvatar = true
                 if let authorSignatureAttribute = firstMessage.authorSignatureAttribute {
                     effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignatureAttribute.signature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignatureAttribute.signature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil)
@@ -1573,7 +1573,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         displayAuthorInfo = false
                     }
                 }
-            }
+            }*/
         
             if !peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 if peerId.isGroupOrChannel && effectiveAuthor != nil {

@@ -409,6 +409,7 @@ public extension Api {
         case channelAdminLogEventActionToggleInvites(newValue: Api.Bool)
         case channelAdminLogEventActionToggleNoForwards(newValue: Api.Bool)
         case channelAdminLogEventActionTogglePreHistoryHidden(newValue: Api.Bool)
+        case channelAdminLogEventActionToggleSignatureProfiles(newValue: Api.Bool)
         case channelAdminLogEventActionToggleSignatures(newValue: Api.Bool)
         case channelAdminLogEventActionToggleSlowMode(prevValue: Int32, newValue: Int32)
         case channelAdminLogEventActionUpdatePinned(message: Api.Message)
@@ -718,6 +719,12 @@ public extension Api {
                     }
                     newValue.serialize(buffer, true)
                     break
+                case .channelAdminLogEventActionToggleSignatureProfiles(let newValue):
+                    if boxed {
+                        buffer.appendInt32(1621597305)
+                    }
+                    newValue.serialize(buffer, true)
+                    break
                 case .channelAdminLogEventActionToggleSignatures(let newValue):
                     if boxed {
                         buffer.appendInt32(648939889)
@@ -832,6 +839,8 @@ public extension Api {
                 return ("channelAdminLogEventActionToggleNoForwards", [("newValue", newValue as Any)])
                 case .channelAdminLogEventActionTogglePreHistoryHidden(let newValue):
                 return ("channelAdminLogEventActionTogglePreHistoryHidden", [("newValue", newValue as Any)])
+                case .channelAdminLogEventActionToggleSignatureProfiles(let newValue):
+                return ("channelAdminLogEventActionToggleSignatureProfiles", [("newValue", newValue as Any)])
                 case .channelAdminLogEventActionToggleSignatures(let newValue):
                 return ("channelAdminLogEventActionToggleSignatures", [("newValue", newValue as Any)])
                 case .channelAdminLogEventActionToggleSlowMode(let prevValue, let newValue):
@@ -1500,6 +1509,19 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionTogglePreHistoryHidden(newValue: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionToggleSignatureProfiles(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.Bool?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleSignatureProfiles(newValue: _1!)
             }
             else {
                 return nil

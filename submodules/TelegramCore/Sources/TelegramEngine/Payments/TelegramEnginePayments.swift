@@ -93,5 +93,9 @@ public extension TelegramEngine {
         public func sendStarsPaymentForm(formId: Int64, source: BotPaymentInvoiceSource) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
             return _internal_sendStarsPaymentForm(account: self.account, formId: formId, source: source)
         }
+        
+        public func fulfillStarsSubscription(peerId: EnginePeer.Id, subscriptionId: String) -> Signal<Never, FulfillStarsSubsciptionError> {
+            return _internal_fulfillStarsSubscription(account: self.account, peerId: peerId, subscriptionId: subscriptionId)
+        }
     }
 }

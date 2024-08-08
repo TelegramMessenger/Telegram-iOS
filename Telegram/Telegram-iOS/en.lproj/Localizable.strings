@@ -12673,6 +12673,9 @@ Sorry for the inconvenience.";
 
 "MediaPicker.CreateSticker" = "Create a sticker from a photo";
 
+"Channel.AdminLog.MessageToggleProfileSignaturesOn" = "%@ enabled admin profiles";
+"Channel.AdminLog.MessageToggleProfileSignaturesOff" = "%@ disabled admin profiles";
+
 "Stickers.CreateSticker" = "Create\nSticker";
 
 "InviteLink.CreateNewInfo" = "You can create additional invite links that are limited by time, number of users, or require a paid subscription.";
