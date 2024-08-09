@@ -345,7 +345,7 @@ public struct ComponentTransition {
         }
     }
     
-    public func setPosition(view: UIView, position: CGPoint, completion: ((Bool) -> Void)? = nil) {
+    public func setPosition(view: UIView, position: CGPoint, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
         if view.center == position {
             completion?(true)
             return
@@ -364,7 +364,7 @@ public struct ComponentTransition {
             }
             view.center = position
 
-            self.animatePosition(view: view, from: previousPosition, to: view.center, completion: completion)
+            self.animatePosition(view: view, from: previousPosition, to: view.center, delay: delay, completion: completion)
         }
     }
     
@@ -803,8 +803,8 @@ public struct ComponentTransition {
         }
     }
 
-    public func animatePosition(view: UIView, from fromValue: CGPoint, to toValue: CGPoint, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
-        self.animatePosition(layer: view.layer, from: fromValue, to: toValue, additive: additive, completion: completion)
+    public func animatePosition(view: UIView, from fromValue: CGPoint, to toValue: CGPoint, delay: Double = 0.0, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        self.animatePosition(layer: view.layer, from: fromValue, to: toValue, delay: delay, additive: additive, completion: completion)
     }
 
     public func animateBounds(view: UIView, from fromValue: CGRect, to toValue: CGRect, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
@@ -819,7 +819,7 @@ public struct ComponentTransition {
         self.animateBoundsSize(layer: view.layer, from: fromValue, to: toValue, additive: additive, completion: completion)
     }
     
-    public func animatePosition(layer: CALayer, from fromValue: CGPoint, to toValue: CGPoint, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    public func animatePosition(layer: CALayer, from fromValue: CGPoint, to toValue: CGPoint, delay: Double = 0.0, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {
         case .none:
             completion?(true)
@@ -829,7 +829,7 @@ public struct ComponentTransition {
                 to: NSValue(cgPoint: toValue),
                 keyPath: "position",
                 duration: duration,
-                delay: 0.0,
+                delay: delay,
                 curve: curve,
                 removeOnCompletion: true,
                 additive: additive,

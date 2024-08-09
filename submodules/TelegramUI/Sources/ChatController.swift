@@ -613,6 +613,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var messageComposeController: MFMessageComposeViewController?
     
+    weak var currentSendStarsUndoController: UndoOverlayController?
+    var currentSendStarsUndoMessageId: EngineMessage.Id?
+    var currentSendStarsUndoCount: Int = 0
+    
     public var alwaysShowSearchResultsAsList: Bool = false {
         didSet {
             self.presentationInterfaceState = self.presentationInterfaceState.updatedDisplayHistoryFilterAsList(self.alwaysShowSearchResultsAsList)
@@ -1709,23 +1713,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             
                             strongSelf.context.engine.messages.sendStarsReaction(id: message.id, count: 1)
-                            
-                            if !"".isEmpty {
-                                let _ = (strongSelf.context.engine.stickers.resolveInlineStickers(fileIds: [MessageReaction.starsReactionId])
-                                |> deliverOnMainQueue).start(next: { [weak strongSelf, weak itemNode] files in
-                                    guard let strongSelf, let file = files[MessageReaction.starsReactionId] else {
-                                        return
-                                    }
-                                    //TODO:localize
-                                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .starsSent(context: strongSelf.context, file: file, amount: 1, title: "Star Sent", text: "Long tap on {star} to select custom quantity of stars."), elevatedLayout: false, action: { _ in
-                                        return false
-                                    }), in: .current)
-                                    
-                                    if let itemNode = itemNode, let targetView = itemNode.targetReactionView(value: chosenReaction) {
-                                        strongSelf.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: strongSelf.chatDisplayNode.view))
-                                    }
-                                })
-                            }
+                            strongSelf.displayOrUpdateSendStarsUndo(messageId: message.id, count: 1)
                         })
                     } else {
                         var removedReaction: MessageReaction.Reaction?

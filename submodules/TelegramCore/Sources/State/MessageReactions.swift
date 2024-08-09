@@ -198,6 +198,28 @@ public func sendStarsReactionsInteractively(account: Account, messageId: Message
     |> ignoreValues
 }
 
+func cancelPendingSendStarsReactionInteractively(account: Account, messageId: MessageId) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        transaction.setPendingMessageAction(type: .sendStarsReaction, id: messageId, action: nil)
+        transaction.updateMessage(messageId, update: { currentMessage in
+            var storeForwardInfo: StoreMessageForwardInfo?
+            if let forwardInfo = currentMessage.forwardInfo {
+                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+            }
+            var attributes = currentMessage.attributes
+            loop: for j in 0 ..< attributes.count {
+                if let _ = attributes[j] as? PendingStarsReactionsMessageAttribute {
+                    attributes.remove(at: j)
+                    break loop
+                }
+            }
+            
+            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+        })
+    }
+    |> ignoreValues
+}
+
 private enum RequestUpdateMessageReactionError {
     case generic
 }

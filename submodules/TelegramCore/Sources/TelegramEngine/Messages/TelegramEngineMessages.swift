@@ -337,6 +337,10 @@ public extension TelegramEngine {
         public func sendStarsReaction(id: EngineMessage.Id, count: Int) {
             let _ = sendStarsReactionsInteractively(account: self.account, messageId: id, count: count).startStandalone()
         }
+        
+        public func cancelPendingSendStarsReaction(id: EngineMessage.Id) {
+            let _ = cancelPendingSendStarsReactionInteractively(account: self.account, messageId: id).startStandalone()
+        }
 
         public func requestChatContextResults(botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String, incompleteResults: Bool = false, staleCachedResults: Bool = false) -> Signal<RequestChatContextResultsResult?, RequestChatContextResultsError> {
             return _internal_requestChatContextResults(account: self.account, botId: botId, peerId: peerId, query: query, location: location, offset: offset, incompleteResults: incompleteResults, staleCachedResults: staleCachedResults)

@@ -374,6 +374,7 @@ extension ChatControllerImpl {
                         }
                         
                         self.context.engine.messages.sendStarsReaction(id: message.id, count: 1)
+                        self.displayOrUpdateSendStarsUndo(messageId: message.id, count: 1)
                     } else {
                         let chosenReaction: MessageReaction.Reaction = chosenUpdatedReaction.reaction
                         

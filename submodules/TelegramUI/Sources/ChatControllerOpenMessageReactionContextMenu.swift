@@ -19,6 +19,7 @@ import ChatSendStarsScreen
 import ChatMessageItemCommon
 import ChatMessageItemView
 import ReactionSelectionNode
+import AnimatedTextComponent
 
 extension ChatControllerImpl {
     func presentTagPremiumPaywall() {
@@ -261,24 +262,7 @@ extension ChatControllerImpl {
                         let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount))
                         #endif
                         
-                        let _ = (self.context.engine.stickers.resolveInlineStickers(fileIds: [MessageReaction.starsReactionId])
-                        |> deliverOnMainQueue).start(next: { [weak self] files in
-                            guard let self, let file = files[MessageReaction.starsReactionId] else {
-                                return
-                            }
-                            
-                            //TODO:localize
-                            let title: String
-                            if amount == 1 {
-                                title = "Star Sent"
-                            } else {
-                                title = "\(amount) Stars Sent"
-                            }
-                            
-                            self.present(UndoOverlayController(presentationData: self.presentationData, content: .starsSent(context: self.context, file: file, amount: amount, title: title, text: nil), elevatedLayout: false, action: { _ in
-                                return false
-                            }), in: .current)
-                        })
+                        self.displayOrUpdateSendStarsUndo(messageId: message.id, count: Int(amount))
                     }))
                 })
                 
@@ -478,6 +462,52 @@ extension ChatControllerImpl {
                 })
                 self.window?.presentInGlobalOverlay(controller)
             })
+        }
+    }
+    
+    func displayOrUpdateSendStarsUndo(messageId: EngineMessage.Id, count: Int) {
+        if self.currentSendStarsUndoMessageId != messageId {
+            if let current = self.currentSendStarsUndoController {
+                self.currentSendStarsUndoController = nil
+                current.dismiss()
+            }
+        }
+        
+        if let _ = self.currentSendStarsUndoController {
+            self.currentSendStarsUndoCount += count
+        } else {
+            self.currentSendStarsUndoCount = count
+        }
+        
+        //TODO:localize
+        let title: String
+        if self.currentSendStarsUndoCount == 1 {
+            title = "Star sent!"
+        } else {
+            title = "Stars sent!"
+        }
+        
+        var textItems: [AnimatedTextComponent.Item] = []
+        textItems.append(AnimatedTextComponent.Item(id: AnyHashable(0), isUnbreakable: true, content: .text("You have reacted with ")))
+        textItems.append(AnimatedTextComponent.Item(id: AnyHashable(1), content: .number(self.currentSendStarsUndoCount, minDigits: 1)))
+        textItems.append(AnimatedTextComponent.Item(id: AnyHashable(2), isUnbreakable: true, content: .text(self.currentSendStarsUndoCount == 1 ? " star." : " stars.")))
+        
+        self.currentSendStarsUndoMessageId = messageId
+        //TODO:localize
+        if let current = self.currentSendStarsUndoController {
+            current.content = .starsSent(context: self.context, title: title, text: textItems)
+        } else {
+            let controller = UndoOverlayController(presentationData: self.presentationData, content: .starsSent(context: self.context, title: title, text: textItems), elevatedLayout: false, position: .top, action: { [weak self] action in
+                guard let self else {
+                    return false
+                }
+                if case .undo = action {
+                    self.context.engine.messages.cancelPendingSendStarsReaction(id: messageId)
+                }
+                return false
+            })
+            self.currentSendStarsUndoController = controller
+            self.present(controller, in: .current)
         }
     }
 }
