@@ -363,7 +363,6 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
     }
         
-    
     var currentFontState = BrowserPresentationState.FontState(size: 100, isSerif: false)
     func updateFontState(_ state: BrowserPresentationState.FontState) {
         self.updateFontState(state, force: false)
@@ -461,6 +460,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                     
                     self?.currentSearchResult = 0
                     self?.searchResultsCount = 0
+                    completion?(0)
                 }
             }
         }

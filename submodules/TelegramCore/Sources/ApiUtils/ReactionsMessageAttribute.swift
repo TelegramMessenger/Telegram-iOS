@@ -146,7 +146,7 @@ private func mergeReactions(reactions: [MessageReaction], recentPeers: [Reaction
     
     for i in (0 ..< result.count).reversed() {
         if result[i].chosenOrder != nil {
-            if !pending.contains(where: { $0.value == result[i].value }) {
+            if !pending.contains(where: { $0.value == result[i].value }), result[i].value != .stars {
                 if let index = recentPeers.firstIndex(where: { $0.value == result[i].value && ($0.peerId == accountPeerId || $0.isMy) }) {
                     recentPeers.remove(at: index)
                 }

@@ -231,17 +231,23 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     params.present(controller, nil)
                 } else if let rootController = params.navigationController?.view.window?.rootViewController {
                     let proceed = {
-                        if params.context.sharedContext.immediateExperimentalUISettings.browserExperiment && BrowserScreen.supportedDocumentMimeTypes.contains(file.mimeType) {
+                        let canShare = !params.message.isCopyProtected()
+                        if BrowserScreen.supportedDocumentMimeTypes.contains(file.mimeType) {
                             let subject: BrowserScreen.Subject
                             if file.mimeType == "application/pdf" {
-                                subject = .pdfDocument(file: file)
+                                subject = .pdfDocument(file: file, canShare: canShare)
                             } else {
-                                subject = .document(file: file)
+                                subject = .document(file: file, canShare: canShare)
                             }
                             let controller = BrowserScreen(context: params.context, subject: subject)
+                            controller.openDocument = { file, canShare in
+                                controller.dismiss()
+                                
+                                presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file, canShare: canShare)
+                            }
                             params.navigationController?.pushViewController(controller)
                         } else {
-                            presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file, canShare: !params.message.isCopyProtected())
+                            presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file, canShare: canShare)
                         }
                     }
                     if file.mimeType.contains("image/svg") {

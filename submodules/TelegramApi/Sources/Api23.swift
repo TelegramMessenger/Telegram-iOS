@@ -672,27 +672,28 @@ public extension Api {
 }
 public extension Api {
     enum StarsSubscription: TypeConstructorDescription {
-        case starsSubscription(flags: Int32, id: String, peer: Api.Peer, untilDate: Int32, pricing: Api.StarsSubscriptionPricing)
+        case starsSubscription(flags: Int32, id: String, peer: Api.Peer, untilDate: Int32, pricing: Api.StarsSubscriptionPricing, chatInviteHash: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .starsSubscription(let flags, let id, let peer, let untilDate, let pricing):
+                case .starsSubscription(let flags, let id, let peer, let untilDate, let pricing, let chatInviteHash):
                     if boxed {
-                        buffer.appendInt32(-797707802)
+                        buffer.appendInt32(1401868056)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(id, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     serializeInt32(untilDate, buffer: buffer, boxed: false)
                     pricing.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(chatInviteHash!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .starsSubscription(let flags, let id, let peer, let untilDate, let pricing):
-                return ("starsSubscription", [("flags", flags as Any), ("id", id as Any), ("peer", peer as Any), ("untilDate", untilDate as Any), ("pricing", pricing as Any)])
+                case .starsSubscription(let flags, let id, let peer, let untilDate, let pricing, let chatInviteHash):
+                return ("starsSubscription", [("flags", flags as Any), ("id", id as Any), ("peer", peer as Any), ("untilDate", untilDate as Any), ("pricing", pricing as Any), ("chatInviteHash", chatInviteHash as Any)])
     }
     }
     
@@ -711,13 +712,16 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _5 = Api.parse(reader, signature: signature) as? Api.StarsSubscriptionPricing
             }
+            var _6: String?
+            if Int(_1!) & Int(1 << 3) != 0 {_6 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.StarsSubscription.starsSubscription(flags: _1!, id: _2!, peer: _3!, untilDate: _4!, pricing: _5!)
+            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.StarsSubscription.starsSubscription(flags: _1!, id: _2!, peer: _3!, untilDate: _4!, pricing: _5!, chatInviteHash: _6)
             }
             else {
                 return nil

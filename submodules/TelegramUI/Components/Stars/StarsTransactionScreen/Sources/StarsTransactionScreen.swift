@@ -197,12 +197,12 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let count: Int64
             var countIsGeneric = false
             var countOnTop = false
-            let transactionId: String?
+            var transactionId: String?
             let date: Int32
-            let via: String?
-            let messageId: EngineMessage.Id?
-            let toPeer: EnginePeer?
-            let transactionPeer: StarsContext.State.Transaction.Peer?
+            var via: String?
+            var messageId: EngineMessage.Id?
+            var toPeer: EnginePeer?
+            var transactionPeer: StarsContext.State.Transaction.Peer?
             var media: [AnyMediaReference] = []
             var photo: TelegramMediaWebFile?
             var transactionStatus: (String, UIColor)? = nil
@@ -211,59 +211,48 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var isSubscriber = false
             var isSubscriptionFee = false
             var isCancelled = false
+            var isReaction = false
             
             var delayedCloseOnOpenPeer = true
             switch subject {
             case let .importer(peer, pricing, importer, usdRate):
                 let usdValue = formatTonUsdValue(pricing.amount, divide: false, rate: usdRate, dateTimeFormat: environment.dateTimeFormat)
-                titleText = "Subscription"
-                descriptionText = "appx. \(usdValue) per month"
+                titleText = strings.Stars_Transaction_Subscription_Title
+                descriptionText = strings.Stars_Transaction_Subscription_PerMonthUsd(usdValue).string
                 count = pricing.amount
                 countOnTop = true
-                transactionId = nil
                 date = importer.date
-                via = nil
-                messageId = nil
                 toPeer = importer.peer.peer.flatMap(EnginePeer.init)
                 transactionPeer = .peer(peer)
                 isSubscriber = true
             case let .subscription(subscription):
-                titleText = "Subscription"
+                titleText = strings.Stars_Transaction_Subscription_Title
                 descriptionText = ""
                 count = subscription.pricing.amount
-                transactionId = nil
                 date = subscription.untilDate
-                via = nil
-                messageId = nil
                 toPeer = subscription.peer
                 transactionPeer = .peer(subscription.peer)
                 isSubscription = true
                                 
                 if subscription.flags.contains(.isCancelled) {
-                    statusText = "You have cancelled your subscription"
+                    statusText = strings.Stars_Transaction_Subscription_Cancelled
                     statusIsDestructive = true
-                    buttonText = "Renew Subscription"
+                    buttonText = strings.Stars_Transaction_Subscription_Renew
                     isCancelled = true
                 } else {
-                    statusText = "If you cancel now, you can still access your subscription until \(stringForMediumDate(timestamp: subscription.untilDate, strings: strings, dateTimeFormat: dateTimeFormat, withTime: false))"
-                    buttonText = "Cancel Subscription"
+                    statusText = strings.Stars_Transaction_Subscription_Active(stringForMediumDate(timestamp: subscription.untilDate, strings: strings, dateTimeFormat: dateTimeFormat, withTime: false)).string
+                    buttonText = strings.Stars_Transaction_Subscription_Cancel
                     buttonIsDestructive = true
                 }
             case let .transaction(transaction, parentPeer):
                 if let _ = transaction.subscriptionPeriod {
-                    //TODO:localize
-                    titleText = "Monthly subscription fee"
+                    titleText = strings.Stars_Transaction_SubscriptionFee
                     descriptionText = ""
                     count = transaction.count
-                    countOnTop = false
                     transactionId = transaction.id
-                    via = nil
-                    messageId = nil
                     date = transaction.date
                     if case let .peer(peer) = transaction.peer {
                         toPeer = peer
-                    } else {
-                        toPeer = nil
                     }
                     transactionPeer = transaction.peer
                     isSubscriptionFee = true
@@ -273,16 +262,24 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     count = transaction.count
                     countOnTop = true
                     transactionId = transaction.id
-                    via = nil
-                    messageId = nil
                     date = transaction.date
                     if case let .peer(peer) = transaction.peer {
                         toPeer = peer
-                    } else {
-                        toPeer = nil
                     }
                     transactionPeer = transaction.peer
                     isGift = true
+                } else if transaction.flags.contains(.isReaction) {
+                    titleText = strings.Stars_Transaction_Reaction_Title
+                    descriptionText = ""
+                    messageId = transaction.paidMessageId
+                    count = transaction.count
+                    transactionId = transaction.id
+                    date = transaction.date
+                    if case let .peer(peer) = transaction.peer {
+                        toPeer = peer
+                    }
+                    transactionPeer = transaction.peer
+                    isReaction = true
                 } else {
                     switch transaction.peer {
                     case let .peer(peer):
@@ -291,7 +288,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         } else {
                             titleText = transaction.title ?? peer.compactDisplayTitle
                         }
-                        via = nil
                     case .appStore:
                         titleText = strings.Stars_Transaction_AppleTopUp_Title
                         via = strings.Stars_Transaction_AppleTopUp_Subtitle
@@ -314,7 +310,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         via = strings.Stars_Transaction_TelegramAds_Subtitle
                     case .unsupported:
                         titleText = strings.Stars_Transaction_Unsupported_Title
-                        via = nil
                     }
                     if !transaction.media.isEmpty {
                         var description: String = ""
@@ -354,8 +349,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     date = transaction.date
                     if case let .peer(peer) = transaction.peer {
                         toPeer = peer
-                    } else {
-                        toPeer = nil
                     }
                     transactionPeer = transaction.peer
                     media = transaction.media.map { AnyMediaReference.starsTransaction(transaction: StarsTransactionReference(peerId: parentPeer.id, id: transaction.id, isRefund: transaction.flags.contains(.isRefund)), media: $0) }
@@ -371,16 +364,11 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 titleText = receipt.invoiceMedia.title
                 descriptionText = receipt.invoiceMedia.description
                 count = (receipt.invoice.prices.first?.amount ?? receipt.invoiceMedia.totalAmount) * -1
-                via = nil
-                messageId = nil
                 transactionId = receipt.transactionId
                 date = receipt.date
                 if let peer = state.peerMap[receipt.botPaymentId] {
                     toPeer = peer
-                } else {
-                    toPeer = nil
                 }
-                transactionPeer = nil
                 photo = receipt.invoiceMedia.photo
                 delayedCloseOnOpenPeer = false
             case let .gift(message):
@@ -398,15 +386,12 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 } else {
                     fatalError()
                 }
-                via = nil
-                messageId = nil
                 date = message.timestamp
                 if message.id.peerId.id._internalGetInt64Value() == 777000 {
                     toPeer = nil
                 } else {
                     toPeer = state.peerMap[message.id.peerId]
                 }
-                transactionPeer = nil
                 isGift = true
                 delayedCloseOnOpenPeer = false
             }
@@ -427,7 +412,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let formattedAmount = presentationStringsFormattedNumber(abs(Int32(count)), dateTimeFormat.groupingSeparator)
             let countColor: UIColor
             if isSubscription || isSubscriber {
-                amountText = "\(formattedAmount) / month"
+                amountText = strings.Stars_Transaction_Subscription_PerMonth(formattedAmount).string
                 countColor = theme.list.itemSecondaryTextColor
             } else if countIsGeneric {
                 amountText = "\(formattedAmount)"
@@ -543,9 +528,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             } else if let toPeer {
                 let title: String
                 if isSubscription {
-                    title = "Subscription"
+                    title = strings.Stars_Transaction_Subscription_Subscription
                 } else if isSubscriber {
-                    title = "Subscriber"
+                    title = strings.Stars_Transaction_Subscription_Subscriber
                 } else {
                     title = count < 0 || countIsGeneric ? strings.Stars_Transaction_To : strings.Stars_Transaction_From
                 }
@@ -604,7 +589,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 }
                 tableItems.append(.init(
                     id: "media",
-                    title: strings.Stars_Transaction_Media,
+                    title: isReaction ? strings.Stars_Transaction_Reaction_Post : strings.Stars_Transaction_Media,
                     component: AnyComponent(
                         Button(
                             content: AnyComponent(
@@ -647,15 +632,15 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             if isSubscription {
                 if isCancelled {
                     if date > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
-                        dateTitle = "Expires"
+                        dateTitle = strings.Stars_Transaction_Subscription_Status_Expires
                     } else {
-                        dateTitle = "Expired"
+                        dateTitle = strings.Stars_Transaction_Subscription_Status_Expired
                     }
                 } else {
-                    dateTitle = "Renews"
+                    dateTitle = strings.Stars_Transaction_Subscription_Status_Renews
                 }
             } else if isSubscriber {
-                dateTitle = "Subscribed"
+                dateTitle = strings.Stars_Transaction_Subscription_Status_Subscribed
             } else {
                 dateTitle = strings.Stars_Transaction_Date
             }
@@ -1223,11 +1208,11 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             let text: String
             switch action {
             case .cancel:
-                title = "Subscription cancelled"
-                text = "You will still have access top [\(subscription.peer.compactDisplayTitle)]() until \(stringForMediumDate(timestamp: subscription.untilDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat))."
+                title = presentationData.strings.Stars_Transaction_Subscription_Cancelled_Title
+                text = presentationData.strings.Stars_Transaction_Subscription_Cancelled_Text(subscription.peer.compactDisplayTitle, stringForMediumDate(timestamp: subscription.untilDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)).string
             case .renew:
-                title = "Subscription renewed"
-                text = "You renewed your subscription to [\(subscription.peer.compactDisplayTitle)]()."
+                title = presentationData.strings.Stars_Transaction_Subscription_Renewed_Title
+                text = presentationData.strings.Stars_Transaction_Subscription_Renewed_Text(subscription.peer.compactDisplayTitle).string
             }
 
             let controller = UndoOverlayController(presentationData: presentationData, content: .invitedToVoiceChat(context: context, peer: subscription.peer, title: title, text: text, action: nil, duration: 3.0), elevatedLayout: false, position: .bottom, action: { _ in return true })

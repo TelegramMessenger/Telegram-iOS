@@ -238,9 +238,10 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                             itemTitle = title
                             itemSubtitle = peer.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast)
                         } else {
-                            if let _ = item.transaction.subscriptionPeriod {
-                                //TODO:localize
-                                itemSubtitle = "Monthly subscription fee"
+                            if item.transaction.flags.contains(.isReaction) {
+                                itemSubtitle = item.presentationData.strings.Stars_Intro_Transaction_Reaction_Title
+                            } else if let _ = item.transaction.subscriptionPeriod {
+                                itemSubtitle = item.presentationData.strings.Stars_Intro_Transaction_SubscriptionFee_Title
                             } else {
                                 itemSubtitle = nil
                             }

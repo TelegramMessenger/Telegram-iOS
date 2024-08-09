@@ -9,7 +9,6 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import PresentationDataUtils
 import AccountContext
-import WebKit
 import AppBundle
 import PromptUI
 import SafariServices
@@ -18,11 +17,11 @@ import UndoUI
 import UrlEscaping
 import PDFKit
 
-final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
+final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDFDocumentDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     
-    private let webView: PDFView
+    private let pdfView: PDFView
     private let scrollView: UIScrollView!
         
     let uuid: UUID
@@ -53,13 +52,10 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.uuid = UUID()
         self.presentationData = presentationData
         
-        self.webView = PDFView()
-        self.webView.maxScaleFactor = 4.0;
-        self.webView.minScaleFactor = self.webView.scaleFactorForSizeToFit
-        self.webView.autoScales = true
-        
+        self.pdfView = PDFView()
+
         var scrollView: UIScrollView?
-        for view in self.webView.subviews {
+        for view in self.pdfView.subviews {
             if let view = view as? UIScrollView {
                 scrollView = view
             } else {
@@ -72,21 +68,24 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
         self.scrollView = scrollView
         
-        var title: String = "file"
-        if let path = self.context.account.postbox.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe) {
-//            var updatedPath = path
-//            if let fileName = file.fileName {
-//                let tempFile = TempBox.shared.file(path: path, fileName: fileName)
-//                updatedPath = tempFile.path
-//                self.tempFile = tempFile
-//                title = fileName
-//            }
-
-            self.webView.document = PDFDocument(data: data)
-            title = file.fileName ?? "file"
+        self.pdfView.displayDirection = .vertical
+        self.pdfView.autoScales = true
+        
+        var title = "file"
+        var url = ""
+        if let path = self.context.account.postbox.mediaBox.completedResourcePath(file.resource) {
+            var updatedPath = path
+            if let fileName = file.fileName {
+                let tempFile = TempBox.shared.file(path: path, fileName: fileName)
+                updatedPath = tempFile.path
+                self.tempFile = tempFile
+                title = fileName
+                url = updatedPath
+            }
+            self.pdfView.document = PDFDocument(url: URL(fileURLWithPath: updatedPath))
         }
          
-        self._state = BrowserContentState(title: title, url: "", estimatedProgress: 0.0, readingProgress: 0.0, contentType: .document)
+        self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.0, readingProgress: 0.0, contentType: .document)
         self.statePromise = Promise<BrowserContentState>(self._state)
         
         super.init(frame: .zero)
@@ -94,10 +93,12 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         if #available(iOS 15.0, *) {
             self.backgroundColor = presentationData.theme.list.plainBackgroundColor
         }
-        self.addSubview(self.webView)
+        self.addSubview(self.pdfView)
         
         Queue.mainQueue().after(1.0) {
-            scrollView?.delegate = self
+            if let scrollView = self.scrollView {
+                scrollView.delegate = self
+            }
         }
     }
     
@@ -115,134 +116,172 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
     }
             
-    var currentFontState = BrowserPresentationState.FontState(size: 100, isSerif: false)
+    
     func updateFontState(_ state: BrowserPresentationState.FontState) {
-        self.updateFontState(state, force: false)
+        
     }
     func updateFontState(_ state: BrowserPresentationState.FontState, force: Bool) {
-        self.currentFontState = state
+    }
         
-//        let fontFamily = state.isSerif ? "'Georgia, serif'" : "null"
-//        let textSizeAdjust = state.size != 100 ? "'\(state.size)%'" : "null"
-//        let js = "\(setupFontFunctions) setTelegramFontOverrides(\(fontFamily), \(textSizeAdjust))";
-//        self.webView.evaluateJavaScript(js) { _, _ in }
-    }
-    
-    private var didSetupSearch = false
-    private func setupSearch(completion: @escaping () -> Void) {
-//        guard !self.didSetupSearch else {
-//            completion()
-//            return
-//        }
-//        
-//        let bundle = getAppBundle()
-//        guard let scriptPath = bundle.path(forResource: "UIWebViewSearch", ofType: "js") else {
-//            return
-//        }
-//        guard let scriptData = try? Data(contentsOf: URL(fileURLWithPath: scriptPath)) else {
-//            return
-//        }
-//        guard let script = String(data: scriptData, encoding: .utf8) else {
-//            return
-//        }
-//        self.didSetupSearch = true
-//        self.webView.evaluateJavaScript(script, completionHandler: { _, error in
-//            if error != nil {
-//                print()
-//            }
-//            completion()
-//        })
-    }
-    
+    private var findSession: Any?
     private var previousQuery: String?
-    func setSearch(_ query: String?, completion: ((Int) -> Void)?) {
-//        guard self.previousQuery != query else {
-//            return
-//        }
-//        self.previousQuery = query
-//        self.setupSearch { [weak self] in
-//            if let query = query {
-//                let js = "uiWebview_HighlightAllOccurencesOfString('\(query)')"
-//                self?.webView.evaluateJavaScript(js, completionHandler: { [weak self] _, _ in
-//                    let js = "uiWebview_SearchResultCount"
-//                    self?.webView.evaluateJavaScript(js, completionHandler: { [weak self] result, _ in
-//                        if let result = result as? NSNumber {
-//                            self?.searchResultsCount = result.intValue
-//                            completion?(result.intValue)
-//                        } else {
-//                            completion?(0)
-//                        }
-//                    })
-//                })
-//            } else {
-//                let js = "uiWebview_RemoveAllHighlights()"
-//                self?.webView.evaluateJavaScript(js, completionHandler: nil)
-//                
-//                self?.currentSearchResult = 0
-//                self?.searchResultsCount = 0
-//            }
-//        }
-    }
-    
     private var currentSearchResult: Int = 0
     private var searchResultsCount: Int = 0
+    private var searchResults: [PDFSelection] = []
+    private var searchCompletion: ((Int) -> Void)?
+    private var searchDimmingView: UIView?
+    
+    private let matchColor = UIColor(rgb: 0xd4d4d, alpha: 0.2)
+    private let selectedColor = UIColor(rgb: 0xffe438)
+    
+    func didMatchString(_ instance: PDFSelection) {
+        instance.color = self.matchColor
+        self.searchResults.append(instance)
+    }
+    
+    func documentDidEndDocumentFind(_ notification: Notification) {
+        self.searchResultsCount = self.searchResults.count
+        
+        if let searchCompletion = self.searchCompletion {
+            self.searchCompletion = nil
+            searchCompletion(self.searchResultsCount)
+        }
+        
+        self.updateSearchHighlights(highlightedSelection: self.searchResults.first)
+    }
+    
+    func updateSearchHighlights(highlightedSelection: PDFSelection?) {
+        self.pdfView.highlightedSelections = nil
+        if let highlightedSelection {
+            for selection in self.searchResults {
+                if selection === highlightedSelection {
+                    selection.color = self.selectedColor
+                } else {
+                    selection.color = self.matchColor
+                }
+            }
+            self.pdfView.highlightedSelections = self.searchResults
+        }
+    }
+    
+    func setSearch(_ query: String?, completion: ((Int) -> Void)?) {
+        guard let document = self.pdfView.document, self.previousQuery != query else {
+            return
+        }
+        self.previousQuery = query
+        
+        if #available(iOS 16.0, *), !"".isEmpty {
+            if let query {
+                var findSession: UIFindSession?
+                if let current = self.findSession as? UIFindSession {
+                    findSession = current
+                } else {
+                    self.pdfView.isFindInteractionEnabled = true
+
+                    if let session = self.pdfView.findInteraction(self.pdfView.findInteraction, sessionFor: self.pdfView) {
+                        findSession = session
+                        self.findSession = session
+                        
+                        self.pdfView.findInteraction(self.pdfView.findInteraction, didBegin: session)
+                    }
+                }
+                if let findSession {
+                    findSession.performSearch(query: query, options: BrowserSearchOptions())
+                    self.pdfView.findInteraction.updateResultCount()
+                    completion?(findSession.resultCount)
+                }
+            } else {
+                if let session = self.findSession as? UIFindSession {
+                    self.pdfView.findInteraction(self.pdfView.findInteraction, didEnd: session)
+                    self.findSession = nil
+                    self.pdfView.isFindInteractionEnabled = false
+                }
+            }
+        } else {
+            if let query {
+                self.currentSearchResult = 0
+                self.searchCompletion = completion
+                
+                document.cancelFindString()
+                document.delegate = self
+                document.beginFindString(query, withOptions: .caseInsensitive)
+            } else {
+                self.searchResults = []
+                self.currentSearchResult = 0
+                self.searchResultsCount = 0
+                
+                self.updateSearchHighlights(highlightedSelection: nil)
+                
+                document.cancelFindString()
+                document.delegate = nil
+                
+                completion?(0)
+            }
+        }
+    }
     
     func scrollToPreviousSearchResult(completion: ((Int, Int) -> Void)?) {
-//        let searchResultsCount = self.searchResultsCount
-//        var index = self.currentSearchResult - 1
-//        if index < 0 {
-//            index = searchResultsCount - 1
-//        }
-//        self.currentSearchResult = index
-//        
-//        let js = "uiWebview_ScrollTo('\(searchResultsCount - index - 1)')"
-//        self.webView.evaluateJavaScript(js, completionHandler: { _, _ in
-//            completion?(index, searchResultsCount)
-//        })
+        if #available(iOS 16.0, *), !"".isEmpty {
+            if let session = self.findSession as? UIFindSession {
+                session.highlightNextResult(in: .backward)
+                completion?(session.highlightedResultIndex, session.resultCount)
+            }
+        } else {
+            let searchResultsCount = self.searchResultsCount
+            var index = self.currentSearchResult - 1
+            if index < 0 {
+                index = searchResultsCount - 1
+            }
+            self.currentSearchResult = index
+            
+            if index >= 0 && index < self.searchResults.count {
+                self.updateSearchHighlights(highlightedSelection: self.searchResults[index])
+                
+                self.pdfView.go(to: self.searchResults[index])
+                completion?(index, searchResultsCount)
+            }
+        }
     }
     
     func scrollToNextSearchResult(completion: ((Int, Int) -> Void)?) {
-//        let searchResultsCount = self.searchResultsCount
-//        var index = self.currentSearchResult + 1
-//        if index >= searchResultsCount {
-//            index = 0
-//        }
-//        self.currentSearchResult = index
-//        
-//        let js = "uiWebview_ScrollTo('\(searchResultsCount - index - 1)')"
-//        self.webView.evaluateJavaScript(js, completionHandler: { _, _ in
-//            completion?(index, searchResultsCount)
-//        })
+        if #available(iOS 16.0, *), !"".isEmpty {
+            if let session = self.findSession as? UIFindSession {
+                session.highlightNextResult(in: .forward)
+                completion?(session.highlightedResultIndex, session.resultCount)
+            }
+        } else {
+            let searchResultsCount = self.searchResultsCount
+            var index = self.currentSearchResult + 1
+            if index >= searchResultsCount {
+                index = 0
+            }
+            self.currentSearchResult = index
+            
+            if index >= 0 && index < self.searchResults.count {
+                self.updateSearchHighlights(highlightedSelection: self.searchResults[index])
+                
+                self.pdfView.go(to: self.searchResults[index])
+                completion?(index, searchResultsCount)
+            }
+        }
     }
     
     func stop() {
-//        self.webView.stopLoading()
     }
     
     func reload() {
-//        self.webView.reload()
     }
     
     func navigateBack() {
-//        self.webView.goBack()
     }
     
     func navigateForward() {
-//        self.webView.goForward()
     }
     
     func navigateTo(historyItem: BrowserContentState.HistoryItem) {
-//        if let webItem = historyItem.webItem {
-//            self.webView.go(to: webItem)
-//        }
     }
     
     func navigateTo(address: String) {
-//        let finalUrl = explicitUrl(address)
-//        guard let url = URL(string: finalUrl) else {
-//            return
-//        }
-//        self.webView.load(URLRequest(url: url))
     }
     
     func scrollToTop() {
@@ -251,42 +290,22 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     
     private var validLayout: (CGSize, UIEdgeInsets, UIEdgeInsets)?
     func updateLayout(size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, transition: ComponentTransition) {
+        let isFirstTime = self.validLayout == nil
         self.validLayout = (size, insets, fullInsets)
         
         self.previousScrollingOffset = ScrollingOffsetState(value: self.scrollView.contentOffset.y, isDraggingOrDecelerating: self.scrollView.isDragging || self.scrollView.isDecelerating)
         
-        let webViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - insets.bottom))
-        var refresh = false
-        if self.webView.frame.width > 0 && webViewFrame.width != self.webView.frame.width {
-            refresh = true
-        }
-        transition.setFrame(view: self.webView, frame: webViewFrame)
-        
-        if refresh {
-            self.webView.reloadInputViews()
+        let pdfViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - insets.bottom))
+        transition.setFrame(view: self.pdfView, frame: pdfViewFrame)
+        if let searchDimmingView = self.searchDimmingView {
+            transition.setFrame(view: searchDimmingView, frame: CGRect(origin: .zero, size: self.pdfView.bounds.size))
         }
         
-//        if let error = self.currentError {
-//            let errorSize = self.errorView.update(
-//                transition: .immediate,
-//                component: AnyComponent(
-//                    ErrorComponent(
-//                        theme: self.presentationData.theme,
-//                        title: self.presentationData.strings.Browser_ErrorTitle,
-//                        text: error.localizedDescription
-//                    )
-//                ),
-//                environment: {},
-//                containerSize: CGSize(width: size.width - insets.left - insets.right - 72.0, height: size.height)
-//            )
-//            if self.errorView.superview == nil {
-//                self.addSubview(self.errorView)
-//                self.errorView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-//            }
-//            self.errorView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - errorSize.width) / 2.0), y: insets.top + floorToScreenPixels((size.height - insets.top - insets.bottom - errorSize.height) / 2.0)), size: errorSize)
-//        } else if self.errorView.superview != nil {
-//            self.errorView.removeFromSuperview()
-//        }
+        if isFirstTime {
+            self.pdfView.setNeedsLayout()
+            self.pdfView.layoutIfNeeded()
+            self.pdfView.minScaleFactor = self.pdfView.scaleFactorForSizeToFit
+        }
     }
     
     private func updateState(_ f: (BrowserContentState) -> BrowserContentState) {
@@ -302,22 +321,64 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     
     private var previousScrollingOffset: ScrollingOffsetState?
     
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        self.updateScrollingOffset(isReset: false, transition: .immediate)
-    }
-    
     private func snapScrollingOffsetToInsets() {
         let transition = ComponentTransition(animation: .curve(duration: 0.4, curve: .spring))
         self.updateScrollingOffset(isReset: false, transition: transition)
     }
     
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+        if let scrollViewDelegate = scrollView as? UIScrollViewDelegate {
+            return scrollViewDelegate.viewForZooming?(in: scrollView)
+        }
+        return nil
+    }
+    
+    func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
+        if let scrollViewDelegate = scrollView as? UIScrollViewDelegate {
+            scrollViewDelegate.scrollViewWillBeginZooming?(scrollView, with: view)
+        }
+        self.resetScrolling()
+        self.wasZooming = true
+    }
+    
+    private var wasZooming = false
+    func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+        if let scrollViewDelegate = scrollView as? UIScrollViewDelegate {
+            scrollViewDelegate.scrollViewDidEndZooming?(scrollView, with: view, atScale: scale)
+        }
+        Queue.mainQueue().after(0.1, {
+            self.wasZooming = false
+        })
+    }
+    
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        if let scrollViewDelegate = scrollView as? UIScrollViewDelegate {
+            scrollViewDelegate.scrollViewDidZoom?(scrollView)
+        }
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if let scrollViewDelegate = scrollView as? UIScrollViewDelegate {
+            scrollViewDelegate.scrollViewDidScroll?(scrollView)
+        }
+        if !scrollView.isZooming && !self.wasZooming {
+            self.updateScrollingOffset(isReset: false, transition: .immediate)
+        }
+    }
+    
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if let scrollViewDelegate = scrollView as? UIScrollViewDelegate {
+            scrollViewDelegate.scrollViewDidEndDragging?(scrollView, willDecelerate: decelerate)
+        }
         if !decelerate {
             self.snapScrollingOffsetToInsets()
         }
     }
     
     public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        if let scrollViewDelegate = scrollView as? UIScrollViewDelegate {
+            scrollViewDelegate.scrollViewDidEndDecelerating?(scrollView)
+        }
         self.snapScrollingOffsetToInsets()
     }
     
@@ -356,90 +417,6 @@ final class BrowserPdfContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     func resetScrolling() {
         self.updateScrollingOffset(isReset: true, transition: .spring(duration: 0.4))
     }
-    
-    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-//        self.currentError = nil
-        self.updateFontState(self.currentFontState, force: true)
-    }
-    
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        self.updateState {
-            $0
-                .withUpdatedBackList(webView.backForwardList.backList.map { BrowserContentState.HistoryItem(webItem: $0) })
-                .withUpdatedForwardList(webView.backForwardList.forwardList.map { BrowserContentState.HistoryItem(webItem: $0) })
-        }
-    }
-    
-//    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-//        if (error as NSError).code != -999 {
-//            self.currentError = error
-//        } else {
-//            self.currentError = nil
-//        }
-//        if let (size, insets) = self.validLayout {
-//            self.updateLayout(size: size, insets: insets, transition: .immediate)
-//        }
-//    }
-//
-//    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-//        if (error as NSError).code != -999 {
-//            self.currentError = error
-//        } else {
-//            self.currentError = nil
-//        }
-//        if let (size, insets) = self.validLayout {
-//            self.updateLayout(size: size, insets: insets, transition: .immediate)
-//        }
-//    }
-    
-    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        if navigationAction.targetFrame == nil {
-            if let url = navigationAction.request.url?.absoluteString {
-                self.open(url: url, new: true)
-            }
-        }
-        return nil
-    }
-    
-    func webViewDidClose(_ webView: WKWebView) {
-        self.close()
-    }
-    
-    @available(iOSApplicationExtension 15.0, iOS 15.0, *)
-    func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
-        decisionHandler(.prompt)
-    }
-    
-    
-//    @available(iOS 13.0, *)
-//    func webView(_ webView: WKWebView, contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo, completionHandler: @escaping (UIContextMenuConfiguration?) -> Void) {
-//        guard let url = elementInfo.linkURL else {
-//            completionHandler(nil)
-//            return
-//        }
-//        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-//        let configuration = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
-//            return UIMenu(title: "", children: [
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_Open, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Browser"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
-//                    self?.open(url: url.absoluteString, new: false)
-//                }),
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_OpenInNewTab, image: generateTintedImage(image: UIImage(bundleImageName: "Instant View/NewTab"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
-//                    self?.open(url: url.absoluteString, new: true)
-//                }),
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_AddToReadingList, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReadingList"), color: presentationData.theme.contextMenu.primaryColor), handler: { _ in
-//                    let _ = try? SSReadingList.default()?.addItem(with: url, title: nil, previewText: nil)
-//                }),
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_CopyLink, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
-//                    UIPasteboard.general.string = url.absoluteString
-//                    self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
-//                }),
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_Share, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
-//                    self?.share(url: url.absoluteString)
-//                })
-//            ])
-//        }
-//        completionHandler(configuration)
-//    }
     
     private func open(url: String, new: Bool) {
         let subject: BrowserScreen.Subject = .webPage(url: url)

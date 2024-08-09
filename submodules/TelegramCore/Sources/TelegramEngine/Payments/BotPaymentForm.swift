@@ -541,7 +541,7 @@ public enum SendBotPaymentFormError {
 }
 
 public enum SendBotPaymentResult {
-    case done(receiptMessageId: MessageId?)
+    case done(receiptMessageId: MessageId?, subscriptionPeerId: PeerId?)
     case externalVerificationRequired(url: String)
 }
 
@@ -585,6 +585,17 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                 case let .paymentResult(updates):
                     account.stateManager.addUpdates(updates)
                     var receiptMessageId: MessageId?
+                
+                    switch source {
+                    case .starsChatSubscription:
+                        let chats = updates.chats.compactMap { parseTelegramGroupOrChannel(chat: $0) }
+                        if let first = chats.first {
+                            return .done(receiptMessageId: nil, subscriptionPeerId: first.id)
+                        }
+                    default:
+                        break
+                    }
+                
                     for apiMessage in updates.messages {
                         if let message = StoreMessage(apiMessage: apiMessage, accountPeerId: account.peerId, peerIsForum: false) {
                             for media in message.media {
@@ -623,7 +634,7 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                             }
                         }
                     }
-                    return .done(receiptMessageId: receiptMessageId)
+                    return .done(receiptMessageId: receiptMessageId, subscriptionPeerId: nil)
                 case let .paymentVerificationNeeded(url):
                     return .externalVerificationRequired(url: url)
             }
