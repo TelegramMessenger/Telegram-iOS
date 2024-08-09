@@ -770,9 +770,17 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         }
     }
     
-    func setup(origin: GalleryItemOriginData?, caption: NSAttributedString) {
-        let titleText = origin?.title
+    func setup(origin: GalleryItemOriginData?, caption: NSAttributedString, isAd: Bool = false) {
+        var titleText = origin?.title
         let dateText = origin?.timestamp.flatMap { humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: $0).string }
+        
+        let caption = caption.mutableCopy() as! NSMutableAttributedString
+        if isAd {
+            if let titleText, !titleText.isEmpty {
+                caption.insert(NSAttributedString(string: titleText + "\n", font: Font.semibold(17.0), textColor: .white), at: 0)
+            }
+            titleText = nil
+        }
         
         if self.currentMessageText != caption || self.currentAuthorNameText != titleText || self.currentDateText != dateText {
             self.currentMessageText = caption
@@ -820,9 +828,12 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         if Namespaces.Message.allNonRegular.contains(message.id.namespace) || message.timestamp == 0 {
             displayInfo = false
         }
+        if let _ = message.adAttribute {
+            displayInfo = false
+        }
         
         var canDelete: Bool
-        var canShare = !message.containsSecretMedia && !Namespaces.Message.allNonRegular.contains(message.id.namespace)
+        var canShare = !message.containsSecretMedia && !Namespaces.Message.allNonRegular.contains(message.id.namespace) && message.adAttribute == nil
 
         var canFullscreen = false
         
@@ -922,13 +933,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         }
         
         var dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: message.timestamp).string
-        if !displayInfo {
-            authorNameText = ""
-            dateText = ""
-            canEdit = false
-        }
-        
-        var messageText = NSAttributedString(string: "")
+
+        var messageText = NSMutableAttributedString(string: "")
         var hasCaption = false
         for media in message.media {
             if media is TelegramMediaPaidContent {
@@ -991,7 +997,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                 codeHighlightState.disposable.dispose()
             }
             
-            messageText = galleryCaptionStringWithAppliedEntities(context: self.context, text: text, entities: entities, message: message, cachedMessageSyntaxHighlight: cachedMessageSyntaxHighlight)
+            messageText = galleryCaptionStringWithAppliedEntities(context: self.context, text: text, entities: entities, message: message, cachedMessageSyntaxHighlight: cachedMessageSyntaxHighlight).mutableCopy() as! NSMutableAttributedString
+            messageText.insert(NSAttributedString(string: (authorNameText ?? "") + "\n", font: Font.semibold(17.0), textColor: .white), at: 0)
+        }
+        
+        if !displayInfo {
+            authorNameText = ""
+            dateText = ""
+            canEdit = false
         }
                         
         if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || canFullscreen != !self.fullscreenButton.isHidden || canShare != !self.actionButton.isHidden || canEdit != !self.editButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {

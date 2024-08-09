@@ -1535,8 +1535,6 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     additive: true,
                     completion: { [weak self] _ in
                         Queue.mainQueue().after(reactionContextNodeIsAnimatingOut ? 0.2 * UIView.animationDurationFactor() : 0.0, {
-                            contentNode.containingItem.isExtractedToContextPreview = false
-                            contentNode.containingItem.isExtractedToContextPreviewUpdated?(false)
                             
                             if let strongSelf = self, let contentNode = strongSelf.itemContentNode {
                                 switch contentNode.containingItem {
@@ -1546,6 +1544,9 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                                     containingView.addSubview(containingView.contentView)
                                 }
                             }
+                            
+                            contentNode.containingItem.isExtractedToContextPreview = false
+                            contentNode.containingItem.isExtractedToContextPreviewUpdated?(false)
                             
                             completion()
                         })
@@ -1668,7 +1669,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         }
     }
     
-    func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, reducedCurve: Bool, completion: @escaping () -> Void) {
+    func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, reducedCurve: Bool, onHit: (() -> Void)?, completion: @escaping () -> Void) {
         guard let reactionContextNode = self.reactionContextNode else {
             self.requestAnimateOut(.default, completion)
             return
@@ -1697,7 +1698,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             intermediateCompletion()
         })
         
-        reactionContextNode.animateOutToReaction(value: value, targetView: targetView, hideNode: hideNode, animateTargetContainer: animateTargetContainer, addStandaloneReactionAnimation: addStandaloneReactionAnimation, completion: { [weak self] in
+        reactionContextNode.animateOutToReaction(value: value, targetView: targetView, hideNode: hideNode, animateTargetContainer: animateTargetContainer, addStandaloneReactionAnimation: addStandaloneReactionAnimation, onHit: onHit, completion: { [weak self] in
             guard let strongSelf = self else {
                 return
             }

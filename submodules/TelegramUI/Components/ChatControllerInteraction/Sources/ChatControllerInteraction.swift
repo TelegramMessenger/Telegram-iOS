@@ -272,6 +272,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let scrollToMessageId: (MessageIndex) -> Void
     public let navigateToStory: (Message, StoryId) -> Void
     public let attemptedNavigationToPrivateQuote: (Peer?) -> Void
+    public let forceUpdateWarpContents: () -> Void
     
     public var canPlayMedia: Bool = false
     public var hiddenMedia: [MessageId: [Media]] = [:]
@@ -400,6 +401,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         scrollToMessageId: @escaping (MessageIndex) -> Void,
         navigateToStory: @escaping (Message, StoryId) -> Void,
         attemptedNavigationToPrivateQuote: @escaping (Peer?) -> Void,
+        forceUpdateWarpContents: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
         stickerSettings: ChatInterfaceStickerSettings,
@@ -509,6 +511,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.scrollToMessageId = scrollToMessageId
         self.navigateToStory = navigateToStory
         self.attemptedNavigationToPrivateQuote = attemptedNavigationToPrivateQuote
+        self.forceUpdateWarpContents = forceUpdateWarpContents
         
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         

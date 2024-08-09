@@ -18,26 +18,37 @@ import ListSectionComponent
 import BundleIconComponent
 import TextFormat
 import UndoUI
+import ListActionItemComponent
+import StarsAvatarComponent
+import TelegramStringFormatting
+
+private let initialSubscriptionsDisplayedLimit: Int32 = 3
 
 final class StarsTransactionsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
     let starsContext: StarsContext
+    let subscriptionsContext: StarsSubscriptionsContext
     let openTransaction: (StarsContext.State.Transaction) -> Void
+    let openSubscription: (StarsContext.State.Subscription) -> Void
     let buy: () -> Void
     let gift: () -> Void
     
     init(
         context: AccountContext,
         starsContext: StarsContext,
+        subscriptionsContext: StarsSubscriptionsContext,
         openTransaction: @escaping (StarsContext.State.Transaction) -> Void,
+        openSubscription: @escaping (StarsContext.State.Subscription) -> Void,
         buy: @escaping () -> Void,
         gift: @escaping () -> Void
     ) {
         self.context = context
         self.starsContext = starsContext
+        self.subscriptionsContext = subscriptionsContext
         self.openTransaction = openTransaction
+        self.openSubscription = openSubscription
         self.buy = buy
         self.gift = gift
     }
@@ -115,6 +126,11 @@ final class StarsTransactionsScreenComponent: Component {
         private var starsState: StarsContext.State?
         
         private var previousBalance: Int64?
+        
+        private var subscriptionsStateDisposable: Disposable?
+        private var subscriptionsState: StarsSubscriptionsContext.State?
+        private var subscriptionsExpanded = false
+        private var subscriptionsMoreDisplayed: Int32 = 0
         
         private var allTransactionsContext: StarsTransactionsContext?
         private var incomingTransactionsContext: StarsTransactionsContext?
@@ -296,6 +312,18 @@ final class StarsTransactionsScreenComponent: Component {
                         return
                     }
                     self.starsState = state
+                    
+                    if !self.isUpdating {
+                        self.state?.updated()
+                    }
+                })
+                
+                self.subscriptionsStateDisposable = (component.subscriptionsContext.state
+                |> deliverOnMainQueue).start(next: { [weak self] state in
+                    guard let self else {
+                        return
+                    }
+                    self.subscriptionsState = state
                     
                     if !self.isUpdating {
                         self.state?.updated()
@@ -574,17 +602,134 @@ final class StarsTransactionsScreenComponent: Component {
             contentHeight += balanceSize.height
             contentHeight += 44.0
             
-            let subscriptionsItems: [AnyComponentWithIdentity<Empty>] = []
+            let fontBaseDisplaySize = 17.0
+            var subscriptionsItems: [AnyComponentWithIdentity<Empty>] = []
+            if let subscriptionsState = self.subscriptionsState {
+                var subscriptions = subscriptionsState.subscriptions
+                var limit: Int32
+                if self.subscriptionsExpanded {
+                    limit = 25 + self.subscriptionsMoreDisplayed
+                } else {
+                    limit = initialSubscriptionsDisplayedLimit
+                }
+                subscriptions = Array(subscriptions.prefix(Int(limit)))
+                
+                for subscription in subscriptions {
+                    var titleComponents: [AnyComponentWithIdentity<Empty>] = []
+                    titleComponents.append(
+                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: subscription.peer.compactDisplayTitle,
+                                font: Font.semibold(fontBaseDisplaySize),
+                                textColor: environment.theme.list.itemPrimaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        )))
+                    )
+                    //TODO:localize
+                    let dateText: String
+                    let dateValue = stringForDateWithoutYear(date: Date(timeIntervalSince1970: Double(subscription.untilDate)), strings: environment.strings)
+                    if subscription.flags.contains(.isCancelled) {
+                        if subscription.untilDate > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
+                            dateText = environment.strings.Stars_Intro_Subscriptions_Expires(dateValue).string
+                        } else {
+                            dateText = environment.strings.Stars_Intro_Subscriptions_Expired(dateValue).string
+                        }
+                    } else {
+                        dateText = environment.strings.Stars_Intro_Subscriptions_Renews(dateValue).string
+                    }
+                    titleComponents.append(
+                        AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: dateText,
+                                font: Font.regular(floor(fontBaseDisplaySize * 15.0 / 17.0)),
+                                textColor: environment.theme.list.itemSecondaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        )))
+                    )
+                    let labelComponent: AnyComponentWithIdentity<Empty>
+                    if subscription.flags.contains(.isCancelled) {
+                        labelComponent = AnyComponentWithIdentity(id: "cancelledLabel", component: AnyComponent(
+                            MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Stars_Intro_Subscriptions_Cancelled, font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemDestructiveColor)))
+                        ))
+                    } else {
+                        let itemLabel = NSAttributedString(string: "\(subscription.pricing.amount)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor)
+                        let itemSublabel = NSAttributedString(string: environment.strings.Stars_Intro_Subscriptions_PerMonth, font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemSecondaryTextColor)
+                        
+                        labelComponent = AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel, subtext: itemSublabel)))
+                    }
+                    
+                    subscriptionsItems.append(AnyComponentWithIdentity(
+                        id: subscription.id,
+                        component: AnyComponent(
+                            ListActionItemComponent(
+                                theme: environment.theme,
+                                title: AnyComponent(VStack(titleComponents, alignment: .left, spacing: 2.0)),
+                                contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 8.0, right: 0.0),
+                                leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: .peer(subscription.peer), photo: nil, media: [], backgroundColor: environment.theme.list.plainBackgroundColor))), false),
+                                icon: nil,
+                                accessory: .custom(ListActionItemComponent.CustomAccessory(component: labelComponent, insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
+                                action: { [weak self] _ in
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                    component.openSubscription(subscription)
+                                }
+                            )
+                        )
+                    ))
+                }
+                if subscriptionsState.canLoadMore {
+                    subscriptionsItems.append(AnyComponentWithIdentity(
+                        id: "showMore",
+                        component: AnyComponent(
+                            ListActionItemComponent(
+                                theme: environment.theme,
+                                title: AnyComponent(Text(
+                                    text: environment.strings.Stars_Intro_Subscriptions_ShowMore,
+                                    font: Font.regular(17.0),
+                                    color: environment.theme.list.itemAccentColor
+                                )),
+                                leftIcon: .custom(
+                                    AnyComponentWithIdentity(
+                                        id: "icon",
+                                        component: AnyComponent(Image(
+                                            image: PresentationResourcesItemList.downArrowImage(environment.theme),
+                                            size: CGSize(width: 30.0, height: 30.0)
+                                        ))
+                                    ),
+                                    false
+                                ),
+                                accessory: nil,
+                                action: { [weak self] _ in
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                    if self.subscriptionsExpanded {
+                                        self.subscriptionsMoreDisplayed += 10
+                                    } else {
+                                        self.subscriptionsExpanded = true
+                                    }
+                                    component.subscriptionsContext.loadMore()
+                                },
+                                highlighting: .default,
+                                updateIsHighlighted: { view, _ in
+                                    
+                                })
+                        )
+                    ))
+                }
+            }
             
             if !subscriptionsItems.isEmpty {
-                //TODO:localize
                 let subscriptionsSize = self.subscriptionsView.update(
                     transition: .immediate,
                     component: AnyComponent(ListSectionComponent(
                         theme: environment.theme,
                         header: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "My Subscriptions".uppercased(),
+                                string: environment.strings.Stars_Intro_Subscriptions_Title.uppercased(),
                                 font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -754,6 +899,7 @@ final class StarsTransactionsScreenComponent: Component {
 public final class StarsTransactionsScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     private let starsContext: StarsContext
+    private let subscriptionsContext: StarsSubscriptionsContext
     
     private let options = Promise<[StarsTopUpOption]>()
     
@@ -761,14 +907,21 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         self.context = context
         self.starsContext = starsContext
         
+        self.subscriptionsContext = context.engine.payments.peerStarsSubscriptionsContext(starsContext: starsContext)
+        
         var buyImpl: (() -> Void)?
         var giftImpl: (() -> Void)?
         var openTransactionImpl: ((StarsContext.State.Transaction) -> Void)?
+        var openSubscriptionImpl: ((StarsContext.State.Subscription) -> Void)?
         super.init(context: context, component: StarsTransactionsScreenComponent(
             context: context,
             starsContext: starsContext,
+            subscriptionsContext: self.subscriptionsContext,
             openTransaction: { transaction in
                 openTransactionImpl?(transaction)
+            },
+            openSubscription: { subscription in
+                openSubscriptionImpl?(subscription)
             },
             buy: {
                 buyImpl?()
@@ -794,6 +947,19 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                 let controller = context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction, peer: peer)
                 self.push(controller)
             })
+        }
+        
+        openSubscriptionImpl = { [weak self] subscription in
+            guard let self else {
+                return
+            }
+            let controller = context.sharedContext.makeStarsSubscriptionScreen(context: context, subscription: subscription, update: { [weak self] cancel in
+                guard let self else {
+                    return
+                }
+                self.subscriptionsContext.updateSubscription(id: subscription.id, cancel: cancel)
+            })
+            self.push(controller)
         }
         
         buyImpl = { [weak self] in
@@ -902,6 +1068,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         }
         
         self.starsContext.load(force: false)
+        self.subscriptionsContext.loadMore()
     }
     
     required public init(coder aDecoder: NSCoder) {

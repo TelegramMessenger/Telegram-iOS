@@ -55,7 +55,7 @@ enum PeerInfoMember: Equatable {
             switch participant.participant {
             case .creator:
                 return .creator
-            case let .member(_, _, adminInfo, _, _):
+            case let .member(_, _, adminInfo, _, _, _):
                 if adminInfo != nil {
                     return .admin
                 } else {
@@ -75,7 +75,7 @@ enum PeerInfoMember: Equatable {
                 switch participant.participant {
                 case let .creator(_, _, rank):
                     return rank
-                case let .member(_, _, _, _, rank):
+                case let .member(_, _, _, _, rank, _):
                     return rank
                 }
             case .legacyGroupMember:

@@ -124,7 +124,7 @@ private func rippleOffset(
     }
     
     if distance <= 60.0 {
-        rippleAmount = 0.4 * rippleAmount
+        rippleAmount = 0.3 * rippleAmount
     }
 
     // A vector of length `amplitude` that points away from position.
@@ -250,6 +250,83 @@ public protocol SpaceWarpNode: ASDisplayNode {
     func update(size: CGSize, cornerRadius: CGFloat, transition: ComponentTransition)
 }
 
+private final class MaskGridLayer: SimpleLayer {
+    private var itemLayers: [SimpleLayer] = []
+    
+    private var resolution: (x: Int, y: Int)?
+    
+    func updateGrid(size: CGSize, resolutionX: Int, resolutionY: Int, cornerRadius: CGFloat) {
+        if let resolution = self.resolution, resolution.x == resolutionX, resolution.y == resolutionY {
+            return
+        }
+        self.resolution = (resolutionX, resolutionY)
+        
+        for itemLayer in self.itemLayers {
+            itemLayer.removeFromSuperlayer()
+        }
+        self.itemLayers.removeAll()
+        
+        let itemSize = CGSize(width: size.width / CGFloat(resolutionX), height: size.height / CGFloat(resolutionY))
+        
+        let topLeftCorner = CGRect(origin: CGPoint(), size: CGSize(width: cornerRadius, height: cornerRadius))
+        let topRightCorner = CGRect(origin: CGPoint(x: size.width - cornerRadius, y: 0.0), size: CGSize(width: cornerRadius, height: cornerRadius))
+        let bottomLeftCorner = CGRect(origin: CGPoint(x: 0.0, y: size.height - cornerRadius), size: CGSize(width: cornerRadius, height: cornerRadius))
+        let bottomRightCorner = CGRect(origin: CGPoint(x: size.width - cornerRadius, y: size.height - cornerRadius), size: CGSize(width: cornerRadius, height: cornerRadius))
+        
+        var cornersImage: UIImage?
+        if cornerRadius > 0.0 {
+            cornersImage = generateImage(CGSize(width: cornerRadius * 2.0 + 200.0, height: cornerRadius * 2.0 + 200.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(UIColor.black.cgColor)
+                context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: cornerRadius).cgPath)
+                context.fillPath()
+            })
+        }
+        
+        for y in 0 ..< resolutionY {
+            for x in 0 ..< resolutionX {
+                let itemLayer = SimpleLayer()
+                itemLayer.backgroundColor = UIColor.black.cgColor
+                itemLayer.isOpaque = true
+                itemLayer.opacity = 1.0
+                itemLayer.anchorPoint = CGPoint()
+                self.addSublayer(itemLayer)
+                self.itemLayers.append(itemLayer)
+                
+                if cornerRadius > 0.0, let cornersImage {
+                    let gridPosition = CGPoint(x: CGFloat(x) / CGFloat(resolutionX), y: CGFloat(y) / CGFloat(resolutionY))
+                    let sourceRect = CGRect(origin: CGPoint(x: gridPosition.x * (size.width), y: gridPosition.y * (size.height)), size: itemSize)
+                    if sourceRect.intersects(topLeftCorner) || sourceRect.intersects(topRightCorner) || sourceRect.intersects(bottomLeftCorner) || sourceRect.intersects(bottomRightCorner) {
+                        var clippedCornersRect = sourceRect
+                        if clippedCornersRect.maxX > cornersImage.size.width {
+                            clippedCornersRect.origin.x -= size.width - cornersImage.size.width
+                        }
+                        if clippedCornersRect.maxY > cornersImage.size.height {
+                            clippedCornersRect.origin.y -= size.height - cornersImage.size.height
+                        }
+                        
+                        itemLayer.contents = cornersImage.cgImage
+                        itemLayer.contentsRect = CGRect(origin: CGPoint(x: clippedCornersRect.minX / cornersImage.size.width, y: clippedCornersRect.minY / cornersImage.size.height), size: CGSize(width: clippedCornersRect.width / cornersImage.size.width, height: clippedCornersRect.height / cornersImage.size.height))
+                        itemLayer.backgroundColor = nil
+                        itemLayer.isOpaque = false
+                    }
+                }
+            }
+        }
+    }
+    
+    func update(positions: [CGPoint], bounds: [CGRect], transforms: [CATransform3D]) {
+        for i in 0 ..< self.itemLayers.count {
+            if i < positions.count && i < bounds.count && i < transforms.count {
+                let itemLayer = self.itemLayers[i]
+                itemLayer.position = positions[i]
+                itemLayer.bounds = bounds[i]
+                itemLayer.transform = transforms[i]
+            }
+        }
+    }
+}
+
 open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
     private final class Shockwave {
         let startPoint: CGPoint
@@ -270,8 +347,7 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
     private var meshView: STCMeshView?
     
     private var gradientLayer: SimpleGradientLayer?
-    
-    private var debugLayers: [SimpleLayer] = []
+    private var gradientMaskLayer: MaskGridLayer?
     
     #if DEBUG
     private var fpsView: FPSView?
@@ -313,10 +389,16 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         }
         
         if self.link == nil {
-            self.link = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] deltaTime in
+            var previousTimestamp = CACurrentMediaTime()
+            self.link = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] _ in
                 guard let self else {
                     return
                 }
+                
+                let timestamp = CACurrentMediaTime()
+                let deltaTime = max(0.0, min(10.0 / 60.0, timestamp - previousTimestamp))
+                previousTimestamp = timestamp
+                
                 for shockwave in self.shockwaves {
                     shockwave.timeValue += deltaTime * (1.0 / CGFloat(UIView.animationDurationFactor()))
                 }
@@ -338,24 +420,12 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
             self.meshView = nil
             meshView.removeFromSuperview()
         }
-        for debugLayer in self.debugLayers {
-            debugLayer.removeFromSuperlayer()
-        }
-        self.debugLayers.removeAll()
         
         let meshView = STCMeshView(frame: CGRect())
         self.meshView = meshView
         self.view.insertSubview(meshView, aboveSubview: self.backgroundView)
         
         meshView.instanceCount = resolutionX * resolutionY
-        
-        /*for _ in 0 ..< resolutionX * resolutionY {
-            let debugLayer = SimpleLayer()
-            debugLayer.backgroundColor = UIColor.red.cgColor
-            debugLayer.opacity = 1.0
-            self.layer.addSublayer(debugLayer)
-            self.debugLayers.append(debugLayer)
-        }*/
     }
     
     public func update(size: CGSize, cornerRadius: CGFloat, transition: ComponentTransition) {
@@ -368,7 +438,7 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         
         transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
         
-        let params = RippleParams(amplitude: 20.0, frequency: 15.0, decay: 8.0, speed: 1400.0)
+        let params = RippleParams(amplitude: 10.0, frequency: 15.0, decay: 8.0, speed: 1400.0)
         
         if let currentCloneView = self.currentCloneView {
             currentCloneView.removeFromSuperview()
@@ -396,11 +466,6 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
                 meshView.removeFromSuperview()
             }
             
-            for debugLayer in self.debugLayers {
-                debugLayer.removeFromSuperlayer()
-            }
-            self.debugLayers.removeAll()
-            
             self.resolution = nil
             self.backgroundView.isHidden = true
             self.contentNodeSource.clipsToBounds = false
@@ -410,6 +475,10 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
                 self.gradientLayer = nil
                 gradientLayer.removeFromSuperlayer()
             }
+            if let gradientMaskLayer = self.gradientMaskLayer {
+                self.gradientMaskLayer = nil
+                gradientMaskLayer.removeFromSuperlayer()
+            }
             
             return
         }
@@ -418,33 +487,15 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         self.contentNodeSource.clipsToBounds = true
         self.contentNodeSource.layer.cornerRadius = cornerRadius
         
-        /*let gradientLayer: SimpleGradientLayer
-        if let current = self.gradientLayer {
-            gradientLayer = current
-        } else {
-            gradientLayer = SimpleGradientLayer()
-            self.gradientLayer = gradientLayer
-            self.layer.addSublayer(gradientLayer)
-            
-            gradientLayer.type = .radial
-            gradientLayer.colors = [UIColor.clear.cgColor, UIColor.clear.cgColor, UIColor.white.cgColor, UIColor.clear.cgColor, UIColor.clear.cgColor]
-        }
-        gradientLayer.frame = CGRect(origin: CGPoint(), size: size)
-        
-        gradientLayer.startPoint = CGPoint(x: startPoint.x / size.width, y: startPoint.x / size.height)
-        let radius = CGSize(width: maxEdge, height: maxEdge)
-        let endEndPoint = CGPoint(x: (gradientLayer.startPoint.x + radius.width) * 1.0, y: (gradientLayer.startPoint.y + radius.height) * 1.0)
-        gradientLayer.endPoint = endEndPoint
-        
-        let progress = max(0.0, min(1.0, self.timeValue / maxDelay))*/
-        
         #if DEBUG
         if let fpsView = self.fpsView {
             fpsView.update()
         }
         #endif
         
-        self.updateGrid(resolutionX: max(2, Int(size.width / 40.0)), resolutionY: max(2, Int(size.height / 40.0)))
+        let resolutionX = max(2, Int(size.width / 40.0))
+        let resolutionY = max(2, Int(size.height / 40.0))
+        self.updateGrid(resolutionX: resolutionX, resolutionY: resolutionY)
         guard let resolution = self.resolution, let meshView = self.meshView else {
             return
         }
@@ -455,6 +506,60 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         }
         
         meshView.frame = CGRect(origin: CGPoint(), size: size)
+        
+        if let shockwave = self.shockwaves.first {
+            let gradientMaskLayer: MaskGridLayer
+            if let current = self.gradientMaskLayer {
+                gradientMaskLayer = current
+            } else {
+                gradientMaskLayer = MaskGridLayer()
+                self.gradientMaskLayer = gradientMaskLayer
+            }
+            
+            let gradientLayer: SimpleGradientLayer
+            if let current = self.gradientLayer {
+                gradientLayer = current
+            } else {
+                gradientLayer = SimpleGradientLayer()
+                self.gradientLayer = gradientLayer
+                self.layer.addSublayer(gradientLayer)
+                
+                gradientLayer.type = .radial
+                gradientLayer.colors = [UIColor(white: 1.0, alpha: 0.0).cgColor, UIColor(white: 1.0, alpha: 0.0).cgColor, UIColor(white: 1.0, alpha: 0.2).cgColor, UIColor(white: 1.0, alpha: 0.0).cgColor]
+                
+                gradientLayer.mask = gradientMaskLayer
+            }
+            
+            gradientLayer.frame = CGRect(origin: CGPoint(), size: size)
+            gradientMaskLayer.frame = CGRect(origin: CGPoint(), size: size)
+            
+            gradientLayer.startPoint = CGPoint(x: shockwave.startPoint.x / size.width, y: shockwave.startPoint.y / size.height)
+            
+            let distance = shockwave.timeValue * params.speed
+            let progress = max(0.0, distance / min(size.width, size.height))
+            
+            let radius = CGSize(width: 1.0 * progress, height: (size.width / size.height) * progress)
+            let endEndPoint = CGPoint(x: (gradientLayer.startPoint.x + radius.width), y: (gradientLayer.startPoint.y + radius.height))
+            gradientLayer.endPoint = endEndPoint
+            
+            let maxWavefrontNorm: CGFloat = 0.4
+            
+            let normProgress = max(0.0, min(1.0, progress))
+            let interpolatedNorm: CGFloat = 1.0 * (1.0 - normProgress) + maxWavefrontNorm * normProgress
+            let wavefrontNorm: CGFloat = max(0.01, min(0.99, interpolatedNorm))
+            
+            gradientLayer.locations = ([0.0, 1.0 - wavefrontNorm, 1.0 - wavefrontNorm * 0.5, 1.0] as [CGFloat]).map { $0 as NSNumber }
+            
+            let alphaProgress: CGFloat = max(0.0, min(1.0, normProgress / 0.15))
+            var interpolatedAlpha: CGFloat = alphaProgress
+            interpolatedAlpha = max(0.0, min(1.0, interpolatedAlpha))
+            gradientLayer.opacity = Float(interpolatedAlpha)
+        } else {
+            if let gradientLayer = self.gradientLayer {
+                self.gradientLayer = nil
+                gradientLayer.removeFromSuperlayer()
+            }
+        }
         
         let itemSize = CGSize(width: size.width / CGFloat(resolution.x), height: size.height / CGFloat(resolution.y))
         
@@ -520,10 +625,9 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
             meshView.instanceTransforms = buffer.baseAddress!
         }
         
-        for i in 0 ..< self.debugLayers.count {
-            self.debugLayers[i].bounds = instanceBounds[i]
-            self.debugLayers[i].position = instancePositions[i]
-            self.debugLayers[i].transform = instanceTransforms[i]
+        if let gradientMaskLayer = self.gradientMaskLayer {
+            gradientMaskLayer.updateGrid(size: size, resolutionX: resolutionX, resolutionY: resolutionY, cornerRadius: cornerRadius)
+            gradientMaskLayer.update(positions: instancePositions, bounds: instanceBounds, transforms: instanceTransforms)
         }
     }
     

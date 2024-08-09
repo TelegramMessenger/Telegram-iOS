@@ -44,7 +44,7 @@ func _internal_revokePersistentPeerExportedInvitation(account: Account, peerId: 
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let flags: Int32 = (1 << 2)
             if let _ = peer as? TelegramChannel {
-                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil, title: nil))
+                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil, title: nil, subscriptionPricing: nil))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
                     return account.postbox.transaction { transaction -> ExportedInvitation? in
@@ -61,7 +61,7 @@ func _internal_revokePersistentPeerExportedInvitation(account: Account, peerId: 
                     }
                 }
             } else if let _ = peer as? TelegramGroup {
-                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil, title: nil))
+                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil, title: nil, subscriptionPricing: nil))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
                     return account.postbox.transaction { transaction -> ExportedInvitation? in
@@ -90,7 +90,7 @@ public enum CreatePeerExportedInvitationError {
     case generic
 }
 
-func _internal_createPeerExportedInvitation(account: Account, peerId: PeerId, title: String?, expireDate: Int32?, usageLimit: Int32?, requestNeeded: Bool?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
+func _internal_createPeerExportedInvitation(account: Account, peerId: PeerId, title: String?, expireDate: Int32?, usageLimit: Int32?, requestNeeded: Bool?, subscriptionPricing: StarsSubscriptionPricing?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
     return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var flags: Int32 = 0
@@ -106,7 +106,10 @@ func _internal_createPeerExportedInvitation(account: Account, peerId: PeerId, ti
             if let _ = title {
                 flags |= (1 << 4)
             }
-            return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: expireDate, usageLimit: usageLimit, title: title))
+            if let _ = subscriptionPricing {
+                flags |= (1 << 5)
+            }
+            return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: expireDate, usageLimit: usageLimit, title: title, subscriptionPricing: subscriptionPricing?.apiStarsSubscriptionPricing))
             |> mapError { _ in return CreatePeerExportedInvitationError.generic }
             |> map { result -> ExportedInvitation? in
                 return ExportedInvitation(apiExportedInvite: result)
@@ -634,6 +637,14 @@ public struct PeerInvitationImportersState: Equatable {
         public var about: String?
         public var approvedBy: PeerId?
         public var joinedViaFolderLink: Bool
+        
+        public init(peer: RenderedPeer, date: Int32, about: String? = nil, approvedBy: PeerId? = nil, joinedViaFolderLink: Bool) {
+            self.peer = peer
+            self.date = date
+            self.about = about
+            self.approvedBy = approvedBy
+            self.joinedViaFolderLink = joinedViaFolderLink
+        }
     }
     public var importers: [Importer]
     public var isLoadingMore: Bool
@@ -817,7 +828,7 @@ private final class PeerInvitationImportersContextImpl {
         
         var link: String?
         var count: Int32 = 0
-        if let invite = invite, case let .link(inviteLink, _, _, _, _, _, _, _, _, _, inviteCount, _) = invite {
+        if let invite = invite, case let .link(inviteLink, _, _, _, _, _, _, _, _, _, inviteCount, _, _) = invite {
             link = inviteLink
             if let inviteCount = inviteCount {
                 count = inviteCount

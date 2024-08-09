@@ -125,6 +125,8 @@ final class NavigationToolbarContentComponent: CombinedComponent {
     let canGoBack: Bool
     let canGoForward: Bool
     let canOpenIn: Bool
+    let canShare: Bool
+    let isDocument: Bool
     let performAction: ActionSlot<BrowserScreen.Action>
     let performHoldAction: (UIView, ContextGesture?, BrowserScreen.Action) -> Void
     
@@ -134,6 +136,8 @@ final class NavigationToolbarContentComponent: CombinedComponent {
         canGoBack: Bool,
         canGoForward: Bool,
         canOpenIn: Bool,
+        canShare: Bool,
+        isDocument: Bool,
         performAction: ActionSlot<BrowserScreen.Action>,
         performHoldAction: @escaping (UIView, ContextGesture?, BrowserScreen.Action) -> Void
     ) {
@@ -142,6 +146,8 @@ final class NavigationToolbarContentComponent: CombinedComponent {
         self.canGoBack = canGoBack
         self.canGoForward = canGoForward
         self.canOpenIn = canOpenIn
+        self.canShare = canShare
+        self.isDocument = isDocument
         self.performAction = performAction
         self.performHoldAction = performHoldAction
     }
@@ -162,6 +168,12 @@ final class NavigationToolbarContentComponent: CombinedComponent {
         if lhs.canOpenIn != rhs.canOpenIn {
             return false
         }
+        if lhs.canShare != rhs.canShare {
+            return false
+        }
+        if lhs.isDocument != rhs.isDocument {
+            return false
+        }
         return true
     }
     
@@ -171,6 +183,8 @@ final class NavigationToolbarContentComponent: CombinedComponent {
         let share = Child(Button.self)
         let bookmark = Child(Button.self)
         let openIn = Child(Button.self)
+        let search = Child(Button.self)
+        let quickLook = Child(Button.self)
         
         return { context in
             let availableSize = context.availableSize
@@ -180,69 +194,17 @@ final class NavigationToolbarContentComponent: CombinedComponent {
             let sideInset: CGFloat = 5.0
             let buttonSize = CGSize(width: 50.0, height: availableSize.height)
             
-            var buttonCount = 4
+            var buttonCount = 3
+            if context.component.canShare {
+                buttonCount += 1
+            }
             if context.component.canOpenIn {
                 buttonCount += 1
             }
             
             let spacing = (availableSize.width - buttonSize.width * CGFloat(buttonCount) - sideInset * 2.0) / CGFloat(buttonCount - 1)
             
-            let canGoBack = context.component.canGoBack
-            let back = back.update(
-                component: ContextReferenceButtonComponent(
-                    content: AnyComponent(
-                        BundleIconComponent(
-                            name: "Instant View/Back",
-                            tintColor: canGoBack ? context.component.accentColor : context.component.accentColor.withAlphaComponent(0.4)
-                        )
-                    ),
-                    minSize: buttonSize,
-                    action: { view, gesture in
-                        guard canGoBack else {
-                            return
-                        }
-                        if let gesture {
-                            performHoldAction(view, gesture, .navigateBack)
-                        } else {
-                            performAction.invoke(.navigateBack)
-                        }
-                    }
-                ),
-                availableSize: buttonSize,
-                transition: .easeInOut(duration: 0.2)
-            )
-            context.add(back
-                .position(CGPoint(x: sideInset + back.size.width / 2.0, y: availableSize.height / 2.0))
-            )
-            
-            let canGoForward = context.component.canGoForward
-            let forward = forward.update(
-                component: ContextReferenceButtonComponent(
-                    content: AnyComponent(
-                        BundleIconComponent(
-                            name: "Instant View/Forward",
-                            tintColor: canGoForward ? context.component.accentColor : context.component.accentColor.withAlphaComponent(0.4)
-                        )
-                    ),
-                    minSize: buttonSize,
-                    action: { view, gesture in
-                        guard canGoForward else {
-                            return
-                        }
-                        if let gesture {
-                            performHoldAction(view, gesture, .navigateForward)
-                        } else {
-                            performAction.invoke(.navigateForward)
-                        }
-                    }
-                ),
-                availableSize: buttonSize,
-                transition: .easeInOut(duration: 0.2)
-            )
-            context.add(forward
-                .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width / 2.0, y: availableSize.height / 2.0))
-            )
-            
+            let canShare = context.component.canShare
             let share = share.update(
                 component: Button(
                     content: AnyComponent(
@@ -252,41 +214,50 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                         )
                     ),
                     action: {
-                        performAction.invoke(.share)
+                        if canShare {
+                            performAction.invoke(.share)
+                        }
                     }
                 ).minSize(buttonSize),
                 availableSize: buttonSize,
                 transition: .easeInOut(duration: 0.2)
             )
-            context.add(share
-                .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width + spacing + share.size.width / 2.0, y: availableSize.height / 2.0))
-            )
             
-            let bookmark = bookmark.update(
-                component: Button(
-                    content: AnyComponent(
-                        BundleIconComponent(
-                            name: "Instant View/Bookmark",
-                            tintColor: context.component.accentColor
-                        )
-                    ),
-                    action: {
-                        performAction.invoke(.openBookmarks)
-                    }
-                ).minSize(buttonSize),
-                availableSize: buttonSize,
-                transition: .easeInOut(duration: 0.2)
-            )
-            context.add(bookmark
-                .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width + spacing + share.size.width + spacing + bookmark.size.width / 2.0, y: availableSize.height / 2.0))
-            )
-            
-            if context.component.canOpenIn {
-                let openIn = openIn.update(
+            if context.component.isDocument {
+                if !context.component.canShare {
+                    context.add(share
+                        .position(CGPoint(x: availableSize.width / 2.0, y: 10000.0))
+                    )
+                } else {
+                    context.add(share
+                        .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0))
+                    )
+                }
+                
+                let search = search.update(
                     component: Button(
                         content: AnyComponent(
                             BundleIconComponent(
-                                name: "Instant View/Browser",
+                                name: "Chat List/SearchIcon",
+                                tintColor: context.component.accentColor
+                            )
+                        ),
+                        action: {
+                            performAction.invoke(.updateSearchActive(true))
+                        }
+                    ).minSize(buttonSize),
+                    availableSize: buttonSize,
+                    transition: .easeInOut(duration: 0.2)
+                )
+                context.add(search
+                    .position(CGPoint(x: sideInset + search.size.width / 2.0, y: availableSize.height / 2.0))
+                )
+                
+                let quickLook = quickLook.update(
+                    component: Button(
+                        content: AnyComponent(
+                            BundleIconComponent(
+                                name: "Stories/EmbeddedViewIcon",
                                 tintColor: context.component.accentColor
                             )
                         ),
@@ -297,9 +268,109 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                     availableSize: buttonSize,
                     transition: .easeInOut(duration: 0.2)
                 )
-                context.add(openIn
-                    .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width + spacing + share.size.width + spacing + bookmark.size.width + spacing + openIn.size.width / 2.0, y: availableSize.height / 2.0))
+                context.add(quickLook
+                    .position(CGPoint(x: context.availableSize.width - sideInset - quickLook.size.width / 2.0, y: availableSize.height / 2.0))
                 )
+            } else {
+                let canGoBack = context.component.canGoBack
+                let back = back.update(
+                    component: ContextReferenceButtonComponent(
+                        content: AnyComponent(
+                            BundleIconComponent(
+                                name: "Instant View/Back",
+                                tintColor: canGoBack ? context.component.accentColor : context.component.accentColor.withAlphaComponent(0.4)
+                            )
+                        ),
+                        minSize: buttonSize,
+                        action: { view, gesture in
+                            guard canGoBack else {
+                                return
+                            }
+                            if let gesture {
+                                performHoldAction(view, gesture, .navigateBack)
+                            } else {
+                                performAction.invoke(.navigateBack)
+                            }
+                        }
+                    ),
+                    availableSize: buttonSize,
+                    transition: .easeInOut(duration: 0.2)
+                )
+                context.add(back
+                    .position(CGPoint(x: sideInset + back.size.width / 2.0, y: availableSize.height / 2.0))
+                )
+                
+                let canGoForward = context.component.canGoForward
+                let forward = forward.update(
+                    component: ContextReferenceButtonComponent(
+                        content: AnyComponent(
+                            BundleIconComponent(
+                                name: "Instant View/Forward",
+                                tintColor: canGoForward ? context.component.accentColor : context.component.accentColor.withAlphaComponent(0.4)
+                            )
+                        ),
+                        minSize: buttonSize,
+                        action: { view, gesture in
+                            guard canGoForward else {
+                                return
+                            }
+                            if let gesture {
+                                performHoldAction(view, gesture, .navigateForward)
+                            } else {
+                                performAction.invoke(.navigateForward)
+                            }
+                        }
+                    ),
+                    availableSize: buttonSize,
+                    transition: .easeInOut(duration: 0.2)
+                )
+                context.add(forward
+                    .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width / 2.0, y: availableSize.height / 2.0))
+                )
+                
+                context.add(share
+                    .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width + spacing + share.size.width / 2.0, y: availableSize.height / 2.0))
+                )
+                
+                let bookmark = bookmark.update(
+                    component: Button(
+                        content: AnyComponent(
+                            BundleIconComponent(
+                                name: "Instant View/Bookmark",
+                                tintColor: context.component.accentColor
+                            )
+                        ),
+                        action: {
+                            performAction.invoke(.openBookmarks)
+                        }
+                    ).minSize(buttonSize),
+                    availableSize: buttonSize,
+                    transition: .easeInOut(duration: 0.2)
+                )
+                context.add(bookmark
+                    .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width + spacing + share.size.width + spacing + bookmark.size.width / 2.0, y: availableSize.height / 2.0))
+                )
+                
+                if context.component.canOpenIn {
+                    let openIn = openIn.update(
+                        component: Button(
+                            content: AnyComponent(
+                                BundleIconComponent(
+                                    name: "Instant View/Browser",
+                                    tintColor: context.component.accentColor
+                                )
+                            ),
+                            action: {
+                                performAction.invoke(.openIn)
+                            }
+                        ).minSize(buttonSize),
+                        availableSize: buttonSize,
+                        transition: .easeInOut(duration: 0.2)
+                    )
+                    context.add(openIn
+                        .position(CGPoint(x: sideInset + back.size.width + spacing + forward.size.width + spacing + share.size.width + spacing + bookmark.size.width + spacing + openIn.size.width / 2.0, y: availableSize.height / 2.0))
+                    )
+                }
             }
             
             return availableSize

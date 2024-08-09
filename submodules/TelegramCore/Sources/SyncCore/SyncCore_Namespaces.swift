@@ -184,6 +184,7 @@ public extension PendingMessageActionType {
     static let updateReaction = PendingMessageActionType(rawValue: 1)
     static let sendScheduledMessageImmediately = PendingMessageActionType(rawValue: 2)
     static let readReaction = PendingMessageActionType(rawValue: 3)
+    static let sendStarsReaction = PendingMessageActionType(rawValue: 4)
 }
 
 public let peerIdNamespacesWithInitialCloudMessageHoles = [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel]

@@ -1528,15 +1528,17 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
         self.playbackRatePromise.set(self.playbackRate ?? 1.0)
         
+        var isAd = false
         if let contentInfo = item.contentInfo {
             switch contentInfo {
                 case let .message(message, _):
+                    isAd = message.adAttribute != nil
                     self.footerContentNode.setMessage(message, displayInfo: !item.displayInfoOnTop, peerIsCopyProtected: item.peerIsCopyProtected)
                 case let .webPage(webPage, media, _):
                     self.footerContentNode.setWebPage(webPage, media: media)
             }
         }
-        self.footerContentNode.setup(origin: item.originData, caption: item.caption)
+        self.footerContentNode.setup(origin: item.originData, caption: item.caption, isAd: isAd)
     }
     
     override func controlsVisibilityUpdated(isVisible: Bool) {

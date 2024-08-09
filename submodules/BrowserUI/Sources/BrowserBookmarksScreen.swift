@@ -166,6 +166,7 @@ public final class BrowserBookmarksScreen: ViewController {
             }, scrollToMessageId: { _ in
             }, navigateToStory: { _, _ in
             }, attemptedNavigationToPrivateQuote: { _ in
+            }, forceUpdateWarpContents: {
             }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
             
             

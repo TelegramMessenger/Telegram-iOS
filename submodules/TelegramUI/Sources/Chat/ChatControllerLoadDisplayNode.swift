@@ -1627,7 +1627,7 @@ extension ChatControllerImpl {
                                             var reactionItem: ReactionItem?
                                             
                                             switch updatedReaction {
-                                            case .builtin:
+                                            case .builtin, .stars:
                                                 for reaction in availableReactions.reactions {
                                                     guard let centerAnimation = reaction.centerAnimation else {
                                                         continue
@@ -3989,7 +3989,7 @@ extension ChatControllerImpl {
                 if let strongSelf = self {
                     HapticFeedback().impact()
                     
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.Conversation_SendMesageAsPremiumInfo, action: strongSelf.presentationData.strings.EmojiInput_PremiumEmojiToast_Action, duration: 3), elevatedLayout: false, action: { [weak self] action in
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, title: nil, text: strongSelf.presentationData.strings.Conversation_SendMesageAsPremiumInfo, action: strongSelf.presentationData.strings.EmojiInput_PremiumEmojiToast_Action, duration: 3), elevatedLayout: false, action: { [weak self] action in
                         guard let strongSelf = self else {
                             return true
                         }

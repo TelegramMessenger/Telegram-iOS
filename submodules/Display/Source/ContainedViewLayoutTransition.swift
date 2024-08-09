@@ -538,6 +538,17 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func animateScaleWithKeyframes(layer: CALayer, keyframes: [CGFloat], removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        switch self {
+        case .immediate:
+            completion?(true)
+        case let .animated(duration, curve):
+            layer.animateKeyframes(values: keyframes.map { NSNumber(value: Float($0)) }, duration: duration, keyPath: "transform.scale", timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: { value in
+                completion?(value)
+            })
+        }
+    }
+    
     func animateFrame(node: ASDisplayNode, from frame: CGRect, to toFrame: CGRect? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self {
             case .immediate:

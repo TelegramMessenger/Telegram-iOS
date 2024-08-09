@@ -1745,6 +1745,15 @@ public final class StoryItemSetContainerComponent: Component {
                                             }
                                         case let .custom(fileId):
                                             animationFileId = fileId
+                                        case .stars:
+                                            if let availableReactions = component.availableReactions {
+                                                for availableReaction in availableReactions.reactionItems {
+                                                    if availableReaction.reaction.rawValue == value {
+                                                        centerAnimation = availableReaction.listAnimation
+                                                        break
+                                                    }
+                                                }
+                                            }
                                         }
                                         
                                         if animationFileId == nil && centerAnimation == nil {
@@ -2944,6 +2953,15 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                             case let .custom(fileId):
                                 animationFileId = fileId
+                            case .stars:
+                                if let availableReactions = component.availableReactions {
+                                    for availableReaction in availableReactions.reactionItems {
+                                        if availableReaction.reaction.rawValue == value {
+                                            centerAnimation = availableReaction.listAnimation
+                                            break
+                                        }
+                                    }
+                                }
                             }
                             
                             if animationFileId == nil && centerAnimation == nil {
@@ -4564,7 +4582,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             
                                             standaloneReactionAnimation.frame = self.bounds
                                             self.addSubview(standaloneReactionAnimation.view)
-                                        }, completion: { [weak targetView, weak reactionContextNode] in
+                                        }, onHit: nil, completion: { [weak targetView, weak reactionContextNode] in
                                             targetView?.removeFromSuperview()
                                             if let reactionContextNode {
                                                 reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
@@ -4602,6 +4620,8 @@ public final class StoryItemSetContainerComponent: Component {
                                                 }
                                             }
                                         }
+                                    case .stars:
+                                        break
                                     }
 
                                     let message: EnqueueMessage = .message(
@@ -4748,7 +4768,7 @@ public final class StoryItemSetContainerComponent: Component {
                             
                             standaloneReactionAnimation.frame = self.bounds
                             self.componentContainerView.addSubview(standaloneReactionAnimation.view)
-                        }, completion: { [weak reactionContextNode] in
+                        }, onHit: nil, completion: { [weak reactionContextNode] in
                             if let reactionContextNode {
                                 reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
                                     reactionContextNode?.view.removeFromSuperview()

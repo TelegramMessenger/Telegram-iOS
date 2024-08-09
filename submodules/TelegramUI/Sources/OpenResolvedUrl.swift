@@ -283,6 +283,56 @@ func openResolvedUrlImpl(
                         openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
                     case let .peek(peer, deadline):
                         openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: ChatPeekTimeout(deadline: deadline, linkData: link)))
+                    case let .invite(invite):
+                        if let subscriptionPricing = invite.subscriptionPricing, let subscriptionFormId = invite.subscriptionFormId, let starsContext = context.starsContext {
+                            let inputData = Promise<BotCheckoutController.InputData?>()
+                            var photo: [TelegramMediaImageRepresentation] = []
+                            if let photoRepresentation = invite.photoRepresentation {
+                                photo.append(photoRepresentation)
+                            }
+                            let channel = TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(0)), accessHash: .genericPublic(0), title: invite.title, username: nil, photo: photo, creationDate: 0, version: 0, participationStatus: .left, info: .broadcast(TelegramChannelBroadcastInfo(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, usernames: [], storiesHidden: nil, nameColor: invite.nameColor, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, emojiStatus: nil, approximateBoostLevel: nil, subscriptionUntilDate: nil)
+                            let invoice = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: subscriptionPricing.amount, startParam: "", extendedMedia: nil, flags: [], version: 0)
+                            
+                            inputData.set(.single(BotCheckoutController.InputData(
+                                form: BotPaymentForm(
+                                    id: subscriptionFormId,
+                                    canSaveCredentials: false,
+                                    passwordMissing: false,
+                                    invoice: BotPaymentInvoice(isTest: false, requestedFields: [], currency: "XTR", prices: [BotPaymentPrice(label: "", amount: subscriptionPricing.amount)], tip: nil, termsInfo: nil),
+                                    paymentBotId: channel.id,
+                                    providerId: nil,
+                                    url: nil,
+                                    nativeProvider: nil,
+                                    savedInfo: nil,
+                                    savedCredentials: [],
+                                    additionalPaymentMethods: []
+                                ),
+                                validatedFormInfo: nil,
+                                botPeer: EnginePeer(channel)
+                            )))
+                            
+                            let starsInputData = combineLatest(
+                                inputData.get(),
+                                starsContext.state
+                            )
+                            |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
+                                if let data, let state {
+                                    return (state, data.form, data.botPeer)
+                                } else {
+                                    return nil
+                                }
+                            }
+                            let _ = (starsInputData |> filter { $0 != nil } |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                                let controller = context.sharedContext.makeStarsSubscriptionTransferScreen(context: context, starsContext: starsContext, invoice: invoice, link: link, inputData: starsInputData, navigateToPeer: { peer in
+                                    openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                                })
+                                navigationController?.pushViewController(controller)
+                            })
+                        } else {
+                            present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
+                                openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: peekData))
+                            }, parentNavigationController: navigationController, resolvedState: resolvedState), nil)
+                        }
                     default:
                         present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
                             openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: peekData))
@@ -656,12 +706,38 @@ func openResolvedUrlImpl(
             if let navigationController = navigationController {
                 navigationController.pushViewController(controller, animated: true)
             }
-        case let .starsTopup(amount):
+        case let .starsTopup(amount, purpose):
             dismissInput()
             if let starsContext = context.starsContext {
-                let controller = context.sharedContext.makeStarsPurchaseScreen(context: context, starsContext: starsContext, options: [], purpose: .generic(requiredStars: amount), completion: { _ in })
-                if let navigationController = navigationController {
-                    navigationController.pushViewController(controller, animated: true)
+                let proceed = {
+                    let controller = context.sharedContext.makeStarsPurchaseScreen(context: context, starsContext: starsContext, options: [], purpose: .topUp(requiredStars: amount, purpose: purpose), completion: { _ in })
+                    if let navigationController = navigationController {
+                        navigationController.pushViewController(controller, animated: true)
+                    }
+                }
+                if let currentState = starsContext.currentState, currentState.balance >= amount {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let controller = UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .universal(
+                            animation: "StarsBuy",
+                            scale: 0.066,
+                            colors: [:],
+                            title: nil,
+                            text: "You have enough stars at the moment.",
+                            customUndoText: "Buy Anyway",
+                            timeout: nil
+                        ),
+                        elevatedLayout: true,
+                        action: { action in
+                            if case .undo = action {
+                                proceed()
+                            }
+                            return true
+                        })
+                    present(controller, nil)
+                } else {
+                    proceed()
                 }
             }
         case let .joinVoiceChat(peerId, invite):

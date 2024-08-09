@@ -33,12 +33,15 @@ private func currentTemperatureUnit() -> TemperatureUnit {
     return temperatureUnit
 }
 
-public func stringForTemperature(_ value: Double) -> String {
+private var formatter: MeasurementFormatter = {
     let formatter = MeasurementFormatter()
     formatter.locale = Locale.current
     formatter.unitStyle = .short
     formatter.numberFormatter.maximumFractionDigits = 0
-    formatter.unitOptions = .temperatureWithoutUnit
+    return formatter
+}()
+
+public func stringForTemperature(_ value: Double) -> String {
     let valueString = formatter.string(from: Measurement(value: value, unit: UnitTemperature.celsius)).trimmingCharacters(in: CharacterSet(charactersIn: "0123456789-,.").inverted)
     return valueString + currentTemperatureUnit().suffix
 }

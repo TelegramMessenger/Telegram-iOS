@@ -264,6 +264,24 @@ public class DrawingReactionEntityView: DrawingStickerEntityView {
                         }
                     })
                 }
+            case .stars:
+                let _ = (self.context.engine.stickers.availableReactions()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { availableReactions in
+                    guard let availableReactions else {
+                        return
+                    }
+                    var animation: TelegramMediaFile?
+                    for reaction in availableReactions.reactions {
+                        if reaction.value == updateReaction.reaction {
+                            animation = reaction.selectAnimation
+                            break
+                        }
+                    }
+                    if let animation {
+                        continueWithAnimationFile(animation)
+                    }
+                })
             }
         }
         

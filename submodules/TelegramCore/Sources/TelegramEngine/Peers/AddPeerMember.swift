@@ -153,10 +153,10 @@ func _internal_addChannelMember(account: Account, peerId: PeerId, memberId: Peer
             if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
                 if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
                     let updatedParticipant: ChannelParticipant
-                    if let currentParticipant = currentParticipant, case let .member(_, invitedAt, adminInfo, _, rank) = currentParticipant {
-                        updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil, rank: rank)
+                    if let currentParticipant = currentParticipant, case let .member(_, invitedAt, adminInfo, _, rank, subscriptionUntilDate) = currentParticipant {
+                        updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil, rank: rank, subscriptionUntilDate: subscriptionUntilDate)
                     } else {
-                        updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: nil, rank: nil)
+                        updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: nil, rank: nil, subscriptionUntilDate: nil)
                     }
                     return account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: [inputUser]))
                     |> `catch` { error -> Signal<Api.messages.InvitedUsers, AddChannelMemberError> in
@@ -208,7 +208,7 @@ func _internal_addChannelMember(account: Account, peerId: PeerId, memberId: Peer
                                         switch currentParticipant {
                                             case .creator:
                                                 break
-                                            case let .member(_, _, _, banInfo, _):
+                                            case let .member(_, _, _, banInfo, _, _):
                                                 if let banInfo = banInfo {
                                                     wasBanned = true
                                                     wasMember = !banInfo.rights.flags.contains(.banReadMessages)
@@ -235,7 +235,7 @@ func _internal_addChannelMember(account: Account, peerId: PeerId, memberId: Peer
                             if let presence = transaction.getPeerPresence(peerId: memberPeer.id) {
                                 presences[memberPeer.id] = presence
                             }
-                            if case let .member(_, _, maybeAdminInfo, _, _) = updatedParticipant {
+                            if case let .member(_, _, maybeAdminInfo, _, _, _) = updatedParticipant {
                                 if let adminInfo = maybeAdminInfo {
                                     if let peer = transaction.getPeer(adminInfo.promotedBy) {
                                         peers[peer.id] = peer

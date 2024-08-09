@@ -262,6 +262,10 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                 
                 okButtonLayout = makeOkButtonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.ChatList_SessionReview_PanelConfirm, font: titleFont, textColor: item.theme.list.itemAccentColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
                 cancelButtonLayout = makeCancelButtonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.ChatList_SessionReview_PanelReject, font: titleFont, textColor: item.theme.list.itemDestructiveColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
+            case let .starsSubscriptionLowBalance(amount):
+                let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: "⭐️ \(amount) Stars needed for your subscriptions", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
+                titleString = titleStringValue
+                textString = NSAttributedString(string: "Insufficient funds to cover your subscriptions.", font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             }
             
             var leftInset: CGFloat = sideInset

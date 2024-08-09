@@ -1958,7 +1958,7 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                     switch channelMember.participant {
                     case .creator:
                         break
-                    case let .member(_, _, adminInfo, _, _):
+                    case let .member(_, _, adminInfo, _, _, _):
                         if let adminInfo = adminInfo {
                             if adminInfo.promotedBy == accountPeerId {
                                 if !channel.flags.contains(.isGigagroup) {

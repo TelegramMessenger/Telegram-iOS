@@ -22,6 +22,8 @@ public final class ChatRecentActionsController: TelegramBaseController {
     private let context: AccountContext
     private let peer: Peer
     private let initialAdminPeerId: PeerId?
+    let starsState: StarsRevenueStats?
+    
     private var presentationData: PresentationData
     private var presentationDataPromise = Promise<PresentationData>()
     override public var updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) {
@@ -37,10 +39,11 @@ public final class ChatRecentActionsController: TelegramBaseController {
     
     private var adminsDisposable: Disposable?
     
-    public init(context: AccountContext, peer: Peer, adminPeerId: PeerId?) {
+    public init(context: AccountContext, peer: Peer, adminPeerId: PeerId?, starsState: StarsRevenueStats?) {
         self.context = context
         self.peer = peer
         self.initialAdminPeerId = adminPeerId
+        self.starsState = starsState
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

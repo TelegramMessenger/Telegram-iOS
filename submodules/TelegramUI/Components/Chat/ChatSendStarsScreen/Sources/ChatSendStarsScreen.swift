@@ -56,7 +56,7 @@ private final class BalanceComponent: CombinedComponent {
     static var body: Body {
         let title = Child(MultilineTextComponent.self)
         let balance = Child(MultilineTextComponent.self)
-        let icon = Child(EmojiStatusComponent.self)
+        let icon = Child(BundleIconComponent.self)
         
         return { context in
             var size = CGSize(width: 0.0, height: 0.0)
@@ -89,19 +89,9 @@ private final class BalanceComponent: CombinedComponent {
             
             let iconSize = CGSize(width: 18.0, height: 18.0)
             let icon = icon.update(
-                component: EmojiStatusComponent(
-                    context: context.component.context,
-                    animationCache: context.component.context.animationCache,
-                    animationRenderer: context.component.context.animationRenderer,
-                    content: .animation(
-                        content: .customEmoji(fileId: MessageReaction.starsReactionId),
-                        size: iconSize,
-                        placeholderColor: .gray,
-                        themeColor: nil,
-                        loopMode: .count(0)
-                    ),
-                    isVisibleForAnimations: true,
-                    action: nil
+                component: BundleIconComponent(
+                    name: "Premium/Stars/StarLarge",
+                    tintColor: nil
                 ),
                 availableSize: iconSize,
                 transition: context.transition
@@ -127,7 +117,7 @@ private final class BalanceComponent: CombinedComponent {
             )
             context.add(
                 icon.position(
-                    icon.size.centered(in: CGRect(origin: CGPoint(x: 0.0, y: title.size.height + titleSpacing), size: icon.size)).center
+                    icon.size.centered(in: CGRect(origin: CGPoint(x: -1.0, y: title.size.height + titleSpacing), size: icon.size)).center
                 )
             )
 
@@ -174,7 +164,7 @@ private final class BadgeComponent: Component {
         private let badgeShapeLayer = SimpleShapeLayer()
         
         private let badgeForeground: SimpleLayer
-        private let badgeIcon: UIImageView
+        let badgeIcon: UIImageView
         private let badgeLabel: BadgeLabelView
         private let badgeLabelMaskView = UIImageView()
         
@@ -480,17 +470,20 @@ private final class PeerComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let peer: EnginePeer
+    let count: Int
     
     init(
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
-        peer: EnginePeer
+        peer: EnginePeer,
+        count: Int
     ) {
         self.context = context
         self.theme = theme
         self.strings = strings
         self.peer = peer
+        self.count = count
     }
     
     static func ==(lhs: PeerComponent, rhs: PeerComponent) -> Bool {
@@ -504,6 +497,9 @@ private final class PeerComponent: Component {
             return false
         }
         if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.count != rhs.count {
             return false
         }
         return true
@@ -546,7 +542,7 @@ private final class PeerComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(PeerBadgeComponent(
                     theme: component.theme,
-                    title: "800"
+                    title: "\(component.count)"
                 )),
                 environment: {},
                 containerSize: CGSize(width: 200.0, height: 200.0)
@@ -590,25 +586,167 @@ private final class PeerComponent: Component {
     }
 }
 
+private final class SliderBackgroundComponent: Component {
+    let theme: PresentationTheme
+    let value: CGFloat
+    let topCutoff: CGFloat?
+    
+    init(
+        theme: PresentationTheme,
+        value: CGFloat,
+        topCutoff: CGFloat?
+    ) {
+        self.theme = theme
+        self.value = value
+        self.topCutoff = topCutoff
+    }
+    
+    static func ==(lhs: SliderBackgroundComponent, rhs: SliderBackgroundComponent) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.value != rhs.value {
+            return false
+        }
+        if lhs.topCutoff != rhs.topCutoff {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        private let sliderBackground = UIView()
+        private let sliderForeground = UIView()
+        private let sliderStars = SliderStarsView()
+        
+        private let topForegroundLine = SimpleLayer()
+        private let topBackgroundLine = SimpleLayer()
+        private let topForegroundText = ComponentView<Empty>()
+        private let topBackgroundText = ComponentView<Empty>()
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            
+            self.sliderBackground.clipsToBounds = true
+            
+            self.sliderForeground.clipsToBounds = true
+            self.sliderForeground.addSubview(self.sliderStars)
+            
+            self.addSubview(self.sliderBackground)
+            self.addSubview(self.sliderForeground)
+            
+            self.sliderBackground.layer.addSublayer(self.topBackgroundLine)
+            self.sliderForeground.layer.addSublayer(self.topForegroundLine)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: SliderBackgroundComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.sliderBackground.backgroundColor = UIColor(rgb: 0xEEEEEF)
+            self.sliderForeground.backgroundColor = UIColor(rgb: 0xFFB10D)
+            self.topForegroundLine.backgroundColor = component.theme.list.plainBackgroundColor.cgColor
+            self.topBackgroundLine.backgroundColor = UIColor(white: 0.0, alpha: 0.1).cgColor
+            
+            transition.setFrame(view: self.sliderBackground, frame: CGRect(origin: CGPoint(), size: availableSize))
+            
+            let sliderMinWidth = availableSize.height
+            let sliderAreaWidth: CGFloat = availableSize.width - sliderMinWidth
+            let sliderForegroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: sliderMinWidth + floorToScreenPixels(sliderAreaWidth * component.value), height: availableSize.height))
+            transition.setFrame(view: self.sliderForeground, frame: sliderForegroundFrame)
+            
+            self.sliderBackground.layer.cornerRadius = availableSize.height * 0.5
+            self.sliderForeground.layer.cornerRadius = availableSize.height * 0.5
+            
+            self.sliderStars.frame = CGRect(origin: .zero, size: availableSize)
+            self.sliderStars.update(size: availableSize, value: component.value)
+            
+            self.sliderForeground.isHidden = sliderForegroundFrame.width <= sliderMinWidth
+            
+            let topCutoff = component.topCutoff ?? 0.0
+            
+            let topLineFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(sliderAreaWidth * topCutoff), y: 0.0), size: CGSize(width: 1.0, height: availableSize.height))
+            transition.setFrame(layer: self.topForegroundLine, frame: topLineFrame)
+            transition.setFrame(layer: self.topBackgroundLine, frame: topLineFrame)
+            
+            //TODO:localize
+            let topTextSize = self.topForegroundText.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: "TOP", font: Font.medium(17.0), textColor: UIColor(white: 1.0, alpha: 0.4)))
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: 100.0)
+            )
+            let _ = self.topBackgroundText.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: "TOP", font: Font.medium(17.0), textColor: UIColor(white: 0.0, alpha: 0.1)))
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: 100.0)
+            )
+            let topTextFrame = CGRect(origin: CGPoint(x: topLineFrame.maxX + 6.0, y: floor((availableSize.height - topTextSize.height) * 0.5)), size: topTextSize)
+            if let topForegroundTextView = self.topForegroundText.view, let topBackgroundTextView = self.topBackgroundText.view {
+                if topForegroundTextView.superview == nil {
+                    topBackgroundTextView.layer.anchorPoint = CGPoint()
+                    self.sliderBackground.addSubview(topBackgroundTextView)
+                    
+                    topForegroundTextView.layer.anchorPoint = CGPoint()
+                    self.sliderForeground.addSubview(topForegroundTextView)
+                }
+                
+                transition.setPosition(view: topForegroundTextView, position: topTextFrame.origin)
+                transition.setPosition(view: topBackgroundTextView, position: topTextFrame.origin)
+                
+                topForegroundTextView.bounds = CGRect(origin: CGPoint(), size: topTextFrame.size)
+                topBackgroundTextView.bounds = CGRect(origin: CGPoint(), size: topTextFrame.size)
+                
+                topForegroundTextView.isHidden = component.topCutoff == nil || topTextFrame.minX <= 10.0 || topTextFrame.maxX >= availableSize.width - 4.0
+                topBackgroundTextView.isHidden = topForegroundTextView.isHidden
+                self.topBackgroundLine.isHidden = topForegroundTextView.isHidden
+                self.topForegroundLine.isHidden = topForegroundTextView.isHidden
+            }
+            
+            return availableSize
+        }
+    }
+    
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
 private final class ChatSendStarsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
     let peer: EnginePeer
+    let maxAmount: Int
     let balance: Int64?
-    let topPeers: [EnginePeer]
-    let completion: (Int64) -> Void
+    let currentSentAmount: Int?
+    let topPeers: [ChatSendStarsScreen.TopPeer]
+    let completion: (Int64, Bool, ChatSendStarsScreen.TransitionOut) -> Void
     
     init(
         context: AccountContext,
         peer: EnginePeer,
+        maxAmount: Int,
         balance: Int64?,
-        topPeers: [EnginePeer],
-        completion: @escaping (Int64) -> Void
+        currentSentAmount: Int?,
+        topPeers: [ChatSendStarsScreen.TopPeer],
+        completion: @escaping (Int64, Bool, ChatSendStarsScreen.TransitionOut) -> Void
     ) {
         self.context = context
         self.peer = peer
+        self.maxAmount = maxAmount
         self.balance = balance
+        self.currentSentAmount = currentSentAmount
         self.topPeers = topPeers
         self.completion = completion
     }
@@ -620,7 +758,13 @@ private final class ChatSendStarsScreenComponent: Component {
         if lhs.peer != rhs.peer {
             return false
         }
+        if lhs.maxAmount != rhs.maxAmount {
+            return false
+        }
         if lhs.balance != rhs.balance {
+            return false
+        }
+        if lhs.currentSentAmount != rhs.currentSentAmount {
             return false
         }
         if lhs.topPeers != rhs.topPeers {
@@ -664,10 +808,8 @@ private final class ChatSendStarsScreenComponent: Component {
         private let descriptionText = ComponentView<Empty>()
         
         private let badgeStars = BadgeStarsView()
+        private let sliderBackground = ComponentView<Empty>()
         private let slider = ComponentView<Empty>()
-        private let sliderBackground = UIView()
-        private let sliderForeground = UIView()
-        private let sliderStars = SliderStarsView()
         private let badge = ComponentView<Empty>()
         
         private var topPeersLeftSeparator: SimpleLayer?
@@ -694,6 +836,8 @@ private final class ChatSendStarsScreenComponent: Component {
         private var amount: Int64 = 1
         private var cachedStarImage: (UIImage, PresentationTheme)?
         private var cachedCloseImage: UIImage?
+        
+        private var isPastTopCutoff: Bool?
         
         override init(frame: CGRect) {
             self.bottomOverscrollLimit = 200.0
@@ -739,9 +883,6 @@ private final class ChatSendStarsScreenComponent: Component {
             self.scrollContentClippingView.addSubview(self.scrollView)
             
             self.scrollView.addSubview(self.scrollContentView)
-            
-            self.sliderForeground.clipsToBounds = true
-            self.sliderForeground.addSubview(self.sliderStars)
             
             self.addSubview(self.navigationBarContainer)
             
@@ -860,7 +1001,7 @@ private final class ChatSendStarsScreenComponent: Component {
             let sideInset: CGFloat = 16.0
             
             if self.component == nil {
-                self.amount = 1
+                self.amount = 50
             }
             
             self.component = component
@@ -889,21 +1030,21 @@ private final class ChatSendStarsScreenComponent: Component {
             let sliderSize = self.slider.update(
                 transition: transition,
                 component: AnyComponent(SliderComponent(
-                    valueCount: 1000,
-                    value: 0,
+                    valueCount: component.maxAmount,
+                    value: Int(self.amount),
                     markPositions: false,
                     trackBackgroundColor: .clear,
                     trackForegroundColor: .clear,
                     knobSize: 26.0,
                     knobColor: .white,
                     valueUpdated: { [weak self] value in
-                        guard let self else {
+                        guard let self, let component = self.component else {
                             return
                         }
                         self.amount = 1 + Int64(value)
                         self.state?.updated(transition: .immediate)
                         
-                        let sliderValue = Float(value) / 1000.0
+                        let sliderValue = Float(value) / Float(component.maxAmount)
                         let currentTimestamp = CACurrentMediaTime()
                         
                         if let previousTimestamp {
@@ -955,34 +1096,46 @@ private final class ChatSendStarsScreenComponent: Component {
                 containerSize: CGSize(width: availableSize.width - sliderInset * 2.0, height: 30.0)
             )
             let sliderFrame = CGRect(origin: CGPoint(x: sliderInset, y: contentHeight + 127.0), size: sliderSize)
-            if let sliderView = self.slider.view {
+            let sliderBackgroundFrame = CGRect(origin: CGPoint(x: sliderFrame.minX - 8.0, y: sliderFrame.minY + 7.0), size: CGSize(width: sliderFrame.width + 16.0, height: sliderFrame.height - 14.0))
+            
+            let progressFraction: CGFloat = CGFloat(self.amount) / CGFloat(component.maxAmount - 1)
+            
+            let topCount = component.topPeers.max(by: { $0.count < $1.count })?.count
+            
+            var topCutoffFraction: CGFloat?
+            if let topCount {
+                let topCutoffFractionValue = CGFloat(topCount) / CGFloat(component.maxAmount - 1)
+                topCutoffFraction = topCutoffFractionValue
+                
+                let isPastCutoff = progressFraction >= topCutoffFractionValue
+                if let isPastTopCutoff = self.isPastTopCutoff, isPastTopCutoff != isPastCutoff {
+                    HapticFeedback().tap()
+                }
+                self.isPastTopCutoff = isPastCutoff
+            } else {
+                self.isPastTopCutoff = nil
+            }
+            
+            let _ = self.sliderBackground.update(
+                transition: transition,
+                component: AnyComponent(SliderBackgroundComponent(
+                    theme: environment.theme,
+                    value: progressFraction,
+                    topCutoff: topCutoffFraction
+                )),
+                environment: {},
+                containerSize: sliderBackgroundFrame.size
+            )
+            
+            if let sliderView = self.slider.view, let sliderBackgroundView = self.sliderBackground.view {
                 if sliderView.superview == nil {
                     self.scrollContentView.addSubview(self.badgeStars)
-                    self.scrollContentView.addSubview(self.sliderBackground)
-                    self.scrollContentView.addSubview(self.sliderForeground)
+                    self.scrollContentView.addSubview(sliderBackgroundView)
                     self.scrollContentView.addSubview(sliderView)
                 }
                 transition.setFrame(view: sliderView, frame: sliderFrame)
                 
-                self.sliderBackground.backgroundColor = UIColor(rgb: 0xEEEEEF)
-                self.sliderForeground.backgroundColor = UIColor(rgb: 0xFFB10D)
-                
-                let sliderBackgroundFrame = CGRect(origin: CGPoint(x: sliderFrame.minX - 8.0, y: sliderFrame.minY + 7.0), size: CGSize(width: sliderFrame.width + 16.0, height: sliderFrame.height - 14.0))
-                transition.setFrame(view: self.sliderBackground, frame: sliderBackgroundFrame)
-                
-                let progressFraction: CGFloat = CGFloat(self.amount) / CGFloat(1000 - 1)
-                let sliderMinWidth = sliderBackgroundFrame.height
-                let sliderAreaWidth: CGFloat = sliderBackgroundFrame.width - sliderMinWidth
-                let sliderForegroundFrame = CGRect(origin: CGPoint(x: sliderBackgroundFrame.minX, y: sliderBackgroundFrame.minY), size: CGSize(width: sliderMinWidth + floorToScreenPixels(sliderAreaWidth * progressFraction), height: sliderBackgroundFrame.height))
-                transition.setFrame(view: self.sliderForeground, frame: sliderForegroundFrame)
-                
-                self.sliderBackground.layer.cornerRadius = sliderBackgroundFrame.height * 0.5
-                self.sliderForeground.layer.cornerRadius = sliderBackgroundFrame.height * 0.5
-                
-                self.sliderStars.frame = CGRect(origin: .zero, size: sliderBackgroundFrame.size)
-                self.sliderStars.update(size: sliderBackgroundFrame.size, value: progressFraction)
-                
-                self.sliderForeground.isHidden = sliderForegroundFrame.width <= sliderMinWidth
+                transition.setFrame(view: sliderBackgroundView, frame: sliderBackgroundFrame)
                 
                 var effectiveInertiaDirection = self.inertiaDirection
                 if progressFraction <= 0.03 || progressFraction >= 0.97 {
@@ -999,6 +1152,11 @@ private final class ChatSendStarsScreenComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: 200.0, height: 200.0)
                 )
+                
+                let sliderMinWidth = sliderBackgroundFrame.height
+                let sliderAreaWidth: CGFloat = sliderBackgroundFrame.width - sliderMinWidth
+                let sliderForegroundFrame = CGRect(origin: sliderBackgroundFrame.origin, size: CGSize(width: sliderMinWidth + floorToScreenPixels(sliderAreaWidth * progressFraction), height: sliderBackgroundFrame.height))
+                
                 var badgeFrame = CGRect(origin: CGPoint(x: sliderForegroundFrame.minX + sliderForegroundFrame.width - floorToScreenPixels(sliderMinWidth * 0.5), y: sliderForegroundFrame.minY - 8.0), size: badgeSize)
                 if let badgeView = self.badge.view as? BadgeComponent.View {
                     if badgeView.superview == nil {
@@ -1109,8 +1267,13 @@ private final class ChatSendStarsScreenComponent: Component {
                 
             contentHeight += 56.0
             contentHeight += 8.0
-                
-            let text = "Choose how many stars you want to send to **\(component.peer.debugDisplayTitle)** to support this post."
+            
+            let text: String
+            if let currentSentAmount = component.currentSentAmount {
+                text = "You sent **\(currentSentAmount)** stars to support this post."
+            } else {
+                text = "Choose how many stars you want to send to **\(component.peer.debugDisplayTitle)** to support this post."
+            }
                 
             let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
             let bold = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
@@ -1215,14 +1378,14 @@ private final class ChatSendStarsScreenComponent: Component {
                 var validIds: [EnginePeer.Id] = []
                 var items: [(itemView: ComponentView<Empty>, size: CGSize)] = []
                 for topPeer in component.topPeers {
-                    validIds.append(topPeer.id)
+                    validIds.append(topPeer.peer.id)
                     
                     let itemView: ComponentView<Empty>
-                    if let current = self.topPeerItems[topPeer.id] {
+                    if let current = self.topPeerItems[topPeer.peer.id] {
                         itemView = current
                     } else {
                         itemView = ComponentView()
-                        self.topPeerItems[topPeer.id] = itemView
+                        self.topPeerItems[topPeer.peer.id] = itemView
                     }
                     
                     let itemSize = itemView.update(
@@ -1231,7 +1394,8 @@ private final class ChatSendStarsScreenComponent: Component {
                             context: component.context,
                             theme: environment.theme,
                             strings: environment.strings,
-                            peer: topPeer
+                            peer: topPeer.peer,
+                            count: topPeer.count
                         )),
                         environment: {},
                         containerSize: CGSize(width: 200.0, height: 200.0)
@@ -1306,7 +1470,49 @@ private final class ChatSendStarsScreenComponent: Component {
                         guard let self, let component = self.component else {
                             return
                         }
-                        component.completion(self.amount)
+                        guard let balance = component.balance else {
+                            return
+                        }
+                        
+                        if balance < self.amount {
+                            let _ = (component.context.engine.payments.starsTopUpOptions()
+                            |> take(1)
+                            |> deliverOnMainQueue).startStandalone(next: { [weak self] options in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                guard let starsContext = component.context.starsContext else {
+                                    return
+                                }
+                                
+                                let purchaseScreen = component.context.sharedContext.makeStarsPurchaseScreen(context: component.context, starsContext: starsContext, options: options, purpose: .transfer(peerId: component.peer.id, requiredStars: self.amount), completion: { result in
+                                    let _ = result
+                                    //TODO:release
+                                })
+                                self.environment?.controller()?.push(purchaseScreen)
+                                self.environment?.controller()?.dismiss()
+                            })
+                            
+                            return
+                        }
+                        
+                        guard let badgeView = self.badge.view as? BadgeComponent.View else {
+                            return
+                        }
+                        let isBecomingTop: Bool
+                        if let topCount {
+                            isBecomingTop = self.amount > topCount
+                        } else {
+                            isBecomingTop = true
+                        }
+                        
+                        component.completion(
+                            self.amount,
+                            isBecomingTop,
+                            ChatSendStarsScreen.TransitionOut(
+                                sourceView: badgeView.badgeIcon
+                            )
+                        )
                         self.environment?.controller()?.dismiss()
                     }
                 )),
@@ -1399,18 +1605,49 @@ private final class ChatSendStarsScreenComponent: Component {
 
 public class ChatSendStarsScreen: ViewControllerComponentContainer {
     public final class InitialData {
-        let peer: EnginePeer
-        let balance: Int64?
-        let topPeers: [EnginePeer]
+        fileprivate let peer: EnginePeer
+        fileprivate let balance: Int64?
+        fileprivate let currentSentAmount: Int?
+        fileprivate let topPeers: [ChatSendStarsScreen.TopPeer]
         
         fileprivate init(
             peer: EnginePeer,
             balance: Int64?,
-            topPeers: [EnginePeer]
+            currentSentAmount: Int?,
+            topPeers: [ChatSendStarsScreen.TopPeer]
         ) {
             self.peer = peer
             self.balance = balance
+            self.currentSentAmount = currentSentAmount
             self.topPeers = topPeers
+        }
+    }
+    
+    fileprivate final class TopPeer: Equatable {
+        let peer: EnginePeer
+        let count: Int
+        
+        init(peer: EnginePeer, count: Int) {
+            self.peer = peer
+            self.count = count
+        }
+        
+        static func ==(lhs: TopPeer, rhs: TopPeer) -> Bool {
+            if lhs.peer != rhs.peer {
+                return false
+            }
+            if lhs.count != rhs.count {
+                return false
+            }
+            return true
+        }
+    }
+    
+    public final class TransitionOut {
+        public let sourceView: UIView
+        
+        init(sourceView: UIView) {
+            self.sourceView = sourceView
         }
     }
     
@@ -1420,13 +1657,20 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
     
     private var presenceDisposable: Disposable?
     
-    public init(context: AccountContext, initialData: InitialData, completion: @escaping (Int64) -> Void) {
+    public init(context: AccountContext, initialData: InitialData, completion: @escaping (Int64, Bool, TransitionOut) -> Void) {
         self.context = context
+        
+        var maxAmount = 2500
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["stars_paid_reaction_amount_max"] as? Double {
+            maxAmount = Int(value)
+        }
         
         super.init(context: context, component: ChatSendStarsScreenComponent(
             context: context,
             peer: initialData.peer,
+            maxAmount: maxAmount,
             balance: initialData.balance,
+            currentSentAmount: initialData.currentSentAmount,
             topPeers: initialData.topPeers,
             completion: completion
         ), navigationBarAppearance: .none)
@@ -1454,7 +1698,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         }
     }
     
-    public static func initialData(context: AccountContext, peerId: EnginePeer.Id) -> Signal<InitialData?, NoError> {
+    public static func initialData(context: AccountContext, peerId: EnginePeer.Id, topPeers: [ReactionsMessageAttribute.TopPeer]) -> Signal<InitialData?, NoError> {
         let balance: Signal<Int64?, NoError>
         if let starsContext = context.starsContext {
             balance = starsContext.state
@@ -1466,20 +1710,45 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             balance = .single(nil)
         }
         
+        var currentSentAmount: Int?
+        if let myPeer = topPeers.first(where: { $0.isMy }) {
+            currentSentAmount = Int(myPeer.count)
+        }
+        
+        var topPeers = topPeers.sorted(by: { $0.count < $1.count })
+        if topPeers.count > 3 {
+            topPeers = Array(topPeers.prefix(3))
+        }
+        
         return combineLatest(
-            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
-            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
+            context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                EngineDataMap(topPeers.map(\.peerId).map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+            ),
             balance
         )
-        |> map { peer, accountPeer, balance -> InitialData? in
-            guard let peer, let accountPeer else {
+        |> map { peerAndTopPeerMap, balance -> InitialData? in
+            let (peer, topPeerMap) = peerAndTopPeerMap
+            guard let peer else {
                 return nil
             }
             
             return InitialData(
                 peer: peer,
                 balance: balance,
-                topPeers: [accountPeer, peer]
+                currentSentAmount: currentSentAmount,
+                topPeers: topPeers.compactMap { topPeer -> ChatSendStarsScreen.TopPeer? in
+                    guard let topPeerValue = topPeerMap[topPeer.peerId] else {
+                        return nil
+                    }
+                    guard let topPeerValue else {
+                        return nil
+                    }
+                    return ChatSendStarsScreen.TopPeer(
+                        peer: topPeerValue,
+                        count: Int(topPeer.count)
+                    )
+                }
             )
         }
     }

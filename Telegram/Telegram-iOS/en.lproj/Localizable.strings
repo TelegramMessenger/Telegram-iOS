@@ -12344,6 +12344,7 @@ Sorry for the inconvenience.";
 "Stars.Transfer.Purchased.Stars_any" = "%@ Stars";
 "Stars.Transfer.UnlockedText" = "You unlocked media for **%1$@**.";
 "Stars.Transfer.UnlockInfo" = "Do you want to unlock %1$@ in **%2$@** for **%3$@**?";
+"Stars.Transfer.UnlockBotInfo" = "Do you want to unlock %1$@ from **%2$@** for **%3$@**?";
 
 "Stars.Transfer.Balance" = "Balance";
 
@@ -12672,3 +12673,66 @@ Sorry for the inconvenience.";
 "Stars.Intro.GiftStars" = "Gift Stars to Friends";
 
 "MediaPicker.CreateSticker" = "Create a sticker from a photo";
+
+"Channel.AdminLog.MessageToggleProfileSignaturesOn" = "%@ enabled admin profiles";
+"Channel.AdminLog.MessageToggleProfileSignaturesOff" = "%@ disabled admin profiles";
+
+"Stickers.CreateSticker" = "Create\nSticker";
+
+"InviteLink.CreateNewInfo" = "You can create additional invite links that are limited by time, number of users, or require a paid subscription.";
+
+"InviteLink.CopyShort" = "Copy";
+"InviteLink.ShareShort" = "Share";
+
+"Stars.Subscription.Terms" = "By subscribing you agree to the [Terms of Service]().";
+"Stars.Subscription.Terms_URL" = "https://telegram.org/tos/stars";
+
+"Stars.Transaction.Reaction.Title" = "Star reaction";
+"Stars.Transaction.Reaction.Post" = "Post";
+
+"Stars.Transaction.SubscriptionFee" = "Monthly Subscription Fee";
+"Stars.Transaction.Subscription.Title" = "Subscription";
+"Stars.Transaction.Subscription.Active" = "If you cancel now, you can still access your subscription until %@";
+"Stars.Transaction.Subscription.Cancelled" = "You have cancelled your subscription.";
+"Stars.Transaction.Subscription.Renew" = "Renew Subscription";
+"Stars.Transaction.Subscription.Cancel" = "Cancel Subscription";
+"Stars.Transaction.Subscription.JoinChannel" = "Join Channel";
+"Stars.Transaction.Subscription.JoinAgainChannel" = "Join Channel";
+"Stars.Transaction.Subscription.LeftChannel" = "You left channel but you can still get back until %@";
+"Stars.Transaction.Subscription.PerMonth" = "%@ / month";
+"Stars.Transaction.Subscription.PerMonthUsd" = "appx. %@ per month";
+"Stars.Transaction.Subscription.Subscription" = "Subscription";
+"Stars.Transaction.Subscription.Subscriber" = "Subscriber";
+
+"Stars.Transaction.Subscription.Status.Expires" = "Expires";
+"Stars.Transaction.Subscription.Status.Expired" = "Expired";
+"Stars.Transaction.Subscription.Status.Renews" = "Renews";
+"Stars.Transaction.Subscription.Status.Subscribed" = "Subscribed";
+
+"Stars.Transaction.Subscription.Cancelled.Title" = "Subscription cancelled";
+"Stars.Transaction.Subscription.Cancelled.Text" = "You will still have access to [%1$@]() until %2$@.";
+
+"Stars.Transaction.Subscription.Renewed.Title" = "Subscription renewed";
+"Stars.Transaction.Subscription.Renewed.Text" = "You renewed your subscription to [%1$@]().";
+
+"Stars.Intro.Subscriptions.Title" = "MY SUBSCRIPTIONS";
+"Stars.Intro.Subscriptions.PerMonth" = "per month";
+"Stars.Intro.Subscriptions.Renews" = "renews on %@";
+"Stars.Intro.Subscriptions.Expires" = "expires on %@";
+"Stars.Intro.Subscriptions.Expired" = "expired on %@";
+"Stars.Intro.Subscriptions.Cancelled" = "cancelled";
+"Stars.Intro.Subscriptions.ShowMore" = "Show More";
+
+"Stars.Intro.Transaction.SubscriptionFee.Title" = "Monthly Subscription Fee";
+"Stars.Intro.Transaction.Reaction.Title" = "Star Reaction";
+
+"Stars.Purchase.GenericPurchasePurpose" = "Buy Stars to unlock content and services on Telegram.";
+"Stars.Purchase.PurchasePurpose.subs" = "Buy Stars to keep all your subscriptions.";
+
+"Stars.Transfer.Subscribe.Channel.Title" = "Subscribe";
+"Stars.Transfer.SubscribeInfo" = "Do you want to subscribe to **%1$@** for **%2$@** per month?";
+"Stars.Transfer.Subscribe" = "Subscribe";
+"Stars.Transfer.Subscribe.Successful.Title" = "Subscription successful!";
+"Stars.Transfer.Subscribe.Successful.Text" = "%1$@ transferred to %2$@.";
+
+"Gallery.Ad" = "Ad";

@@ -191,6 +191,15 @@ public extension Peer {
         }
     }
     
+    var isSubscription: Bool {
+        switch self {
+        case let channel as TelegramChannel:
+            return channel.subscriptionUntilDate != nil
+        default:
+            return false
+        }
+    }
+    
     var isCloseFriend: Bool {
         switch self {
         case let user as TelegramUser:
