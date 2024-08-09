@@ -60,6 +60,7 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
         }
         
         var title: String = "file"
+        var url = ""
         if let path = self.context.account.postbox.mediaBox.completedResourcePath(file.resource) {
             var updatedPath = path
             if let fileName = file.fileName {
@@ -67,13 +68,14 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
                 updatedPath = tempFile.path
                 self.tempFile = tempFile
                 title = fileName
+                url = updatedPath
             }
 
             let request = URLRequest(url: URL(fileURLWithPath: updatedPath))
             self.webView.load(request)
         }
          
-        self._state = BrowserContentState(title: title, url: "", estimatedProgress: 0.0, readingProgress: 0.0, contentType: .document)
+        self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.0, readingProgress: 0.0, contentType: .document)
         self.statePromise = Promise<BrowserContentState>(self._state)
         
         super.init(frame: .zero)

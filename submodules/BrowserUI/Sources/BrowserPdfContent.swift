@@ -71,13 +71,21 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         self.pdfView.displayDirection = .vertical
         self.pdfView.autoScales = true
         
-        var title: String = "file"
-        if let path = self.context.account.postbox.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe) {
-            self.pdfView.document = PDFDocument(data: data)
-            title = file.fileName ?? "file"
+        var title = "file"
+        var url = ""
+        if let path = self.context.account.postbox.mediaBox.completedResourcePath(file.resource) {
+            var updatedPath = path
+            if let fileName = file.fileName {
+                let tempFile = TempBox.shared.file(path: path, fileName: fileName)
+                updatedPath = tempFile.path
+                self.tempFile = tempFile
+                title = fileName
+                url = updatedPath
+            }
+            self.pdfView.document = PDFDocument(url: URL(fileURLWithPath: updatedPath))
         }
          
-        self._state = BrowserContentState(title: title, url: "", estimatedProgress: 0.0, readingProgress: 0.0, contentType: .document)
+        self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.0, readingProgress: 0.0, contentType: .document)
         self.statePromise = Promise<BrowserContentState>(self._state)
         
         super.init(frame: .zero)

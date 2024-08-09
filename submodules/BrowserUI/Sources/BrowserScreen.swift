@@ -28,6 +28,7 @@ private final class BrowserScreenComponent: CombinedComponent {
     let context: AccountContext
     let contentState: BrowserContentState?
     let presentationState: BrowserPresentationState
+    let canShare: Bool
     let performAction: ActionSlot<BrowserScreen.Action>
     let performHoldAction: (UIView, ContextGesture?, BrowserScreen.Action) -> Void
     let panelCollapseFraction: CGFloat
@@ -36,6 +37,7 @@ private final class BrowserScreenComponent: CombinedComponent {
         context: AccountContext,
         contentState: BrowserContentState?,
         presentationState: BrowserPresentationState,
+        canShare: Bool,
         performAction: ActionSlot<BrowserScreen.Action>,
         performHoldAction: @escaping (UIView, ContextGesture?, BrowserScreen.Action) -> Void,
         panelCollapseFraction: CGFloat
@@ -43,6 +45,7 @@ private final class BrowserScreenComponent: CombinedComponent {
         self.context = context
         self.contentState = contentState
         self.presentationState = presentationState
+        self.canShare = canShare
         self.performAction = performAction
         self.performHoldAction = performHoldAction
         self.panelCollapseFraction = panelCollapseFraction
@@ -56,6 +59,9 @@ private final class BrowserScreenComponent: CombinedComponent {
             return false
         }
         if lhs.presentationState != rhs.presentationState {
+            return false
+        }
+        if lhs.canShare != rhs.canShare {
             return false
         }
         if lhs.panelCollapseFraction != rhs.panelCollapseFraction {
@@ -260,25 +266,27 @@ private final class BrowserScreenComponent: CombinedComponent {
                             ),
                             at: 0
                         )
-                        navigationRightItems.insert(
-                            AnyComponentWithIdentity(
-                                id: "share",
-                                component: AnyComponent(
-                                    Button(
-                                        content: AnyComponent(
-                                            BundleIconComponent(
-                                                name: "Chat List/NavigationShare",
-                                                tintColor: environment.theme.rootController.navigationBar.accentTextColor
-                                            )
-                                        ),
-                                        action: {
-                                            performAction.invoke(.share)
-                                        }
+                        if context.component.canShare {
+                            navigationRightItems.insert(
+                                AnyComponentWithIdentity(
+                                    id: "share",
+                                    component: AnyComponent(
+                                        Button(
+                                            content: AnyComponent(
+                                                BundleIconComponent(
+                                                    name: "Chat List/NavigationShare",
+                                                    tintColor: environment.theme.rootController.navigationBar.accentTextColor
+                                                )
+                                            ),
+                                            action: {
+                                                performAction.invoke(.share)
+                                            }
+                                        )
                                     )
-                                )
-                            ),
-                            at: 0
-                        )
+                                ),
+                                at: 0
+                            )
+                        }
                         if canOpenIn {
                             navigationRightItems.append(
                                 AnyComponentWithIdentity(
@@ -359,6 +367,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                             canGoBack: context.component.contentState?.canGoBack ?? false,
                             canGoForward: context.component.contentState?.canGoForward ?? false,
                             canOpenIn: canOpenIn,
+                            canShare: context.component.canShare,
                             isDocument: context.component.contentState?.contentType == .document,
                             performAction: performAction,
                             performHoldAction: performHoldAction
@@ -617,7 +626,19 @@ public class BrowserScreen: ViewController, MinimizableController {
                 case .minimize:
                     self.minimize()
                 case .openIn:
-                    self.context.sharedContext.applicationBindings.openUrl(url)
+                    var processed = false
+                    if let controller = self.controller {
+                        switch controller.subject {
+                        case let .document(file, canShare), let .pdfDocument(file, canShare):
+                            processed = true
+                            controller.openDocument(file, canShare)
+                        default:
+                            break
+                        }
+                    }
+                    if !processed {
+                        self.context.sharedContext.applicationBindings.openUrl(url)
+                    }
                 case .openSettings:
                     self.openSettings()
                 case let .updateSearchActive(active):
@@ -806,9 +827,9 @@ public class BrowserScreen: ViewController, MinimizableController {
                     self.openPeer(peer)
                 }
                 browserContent = instantPageContent
-            case let .document(file):
+            case let .document(file, _):
                 browserContent = BrowserDocumentContent(context: self.context, presentationData: self.presentationData, file: file)
-            case let .pdfDocument(file):
+            case let .pdfDocument(file, _):
                 browserContent = BrowserPdfContent(context: self.context, presentationData: self.presentationData, file: file)
             }
             browserContent.pushContent = { [weak self] content in
@@ -1087,8 +1108,16 @@ public class BrowserScreen: ViewController, MinimizableController {
                     openInUrl = url
                 }
                 
-                
                 let canOpenIn = !(self.contentState?.url.hasPrefix("tonsite") ?? false)
+                var canShare = true
+                if let controller = self.controller {
+                    switch controller.subject {
+                    case let .document(_, canShareValue), let .pdfDocument(_, canShareValue):
+                        canShare = canShareValue
+                    default:
+                        break
+                    }
+                }
                 
                 var items: [ContextMenuItem] = []
                 if contentState.contentType == .document, contentState.title.lowercased().hasSuffix(".pdf") {
@@ -1124,7 +1153,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                     })))
                 }
                 
-                if !layout.metrics.isTablet {
+                if canShare && !layout.metrics.isTablet {
                     items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_Share, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
                         performAction.invoke(.share)
                         action(.default)
@@ -1295,6 +1324,16 @@ public class BrowserScreen: ViewController, MinimizableController {
                     return self?.controller
                 }
             )
+            
+            var canShare = true
+            if let controller = self.controller {
+                switch controller.subject {
+                case let .document(_, canShareValue), let .pdfDocument(_, canShareValue):
+                    canShare = canShareValue
+                default:
+                    break
+                }
+            }
 
             let componentSize = self.componentHost.update(
                 transition: transition,
@@ -1303,6 +1342,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                         context: self.context,
                         contentState: self.contentState,
                         presentationState: self.presentationState,
+                        canShare: canShare,
                         performAction: self.performAction,
                         performHoldAction: { [weak self] view, gesture, action in
                             if let self {
@@ -1379,14 +1419,16 @@ public class BrowserScreen: ViewController, MinimizableController {
     public enum Subject {
         case webPage(url: String)
         case instantPage(webPage: TelegramMediaWebpage, anchor: String?, sourceLocation: InstantPageSourceLocation)
-        case document(file: TelegramMediaFile)
-        case pdfDocument(file: TelegramMediaFile)
+        case document(file: TelegramMediaFile, canShare: Bool)
+        case pdfDocument(file: TelegramMediaFile, canShare: Bool)
     }
     
     private let context: AccountContext
-    private let subject: Subject
+    fileprivate let subject: Subject
     private var preferredConfiguration: WKWebViewConfiguration?
     private var openPreviousOnClose = false
+    
+    public var openDocument: (TelegramMediaFile, Bool) -> Void = { _, _ in }
     
     private var validLayout: ContainerViewLayout?
     

@@ -125,6 +125,7 @@ final class NavigationToolbarContentComponent: CombinedComponent {
     let canGoBack: Bool
     let canGoForward: Bool
     let canOpenIn: Bool
+    let canShare: Bool
     let isDocument: Bool
     let performAction: ActionSlot<BrowserScreen.Action>
     let performHoldAction: (UIView, ContextGesture?, BrowserScreen.Action) -> Void
@@ -135,6 +136,7 @@ final class NavigationToolbarContentComponent: CombinedComponent {
         canGoBack: Bool,
         canGoForward: Bool,
         canOpenIn: Bool,
+        canShare: Bool,
         isDocument: Bool,
         performAction: ActionSlot<BrowserScreen.Action>,
         performHoldAction: @escaping (UIView, ContextGesture?, BrowserScreen.Action) -> Void
@@ -144,6 +146,7 @@ final class NavigationToolbarContentComponent: CombinedComponent {
         self.canGoBack = canGoBack
         self.canGoForward = canGoForward
         self.canOpenIn = canOpenIn
+        self.canShare = canShare
         self.isDocument = isDocument
         self.performAction = performAction
         self.performHoldAction = performHoldAction
@@ -163,6 +166,9 @@ final class NavigationToolbarContentComponent: CombinedComponent {
             return false
         }
         if lhs.canOpenIn != rhs.canOpenIn {
+            return false
+        }
+        if lhs.canShare != rhs.canShare {
             return false
         }
         if lhs.isDocument != rhs.isDocument {
@@ -188,13 +194,17 @@ final class NavigationToolbarContentComponent: CombinedComponent {
             let sideInset: CGFloat = 5.0
             let buttonSize = CGSize(width: 50.0, height: availableSize.height)
             
-            var buttonCount = 4
+            var buttonCount = 3
+            if context.component.canShare {
+                buttonCount += 1
+            }
             if context.component.canOpenIn {
                 buttonCount += 1
             }
             
             let spacing = (availableSize.width - buttonSize.width * CGFloat(buttonCount) - sideInset * 2.0) / CGFloat(buttonCount - 1)
             
+            let canShare = context.component.canShare
             let share = share.update(
                 component: Button(
                     content: AnyComponent(
@@ -204,7 +214,9 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                         )
                     ),
                     action: {
-                        performAction.invoke(.share)
+                        if canShare {
+                            performAction.invoke(.share)
+                        }
                     }
                 ).minSize(buttonSize),
                 availableSize: buttonSize,
@@ -212,9 +224,15 @@ final class NavigationToolbarContentComponent: CombinedComponent {
             )
             
             if context.component.isDocument {
-                context.add(share
-                    .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0))
-                )
+                if !context.component.canShare {
+                    context.add(share
+                        .position(CGPoint(x: availableSize.width / 2.0, y: 10000.0))
+                    )
+                } else {
+                    context.add(share
+                        .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0))
+                    )
+                }
                 
                 let search = search.update(
                     component: Button(
