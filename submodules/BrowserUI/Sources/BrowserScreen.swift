@@ -641,6 +641,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                         })
                     })
                 case .scrollToPreviousSearchResult:
+                    self.view.window?.endEditing(true)
                     content.scrollToPreviousSearchResult(completion: { [weak self] index, count in
                         self?.updatePresentationState({ state in
                             var updatedState = state
@@ -650,6 +651,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                         })
                     })
                 case .scrollToNextSearchResult:
+                    self.view.window?.endEditing(true)
                     content.scrollToNextSearchResult(completion: { [weak self] index, count in
                         self?.updatePresentationState({ state in
                             var updatedState = state
@@ -1089,11 +1091,11 @@ public class BrowserScreen: ViewController, MinimizableController {
                 let canOpenIn = !(self.contentState?.url.hasPrefix("tonsite") ?? false)
                 
                 var items: [ContextMenuItem] = []
-                items.append(.custom(fontItem, false))
-                
                 if contentState.contentType == .document, contentState.title.lowercased().hasSuffix(".pdf") {
                     
                 } else {
+                    items.append(.custom(fontItem, false))
+                    
                     items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontSanFrancisco, icon: forceIsSerif ? emptyIcon : checkIcon, action: { (controller, action) in
                         performAction.invoke(.updateFontIsSerif(false))
                         action(.default)
@@ -1105,7 +1107,9 @@ public class BrowserScreen: ViewController, MinimizableController {
                     })))
                 }
                 
-                items.append(.separator)
+                if !items.isEmpty {
+                    items.append(.separator)
+                }
                 
                 if case .webPage = contentState.contentType {
                     items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_Reload, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Reload"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
@@ -1113,7 +1117,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                         action(.default)
                     })))
                 }
-                if [.webPage].contains(contentState.contentType) {
+                if [.webPage, .document].contains(contentState.contentType) {
                     items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_Search, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Search"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
                         performAction.invoke(.updateSearchActive(true))
                         action(.default)

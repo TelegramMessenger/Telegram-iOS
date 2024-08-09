@@ -460,6 +460,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                     
                     self?.currentSearchResult = 0
                     self?.searchResultsCount = 0
+                    completion?(0)
                 }
             }
         }

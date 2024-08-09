@@ -177,6 +177,8 @@ final class NavigationToolbarContentComponent: CombinedComponent {
         let share = Child(Button.self)
         let bookmark = Child(Button.self)
         let openIn = Child(Button.self)
+        let search = Child(Button.self)
+        let quickLook = Child(Button.self)
         
         return { context in
             let availableSize = context.availableSize
@@ -211,7 +213,45 @@ final class NavigationToolbarContentComponent: CombinedComponent {
             
             if context.component.isDocument {
                 context.add(share
-                    .position(CGPoint(x: sideInset + share.size.width / 2.0, y: availableSize.height / 2.0))
+                    .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0))
+                )
+                
+                let search = search.update(
+                    component: Button(
+                        content: AnyComponent(
+                            BundleIconComponent(
+                                name: "Chat List/SearchIcon",
+                                tintColor: context.component.accentColor
+                            )
+                        ),
+                        action: {
+                            performAction.invoke(.updateSearchActive(true))
+                        }
+                    ).minSize(buttonSize),
+                    availableSize: buttonSize,
+                    transition: .easeInOut(duration: 0.2)
+                )
+                context.add(search
+                    .position(CGPoint(x: sideInset + search.size.width / 2.0, y: availableSize.height / 2.0))
+                )
+                
+                let quickLook = quickLook.update(
+                    component: Button(
+                        content: AnyComponent(
+                            BundleIconComponent(
+                                name: "Stories/EmbeddedViewIcon",
+                                tintColor: context.component.accentColor
+                            )
+                        ),
+                        action: {
+                            performAction.invoke(.openIn)
+                        }
+                    ).minSize(buttonSize),
+                    availableSize: buttonSize,
+                    transition: .easeInOut(duration: 0.2)
+                )
+                context.add(quickLook
+                    .position(CGPoint(x: context.availableSize.width - sideInset - quickLook.size.width / 2.0, y: availableSize.height / 2.0))
                 )
             } else {
                 let canGoBack = context.component.canGoBack
