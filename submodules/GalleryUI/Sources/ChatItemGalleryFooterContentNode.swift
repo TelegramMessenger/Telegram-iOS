@@ -772,7 +772,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
     
     func setup(origin: GalleryItemOriginData?, caption: NSAttributedString, isAd: Bool = false) {
         var titleText = origin?.title
-        let dateText = origin?.timestamp.flatMap { humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: $0).string }
+        var dateText = origin?.timestamp.flatMap { humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: $0).string }
         
         let caption = caption.mutableCopy() as! NSMutableAttributedString
         if isAd {
@@ -780,6 +780,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                 caption.insert(NSAttributedString(string: titleText + "\n", font: Font.semibold(17.0), textColor: .white), at: 0)
             }
             titleText = nil
+            dateText = nil
         }
         
         if self.currentMessageText != caption || self.currentAuthorNameText != titleText || self.currentDateText != dateText {
@@ -998,7 +999,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
             }
             
             messageText = galleryCaptionStringWithAppliedEntities(context: self.context, text: text, entities: entities, message: message, cachedMessageSyntaxHighlight: cachedMessageSyntaxHighlight).mutableCopy() as! NSMutableAttributedString
-            messageText.insert(NSAttributedString(string: (authorNameText ?? "") + "\n", font: Font.semibold(17.0), textColor: .white), at: 0)
+            if let _ = message.adAttribute {
+                messageText.insert(NSAttributedString(string: (authorNameText ?? "") + "\n", font: Font.semibold(17.0), textColor: .white), at: 0)
+            }
         }
         
         if !displayInfo {

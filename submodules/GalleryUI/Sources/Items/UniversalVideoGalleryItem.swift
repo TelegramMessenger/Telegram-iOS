@@ -23,6 +23,7 @@ import OpenInExternalAppUI
 import AVKit
 import TextFormat
 import SliderContextItem
+import Pasteboard
 
 public enum UniversalVideoGalleryItemContentInfo {
     case message(Message, Int?)
@@ -89,6 +90,8 @@ public class UniversalVideoGalleryItem: GalleryItem {
         
         if let indexData = self.indexData {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").string))
+        } else if case let .message(message, _) = self.contentInfo, let _ = message.adAttribute {
+            node._title.set(.single(self.presentationData.strings.Gallery_Ad))
         }
         
         node.setupItem(self)
@@ -2480,9 +2483,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             return
         }
         var dismissImpl: (() -> Void)?
-        let items: Signal<[ContextMenuItem], NoError> = self.contextMenuMainItems(dismiss: {
-            dismissImpl?()
-        })
+        let items: Signal<[ContextMenuItem], NoError>
+        if case let .message(message, _) = self.item?.contentInfo, let _ = message.adAttribute {
+            items = self.adMenuMainItems()
+        } else {
+            items = self.contextMenuMainItems(dismiss: {
+                dismissImpl?()
+            })
+        }
+        
         let contextController = ContextController(presentationData: self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme), source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.moreBarButton.referenceNode)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
         self.isShowingContextMenuPromise.set(true)
         controller.presentInGlobalOverlay(contextController)
@@ -2506,6 +2515,121 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
         return speedList
     }
+    
+    private func adMenuMainItems() -> Signal<[ContextMenuItem], NoError> {
+        guard case let .message(message, _) = self.item?.contentInfo, let adAttribute = message.adAttribute else {
+            return .single([])
+        }
+        
+        let context = self.context
+        let presentationData = self.presentationData
+        var actions: [ContextMenuItem] = []
+        if adAttribute.canReport {
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_AboutAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
+            }, iconSource: nil, action: { _, f in
+                f(.dismissWithoutContent)
+                
+//                controllerInteraction.navigationController()?.pushViewController(AdsInfoScreen(context: context))
+            })))
+            
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_ReportAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
+            }, iconSource: nil, action: { _, f in
+                f(.default)
+                
+                let _ = (context.engine.messages.reportAdMessage(peerId: message.id.peerId, opaqueId: adAttribute.opaqueId, option: nil)
+                |> deliverOnMainQueue).start(next: { result in
+                    if case let .options(title, options) = result {
+                        let _ = title
+                        let _ = options
+//                        controllerInteraction.navigationController()?.pushViewController(
+//                            AdsReportScreen(
+//                                context: context,
+//                                peerId: message.id.peerId,
+//                                opaqueId: adAttribute.opaqueId,
+//                                title: title,
+//                                options: options,
+//                                completed: { [weak interfaceInteraction] in
+//                                    guard let interfaceInteraction else {
+//                                        return
+//                                    }
+//                                    guard let chatController = interfaceInteraction.chatController() as? ChatControllerImpl else {
+//                                        return
+//                                    }
+//                                    chatController.removeAd(opaqueId: adAttribute.opaqueId)
+//                                }
+//                            )
+//                        )
+                    }
+                })
+            })))
+            
+            actions.append(.separator)
+                           
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_RemoveAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.primaryTextColor)
+            }, iconSource: nil, action: { c, _ in
+                c?.dismiss(completion: {
+//                    controllerInteraction.openNoAdsDemo()
+                })
+            })))
+        } else {
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
+            }, iconSource: nil, action: { _, f in
+                f(.dismissWithoutContent)
+//                controllerInteraction.navigationController()?.pushViewController(AdInfoScreen(context: context))
+            })))
+            
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+            if !context.isPremium && !premiumConfiguration.isPremiumDisabled {
+                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Hide, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.primaryTextColor)
+                }, iconSource: nil, action: { c, _ in
+                    c?.dismiss(completion: {
+                        var replaceImpl: ((ViewController) -> Void)?
+                        let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: false, action: {
+                            let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
+                            replaceImpl?(controller)
+                        }, dismissed: nil)
+                        replaceImpl = { [weak controller] c in
+                            controller?.replace(with: c)
+                        }
+//                        controllerInteraction.navigationController()?.pushViewController(controller)
+                    })
+                })))
+            }
+            
+            if !message.text.isEmpty {
+                actions.append(.separator)
+                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuCopy, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
+                }, action: { [weak self] _, f in
+                    var messageEntities: [MessageTextEntity]?
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? TextEntitiesMessageAttribute {
+                            messageEntities = attribute.entities
+                        }
+                    }
+                    
+                    storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                    
+                    Queue.mainQueue().after(0.2, {
+                        guard let self, let controller = self.galleryController() else {
+                            return
+                        }
+                        controller.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: presentationData.strings.Conversation_MessageCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    })
+                    
+                    f(.default)
+                })))
+            }
+        }
+
+        return .single(actions)
+    }
+
 
     private func contextMenuMainItems(dismiss: @escaping () -> Void) -> Signal<[ContextMenuItem], NoError> {
         guard let videoNode = self.videoNode, let item = self.item else {
