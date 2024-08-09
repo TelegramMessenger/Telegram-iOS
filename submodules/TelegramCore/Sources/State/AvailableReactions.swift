@@ -4,7 +4,7 @@ import Postbox
 import SwiftSignalKit
 
 private func generateStarsReactionFile(kind: Int, isAnimatedSticker: Bool) -> TelegramMediaFile {
-    let baseId: Int64 = 52343278047832950
+    let baseId: Int64 = 52343278047832950 + 10
     let fileId = baseId + Int64(kind)
     
     var attributes: [TelegramMediaFileAttribute] = []

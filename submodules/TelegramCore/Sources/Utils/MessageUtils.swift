@@ -344,6 +344,11 @@ public extension Message {
                 return false
             }
         } else if self.author?.id == accountPeerId {
+            if let channel = self.peers[self.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info {
+                if !info.flags.contains(.messagesShouldHaveProfiles) {
+                    return true
+                }
+            }
             return false
         } else if self.flags.contains(.Incoming) {
             return true

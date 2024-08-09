@@ -356,7 +356,7 @@ private func requestSendStarsReaction(postbox: Postbox, network: Network, stateM
 }
 
 private final class ManagedApplyPendingMessageReactionsActionsHelper {
-    var operationDisposables: [MessageId: Disposable] = [:]
+    var operationDisposables: [MessageId: (PendingMessageActionData, Disposable)] = [:]
     
     func update(entries: [PendingMessageActionsEntry]) -> (disposeOperations: [Disposable], beginOperations: [(PendingMessageActionsEntry, MetaDisposable)]) {
         var disposeOperations: [Disposable] = []
@@ -365,23 +365,26 @@ private final class ManagedApplyPendingMessageReactionsActionsHelper {
         var hasRunningOperationForPeerId = Set<PeerId>()
         var validIds = Set<MessageId>()
         for entry in entries {
+            if let current = self.operationDisposables[entry.id], !current.0.isEqual(to: entry.action) {
+                self.operationDisposables.removeValue(forKey: entry.id)
+                disposeOperations.append(current.1)
+            }
+            
             if !hasRunningOperationForPeerId.contains(entry.id.peerId) {
                 hasRunningOperationForPeerId.insert(entry.id.peerId)
                 validIds.insert(entry.id)
                 
-                if self.operationDisposables[entry.id] == nil {
-                    let disposable = MetaDisposable()
-                    beginOperations.append((entry, disposable))
-                    self.operationDisposables[entry.id] = disposable
-                }
+                let disposable = MetaDisposable()
+                beginOperations.append((entry, disposable))
+                self.operationDisposables[entry.id] = (entry.action, disposable)
             }
         }
         
         var removeMergedIds: [MessageId] = []
-        for (id, disposable) in self.operationDisposables {
+        for (id, actionAndDisposable) in self.operationDisposables {
             if !validIds.contains(id) {
                 removeMergedIds.append(id)
-                disposeOperations.append(disposable)
+                disposeOperations.append(actionAndDisposable.1)
             }
         }
         
@@ -393,7 +396,7 @@ private final class ManagedApplyPendingMessageReactionsActionsHelper {
     }
     
     func reset() -> [Disposable] {
-        let disposables = Array(self.operationDisposables.values)
+        let disposables = Array(self.operationDisposables.values.map(\.1))
         self.operationDisposables.removeAll()
         return disposables
     }

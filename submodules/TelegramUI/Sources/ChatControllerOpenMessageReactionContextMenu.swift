@@ -171,6 +171,7 @@ extension ChatControllerImpl {
                     guard let self, let initialData else {
                         return
                     }
+                    HapticFeedback().tap()
                     self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount, isBecomingTop, transitionOut in
                         guard let self, amount > 0 else {
                             return
@@ -256,7 +257,9 @@ extension ChatControllerImpl {
                             }
                         }
                         
-                        //let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount))
+                        #if !DEBUG
+                        let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount))
+                        #endif
                         
                         let _ = (self.context.engine.stickers.resolveInlineStickers(fileIds: [MessageReaction.starsReactionId])
                         |> deliverOnMainQueue).start(next: { [weak self] files in
