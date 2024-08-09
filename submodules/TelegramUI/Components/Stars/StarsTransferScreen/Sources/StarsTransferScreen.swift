@@ -348,8 +348,7 @@ private final class SheetContent: CombinedComponent {
             
             let titleString: String
             if isSubscription {
-                //TODO:localize
-                titleString = "Subscribe to the Channel"
+                titleString = strings.Stars_Transfer_Subscribe_Channel_Title
             } else {
                 titleString = strings.Stars_Transfer_Title
             }
@@ -376,7 +375,7 @@ private final class SheetContent: CombinedComponent {
             let amount = component.invoice.totalAmount
             let infoText: String
             if case .starsChatSubscription = context.component.source {
-                infoText = "Do you want to subscribe to **\(state.botPeer?.compactDisplayTitle ?? "")** for **\(strings.Stars_Transfer_Info_Stars(Int32(amount)))** per month?"
+                infoText = strings.Stars_Transfer_SubscribeInfo(state.botPeer?.compactDisplayTitle ?? "", strings.Stars_Transfer_Info_Stars(Int32(amount))).string
             } else if !component.extendedMedia.isEmpty {
                 var description: String = ""
                 var photoCount: Int32 = 0
@@ -403,11 +402,20 @@ private final class SheetContent: CombinedComponent {
                         description += "**\(strings.Stars_Transfer_SingleVideo)**"
                     }
                 }
-                infoText = strings.Stars_Transfer_UnlockInfo(
-                    description,
-                    state.chatPeer?.compactDisplayTitle ?? "",
-                    strings.Stars_Transfer_Info_Stars(Int32(amount))
-                ).string
+                
+                if let botPeerName = state.botPeer?.compactDisplayTitle {
+                    infoText = strings.Stars_Transfer_UnlockBotInfo(
+                        description,
+                        botPeerName,
+                        strings.Stars_Transfer_Info_Stars(Int32(amount))
+                    ).string
+                } else {
+                    infoText = strings.Stars_Transfer_UnlockInfo(
+                        description,
+                        state.chatPeer?.compactDisplayTitle ?? "",
+                        strings.Stars_Transfer_Info_Stars(Int32(amount))
+                    ).string
+                }
             } else {
                 infoText = strings.Stars_Transfer_Info(
                     component.invoice.title,
@@ -483,7 +491,7 @@ private final class SheetContent: CombinedComponent {
             let amountString = presentationStringsFormattedNumber(Int32(amount), presentationData.dateTimeFormat.groupingSeparator)
             let buttonAttributedString: NSMutableAttributedString
             if case .starsChatSubscription = component.source {
-                buttonAttributedString = NSMutableAttributedString(string: "Subscribe", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
+                buttonAttributedString = NSMutableAttributedString(string: strings.Stars_Transfer_Subscribe, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             } else {
                 buttonAttributedString = NSMutableAttributedString(string: "\(strings.Stars_Transfer_Pay)   #  \(amountString)", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             }
@@ -524,7 +532,7 @@ private final class SheetContent: CombinedComponent {
                                 } else if let peerId = state?.botPeer?.id {
                                     purpose = .transfer(peerId: peerId, requiredStars: invoice.totalAmount)
                                 } else {
-                                    purpose = .generic(requiredStars: nil)
+                                    purpose = .generic
                                 }
                                 let purchaseController = accountContext.sharedContext.makeStarsPurchaseScreen(
                                     context: accountContext,
@@ -549,9 +557,8 @@ private final class SheetContent: CombinedComponent {
                                 var title = presentationData.strings.Stars_Transfer_PurchasedTitle
                                 let text: String
                                 if isSubscription {
-                                    //TODO:localize
-                                    title = "Subscription successful!"
-                                    text = "\(presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))) transferred to \(botTitle)."
+                                    title = presentationData.strings.Stars_Transfer_Subscribe_Successful_Title
+                                    text = presentationData.strings.Stars_Transfer_Subscribe_Successful_Text(presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount)), botTitle).string
                                 } else if let _ = component.invoice.extendedMedia {
                                     text = presentationData.strings.Stars_Transfer_UnlockedText( presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string
                                 } else {

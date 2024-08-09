@@ -637,6 +637,14 @@ public struct PeerInvitationImportersState: Equatable {
         public var about: String?
         public var approvedBy: PeerId?
         public var joinedViaFolderLink: Bool
+        
+        public init(peer: RenderedPeer, date: Int32, about: String? = nil, approvedBy: PeerId? = nil, joinedViaFolderLink: Bool) {
+            self.peer = peer
+            self.date = date
+            self.about = about
+            self.approvedBy = approvedBy
+            self.joinedViaFolderLink = joinedViaFolderLink
+        }
     }
     public var importers: [Importer]
     public var isLoadingMore: Bool

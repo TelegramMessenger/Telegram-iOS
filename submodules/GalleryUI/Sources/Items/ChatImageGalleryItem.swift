@@ -168,7 +168,9 @@ class ChatImageGalleryItem: GalleryItem {
             }
         }
         
-        if let location = self.location {
+        if let _ = message.adAttribute {
+            node._title.set(.single(self.presentationData.strings.Gallery_Ad))
+        } else if let location = self.location {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").string))
         }
                 

@@ -1650,8 +1650,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return nil
     }
     
-    public func makeChatRecentActionsController(context: AccountContext, peer: Peer, adminPeerId: PeerId?) -> ViewController {
-        return ChatRecentActionsController(context: context, peer: peer, adminPeerId: adminPeerId)
+    public func makeChatRecentActionsController(context: AccountContext, peer: Peer, adminPeerId: PeerId?, starsState: StarsRevenueStats?) -> ViewController {
+        return ChatRecentActionsController(context: context, peer: peer, adminPeerId: adminPeerId, starsState: starsState)
     }
     
     public func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void) {

@@ -12344,6 +12344,7 @@ Sorry for the inconvenience.";
 "Stars.Transfer.Purchased.Stars_any" = "%@ Stars";
 "Stars.Transfer.UnlockedText" = "You unlocked media for **%1$@**.";
 "Stars.Transfer.UnlockInfo" = "Do you want to unlock %1$@ in **%2$@** for **%3$@**?";
+"Stars.Transfer.UnlockBotInfo" = "Do you want to unlock %1$@ from **%2$@** for **%3$@**?";
 
 "Stars.Transfer.Balance" = "Balance";
 
@@ -12695,6 +12696,9 @@ Sorry for the inconvenience.";
 "Stars.Transaction.Subscription.Cancelled" = "You have cancelled your subscription.";
 "Stars.Transaction.Subscription.Renew" = "Renew Subscription";
 "Stars.Transaction.Subscription.Cancel" = "Cancel Subscription";
+"Stars.Transaction.Subscription.JoinChannel" = "Join Channel";
+"Stars.Transaction.Subscription.JoinAgainChannel" = "Join Channel";
+"Stars.Transaction.Subscription.LeftChannel" = "You left channel but you can still get back until %@";
 "Stars.Transaction.Subscription.PerMonth" = "%@ / month";
 "Stars.Transaction.Subscription.PerMonthUsd" = "appx. %@ per month";
 "Stars.Transaction.Subscription.Subscription" = "Subscription";
@@ -12721,3 +12725,14 @@ Sorry for the inconvenience.";
 
 "Stars.Intro.Transaction.SubscriptionFee.Title" = "Monthly Subscription Fee";
 "Stars.Intro.Transaction.Reaction.Title" = "Star Reaction";
+
+"Stars.Purchase.GenericPurchasePurpose" = "Buy Stars to unlock content and services on Telegram.";
+"Stars.Purchase.PurchasePurpose.subs" = "Buy Stars to keep all your subscriptions.";
+
+"Stars.Transfer.Subscribe.Channel.Title" = "Subscribe";
+"Stars.Transfer.SubscribeInfo" = "Do you want to subscribe to **%1$@** for **%2$@** per month?";
+"Stars.Transfer.Subscribe" = "Subscribe";
+"Stars.Transfer.Subscribe.Successful.Title" = "Subscription successful!";
+"Stars.Transfer.Subscribe.Successful.Text" = "%1$@ transferred to %2$@.";
+
+"Gallery.Ad" = "Ad";

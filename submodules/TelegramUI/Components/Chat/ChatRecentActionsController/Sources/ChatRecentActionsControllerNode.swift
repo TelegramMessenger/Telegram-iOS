@@ -210,10 +210,16 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                         ])])
                                         strongSelf.presentController(actionSheet, .window(.root), nil)
                                     } else {
-                                        let controller = inviteLinkEditController(context: strongSelf.context, updatedPresentationData: strongSelf.controller?.updatedPresentationData, peerId: peer.id, invite: invite, completion: { [weak self] _ in
-                                            self?.eventLogContext.reload()
-                                        })
-                                        controller.navigationPresentation = .modal
+                                        let controller = InviteLinkViewController(
+                                            context: strongSelf.context,
+                                            updatedPresentationData: strongSelf.controller?.updatedPresentationData,
+                                            peerId: peer.id,
+                                            invite: invite,
+                                            invitationsContext: nil,
+                                            revokedInvitationsContext: nil,
+                                            importersContext: nil,
+                                            starsState: strongSelf.controller?.starsState
+                                        )
                                         strongSelf.pushController(controller)
                                     }
                                     return true

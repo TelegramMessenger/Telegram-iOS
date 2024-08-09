@@ -182,6 +182,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
     private var absoluteLocation: (CGRect, CGSize)?
     
     private var currentColor: ItemBackgroundColor?
+    private var currentIsPaid: Bool?
     private var layoutParams: (ItemListInviteLinkItem, ListViewItemLayoutParams, ItemListNeighbors, Bool, Bool)?
     
     public var tag: ItemListItemTag?
@@ -548,8 +549,12 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
-                        
-                        if let _ = item.invite?.pricing {
+                    }
+                    
+                    let isPaid = item.invite?.pricing != nil
+                    if updatedTheme != nil || strongSelf.currentIsPaid != isPaid {
+                        strongSelf.currentIsPaid = isPaid
+                        if isPaid {
                             strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/SubscriptionLink"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                         } else {
                             strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/InviteLink"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor)

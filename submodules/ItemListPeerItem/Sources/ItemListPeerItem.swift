@@ -1358,6 +1358,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     let _ = statusApply()
                     if case let .account(context) = item.context {
                         let _ = labelApply(TextNodeWithEntities.Arguments(context: context, cache: item.context.animationCache, renderer: item.context.animationRenderer, placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, attemptSynchronous: false))
+                    } else {
+                        let _ = labelApply(nil)
                     }
                     strongSelf.labelNode.textNode.isHidden = labelAttributedString == nil
                     

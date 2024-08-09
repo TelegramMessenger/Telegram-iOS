@@ -857,18 +857,20 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
 
 private struct StarsSubscriptionConfiguration {
     static var defaultValue: StarsSubscriptionConfiguration {
-        return StarsSubscriptionConfiguration(maxFee: 2500)
+        return StarsSubscriptionConfiguration(maxFee: 2500, usdSellRate: 2000)
     }
     
     let maxFee: Int64?
+    let usdSellRate: Int64?
     
-    fileprivate init(maxFee: Int64?) {
+    fileprivate init(maxFee: Int64?, usdSellRate: Int64?) {
         self.maxFee = maxFee
+        self.usdSellRate = usdSellRate
     }
     
     public static func with(appConfiguration: AppConfiguration) -> StarsSubscriptionConfiguration {
-        if let data = appConfiguration.data, let value = data["stars_subscription_amount_max"] as? Double {
-            return StarsSubscriptionConfiguration(maxFee: Int64(value))
+        if let data = appConfiguration.data, let value = data["stars_subscription_amount_max"] as? Double, let usdRate = data["stars_usd_sell_rate_x1000"] as? Double {
+            return StarsSubscriptionConfiguration(maxFee: Int64(value), usdSellRate: Int64(usdRate))
         } else {
             return .defaultValue
         }
