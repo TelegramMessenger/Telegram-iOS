@@ -1086,9 +1086,22 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
 
         return account.network.request(Api.functions.payments.sendStarsForm(flags: flags, formId: formId, invoice: invoice))
         |> map { result -> SendBotPaymentResult in
+            
+            
+            
             switch result {
                 case let .paymentResult(updates):
                     account.stateManager.addUpdates(updates)
+                
+                    switch source {
+                    case .starsChatSubscription:
+                        let chats = updates.chats.compactMap { parseTelegramGroupOrChannel(chat: $0) }
+                        if let first = chats.first {
+                            return .done(receiptMessageId: nil, subscriptionPeerId: first.id)
+                        }
+                    default:
+                        break
+                    }
                     var receiptMessageId: MessageId?
                     for apiMessage in updates.messages {
                         if let message = StoreMessage(apiMessage: apiMessage, accountPeerId: account.peerId, peerIsForum: false) {
@@ -1130,7 +1143,7 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                             }
                         }
                     }
-                    return .done(receiptMessageId: receiptMessageId)
+                return .done(receiptMessageId: receiptMessageId, subscriptionPeerId: nil)
                 case let .paymentVerificationNeeded(url):
                     return .externalVerificationRequired(url: url)
             }

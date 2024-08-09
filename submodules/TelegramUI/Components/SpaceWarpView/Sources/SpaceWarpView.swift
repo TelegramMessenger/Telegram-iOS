@@ -124,7 +124,7 @@ private func rippleOffset(
     }
     
     if distance <= 60.0 {
-        rippleAmount = 0.4 * rippleAmount
+        rippleAmount = 0.3 * rippleAmount
     }
 
     // A vector of length `amplitude` that points away from position.

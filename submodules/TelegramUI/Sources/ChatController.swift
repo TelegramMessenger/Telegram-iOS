@@ -613,6 +613,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var messageComposeController: MFMessageComposeViewController?
     
+    weak var currentSendStarsUndoController: UndoOverlayController?
+    var currentSendStarsUndoMessageId: EngineMessage.Id?
+    var currentSendStarsUndoCount: Int = 0
+    
     public var alwaysShowSearchResultsAsList: Bool = false {
         didSet {
             self.presentationInterfaceState = self.presentationInterfaceState.updatedDisplayHistoryFilterAsList(self.alwaysShowSearchResultsAsList)
@@ -1677,24 +1681,40 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         })
                         
-                        let _ = sendStarsReactionsInteractively(account: strongSelf.context.account, messageId: message.id, count: 1).startStandalone()
-                        
-                        if !"".isEmpty {
-                            let _ = (strongSelf.context.engine.stickers.resolveInlineStickers(fileIds: [MessageReaction.starsReactionId])
-                                     |> deliverOnMainQueue).start(next: { [weak strongSelf, weak itemNode] files in
-                                guard let strongSelf, let file = files[MessageReaction.starsReactionId] else {
-                                    return
-                                }
-                                //TODO:localize
-                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .starsSent(context: strongSelf.context, file: file, amount: 1, title: "Star Sent", text: "Long tap on {star} to select custom quantity of stars."), elevatedLayout: false, action: { _ in
-                                    return false
-                                }), in: .current)
-                                
-                                if let itemNode = itemNode, let targetView = itemNode.targetReactionView(value: chosenReaction) {
-                                    strongSelf.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: strongSelf.chatDisplayNode.view))
-                                }
-                            })
+                        guard let starsContext = strongSelf.context.starsContext else {
+                            return
                         }
+                        let _ = (starsContext.state
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak strongSelf] state in
+                            guard let strongSelf, let balance = state?.balance else {
+                                return
+                            }
+                            
+                            if balance < 1 {
+                                let _ = (strongSelf.context.engine.payments.starsTopUpOptions()
+                                |> take(1)
+                                |> deliverOnMainQueue).startStandalone(next: { [weak strongSelf] options in
+                                    guard let strongSelf, let peerId = strongSelf.chatLocation.peerId else {
+                                        return
+                                    }
+                                    guard let starsContext = strongSelf.context.starsContext else {
+                                        return
+                                    }
+                                    
+                                    let purchaseScreen = strongSelf.context.sharedContext.makeStarsPurchaseScreen(context: strongSelf.context, starsContext: starsContext, options: options, purpose: .transfer(peerId: peerId, requiredStars: 1), completion: { result in
+                                        let _ = result
+                                        //TODO:release
+                                    })
+                                    strongSelf.push(purchaseScreen)
+                                })
+                                
+                                return
+                            }
+                            
+                            strongSelf.context.engine.messages.sendStarsReaction(id: message.id, count: 1)
+                            strongSelf.displayOrUpdateSendStarsUndo(messageId: message.id, count: 1)
+                        })
                     } else {
                         var removedReaction: MessageReaction.Reaction?
                         var messageAlreadyHasThisReaction = false

@@ -15,6 +15,7 @@ import MultiAnimationRenderer
 import EmojiTextAttachmentView
 import TextFormat
 import AppBundle
+import AnimatedTextComponent
 
 private let tagImage: UIImage? = {
     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ReactionTagBackground"), color: .white)?.stretchableImage(withLeftCapWidth: 8, topCapHeight: 15)
@@ -832,6 +833,12 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
     
     private var ignoreButtonTap: Bool = false
     
+    private var tapAnimationLink: SharedDisplayLinkDriver.Link?
+    private var tapAnimationValue: CGFloat = 0.0
+    private var previousTapAnimationTimestamp: Double = 0.0
+    private var previousTapTimestamp: Double = 0.0
+    private var tapCounterView: StarsReactionCounterView?
+    
     public var activateAfterCompletion: Bool = false {
         didSet {
             if self.activateAfterCompletion {
@@ -931,13 +938,101 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
             return
         }
         layout.spec.component.action(self, layout.spec.component.reaction.value, self.containerView)
+        
+        if case .stars = layout.spec.component.reaction.value {
+            self.addStarsTap()
+        }
+    }
+    
+    private func addStarsTap() {
+        let timestamp = CACurrentMediaTime()
+        
+        self.previousTapTimestamp = timestamp
+        
+        let deltaTime = timestamp - self.previousTapAnimationTimestamp
+        if deltaTime < 0.4 || self.tapCounterView != nil {
+            self.previousTapAnimationTimestamp = timestamp
+            
+            if let superview = self.superview {
+                for subview in superview.subviews {
+                    if subview !== self {
+                        subview.layer.zPosition = 0.0
+                    }
+                }
+            }
+            self.layer.zPosition = 1.0
+            
+            if let tapCounterView = self.tapCounterView {
+                tapCounterView.add()
+            } else {
+                let tapCounterView = StarsReactionCounterView(count: 2)
+                self.tapCounterView = tapCounterView
+                self.addSubview(tapCounterView)
+                tapCounterView.animateIn()
+                if let layout = self.layout {
+                    tapCounterView.frame = CGRect(origin: CGPoint(x: layout.size.width * 0.5, y: -70.0), size: CGSize())
+                }
+            }
+        }
+        self.tapAnimationValue = min(1.0, self.tapAnimationValue)
+        
+        if self.tapAnimationLink == nil {
+            self.previousTapAnimationTimestamp = timestamp
+            self.updateTapAnimation()
+            
+            self.tapAnimationLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.updateTapAnimation()
+            })
+        }
+    }
+    
+    private func updateTapAnimation() {
+        let timestamp = CACurrentMediaTime()
+        let deltaTime = min(timestamp - self.previousTapAnimationTimestamp, 1.0 / 60.0)
+        self.previousTapAnimationTimestamp = timestamp
+        
+        let decelerationRate: CGFloat = 0.98
+        let lastTapDeltaTime = max(0.0, timestamp - self.previousTapTimestamp)
+        let tapAnimationTargetValue: CGFloat
+        if self.tapCounterView != nil {
+            tapAnimationTargetValue = 1.0 * CGFloat(pow(Double(decelerationRate), 1200.0 * lastTapDeltaTime))
+        } else {
+            tapAnimationTargetValue = 0.0
+        }
+        
+        let advancementFraction = deltaTime * UIView.animationDurationFactor() * 120.0 / 60.0
+        self.tapAnimationValue = self.tapAnimationValue * (1.0 - advancementFraction) + tapAnimationTargetValue * advancementFraction
+        
+        if self.tapAnimationValue <= 0.001 && self.previousTapTimestamp + 2.0 < timestamp {
+            self.tapAnimationValue = 0.0
+            self.tapAnimationLink?.invalidate()
+            self.tapAnimationLink = nil
+            
+            if let tapCounterView = self.tapCounterView {
+                self.tapCounterView = nil
+                tapCounterView.alpha = 0.0
+                tapCounterView.animateOut(completion: { [weak tapCounterView] in
+                    tapCounterView?.removeFromSuperview()
+                })
+            }
+        }
+        
+        let tapAnimationFactor = max(0.0, min(1.0, self.tapAnimationValue / 0.3))
+        
+        let scaleValue: CGFloat = 1.0 + tapAnimationFactor * 0.5
+        self.buttonNode.layer.transform = CATransform3DMakeScale(scaleValue, scaleValue, 1.0)
     }
     
     fileprivate func apply(layout: Layout, animation: ListViewItemUpdateAnimation, arguments: ReactionButtonsAsyncLayoutContainer.Arguments) {
         self.containerView.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.containerView.contentView.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.containerView.contentRect = CGRect(origin: CGPoint(), size: layout.size)
-        animation.animator.updateFrame(layer: self.buttonNode.layer, frame: CGRect(origin: CGPoint(), size: layout.size), completion: nil)
+        let buttonFrame = CGRect(origin: CGPoint(), size: layout.size)
+        animation.animator.updatePosition(layer: self.buttonNode.layer, position: buttonFrame.center, completion: nil)
+        animation.animator.updateBounds(layer: self.buttonNode.layer, bounds: CGRect(origin: CGPoint(), size: buttonFrame.size), completion: nil)
         
         if case .stars = layout.spec.component.reaction.value {
             let starsEffectLayer: StarsButtonEffectLayer
@@ -1421,5 +1516,85 @@ public final class ReactionButtonsAsyncLayoutContainer {
                 return ApplyResult(items: items, removedNodes: removedNodes)
             }
         )
+    }
+}
+
+private final class StarsReactionCounterView: UIView {
+    private let portalSource: PortalSourceView
+    private let label = ComponentView<Empty>()
+    
+    private var count: Int
+    
+    init(count: Int) {
+        self.count = count
+        
+        let portalSource = PortalSourceView()
+        portalSource.needsGlobalPortal = true
+        self.portalSource = portalSource
+        
+        super.init(frame: CGRect())
+        
+        self.addSubview(portalSource)
+        
+        portalSource.frame = CGRect(origin: CGPoint(x: -200.0, y: -200.0), size: CGSize(width: 400.0, height: 400.0))
+        
+        self.update(transition: .immediate)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func animateIn() {
+        if let labelView = self.label.view {
+            labelView.layer.animateScale(from: 0.001, to: 1.0, duration: 0.15)
+            labelView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        }
+    }
+    
+    func animateOut(completion: @escaping () -> Void) {
+        if let labelView = self.label.view {
+            labelView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.15, removeOnCompletion: false)
+            labelView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { _ in
+                completion()
+            })
+        } else {
+            completion()
+        }
+    }
+    
+    func add() {
+        self.count += 1
+        self.update(transition: .easeInOut(duration: 0.15))
+    }
+    
+    func update(transition: ComponentTransition) {
+        var items: [AnimatedTextComponent.Item] = []
+        items.append(AnimatedTextComponent.Item(id: AnyHashable(0), content: .text("+")))
+        items.append(AnimatedTextComponent.Item(id: AnyHashable(1), content: .number(self.count, minDigits: 1)))
+        
+        let labelSize = self.label.update(
+            transition: transition,
+            component: AnyComponent(AnimatedTextComponent(
+                font: Font.with(size: 40.0, design: .round, weight: .bold),
+                color: .white,
+                items: items
+            )),
+            environment: {},
+            containerSize: CGSize(width: 200.0, height: 200.0)
+        )
+        let labelFrame = CGRect(origin: CGPoint(x: floor((self.portalSource.bounds.width - labelSize.width) * 0.5), y: floor((self.portalSource.bounds.height - labelSize.height) * 0.5)), size: labelSize)
+        
+        if let labelView = self.label.view {
+            if labelView.superview == nil {
+                self.portalSource.addSubview(labelView)
+                labelView.layer.shadowColor = UIColor.black.cgColor
+                labelView.layer.shadowOffset = CGSize(width: 0.0, height: 1.0)
+                labelView.layer.shadowOpacity = 0.45
+                labelView.layer.shadowRadius = 9.0
+            }
+            
+            transition.setFrame(view: labelView, frame: labelFrame)
+        }
     }
 }

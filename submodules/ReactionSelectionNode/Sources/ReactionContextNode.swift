@@ -3329,6 +3329,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         }
         
         let switchToInlineImmediately: Bool
+        var playAnimationInline = false
         if let itemNode {
             if itemNode.item.listAnimation.isVideoEmoji || itemNode.item.listAnimation.isVideoSticker || itemNode.item.listAnimation.isAnimatedSticker || itemNode.item.listAnimation.isStaticEmoji {
                 switch itemNode.item.reaction.rawValue {
@@ -3337,7 +3338,8 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                 case .custom:
                     switchToInlineImmediately = true
                 case .stars:
-                    switchToInlineImmediately = false
+                    switchToInlineImmediately = true
+                    playAnimationInline = true
                 }
             } else {
                 switchToInlineImmediately = false
@@ -3345,6 +3347,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         } else {
             switchToInlineImmediately = false
         }
+        let _ = playAnimationInline
         
         if let itemNode, !forceSmallEffectAnimation, !switchToInlineImmediately, !hideCenterAnimation {
             if let targetView = targetView as? ReactionIconView, !isLarge {
@@ -3382,6 +3385,8 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         var expandedSize: CGSize = selfTargetRect.size
         if isLarge {
             expandedSize = CGSize(width: 120.0, height: 120.0)
+        } else if case .stars = reaction.reaction.rawValue {
+            expandedSize = CGSize(width: 120.0, height: 120.0)
         }
         
         let expandedFrame = CGRect(origin: CGPoint(x: selfTargetRect.midX - expandedSize.width / 2.0, y: selfTargetRect.midY - expandedSize.height / 2.0), size: expandedSize)
@@ -3390,6 +3395,8 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         let incomingMessage: Bool = expandedFrame.midX < self.bounds.width / 2.0
         if isLarge && !forceSmallEffectAnimation {
             effectFrame = expandedFrame.insetBy(dx: -expandedFrame.width * 0.5, dy: -expandedFrame.height * 0.5).offsetBy(dx: incomingMessage ? (expandedFrame.width - 50.0) : (-expandedFrame.width + 50.0), dy: 0.0)
+        } else if case .stars = reaction.reaction.rawValue {
+            effectFrame = expandedFrame.insetBy(dx: -expandedFrame.width * 0.5, dy: -expandedFrame.height * 0.5)
         } else {
             effectFrame = expandedFrame.insetBy(dx: -expandedSize.width, dy: -expandedSize.height)
         }
@@ -3419,6 +3426,8 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         var additionalAnimationResource: MediaResource?
         if isLarge && !forceSmallEffectAnimation {
             additionalAnimationResource = reaction.largeApplicationAnimation?.resource
+        } else if case .stars = reaction.reaction.rawValue {
+            additionalAnimationResource = reaction.largeApplicationAnimation?.resource ?? reaction.applicationAnimation?.resource
         } else {
             additionalAnimationResource = reaction.applicationAnimation?.resource
         }
@@ -3949,7 +3958,8 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         let starSourceScale = sourceFrame.width / starSize.width
         let starDestinationScale = selfTargetRect.width / starSize.width
         
-        let keyframes = generateParabollicMotionKeyframes(from: selfSourceRect.center, to: expandedFrame.center, elevation: 40.0)
+        let elevation: CGFloat = min(selfSourceRect.center.y, expandedFrame.center.y) - selfSourceRect.center.y - 40.0
+        let keyframes = generateParabollicMotionKeyframes(from: selfSourceRect.center, to: expandedFrame.center, elevation: -elevation)
         let scaleKeyframes = generateScaleKeyframes(from: starSourceScale, center: 1.0, to: starDestinationScale)
         starView.layer.transform = CATransform3DMakeScale(starDestinationScale, starDestinationScale, 1.0)
         transition.animateScaleWithKeyframes(layer: starView.layer, keyframes: scaleKeyframes)

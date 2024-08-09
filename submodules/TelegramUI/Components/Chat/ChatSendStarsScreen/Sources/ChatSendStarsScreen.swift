@@ -56,7 +56,7 @@ private final class BalanceComponent: CombinedComponent {
     static var body: Body {
         let title = Child(MultilineTextComponent.self)
         let balance = Child(MultilineTextComponent.self)
-        let icon = Child(EmojiStatusComponent.self)
+        let icon = Child(BundleIconComponent.self)
         
         return { context in
             var size = CGSize(width: 0.0, height: 0.0)
@@ -89,19 +89,9 @@ private final class BalanceComponent: CombinedComponent {
             
             let iconSize = CGSize(width: 18.0, height: 18.0)
             let icon = icon.update(
-                component: EmojiStatusComponent(
-                    context: context.component.context,
-                    animationCache: context.component.context.animationCache,
-                    animationRenderer: context.component.context.animationRenderer,
-                    content: .animation(
-                        content: .customEmoji(fileId: MessageReaction.starsReactionId), //TODO:release
-                        size: iconSize,
-                        placeholderColor: .gray,
-                        themeColor: nil,
-                        loopMode: .count(0)
-                    ),
-                    isVisibleForAnimations: true,
-                    action: nil
+                component: BundleIconComponent(
+                    name: "Premium/Stars/StarLarge",
+                    tintColor: nil
                 ),
                 availableSize: iconSize,
                 transition: context.transition
@@ -127,7 +117,7 @@ private final class BalanceComponent: CombinedComponent {
             )
             context.add(
                 icon.position(
-                    icon.size.centered(in: CGRect(origin: CGPoint(x: 0.0, y: title.size.height + titleSpacing), size: icon.size)).center
+                    icon.size.centered(in: CGRect(origin: CGPoint(x: -1.0, y: title.size.height + titleSpacing), size: icon.size)).center
                 )
             )
 
@@ -713,16 +703,10 @@ private final class SliderBackgroundComponent: Component {
                 topForegroundTextView.bounds = CGRect(origin: CGPoint(), size: topTextFrame.size)
                 topBackgroundTextView.bounds = CGRect(origin: CGPoint(), size: topTextFrame.size)
                 
-                topForegroundTextView.isHidden = component.topCutoff == nil || topTextFrame.maxX >= availableSize.width - 4.0
-                topBackgroundTextView.isHidden = component.topCutoff == nil || topTextFrame.maxX >= availableSize.width - 4.0
-            }
-            
-            if component.topCutoff == nil {
-                self.topForegroundLine.isHidden = true
-                self.topBackgroundLine.isHidden = true
-            } else {
-                self.topForegroundLine.isHidden = false
-                self.topBackgroundLine.isHidden = false
+                topForegroundTextView.isHidden = component.topCutoff == nil || topTextFrame.minX <= 10.0 || topTextFrame.maxX >= availableSize.width - 4.0
+                topBackgroundTextView.isHidden = topForegroundTextView.isHidden
+                self.topBackgroundLine.isHidden = topForegroundTextView.isHidden
+                self.topForegroundLine.isHidden = topForegroundTextView.isHidden
             }
             
             return availableSize
@@ -743,20 +727,26 @@ private final class ChatSendStarsScreenComponent: Component {
     
     let context: AccountContext
     let peer: EnginePeer
+    let maxAmount: Int
     let balance: Int64?
+    let currentSentAmount: Int?
     let topPeers: [ChatSendStarsScreen.TopPeer]
     let completion: (Int64, Bool, ChatSendStarsScreen.TransitionOut) -> Void
     
     init(
         context: AccountContext,
         peer: EnginePeer,
+        maxAmount: Int,
         balance: Int64?,
+        currentSentAmount: Int?,
         topPeers: [ChatSendStarsScreen.TopPeer],
         completion: @escaping (Int64, Bool, ChatSendStarsScreen.TransitionOut) -> Void
     ) {
         self.context = context
         self.peer = peer
+        self.maxAmount = maxAmount
         self.balance = balance
+        self.currentSentAmount = currentSentAmount
         self.topPeers = topPeers
         self.completion = completion
     }
@@ -768,7 +758,13 @@ private final class ChatSendStarsScreenComponent: Component {
         if lhs.peer != rhs.peer {
             return false
         }
+        if lhs.maxAmount != rhs.maxAmount {
+            return false
+        }
         if lhs.balance != rhs.balance {
+            return false
+        }
+        if lhs.currentSentAmount != rhs.currentSentAmount {
             return false
         }
         if lhs.topPeers != rhs.topPeers {
@@ -1005,7 +1001,7 @@ private final class ChatSendStarsScreenComponent: Component {
             let sideInset: CGFloat = 16.0
             
             if self.component == nil {
-                self.amount = 1
+                self.amount = 50
             }
             
             self.component = component
@@ -1034,21 +1030,21 @@ private final class ChatSendStarsScreenComponent: Component {
             let sliderSize = self.slider.update(
                 transition: transition,
                 component: AnyComponent(SliderComponent(
-                    valueCount: 1000,
-                    value: 0,
+                    valueCount: component.maxAmount,
+                    value: Int(self.amount),
                     markPositions: false,
                     trackBackgroundColor: .clear,
                     trackForegroundColor: .clear,
                     knobSize: 26.0,
                     knobColor: .white,
                     valueUpdated: { [weak self] value in
-                        guard let self else {
+                        guard let self, let component = self.component else {
                             return
                         }
                         self.amount = 1 + Int64(value)
                         self.state?.updated(transition: .immediate)
                         
-                        let sliderValue = Float(value) / 1000.0
+                        let sliderValue = Float(value) / Float(component.maxAmount)
                         let currentTimestamp = CACurrentMediaTime()
                         
                         if let previousTimestamp {
@@ -1102,13 +1098,13 @@ private final class ChatSendStarsScreenComponent: Component {
             let sliderFrame = CGRect(origin: CGPoint(x: sliderInset, y: contentHeight + 127.0), size: sliderSize)
             let sliderBackgroundFrame = CGRect(origin: CGPoint(x: sliderFrame.minX - 8.0, y: sliderFrame.minY + 7.0), size: CGSize(width: sliderFrame.width + 16.0, height: sliderFrame.height - 14.0))
             
-            let progressFraction: CGFloat = CGFloat(self.amount) / CGFloat(1000 - 1)
+            let progressFraction: CGFloat = CGFloat(self.amount) / CGFloat(component.maxAmount - 1)
             
             let topCount = component.topPeers.max(by: { $0.count < $1.count })?.count
             
             var topCutoffFraction: CGFloat?
             if let topCount {
-                let topCutoffFractionValue = CGFloat(topCount) / CGFloat(1000 - 1)
+                let topCutoffFractionValue = CGFloat(topCount) / CGFloat(component.maxAmount - 1)
                 topCutoffFraction = topCutoffFractionValue
                 
                 let isPastCutoff = progressFraction >= topCutoffFractionValue
@@ -1271,8 +1267,13 @@ private final class ChatSendStarsScreenComponent: Component {
                 
             contentHeight += 56.0
             contentHeight += 8.0
-                
-            let text = "Choose how many stars you want to send to **\(component.peer.debugDisplayTitle)** to support this post."
+            
+            let text: String
+            if let currentSentAmount = component.currentSentAmount {
+                text = "You sent **\(currentSentAmount)** stars to support this post."
+            } else {
+                text = "Choose how many stars you want to send to **\(component.peer.debugDisplayTitle)** to support this post."
+            }
                 
             let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
             let bold = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
@@ -1469,6 +1470,32 @@ private final class ChatSendStarsScreenComponent: Component {
                         guard let self, let component = self.component else {
                             return
                         }
+                        guard let balance = component.balance else {
+                            return
+                        }
+                        
+                        if balance < self.amount {
+                            let _ = (component.context.engine.payments.starsTopUpOptions()
+                            |> take(1)
+                            |> deliverOnMainQueue).startStandalone(next: { [weak self] options in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                guard let starsContext = component.context.starsContext else {
+                                    return
+                                }
+                                
+                                let purchaseScreen = component.context.sharedContext.makeStarsPurchaseScreen(context: component.context, starsContext: starsContext, options: options, purpose: .transfer(peerId: component.peer.id, requiredStars: self.amount), completion: { result in
+                                    let _ = result
+                                    //TODO:release
+                                })
+                                self.environment?.controller()?.push(purchaseScreen)
+                                self.environment?.controller()?.dismiss()
+                            })
+                            
+                            return
+                        }
+                        
                         guard let badgeView = self.badge.view as? BadgeComponent.View else {
                             return
                         }
@@ -1478,6 +1505,7 @@ private final class ChatSendStarsScreenComponent: Component {
                         } else {
                             isBecomingTop = true
                         }
+                        
                         component.completion(
                             self.amount,
                             isBecomingTop,
@@ -1579,15 +1607,18 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
     public final class InitialData {
         fileprivate let peer: EnginePeer
         fileprivate let balance: Int64?
+        fileprivate let currentSentAmount: Int?
         fileprivate let topPeers: [ChatSendStarsScreen.TopPeer]
         
         fileprivate init(
             peer: EnginePeer,
             balance: Int64?,
+            currentSentAmount: Int?,
             topPeers: [ChatSendStarsScreen.TopPeer]
         ) {
             self.peer = peer
             self.balance = balance
+            self.currentSentAmount = currentSentAmount
             self.topPeers = topPeers
         }
     }
@@ -1629,10 +1660,17 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
     public init(context: AccountContext, initialData: InitialData, completion: @escaping (Int64, Bool, TransitionOut) -> Void) {
         self.context = context
         
+        var maxAmount = 2500
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["stars_paid_reaction_amount_max"] as? Double {
+            maxAmount = Int(value)
+        }
+        
         super.init(context: context, component: ChatSendStarsScreenComponent(
             context: context,
             peer: initialData.peer,
+            maxAmount: maxAmount,
             balance: initialData.balance,
+            currentSentAmount: initialData.currentSentAmount,
             topPeers: initialData.topPeers,
             completion: completion
         ), navigationBarAppearance: .none)
@@ -1672,6 +1710,16 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             balance = .single(nil)
         }
         
+        var currentSentAmount: Int?
+        if let myPeer = topPeers.first(where: { $0.isMy }) {
+            currentSentAmount = Int(myPeer.count)
+        }
+        
+        var topPeers = topPeers.sorted(by: { $0.count < $1.count })
+        if topPeers.count > 3 {
+            topPeers = Array(topPeers.prefix(3))
+        }
+        
         return combineLatest(
             context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
@@ -1688,6 +1736,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             return InitialData(
                 peer: peer,
                 balance: balance,
+                currentSentAmount: currentSentAmount,
                 topPeers: topPeers.compactMap { topPeer -> ChatSendStarsScreen.TopPeer? in
                     guard let topPeerValue = topPeerMap[topPeer.peerId] else {
                         return nil

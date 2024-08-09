@@ -198,6 +198,28 @@ public func sendStarsReactionsInteractively(account: Account, messageId: Message
     |> ignoreValues
 }
 
+func cancelPendingSendStarsReactionInteractively(account: Account, messageId: MessageId) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        transaction.setPendingMessageAction(type: .sendStarsReaction, id: messageId, action: nil)
+        transaction.updateMessage(messageId, update: { currentMessage in
+            var storeForwardInfo: StoreMessageForwardInfo?
+            if let forwardInfo = currentMessage.forwardInfo {
+                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+            }
+            var attributes = currentMessage.attributes
+            loop: for j in 0 ..< attributes.count {
+                if let _ = attributes[j] as? PendingStarsReactionsMessageAttribute {
+                    attributes.remove(at: j)
+                    break loop
+                }
+            }
+            
+            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+        })
+    }
+    |> ignoreValues
+}
+
 private enum RequestUpdateMessageReactionError {
     case generic
 }
@@ -356,7 +378,7 @@ private func requestSendStarsReaction(postbox: Postbox, network: Network, stateM
 }
 
 private final class ManagedApplyPendingMessageReactionsActionsHelper {
-    var operationDisposables: [MessageId: Disposable] = [:]
+    var operationDisposables: [MessageId: (PendingMessageActionData, Disposable)] = [:]
     
     func update(entries: [PendingMessageActionsEntry]) -> (disposeOperations: [Disposable], beginOperations: [(PendingMessageActionsEntry, MetaDisposable)]) {
         var disposeOperations: [Disposable] = []
@@ -365,23 +387,26 @@ private final class ManagedApplyPendingMessageReactionsActionsHelper {
         var hasRunningOperationForPeerId = Set<PeerId>()
         var validIds = Set<MessageId>()
         for entry in entries {
+            if let current = self.operationDisposables[entry.id], !current.0.isEqual(to: entry.action) {
+                self.operationDisposables.removeValue(forKey: entry.id)
+                disposeOperations.append(current.1)
+            }
+            
             if !hasRunningOperationForPeerId.contains(entry.id.peerId) {
                 hasRunningOperationForPeerId.insert(entry.id.peerId)
                 validIds.insert(entry.id)
                 
-                if self.operationDisposables[entry.id] == nil {
-                    let disposable = MetaDisposable()
-                    beginOperations.append((entry, disposable))
-                    self.operationDisposables[entry.id] = disposable
-                }
+                let disposable = MetaDisposable()
+                beginOperations.append((entry, disposable))
+                self.operationDisposables[entry.id] = (entry.action, disposable)
             }
         }
         
         var removeMergedIds: [MessageId] = []
-        for (id, disposable) in self.operationDisposables {
+        for (id, actionAndDisposable) in self.operationDisposables {
             if !validIds.contains(id) {
                 removeMergedIds.append(id)
-                disposeOperations.append(disposable)
+                disposeOperations.append(actionAndDisposable.1)
             }
         }
         
@@ -393,7 +418,7 @@ private final class ManagedApplyPendingMessageReactionsActionsHelper {
     }
     
     func reset() -> [Disposable] {
-        let disposables = Array(self.operationDisposables.values)
+        let disposables = Array(self.operationDisposables.values.map(\.1))
         self.operationDisposables.removeAll()
         return disposables
     }
