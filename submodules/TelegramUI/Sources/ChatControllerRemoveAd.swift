@@ -9,7 +9,7 @@ import TelegramPresentationData
 import PresentationDataUtils
 import ChatMessageItemView
 
-extension ChatControllerImpl {
+public extension ChatControllerImpl {
     func removeAd(opaqueId: Data) {
         var foundItemNode: ChatMessageItemView?
         self.chatDisplayNode.historyNode.forEachItemNode { itemNode in

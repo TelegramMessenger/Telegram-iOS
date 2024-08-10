@@ -2805,6 +2805,7 @@ final class StorageUsageScreenComponent: Component {
                     }
                     let _ = self
                 }, openBotCommand: { _ in
+                }, openAd: { _ in
                 }, addContact: { _ in
                 }, storeMediaPlaybackState: { [weak self] messageId, timestamp, playbackRate in
                     guard let self else {

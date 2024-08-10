@@ -594,7 +594,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
             }, iconSource: nil, action: { _, f in
                 f(.dismissWithoutContent)
-                controllerInteraction.navigationController()?.pushViewController(AdInfoScreen(context: context))
+                controllerInteraction.navigationController()?.pushViewController(AdInfoScreen(context: context, forceDark: true))
             })))
             
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })

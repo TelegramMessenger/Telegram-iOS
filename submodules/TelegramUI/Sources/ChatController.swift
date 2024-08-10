@@ -294,6 +294,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     let temporaryHiddenGalleryMediaDisposable = MetaDisposable()
+    
+    let galleryPresentationContext = PresentationContext()
 
     let chatBackgroundNode: WallpaperBackgroundNode
     public private(set) var controllerInteraction: ChatControllerInteraction?
@@ -1274,7 +1276,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: openChatLocation, chatFilterTag: chatFilterTag, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, mediaIndex: params.mediaIndex, standalone: standalone, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a in
-                self?.present(c, in: .window(.root), with: a, blockInteraction: true)
+                if c is GalleryController {
+                    c.presentationArguments = a
+                    self?.galleryPresentationContext.present(c, on: PresentationSurfaceLevel(rawValue: 0), blockInteraction: true, completion: {})
+                } else {
+                    self?.present(c, in: .window(.root), with: a, blockInteraction: true)
+                }
             }, transitionNode: { messageId, media, adjustRect in
                 var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                 if let strongSelf = self {
@@ -1368,6 +1375,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }, openBotCommand: { [weak self] command in
                     if let strongSelf = self {
                         strongSelf.controllerInteraction?.sendBotCommand(nil, command)
+                    }
+                }, openAd: { [weak self] messageId in
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction?.activateAdAction(messageId, nil)
                     }
                 }, addContact: { [weak self] phoneNumber in
                     if let strongSelf = self {
@@ -3857,6 +3868,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId), let adAttribute = message.adAttribute else {
                 return
             }
+            
+            var progress = progress
+            if progress == nil {
+                self.chatDisplayNode.historyNode.forEachVisibleMessageItemNode { itemView in
+                    if itemView.item?.message.id == messageId {
+                        progress = itemView.makeProgress()
+                    }
+                }
+            }
+            
             self.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId)
             self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: adAttribute.url, concealed: false, external: true, progress: progress))
         }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId, maxQuantity in
@@ -7178,6 +7199,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     override public func loadDisplayNode() {
         self.loadDisplayNodeImpl()
+        self.galleryPresentationContext.view = self.view
     }
     
     override public func viewWillAppear(_ animated: Bool) {

@@ -29,6 +29,7 @@ import Pasteboard
 import Speak
 import TranslateUI
 import TelegramNotices
+import SolidRoundedButtonNode
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: .white)
@@ -145,6 +146,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
     private let textNode: ImmediateTextNodeWithEntities
     private var spoilerTextNode: ImmediateTextNodeWithEntities?
     private var dustNode: InvisibleInkDustNode?
+    private var buttonNode: SolidRoundedButtonNode?
     
     private var textSelectionNode: TextSelectionNode?
     
@@ -164,7 +166,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
     private var currentMessageText: NSAttributedString?
     private var currentAuthorNameText: String?
     private var currentDateText: String?
-        
+    
     private var currentMessage: Message?
     private var currentWebPageAndMedia: (TelegramMediaWebpage, Media)?
     private let messageContextDisposable = MetaDisposable()
@@ -193,6 +195,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
     var performAction: ((GalleryControllerInteractionTapAction) -> Void)?
     var openActionOptions: ((GalleryControllerInteractionTapAction, Message) -> Void)?
     
+    private var isAd: Bool {
+        if self.currentMessage?.adAttribute != nil {
+            return true
+        }
+        return false
+    }
+    
     var content: ChatItemGalleryFooterContent = .info {
         didSet {
             if self.content != oldValue {
@@ -208,8 +217,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                         self.currentIsPaused = true
                         self.authorNameNode.isHidden = true
                         self.dateNode.isHidden = true
-                        self.hasSeekControls = seekable
-                        if status == .Local {
+                        self.hasSeekControls = seekable && !self.isAd
+                    
+                        if status == .Local && !self.isAd {
                             self.playbackControlButton.isHidden = false
                             self.playPauseIconNode.enqueueState(.play, animated: true)
                         } else {
@@ -236,16 +246,20 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                         self.currentIsPaused = paused
                         self.authorNameNode.isHidden = true
                         self.dateNode.isHidden = true
-                        self.hasSeekControls = seekable
-                        self.playbackControlButton.isHidden = false
                         
-                        let icon: PlayPauseIconNodeState
-                        if let wasPlaying = self.wasPlaying {
-                            icon = wasPlaying ? .pause : .play
+                        if !self.isAd {
+                            self.playbackControlButton.isHidden = false
+                            let icon: PlayPauseIconNodeState
+                            if let wasPlaying = self.wasPlaying {
+                                icon = wasPlaying ? .pause : .play
+                            } else {
+                                icon = paused ? .play : .pause
+                            }
+                            self.playPauseIconNode.enqueueState(icon, animated: true)
+                            self.hasSeekControls = seekable
                         } else {
-                            icon = paused ? .play : .pause
+                            self.hasSeekControls = false
                         }
-                        self.playPauseIconNode.enqueueState(icon, animated: true)
                         self.statusButtonNode.isHidden = true
                         self.statusNode.isHidden = true
                 }
@@ -829,15 +843,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         if Namespaces.Message.allNonRegular.contains(message.id.namespace) || message.timestamp == 0 {
             displayInfo = false
         }
-        if let _ = message.adAttribute {
-            displayInfo = false
-        }
-        
+        var canFullscreen = false
         var canDelete: Bool
         var canShare = !message.containsSecretMedia && !Namespaces.Message.allNonRegular.contains(message.id.namespace) && message.adAttribute == nil
-
-        var canFullscreen = false
-        
+                
         var canEdit = false
         var isImage = false
         var isVideo = false
@@ -922,6 +931,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         
         if message.containsSecretMedia {
             canDelete = false
+        }
+        
+        if let _ = message.adAttribute {
+            displayInfo = false
+            canFullscreen = false
         }
         
         var authorNameText: String?
@@ -1043,6 +1057,22 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
 
             self.actionButton.isHidden = !canShare
             self.editButton.isHidden = !canEdit
+            
+            if let adAttribute = message.adAttribute {
+                if self.buttonNode == nil {
+                    let buttonNode = SolidRoundedButtonNode(title: adAttribute.buttonText, theme: SolidRoundedButtonTheme(backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.15), foregroundColor: UIColor(rgb: 0xffffff)), height: 50.0, cornerRadius: 11.0)
+                    buttonNode.pressed = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.performAction?(.ad(message.id))
+                    }
+                    self.contentNode.addSubnode(buttonNode)
+                    self.buttonNode = buttonNode
+                }
+            } else if let buttonNode = self.buttonNode {
+                buttonNode.removeFromSupernode()
+            }
             
             self.requestLayout?(.immediate)
         }
@@ -1192,6 +1222,17 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                     self.scrollWrapperNode.layer.mask?.frame = self.scrollWrapperNode.bounds
                     self.scrollWrapperNode.layer.mask?.removeAllAnimations()
                 }
+                
+                if let buttonNode = self.buttonNode {
+                    let buttonHeight = buttonNode.updateLayout(width: constrainSize.width, transition: transition)
+                    transition.updateFrame(node: buttonNode, frame: CGRect(origin: CGPoint(x: sideInset, y: scrollWrapperNodeFrame.maxY + 8.0), size: CGSize(width: constrainSize.width, height: buttonHeight)))
+                    
+                    if let _ = self.scrubberView {
+                        panelHeight += 68.0
+                    } else {
+                        panelHeight += 22.0
+                    }
+                }
             }
             textFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset + textOffset), size: textSize)
             
@@ -1225,6 +1266,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                 if contentInset > 0.0 {
                     scrubberY -= contentInset
                 }
+            }
+            
+            if let _ = self.buttonNode {
+                panelHeight -= 44.0
             }
             
             let scrubberFrame = CGRect(origin: CGPoint(x: leftInset, y: scrubberY), size: CGSize(width: width - leftInset - rightInset, height: 34.0))
@@ -1325,6 +1370,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         self.forwardButton.alpha = self.hasSeekControls ? 1.0 : 0.0
         self.statusNode.alpha = 1.0
         self.playbackControlButton.alpha = 1.0
+        self.buttonNode?.alpha = 1.0
         self.scrollWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
     }
     
@@ -1349,6 +1395,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         self.forwardButton.alpha = 0.0
         self.statusNode.alpha = 0.0
         self.playbackControlButton.alpha = 0.0
+        self.buttonNode?.alpha = 0.0
         self.scrollWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { _ in
             completion()
         })

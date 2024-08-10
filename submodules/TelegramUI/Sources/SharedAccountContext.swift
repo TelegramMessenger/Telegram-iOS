@@ -2156,7 +2156,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
             return controller
         default:
-            return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
+            return PremiumDemoScreen(context: context, subject: mappedSubject, forceDark: forceDark, action: action)
         }
     }
     

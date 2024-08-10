@@ -22,6 +22,9 @@ import UndoUI
 import ContextUI
 import SaveToCameraRoll
 import Pasteboard
+import AdUI
+import AdsInfoScreen
+import AdsReportScreen
 
 enum ChatMediaGalleryThumbnail: Equatable {
     case image(ImageMediaReference)
@@ -545,40 +548,38 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         if adAttribute.canReport {
             actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_AboutAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
-            }, iconSource: nil, action: { _, f in
+            }, iconSource: nil, action: { [weak self] _, f in
                 f(.dismissWithoutContent)
-                
-//                controllerInteraction.navigationController()?.pushViewController(AdsInfoScreen(context: context))
+                if let navigationController = self?.baseNavigationController() as? NavigationController {
+                    navigationController.pushViewController(AdsInfoScreen(context: context))
+                }
             })))
             
             actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_ReportAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
-            }, iconSource: nil, action: { _, f in
+            }, iconSource: nil, action: { [weak self] _, f in
                 f(.default)
                 
                 let _ = (context.engine.messages.reportAdMessage(peerId: message.id.peerId, opaqueId: adAttribute.opaqueId, option: nil)
-                |> deliverOnMainQueue).start(next: { result in
+                |> deliverOnMainQueue).start(next: { [weak self] result in
                     if case let .options(title, options) = result {
-                        let _ = title
-                        let _ = options
-//                        controllerInteraction.navigationController()?.pushViewController(
-//                            AdsReportScreen(
-//                                context: context,
-//                                peerId: message.id.peerId,
-//                                opaqueId: adAttribute.opaqueId,
-//                                title: title,
-//                                options: options,
-//                                completed: { [weak interfaceInteraction] in
-//                                    guard let interfaceInteraction else {
-//                                        return
-//                                    }
-//                                    guard let chatController = interfaceInteraction.chatController() as? ChatControllerImpl else {
-//                                        return
-//                                    }
-//                                    chatController.removeAd(opaqueId: adAttribute.opaqueId)
-//                                }
-//                            )
-//                        )
+                        if let navigationController = self?.baseNavigationController() as? NavigationController {
+                            navigationController.pushViewController(
+                                AdsReportScreen(
+                                    context: context,
+                                    peerId: message.id.peerId,
+                                    opaqueId: adAttribute.opaqueId,
+                                    title: title,
+                                    options: options,
+                                    forceDark: true,
+                                    completed: {
+                                        if let navigationController = self?.baseNavigationController() as? NavigationController, let chatController = navigationController.viewControllers.last as? ChatController {
+                                            chatController.removeAd(opaqueId: adAttribute.opaqueId)
+                                        }
+                                    }
+                                )
+                            )
+                        }
                     }
                 })
             })))
@@ -587,40 +588,53 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                            
             actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_RemoveAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.primaryTextColor)
-            }, iconSource: nil, action: { c, _ in
+            }, iconSource: nil, action: { [weak self] c, _ in
                 c?.dismiss(completion: {
-//                    controllerInteraction.openNoAdsDemo()
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: true, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: true, dismissed: nil)
+                        replaceImpl?(controller)
+                    }, dismissed: nil)
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    if let navigationController = self?.baseNavigationController() as? NavigationController {
+                        navigationController.pushViewController(controller)
+                    }
                 })
             })))
         } else {
             actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
-            }, iconSource: nil, action: { _, f in
+            }, iconSource: nil, action: { [weak self] _, f in
                 f(.dismissWithoutContent)
-//                controllerInteraction.navigationController()?.pushViewController(AdInfoScreen(context: context))
+                if let navigationController = self?.baseNavigationController() as? NavigationController {
+                    navigationController.pushViewController(AdInfoScreen(context: context, forceDark: true))
+                }
             })))
             
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
             if !context.isPremium && !premiumConfiguration.isPremiumDisabled {
                 actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Hide, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.primaryTextColor)
-                }, iconSource: nil, action: { c, _ in
+                }, iconSource: nil, action: { [weak self] c, _ in
                     c?.dismiss(completion: {
                         var replaceImpl: ((ViewController) -> Void)?
-                        let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: false, action: {
-                            let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
+                        let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: true, action: {
+                            let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: true, dismissed: nil)
                             replaceImpl?(controller)
                         }, dismissed: nil)
                         replaceImpl = { [weak controller] c in
                             controller?.replace(with: c)
                         }
-//                        controllerInteraction.navigationController()?.pushViewController(controller)
+                        if let navigationController = self?.baseNavigationController() as? NavigationController {
+                            navigationController.pushViewController(controller)
+                        }
                     })
                 })))
             }
             
             if !message.text.isEmpty {
-                
                 actions.append(.separator)
                 actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuCopy, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)

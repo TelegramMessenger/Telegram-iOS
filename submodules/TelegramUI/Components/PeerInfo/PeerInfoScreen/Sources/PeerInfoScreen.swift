@@ -5113,6 +5113,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 strongSelf.openHashtag(hashtag, peerName: peerName)
             }
         }, openBotCommand: { _ in
+        }, openAd: { _ in
         }, addContact: { [weak self] phoneNumber in
             if let strongSelf = self {
                 strongSelf.context.sharedContext.openAddContact(context: strongSelf.context, firstName: "", lastName: "", phoneNumber: phoneNumber, label: defaultContactLabel, present: { [weak self] controller, arguments in

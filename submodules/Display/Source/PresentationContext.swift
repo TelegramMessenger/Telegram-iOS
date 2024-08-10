@@ -18,7 +18,7 @@ public enum PresentationContextType {
 
 public final class PresentationContext {
     private var _view: UIView?
-    var view: UIView? {
+    public var view: UIView? {
         get {
             return self._view
         } set(value) {
@@ -121,6 +121,9 @@ public final class PresentationContext {
     
     private func layoutForController(containerLayout: ContainerViewLayout, controller: ContainableController) -> (ContainerViewLayout, CGRect) {
         return (containerLayout, CGRect(origin: CGPoint(), size: containerLayout.size))
+    }
+    
+    public init() {
     }
     
     public func present(_ controller: ContainableController, on level: PresentationSurfaceLevel, blockInteraction: Bool = false, completion: @escaping () -> Void) {
