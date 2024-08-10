@@ -52,7 +52,8 @@ public final class PresentationContext {
         return self.view != nil && self.layout != nil
     }
     
-    private(set) var controllers: [(ContainableController, PresentationSurfaceLevel)] = []
+    public private(set) var controllers: [(ContainableController, PresentationSurfaceLevel)] = []
+    public var controllersUpdated: ([ContainableController]) -> Void = { _ in }
     
     private var presentationDisposables = DisposableSet()
     

@@ -6803,23 +6803,31 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    func updateStatusBarPresentation() {
+        if !self.galleryPresentationContext.controllers.isEmpty {
+            self.statusBar.statusBarStyle = .White
+        } else {
+            switch self.presentationInterfaceState.mode {
+            case let .standard(standardMode):
+                switch standardMode {
+                case .embedded:
+                    self.statusBar.statusBarStyle = .Ignore
+                default:
+                    self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+                    self.deferScreenEdgeGestures = []
+                }
+            case .overlay:
+                self.statusBar.statusBarStyle = .Hide
+                self.deferScreenEdgeGestures = [.top]
+            case .inline:
+                self.statusBar.statusBarStyle = .Ignore
+            }
+        }
+    }
+    
     func themeAndStringsUpdated() {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
-        switch self.presentationInterfaceState.mode {
-        case let .standard(standardMode):
-            switch standardMode {
-            case .embedded:
-                self.statusBar.statusBarStyle = .Ignore
-            default:
-                self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-                self.deferScreenEdgeGestures = []
-            }
-        case .overlay:
-            self.statusBar.statusBarStyle = .Hide
-            self.deferScreenEdgeGestures = [.top]
-        case .inline:
-            self.statusBar.statusBarStyle = .Ignore
-        }
+        self.updateStatusBarPresentation()
         self.updateNavigationBarPresentation()
         self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
             var state = state
@@ -7200,6 +7208,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     override public func loadDisplayNode() {
         self.loadDisplayNodeImpl()
         self.galleryPresentationContext.view = self.view
+        self.galleryPresentationContext.controllersUpdated = { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.updateStatusBarPresentation()
+        }
     }
     
     override public func viewWillAppear(_ animated: Bool) {
