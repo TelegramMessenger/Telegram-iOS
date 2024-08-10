@@ -1278,6 +1278,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }, present: { c, a, i in
                 if case .current = i {
                     c.presentationArguments = a
+                    c.statusBar.alphaUpdated = { [weak self] transition in
+                        guard let self else {
+                            return
+                        }
+                        self.updateStatusBarPresentation(animated: transition.isAnimated)
+                    }
                     self?.galleryPresentationContext.present(c, on: PresentationSurfaceLevel(rawValue: 0), blockInteraction: true, completion: {})
                 } else {
                     self?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -6803,9 +6809,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    func updateStatusBarPresentation() {
-        if !self.galleryPresentationContext.controllers.isEmpty {
-            self.statusBar.statusBarStyle = .White
+    func updateStatusBarPresentation(animated: Bool = false) {
+        if !self.galleryPresentationContext.controllers.isEmpty, let statusBarStyle = (self.galleryPresentationContext.controllers.last?.0 as? ViewController)?.statusBar.statusBarStyle {
+            self.statusBar.updateStatusBarStyle(statusBarStyle, animated: animated)
         } else {
             switch self.presentationInterfaceState.mode {
             case let .standard(standardMode):

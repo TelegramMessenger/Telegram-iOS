@@ -30,6 +30,7 @@ import Speak
 import TranslateUI
 import TelegramNotices
 import SolidRoundedButtonNode
+import UrlHandling
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: .white)
@@ -147,6 +148,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
     private var spoilerTextNode: ImmediateTextNodeWithEntities?
     private var dustNode: InvisibleInkDustNode?
     private var buttonNode: SolidRoundedButtonNode?
+    private var buttonIconNode: ASImageNode?
     
     private var textSelectionNode: TextSelectionNode?
     
@@ -1069,6 +1071,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                     }
                     self.contentNode.addSubnode(buttonNode)
                     self.buttonNode = buttonNode
+                    
+                    if !isTelegramMeLink(adAttribute.url) {
+                        let buttonIconNode = ASImageNode()
+                        buttonIconNode.displaysAsynchronously = false
+                        buttonIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLink"), color: .white)
+                        buttonNode.addSubnode(buttonIconNode)
+                        self.buttonIconNode = buttonIconNode
+                    }
                 }
             } else if let buttonNode = self.buttonNode {
                 buttonNode.removeFromSupernode()
@@ -1226,6 +1236,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                 if let buttonNode = self.buttonNode {
                     let buttonHeight = buttonNode.updateLayout(width: constrainSize.width, transition: transition)
                     transition.updateFrame(node: buttonNode, frame: CGRect(origin: CGPoint(x: sideInset, y: scrollWrapperNodeFrame.maxY + 8.0), size: CGSize(width: constrainSize.width, height: buttonHeight)))
+                    
+                    if let buttonIconNode = self.buttonIconNode, let icon = buttonIconNode.image {
+                        transition.updateFrame(node: buttonIconNode, frame: CGRect(origin: CGPoint(x: constrainSize.width - icon.size.width - 9.0, y: 9.0), size: icon.size))
+                    }
                     
                     if let _ = self.scrubberView {
                         panelHeight += 68.0
