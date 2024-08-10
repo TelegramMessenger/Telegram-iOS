@@ -2733,7 +2733,8 @@ final class StorageUsageScreenComponent: Component {
                 navigationController: navigationController,
                 dismissInput: { [weak self] in
                     self?.endEditing(true)
-                }, present: { [weak self] c, a in
+                },
+                present: { [weak self] c, a, _ in
                     guard let self else {
                         return
                     }

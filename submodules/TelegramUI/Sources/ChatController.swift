@@ -1275,8 +1275,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: openChatLocation, chatFilterTag: chatFilterTag, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, mediaIndex: params.mediaIndex, standalone: standalone, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
-            }, present: { c, a in
-                if c is GalleryController {
+            }, present: { c, a, i in
+                if case .current = i {
                     c.presentationArguments = a
                     self?.galleryPresentationContext.present(c, on: PresentationSurfaceLevel(rawValue: 0), blockInteraction: true, completion: {})
                 } else {
