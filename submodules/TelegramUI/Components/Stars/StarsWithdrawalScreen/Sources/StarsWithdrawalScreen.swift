@@ -524,7 +524,7 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
             theme: .default
         )
         
-        self.navigationPresentation = .standaloneModal
+        self.navigationPresentation = .flatModal
     }
         
     required public init(coder aDecoder: NSCoder) {

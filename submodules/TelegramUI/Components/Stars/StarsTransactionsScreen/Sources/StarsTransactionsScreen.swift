@@ -323,10 +323,15 @@ final class StarsTransactionsScreenComponent: Component {
                     guard let self else {
                         return
                     }
-                    self.subscriptionsState = state
+                    let isFirstTime = self.subscriptionsState == nil
+                    if !state.subscriptions.isEmpty {
+                        self.subscriptionsState = state
+                    } else {
+                        self.subscriptionsState = nil
+                    }
                     
                     if !self.isUpdating {
-                        self.state?.updated()
+                        self.state?.updated(transition: isFirstTime ? .immediate : .spring(duration: 0.4))
                     }
                 })
             }
@@ -628,14 +633,18 @@ final class StarsTransactionsScreenComponent: Component {
                     )
                     let dateText: String
                     let dateValue = stringForDateWithoutYear(date: Date(timeIntervalSince1970: Double(subscription.untilDate)), strings: environment.strings)
-                    if subscription.flags.contains(.isCancelled) {
-                        if subscription.untilDate > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
+                    var isExpired = false
+                    if subscription.untilDate > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
+                        if subscription.flags.contains(.isCancelled) {
                             dateText = environment.strings.Stars_Intro_Subscriptions_Expires(dateValue).string
                         } else {
-                            dateText = environment.strings.Stars_Intro_Subscriptions_Expired(dateValue).string
+                            dateText = environment.strings.Stars_Intro_Subscriptions_Renews(dateValue).string
                         }
                     } else {
-                        dateText = environment.strings.Stars_Intro_Subscriptions_Renews(dateValue).string
+                        dateText = environment.strings.Stars_Intro_Subscriptions_Expired(dateValue).string
+                        if !subscription.flags.contains(.isCancelled) {
+                            isExpired = true
+                        }
                     }
                     titleComponents.append(
                         AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
@@ -648,9 +657,9 @@ final class StarsTransactionsScreenComponent: Component {
                         )))
                     )
                     let labelComponent: AnyComponentWithIdentity<Empty>
-                    if subscription.flags.contains(.isCancelled) {
+                    if subscription.flags.contains(.isCancelled) || isExpired {
                         labelComponent = AnyComponentWithIdentity(id: "cancelledLabel", component: AnyComponent(
-                            MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Stars_Intro_Subscriptions_Cancelled, font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemDestructiveColor)))
+                            MultilineTextComponent(text: .plain(NSAttributedString(string: isExpired ? environment.strings.Stars_Intro_Subscriptions_ExpiredStatus : environment.strings.Stars_Intro_Subscriptions_Cancelled, font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemDestructiveColor)))
                         ))
                     } else {
                         let itemLabel = NSAttributedString(string: "\(subscription.pricing.amount)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor)
@@ -710,6 +719,7 @@ final class StarsTransactionsScreenComponent: Component {
                                     } else {
                                         self.subscriptionsExpanded = true
                                     }
+                                    self.state?.updated(transition: .spring(duration: 0.4))
                                     component.subscriptionsContext.loadMore()
                                 },
                                 highlighting: .default,
@@ -723,7 +733,7 @@ final class StarsTransactionsScreenComponent: Component {
             
             if !subscriptionsItems.isEmpty {
                 let subscriptionsSize = self.subscriptionsView.update(
-                    transition: .immediate,
+                    transition: transition,
                     component: AnyComponent(ListSectionComponent(
                         theme: environment.theme,
                         header: AnyComponent(MultilineTextComponent(
@@ -956,7 +966,22 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                 guard let self else {
                     return
                 }
-                self.subscriptionsContext.updateSubscription(id: subscription.id, cancel: cancel)
+                if subscription.untilDate > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
+                    if let channel = subscription.peer._asPeer() as? TelegramChannel, channel.participationStatus == .left {
+                        let _ = self.context.engine.payments.fulfillStarsSubscription(peerId: context.account.peerId, subscriptionId: subscription.id).startStandalone()
+                        if subscription.flags.contains(.isCancelled) {
+                            self.subscriptionsContext.updateSubscription(id: subscription.id, cancel: false)
+                        }
+                    } else {
+                        if !subscription.flags.contains(.isCancelled) {
+                            self.subscriptionsContext.updateSubscription(id: subscription.id, cancel: true)
+                        }
+                    }
+                } else {
+                    if let inviteHash = subscription.inviteHash {
+                        self.context.sharedContext.openResolvedUrl(.join(inviteHash), context: self.context, urlContext: .generic, navigationController: self.navigationController as? NavigationController, forceExternal: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { _, _ in }, dismissInput: {}, contentContext: nil, progress: Promise(), completion: nil)
+                    }
+                }
             })
             self.push(controller)
         }

@@ -260,6 +260,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         }
                     } else {
                         if date < Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
+                            statusText = strings.Stars_Transaction_Subscription_Expired(stringForMediumDate(timestamp: subscription.untilDate, strings: strings, dateTimeFormat: dateTimeFormat, withTime: false)).string
                             buttonText = strings.Stars_Transaction_Subscription_Renew
                         } else {
                             statusText = strings.Stars_Transaction_Subscription_LeftChannel(stringForMediumDate(timestamp: subscription.untilDate, strings: strings, dateTimeFormat: dateTimeFormat, withTime: false)).string
@@ -1135,7 +1136,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             theme: forceDark ? .dark : .default
         )
         
-        self.navigationPresentation = .standaloneModal
+        self.navigationPresentation = .flatModal
         self.automaticallyControlPresentationContextLayout = false
         
         openPeerImpl = { [weak self] peer in

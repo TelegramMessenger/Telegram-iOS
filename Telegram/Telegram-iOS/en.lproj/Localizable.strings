@@ -12702,6 +12702,7 @@ Sorry for the inconvenience.";
 "Stars.Transaction.Subscription.JoinChannel" = "Join Channel";
 "Stars.Transaction.Subscription.JoinAgainChannel" = "Join Channel";
 "Stars.Transaction.Subscription.LeftChannel" = "You left channel but you can still get back until %@";
+"Stars.Transaction.Subscription.Expired" = "Your subscription expired on %@.";
 "Stars.Transaction.Subscription.PerMonth" = "%@ / month";
 "Stars.Transaction.Subscription.PerMonthUsd" = "appx. %@ per month";
 "Stars.Transaction.Subscription.Subscription" = "Subscription";
@@ -12724,6 +12725,7 @@ Sorry for the inconvenience.";
 "Stars.Intro.Subscriptions.Expires" = "expires on %@";
 "Stars.Intro.Subscriptions.Expired" = "expired on %@";
 "Stars.Intro.Subscriptions.Cancelled" = "cancelled";
+"Stars.Intro.Subscriptions.ExpiredStatus" = "expired";
 "Stars.Intro.Subscriptions.ShowMore" = "Show More";
 
 "Stars.Intro.Transaction.SubscriptionFee.Title" = "Monthly Subscription Fee";
