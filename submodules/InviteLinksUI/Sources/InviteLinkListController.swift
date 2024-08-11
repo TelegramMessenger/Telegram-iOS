@@ -268,7 +268,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
     }
 }
 
-private func inviteLinkListControllerEntries(presentationData: PresentationData, exportedInvitation: EngineExportedPeerInvitation?, peer: EnginePeer?, invites: [ExportedInvitation]?, revokedInvites: [ExportedInvitation]?, importers: PeerInvitationImportersState?, creators: [ExportedInvitationCreator], admin: ExportedInvitationCreator?, tick: Int32, starsState: StarsRevenueStats?) -> [InviteLinksListEntry] {
+private func inviteLinkListControllerEntries(presentationData: PresentationData, exportedInvitation: EngineExportedPeerInvitation?, peer: EnginePeer?, invites: [ExportedInvitation]?, revokedInvites: [ExportedInvitation]?, importers: PeerInvitationImportersState?, creators: [ExportedInvitationCreator], admin: ExportedInvitationCreator?, tick: Int32) -> [InviteLinksListEntry] {
     var entries: [InviteLinksListEntry] = []
     
     if admin == nil {
@@ -393,7 +393,7 @@ private struct InviteLinkListControllerState: Equatable {
     var revokingPrivateLink: Bool
 }
 
-public func inviteLinkListController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, admin: ExportedInvitationCreator?, starsRevenueContext: StarsRevenueStatsContext? = nil) -> ViewController {
+public func inviteLinkListController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, admin: ExportedInvitationCreator?) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
@@ -408,10 +408,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
     let updateState: ((InviteLinkListControllerState) -> InviteLinkListControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
-    
-    let starsContext: StarsRevenueStatsContext = starsRevenueContext ?? context.engine.payments.peerStarsRevenueContext(peerId: peerId)
-    let starsStats = Atomic<StarsRevenueStats?>(value: nil)
-    
+        
     let revokeLinkDisposable = MetaDisposable()
     actionsDisposable.add(revokeLinkDisposable)
     
@@ -490,7 +487,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
         }
         presentControllerImpl?(shareController, nil)
     }, openMainLink: { invite in
-        let controller = InviteLinkViewController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, invite: invite, invitationsContext: nil, revokedInvitationsContext: revokedInvitesContext, importersContext: nil, starsState: starsStats.with { $0 })
+        let controller = InviteLinkViewController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, invite: invite, invitationsContext: nil, revokedInvitationsContext: revokedInvitesContext, importersContext: nil)
         pushControllerImpl?(controller)
     }, copyLink: { invite in
         UIPasteboard.general.string = invite.link
@@ -607,7 +604,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
         let contextController = ContextController(presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, createLink: {
-        let controller = inviteLinkEditController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, invite: nil, starsState: starsStats.with( { $0 }), completion: { invite in
+        let controller = inviteLinkEditController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, invite: nil, completion: { invite in
             if let invite = invite {
                 invitesContext.add(invite)
             }
@@ -616,7 +613,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
         pushControllerImpl?(controller)
     }, openLink: { invite in
         if let invite = invite {
-            let controller = InviteLinkViewController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, invite: invite, invitationsContext: invitesContext, revokedInvitationsContext: revokedInvitesContext, importersContext: nil, starsState: starsStats.with { $0 })
+            let controller = InviteLinkViewController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, invite: invite, invitationsContext: invitesContext, revokedInvitationsContext: revokedInvitesContext, importersContext: nil)
             pushControllerImpl?(controller)
         }
     }, linkContextAction: { invite, canEdit, node, gesture in
@@ -733,7 +730,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                 }, action: { _, f in
                     f(.default)
                 
-                    let controller = inviteLinkEditController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, invite: invite, starsState: starsStats.with( { $0 }), completion: { invite in
+                    let controller = inviteLinkEditController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, invite: invite, completion: { invite in
                         if let invite = invite {
                             if invite.isRevoked {
                                 invitesContext.remove(invite)
@@ -900,14 +897,12 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
         invitesContext.state,
         revokedInvitesContext.state,
         creators,
-        timerPromise.get(),
-        starsContext.state
+        timerPromise.get()
     )
-    |> map { presentationData, exportedInvitation, peer, importersContext, importers, invites, revokedInvites, creators, tick, starsState -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, exportedInvitation, peer, importersContext, importers, invites, revokedInvites, creators, tick -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previousInvites = previousInvites.swap(invites)
         let previousRevokedInvites = previousRevokedInvites.swap(revokedInvites)
         let previousCreators = previousCreators.swap(creators)
-        let _ = starsStats.swap(starsState.stats)
         
         var crossfade = false
         if (previousInvites?.hasLoadedOnce ?? false) != (invites.hasLoadedOnce) {
@@ -933,7 +928,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkListControllerEntries(presentationData: presentationData, exportedInvitation: exportedInvitation, peer: peer, invites: invites.hasLoadedOnce ? invites.invitations : nil, revokedInvites: revokedInvites.hasLoadedOnce ? revokedInvites.invitations : nil, importers: importers, creators: creators, admin: admin, tick: tick, starsState: starsState.stats), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkListControllerEntries(presentationData: presentationData, exportedInvitation: exportedInvitation, peer: peer, invites: invites.hasLoadedOnce ? invites.invitations : nil, revokedInvites: revokedInvites.hasLoadedOnce ? revokedInvites.invitations : nil, importers: importers, creators: creators, admin: admin, tick: tick), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }

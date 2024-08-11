@@ -467,7 +467,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                         }
                     },
                     tapAction: { attributes, _ in
-                        component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_Purchase_Terms_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                        component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_Purchase_Terms_URL, forceExternal: false, presentationData: presentationData, navigationController: nil, dismissInput: {})
                     }
                 ),
                 environment: {},

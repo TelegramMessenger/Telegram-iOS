@@ -380,20 +380,18 @@ public final class InviteLinkViewController: ViewController {
     private let invitationsContext: PeerExportedInvitationsContext?
     private let revokedInvitationsContext: PeerExportedInvitationsContext?
     private let importersContext: PeerInvitationImportersContext?
-    private let starsState: StarsRevenueStats?
 
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     fileprivate var presentationDataPromise = Promise<PresentationData>()
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, invite: ExportedInvitation, invitationsContext: PeerExportedInvitationsContext?, revokedInvitationsContext: PeerExportedInvitationsContext?, importersContext: PeerInvitationImportersContext?, starsState: StarsRevenueStats? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, invite: ExportedInvitation, invitationsContext: PeerExportedInvitationsContext?, revokedInvitationsContext: PeerExportedInvitationsContext?, importersContext: PeerInvitationImportersContext?) {
         self.context = context
         self.peerId = peerId
         self.invite = invite
         self.invitationsContext = invitationsContext
         self.revokedInvitationsContext = revokedInvitationsContext
         self.importersContext = importersContext
-        self.starsState = starsState
         
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                 
@@ -522,6 +520,8 @@ public final class InviteLinkViewController: ViewController {
             self.presentationDataPromise = Promise(self.presentationData)
             self.controller = controller
             
+            let configuration = StarsSubscriptionConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+            
             self.importersContext = importersContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .invite(invite: invite, requested: false))
             if case let .link(_, _, _, requestApproval, _, _, _, _, _, _, _, _, _) = invite, requestApproval {
                 self.requestsContext = context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .invite(invite: invite, requested: true))
@@ -589,15 +589,16 @@ public final class InviteLinkViewController: ViewController {
                     }
                 })
             }, openSubscription: { [weak self] pricing, importer in
-                guard let controller = self?.controller else {
-                    return
-                }
                 let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                |> deliverOnMainQueue).start(next: { peer in
+                |> deliverOnMainQueue).start(next: { [weak self] peer in
                     guard let peer else {
                         return
                     }
-                    let subscriptionController = context.sharedContext.makeStarsSubscriptionScreen(context: context, peer: peer, pricing: pricing, importer: importer, usdRate: controller.starsState?.usdRate ?? 0.0)
+                    var usdRate = 0.012
+                    if let usdWithdrawRate = configuration.usdWithdrawRate {
+                        usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
+                    }
+                    let subscriptionController = context.sharedContext.makeStarsSubscriptionScreen(context: context, peer: peer, pricing: pricing, importer: importer, usdRate: usdRate)
                     self?.controller?.push(subscriptionController)
                 })
             }, copyLink: { [weak self] invite in
@@ -824,7 +825,7 @@ public final class InviteLinkViewController: ViewController {
             } else {
                 requestsState = .single(PeerInvitationImportersState.Empty)
             }
-            
+                        
             if case let .link(_, _, _, _, _, adminId, date, _, _, usageLimit, _, _, _) = invite {
                 self.disposable = (combineLatest(
                     self.presentationDataPromise.get(),
@@ -833,8 +834,11 @@ public final class InviteLinkViewController: ViewController {
                     context.account.postbox.loadedPeerWithId(adminId)
                 ) |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, requestsState, creatorPeer in
                     if let strongSelf = self {
-                        let usdRate = strongSelf.controller?.starsState?.usdRate
-                                                
+                        var usdRate = 0.012
+                        if let usdWithdrawRate = configuration.usdWithdrawRate {
+                            usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
+                        }
+                                                                        
                         var entries: [InviteLinkViewEntry] = []
                         
                         entries.append(.link(presentationData.theme, invite))
@@ -845,12 +849,8 @@ public final class InviteLinkViewController: ViewController {
                             var subtitle = presentationData.strings.InviteLink_SubscriptionFee_NoOneJoined
                             if state.count > 0 {
                                 title += " x \(state.count)"
-                                if let usdRate {
-                                    let usdValue = formatTonUsdValue(pricing.amount * Int64(state.count), divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat)
-                                    subtitle = presentationData.strings.InviteLink_SubscriptionFee_ApproximateIncome(usdValue).string
-                                } else {
-                                    subtitle = ""
-                                }
+                                let usdValue = formatTonUsdValue(pricing.amount * Int64(state.count), divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat)
+                                subtitle = presentationData.strings.InviteLink_SubscriptionFee_ApproximateIncome(usdValue).string
                             }
                             entries.append(.subscriptionPricing(presentationData.theme, title, subtitle))
                         }
@@ -1001,7 +1001,7 @@ public final class InviteLinkViewController: ViewController {
             let revokedInvitationsContext = parentController.revokedInvitationsContext
             if let navigationController = navigationController {
                 let updatedPresentationData = (self.presentationData, parentController.presentationDataPromise.get())
-                let controller = inviteLinkEditController(context: self.context, updatedPresentationData: updatedPresentationData, peerId: self.peerId, invite: self.invite, starsState: self.controller?.starsState, completion: { [weak self] invite in
+                let controller = inviteLinkEditController(context: self.context, updatedPresentationData: updatedPresentationData, peerId: self.peerId, invite: self.invite, completion: { [weak self] invite in
                     if let invite = invite {
                         if invite.isRevoked {
                             invitationsContext?.remove(invite)
