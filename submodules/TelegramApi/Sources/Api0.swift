@@ -92,7 +92,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1071145937] = { return Api.BotCommandScope.parse_botCommandScopePeerAdmins($0) }
     dict[169026035] = { return Api.BotCommandScope.parse_botCommandScopePeerUser($0) }
     dict[1011811544] = { return Api.BotCommandScope.parse_botCommandScopeUsers($0) }
-    dict[-1892676777] = { return Api.BotInfo.parse_botInfo($0) }
+    dict[-2109505932] = { return Api.BotInfo.parse_botInfo($0) }
     dict[1984755728] = { return Api.BotInlineMessage.parse_botInlineMessageMediaAuto($0) }
     dict[416402882] = { return Api.BotInlineMessage.parse_botInlineMessageMediaContact($0) }
     dict[85477117] = { return Api.BotInlineMessage.parse_botInlineMessageMediaGeo($0) }
@@ -1409,7 +1409,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
