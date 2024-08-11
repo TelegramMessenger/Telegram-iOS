@@ -241,18 +241,26 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 isSubscription = true
                                 
                 var hasLeft = false
-                if let toPeer, case let .channel(channel) = toPeer, channel.participationStatus == .left {
-                    hasLeft = true
+                var isKicked = false
+                if let toPeer, case let .channel(channel) = toPeer {
+                    switch channel.participationStatus {
+                    case .left:
+                        hasLeft = true
+                    case .kicked:
+                        isKicked = true
+                    default:
+                        break
+                    }
                 }
                 
-                if hasLeft {
+                if hasLeft || isKicked {
                     if subscription.flags.contains(.isCancelled) {
                         statusText = strings.Stars_Transaction_Subscription_Cancelled
                         statusIsDestructive = true
                         if date > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
                             buttonText = strings.Stars_Transaction_Subscription_Renew
                         } else {
-                            if let _ = subscription.inviteHash {
+                            if let _ = subscription.inviteHash, !isKicked {
                                 buttonText = strings.Stars_Transaction_Subscription_JoinAgainChannel
                             } else {
                                 buttonText = strings.Common_OK
@@ -1136,7 +1144,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             theme: forceDark ? .dark : .default
         )
         
-        self.navigationPresentation = .flatModal
+        self.navigationPresentation = .standaloneFlatModal
         self.automaticallyControlPresentationContextLayout = false
         
         openPeerImpl = { [weak self] peer in

@@ -251,7 +251,9 @@ private func _internal_requestStarsSubscriptions(account: Account, peerId: Engin
                     if let subscriptions {
                         for entry in subscriptions {
                             if let parsedSubscription = StarsContext.State.Subscription(apiSubscription: entry, transaction: transaction) {
-                                parsedSubscriptions.append(parsedSubscription)
+                                if !missingBalance || parsedSubscription.flags.contains(.missingBalance) {
+                                    parsedSubscriptions.append(parsedSubscription)
+                                }
                             }
                         }
                     }
@@ -923,7 +925,7 @@ private final class StarsSubscriptionsContextImpl {
     private var stateDisposable: Disposable?
     private let updateDisposable = MetaDisposable()
     
-    init(account: Account, starsContext: StarsContext?, missingBalance: Bool = false) {
+    init(account: Account, starsContext: StarsContext?, missingBalance: Bool) {
         assert(Queue.mainQueue().isCurrent())
         
         self.account = account
@@ -964,7 +966,7 @@ private final class StarsSubscriptionsContextImpl {
             self.nextOffset = status.nextSubscriptionsOffset
             
             var updatedState = self._state
-            updatedState.balance = status.balance
+            updatedState.balance = status.subscriptionsMissingBalance ?? 0
             updatedState.subscriptions = nextOffset.isEmpty ? status.subscriptions : updatedState.subscriptions + status.subscriptions
             updatedState.isLoading = false
             updatedState.canLoadMore = self.nextOffset != nil

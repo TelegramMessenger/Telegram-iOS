@@ -12774,7 +12774,7 @@ Sorry for the inconvenience.";
 "ChatList.SubscriptionsLowBalance.Stars_1" = "%@ Star needed";
 "ChatList.SubscriptionsLowBalance.Stars_any" = "%@ Stars needed";
 
-"ChatList.SubscriptionsLowBalance.Single.Title" = "%1$@ for %@$@";
+"ChatList.SubscriptionsLowBalance.Single.Title" = "%1$@ for %2$@";
 "ChatList.SubscriptionsLowBalance.Single.Text" = "Insufficient funds to cover your subscription.";
 
 "ChatList.SubscriptionsLowBalance.Multiple.Title" = "%@ for your subscriptions";

@@ -1984,7 +1984,7 @@ public final class ChatListNode: ListView {
                     if let starsSubscriptionsContext {
                         return starsSubscriptionsContext.state
                         |> map { state in
-                            if state.balance > 0 {
+                            if state.balance > 0 && !state.subscriptions.isEmpty {
                                 return .starsSubscriptionLowBalance(
                                     amount: state.balance,
                                     peers: state.subscriptions.map { $0.peer }

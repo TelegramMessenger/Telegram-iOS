@@ -1169,7 +1169,7 @@ func generateStarsIcon(count: Int) -> UIImage {
         
         let mainImage = UIImage(bundleImageName: "Premium/Stars/StarLarge")
         if let cgImage = mainImage?.cgImage, let partCGImage = partImage.cgImage {
-            context.draw(cgImage, in: CGRect(origin: CGPoint(x: originX, y: 0.0), size: imageSize), byTiling: false)
+            context.draw(cgImage, in: CGRect(origin: CGPoint(x: originX, y: 0.0), size: imageSize).insetBy(dx: -1.5, dy: -1.5), byTiling: false)
             originX += spacing + UIScreenPixel
             
             for _ in 0 ..< count - 1 {

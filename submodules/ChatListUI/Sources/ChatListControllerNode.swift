@@ -348,6 +348,9 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
         itemNode.listNode.openPremiumManagement = { [weak self] in
             self?.openPremiumManagement?()
         }
+        itemNode.listNode.openStarsTopup = { [weak self] amount in
+            self?.openStarsTopup?(amount)
+        }
         
         self.currentItemStateValue.set(itemNode.listNode.state |> map { state in
             let filterId: Int32?

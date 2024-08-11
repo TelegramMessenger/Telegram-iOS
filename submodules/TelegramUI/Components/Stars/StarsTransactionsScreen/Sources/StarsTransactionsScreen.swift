@@ -135,7 +135,7 @@ final class StarsTransactionsScreenComponent: Component {
         private var allTransactionsContext: StarsTransactionsContext?
         private var incomingTransactionsContext: StarsTransactionsContext?
         private var outgoingTransactionsContext: StarsTransactionsContext?
-        
+                
         override init(frame: CGRect) {
             self.navigationBackgroundView = BlurredBackgroundView(color: nil, enableBlur: true)
             self.navigationBackgroundView.alpha = 0.0
@@ -912,6 +912,8 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
     
     private let options = Promise<[StarsTopUpOption]>()
     
+    private let navigateDisposable = MetaDisposable()
+    
     public init(context: AccountContext, starsContext: StarsContext, forceDark: Bool = false) {
         self.context = context
         self.starsContext = starsContext
@@ -979,7 +981,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                     }
                 } else {
                     if let inviteHash = subscription.inviteHash {
-                        self.context.sharedContext.openResolvedUrl(.join(inviteHash), context: self.context, urlContext: .generic, navigationController: self.navigationController as? NavigationController, forceExternal: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { _, _ in }, dismissInput: {}, contentContext: nil, progress: Promise(), completion: nil)
+                        self.context.sharedContext.handleTextLinkAction(context: self.context, peerId: nil, navigateDisposable: self.navigateDisposable, controller: self, action: .tap, itemLink: .url(url: "https://t.me/+\(inviteHash)", concealed: false))
                     }
                 }
             })
@@ -1099,7 +1101,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override public func viewDidLoad() {
-        super.viewDidLoad()
+    deinit {
+        self.navigateDisposable.dispose()
     }
 }
