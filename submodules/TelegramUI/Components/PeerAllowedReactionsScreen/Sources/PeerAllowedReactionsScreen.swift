@@ -142,6 +142,9 @@ final class PeerAllowedReactionsScreenComponent: Component {
             if !self.isEnabled {
                 enabledReactions.removeAll()
             }
+            
+            enabledReactions.removeAll(where: { $0.reaction == .stars })
+            
             guard let availableReactions = self.availableReactions else {
                 return true
             }
@@ -209,6 +212,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
             guard var enabledReactions = self.enabledReactions else {
                 return
             }
+            enabledReactions.removeAll(where: { $0.reaction == .stars })
+            
             if !self.isEnabled {
                 enabledReactions.removeAll()
             }
@@ -357,7 +362,20 @@ final class PeerAllowedReactionsScreenComponent: Component {
             if let current = self.enabledReactions {
                 enabledReactions = current
             } else {
-                enabledReactions = component.initialContent.enabledReactions
+                if let value = component.initialContent.reactionSettings?.starsAllowed {
+                    self.areStarsReactionsEnabled = value
+                } else {
+                    self.areStarsReactionsEnabled = component.initialContent.isStarReactionAvailable
+                }
+                
+                var enabledReactionsValue = component.initialContent.enabledReactions
+                if self.areStarsReactionsEnabled {
+                    if let item = component.initialContent.availableReactions?.reactions.first(where: { $0.value == .stars }) {
+                        enabledReactionsValue.insert(EmojiComponentReactionItem(reaction: item.value, file: item.selectAnimation), at: 0)
+                    }
+                }
+                
+                enabledReactions = enabledReactionsValue
                 self.enabledReactions = enabledReactions
                 self.availableReactions = component.initialContent.availableReactions
                 self.isEnabled = component.initialContent.isEnabled
@@ -369,11 +387,6 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     )
                 }
                 self.allowedReactionCount = (component.initialContent.reactionSettings?.maxReactionCount).flatMap(Int.init) ?? 11
-                if let value = component.initialContent.reactionSettings?.starsAllowed {
-                    self.areStarsReactionsEnabled = value
-                } else {
-                    self.areStarsReactionsEnabled = component.initialContent.isStarReactionAvailable
-                }
             }
             var caretPosition = self.caretPosition ?? enabledReactions.count
             caretPosition = max(0, min(enabledReactions.count, caretPosition))
@@ -576,6 +589,11 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                     if let availableReactions = self.availableReactions {
                                         for reactionItem in availableReactions.reactions.filter({ $0.isEnabled }) {
                                             enabledReactions.append(EmojiComponentReactionItem(reaction: reactionItem.value, file: reactionItem.selectAnimation))
+                                        }
+                                    }
+                                    if self.areStarsReactionsEnabled {
+                                        if let item = component.initialContent.availableReactions?.reactions.first(where: { $0.value == .stars }) {
+                                            enabledReactions.insert(EmojiComponentReactionItem(reaction: item.value, file: item.selectAnimation), at: 0)
                                         }
                                     }
                                     self.enabledReactions = enabledReactions
@@ -938,10 +956,33 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                     title: "Enable Paid Reactions",
                                     value: self.areStarsReactionsEnabled,
                                     valueUpdated: { [weak self] value in
-                                        guard let self else {
+                                        guard let self, let component = self.component else {
                                             return
                                         }
                                         self.areStarsReactionsEnabled = value
+                                        
+                                        var enabledReactions = self.enabledReactions ?? []
+                                        if self.areStarsReactionsEnabled {
+                                            if let item = component.initialContent.availableReactions?.reactions.first(where: { $0.value == .stars }) {
+                                                enabledReactions.insert(EmojiComponentReactionItem(reaction: item.value, file: item.selectAnimation), at: 0)
+                                                if let caretPosition = self.caretPosition {
+                                                    self.caretPosition = min(enabledReactions.count, caretPosition + 1)
+                                                }
+                                            }
+                                        } else {
+                                            if let index = enabledReactions.firstIndex(where: { $0.reaction == .stars }) {
+                                                enabledReactions.remove(at: index)
+                                                if let caretPosition = self.caretPosition, caretPosition > index {
+                                                    self.caretPosition = max(0, caretPosition - 1)
+                                                }
+                                            }
+                                        }
+                                        
+                                        self.enabledReactions = enabledReactions
+                                        
+                                        if !self.isUpdating {
+                                            self.state?.updated(transition: .spring(duration: 0.25))
+                                        }
                                     }
                                 )))
                             ]
@@ -1138,6 +1179,11 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                 self.recenterOnCaret = true
                             }
                             self.enabledReactions = enabledReactions
+                            
+                            if !enabledReactions.contains(where: { $0.reaction == .stars }) {
+                                self.areStarsReactionsEnabled = false
+                            }
+                            
                             if !self.isUpdating {
                                 self.state?.updated(transition: .spring(duration: 0.25))
                             }

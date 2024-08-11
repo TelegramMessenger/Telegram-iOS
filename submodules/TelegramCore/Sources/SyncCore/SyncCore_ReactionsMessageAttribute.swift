@@ -329,12 +329,12 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
     }
     
     public struct TopPeer: Equatable, PostboxCoding {
-        public var peerId: PeerId
+        public var peerId: PeerId?
         public var count: Int32
         public var isTop: Bool
         public var isMy: Bool
         
-        public init(peerId: PeerId, count: Int32, isTop: Bool, isMy: Bool) {
+        public init(peerId: PeerId?, count: Int32, isTop: Bool, isMy: Bool) {
             self.peerId = peerId
             self.count = count
             self.isMy = isMy
@@ -342,14 +342,22 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         }
         
         public init(decoder: PostboxDecoder) {
-            self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
+            if let peerId = decoder.decodeOptionalInt64ForKey("p") {
+                self.peerId = PeerId(peerId)
+            } else {
+                self.peerId = nil
+            }
             self.count = decoder.decodeInt32ForKey("c", orElse: 0)
             self.isTop = decoder.decodeBoolForKey("t", orElse: false)
             self.isMy = decoder.decodeBoolForKey("m", orElse: false)
         }
         
         public func encode(_ encoder: PostboxEncoder) {
-            encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
+            if let peerId = self.peerId {
+                encoder.encodeInt64(peerId.toInt64(), forKey: "p")
+            } else {
+                encoder.encodeNil(forKey: "p")
+            }
             encoder.encodeInt32(self.count, forKey: "c")
             encoder.encodeBool(self.isTop, forKey: "t")
             encoder.encodeBool(self.isMy, forKey: "m")

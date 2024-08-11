@@ -164,107 +164,10 @@ extension ChatControllerImpl {
                 self.window?.presentInGlobalOverlay(controller)
             })
         } else {
-            if case .stars = value, let reactionsAttribute = mergedMessageReactions(attributes: message.attributes, isTags: false) {
+            if case .stars = value {
                 gesture?.cancel()
                 cancelParentGestures(view: sourceView)
-                let _ = (ChatSendStarsScreen.initialData(context: self.context, peerId: message.id.peerId, topPeers: reactionsAttribute.topPeers)
-                |> deliverOnMainQueue).start(next: { [weak self] initialData in
-                    guard let self, let initialData else {
-                        return
-                    }
-                    HapticFeedback().tap()
-                    self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount, isBecomingTop, transitionOut in
-                        guard let self, amount > 0 else {
-                            return
-                        }
-                        
-                        var sourceItemNode: ChatMessageItemView?
-                        self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                            if let itemNode = itemNode as? ChatMessageItemView {
-                                if itemNode.item?.message.id == message.id {
-                                    sourceItemNode = itemNode
-                                    return
-                                }
-                            }
-                        }
-                        
-                        if let itemNode = sourceItemNode, let item = itemNode.item, let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: .stars) {
-                            var reactionItem: ReactionItem?
-                            
-                            for reaction in availableReactions.reactions {
-                                guard let centerAnimation = reaction.centerAnimation else {
-                                    continue
-                                }
-                                guard let aroundAnimation = reaction.aroundAnimation else {
-                                    continue
-                                }
-                                if reaction.value == .stars {
-                                    reactionItem = ReactionItem(
-                                        reaction: ReactionItem.Reaction(rawValue: reaction.value),
-                                        appearAnimation: reaction.appearAnimation,
-                                        stillAnimation: reaction.selectAnimation,
-                                        listAnimation: centerAnimation,
-                                        largeListAnimation: reaction.activateAnimation,
-                                        applicationAnimation: aroundAnimation,
-                                        largeApplicationAnimation: reaction.effectAnimation,
-                                        isCustom: false
-                                    )
-                                    break
-                                }
-                            }
-                            
-                            if let reactionItem {
-                                let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: self.chatDisplayNode.historyNode.takeGenericReactionEffect())
-                                
-                                self.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
-                                
-                                self.view.window?.addSubview(standaloneReactionAnimation.view)
-                                standaloneReactionAnimation.frame = self.chatDisplayNode.bounds
-                                standaloneReactionAnimation.animateOutToReaction(
-                                    context: self.context,
-                                    theme: self.presentationData.theme,
-                                    item: reactionItem,
-                                    value: .stars,
-                                    sourceView: transitionOut.sourceView,
-                                    targetView: targetView,
-                                    hideNode: false,
-                                    forceSwitchToInlineImmediately: false,
-                                    animateTargetContainer: nil,
-                                    addStandaloneReactionAnimation: { [weak self] standaloneReactionAnimation in
-                                        guard let self else {
-                                            return
-                                        }
-                                        self.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
-                                        standaloneReactionAnimation.frame = self.chatDisplayNode.bounds
-                                        self.chatDisplayNode.addSubnode(standaloneReactionAnimation)
-                                    },
-                                    onHit: { [weak self, weak itemNode] in
-                                        guard let self else {
-                                            return
-                                        }
-                                        
-                                        if isBecomingTop {
-                                            self.chatDisplayNode.animateQuizCorrectOptionSelected()
-                                        }
-                                        
-                                        if let itemNode, let targetView = itemNode.targetReactionView(value: .stars) {
-                                            self.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: self.chatDisplayNode.view))
-                                        }
-                                    },
-                                    completion: { [weak standaloneReactionAnimation] in
-                                        standaloneReactionAnimation?.view.removeFromSuperview()
-                                    }
-                                )
-                            }
-                        }
-                        
-                        #if !DEBUG
-                        let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount))
-                        #endif
-                        
-                        self.displayOrUpdateSendStarsUndo(messageId: message.id, count: Int(amount))
-                    }))
-                })
+                self.openMessageSendStarsScreen(message: message)
                 
                 return
             }
@@ -463,6 +366,110 @@ extension ChatControllerImpl {
                 self.window?.presentInGlobalOverlay(controller)
             })
         }
+    }
+    
+    func openMessageSendStarsScreen(message: Message) {
+        guard let reactionsAttribute = mergedMessageReactions(attributes: message.attributes, isTags: false) else {
+            return
+        }
+        let _ = (ChatSendStarsScreen.initialData(context: self.context, peerId: message.id.peerId, topPeers: reactionsAttribute.topPeers)
+        |> deliverOnMainQueue).start(next: { [weak self] initialData in
+            guard let self, let initialData else {
+                return
+            }
+            HapticFeedback().tap()
+            self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount, isBecomingTop, transitionOut in
+                guard let self, amount > 0 else {
+                    return
+                }
+                
+                var sourceItemNode: ChatMessageItemView?
+                self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? ChatMessageItemView {
+                        if itemNode.item?.message.id == message.id {
+                            sourceItemNode = itemNode
+                            return
+                        }
+                    }
+                }
+                
+                if let itemNode = sourceItemNode, let item = itemNode.item, let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: .stars) {
+                    var reactionItem: ReactionItem?
+                    
+                    for reaction in availableReactions.reactions {
+                        guard let centerAnimation = reaction.centerAnimation else {
+                            continue
+                        }
+                        guard let aroundAnimation = reaction.aroundAnimation else {
+                            continue
+                        }
+                        if reaction.value == .stars {
+                            reactionItem = ReactionItem(
+                                reaction: ReactionItem.Reaction(rawValue: reaction.value),
+                                appearAnimation: reaction.appearAnimation,
+                                stillAnimation: reaction.selectAnimation,
+                                listAnimation: centerAnimation,
+                                largeListAnimation: reaction.activateAnimation,
+                                applicationAnimation: aroundAnimation,
+                                largeApplicationAnimation: reaction.effectAnimation,
+                                isCustom: false
+                            )
+                            break
+                        }
+                    }
+                    
+                    if let reactionItem {
+                        let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: self.chatDisplayNode.historyNode.takeGenericReactionEffect())
+                        
+                        self.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                        
+                        self.view.window?.addSubview(standaloneReactionAnimation.view)
+                        standaloneReactionAnimation.frame = self.chatDisplayNode.bounds
+                        standaloneReactionAnimation.animateOutToReaction(
+                            context: self.context,
+                            theme: self.presentationData.theme,
+                            item: reactionItem,
+                            value: .stars,
+                            sourceView: transitionOut.sourceView,
+                            targetView: targetView,
+                            hideNode: false,
+                            forceSwitchToInlineImmediately: false,
+                            animateTargetContainer: nil,
+                            addStandaloneReactionAnimation: { [weak self] standaloneReactionAnimation in
+                                guard let self else {
+                                    return
+                                }
+                                self.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                                standaloneReactionAnimation.frame = self.chatDisplayNode.bounds
+                                self.chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                            },
+                            onHit: { [weak self, weak itemNode] in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                if isBecomingTop {
+                                    self.chatDisplayNode.animateQuizCorrectOptionSelected()
+                                }
+                                
+                                if let itemNode, let targetView = itemNode.targetReactionView(value: .stars) {
+                                    self.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: self.chatDisplayNode.view))
+                                }
+                            },
+                            completion: { [weak standaloneReactionAnimation] in
+                                standaloneReactionAnimation?.view.removeFromSuperview()
+                            }
+                        )
+                    }
+                }
+                
+                #if !DEBUG
+                let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount))
+                #endif
+                
+                self.displayOrUpdateSendStarsUndo(messageId: message.id, count: Int(amount))
+            }))
+        })
     }
     
     func displayOrUpdateSendStarsUndo(messageId: EngineMessage.Id, count: Int) {
