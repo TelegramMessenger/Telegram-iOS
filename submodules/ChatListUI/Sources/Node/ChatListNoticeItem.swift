@@ -11,6 +11,8 @@ import ItemListUI
 import Markdown
 import AccountContext
 import MergedAvatarsNode
+import TextNodeWithEntities
+import TextFormat
 
 class ChatListNoticeItem: ListViewItem {
     enum Action {
@@ -87,7 +89,7 @@ private let textFont = Font.regular(15.0)
 final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
     private let contentContainer: ASDisplayNode
     private let titleNode: TextNode
-    private let textNode: TextNode
+    private let textNode: TextNodeWithEntities
     private let arrowNode: ASImageNode
     private let separatorNode: ASDisplayNode
     
@@ -113,7 +115,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
         self.contentContainer = ASDisplayNode()
         
         self.titleNode = TextNode()
-        self.textNode = TextNode()
+        self.textNode = TextNodeWithEntities()
         self.arrowNode = ASImageNode()
         self.separatorNode = ASDisplayNode()
         
@@ -123,7 +125,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
         self.clipsToBounds = true
         
         self.contentContainer.addSubnode(self.titleNode)
-        self.contentContainer.addSubnode(self.textNode)
+        self.contentContainer.addSubnode(self.textNode.textNode)
         self.contentContainer.addSubnode(self.arrowNode)
         
         self.addSubnode(self.contentContainer)
@@ -153,7 +155,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
         let previousItem = self.item
         
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
-        let makeTextLayout = TextNode.asyncLayout(self.textNode)
+        let makeTextLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         
         let makeOkButtonTextLayout = TextNode.asyncLayout(self.okButtonText)
         let makeCancelButtonTextLayout = TextNode.asyncLayout(self.cancelButtonText)
@@ -262,10 +264,24 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                 
                 okButtonLayout = makeOkButtonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.ChatList_SessionReview_PanelConfirm, font: titleFont, textColor: item.theme.list.itemAccentColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
                 cancelButtonLayout = makeCancelButtonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.ChatList_SessionReview_PanelReject, font: titleFont, textColor: item.theme.list.itemDestructiveColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
-            case let .starsSubscriptionLowBalance(amount):
-                let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: "⭐️ \(amount) Stars needed for your subscriptions", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
-                titleString = titleStringValue
-                textString = NSAttributedString(string: "Insufficient funds to cover your subscriptions.", font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+            case let .starsSubscriptionLowBalance(amount, peers):
+                let title: String
+                let text: String
+                let starsValue = item.strings.ChatList_SubscriptionsLowBalance_Stars(Int32(amount))
+                if let peer = peers.first, peers.count == 1 {
+                    title = item.strings.ChatList_SubscriptionsLowBalance_Single_Title(starsValue, peer.compactDisplayTitle).string
+                    text = item.strings.ChatList_SubscriptionsLowBalance_Single_Text
+                } else {
+                    title = item.strings.ChatList_SubscriptionsLowBalance_Multiple_Title(starsValue).string
+                    text = item.strings.ChatList_SubscriptionsLowBalance_Multiple_Text
+                }
+                let attributedTitle = NSMutableAttributedString(string: "⭐️\(title)", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
+                if let range = attributedTitle.string.range(of: "⭐️") {
+                    attributedTitle.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedTitle.string))
+                    attributedTitle.addAttribute(.baselineOffset, value: -1.0, range: NSRange(range, in: attributedTitle.string))
+                }
+                titleString = attributedTitle
+                textString = NSAttributedString(string: text, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             }
             
             var leftInset: CGFloat = sideInset
@@ -302,12 +318,12 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.0.size)
                     }
                     
-                    let _ = textLayout.1()
+                    let _ = textLayout.1(TextNodeWithEntities.Arguments(context: item.context, cache: item.context.animationCache, renderer: item.context.animationRenderer, placeholderColor: .white, attemptSynchronous: true))
                     
                     if case .center = alignment {
-                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floor((params.width - textLayout.0.size.width) * 0.5), y: strongSelf.titleNode.frame.maxY + spacing), size: textLayout.0.size)
+                        strongSelf.textNode.textNode.frame = CGRect(origin: CGPoint(x: floor((params.width - textLayout.0.size.width) * 0.5), y: strongSelf.titleNode.frame.maxY + spacing), size: textLayout.0.size)
                     } else {
-                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + spacing), size: textLayout.0.size)
+                        strongSelf.textNode.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + spacing), size: textLayout.0.size)
                     }
                     
                     if !avatarPeers.isEmpty {
@@ -342,6 +358,8 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                     } else if case .birthdayPremiumGift = item.notice {
                         hasCloseButton = true
                     } else if case .premiumGrace = item.notice {
+                        hasCloseButton = true
+                    } else if case .starsSubscriptionLowBalance = item.notice {
                         hasCloseButton = true
                     }
                                         
@@ -387,8 +405,8 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                         let buttonWidth: CGFloat = floor(buttonsWidth * 0.5)
                         let buttonHeight: CGFloat = 32.0
                         
-                        let okButtonFrame = CGRect(origin: CGPoint(x: floor((params.width - buttonsWidth) * 0.5), y: strongSelf.textNode.frame.maxY + 6.0), size: CGSize(width: buttonWidth, height: buttonHeight))
-                        let cancelButtonFrame = CGRect(origin: CGPoint(x: okButtonFrame.maxX, y: strongSelf.textNode.frame.maxY + 6.0), size: CGSize(width: buttonWidth, height: buttonHeight))
+                        let okButtonFrame = CGRect(origin: CGPoint(x: floor((params.width - buttonsWidth) * 0.5), y: strongSelf.textNode.textNode.frame.maxY + 6.0), size: CGSize(width: buttonWidth, height: buttonHeight))
+                        let cancelButtonFrame = CGRect(origin: CGPoint(x: okButtonFrame.maxX, y: strongSelf.textNode.textNode.frame.maxY + 6.0), size: CGSize(width: buttonWidth, height: buttonHeight))
                         
                         okButton.frame = okButtonFrame
                         cancelButton.frame = cancelButtonFrame

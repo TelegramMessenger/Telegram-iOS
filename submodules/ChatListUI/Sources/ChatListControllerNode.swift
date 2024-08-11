@@ -413,12 +413,28 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
     var openBirthdaySetup: (() -> Void)?
     var openPremiumManagement: (() -> Void)?
     var openStories: ((ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void)?
+    var openStarsTopup: ((Int64?) -> Void)?
     var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     var didBeginSelectingChats: (() -> Void)?
     var canExpandHiddenItems: (() -> Bool)?
     public var displayFilterLimit: (() -> Void)?
     
-    public init(context: AccountContext, controller: ChatListControllerImpl?, location: ChatListControllerLocation, chatListMode: ChatListNodeMode = .chatList(appendContacts: true), previewing: Bool, controlsHistoryPreload: Bool, isInlineMode: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void, openArchiveSettings: @escaping () -> Void) {
+    public init(
+        context: AccountContext,
+        controller: ChatListControllerImpl?,
+        location: ChatListControllerLocation,
+        chatListMode: ChatListNodeMode = .chatList(appendContacts: true),
+        previewing: Bool,
+        controlsHistoryPreload: Bool,
+        isInlineMode: Bool,
+        presentationData: PresentationData,
+        animationCache: AnimationCache,
+        animationRenderer: MultiAnimationRenderer,
+        filterBecameEmpty: @escaping (ChatListFilter?) -> Void,
+        filterEmptyAction: @escaping (ChatListFilter?) -> Void,
+        secondaryEmptyAction: @escaping () -> Void,
+        openArchiveSettings: @escaping () -> Void)
+    {
         self.context = context
         self.controller = controller
         self.location = location
