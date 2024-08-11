@@ -736,10 +736,14 @@ private final class SliderBackgroundComponent: Component {
 }
 
 private final class ChatSendStarsScreenComponent: Component {
+    private final class IsAdjustingAmountHint {
+    }
+    
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
     let peer: EnginePeer
+    let myPeer: EnginePeer
     let messageId: EngineMessage.Id
     let maxAmount: Int
     let balance: Int64?
@@ -751,6 +755,7 @@ private final class ChatSendStarsScreenComponent: Component {
     init(
         context: AccountContext,
         peer: EnginePeer,
+        myPeer: EnginePeer,
         messageId: EngineMessage.Id,
         maxAmount: Int,
         balance: Int64?,
@@ -761,6 +766,7 @@ private final class ChatSendStarsScreenComponent: Component {
     ) {
         self.context = context
         self.peer = peer
+        self.myPeer = myPeer
         self.messageId = messageId
         self.maxAmount = maxAmount
         self.balance = balance
@@ -775,6 +781,9 @@ private final class ChatSendStarsScreenComponent: Component {
             return false
         }
         if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.myPeer != rhs.myPeer {
             return false
         }
         if lhs.maxAmount != rhs.maxAmount {
@@ -1071,7 +1080,7 @@ private final class ChatSendStarsScreenComponent: Component {
                             return
                         }
                         self.amount = 1 + Int64(value)
-                        self.state?.updated(transition: .immediate)
+                        self.state?.updated(transition: ComponentTransition(animation: .none).withUserData(IsAdjustingAmountHint()))
                         
                         let sliderValue = Float(value) / Float(component.maxAmount)
                         let currentTimestamp = CACurrentMediaTime()
@@ -1404,9 +1413,36 @@ private final class ChatSendStarsScreenComponent: Component {
                 transition.setFrame(layer: topPeersLeftSeparator, frame: CGRect(origin: CGPoint(x: sideInset, y: separatorY), size: CGSize(width: max(0.0, topPeersBackgroundFrame.minX - separatorSpacing - sideInset), height: UIScreenPixel)))
                 transition.setFrame(layer: topPeersRightSeparator, frame: CGRect(origin: CGPoint(x: topPeersBackgroundFrame.maxX + separatorSpacing, y: separatorY), size: CGSize(width: max(0.0, availableSize.width - sideInset - (topPeersBackgroundFrame.maxX + separatorSpacing)), height: UIScreenPixel)))
                 
+                var mappedTopPeers = component.topPeers
+                if let index = mappedTopPeers.firstIndex(where: { $0.isMy }) {
+                    mappedTopPeers.remove(at: index)
+                }
+                var myCount = Int(self.amount)
+                if let myTopPeer = component.myTopPeer {
+                    myCount += myTopPeer.count
+                }
+                mappedTopPeers.append(ChatSendStarsScreen.TopPeer(
+                    peer: self.isAnonymous ? nil : component.myPeer,
+                    isMy: true,
+                    count: myCount
+                ))
+                mappedTopPeers.sort(by: { $0.count > $1.count })
+                if mappedTopPeers.count > 3 {
+                    mappedTopPeers = Array(mappedTopPeers.prefix(3))
+                }
+                
+                var animateItems = false
+                var itemPositionTransition = transition
+                var itemAlphaTransition = transition
+                if transition.userData(IsAdjustingAmountHint.self) != nil {
+                    animateItems = true
+                    itemPositionTransition = .spring(duration: 0.4)
+                    itemAlphaTransition = .easeInOut(duration: 0.2)
+                }
+                
                 var validIds: [ChatSendStarsScreen.TopPeer.Id] = []
                 var items: [(itemView: ComponentView<Empty>, size: CGSize)] = []
-                for topPeer in component.topPeers {
+                for topPeer in mappedTopPeers {
                     validIds.append(topPeer.id)
                     
                     let itemView: ComponentView<Empty>
@@ -1456,7 +1492,17 @@ private final class ChatSendStarsScreenComponent: Component {
                 for (id, itemView) in self.topPeerItems {
                     if !validIds.contains(id) {
                         removedIds.append(id)
-                        itemView.view?.removeFromSuperview()
+                        
+                        if animateItems {
+                            if let itemComponentView = itemView.view {
+                                itemPositionTransition.setScale(view: itemComponentView, scale: 0.001)
+                                itemAlphaTransition.setAlpha(view: itemComponentView, alpha: 0.0, completion: { [weak itemComponentView] _ in
+                                    itemComponentView?.removeFromSuperview()
+                                })
+                            }
+                        } else {
+                            itemView.view?.removeFromSuperview()
+                        }
                     }
                 }
                 for id in removedIds {
@@ -1476,10 +1522,26 @@ private final class ChatSendStarsScreenComponent: Component {
                 var itemX: CGFloat = floor((availableSize.width - totalWidth) * 0.5) + itemSpacing
                 for (itemView, itemSize) in items {
                     if let itemComponentView = itemView.view {
+                        var animateItem = animateItems
                         if itemComponentView.superview == nil {
                             self.scrollContentView.addSubview(itemComponentView)
+                            animateItem = false
+                            ComponentTransition.immediate.setScale(view: itemComponentView, scale: 0.001)
+                            itemComponentView.alpha = 0.0
                         }
-                        itemComponentView.frame = CGRect(origin: CGPoint(x: itemX, y: contentHeight + 56.0), size: itemSize)
+                        
+                        let itemFrame = CGRect(origin: CGPoint(x: itemX, y: contentHeight + 56.0), size: itemSize)
+                        
+                        if animateItem {
+                            itemPositionTransition.setPosition(view: itemComponentView, position: itemFrame.center)
+                            itemPositionTransition.setBounds(view: itemComponentView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+                        } else {
+                            itemComponentView.center = itemFrame.center
+                            itemComponentView.bounds = CGRect(origin: CGPoint(), size: itemFrame.size)
+                        }
+                        
+                        itemPositionTransition.setScale(view: itemComponentView, scale: 1.0)
+                        itemAlphaTransition.setAlpha(view: itemComponentView, alpha: 1.0)
                     }
                     itemX += itemSize.width + itemSpacing
                 }
@@ -1724,6 +1786,7 @@ private final class ChatSendStarsScreenComponent: Component {
 public class ChatSendStarsScreen: ViewControllerComponentContainer {
     public final class InitialData {
         fileprivate let peer: EnginePeer
+        fileprivate let myPeer: EnginePeer
         fileprivate let messageId: EngineMessage.Id
         fileprivate let balance: Int64?
         fileprivate let currentSentAmount: Int?
@@ -1732,6 +1795,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         
         fileprivate init(
             peer: EnginePeer,
+            myPeer: EnginePeer,
             messageId: EngineMessage.Id,
             balance: Int64?,
             currentSentAmount: Int?,
@@ -1739,6 +1803,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             myTopPeer: ChatSendStarsScreen.TopPeer?
         ) {
             self.peer = peer
+            self.myPeer = myPeer
             self.messageId = messageId
             self.balance = balance
             self.currentSentAmount = currentSentAmount
@@ -1748,16 +1813,20 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
     }
     
     fileprivate final class TopPeer: Equatable {
-        struct Id: Hashable {
-            var value: EnginePeer.Id?
-            
-            init(_ value: EnginePeer.Id?) {
-                self.value = value
-            }
+        enum Id: Hashable {
+            case anonymous
+            case my
+            case peer(EnginePeer.Id)
         }
         
         var id: Id {
-            return Id(self.peer?.id)
+            if self.isMy {
+                return .my
+            } else if let peer = self.peer {
+                return .peer(peer.id)
+            } else {
+                return .anonymous
+            }
         }
         
         var isAnonymous: Bool {
@@ -1765,15 +1834,20 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         }
         
         let peer: EnginePeer?
+        let isMy: Bool
         let count: Int
         
-        init(peer: EnginePeer?, count: Int) {
+        init(peer: EnginePeer?, isMy: Bool, count: Int) {
             self.peer = peer
+            self.isMy = isMy
             self.count = count
         }
         
         static func ==(lhs: TopPeer, rhs: TopPeer) -> Bool {
             if lhs.peer != rhs.peer {
+                return false
+            }
+            if lhs.isMy != rhs.isMy {
                 return false
             }
             if lhs.count != rhs.count {
@@ -1809,6 +1883,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         super.init(context: context, component: ChatSendStarsScreenComponent(
             context: context,
             peer: initialData.peer,
+            myPeer: initialData.myPeer,
             messageId: initialData.messageId,
             maxAmount: maxAmount,
             balance: initialData.balance,
@@ -1874,18 +1949,20 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         return combineLatest(
             context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
                 EngineDataMap(allPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
             ),
             balance
         )
         |> map { peerAndTopPeerMap, balance -> InitialData? in
-            let (peer, topPeerMap) = peerAndTopPeerMap
-            guard let peer else {
+            let (peer, myPeer, topPeerMap) = peerAndTopPeerMap
+            guard let peer, let myPeer else {
                 return nil
             }
             
             return InitialData(
                 peer: peer,
+                myPeer: myPeer,
                 messageId: messageId,
                 balance: balance,
                 currentSentAmount: currentSentAmount,
@@ -1893,6 +1970,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                     guard let topPeerId = topPeer.peerId else {
                         return ChatSendStarsScreen.TopPeer(
                             peer: nil,
+                            isMy: topPeer.isMy,
                             count: Int(topPeer.count)
                         )
                     }
@@ -1904,6 +1982,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                     }
                     return ChatSendStarsScreen.TopPeer(
                         peer: topPeer.isAnonymous ? nil : topPeerValue,
+                        isMy: topPeer.isMy,
                         count: Int(topPeer.count)
                     )
                 },
@@ -1911,6 +1990,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                     guard let topPeerId = topPeer.peerId else {
                         return ChatSendStarsScreen.TopPeer(
                             peer: nil,
+                            isMy: topPeer.isMy,
                             count: Int(topPeer.count)
                         )
                     }
@@ -1922,6 +2002,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                     }
                     return ChatSendStarsScreen.TopPeer(
                         peer: topPeer.isAnonymous ? nil : topPeerValue,
+                        isMy: topPeer.isMy,
                         count: Int(topPeer.count)
                     )
                 }
