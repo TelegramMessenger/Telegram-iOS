@@ -1982,10 +1982,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
         let items = combineLatest(queue: Queue.mainQueue(),
             context.engine.messages.attachMenuBots(),
             context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.botId)),
-            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.BotCommands(id: self.botId))
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.BotCommands(id: self.botId)),
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.BotPrivacyPolicyUrl(id: self.botId))
         )
         |> take(1)
-        |> map { [weak self] attachMenuBots, botPeer, botCommands -> ContextController.Items in
+        |> map { [weak self] attachMenuBots, botPeer, botCommands, privacyPolicyUrl -> ContextController.Items in
             var items: [ContextMenuItem] = []
             
             let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId && !$0.flags.contains(.notActivated) })
@@ -2082,7 +2083,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
                 
                 (self.parentController() as? AttachmentController)?.minimizeIfNeeded()
-                if let botCommands, botCommands.contains(where: { $0.text == "privacy" }) {
+                if let privacyPolicyUrl {
+                    self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: privacyPolicyUrl, forceExternal: false, presentationData: self.presentationData, navigationController: self.getNavigationController(), dismissInput: {})
+                } else if let botCommands, botCommands.contains(where: { $0.text == "privacy" }) {
                     let _ = enqueueMessages(account: self.context.account, peerId: self.botId, messages: [.message(text: "/privacy", attributes: [], inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).startStandalone()
                     
                     if let botPeer, let navigationController = self.getNavigationController() {
@@ -2092,15 +2095,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: self.presentationData.strings.WebApp_PrivacyPolicy_URL, forceExternal: false, presentationData: self.presentationData, navigationController: self.getNavigationController(), dismissInput: {})
                 }
             })))
-            
-            if let botCommands, botCommands.contains(where: { $0.text == "privacy" }) {
-                for command in botCommands {
-                    if command.text == "privacy" {
-                     
-                    }
-                }
-            }
-            
+                        
             if let _ = attachMenuBot, [.attachMenu, .settings, .generic].contains(source) {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_RemoveBot, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
