@@ -1436,8 +1436,8 @@ private final class ChatSendStarsScreenComponent: Component {
                 var itemAlphaTransition = transition
                 if transition.userData(IsAdjustingAmountHint.self) != nil {
                     animateItems = true
-                    itemPositionTransition = .spring(duration: 0.4)
-                    itemAlphaTransition = .easeInOut(duration: 0.2)
+                    itemPositionTransition = .spring(duration: 0.3)
+                    itemAlphaTransition = .easeInOut(duration: 0.15)
                 }
                 
                 var validIds: [ChatSendStarsScreen.TopPeer.Id] = []
