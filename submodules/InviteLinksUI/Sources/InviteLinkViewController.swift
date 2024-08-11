@@ -310,10 +310,9 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 
                 let label: ItemListPeerItemLabel
                 if let pricing {
-                    //TODO:localize
                     let text = NSMutableAttributedString()
                     text.append(NSAttributedString(string: "⭐️\(pricing.amount)\n", font: Font.semibold(17.0), textColor: presentationData.theme.list.itemPrimaryTextColor))
-                    text.append(NSAttributedString(string: "per month", font: Font.regular(13.0), textColor: presentationData.theme.list.itemSecondaryTextColor))
+                    text.append(NSAttributedString(string: presentationData.strings.InviteLink_PerMonth, font: Font.regular(13.0), textColor: presentationData.theme.list.itemSecondaryTextColor))
                     if let range = text.string.range(of: "⭐️") {
                         text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: text.string))
                         text.addAttribute(NSAttributedString.Key.font, value: Font.semibold(15.0), range: NSRange(range, in: text.string))
@@ -841,15 +840,14 @@ public final class InviteLinkViewController: ViewController {
                         entries.append(.link(presentationData.theme, invite))
                         
                         if let pricing = invite.pricing {
-                            //TODO:localize
-                            entries.append(.subscriptionHeader(presentationData.theme, "SUBSCRIPTION FEE"))
-                            var title = "⭐️\(pricing.amount) / month"
-                            var subtitle = "No one joined yet"
+                            entries.append(.subscriptionHeader(presentationData.theme, presentationData.strings.InviteLink_SubscriptionFee_Title.uppercased()))
+                            var title = presentationData.strings.InviteLink_SubscriptionFee_PerMonth("\(pricing.amount)").string
+                            var subtitle = presentationData.strings.InviteLink_SubscriptionFee_NoOneJoined
                             if state.count > 0 {
                                 title += " x \(state.count)"
                                 if let usdRate {
                                     let usdValue = formatTonUsdValue(pricing.amount * Int64(state.count), divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat)
-                                    subtitle = "You get approximately \(usdValue) monthly"
+                                    subtitle = presentationData.strings.InviteLink_SubscriptionFee_ApproximateIncome(usdValue).string
                                 } else {
                                     subtitle = ""
                                 }

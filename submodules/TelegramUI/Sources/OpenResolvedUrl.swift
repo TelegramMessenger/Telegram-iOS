@@ -706,12 +706,38 @@ func openResolvedUrlImpl(
             if let navigationController = navigationController {
                 navigationController.pushViewController(controller, animated: true)
             }
-        case let .starsTopup(amount):
+        case let .starsTopup(amount, purpose):
             dismissInput()
             if let starsContext = context.starsContext {
-                let controller = context.sharedContext.makeStarsPurchaseScreen(context: context, starsContext: starsContext, options: [], purpose: .generic(requiredStars: amount), completion: { _ in })
-                if let navigationController = navigationController {
-                    navigationController.pushViewController(controller, animated: true)
+                let proceed = {
+                    let controller = context.sharedContext.makeStarsPurchaseScreen(context: context, starsContext: starsContext, options: [], purpose: .topUp(requiredStars: amount, purpose: purpose), completion: { _ in })
+                    if let navigationController = navigationController {
+                        navigationController.pushViewController(controller, animated: true)
+                    }
+                }
+                if let currentState = starsContext.currentState, currentState.balance >= amount {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let controller = UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .universal(
+                            animation: "StarsBuy",
+                            scale: 0.066,
+                            colors: [:],
+                            title: nil,
+                            text: "You have enough stars at the moment.",
+                            customUndoText: "Buy Anyway",
+                            timeout: nil
+                        ),
+                        elevatedLayout: true,
+                        action: { action in
+                            if case .undo = action {
+                                proceed()
+                            }
+                            return true
+                        })
+                    present(controller, nil)
+                } else {
+                    proceed()
                 }
             }
         case let .joinVoiceChat(peerId, invite):

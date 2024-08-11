@@ -82,7 +82,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         }
                     }
                 }
-                let openChatMessageMode: ChatControllerInteractionOpenMessageMode
+                var openChatMessageMode: ChatControllerInteractionOpenMessageMode
                 switch mode {
                     case .default:
                         openChatMessageMode = .default
@@ -90,6 +90,9 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         openChatMessageMode = .stream
                     case .automaticPlayback:
                         openChatMessageMode = .automaticPlayback
+                }
+                if let adAttribute = item.message.adAttribute, adAttribute.hasContentMedia {
+                    openChatMessageMode = .automaticPlayback
                 }
                 if !item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: openChatMessageMode)) {
                     if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
@@ -510,6 +513,9 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 }
                 
                 actionTitle = adAttribute.buttonText.uppercased()
+                if !isTelegramMeLink(adAttribute.url) {
+                    actionIcon = .link
+                }
                 displayLine = true
             }
             

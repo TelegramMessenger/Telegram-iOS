@@ -318,6 +318,12 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     flags.remove(.preferMediaInline)
                     mediaAndFlags = (mediaAndFlagsValue.0, flags)
                 }
+                if let adAttribute = message.adAttribute, adAttribute.hasContentMedia {
+                    var flags = mediaAndFlagsValue.1
+                    flags.remove(.preferMediaInline)
+                    flags.insert(.preferMediaBeforeText)
+                    mediaAndFlags = (mediaAndFlagsValue.0, flags)
+                }
             }
             
             var contentMediaAspectFilled = false

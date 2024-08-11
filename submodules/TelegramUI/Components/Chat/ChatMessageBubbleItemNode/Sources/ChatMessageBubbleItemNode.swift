@@ -5957,7 +5957,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     }
     
     override public func makeProgress() -> Promise<Bool>? {
-        return self.unlockButtonNode?.makeProgress()
+        if let unlockButtonNode = self.unlockButtonNode {
+            return unlockButtonNode.makeProgress()
+        } else {
+            for contentNode in self.contentNodes {
+                if let webpageContentNode = contentNode as? ChatMessageWebpageBubbleContentNode {
+                    return webpageContentNode.contentNode.makeProgress()
+                }
+            }
+        }
+        return nil
     }
     
     override public func targetReactionView(value: MessageReaction.Reaction) -> UIView? {

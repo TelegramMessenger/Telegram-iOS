@@ -8,6 +8,8 @@ extension RestrictionRule {
         switch apiReason {
         case let .restrictionReason(platform, reason, text):
             self.init(platform: platform, reason: reason, text: text)
+        case let .restrictionReasonSensitive(platform):
+            self.init(platform: platform)
         }
     }
 }

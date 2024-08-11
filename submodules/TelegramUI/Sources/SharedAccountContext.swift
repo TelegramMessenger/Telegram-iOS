@@ -1650,8 +1650,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return nil
     }
     
-    public func makeChatRecentActionsController(context: AccountContext, peer: Peer, adminPeerId: PeerId?) -> ViewController {
-        return ChatRecentActionsController(context: context, peer: peer, adminPeerId: adminPeerId)
+    public func makeChatRecentActionsController(context: AccountContext, peer: Peer, adminPeerId: PeerId?, starsState: StarsRevenueStats?) -> ViewController {
+        return ChatRecentActionsController(context: context, peer: peer, adminPeerId: adminPeerId, starsState: starsState)
     }
     
     public func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void) {
@@ -2156,7 +2156,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
             return controller
         default:
-            return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
+            return PremiumDemoScreen(context: context, subject: mappedSubject, forceDark: forceDark, action: action)
         }
     }
     
@@ -2713,6 +2713,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
     public func makeProxySettingsController(sharedContext: SharedAccountContext, account: UnauthorizedAccount) -> ViewController {
         return proxySettingsController(accountManager: sharedContext.accountManager, sharedContext: sharedContext, postbox: account.postbox, network: account.network, mode: .modal, presentationData: sharedContext.currentPresentationData.with { $0 }, updatedPresentationData: sharedContext.presentationData)
+    }
+    
+    public func makeDataAndStorageController(context: AccountContext, sensitiveContent: Bool) -> ViewController {
+        return dataAndStorageController(context: context, focusOnItemTag: sensitiveContent ? DataAndStorageEntryTag.sensitiveContent : nil)
     }
     
     public func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, forceTheme: PresentationTheme?) -> ViewController {

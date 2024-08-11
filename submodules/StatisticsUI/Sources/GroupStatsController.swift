@@ -890,7 +890,7 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
             let _ = (context.account.postbox.loadedPeerWithId(peerId)
             |> take(1)
             |> deliverOnMainQueue).start(next: { peer in
-                let controller = context.sharedContext.makeChatRecentActionsController(context: context, peer: peer, adminPeerId: participantPeerId)
+                let controller = context.sharedContext.makeChatRecentActionsController(context: context, peer: peer, adminPeerId: participantPeerId, starsState: nil)
                 navigationController.pushViewController(controller)
             })
         }

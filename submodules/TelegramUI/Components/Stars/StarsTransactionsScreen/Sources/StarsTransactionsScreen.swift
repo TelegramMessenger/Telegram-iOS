@@ -626,7 +626,6 @@ final class StarsTransactionsScreenComponent: Component {
                             maximumNumberOfLines: 1
                         )))
                     )
-                    //TODO:localize
                     let dateText: String
                     let dateValue = stringForDateWithoutYear(date: Date(timeIntervalSince1970: Double(subscription.untilDate)), strings: environment.strings)
                     if subscription.flags.contains(.isCancelled) {
@@ -972,7 +971,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                 guard let self else {
                     return
                 }
-                let controller = context.sharedContext.makeStarsPurchaseScreen(context: context, starsContext: starsContext, options: options, purpose: .generic(requiredStars: nil), completion: { [weak self] stars in
+                let controller = context.sharedContext.makeStarsPurchaseScreen(context: context, starsContext: starsContext, options: options, purpose: .generic, completion: { [weak self] stars in
                     guard let self else {
                         return
                     }

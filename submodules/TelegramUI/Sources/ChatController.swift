@@ -294,6 +294,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     let temporaryHiddenGalleryMediaDisposable = MetaDisposable()
+    
+    let galleryPresentationContext = PresentationContext()
 
     let chatBackgroundNode: WallpaperBackgroundNode
     public private(set) var controllerInteraction: ChatControllerInteraction?
@@ -1273,8 +1275,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: openChatLocation, chatFilterTag: chatFilterTag, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, mediaIndex: params.mediaIndex, standalone: standalone, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
-            }, present: { c, a in
-                self?.present(c, in: .window(.root), with: a, blockInteraction: true)
+            }, present: { c, a, i in
+                if case .current = i {
+                    c.presentationArguments = a
+                    c.statusBar.alphaUpdated = { [weak self] transition in
+                        guard let self else {
+                            return
+                        }
+                        self.updateStatusBarPresentation(animated: transition.isAnimated)
+                    }
+                    self?.galleryPresentationContext.present(c, on: PresentationSurfaceLevel(rawValue: 0), blockInteraction: true, completion: {})
+                } else {
+                    self?.present(c, in: .window(.root), with: a, blockInteraction: true)
+                }
             }, transitionNode: { messageId, media, adjustRect in
                 var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                 if let strongSelf = self {
@@ -1368,6 +1381,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }, openBotCommand: { [weak self] command in
                     if let strongSelf = self {
                         strongSelf.controllerInteraction?.sendBotCommand(nil, command)
+                    }
+                }, openAd: { [weak self] messageId in
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction?.activateAdAction(messageId, nil)
                     }
                 }, addContact: { [weak self] phoneNumber in
                     if let strongSelf = self {
@@ -3857,6 +3874,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId), let adAttribute = message.adAttribute else {
                 return
             }
+            
+            var progress = progress
+            if progress == nil {
+                self.chatDisplayNode.historyNode.forEachVisibleMessageItemNode { itemView in
+                    if itemView.item?.message.id == messageId {
+                        progress = itemView.makeProgress()
+                    }
+                }
+            }
+            
             self.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId)
             self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: adAttribute.url, concealed: false, external: true, progress: progress))
         }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId, maxQuantity in
@@ -4396,7 +4423,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 if alwaysShow {
-                    self.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: "You can update the visibility of sensitive media in [Data and Storage > Show 18+ Content]().", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { _ in return false }), in: .current)
+                    let _ = updateMediaDisplaySettingsInteractively(accountManager: context.sharedContext.accountManager, {
+                        $0.withUpdatedShowSensitiveContent(true)
+                    }).startStandalone()
+                    
+                    self.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.SensitiveContent_SettingsInfo, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { [weak self] action in
+                        if case .info = action, let self {
+                            let controller = self.context.sharedContext.makeDataAndStorageController(context: self.context, sensitiveContent: true)
+                            self.push(controller)
+                        }
+                        return false
+                    }), in: .current)
                 }
                 reveal()
             })
@@ -6782,23 +6819,31 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    func updateStatusBarPresentation(animated: Bool = false) {
+        if !self.galleryPresentationContext.controllers.isEmpty, let statusBarStyle = (self.galleryPresentationContext.controllers.last?.0 as? ViewController)?.statusBar.statusBarStyle {
+            self.statusBar.updateStatusBarStyle(statusBarStyle, animated: animated)
+        } else {
+            switch self.presentationInterfaceState.mode {
+            case let .standard(standardMode):
+                switch standardMode {
+                case .embedded:
+                    self.statusBar.statusBarStyle = .Ignore
+                default:
+                    self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+                    self.deferScreenEdgeGestures = []
+                }
+            case .overlay:
+                self.statusBar.statusBarStyle = .Hide
+                self.deferScreenEdgeGestures = [.top]
+            case .inline:
+                self.statusBar.statusBarStyle = .Ignore
+            }
+        }
+    }
+    
     func themeAndStringsUpdated() {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
-        switch self.presentationInterfaceState.mode {
-        case let .standard(standardMode):
-            switch standardMode {
-            case .embedded:
-                self.statusBar.statusBarStyle = .Ignore
-            default:
-                self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-                self.deferScreenEdgeGestures = []
-            }
-        case .overlay:
-            self.statusBar.statusBarStyle = .Hide
-            self.deferScreenEdgeGestures = [.top]
-        case .inline:
-            self.statusBar.statusBarStyle = .Ignore
-        }
+        self.updateStatusBarPresentation()
         self.updateNavigationBarPresentation()
         self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
             var state = state
@@ -7178,6 +7223,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     override public func loadDisplayNode() {
         self.loadDisplayNodeImpl()
+        self.galleryPresentationContext.view = self.view
+        self.galleryPresentationContext.controllersUpdated = { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.updateStatusBarPresentation()
+        }
     }
     
     override public func viewWillAppear(_ animated: Bool) {

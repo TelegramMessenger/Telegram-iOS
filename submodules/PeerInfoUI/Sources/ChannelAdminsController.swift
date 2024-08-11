@@ -709,7 +709,7 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
                 }
                 if case .legacyGroup = peer {
                 } else {
-                    pushControllerImpl?(context.sharedContext.makeChatRecentActionsController(context: context, peer: peer._asPeer(), adminPeerId: nil))
+                    pushControllerImpl?(context.sharedContext.makeChatRecentActionsController(context: context, peer: peer._asPeer(), adminPeerId: nil, starsState: nil))
                 }
             })
         })

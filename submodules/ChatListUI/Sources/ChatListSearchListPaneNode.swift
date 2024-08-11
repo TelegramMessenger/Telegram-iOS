@@ -2705,7 +2705,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         openMediaMessageImpl = { message, mode in
             let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatFilterTag: nil, chatLocationContextHolder: nil, message: message._asMessage(), standalone: false, reverseMessageGalleryOrder: true, mode: mode, navigationController: navigationController, dismissInput: {
                 interaction.dismissInput()
-            }, present: { c, a in
+            }, present: { c, a, _ in
                 interaction.present(c, a)
             }, transitionNode: { messageId, media, _ in
                 return transitionNodeImpl?(messageId, EngineMedia(media))
@@ -2861,7 +2861,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             
             return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: .peer(id: message.id.peerId), chatFilterTag: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: true, mode: mode, navigationController: navigationController, dismissInput: {
                 interaction.dismissInput()
-            }, present: { c, a in
+            }, present: { c, a, _ in
                 interaction.present(c, a)
             }, transitionNode: { messageId, media, _ in
                 var transitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?

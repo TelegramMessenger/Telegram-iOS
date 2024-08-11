@@ -182,6 +182,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
     private var absoluteLocation: (CGRect, CGSize)?
     
     private var currentColor: ItemBackgroundColor?
+    private var currentIsPaid: Bool?
     private var layoutParams: (ItemListInviteLinkItem, ListViewItemLayoutParams, ItemListNeighbors, Bool, Bool)?
     
     public var tag: ItemListItemTag?
@@ -403,10 +404,9 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                 }
                 
                 if let subscriptionPricing {
-                    //TODO:localize
                     let text = NSMutableAttributedString()
                     text.append(NSAttributedString(string: "⭐️\(subscriptionPricing.amount)\n", font: Font.semibold(17.0), textColor: item.presentationData.theme.list.itemPrimaryTextColor))
-                    text.append(NSAttributedString(string: "per month", font: Font.regular(13.0), textColor: item.presentationData.theme.list.itemSecondaryTextColor))
+                    text.append(NSAttributedString(string: item.presentationData.strings.InviteLink_PerMonth, font: Font.regular(13.0), textColor: item.presentationData.theme.list.itemSecondaryTextColor))
                     if let range = text.string.range(of: "⭐️") {
                         text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: text.string))
                         text.addAttribute(NSAttributedString.Key.font, value: Font.semibold(15.0), range: NSRange(range, in: text.string))
@@ -548,8 +548,12 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
-                        
-                        if let _ = item.invite?.pricing {
+                    }
+                    
+                    let isPaid = item.invite?.pricing != nil
+                    if updatedTheme != nil || strongSelf.currentIsPaid != isPaid {
+                        strongSelf.currentIsPaid = isPaid
+                        if isPaid {
                             strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/SubscriptionLink"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                         } else {
                             strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/InviteLink"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor)

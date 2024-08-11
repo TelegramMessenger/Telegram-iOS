@@ -16,8 +16,8 @@ import Markdown
 private let textFont = Font.regular(13.0)
 private let boldTextFont = Font.semibold(13.0)
 
-private func formattedText(_ text: String, color: UIColor, textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
-    return parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: color), bold: MarkdownAttributeSet(font: boldTextFont, textColor: color), link: MarkdownAttributeSet(font: textFont, textColor: color), linkAttribute: { _ in return nil}), textAlignment: textAlignment)
+private func formattedText(_ text: String, color: UIColor, linkColor: UIColor, textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
+    return parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: color), bold: MarkdownAttributeSet(font: boldTextFont, textColor: color), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { _ in return nil}), textAlignment: textAlignment)
 }
 
 private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
@@ -44,6 +44,7 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
     private var validLayout: CGSize?
     
     private let morePressed: () -> Void
+    private let termsPressed: () -> Void
     
     override var dismissOnOutsideTap: Bool {
         return self.isUserInteractionEnabled
@@ -55,13 +56,14 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
         }
     }
     
-    init(context: AccountContext, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, peer: EnginePeer, title: String, text: String, showMore: Bool, requestWriteAccess: Bool, actions: [TextAlertAction], morePressed: @escaping () -> Void) {
+    init(context: AccountContext, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, peer: EnginePeer, title: String, text: String, showMore: Bool, requestWriteAccess: Bool, actions: [TextAlertAction], morePressed: @escaping () -> Void, termsPressed: @escaping () -> Void) {
         self.strings = strings
         self.peer = peer
         self.title = title
         self.text = text
         self.showMore = showMore
         self.morePressed = morePressed
+        self.termsPressed = termsPressed
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
@@ -145,6 +147,8 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
         super.didLoad()
         
         self.allowWriteLabelNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.allowWriteTap(_:))))
+        
+        self.textNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.termsTap(_:))))
     }
     
     @objc private func allowWriteTap(_ gestureRecognizer: UITapGestureRecognizer) {
@@ -153,18 +157,22 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
         }
     }
     
+    @objc private func termsTap(_ gestureRecognizer: UITapGestureRecognizer) {
+        self.termsPressed()
+    }
+    
     @objc private func moreButtonPressed() {
         self.morePressed()
     }
     
     override func updateTheme(_ theme: AlertControllerTheme) {
         self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.semibold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        self.textNode.attributedText = NSAttributedString(string: self.text, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.textNode.attributedText =  formattedText(self.text, color: theme.primaryColor, linkColor: theme.accentColor, textAlignment: .center)
         
         self.moreButton.setAttributedTitle(NSAttributedString(string: self.strings.WebApp_LaunchMoreInfo, font: Font.regular(13.0), textColor: theme.accentColor), for: .normal)
         self.arrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Peer Info/AlertArrow"), color: theme.accentColor)
         
-        self.allowWriteLabelNode.attributedText = formattedText(strings.WebApp_AddToAttachmentAllowMessages(self.peer.compactDisplayTitle).string, color: theme.primaryColor)
+        self.allowWriteLabelNode.attributedText = formattedText(strings.WebApp_AddToAttachmentAllowMessages(self.peer.compactDisplayTitle).string, color: theme.primaryColor, linkColor: theme.primaryColor)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -313,7 +321,15 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
     }
 }
 
-public func webAppLaunchConfirmationController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peer: EnginePeer, requestWriteAccess: Bool = false, completion: @escaping (Bool) -> Void, showMore: (() -> Void)?) -> AlertController {
+public func webAppLaunchConfirmationController(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
+    peer: EnginePeer,
+    requestWriteAccess: Bool = false,
+    completion: @escaping (Bool) -> Void,
+    showMore: (() -> Void)?,
+    openTerms: @escaping () -> Void
+) -> AlertController {
     let theme = defaultDarkColorPresentationTheme
     let presentationData: PresentationData
     if let updatedPresentationData {
@@ -337,11 +353,14 @@ public func webAppLaunchConfirmationController(context: AccountContext, updatedP
     })]
     
     let title = peer.compactDisplayTitle
-    let text = presentationData.strings.WebApp_LaunchConfirmation
+    let text = presentationData.strings.WebApp_LaunchTermsConfirmation
     
     let contentNode = WebAppLaunchConfirmationAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, peer: peer, title: title, text: text, showMore: showMore != nil, requestWriteAccess: requestWriteAccess, actions: actions, morePressed: {
         dismissImpl?(true)
         showMore?()
+    }, termsPressed: {
+        dismissImpl?(true)
+        openTerms()
     })
     getContentNodeImpl = { [weak contentNode] in
         return contentNode

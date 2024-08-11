@@ -686,7 +686,7 @@ public final class StarsContext {
         return peerId!
     }
     
-    var currentState: StarsContext.State? {
+    public var currentState: StarsContext.State? {
         var state: StarsContext.State?
         self.impl.syncWith { impl in
             state = impl._state

@@ -36,7 +36,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
     let openAppExamples: () -> Void
     let copyTransactionId: (String) -> Void
-    let updateSubscription: (StarsTransactionScreen.SubscriptionAction) -> Void
+    let updateSubscription: () -> Void
     
     init(
         context: AccountContext,
@@ -47,7 +47,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
         openAppExamples: @escaping () -> Void,
         copyTransactionId: @escaping (String) -> Void,
-        updateSubscription: @escaping (StarsTransactionScreen.SubscriptionAction) -> Void
+        updateSubscription: @escaping () -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -199,6 +199,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var countOnTop = false
             var transactionId: String?
             let date: Int32
+            var additionalDate: Int32?
             var via: String?
             var messageId: EngineMessage.Id?
             var toPeer: EnginePeer?
@@ -230,14 +231,41 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 descriptionText = ""
                 count = subscription.pricing.amount
                 date = subscription.untilDate
+                if let creationDate = (subscription.peer._asPeer() as? TelegramChannel)?.creationDate, creationDate > 0 {
+                    additionalDate = creationDate
+                } else {
+                    additionalDate = nil
+                }
                 toPeer = subscription.peer
                 transactionPeer = .peer(subscription.peer)
                 isSubscription = true
                                 
-                if subscription.flags.contains(.isCancelled) {
-                    statusText = strings.Stars_Transaction_Subscription_Cancelled
-                    statusIsDestructive = true
-                    buttonText = strings.Stars_Transaction_Subscription_Renew
+                var hasLeft = false
+                if let toPeer, case let .channel(channel) = toPeer, channel.participationStatus == .left {
+                    hasLeft = true
+                }
+                
+                if hasLeft {
+                    if subscription.flags.contains(.isCancelled) {
+                        statusText = strings.Stars_Transaction_Subscription_Cancelled
+                        statusIsDestructive = true
+                        if date > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
+                            buttonText = strings.Stars_Transaction_Subscription_Renew
+                        } else {
+                            if let _ = subscription.inviteHash {
+                                buttonText = strings.Stars_Transaction_Subscription_JoinAgainChannel
+                            } else {
+                                buttonText = strings.Common_OK
+                            }
+                        }
+                    } else {
+                        if date < Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
+                            buttonText = strings.Stars_Transaction_Subscription_Renew
+                        } else {
+                            statusText = strings.Stars_Transaction_Subscription_LeftChannel(stringForMediumDate(timestamp: subscription.untilDate, strings: strings, dateTimeFormat: dateTimeFormat, withTime: false)).string
+                            buttonText = strings.Stars_Transaction_Subscription_JoinChannel
+                        }
+                    }
                     isCancelled = true
                 } else {
                     statusText = strings.Stars_Transaction_Subscription_Active(stringForMediumDate(timestamp: subscription.untilDate, strings: strings, dateTimeFormat: dateTimeFormat, withTime: false)).string
@@ -628,16 +656,26 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 ))
             }
             
+            if isSubscription, let additionalDate {
+                tableItems.append(.init(
+                    id: "additionalDate",
+                    title: strings.Stars_Transaction_Subscription_Status_Subscribed,
+                    component: AnyComponent(
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: additionalDate, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
+                    )
+                ))
+            }
+            
             let dateTitle: String
             if isSubscription {
-                if isCancelled {
-                    if date > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
+                if date > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
+                    if isCancelled {
                         dateTitle = strings.Stars_Transaction_Subscription_Status_Expires
                     } else {
-                        dateTitle = strings.Stars_Transaction_Subscription_Status_Expired
+                        dateTitle = strings.Stars_Transaction_Subscription_Status_Renews
                     }
                 } else {
-                    dateTitle = strings.Stars_Transaction_Subscription_Status_Renews
+                    dateTitle = strings.Stars_Transaction_Subscription_Status_Expired
                 }
             } else if isSubscriber {
                 dateTitle = strings.Stars_Transaction_Subscription_Status_Subscribed
@@ -651,6 +689,16 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
                 )
             ))
+            
+            if isSubscriber, let additionalDate {
+                tableItems.append(.init(
+                    id: "additionalDate",
+                    title: strings.Stars_Transaction_Subscription_Status_Renews,
+                    component: AnyComponent(
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: additionalDate, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
+                    )
+                ))
+            }
             
             let table = table.update(
                 component: TableComponent(
@@ -857,13 +905,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         isLoading: state.inProgress,
                         action: {
                             component.cancel(true)
-                            
                             if isSubscription {
-                                if buttonIsDestructive {
-                                    component.updateSubscription(.cancel)
-                                } else {
-                                    component.updateSubscription(.renew)
-                                }
+                                component.updateSubscription()
                             }
                         }
                     ),
@@ -899,7 +942,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
     let openAppExamples: () -> Void
     let copyTransactionId: (String) -> Void
-    let updateSubscription: (StarsTransactionScreen.SubscriptionAction) -> Void
+    let updateSubscription: () -> Void
     
     init(
         context: AccountContext,
@@ -909,7 +952,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
         openAppExamples: @escaping () -> Void,
         copyTransactionId: @escaping (String) -> Void,
-        updateSubscription: @escaping (StarsTransactionScreen.SubscriptionAction) -> Void
+        updateSubscription: @escaping () -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -1061,7 +1104,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
         var openMediaImpl: (([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)?
         var openAppExamplesImpl: (() -> Void)?
         var copyTransactionIdImpl: ((String) -> Void)?
-        var updateSubscriptionImpl: ((StarsTransactionScreen.SubscriptionAction) -> Void)?
+        var updateSubscriptionImpl: (() -> Void)?
         
         super.init(
             context: context,
@@ -1083,8 +1126,8 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 copyTransactionId: { transactionId in
                     copyTransactionIdImpl?(transactionId)
                 },
-                updateSubscription: { action in
-                    updateSubscriptionImpl?(action)
+                updateSubscription: {
+                    updateSubscriptionImpl?()
                 }
             ),
             navigationBarAppearance: .none,
@@ -1092,7 +1135,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             theme: forceDark ? .dark : .default
         )
         
-        self.navigationPresentation = .flatModal
+        self.navigationPresentation = .standaloneModal
         self.automaticallyControlPresentationContextLayout = false
         
         openPeerImpl = { [weak self] peer in
@@ -1197,27 +1240,37 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             HapticFeedback().tap()
         }
         
-        updateSubscriptionImpl = { [weak self] action in
+        updateSubscriptionImpl = { [weak self] in
             guard let self, case let .subscription(subscription) = subject, let navigationController = self.navigationController as? NavigationController else {
                 return
             }
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            updateSubscription(action == .cancel)
-            
-            let title: String
-            let text: String
-            switch action {
-            case .cancel:
-                title = presentationData.strings.Stars_Transaction_Subscription_Cancelled_Title
-                text = presentationData.strings.Stars_Transaction_Subscription_Cancelled_Text(subscription.peer.compactDisplayTitle, stringForMediumDate(timestamp: subscription.untilDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)).string
-            case .renew:
-                title = presentationData.strings.Stars_Transaction_Subscription_Renewed_Title
-                text = presentationData.strings.Stars_Transaction_Subscription_Renewed_Text(subscription.peer.compactDisplayTitle).string
+            var titleAndText: (String, String)?
+            if subscription.flags.contains(.isCancelled) {
+                updateSubscription(false)
+                if subscription.untilDate > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
+                    titleAndText = (
+                        presentationData.strings.Stars_Transaction_Subscription_Renewed_Title,
+                        presentationData.strings.Stars_Transaction_Subscription_Renewed_Text(subscription.peer.compactDisplayTitle).string
+                    )
+                }
+            } else {
+                if subscription.untilDate < Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
+                    updateSubscription(false)
+                } else {
+                    updateSubscription(true)
+                    titleAndText = (
+                        presentationData.strings.Stars_Transaction_Subscription_Cancelled_Title,
+                        presentationData.strings.Stars_Transaction_Subscription_Cancelled_Text(subscription.peer.compactDisplayTitle, stringForMediumDate(timestamp: subscription.untilDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)).string
+                    )
+                }
             }
-
-            let controller = UndoOverlayController(presentationData: presentationData, content: .invitedToVoiceChat(context: context, peer: subscription.peer, title: title, text: text, action: nil, duration: 3.0), elevatedLayout: false, position: .bottom, action: { _ in return true })
-            Queue.mainQueue().after(0.6) {
-                navigationController.presentOverlay(controller: controller)
+            
+            if let (title, text) = titleAndText {
+                let controller = UndoOverlayController(presentationData: presentationData, content: .invitedToVoiceChat(context: context, peer: subscription.peer, title: title, text: text, action: nil, duration: 3.0), elevatedLayout: false, position: .bottom, action: { _ in return true })
+                Queue.mainQueue().after(0.6) {
+                    navigationController.presentOverlay(controller: controller)
+                }
             }
         }
     }

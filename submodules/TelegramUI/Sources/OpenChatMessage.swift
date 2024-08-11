@@ -164,7 +164,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                         return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                     }
                     return nil
-                }))
+                }), .window(.root))
                 return true
             case .map:
                 params.dismissInput()
@@ -221,14 +221,14 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     }
                 }, getSourceRect: params.getSourceRect)
                 params.dismissInput()
-                params.present(controller, nil)
+                params.present(controller, nil, .window(.root))
                 return true
             case let .document(file, immediateShare):
                 params.dismissInput()
                 let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
                 if immediateShare {
                     let controller = ShareController(context: params.context, subject: .media(.standalone(media: file)), immediateExternalShare: true)
-                    params.present(controller, nil)
+                    params.present(controller, nil, .window(.root))
                 } else if let rootController = params.navigationController?.view.window?.rootViewController {
                     let proceed = {
                         let canShare = !params.message.isCopyProtected()
@@ -252,7 +252,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     }
                     if file.mimeType.contains("image/svg") {
                         let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
-                        params.present(textAlertController(context: params.context, title: nil, text: presentationData.strings.OpenFile_PotentiallyDangerousContentAlert, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.OpenFile_Proceed, action: { proceed() })] ), nil)
+                        params.present(textAlertController(context: params.context, title: nil, text: presentationData.strings.OpenFile_PotentiallyDangerousContentAlert, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.OpenFile_Proceed, action: { proceed() })] ), nil, .window(.root))
                     } else {
                         proceed()
                     }
@@ -314,7 +314,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                             return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                         }
                         return nil
-                    }))
+                    }), params.message.adAttribute != nil ? .current : .window(.root))
                 })
                 return true
             case let .secretGallery(gallery):
@@ -325,7 +325,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                         return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                     }
                     return nil
-                }))
+                }), .window(.root))
                 return true
             case let .other(otherMedia):
                 params.dismissInput()
@@ -368,7 +368,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                         return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                     }
                     return nil
-                }))
+                }), .window(.root))
             case let .theme(media):
                 params.dismissInput()
                 let path = params.context.account.postbox.mediaBox.completedResourcePath(media.resource)

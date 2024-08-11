@@ -218,7 +218,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private var didInitializeInputMediaNodeDataPromise: Bool = false
     private var inputMediaNodeDataDisposable: Disposable?
     private var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
-    
+        
     let navigateButtons: ChatHistoryNavigationButtons
     
     private var ignoreUpdateHeight = false
@@ -2058,6 +2058,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             childrenLayout.intrinsicInsets = UIEdgeInsets(top: listInsets.top, left: listInsets.left, bottom: listInsets.bottom, right: listInsets.right)
         }
         self.controller?.presentationContext.containerLayoutUpdated(childrenLayout, transition: transition)
+        self.controller?.galleryPresentationContext.containerLayoutUpdated(layout, transition: transition)
         
         listViewTransaction(ListViewUpdateSizeAndInsets(size: contentBounds.size, insets: listInsets, scrollIndicatorInsets: listScrollIndicatorInsets, duration: duration, curve: curve, ensureTopInsetForOverlayHighlightedItems: ensureTopInsetForOverlayHighlightedItems), additionalScrollDistance, scrollToTop, { [weak self] in
             if let strongSelf = self {
