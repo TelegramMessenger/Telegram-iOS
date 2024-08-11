@@ -275,7 +275,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1038136962] = { return Api.EncryptedFile.parse_encryptedFileEmpty($0) }
     dict[-317144808] = { return Api.EncryptedMessage.parse_encryptedMessage($0) }
     dict[594758406] = { return Api.EncryptedMessage.parse_encryptedMessageService($0) }
-    dict[-1812799720] = { return Api.ExportedChatInvite.parse_chatInviteExported($0) }
+    dict[-1574126186] = { return Api.ExportedChatInvite.parse_chatInviteExported($0) }
     dict[-317687113] = { return Api.ExportedChatInvite.parse_chatInvitePublicJoinRequests($0) }
     dict[206668204] = { return Api.ExportedChatlistInvite.parse_exportedChatlistInvite($0) }
     dict[1103040667] = { return Api.ExportedContactToken.parse_exportedContactToken($0) }
@@ -621,7 +621,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1177089766] = { return Api.MessagePeerVote.parse_messagePeerVoteMultiple($0) }
     dict[182649427] = { return Api.MessageRange.parse_messageRange($0) }
     dict[171155211] = { return Api.MessageReactions.parse_messageReactions($0) }
-    dict[-285158328] = { return Api.MessageReactor.parse_messageReactor($0) }
+    dict[1269016922] = { return Api.MessageReactor.parse_messageReactor($0) }
     dict[-2083123262] = { return Api.MessageReplies.parse_messageReplies($0) }
     dict[-1346631205] = { return Api.MessageReplyHeader.parse_messageReplyHeader($0) }
     dict[240843065] = { return Api.MessageReplyHeader.parse_messageReplyStoryHeader($0) }
@@ -803,6 +803,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1929860175] = { return Api.RequestedPeer.parse_requestedPeerChat($0) }
     dict[-701500310] = { return Api.RequestedPeer.parse_requestedPeerUser($0) }
     dict[-797791052] = { return Api.RestrictionReason.parse_restrictionReason($0) }
+    dict[2007669447] = { return Api.RestrictionReason.parse_restrictionReasonSensitive($0) }
     dict[894777186] = { return Api.RichText.parse_textAnchor($0) }
     dict[1730456516] = { return Api.RichText.parse_textBold($0) }
     dict[2120376535] = { return Api.RichText.parse_textConcat($0) }
@@ -881,7 +882,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-651419003] = { return Api.SendMessageAction.parse_speakingInGroupCallAction($0) }
     dict[-1239335713] = { return Api.ShippingOption.parse_shippingOption($0) }
     dict[-425595208] = { return Api.SmsJob.parse_smsJob($0) }
-    dict[-1108478618] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
+    dict[1301522832] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
     dict[1124938064] = { return Api.SponsoredMessageReportOption.parse_sponsoredMessageReportOption($0) }
     dict[1577421297] = { return Api.StarsGiftOption.parse_starsGiftOption($0) }
     dict[2033461574] = { return Api.StarsRevenueStatus.parse_starsRevenueStatus($0) }
@@ -1408,7 +1409,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
                 return nil
             }
         }

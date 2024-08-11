@@ -397,6 +397,7 @@ public extension Api {
 public extension Api {
     enum RestrictionReason: TypeConstructorDescription {
         case restrictionReason(platform: String, reason: String, text: String)
+        case restrictionReasonSensitive(platform: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -408,6 +409,12 @@ public extension Api {
                     serializeString(reason, buffer: buffer, boxed: false)
                     serializeString(text, buffer: buffer, boxed: false)
                     break
+                case .restrictionReasonSensitive(let platform):
+                    if boxed {
+                        buffer.appendInt32(2007669447)
+                    }
+                    serializeString(platform, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -415,6 +422,8 @@ public extension Api {
         switch self {
                 case .restrictionReason(let platform, let reason, let text):
                 return ("restrictionReason", [("platform", platform as Any), ("reason", reason as Any), ("text", text as Any)])
+                case .restrictionReasonSensitive(let platform):
+                return ("restrictionReasonSensitive", [("platform", platform as Any)])
     }
     }
     
@@ -430,6 +439,17 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.RestrictionReason.restrictionReason(platform: _1!, reason: _2!, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_restrictionReasonSensitive(_ reader: BufferReader) -> RestrictionReason? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.RestrictionReason.restrictionReasonSensitive(platform: _1!)
             }
             else {
                 return nil

@@ -441,14 +441,14 @@ public extension Api {
     }
 }
 public extension Api {
-    enum SponsoredMessage: TypeConstructorDescription {
-        case sponsoredMessage(flags: Int32, randomId: Buffer, url: String, title: String, message: String, entities: [Api.MessageEntity]?, photo: Api.Photo?, color: Api.PeerColor?, buttonText: String, sponsorInfo: String?, additionalInfo: String?)
+    indirect enum SponsoredMessage: TypeConstructorDescription {
+        case sponsoredMessage(flags: Int32, randomId: Buffer, url: String, title: String, message: String, entities: [Api.MessageEntity]?, photo: Api.Photo?, media: Api.MessageMedia?, color: Api.PeerColor?, buttonText: String, sponsorInfo: String?, additionalInfo: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .sponsoredMessage(let flags, let randomId, let url, let title, let message, let entities, let photo, let color, let buttonText, let sponsorInfo, let additionalInfo):
+                case .sponsoredMessage(let flags, let randomId, let url, let title, let message, let entities, let photo, let media, let color, let buttonText, let sponsorInfo, let additionalInfo):
                     if boxed {
-                        buffer.appendInt32(-1108478618)
+                        buffer.appendInt32(1301522832)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeBytes(randomId, buffer: buffer, boxed: false)
@@ -461,6 +461,7 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     if Int(flags) & Int(1 << 6) != 0 {photo!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 14) != 0 {media!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 13) != 0 {color!.serialize(buffer, true)}
                     serializeString(buttonText, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 7) != 0 {serializeString(sponsorInfo!, buffer: buffer, boxed: false)}
@@ -471,8 +472,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .sponsoredMessage(let flags, let randomId, let url, let title, let message, let entities, let photo, let color, let buttonText, let sponsorInfo, let additionalInfo):
-                return ("sponsoredMessage", [("flags", flags as Any), ("randomId", randomId as Any), ("url", url as Any), ("title", title as Any), ("message", message as Any), ("entities", entities as Any), ("photo", photo as Any), ("color", color as Any), ("buttonText", buttonText as Any), ("sponsorInfo", sponsorInfo as Any), ("additionalInfo", additionalInfo as Any)])
+                case .sponsoredMessage(let flags, let randomId, let url, let title, let message, let entities, let photo, let media, let color, let buttonText, let sponsorInfo, let additionalInfo):
+                return ("sponsoredMessage", [("flags", flags as Any), ("randomId", randomId as Any), ("url", url as Any), ("title", title as Any), ("message", message as Any), ("entities", entities as Any), ("photo", photo as Any), ("media", media as Any), ("color", color as Any), ("buttonText", buttonText as Any), ("sponsorInfo", sponsorInfo as Any), ("additionalInfo", additionalInfo as Any)])
     }
     }
     
@@ -495,16 +496,20 @@ public extension Api {
             if Int(_1!) & Int(1 << 6) != 0 {if let signature = reader.readInt32() {
                 _7 = Api.parse(reader, signature: signature) as? Api.Photo
             } }
-            var _8: Api.PeerColor?
-            if Int(_1!) & Int(1 << 13) != 0 {if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.PeerColor
+            var _8: Api.MessageMedia?
+            if Int(_1!) & Int(1 << 14) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.MessageMedia
             } }
-            var _9: String?
-            _9 = parseString(reader)
+            var _9: Api.PeerColor?
+            if Int(_1!) & Int(1 << 13) != 0 {if let signature = reader.readInt32() {
+                _9 = Api.parse(reader, signature: signature) as? Api.PeerColor
+            } }
             var _10: String?
-            if Int(_1!) & Int(1 << 7) != 0 {_10 = parseString(reader) }
+            _10 = parseString(reader)
             var _11: String?
-            if Int(_1!) & Int(1 << 8) != 0 {_11 = parseString(reader) }
+            if Int(_1!) & Int(1 << 7) != 0 {_11 = parseString(reader) }
+            var _12: String?
+            if Int(_1!) & Int(1 << 8) != 0 {_12 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -512,12 +517,13 @@ public extension Api {
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 6) == 0) || _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 13) == 0) || _8 != nil
-            let _c9 = _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 7) == 0) || _10 != nil
-            let _c11 = (Int(_1!) & Int(1 << 8) == 0) || _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, url: _3!, title: _4!, message: _5!, entities: _6, photo: _7, color: _8, buttonText: _9!, sponsorInfo: _10, additionalInfo: _11)
+            let _c8 = (Int(_1!) & Int(1 << 14) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 13) == 0) || _9 != nil
+            let _c10 = _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 7) == 0) || _11 != nil
+            let _c12 = (Int(_1!) & Int(1 << 8) == 0) || _12 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
+                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, url: _3!, title: _4!, message: _5!, entities: _6, photo: _7, media: _8, color: _9, buttonText: _10!, sponsorInfo: _11, additionalInfo: _12)
             }
             else {
                 return nil
