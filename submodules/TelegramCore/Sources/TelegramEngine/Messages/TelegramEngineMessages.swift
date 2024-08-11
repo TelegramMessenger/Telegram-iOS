@@ -334,12 +334,16 @@ public extension TelegramEngine {
             ).startStandalone()
         }
         
-        public func sendStarsReaction(id: EngineMessage.Id, count: Int) {
-            let _ = sendStarsReactionsInteractively(account: self.account, messageId: id, count: count).startStandalone()
+        public func sendStarsReaction(id: EngineMessage.Id, count: Int, isAnonymous: Bool) {
+            let _ = sendStarsReactionsInteractively(account: self.account, messageId: id, count: count, isAnonymous: isAnonymous).startStandalone()
         }
         
         public func cancelPendingSendStarsReaction(id: EngineMessage.Id) {
             let _ = cancelPendingSendStarsReactionInteractively(account: self.account, messageId: id).startStandalone()
+        }
+        
+        public func updateStarsReactionIsAnonymous(id: EngineMessage.Id, isAnonymous: Bool) -> Signal<Never, NoError> {
+            return _internal_updateStarsReactionIsAnonymous(account: self.account, messageId: id, isAnonymous: isAnonymous)
         }
 
         public func requestChatContextResults(botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String, incompleteResults: Bool = false, staleCachedResults: Bool = false) -> Signal<RequestChatContextResultsResult?, RequestChatContextResultsError> {

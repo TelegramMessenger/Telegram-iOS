@@ -369,16 +369,14 @@ extension ChatControllerImpl {
     }
     
     func openMessageSendStarsScreen(message: Message) {
-        guard let reactionsAttribute = mergedMessageReactions(attributes: message.attributes, isTags: false) else {
-            return
-        }
-        let _ = (ChatSendStarsScreen.initialData(context: self.context, peerId: message.id.peerId, topPeers: reactionsAttribute.topPeers)
+        let reactionsAttribute = mergedMessageReactions(attributes: message.attributes, isTags: false)
+        let _ = (ChatSendStarsScreen.initialData(context: self.context, peerId: message.id.peerId, messageId: message.id, topPeers: reactionsAttribute?.topPeers ?? [])
         |> deliverOnMainQueue).start(next: { [weak self] initialData in
             guard let self, let initialData else {
                 return
             }
             HapticFeedback().tap()
-            self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount, isBecomingTop, transitionOut in
+            self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount, isAnonymous, isBecomingTop, transitionOut in
                 guard let self, amount > 0 else {
                     return
                 }
@@ -463,10 +461,7 @@ extension ChatControllerImpl {
                     }
                 }
                 
-                #if !DEBUG
-                let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount))
-                #endif
-                
+                let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount), isAnonymous: isAnonymous)
                 self.displayOrUpdateSendStarsUndo(messageId: message.id, count: Int(amount))
             }))
         })

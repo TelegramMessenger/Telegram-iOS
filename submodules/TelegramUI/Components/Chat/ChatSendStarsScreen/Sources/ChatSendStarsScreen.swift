@@ -18,6 +18,7 @@ import SliderComponent
 import RoundedRectWithTailPath
 import AvatarNode
 import BundleIconComponent
+import CheckNode
 
 private final class BalanceComponent: CombinedComponent {
     let context: AccountContext
@@ -739,27 +740,33 @@ private final class ChatSendStarsScreenComponent: Component {
     
     let context: AccountContext
     let peer: EnginePeer
+    let messageId: EngineMessage.Id
     let maxAmount: Int
     let balance: Int64?
     let currentSentAmount: Int?
     let topPeers: [ChatSendStarsScreen.TopPeer]
-    let completion: (Int64, Bool, ChatSendStarsScreen.TransitionOut) -> Void
+    let myTopPeer: ChatSendStarsScreen.TopPeer?
+    let completion: (Int64, Bool, Bool, ChatSendStarsScreen.TransitionOut) -> Void
     
     init(
         context: AccountContext,
         peer: EnginePeer,
+        messageId: EngineMessage.Id,
         maxAmount: Int,
         balance: Int64?,
         currentSentAmount: Int?,
         topPeers: [ChatSendStarsScreen.TopPeer],
-        completion: @escaping (Int64, Bool, ChatSendStarsScreen.TransitionOut) -> Void
+        myTopPeer: ChatSendStarsScreen.TopPeer?,
+        completion: @escaping (Int64, Bool, Bool, ChatSendStarsScreen.TransitionOut) -> Void
     ) {
         self.context = context
         self.peer = peer
+        self.messageId = messageId
         self.maxAmount = maxAmount
         self.balance = balance
         self.currentSentAmount = currentSentAmount
         self.topPeers = topPeers
+        self.myTopPeer = myTopPeer
         self.completion = completion
     }
     
@@ -780,6 +787,9 @@ private final class ChatSendStarsScreenComponent: Component {
             return false
         }
         if lhs.topPeers != rhs.topPeers {
+            return false
+        }
+        if lhs.myTopPeer != rhs.myTopPeer {
             return false
         }
         return true
@@ -829,6 +839,9 @@ private final class ChatSendStarsScreenComponent: Component {
         private var topPeersTitleBackground: SimpleLayer?
         private var topPeersTitle: ComponentView<Empty>?
         
+        private var anonymousSeparator = SimpleLayer()
+        private var anonymousContents = ComponentView<Empty>()
+        
         private var topPeerItems: [ChatSendStarsScreen.TopPeer.Id: ComponentView<Empty>] = [:]
         
         private let actionButton = ComponentView<Empty>()
@@ -846,6 +859,7 @@ private final class ChatSendStarsScreenComponent: Component {
         private var topOffsetDistance: CGFloat?
         
         private var amount: Int64 = 1
+        private var isAnonymous: Bool = false
         private var cachedStarImage: (UIImage, PresentationTheme)?
         private var cachedCloseImage: UIImage?
         
@@ -1014,6 +1028,9 @@ private final class ChatSendStarsScreenComponent: Component {
             
             if self.component == nil {
                 self.amount = 50
+                if let myTopPeer = component.myTopPeer {
+                    self.isAnonymous = myTopPeer.isAnonymous
+                }
             }
             
             self.component = component
@@ -1470,6 +1487,73 @@ private final class ChatSendStarsScreenComponent: Component {
                 contentHeight += 161.0
             }
             
+            do {
+                if !component.topPeers.isEmpty {
+                    contentHeight += 2.0
+                }
+                
+                if self.anonymousSeparator.superlayer == nil {
+                    self.scrollContentView.layer.addSublayer(self.anonymousSeparator)
+                }
+                
+                self.anonymousSeparator.backgroundColor = environment.theme.list.itemPlainSeparatorColor.cgColor
+                
+                let checkTheme = CheckComponent.Theme(
+                    backgroundColor: environment.theme.list.itemCheckColors.fillColor,
+                    strokeColor: environment.theme.list.itemCheckColors.foregroundColor,
+                    borderColor: environment.theme.list.itemCheckColors.strokeColor,
+                    overlayBorder: false,
+                    hasInset: false,
+                    hasShadow: false
+                )
+                let anonymousContentsSize = self.anonymousContents.update(
+                    transition: transition,
+                    component: AnyComponent(PlainButtonComponent(
+                            content: AnyComponent(HStack([
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(CheckComponent(
+                                theme: checkTheme,
+                                selected: !self.isAnonymous
+                            ))),
+                            AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: "Show me in Top Senders", font: Font.regular(16.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                            )))
+                            ],
+                            spacing: 10.0
+                        )),
+                        effectAlignment: .center,
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            self.isAnonymous = !self.isAnonymous
+                            self.state?.updated(transition: .easeInOut(duration: 0.2))
+                            
+                            if component.myTopPeer != nil {
+                                let _ = component.context.engine.messages.updateStarsReactionIsAnonymous(id: component.messageId, isAnonymous: self.isAnonymous).startStandalone()
+                            }
+                        },
+                        animateAlpha: false,
+                        animateScale: false
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                )
+                
+                transition.setFrame(layer: self.anonymousSeparator, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: UIScreenPixel)))
+                
+                contentHeight += 21.0
+                
+                let anonymousContentsFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - anonymousContentsSize.width) * 0.5), y: contentHeight), size: anonymousContentsSize)
+                if let anonymousContentsView = self.anonymousContents.view {
+                    if anonymousContentsView.superview == nil {
+                        self.scrollContentView.addSubview(anonymousContentsView)
+                    }
+                    transition.setFrame(view: anonymousContentsView, frame: anonymousContentsFrame)
+                }
+                
+                contentHeight += anonymousContentsSize.height + 27.0
+            }
+            
             initialContentHeight = contentHeight
             
             if self.cachedStarImage == nil || self.cachedStarImage?.1 !== environment.theme {
@@ -1541,6 +1625,7 @@ private final class ChatSendStarsScreenComponent: Component {
                         
                         component.completion(
                             self.amount,
+                            self.isAnonymous,
                             isBecomingTop,
                             ChatSendStarsScreen.TransitionOut(
                                 sourceView: badgeView.badgeIcon
@@ -1639,20 +1724,26 @@ private final class ChatSendStarsScreenComponent: Component {
 public class ChatSendStarsScreen: ViewControllerComponentContainer {
     public final class InitialData {
         fileprivate let peer: EnginePeer
+        fileprivate let messageId: EngineMessage.Id
         fileprivate let balance: Int64?
         fileprivate let currentSentAmount: Int?
         fileprivate let topPeers: [ChatSendStarsScreen.TopPeer]
+        fileprivate let myTopPeer: ChatSendStarsScreen.TopPeer?
         
         fileprivate init(
             peer: EnginePeer,
+            messageId: EngineMessage.Id,
             balance: Int64?,
             currentSentAmount: Int?,
-            topPeers: [ChatSendStarsScreen.TopPeer]
+            topPeers: [ChatSendStarsScreen.TopPeer],
+            myTopPeer: ChatSendStarsScreen.TopPeer?
         ) {
             self.peer = peer
+            self.messageId = messageId
             self.balance = balance
             self.currentSentAmount = currentSentAmount
             self.topPeers = topPeers
+            self.myTopPeer = myTopPeer
         }
     }
     
@@ -1667,6 +1758,10 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         
         var id: Id {
             return Id(self.peer?.id)
+        }
+        
+        var isAnonymous: Bool {
+            return self.peer == nil
         }
         
         let peer: EnginePeer?
@@ -1703,7 +1798,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
     
     private var presenceDisposable: Disposable?
     
-    public init(context: AccountContext, initialData: InitialData, completion: @escaping (Int64, Bool, TransitionOut) -> Void) {
+    public init(context: AccountContext, initialData: InitialData, completion: @escaping (Int64, Bool, Bool, TransitionOut) -> Void) {
         self.context = context
         
         var maxAmount = 2500
@@ -1714,10 +1809,12 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         super.init(context: context, component: ChatSendStarsScreenComponent(
             context: context,
             peer: initialData.peer,
+            messageId: initialData.messageId,
             maxAmount: maxAmount,
             balance: initialData.balance,
             currentSentAmount: initialData.currentSentAmount,
             topPeers: initialData.topPeers,
+            myTopPeer: initialData.myTopPeer,
             completion: completion
         ), navigationBarAppearance: .none)
         
@@ -1748,7 +1845,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         }
     }
     
-    public static func initialData(context: AccountContext, peerId: EnginePeer.Id, topPeers: [ReactionsMessageAttribute.TopPeer]) -> Signal<InitialData?, NoError> {
+    public static func initialData(context: AccountContext, peerId: EnginePeer.Id, messageId: EngineMessage.Id, topPeers: [ReactionsMessageAttribute.TopPeer]) -> Signal<InitialData?, NoError> {
         let balance: Signal<Int64?, NoError>
         if let starsContext = context.starsContext {
             balance = starsContext.state
@@ -1761,9 +1858,13 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         }
         
         var currentSentAmount: Int?
+        var myTopPeer: ReactionsMessageAttribute.TopPeer?
         if let myPeer = topPeers.first(where: { $0.isMy }) {
+            myTopPeer = myPeer
             currentSentAmount = Int(myPeer.count)
         }
+        
+        let allPeerIds = topPeers.compactMap(\.peerId)
         
         var topPeers = topPeers.sorted(by: { $0.count > $1.count })
         if topPeers.count > 3 {
@@ -1773,9 +1874,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         return combineLatest(
             context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
-                EngineDataMap(topPeers.map(\.peerId).compactMap {
-                    $0.flatMap(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))
-                })
+                EngineDataMap(allPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
             ),
             balance
         )
@@ -1787,6 +1886,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             
             return InitialData(
                 peer: peer,
+                messageId: messageId,
                 balance: balance,
                 currentSentAmount: currentSentAmount,
                 topPeers: topPeers.compactMap { topPeer -> ChatSendStarsScreen.TopPeer? in
@@ -1803,7 +1903,25 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                         return nil
                     }
                     return ChatSendStarsScreen.TopPeer(
-                        peer: topPeerValue,
+                        peer: topPeer.isAnonymous ? nil : topPeerValue,
+                        count: Int(topPeer.count)
+                    )
+                },
+                myTopPeer: myTopPeer.flatMap { topPeer -> ChatSendStarsScreen.TopPeer? in
+                    guard let topPeerId = topPeer.peerId else {
+                        return ChatSendStarsScreen.TopPeer(
+                            peer: nil,
+                            count: Int(topPeer.count)
+                        )
+                    }
+                    guard let topPeerValue = topPeerMap[topPeerId] else {
+                        return nil
+                    }
+                    guard let topPeerValue else {
+                        return nil
+                    }
+                    return ChatSendStarsScreen.TopPeer(
+                        peer: topPeer.isAnonymous ? nil : topPeerValue,
                         count: Int(topPeer.count)
                     )
                 }
@@ -2040,5 +2158,99 @@ private final class SliderStarsView: UIView {
         self.emitterLayer.frame = CGRect(origin: .zero, size: size)
         self.emitterLayer.emitterPosition = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
         self.emitterLayer.emitterSize = size
+    }
+}
+
+private final class CheckComponent: Component {
+    struct Theme: Equatable {
+        public let backgroundColor: UIColor
+        public let strokeColor: UIColor
+        public let borderColor: UIColor
+        public let overlayBorder: Bool
+        public let hasInset: Bool
+        public let hasShadow: Bool
+        public let filledBorder: Bool
+        public let borderWidth: CGFloat?
+        
+        public init(backgroundColor: UIColor, strokeColor: UIColor, borderColor: UIColor, overlayBorder: Bool, hasInset: Bool, hasShadow: Bool, filledBorder: Bool = false, borderWidth: CGFloat? = nil) {
+            self.backgroundColor = backgroundColor
+            self.strokeColor = strokeColor
+            self.borderColor = borderColor
+            self.overlayBorder = overlayBorder
+            self.hasInset = hasInset
+            self.hasShadow = hasShadow
+            self.filledBorder = filledBorder
+            self.borderWidth = borderWidth
+        }
+        
+        var checkNodeTheme: CheckNodeTheme {
+            return CheckNodeTheme(
+                backgroundColor: self.backgroundColor,
+                strokeColor: self.strokeColor,
+                borderColor: self.borderColor,
+                overlayBorder: self.overlayBorder,
+                hasInset: self.hasInset,
+                hasShadow: self.hasShadow,
+                filledBorder: self.filledBorder,
+                borderWidth: self.borderWidth
+            )
+        }
+    }
+    
+    let theme: Theme
+    let selected: Bool
+    
+    init(
+        theme: Theme,
+        selected: Bool
+    ) {
+        self.theme = theme
+        self.selected = selected
+    }
+    
+    static func ==(lhs: CheckComponent, rhs: CheckComponent) -> Bool {
+        if lhs.theme != rhs.theme {
+            return false
+        }
+        if lhs.selected != rhs.selected {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        private var currentValue: CGFloat?
+        private var animator: DisplayLinkAnimator?
+
+        private var checkLayer: CheckLayer {
+            return self.layer as! CheckLayer
+        }
+        
+        override class var layerClass: AnyClass {
+            return CheckLayer.self
+        }
+        
+        init() {
+            super.init(frame: CGRect())
+        }
+
+        required init?(coder aDecoder: NSCoder) {
+            preconditionFailure()
+        }
+    
+        func update(component: CheckComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+            self.checkLayer.setSelected(component.selected, animated: true)
+            self.checkLayer.theme = component.theme.checkNodeTheme
+            
+            return CGSize(width: 22.0, height: 22.0)
+        }
+    }
+
+    func makeView() -> View {
+        return View()
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

@@ -31,6 +31,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Utils/RoundedRectWithTailPath",
         "//submodules/AvatarNode",
         "//submodules/Components/BundleIconComponent",
+        "//submodules/CheckNode",
     ],
     visibility = [
         "//visibility:public",

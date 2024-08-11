@@ -64,8 +64,9 @@ extension ReactionsMessageAttribute {
                             peerId: peerId?.peerId,
                             count: count,
                             isTop: (flags & (1 << 0)) != 0,
-                            isMy: (flags & (1 << 1)) != 0)
-                        )
+                            isMy: (flags & (1 << 1)) != 0,
+                            isAnonymous: (flags & (1 << 2)) != 0
+                        ))
                     }
                 }
             }
@@ -254,8 +255,9 @@ extension ReactionsMessageAttribute {
                             peerId: peerId?.peerId,
                             count: count,
                             isTop: (flags & (1 << 0)) != 0,
-                            isMy: (flags & (1 << 1)) != 0)
-                        )
+                            isMy: (flags & (1 << 1)) != 0,
+                            isAnonymous: (flags & (1 << 2)) != 0
+                        ))
                     }
                 }
             }

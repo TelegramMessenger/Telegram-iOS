@@ -1729,7 +1729,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return
                             }
                             
-                            strongSelf.context.engine.messages.sendStarsReaction(id: message.id, count: 1)
+                            strongSelf.context.engine.messages.sendStarsReaction(id: message.id, count: 1, isAnonymous: false)
                             strongSelf.displayOrUpdateSendStarsUndo(messageId: message.id, count: 1)
                         })
                     } else {
