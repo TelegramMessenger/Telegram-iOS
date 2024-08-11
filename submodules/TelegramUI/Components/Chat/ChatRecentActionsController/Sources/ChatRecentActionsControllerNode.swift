@@ -217,8 +217,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                             invite: invite,
                                             invitationsContext: nil,
                                             revokedInvitationsContext: nil,
-                                            importersContext: nil,
-                                            starsState: strongSelf.controller?.starsState
+                                            importersContext: nil
                                         )
                                         strongSelf.pushController(controller)
                                     }

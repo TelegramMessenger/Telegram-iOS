@@ -800,7 +800,7 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
             theme: .default
         )
         
-        self.navigationPresentation = .standaloneModal
+        self.navigationPresentation = .flatModal
         
         starsContext.load(force: false)
     }

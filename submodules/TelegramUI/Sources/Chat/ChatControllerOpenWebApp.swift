@@ -195,7 +195,13 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
                     return
                 }
                 var presentImpl: ((ViewController, Any?) -> Void)?
-                let params = WebAppParameters(source: isInline ? .inline : .simple, peerId: peer.id, botId: botId, botName: botName, botVerified: botVerified, url: result.url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: result.flags.contains(.fullSize))
+                let source: WebAppParameters.Source
+                if isInline {
+                    source = .inline
+                } else {
+                    source = url.isEmpty ? .generic : .simple
+                }
+                let params = WebAppParameters(source: source, peerId: peer.id, botId: botId, botName: botName, botVerified: botVerified, url: result.url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: result.flags.contains(.fullSize))
                 let controller = standaloneWebAppController(context: context, updatedPresentationData: updatedPresentationData, params: params, threadId: threadId, openUrl: { [weak parentController] url, concealed, commit in
                     ChatControllerImpl.botOpenUrl(context: context, peerId: peer.id, controller: parentController as? ChatControllerImpl, url: url, concealed: concealed, present: { c, a in
                         presentImpl?(c, a)

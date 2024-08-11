@@ -306,6 +306,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     func reveal(animated: Bool = false) {
         self.isRevealed = true
         if animated {
+            self.dustNode.revealOnTap = true
             self.dustNode.tap(at: CGPoint(x: self.dustNode.bounds.width / 2.0, y: self.dustNode.bounds.height / 2.0))
         } else {
             self.blurredImageNode.removeFromSupernode()

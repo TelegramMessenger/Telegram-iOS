@@ -664,6 +664,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         },
                         openStories: { _, _ in
                         },
+                        openStarsTopup: { _ in
+                        },
                         dismissNotice: { _ in
                         },
                         editPeer: { _ in

@@ -348,6 +348,9 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
         itemNode.listNode.openPremiumManagement = { [weak self] in
             self?.openPremiumManagement?()
         }
+        itemNode.listNode.openStarsTopup = { [weak self] amount in
+            self?.openStarsTopup?(amount)
+        }
         
         self.currentItemStateValue.set(itemNode.listNode.state |> map { state in
             let filterId: Int32?
@@ -413,12 +416,28 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
     var openBirthdaySetup: (() -> Void)?
     var openPremiumManagement: (() -> Void)?
     var openStories: ((ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void)?
+    var openStarsTopup: ((Int64?) -> Void)?
     var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     var didBeginSelectingChats: (() -> Void)?
     var canExpandHiddenItems: (() -> Bool)?
     public var displayFilterLimit: (() -> Void)?
     
-    public init(context: AccountContext, controller: ChatListControllerImpl?, location: ChatListControllerLocation, chatListMode: ChatListNodeMode = .chatList(appendContacts: true), previewing: Bool, controlsHistoryPreload: Bool, isInlineMode: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void, openArchiveSettings: @escaping () -> Void) {
+    public init(
+        context: AccountContext,
+        controller: ChatListControllerImpl?,
+        location: ChatListControllerLocation,
+        chatListMode: ChatListNodeMode = .chatList(appendContacts: true),
+        previewing: Bool,
+        controlsHistoryPreload: Bool,
+        isInlineMode: Bool,
+        presentationData: PresentationData,
+        animationCache: AnimationCache,
+        animationRenderer: MultiAnimationRenderer,
+        filterBecameEmpty: @escaping (ChatListFilter?) -> Void,
+        filterEmptyAction: @escaping (ChatListFilter?) -> Void,
+        secondaryEmptyAction: @escaping () -> Void,
+        openArchiveSettings: @escaping () -> Void)
+    {
         self.context = context
         self.controller = controller
         self.location = location

@@ -2825,6 +2825,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             if let sourceNode = sourceNode as? ChatListItemNode {
                 self.interaction.openStories?(id, sourceNode.avatarNode)
             }
+        }, openStarsTopup: { _ in
         }, dismissNotice: { _ in
         }, editPeer: { _ in
         })
@@ -3658,19 +3659,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     } else if case .apps = key {
                         if let navigationController = self.navigationController {
                             if isRecommended {
-                                #if DEBUG
-                                let _ = (self.context.sharedContext.makeMiniAppListScreenInitialData(context: self.context)
-                                |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
-                                    guard let self, let navigationController = self.navigationController else {
-                                        return
-                                    }
-                                    navigationController.pushViewController(self.context.sharedContext.makeMiniAppListScreen(context: self.context, initialData: initialData))
-                                })
-                                #else
                                 if let peerInfoScreen = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                                     navigationController.pushViewController(peerInfoScreen)
                                 }
-                                #endif
                             } else if case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp), let parentController = self.parentController {
                                 self.context.sharedContext.openWebApp(
                                     context: self.context,
@@ -4659,6 +4650,7 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
             }, performActiveSessionAction: { _, _ in
             }, openChatFolderUpdates: {}, hideChatFolderUpdates: {
             }, openStories: { _, _ in
+            }, openStarsTopup: { _ in
             }, dismissNotice: { _ in
             }, editPeer: { _ in
             })

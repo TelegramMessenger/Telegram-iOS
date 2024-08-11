@@ -64,6 +64,7 @@ public enum ViewControllerNavigationPresentation {
     case modal
     case flatModal
     case standaloneModal
+    case standaloneFlatModal
     case modalInLargeLayout
     case modalInCompactLayout
 }

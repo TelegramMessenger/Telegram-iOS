@@ -33,6 +33,7 @@ public final class ChatAvatarNavigationNode: ASDisplayNode {
     public var storyData: (hasUnseen: Bool, hasUnseenCloseFriends: Bool)?
     
     public let statusView: ComponentView<Empty>
+    private var starView: StarView?
     
     private var cachedDataDisposable = MetaDisposable()
     private var hierarchyTrackingLayer: HierarchyTrackingLayer?
@@ -119,6 +120,25 @@ public final class ChatAvatarNavigationNode: ASDisplayNode {
     public func setPeer(context: AccountContext, theme: PresentationTheme, peer: EnginePeer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, clipStyle: AvatarNodeClipStyle = .round, synchronousLoad: Bool = false, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), storeUnrounded: Bool = false) {
         self.context = context
         self.avatarNode.setPeer(context: context, theme: theme, peer: peer, authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, clipStyle: clipStyle, synchronousLoad: synchronousLoad, displayDimensions: displayDimensions, storeUnrounded: storeUnrounded)
+        
+        if let peer, peer.isSubscription {
+            let starView: StarView
+            if let current = self.starView {
+                starView = current
+            } else {
+                starView = StarView()
+                self.starView = starView
+                self.containerNode.view.addSubview(starView)
+            }
+            starView.outlineColor = theme.rootController.navigationBar.opaqueBackgroundColor
+            
+            let starSize = CGSize(width: 15.0, height: 15.0)
+            let starFrame = CGRect(origin: CGPoint(x: self.containerNode.bounds.width - starSize.width + 1.0, y: self.containerNode.bounds.height - starSize.height + 1.0), size: starSize)
+            starView.frame = starFrame
+        } else if let starView = self.starView {
+            self.starView = nil
+            starView.removeFromSuperview()
+        }
         
         if let peer = peer, peer.isPremium {
             self.cachedDataDisposable.set((context.account.postbox.peerView(id: peer.id)
@@ -281,5 +301,35 @@ public final class ChatAvatarNavigationNode: ASDisplayNode {
             videoNode.updateLayout(size: self.avatarNode.frame.size, cornerRadius: self.avatarNode.frame.size.width / 2.0, transition: .immediate)
             videoNode.frame = self.avatarNode.bounds
         }
+    }
+}
+
+private class StarView: UIView {
+    let outline = SimpleLayer()
+    let foreground = SimpleLayer()
+    
+    var outlineColor: UIColor = .white {
+        didSet {
+            self.outline.layerTintColor = self.outlineColor.cgColor
+        }
+    }
+    
+    override init(frame: CGRect) {
+        self.outline.contents = UIImage(bundleImageName: "Premium/Stars/StarMediumOutline")?.cgImage
+        self.foreground.contents = UIImage(bundleImageName: "Premium/Stars/StarMedium")?.cgImage
+        
+        super.init(frame: frame)
+        
+        self.layer.addSublayer(self.outline)
+        self.layer.addSublayer(self.foreground)
+    }
+    
+    required init?(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
+    override func layoutSubviews() {
+        self.outline.frame = self.bounds
+        self.foreground.frame = self.bounds
     }
 }
