@@ -1739,26 +1739,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 })))
             }
         }
-//        if message.id.peerId.isGroupOrChannel {
-//            //TODO:localize
-//            if message.isAgeRestricted() {
-//                actions.append(.action(ContextMenuActionItem(text: "Unmark as 18+", icon: { theme in
-//                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AgeUnmark"), color: theme.actionSheet.primaryTextColor)
-//                }, action: { c, _ in
-//                    c?.dismiss(completion: {
-//                        controllerInteraction.openMessageStats(messages[0].id)
-//                    })
-//                })))
-//            } else {
-//                actions.append(.action(ContextMenuActionItem(text: "Mark as 18+", icon: { theme in
-//                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AgeMark"), color: theme.actionSheet.primaryTextColor)
-//                }, action: { c, _ in
-//                    c?.dismiss(completion: {
-//                        controllerInteraction.openMessageStats(messages[0].id)
-//                    })
-//                })))
-//            }
-//        }
         
         if isReplyThreadHead {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ViewInChannel, icon: { theme in

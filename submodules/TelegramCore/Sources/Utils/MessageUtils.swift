@@ -381,7 +381,15 @@ public extension Message {
         }
     }
     
-    func isAgeRestricted() -> Bool {
+    func isSensitiveContent(platform: String) -> Bool {
+        if let rule = self.restrictedContentAttribute?.rules.first(where: { $0.isSensitive }) {
+            if rule.platform == "all" || rule.platform == platform {
+                return true
+            }
+        }
+        if let peer = self.peers[self.id.peerId], peer.hasSensitiveContent(platform: platform) {
+            return true
+        }
         return false
     }
 }

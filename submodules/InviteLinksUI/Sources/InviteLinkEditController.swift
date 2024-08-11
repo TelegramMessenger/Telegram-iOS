@@ -489,20 +489,19 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     let isEditingEnabled = invite?.pricing == nil
     let isSubscription = state.subscriptionEnabled
     if !isGroup {
-        //TODO:localize
-        entries.append(.subscriptionFeeToggle(presentationData.theme, "Require Monthly Fee", state.subscriptionEnabled, isEditingEnabled))
+        entries.append(.subscriptionFeeToggle(presentationData.theme, presentationData.strings.InviteLink_Create_Fee, state.subscriptionEnabled, isEditingEnabled))
         if state.subscriptionEnabled {
             var label: String = ""
             if let subscriptionFee = state.subscriptionFee, subscriptionFee > 0, let starsState {
-                label = "≈\(formatTonUsdValue(subscriptionFee, divide: false, rate: starsState.usdRate, dateTimeFormat: presentationData.dateTimeFormat)) / month"
+                label = presentationData.strings.InviteLink_Create_FeePerMonth("≈\(formatTonUsdValue(subscriptionFee, divide: false, rate: starsState.usdRate, dateTimeFormat: presentationData.dateTimeFormat))").string
             }
-            entries.append(.subscriptionFee(presentationData.theme, "Stars amount per month", isEditingEnabled, state.subscriptionFee, label, configuration.maxFee))
+            entries.append(.subscriptionFee(presentationData.theme, presentationData.strings.InviteLink_Create_FeePlaceholder, isEditingEnabled, state.subscriptionFee, label, configuration.maxFee))
         }
         let infoText: String
         if let _ = invite, state.subscriptionEnabled {
-            infoText = "If you need to change the subscription fee, create a new invite link with a different price."
+            infoText = presentationData.strings.InviteLink_Create_FeeEditInfo
         } else {
-            infoText = "Charge a subscription fee from people joining your channel via this link. [Learn More >]()"
+            infoText = presentationData.strings.InviteLink_Create_FeeInfo
         }
         entries.append(.subscriptionFeeInfo(presentationData.theme, infoText))
     }
@@ -511,7 +510,7 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
         entries.append(.requestApproval(presentationData.theme, presentationData.strings.InviteLink_Create_RequestApproval, state.requestApproval, isEditingEnabled && !isSubscription))
         var requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
         if isSubscription {
-            requestApprovalInfoText = "You can't enable admin approval for links that require a monthly fee."
+            requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalFeeUnavailable
         } else {
             if state.requestApproval {
                 requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOnInfoChannel

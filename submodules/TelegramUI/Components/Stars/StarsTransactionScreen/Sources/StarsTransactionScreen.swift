@@ -1135,7 +1135,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             theme: forceDark ? .dark : .default
         )
         
-        self.navigationPresentation = .flatModal
+        self.navigationPresentation = .standaloneModal
         self.automaticallyControlPresentationContextLayout = false
         
         openPeerImpl = { [weak self] peer in

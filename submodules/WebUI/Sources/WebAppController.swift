@@ -2072,24 +2072,31 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 })
             })))
             
-            if let botCommands {
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_PrivacyPolicy, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Privacy"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] c, _ in
+                c?.dismiss(completion: nil)
+                
+                guard let self else {
+                    return
+                }
+                
+                (self.parentController() as? AttachmentController)?.minimizeIfNeeded()
+                if let botCommands, botCommands.contains(where: { $0.text == "privacy" }) {
+                    let _ = enqueueMessages(account: self.context.account, peerId: self.botId, messages: [.message(text: "/privacy", attributes: [], inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).startStandalone()
+                    
+                    if let botPeer, let navigationController = self.getNavigationController() {
+                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(botPeer)))
+                    }
+                } else {
+                    self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: self.presentationData.strings.WebApp_PrivacyPolicy_URL, forceExternal: false, presentationData: self.presentationData, navigationController: self.getNavigationController(), dismissInput: {})
+                }
+            })))
+            
+            if let botCommands, botCommands.contains(where: { $0.text == "privacy" }) {
                 for command in botCommands {
                     if command.text == "privacy" {
-                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_PrivacyPolicy, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Privacy"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] c, _ in
-                            c?.dismiss(completion: nil)
-                            
-                            guard let self else {
-                                return
-                            }
-                            let _ = enqueueMessages(account: self.context.account, peerId: self.botId, messages: [.message(text: "/privacy", attributes: [], inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).startStandalone()
-                            
-                            if let botPeer, let navigationController = self.getNavigationController() {
-                                (self.parentController() as? AttachmentController)?.minimizeIfNeeded()
-                                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(botPeer)))
-                            }
-                        })))
+                     
                     }
                 }
             }

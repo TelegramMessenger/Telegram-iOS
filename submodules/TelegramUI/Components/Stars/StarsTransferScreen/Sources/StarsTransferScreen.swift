@@ -77,6 +77,7 @@ private final class SheetContent: CombinedComponent {
         
         private(set) var botPeer: EnginePeer?
         private(set) var chatPeer: EnginePeer?
+        private(set) var authorPeer: EnginePeer?
         private var peerDisposable: Disposable?
         private(set) var balance: Int64?
         private(set) var form: BotPaymentForm?
@@ -799,7 +800,7 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
             theme: .default
         )
         
-        self.navigationPresentation = .flatModal
+        self.navigationPresentation = .standaloneModal
         
         starsContext.load(force: false)
     }

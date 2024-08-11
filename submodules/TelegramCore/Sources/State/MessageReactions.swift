@@ -341,7 +341,7 @@ private func requestSendStarsReaction(postbox: Postbox, network: Network, stateM
             let timestampPart = UInt64(UInt32(bitPattern: Int32(Date().timeIntervalSince1970)))
             let randomId = (timestampPart << 32) | randomPartId
             
-            let signal: Signal<Never, RequestUpdateMessageReactionError> = network.request(Api.functions.messages.sendPaidReaction(peer: inputPeer, msgId: messageId.id, count: count, randomId: Int64(bitPattern: randomId)))
+            let signal: Signal<Never, RequestUpdateMessageReactionError> = network.request(Api.functions.messages.sendPaidReaction(flags: 0, peer: inputPeer, msgId: messageId.id, count: count, randomId: Int64(bitPattern: randomId)))
             |> mapError { _ -> RequestUpdateMessageReactionError in
                 return .generic
             }

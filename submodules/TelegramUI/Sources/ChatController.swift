@@ -4423,7 +4423,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 if alwaysShow {
-                    self.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: "You can update the visibility of sensitive media in [Data and Storage > Show 18+ Content]().", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { _ in return false }), in: .current)
+                    let _ = updateMediaDisplaySettingsInteractively(accountManager: context.sharedContext.accountManager, {
+                        $0.withUpdatedShowSensitiveContent(true)
+                    }).startStandalone()
+                    
+                    self.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.SensitiveContent_SettingsInfo, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { [weak self] action in
+                        if case .info = action, let self {
+                            let controller = self.context.sharedContext.makeDataAndStorageController(context: self.context, sensitiveContent: true)
+                            self.push(controller)
+                        }
+                        return false
+                    }), in: .current)
                 }
                 reveal()
             })

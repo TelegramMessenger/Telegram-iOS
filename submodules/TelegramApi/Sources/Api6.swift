@@ -1012,14 +1012,14 @@ public extension Api {
 }
 public extension Api {
     enum ExportedChatInvite: TypeConstructorDescription {
-        case chatInviteExported(flags: Int32, link: String, adminId: Int64, date: Int32, startDate: Int32?, expireDate: Int32?, usageLimit: Int32?, usage: Int32?, requested: Int32?, title: String?, subscriptionPricing: Api.StarsSubscriptionPricing?)
+        case chatInviteExported(flags: Int32, link: String, adminId: Int64, date: Int32, startDate: Int32?, expireDate: Int32?, usageLimit: Int32?, usage: Int32?, requested: Int32?, subscriptionExpired: Int32?, title: String?, subscriptionPricing: Api.StarsSubscriptionPricing?)
         case chatInvitePublicJoinRequests
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let requested, let title, let subscriptionPricing):
+                case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let requested, let subscriptionExpired, let title, let subscriptionPricing):
                     if boxed {
-                        buffer.appendInt32(-1812799720)
+                        buffer.appendInt32(-1574126186)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(link, buffer: buffer, boxed: false)
@@ -1030,6 +1030,7 @@ public extension Api {
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(usageLimit!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt32(usage!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 7) != 0 {serializeInt32(requested!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 10) != 0 {serializeInt32(subscriptionExpired!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 8) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 9) != 0 {subscriptionPricing!.serialize(buffer, true)}
                     break
@@ -1044,8 +1045,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let requested, let title, let subscriptionPricing):
-                return ("chatInviteExported", [("flags", flags as Any), ("link", link as Any), ("adminId", adminId as Any), ("date", date as Any), ("startDate", startDate as Any), ("expireDate", expireDate as Any), ("usageLimit", usageLimit as Any), ("usage", usage as Any), ("requested", requested as Any), ("title", title as Any), ("subscriptionPricing", subscriptionPricing as Any)])
+                case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let requested, let subscriptionExpired, let title, let subscriptionPricing):
+                return ("chatInviteExported", [("flags", flags as Any), ("link", link as Any), ("adminId", adminId as Any), ("date", date as Any), ("startDate", startDate as Any), ("expireDate", expireDate as Any), ("usageLimit", usageLimit as Any), ("usage", usage as Any), ("requested", requested as Any), ("subscriptionExpired", subscriptionExpired as Any), ("title", title as Any), ("subscriptionPricing", subscriptionPricing as Any)])
                 case .chatInvitePublicJoinRequests:
                 return ("chatInvitePublicJoinRequests", [])
     }
@@ -1070,11 +1071,13 @@ public extension Api {
             if Int(_1!) & Int(1 << 3) != 0 {_8 = reader.readInt32() }
             var _9: Int32?
             if Int(_1!) & Int(1 << 7) != 0 {_9 = reader.readInt32() }
-            var _10: String?
-            if Int(_1!) & Int(1 << 8) != 0 {_10 = parseString(reader) }
-            var _11: Api.StarsSubscriptionPricing?
+            var _10: Int32?
+            if Int(_1!) & Int(1 << 10) != 0 {_10 = reader.readInt32() }
+            var _11: String?
+            if Int(_1!) & Int(1 << 8) != 0 {_11 = parseString(reader) }
+            var _12: Api.StarsSubscriptionPricing?
             if Int(_1!) & Int(1 << 9) != 0 {if let signature = reader.readInt32() {
-                _11 = Api.parse(reader, signature: signature) as? Api.StarsSubscriptionPricing
+                _12 = Api.parse(reader, signature: signature) as? Api.StarsSubscriptionPricing
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -1085,10 +1088,11 @@ public extension Api {
             let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 7) == 0) || _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 8) == 0) || _10 != nil
-            let _c11 = (Int(_1!) & Int(1 << 9) == 0) || _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.ExportedChatInvite.chatInviteExported(flags: _1!, link: _2!, adminId: _3!, date: _4!, startDate: _5, expireDate: _6, usageLimit: _7, usage: _8, requested: _9, title: _10, subscriptionPricing: _11)
+            let _c10 = (Int(_1!) & Int(1 << 10) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 8) == 0) || _11 != nil
+            let _c12 = (Int(_1!) & Int(1 << 9) == 0) || _12 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
+                return Api.ExportedChatInvite.chatInviteExported(flags: _1!, link: _2!, adminId: _3!, date: _4!, startDate: _5, expireDate: _6, usageLimit: _7, usage: _8, requested: _9, subscriptionExpired: _10, title: _11, subscriptionPricing: _12)
             }
             else {
                 return nil

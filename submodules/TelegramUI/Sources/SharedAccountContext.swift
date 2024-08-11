@@ -2715,6 +2715,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return proxySettingsController(accountManager: sharedContext.accountManager, sharedContext: sharedContext, postbox: account.postbox, network: account.network, mode: .modal, presentationData: sharedContext.currentPresentationData.with { $0 }, updatedPresentationData: sharedContext.presentationData)
     }
     
+    public func makeDataAndStorageController(context: AccountContext, sensitiveContent: Bool) -> ViewController {
+        return dataAndStorageController(context: context, focusOnItemTag: sensitiveContent ? DataAndStorageEntryTag.sensitiveContent : nil)
+    }
+    
     public func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, forceTheme: PresentationTheme?) -> ViewController {
         return installedStickerPacksController(context: context, mode: mode, forceTheme: forceTheme)
     }

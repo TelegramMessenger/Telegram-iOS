@@ -626,7 +626,6 @@ final class StarsTransactionsScreenComponent: Component {
                             maximumNumberOfLines: 1
                         )))
                     )
-                    //TODO:localize
                     let dateText: String
                     let dateValue = stringForDateWithoutYear(date: Date(timeIntervalSince1970: Double(subscription.untilDate)), strings: environment.strings)
                     if subscription.flags.contains(.isCancelled) {
