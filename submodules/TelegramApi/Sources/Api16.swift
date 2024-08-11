@@ -266,16 +266,16 @@ public extension Api {
 }
 public extension Api {
     enum MessageReactor: TypeConstructorDescription {
-        case messageReactor(flags: Int32, peerId: Api.Peer, count: Int32)
+        case messageReactor(flags: Int32, peerId: Api.Peer?, count: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageReactor(let flags, let peerId, let count):
                     if boxed {
-                        buffer.appendInt32(-285158328)
+                        buffer.appendInt32(1269016922)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    peerId.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 3) != 0 {peerId!.serialize(buffer, true)}
                     serializeInt32(count, buffer: buffer, boxed: false)
                     break
     }
@@ -292,16 +292,16 @@ public extension Api {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.Peer?
-            if let signature = reader.readInt32() {
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
                 _2 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
+            } }
             var _3: Int32?
             _3 = reader.readInt32()
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
+            let _c2 = (Int(_1!) & Int(1 << 3) == 0) || _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.MessageReactor.messageReactor(flags: _1!, peerId: _2!, count: _3!)
+                return Api.MessageReactor.messageReactor(flags: _1!, peerId: _2, count: _3!)
             }
             else {
                 return nil

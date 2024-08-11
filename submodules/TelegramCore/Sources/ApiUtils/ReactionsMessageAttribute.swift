@@ -61,7 +61,7 @@ extension ReactionsMessageAttribute {
                     switch item {
                     case let .messageReactor(flags, peerId, count):
                         topPeers.append(ReactionsMessageAttribute.TopPeer(
-                            peerId: peerId.peerId,
+                            peerId: peerId?.peerId,
                             count: count,
                             isTop: (flags & (1 << 0)) != 0,
                             isMy: (flags & (1 << 1)) != 0)
@@ -251,7 +251,7 @@ extension ReactionsMessageAttribute {
                     switch item {
                     case let .messageReactor(flags, peerId, count):
                         topPeers.append(ReactionsMessageAttribute.TopPeer(
-                            peerId: peerId.peerId,
+                            peerId: peerId?.peerId,
                             count: count,
                             isTop: (flags & (1 << 0)) != 0,
                             isMy: (flags & (1 << 1)) != 0)

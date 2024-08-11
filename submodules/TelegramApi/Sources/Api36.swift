@@ -8446,6 +8446,23 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func togglePaidReactionPrivacy(peer: Api.InputPeer, msgId: Int32, `private`: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-2070228073)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    `private`.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.togglePaidReactionPrivacy", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("`private`", String(describing: `private`))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func togglePeerTranslations(flags: Int32, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-461589127)

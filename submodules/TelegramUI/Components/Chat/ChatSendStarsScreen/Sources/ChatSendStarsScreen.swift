@@ -469,14 +469,14 @@ private final class PeerComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let peer: EnginePeer
+    let peer: EnginePeer?
     let count: Int
     
     init(
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
-        peer: EnginePeer,
+        peer: EnginePeer?,
         count: Int
     ) {
         self.context = context
@@ -535,7 +535,11 @@ private final class PeerComponent: Component {
             let avatarSize = CGSize(width: 60.0, height: 60.0)
             let avatarFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: avatarSize)
             avatarNode.frame = avatarFrame
-            avatarNode.setPeer(context: component.context, theme: component.theme, peer: component.peer)
+            if let peer = component.peer {
+                avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer)
+            } else {
+                avatarNode.setPeer(context: component.context, theme: component.theme, peer: nil, overrideImage: .anonymousSavedMessagesIcon)
+            }
             avatarNode.updateSize(size: avatarFrame.size)
             
             let badgeSize = self.badge.update(
@@ -557,10 +561,18 @@ private final class PeerComponent: Component {
             
             let titleSpacing: CGFloat = 8.0
             
+            let peerTitle: String
+            if let peer = component.peer {
+                peerTitle = peer.compactDisplayTitle
+            } else {
+                //TODO:localize
+                peerTitle = "Anonymous"
+            }
+            
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.peer.compactDisplayTitle, font: Font.regular(11.0), textColor: component.theme.list.itemPrimaryTextColor))
+                    text: .plain(NSAttributedString(string: peerTitle, font: Font.regular(11.0), textColor: component.theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: avatarSize.width + 10.0 * 2.0, height: 100.0)
@@ -647,7 +659,7 @@ private final class SliderBackgroundComponent: Component {
             self.sliderBackground.backgroundColor = UIColor(rgb: 0xEEEEEF)
             self.sliderForeground.backgroundColor = UIColor(rgb: 0xFFB10D)
             self.topForegroundLine.backgroundColor = component.theme.list.plainBackgroundColor.cgColor
-            self.topBackgroundLine.backgroundColor = UIColor(white: 0.0, alpha: 0.1).cgColor
+            self.topBackgroundLine.backgroundColor = component.theme.list.plainBackgroundColor.cgColor
             
             transition.setFrame(view: self.sliderBackground, frame: CGRect(origin: CGPoint(), size: availableSize))
             
@@ -817,7 +829,7 @@ private final class ChatSendStarsScreenComponent: Component {
         private var topPeersTitleBackground: SimpleLayer?
         private var topPeersTitle: ComponentView<Empty>?
         
-        private var topPeerItems: [EnginePeer.Id: ComponentView<Empty>] = [:]
+        private var topPeerItems: [ChatSendStarsScreen.TopPeer.Id: ComponentView<Empty>] = [:]
         
         private let actionButton = ComponentView<Empty>()
         private let buttonDescriptionText = ComponentView<Empty>()
@@ -1375,34 +1387,55 @@ private final class ChatSendStarsScreenComponent: Component {
                 transition.setFrame(layer: topPeersLeftSeparator, frame: CGRect(origin: CGPoint(x: sideInset, y: separatorY), size: CGSize(width: max(0.0, topPeersBackgroundFrame.minX - separatorSpacing - sideInset), height: UIScreenPixel)))
                 transition.setFrame(layer: topPeersRightSeparator, frame: CGRect(origin: CGPoint(x: topPeersBackgroundFrame.maxX + separatorSpacing, y: separatorY), size: CGSize(width: max(0.0, availableSize.width - sideInset - (topPeersBackgroundFrame.maxX + separatorSpacing)), height: UIScreenPixel)))
                 
-                var validIds: [EnginePeer.Id] = []
+                var validIds: [ChatSendStarsScreen.TopPeer.Id] = []
                 var items: [(itemView: ComponentView<Empty>, size: CGSize)] = []
                 for topPeer in component.topPeers {
-                    validIds.append(topPeer.peer.id)
+                    validIds.append(topPeer.id)
                     
                     let itemView: ComponentView<Empty>
-                    if let current = self.topPeerItems[topPeer.peer.id] {
+                    if let current = self.topPeerItems[topPeer.id] {
                         itemView = current
                     } else {
                         itemView = ComponentView()
-                        self.topPeerItems[topPeer.peer.id] = itemView
+                        self.topPeerItems[topPeer.id] = itemView
                     }
                     
                     let itemSize = itemView.update(
                         transition: .immediate,
-                        component: AnyComponent(PeerComponent(
-                            context: component.context,
-                            theme: environment.theme,
-                            strings: environment.strings,
-                            peer: topPeer.peer,
-                            count: topPeer.count
+                        component: AnyComponent(PlainButtonComponent(
+                            content: AnyComponent(PeerComponent(
+                                context: component.context,
+                                theme: environment.theme,
+                                strings: environment.strings,
+                                peer: topPeer.peer,
+                                count: topPeer.count
+                            )),
+                            effectAlignment: .center,
+                            action: { [weak self] in
+                                guard let self, let component = self.component, let peer = topPeer.peer else {
+                                    return
+                                }
+                                if let peerInfoController = component.context.sharedContext.makePeerInfoController(
+                                    context: component.context,
+                                    updatedPresentationData: nil,
+                                    peer: peer._asPeer(),
+                                    mode: .generic,
+                                    avatarInitiallyExpanded: false,
+                                    fromChat: false,
+                                    requestsContext: nil
+                                ) {
+                                    self.environment?.controller()?.push(peerInfoController)
+                                }
+                            },
+                            isEnabled: topPeer.peer != nil && topPeer.peer?.id != component.context.account.peerId,
+                            animateAlpha: false
                         )),
                         environment: {},
                         containerSize: CGSize(width: 200.0, height: 200.0)
                     )
                     items.append((itemView, itemSize))
                 }
-                var removedIds: [EnginePeer.Id] = []
+                var removedIds: [ChatSendStarsScreen.TopPeer.Id] = []
                 for (id, itemView) in self.topPeerItems {
                     if !validIds.contains(id) {
                         removedIds.append(id)
@@ -1624,10 +1657,22 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
     }
     
     fileprivate final class TopPeer: Equatable {
-        let peer: EnginePeer
+        struct Id: Hashable {
+            var value: EnginePeer.Id?
+            
+            init(_ value: EnginePeer.Id?) {
+                self.value = value
+            }
+        }
+        
+        var id: Id {
+            return Id(self.peer?.id)
+        }
+        
+        let peer: EnginePeer?
         let count: Int
         
-        init(peer: EnginePeer, count: Int) {
+        init(peer: EnginePeer?, count: Int) {
             self.peer = peer
             self.count = count
         }
@@ -1653,6 +1698,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
     
     private let context: AccountContext
     
+    private var didPlayAppearAnimation: Bool = false
     private var isDismissed: Bool = false
     
     private var presenceDisposable: Disposable?
@@ -1693,8 +1739,12 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         
         self.view.disablesInteractiveModalDismiss = true
         
-        if let componentView = self.node.hostView.componentView as? ChatSendStarsScreenComponent.View {
-            componentView.animateIn()
+        if !self.didPlayAppearAnimation {
+            self.didPlayAppearAnimation = true
+            
+            if let componentView = self.node.hostView.componentView as? ChatSendStarsScreenComponent.View {
+                componentView.animateIn()
+            }
         }
     }
     
@@ -1715,7 +1765,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             currentSentAmount = Int(myPeer.count)
         }
         
-        var topPeers = topPeers.sorted(by: { $0.count < $1.count })
+        var topPeers = topPeers.sorted(by: { $0.count > $1.count })
         if topPeers.count > 3 {
             topPeers = Array(topPeers.prefix(3))
         }
@@ -1723,7 +1773,9 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         return combineLatest(
             context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
-                EngineDataMap(topPeers.map(\.peerId).map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                EngineDataMap(topPeers.map(\.peerId).compactMap {
+                    $0.flatMap(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))
+                })
             ),
             balance
         )
@@ -1738,7 +1790,13 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                 balance: balance,
                 currentSentAmount: currentSentAmount,
                 topPeers: topPeers.compactMap { topPeer -> ChatSendStarsScreen.TopPeer? in
-                    guard let topPeerValue = topPeerMap[topPeer.peerId] else {
+                    guard let topPeerId = topPeer.peerId else {
+                        return ChatSendStarsScreen.TopPeer(
+                            peer: nil,
+                            count: Int(topPeer.count)
+                        )
+                    }
+                    guard let topPeerValue = topPeerMap[topPeerId] else {
                         return nil
                     }
                     guard let topPeerValue else {

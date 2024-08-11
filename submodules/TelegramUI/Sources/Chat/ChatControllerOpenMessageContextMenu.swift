@@ -332,6 +332,18 @@ extension ChatControllerImpl {
                     controller?.view.endEditing(true)
                     
                     if case .stars = chosenUpdatedReaction.reaction {
+                        if isLarge {
+                            if let controller {
+                                controller.dismiss(completion: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.openMessageSendStarsScreen(message: message)
+                                })
+                            }
+                            return
+                        }
+                        
                         let isFirst = !"".isEmpty
                         
                         self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
@@ -362,7 +374,9 @@ extension ChatControllerImpl {
                                                     return
                                                 }
                                                 if let itemNode = itemNode, let targetView = itemNode.targetReactionView(value: chosenReaction) {
-                                                    self.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: self.chatDisplayNode.view))
+                                                    if !"".isEmpty {
+                                                        self.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: self.chatDisplayNode.view))
+                                                    }
                                                 }
                                             }, completion: {})
                                         } else {
