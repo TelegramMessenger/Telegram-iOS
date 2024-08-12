@@ -496,8 +496,8 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
             
             if !isGroup && peer.hasPermission(.sendSomething) {
                 entries.append(.signMessages(presentationData.theme, presentationData.strings.Channel_SignMessages, signMessagesEnabled, showAuthorProfilesEnabled))
-                entries.append(.showAuthorProfiles(presentationData.theme, presentationData.strings.Channel_ShowAuthors, showAuthorProfilesEnabled, signMessagesEnabled))
                 if signMessagesEnabled {
+                    entries.append(.showAuthorProfiles(presentationData.theme, presentationData.strings.Channel_ShowAuthors, showAuthorProfilesEnabled, signMessagesEnabled))
                     entries.append(.signMessagesInfo(presentationData.theme, presentationData.strings.Channel_ShowAuthorsFooter))
                 }
             }

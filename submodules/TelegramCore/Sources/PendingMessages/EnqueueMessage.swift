@@ -742,11 +742,16 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 if messageNamespace != Namespaces.Message.ScheduledLocal && messageNamespace != Namespaces.Message.QuickReplyLocal {
                                     attributes.append(ViewCountMessageAttribute(count: 1))
                                 }
-                                if info.flags.contains(.messagesShouldHaveSignatures) {
-                                    attributes.append(AuthorSignatureMessageAttribute(signature: accountPeer.debugDisplayTitle))
-                                }
                                 if info.flags.contains(.messagesShouldHaveProfiles) {
-                                    authorId = account.peerId
+                                    if sendAsPeer == nil {
+                                        authorId = account.peerId
+                                    }
+                                }
+                                if info.flags.contains(.messagesShouldHaveSignatures) {
+                                    if let sendAsPeer, sendAsPeer.id == peerId {
+                                    } else {
+                                        attributes.append(AuthorSignatureMessageAttribute(signature: accountPeer.debugDisplayTitle))
+                                    }
                                 }
                             case .group:
                                 break
