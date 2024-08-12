@@ -345,7 +345,6 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                 if !isBroadcastChannel {
                     hasAvatar = true
                 } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, message.author?.id != channel.id {
-                    //TODO:release
                     if info.flags.contains(.messagesShouldHaveProfiles) {
                         hasAvatar = true
                         effectiveAuthor = message.author
