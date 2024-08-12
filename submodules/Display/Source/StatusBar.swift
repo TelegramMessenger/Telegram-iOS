@@ -81,7 +81,7 @@ public final class StatusBar: ASDisplayNode {
         }
     }
     
-    var alphaUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    public var alphaUpdated: ((ContainedViewLayoutTransition) -> Void)?
     
     public func updateAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
         self.alpha = alpha

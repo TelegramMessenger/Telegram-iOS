@@ -2622,6 +2622,8 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
             }
         }
         
+        foundItemNode?.animateHideEffects()
+        
         if let customReactionSource = self.customReactionSource {
             let itemNode = ReactionNode(context: self.context, theme: self.presentationData.theme, item: customReactionSource.item, icon: .none, animationCache: self.animationCache, animationRenderer: self.animationRenderer, loopIdle: false, isLocked: false, useDirectRendering: false)
             if let contents = customReactionSource.layer.contents {
@@ -2673,7 +2675,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         if case .builtin = itemNode.item.reaction.rawValue {
             selfTargetBounds = selfTargetBounds.insetBy(dx: -selfTargetBounds.width * 0.5, dy: -selfTargetBounds.height * 0.5)
         } else if case .stars = itemNode.item.reaction.rawValue {
-            selfTargetBounds = selfTargetBounds.insetBy(dx: selfTargetBounds.width * 0.0, dy: selfTargetBounds.height * 0.0)
+            selfTargetBounds = selfTargetBounds.insetBy(dx: -selfTargetBounds.width * 0.13, dy: -selfTargetBounds.height * 0.13).offsetBy(dx: -0.5, dy: -0.5)
         }
         
         let selfTargetRect = self.view.convert(selfTargetBounds, from: targetView)
@@ -2905,7 +2907,14 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         })
         
         if !switchToInlineImmediately {
-            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + min(5.0, 2.0 * UIView.animationDurationFactor()), execute: {
+            let maxDuration: Double
+            if case .stars = value {
+                maxDuration = 3.0
+            } else {
+                maxDuration = 2.0
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + min(5.0, maxDuration * UIView.animationDurationFactor()), execute: {
                 if self.didTriggerExpandedReaction {
                     self.animateFromItemNodeToReaction(itemNode: itemNode, targetView: targetView, hideNode: hideNode, completion: { [weak self] in
                         if let strongSelf = self, strongSelf.didTriggerExpandedReaction, let addStandaloneReactionAnimation = addStandaloneReactionAnimation {
@@ -3986,8 +3995,6 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                         starView.isHidden = true
                     } else {
                         targetView.updateIsAnimationHidden(isAnimationHidden: true, transition: .immediate)
-                        //TODO:release
-                        //targetView.addSubnode(itemNode)
                     }
                 } else if let targetView = targetView as? UIImageView {
                     starView.isHidden = true

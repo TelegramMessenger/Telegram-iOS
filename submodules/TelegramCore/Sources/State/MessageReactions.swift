@@ -172,7 +172,7 @@ public func updateMessageReactionsInteractively(account: Account, messageIds: [M
     |> ignoreValues
 }
 
-public func sendStarsReactionsInteractively(account: Account, messageId: MessageId, count: Int) -> Signal<Never, NoError> {
+public func sendStarsReactionsInteractively(account: Account, messageId: MessageId, count: Int, isAnonymous: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
         transaction.setPendingMessageAction(type: .sendStarsReaction, id: messageId, action: SendStarsReactionsAction(randomId: Int64.random(in: Int64.min ... Int64.max)))
         transaction.updateMessage(messageId, update: { currentMessage in
@@ -190,7 +190,7 @@ public func sendStarsReactionsInteractively(account: Account, messageId: Message
                 }
             }
                 
-            attributes.append(PendingStarsReactionsMessageAttribute(accountPeerId: account.peerId, count: mappedCount))
+            attributes.append(PendingStarsReactionsMessageAttribute(accountPeerId: account.peerId, count: mappedCount, isAnonymous: isAnonymous))
             
             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
         })
@@ -218,6 +218,47 @@ func cancelPendingSendStarsReactionInteractively(account: Account, messageId: Me
         })
     }
     |> ignoreValues
+}
+
+func _internal_forceSendPendingSendStarsReaction(account: Account, messageId: MessageId) -> Signal<Never, NoError> {
+    account.stateManager.forceSendPendingStarsReaction(messageId: messageId)
+    
+    return .complete()
+}
+
+func _internal_updateStarsReactionIsAnonymous(account: Account, messageId: MessageId, isAnonymous: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        transaction.updateMessage(messageId, update: { currentMessage in
+            var storeForwardInfo: StoreMessageForwardInfo?
+            if let forwardInfo = currentMessage.forwardInfo {
+                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+            }
+            var attributes = currentMessage.attributes
+            for j in (0 ..< attributes.count).reversed() {
+                if let attribute = attributes[j] as? ReactionsMessageAttribute {
+                    var updatedTopPeers = attribute.topPeers
+                    if let index = updatedTopPeers.firstIndex(where: { $0.isMy }) {
+                        updatedTopPeers[index].isAnonymous = isAnonymous
+                    }
+                    attributes[j] = ReactionsMessageAttribute(canViewList: attribute.canViewList, isTags: attribute.isTags, reactions: attribute.reactions, recentPeers: attribute.recentPeers, topPeers: updatedTopPeers)
+                }
+            }
+            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+        })
+        
+        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+        guard let inputPeer else {
+            return .complete()
+        }
+        
+        return account.network.request(Api.functions.messages.togglePaidReactionPrivacy(peer: inputPeer, msgId: messageId.id, private: isAnonymous ? .boolTrue : .boolFalse))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> ignoreValues
+    }
 }
 
 private enum RequestUpdateMessageReactionError {
@@ -308,7 +349,7 @@ private func requestUpdateMessageReaction(postbox: Postbox, network: Network, st
 }
 
 private func requestSendStarsReaction(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId) -> Signal<Never, RequestUpdateMessageReactionError> {
-    return postbox.transaction { transaction -> (Peer, Int32)? in
+    return postbox.transaction { transaction -> (Peer, Int32, Bool)? in
         guard let peer = transaction.getPeer(messageId.peerId) else {
             return nil
         }
@@ -316,17 +357,19 @@ private func requestSendStarsReaction(postbox: Postbox, network: Network, stateM
             return nil
         }
         var count: Int32 = 0
+        var isAnonymous = false
         for attribute in message.attributes {
             if let attribute = attribute as? PendingStarsReactionsMessageAttribute {
                 count += attribute.count
+                isAnonymous = attribute.isAnonymous
                 break
             }
         }
-        return (peer, count)
+        return (peer, count, isAnonymous)
     }
     |> castError(RequestUpdateMessageReactionError.self)
     |> mapToSignal { peerAndValue in
-        guard let (peer, count) = peerAndValue else {
+        guard let (peer, count, isAnonymous) = peerAndValue else {
             return .fail(.generic)
         }
         guard let inputPeer = apiInputPeer(peer) else {
@@ -341,11 +384,19 @@ private func requestSendStarsReaction(postbox: Postbox, network: Network, stateM
             let timestampPart = UInt64(UInt32(bitPattern: Int32(Date().timeIntervalSince1970)))
             let randomId = (timestampPart << 32) | randomPartId
             
-            let signal: Signal<Never, RequestUpdateMessageReactionError> = network.request(Api.functions.messages.sendPaidReaction(peer: inputPeer, msgId: messageId.id, count: count, randomId: Int64(bitPattern: randomId)))
+            var flags: Int32 = 0
+            if isAnonymous {
+                flags |= 1 << 0
+            }
+            
+            let signal: Signal<Never, RequestUpdateMessageReactionError> = network.request(Api.functions.messages.sendPaidReaction(flags: 0, peer: inputPeer, msgId: messageId.id, count: count, randomId: Int64(bitPattern: randomId)))
             |> mapError { _ -> RequestUpdateMessageReactionError in
                 return .generic
             }
             |> mapToSignal { result -> Signal<Never, RequestUpdateMessageReactionError> in
+                stateManager.starsContext?.add(balance: Int64(-count), addTransaction: false)
+                //stateManager.starsContext?.load(force: true)
+                
                 return postbox.transaction { transaction -> Void in
                     transaction.setPendingMessageAction(type: .sendStarsReaction, id: messageId, action: UpdateMessageReactionsAction())
                     transaction.updateMessage(messageId, update: { currentMessage in
@@ -526,8 +577,20 @@ func managedApplyPendingMessageStarsReactionsActions(postbox: Postbox, network: 
                 let signal = withTakenStarsAction(postbox: postbox, type: .sendStarsReaction, id: entry.id, { transaction, entry -> Signal<Never, NoError> in
                     if let entry = entry {
                         if let _ = entry.action as? SendStarsReactionsAction {
-                            return synchronizeMessageStarsReactions(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, id: entry.id)
-                            |> delay(5.0, queue: .mainQueue())
+                            let triggerSignal: Signal<Void, NoError> = stateManager.forceSendPendingStarsReaction
+                            |> filter {
+                                $0 == entry.id
+                            }
+                            |> map { _ -> Void in
+                                return Void()
+                            }
+                            |> take(1)
+                            |> timeout(5.0, queue: .mainQueue(), alternate: .single(Void()))
+                            
+                            return triggerSignal
+                            |> mapToSignal { _ -> Signal<Never, NoError> in
+                                return synchronizeMessageStarsReactions(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, id: entry.id)
+                            }
                         } else {
                             assertionFailure()
                         }

@@ -128,7 +128,7 @@ private final class ChatAgeRestrictionAlertContentNode: AlertContentNode {
         self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.semibold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         self.textNode.attributedText = NSAttributedString(string: self.text, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         
-        self.alwaysLabelNode.attributedText = formattedText("Always show 18+ media", color: theme.primaryColor)
+        self.alwaysLabelNode.attributedText = formattedText(self.strings.SensitiveContent_ShowAlways, color: theme.primaryColor)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -269,10 +269,9 @@ public func chatAgeRestrictionAlertController(context: AccountContext, updatedPr
     }
     let strings = presentationData.strings
     
-    //TODO:localize
     var dismissImpl: ((Bool) -> Void)?
     var getContentNodeImpl: (() -> ChatAgeRestrictionAlertContentNode?)?
-    let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: "View Anyway", action: {
+    let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: strings.SensitiveContent_ViewAnyway, action: {
         if let alwaysShow = getContentNodeImpl?()?.alwaysShow {
             completion(alwaysShow)
         } else {
@@ -283,8 +282,8 @@ public func chatAgeRestrictionAlertController(context: AccountContext, updatedPr
         dismissImpl?(true)
     })]
     
-    let title = "18+ Content"
-    let text = "This media may contain sensitive content suitable only for adults.\nDo you still want to view it?"
+    let title = strings.SensitiveContent_Title
+    let text = strings.SensitiveContent_Text
     
     let contentNode = ChatAgeRestrictionAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, actions: actions)
     getContentNodeImpl = { [weak contentNode] in

@@ -513,6 +513,9 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 }
                 
                 actionTitle = adAttribute.buttonText.uppercased()
+                if !isTelegramMeLink(adAttribute.url) {
+                    actionIcon = .link
+                }
                 displayLine = true
             }
             

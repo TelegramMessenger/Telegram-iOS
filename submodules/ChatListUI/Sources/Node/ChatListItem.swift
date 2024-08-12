@@ -1661,7 +1661,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             } else if peer.id.isReplies {
                 overrideImage = .repliesIcon
             } else if peer.id.isAnonymousSavedMessages {
-                overrideImage = .anonymousSavedMessagesIcon
+                overrideImage = .anonymousSavedMessagesIcon(isColored: true)
             } else if peer.id == item.context.account.peerId && !displayAsMessage {
                 if case .savedMessagesChats = item.chatListLocation {
                     overrideImage = .myNotesIcon

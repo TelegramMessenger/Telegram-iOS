@@ -296,6 +296,12 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         self.customContentsNode?.contents = contents
     }
     
+    public func animateHideEffects() {
+        if let starsEffectLayer = self.starsEffectLayer {
+            starsEffectLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        }
+    }
+    
     public func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
         let intrinsicSize = size
         

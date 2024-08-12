@@ -573,6 +573,7 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
         opaqueId: Data,
         title: String,
         options: [ReportAdMessageResult.Option],
+        forceDark: Bool = false,
         completed: @escaping () -> Void
     ) {
         self.context = context
@@ -593,7 +594,7 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
             ),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,
-            theme: .default
+            theme: forceDark ? .dark : .default
         )
         
         self.navigationPresentation = .flatModal

@@ -751,11 +751,10 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 if message.author?.id == accountPeerId {
                     attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_SentYou(price)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 } else {
-                    //TODO:localize
                     var authorName = compactAuthorName
                     var peerIds: [(Int, EnginePeer.Id?)] = [(0, message.author?.id)]
                     if message.id.peerId.namespace == Namespaces.Peer.CloudUser && message.id.peerId.id._internalGetInt64Value() == 777000 {
-                        authorName = "Unknown user"
+                        authorName = strings.Notification_StarsGift_UnknownUser
                         peerIds = []
                     }
                     var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
@@ -1010,13 +1009,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
             case let .paymentRefunded(peerId, currency, totalAmount, _, _):
-                //TODO:localize
-                let patternString: String
-                if peerId == message.id.peerId {
-                    patternString = "You received a refund of {amount}"
-                } else {
-                    patternString = "You received a refund of {amount} from {name}"
-                }
+                let patternString = strings.Notification_Refund
                 
                 let mutableString = NSMutableAttributedString()
                 mutableString.append(NSAttributedString(string: patternString, font: titleFont, textColor: primaryTextColor))

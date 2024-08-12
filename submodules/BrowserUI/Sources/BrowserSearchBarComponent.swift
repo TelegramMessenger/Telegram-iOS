@@ -84,10 +84,6 @@ final class SearchBarContentComponent: Component {
         private var params: Params?
         private var component: SearchBarContentComponent?
         
-        public var wantsDisplayBelowKeyboard: Bool {
-            return self.textField != nil
-        }
-        
         init() {
             self.backgroundLayer = SimpleLayer()
             
@@ -177,9 +173,10 @@ final class SearchBarContentComponent: Component {
         private func activateTextInput() {
             if self.textField == nil, let textFrame = self.textFrame {
                 let backgroundFrame = self.backgroundLayer.frame
-                let textFieldFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textFrame.minX, height: backgroundFrame.height))
+                let textFieldFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textFrame.minX - 32.0, height: backgroundFrame.height))
                 
                 let textField = SearchTextField(frame: textFieldFrame)
+                textField.clipsToBounds = true
                 textField.autocorrectionType = .no
                 textField.returnKeyType = .search
                 self.textField = textField

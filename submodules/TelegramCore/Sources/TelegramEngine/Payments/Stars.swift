@@ -251,7 +251,9 @@ private func _internal_requestStarsSubscriptions(account: Account, peerId: Engin
                     if let subscriptions {
                         for entry in subscriptions {
                             if let parsedSubscription = StarsContext.State.Subscription(apiSubscription: entry, transaction: transaction) {
-                                parsedSubscriptions.append(parsedSubscription)
+                                if !missingBalance || parsedSubscription.flags.contains(.missingBalance) {
+                                    parsedSubscriptions.append(parsedSubscription)
+                                }
                             }
                         }
                     }
@@ -336,14 +338,16 @@ private final class StarsContextImpl {
         }))
     }
     
-    func add(balance: Int64) {
+    func add(balance: Int64, addTransaction: Bool) {
         guard let state = self._state else {
             return
         }
         var transactions = state.transactions
-        transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, media: [], subscriptionPeriod: nil), at: 0)
+        if addTransaction {
+            transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, media: [], subscriptionPeriod: nil), at: 0)
+        }
         
-        self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: state.balance + balance, subscriptions: state.subscriptions, canLoadMoreSubscriptions: state.canLoadMoreSubscriptions, transactions: transactions, canLoadMoreTransactions: state.canLoadMoreTransactions, isLoading: state.isLoading))
+        self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: max(0, state.balance + balance), subscriptions: state.subscriptions, canLoadMoreSubscriptions: state.canLoadMoreSubscriptions, transactions: transactions, canLoadMoreTransactions: state.canLoadMoreTransactions, isLoading: state.isLoading))
     }
     
     fileprivate func updateBalance(_ balance: Int64, transactions: [StarsContext.State.Transaction]?) {
@@ -694,9 +698,9 @@ public final class StarsContext {
         return state
     }
     
-    public func add(balance: Int64) {
+    public func add(balance: Int64, addTransaction: Bool = true) {
         self.impl.with {
-            $0.add(balance: balance)
+            $0.add(balance: balance, addTransaction: addTransaction)
         }
     }
     
@@ -910,7 +914,7 @@ public final class StarsTransactionsContext {
 
 private final class StarsSubscriptionsContextImpl {
     private let account: Account
-    private weak var starsContext: StarsContext?
+    private let missingBalance: Bool
     
     private var _state: StarsSubscriptionsContext.State
     private let _statePromise = Promise<StarsSubscriptionsContext.State>()
@@ -923,16 +927,16 @@ private final class StarsSubscriptionsContextImpl {
     private var stateDisposable: Disposable?
     private let updateDisposable = MetaDisposable()
     
-    init(account: Account, starsContext: StarsContext) {
+    init(account: Account, starsContext: StarsContext?, missingBalance: Bool) {
         assert(Queue.mainQueue().isCurrent())
         
         self.account = account
-        self.starsContext = starsContext
+        self.missingBalance = missingBalance
         
-        let currentSubscriptions = starsContext.currentState?.subscriptions ?? []
-        let canLoadMore = starsContext.currentState?.canLoadMoreSubscriptions ?? true
+        let currentSubscriptions = starsContext?.currentState?.subscriptions ?? []
+        let canLoadMore = starsContext?.currentState?.canLoadMoreSubscriptions ?? true
         
-        self._state = StarsSubscriptionsContext.State(subscriptions: currentSubscriptions, canLoadMore: canLoadMore, isLoading: false)
+        self._state = StarsSubscriptionsContext.State(balance: 0, subscriptions: currentSubscriptions, canLoadMore: canLoadMore, isLoading: false)
         self._statePromise.set(.single(self._state))
         
         self.loadMore()
@@ -956,7 +960,7 @@ private final class StarsSubscriptionsContextImpl {
         updatedState.isLoading = true
         self.updateState(updatedState)
                 
-        self.disposable.set((_internal_requestStarsSubscriptions(account: self.account, peerId: self.account.peerId, offset: nextOffset, missingBalance: false)
+        self.disposable.set((_internal_requestStarsSubscriptions(account: self.account, peerId: self.account.peerId, offset: nextOffset, missingBalance: self.missingBalance)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             guard let self else {
                 return
@@ -964,6 +968,7 @@ private final class StarsSubscriptionsContextImpl {
             self.nextOffset = status.nextSubscriptionsOffset
             
             var updatedState = self._state
+            updatedState.balance = status.subscriptionsMissingBalance ?? 0
             updatedState.subscriptions = nextOffset.isEmpty ? status.subscriptions : updatedState.subscriptions + status.subscriptions
             updatedState.isLoading = false
             updatedState.canLoadMore = self.nextOffset != nil
@@ -1021,11 +1026,13 @@ private final class StarsSubscriptionsContextImpl {
     
 public final class StarsSubscriptionsContext {
     public struct State: Equatable {
+        public var balance: Int64
         public var subscriptions: [StarsContext.State.Subscription]
         public var canLoadMore: Bool
         public var isLoading: Bool
         
-        init(subscriptions: [StarsContext.State.Subscription], canLoadMore: Bool, isLoading: Bool) {
+        init(balance: Int64, subscriptions: [StarsContext.State.Subscription], canLoadMore: Bool, isLoading: Bool) {
+            self.balance = balance
             self.subscriptions = subscriptions
             self.canLoadMore = canLoadMore
             self.isLoading = isLoading
@@ -1052,9 +1059,9 @@ public final class StarsSubscriptionsContext {
         }
     }
     
-    init(account: Account, starsContext: StarsContext) {
+    init(account: Account, starsContext: StarsContext?, missingBalance: Bool) {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
-            return StarsSubscriptionsContextImpl(account: account, starsContext: starsContext)
+            return StarsSubscriptionsContextImpl(account: account, starsContext: starsContext, missingBalance: missingBalance)
         })
     }
     

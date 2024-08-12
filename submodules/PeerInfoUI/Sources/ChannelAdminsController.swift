@@ -496,9 +496,10 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
             
             if !isGroup && peer.hasPermission(.sendSomething) {
                 entries.append(.signMessages(presentationData.theme, presentationData.strings.Channel_SignMessages, signMessagesEnabled, showAuthorProfilesEnabled))
-                //TODO:localize
-                entries.append(.showAuthorProfiles(presentationData.theme, "Show Authors' Profiles", showAuthorProfilesEnabled, signMessagesEnabled))
-                entries.append(.signMessagesInfo(presentationData.theme, "Add names and photos of admins to the messages they post, linking to their profiles."))
+                if signMessagesEnabled {
+                    entries.append(.showAuthorProfiles(presentationData.theme, presentationData.strings.Channel_ShowAuthors, showAuthorProfilesEnabled, signMessagesEnabled))
+                    entries.append(.signMessagesInfo(presentationData.theme, presentationData.strings.Channel_ShowAuthorsFooter))
+                }
             }
         }
     } else if case let .legacyGroup(peer) = peer {

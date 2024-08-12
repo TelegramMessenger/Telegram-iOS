@@ -227,6 +227,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
         }, performActiveSessionAction: { _, _ in
         }, openChatFolderUpdates: {}, hideChatFolderUpdates: {
         }, openStories: { _, _ in
+        }, openStarsTopup: { _ in
         }, dismissNotice: { _ in
         }, editPeer: { _ in
         })

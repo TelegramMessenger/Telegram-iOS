@@ -105,6 +105,7 @@ public class MediaDustNode: ASDisplayNode {
     private var staticNode: ASImageNode?
     private var staticParams: CGSize?
     
+    public var revealOnTap = true
     public var isRevealed = false
     private var isExploding = false
     
@@ -217,6 +218,10 @@ public class MediaDustNode: ASDisplayNode {
         }
         
         self.tapped()
+        
+        guard self.revealOnTap else {
+            return
+        }
         
         self.isRevealed = true
         

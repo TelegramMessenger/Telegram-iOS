@@ -164,107 +164,10 @@ extension ChatControllerImpl {
                 self.window?.presentInGlobalOverlay(controller)
             })
         } else {
-            if case .stars = value, let reactionsAttribute = mergedMessageReactions(attributes: message.attributes, isTags: false) {
+            if case .stars = value {
                 gesture?.cancel()
                 cancelParentGestures(view: sourceView)
-                let _ = (ChatSendStarsScreen.initialData(context: self.context, peerId: message.id.peerId, topPeers: reactionsAttribute.topPeers)
-                |> deliverOnMainQueue).start(next: { [weak self] initialData in
-                    guard let self, let initialData else {
-                        return
-                    }
-                    HapticFeedback().tap()
-                    self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount, isBecomingTop, transitionOut in
-                        guard let self, amount > 0 else {
-                            return
-                        }
-                        
-                        var sourceItemNode: ChatMessageItemView?
-                        self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                            if let itemNode = itemNode as? ChatMessageItemView {
-                                if itemNode.item?.message.id == message.id {
-                                    sourceItemNode = itemNode
-                                    return
-                                }
-                            }
-                        }
-                        
-                        if let itemNode = sourceItemNode, let item = itemNode.item, let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: .stars) {
-                            var reactionItem: ReactionItem?
-                            
-                            for reaction in availableReactions.reactions {
-                                guard let centerAnimation = reaction.centerAnimation else {
-                                    continue
-                                }
-                                guard let aroundAnimation = reaction.aroundAnimation else {
-                                    continue
-                                }
-                                if reaction.value == .stars {
-                                    reactionItem = ReactionItem(
-                                        reaction: ReactionItem.Reaction(rawValue: reaction.value),
-                                        appearAnimation: reaction.appearAnimation,
-                                        stillAnimation: reaction.selectAnimation,
-                                        listAnimation: centerAnimation,
-                                        largeListAnimation: reaction.activateAnimation,
-                                        applicationAnimation: aroundAnimation,
-                                        largeApplicationAnimation: reaction.effectAnimation,
-                                        isCustom: false
-                                    )
-                                    break
-                                }
-                            }
-                            
-                            if let reactionItem {
-                                let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: self.chatDisplayNode.historyNode.takeGenericReactionEffect())
-                                
-                                self.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
-                                
-                                self.view.window?.addSubview(standaloneReactionAnimation.view)
-                                standaloneReactionAnimation.frame = self.chatDisplayNode.bounds
-                                standaloneReactionAnimation.animateOutToReaction(
-                                    context: self.context,
-                                    theme: self.presentationData.theme,
-                                    item: reactionItem,
-                                    value: .stars,
-                                    sourceView: transitionOut.sourceView,
-                                    targetView: targetView,
-                                    hideNode: false,
-                                    forceSwitchToInlineImmediately: false,
-                                    animateTargetContainer: nil,
-                                    addStandaloneReactionAnimation: { [weak self] standaloneReactionAnimation in
-                                        guard let self else {
-                                            return
-                                        }
-                                        self.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
-                                        standaloneReactionAnimation.frame = self.chatDisplayNode.bounds
-                                        self.chatDisplayNode.addSubnode(standaloneReactionAnimation)
-                                    },
-                                    onHit: { [weak self, weak itemNode] in
-                                        guard let self else {
-                                            return
-                                        }
-                                        
-                                        if isBecomingTop {
-                                            self.chatDisplayNode.animateQuizCorrectOptionSelected()
-                                        }
-                                        
-                                        if let itemNode, let targetView = itemNode.targetReactionView(value: .stars) {
-                                            self.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: self.chatDisplayNode.view))
-                                        }
-                                    },
-                                    completion: { [weak standaloneReactionAnimation] in
-                                        standaloneReactionAnimation?.view.removeFromSuperview()
-                                    }
-                                )
-                            }
-                        }
-                        
-                        #if !DEBUG
-                        let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount))
-                        #endif
-                        
-                        self.displayOrUpdateSendStarsUndo(messageId: message.id, count: Int(amount))
-                    }))
-                })
+                self.openMessageSendStarsScreen(message: message)
                 
                 return
             }
@@ -465,6 +368,111 @@ extension ChatControllerImpl {
         }
     }
     
+    func openMessageSendStarsScreen(message: Message) {
+        if let current = self.currentSendStarsUndoController {
+            self.currentSendStarsUndoController = nil
+            current.dismiss()
+        }
+        self.context.engine.messages.forceSendPendingSendStarsReaction(id: message.id)
+        
+        let reactionsAttribute = mergedMessageReactions(attributes: message.attributes, isTags: false)
+        let _ = (ChatSendStarsScreen.initialData(context: self.context, peerId: message.id.peerId, messageId: message.id, topPeers: reactionsAttribute?.topPeers ?? [])
+        |> deliverOnMainQueue).start(next: { [weak self] initialData in
+            guard let self, let initialData else {
+                return
+            }
+            HapticFeedback().tap()
+            self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount, isAnonymous, isBecomingTop, transitionOut in
+                guard let self, amount > 0 else {
+                    return
+                }
+                
+                var sourceItemNode: ChatMessageItemView?
+                self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? ChatMessageItemView {
+                        if itemNode.item?.message.id == message.id {
+                            sourceItemNode = itemNode
+                            return
+                        }
+                    }
+                }
+                
+                if let itemNode = sourceItemNode, let item = itemNode.item, let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: .stars) {
+                    var reactionItem: ReactionItem?
+                    
+                    for reaction in availableReactions.reactions {
+                        guard let centerAnimation = reaction.centerAnimation else {
+                            continue
+                        }
+                        guard let aroundAnimation = reaction.aroundAnimation else {
+                            continue
+                        }
+                        if reaction.value == .stars {
+                            reactionItem = ReactionItem(
+                                reaction: ReactionItem.Reaction(rawValue: reaction.value),
+                                appearAnimation: reaction.appearAnimation,
+                                stillAnimation: reaction.selectAnimation,
+                                listAnimation: centerAnimation,
+                                largeListAnimation: reaction.activateAnimation,
+                                applicationAnimation: aroundAnimation,
+                                largeApplicationAnimation: reaction.effectAnimation,
+                                isCustom: false
+                            )
+                            break
+                        }
+                    }
+                    
+                    if let reactionItem {
+                        let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: self.chatDisplayNode.historyNode.takeGenericReactionEffect())
+                        
+                        self.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                        
+                        self.view.window?.addSubview(standaloneReactionAnimation.view)
+                        standaloneReactionAnimation.frame = self.chatDisplayNode.bounds
+                        standaloneReactionAnimation.animateOutToReaction(
+                            context: self.context,
+                            theme: self.presentationData.theme,
+                            item: reactionItem,
+                            value: .stars,
+                            sourceView: transitionOut.sourceView,
+                            targetView: targetView,
+                            hideNode: false,
+                            forceSwitchToInlineImmediately: false,
+                            animateTargetContainer: nil,
+                            addStandaloneReactionAnimation: { [weak self] standaloneReactionAnimation in
+                                guard let self else {
+                                    return
+                                }
+                                self.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                                standaloneReactionAnimation.frame = self.chatDisplayNode.bounds
+                                self.chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                            },
+                            onHit: { [weak self, weak itemNode] in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                if isBecomingTop {
+                                    self.chatDisplayNode.animateQuizCorrectOptionSelected()
+                                }
+                                
+                                if let itemNode, let targetView = itemNode.targetReactionView(value: .stars) {
+                                    self.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: self.chatDisplayNode.view))
+                                }
+                            },
+                            completion: { [weak standaloneReactionAnimation] in
+                                standaloneReactionAnimation?.view.removeFromSuperview()
+                            }
+                        )
+                    }
+                }
+                
+                let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount), isAnonymous: isAnonymous)
+                self.displayOrUpdateSendStarsUndo(messageId: message.id, count: Int(amount))
+            }))
+        })
+    }
+    
     func displayOrUpdateSendStarsUndo(messageId: EngineMessage.Id, count: Int) {
         if self.currentSendStarsUndoMessageId != messageId {
             if let current = self.currentSendStarsUndoController {
@@ -479,21 +487,14 @@ extension ChatControllerImpl {
             self.currentSendStarsUndoCount = count
         }
         
-        //TODO:localize
-        let title: String
-        if self.currentSendStarsUndoCount == 1 {
-            title = "Star sent!"
-        } else {
-            title = "Stars sent!"
-        }
+        let title: String = self.presentationData.strings.Chat_ToastStarsSent_Title(Int32(self.currentSendStarsUndoCount))
         
-        var textItems: [AnimatedTextComponent.Item] = []
-        textItems.append(AnimatedTextComponent.Item(id: AnyHashable(0), isUnbreakable: true, content: .text("You have reacted with ")))
-        textItems.append(AnimatedTextComponent.Item(id: AnyHashable(1), content: .number(self.currentSendStarsUndoCount, minDigits: 1)))
-        textItems.append(AnimatedTextComponent.Item(id: AnyHashable(2), isUnbreakable: true, content: .text(self.currentSendStarsUndoCount == 1 ? " star." : " stars.")))
+        let textItems = extractAnimatedTextString(string: self.presentationData.strings.Chat_ToastStarsSent_Text("", ""), id: "text", mapping: [
+            0: .number(self.currentSendStarsUndoCount, minDigits: 1),
+            1: .text(self.presentationData.strings.Chat_ToastStarsSent_TextStarAmount(Int32(self.currentSendStarsUndoCount)))
+        ])
         
         self.currentSendStarsUndoMessageId = messageId
-        //TODO:localize
         if let current = self.currentSendStarsUndoController {
             current.content = .starsSent(context: self.context, title: title, text: textItems)
         } else {
@@ -510,4 +511,32 @@ extension ChatControllerImpl {
             self.present(controller, in: .current)
         }
     }
+}
+
+private func extractAnimatedTextString(string: PresentationStrings.FormattedString, id: String, mapping: [Int: AnimatedTextComponent.Item.Content]) -> [AnimatedTextComponent.Item] {
+    var textItems: [AnimatedTextComponent.Item] = []
+    
+    var previousIndex = 0
+    let nsString = string.string as NSString
+    for range in string.ranges.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
+        if range.range.lowerBound > previousIndex {
+            textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_text_before_\(range.index)"), isUnbreakable: true, content: .text(nsString.substring(with: NSRange(location: previousIndex, length: range.range.lowerBound - previousIndex)))))
+        }
+        if let value = mapping[range.index] {
+            let isUnbreakable: Bool
+            switch value {
+            case .text:
+                isUnbreakable = true
+            case .number:
+                isUnbreakable = false
+            }
+            textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_item_\(range.index)"), isUnbreakable: isUnbreakable, content: value))
+        }
+        previousIndex = range.range.upperBound
+    }
+    if nsString.length > previousIndex {
+        textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_text_end"), isUnbreakable: true, content: .text(nsString.substring(with: NSRange(location: previousIndex, length: nsString.length - previousIndex)))))
+    }
+    
+    return textItems
 }

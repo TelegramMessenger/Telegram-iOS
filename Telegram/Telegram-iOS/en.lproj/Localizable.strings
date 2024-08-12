@@ -9197,6 +9197,8 @@ Sorry for the inconvenience.";
 
 "WebApp.LaunchMoreInfo" = "More about this bot";
 "WebApp.LaunchConfirmation" = "To launch this web app, you will connect to its website.";
+"WebApp.LaunchTermsConfirmation" = "By launching this mini app, you agree to the [Terms of Service for Mini Apps]().";
+"WebApp.LaunchTermsConfirmation_URL" = "https://telegram.org/tos/mini-apps";
 "WebApp.LaunchOpenApp" = "Open App";
 
 "WallpaperPreview.PreviewInNightMode" = "Preview this wallpaper in night mode.";
@@ -12517,6 +12519,7 @@ Sorry for the inconvenience.";
 "Notification.StarsGift.Title_any" = "%@ Stars";
 "Notification.StarsGift.Subtitle" = "Use Stars to unlock content and services on Telegram.";
 "Notification.StarsGift.SubtitleYou" = "With Stars, %@ will be able to unlock content and services on Telegram.";
+"Notification.StarsGift.UnknownUser" = "Unknown user";
 
 "Bot.Settings" = "Bot Settings";
 
@@ -12544,6 +12547,11 @@ Sorry for the inconvenience.";
 "WebBrowser.LinkForwardTooltip.TwoChats.One" = "Link forwarded to **%@** and **%@**";
 "WebBrowser.LinkForwardTooltip.ManyChats.One" = "Link forwarded to **%@** and %@ others";
 "WebBrowser.LinkForwardTooltip.SavedMessages.One" = "Link forwarded to **Saved Messages**";
+
+"WebBrowser.FileForwardTooltip.Chat.One" = "Document forwarded to **%@**";
+"WebBrowser.FileForwardTooltip.TwoChats.One" = "Document forwarded to **%@** and **%@**";
+"WebBrowser.FileForwardTooltip.ManyChats.One" = "Document forwarded to **%@** and %@ others";
+"WebBrowser.FileForwardTooltip.SavedMessages.One" = "Document forwarded to **Saved Messages**";
 
 "Stars.Intro.StarsSent_1" = "%@ Star sent.";
 "Stars.Intro.StarsSent_any" = "%@ Stars sent.";
@@ -12699,6 +12707,7 @@ Sorry for the inconvenience.";
 "Stars.Transaction.Subscription.JoinChannel" = "Join Channel";
 "Stars.Transaction.Subscription.JoinAgainChannel" = "Join Channel";
 "Stars.Transaction.Subscription.LeftChannel" = "You left channel but you can still get back until %@";
+"Stars.Transaction.Subscription.Expired" = "Your subscription expired on %@.";
 "Stars.Transaction.Subscription.PerMonth" = "%@ / month";
 "Stars.Transaction.Subscription.PerMonthUsd" = "appx. %@ per month";
 "Stars.Transaction.Subscription.Subscription" = "Subscription";
@@ -12721,6 +12730,7 @@ Sorry for the inconvenience.";
 "Stars.Intro.Subscriptions.Expires" = "expires on %@";
 "Stars.Intro.Subscriptions.Expired" = "expired on %@";
 "Stars.Intro.Subscriptions.Cancelled" = "cancelled";
+"Stars.Intro.Subscriptions.ExpiredStatus" = "expired";
 "Stars.Intro.Subscriptions.ShowMore" = "Show More";
 
 "Stars.Intro.Transaction.SubscriptionFee.Title" = "Monthly Subscription Fee";
@@ -12736,3 +12746,71 @@ Sorry for the inconvenience.";
 "Stars.Transfer.Subscribe.Successful.Text" = "%1$@ transferred to %2$@.";
 
 "Gallery.Ad" = "Ad";
+
+"Chat.SensitiveContent" = "18+ Content";
+
+"Settings.SensitiveContent" = "Show 18+ Content";
+"Settings.SensitiveContentInfo" = "Do not hide media that contain content suitable only for adults.";
+
+"SensitiveContent.Title" = "18+ Content";
+"SensitiveContent.Text" = "This media may contain sensitive content suitable only for adults.\nDo you still want to view it?";
+"SensitiveContent.ShowAlways" = "Always show 18+ media";
+"SensitiveContent.ViewAnyway" = "View Anyway";
+"SensitiveContent.SettingsInfo" = "You can update the visibility of sensitive media in [Data and Storage > Show 18+ Content]().";
+
+"SensitiveContent.Enable.Title" = "18+ Content";
+"SensitiveContent.Enable.Text" = "Confirm that you are over 18 years old and update settings to see potentially explicit and sensitive content.";
+"SensitiveContent.Enable.Confirm" = "Confirm";
+
+"Notification.Refund" = "You received a refund of {amount} from {name}";
+
+"InviteLink.SubscriptionFee.Title" = "SUBSCRIPTION FEE";
+"InviteLink.SubscriptionFee.PerMonth" = "%@ / month";
+"InviteLink.SubscriptionFee.NoOneJoined" = "No one joined yet";
+"InviteLink.SubscriptionFee.ApproximateIncome" = "You get approximately %@ monthly";
+
+"InviteLink.PerMonth" = "per month";
+
+"InviteLink.Create.Fee" = "Require Monthly Fee";
+"InviteLink.Create.FeePerMonth" = "%@ / month";
+"InviteLink.Create.FeePlaceholder" = "Stars amount per month";
+"InviteLink.Create.FeeInfo" = "Charge a subscription fee from people joining your channel via this link. [Learn More >]()";
+"InviteLink.Create.FeeEditInfo" = "If you need to change the subscription fee, create a new invite link with a different price.";
+"InviteLink.Create.RequestApprovalFeeUnavailable" = "You can't enable admin approval for links that require a monthly fee.";
+
+"WebApp.PrivacyPolicy_URL" = "https://telegram.org/privacy-tpa";
+
+"ChatList.SubscriptionsLowBalance.Stars_1" = "%@ Star needed";
+"ChatList.SubscriptionsLowBalance.Stars_any" = "%@ Stars needed";
+
+"ChatList.SubscriptionsLowBalance.Single.Title" = "%1$@ for %2$@";
+"ChatList.SubscriptionsLowBalance.Single.Text" = "Insufficient funds to cover your subscription.";
+
+"ChatList.SubscriptionsLowBalance.Multiple.Title" = "%@ for your subscriptions";
+"ChatList.SubscriptionsLowBalance.Multiple.Text" = "Insufficient funds to cover your subscriptions.";
+
+"ChatList.Search.SectionApps" = "APPS";
+
+"Channel.ShowAuthors" = "Show Authors' Profiles";
+"Channel.ShowAuthorsFooter" = "Add names and photos of admins to the messages they post, linking to their profiles.";
+
+"SendStarReactions.Title" = "React with Stars";
+"SendStarReactions.Balance" = "Balance";
+"SendStarReactions.UserLabelAnonymous" = "Anonymous";
+"SendStarReactions.SliderTop" = "TOP";
+"SendStarReactions.TextSentStars_1" = "You sent **1** star to support this post.";
+"SendStarReactions.TextSentStars_any" = "You sent **%d** stars to support this post.";
+"SendStarReactions.TextGeneric" = "Choose how many stars you want to send to **%@** to support this post.";
+"SendStarReactions.SectionTop" = "Top Senders";
+"SendStarReactions.ShowMyselfInTop" = "Show me in Top Senders";
+"SendStarReactions.SendButtonTitle" = "Send  # %@";
+"SendStarReactions.TermsOfServiceFooter" = "By sending Stars you agree to the [Terms of Service](https://telegram.org/tos/stars)";
+
+"PeerInfo.AllowedReactions.StarReactions" = "Enable Paid Reactions";
+"PeerInfo.AllowedReactions.StarReactionsFooter" = "Switch this on to let your subscribers set paid reactions with Telegram Stars, which you will be able to withdraw later as TON. [Learn More >](https://telegram.org/privacy)";
+
+"Chat.ToastStarsSent.Title_1" = "Star sent!";
+"Chat.ToastStarsSent.Title_any" = "Stars sent!";
+"Chat.ToastStarsSent.Text" = "You have reacted with %1$@ %2$@.";
+"Chat.ToastStarsSent.TextStarAmount_1" = "star";
+"Chat.ToastStarsSent.TextStarAmount_any" = "stars";

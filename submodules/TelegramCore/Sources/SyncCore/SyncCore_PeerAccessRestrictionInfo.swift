@@ -11,6 +11,12 @@ public final class RestrictionRule: PostboxCoding, Equatable {
         self.text = text
     }
     
+    public init(platform: String) {
+        self.platform = platform
+        self.reason = ""
+        self.text = ""
+    }
+    
     public init(decoder: PostboxDecoder) {
         self.platform = decoder.decodeStringForKey("p", orElse: "all")
         self.reason = decoder.decodeStringForKey("r", orElse: "")

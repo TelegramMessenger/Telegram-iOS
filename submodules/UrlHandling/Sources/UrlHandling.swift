@@ -231,7 +231,7 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                         if let phone = phone, let hash = hash {
                             return .cancelAccountReset(phone: phone, hash: hash)
                         }
-                    } else if peerName == "msg" {
+                    } else if peerName == "msg" || peerName == "share" {
                         var url: String?
                         var text: String?
                         var to: String?
@@ -241,7 +241,7 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                                     url = value
                                 } else if queryItem.name == "text" {
                                     text = value
-                                } else if queryItem.name == "to" {
+                                } else if queryItem.name == "to" && peerName != "share" {
                                     to = value
                                 }
                             }

@@ -1550,7 +1550,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
             }
             
-            //TODO:release
             if let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, firstMessage.author?.id != channel.id {
                 if info.flags.contains(.messagesShouldHaveProfiles) {
                     var allowAuthor = incoming
@@ -5957,7 +5956,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     }
     
     override public func makeProgress() -> Promise<Bool>? {
-        return self.unlockButtonNode?.makeProgress()
+        if let unlockButtonNode = self.unlockButtonNode {
+            return unlockButtonNode.makeProgress()
+        } else {
+            for contentNode in self.contentNodes {
+                if let webpageContentNode = contentNode as? ChatMessageWebpageBubbleContentNode {
+                    return webpageContentNode.contentNode.makeProgress()
+                }
+            }
+        }
+        return nil
     }
     
     override public func targetReactionView(value: MessageReaction.Reaction) -> UIView? {

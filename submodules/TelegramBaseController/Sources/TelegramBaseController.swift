@@ -31,7 +31,7 @@ private func presentLiveLocationController(context: AccountContext, peerId: Peer
         if let message = message, let strongController = controller {
             let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatFilterTag: nil, chatLocationContextHolder: nil, message: message._asMessage(), standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
                 controller?.view.endEditing(true)
-            }, present: { c, a in
+            }, present: { c, a, _ in
                 controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
             }, transitionNode: { _, _, _ in
                 return nil

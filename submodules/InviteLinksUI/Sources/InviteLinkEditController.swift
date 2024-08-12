@@ -479,7 +479,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     }
 }
 
-private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state: InviteLinkEditControllerState, isGroup: Bool, isPublic: Bool, presentationData: PresentationData, starsState: StarsRevenueStats?, configuration: StarsSubscriptionConfiguration) -> [InviteLinksEditEntry] {
+private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state: InviteLinkEditControllerState, isGroup: Bool, isPublic: Bool, presentationData: PresentationData, configuration: StarsSubscriptionConfiguration) -> [InviteLinksEditEntry] {
     var entries: [InviteLinksEditEntry] = []
     
     entries.append(.titleHeader(presentationData.theme, presentationData.strings.InviteLink_Create_LinkNameTitle.uppercased()))
@@ -489,20 +489,23 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     let isEditingEnabled = invite?.pricing == nil
     let isSubscription = state.subscriptionEnabled
     if !isGroup {
-        //TODO:localize
-        entries.append(.subscriptionFeeToggle(presentationData.theme, "Require Monthly Fee", state.subscriptionEnabled, isEditingEnabled))
+        entries.append(.subscriptionFeeToggle(presentationData.theme, presentationData.strings.InviteLink_Create_Fee, state.subscriptionEnabled, isEditingEnabled))
         if state.subscriptionEnabled {
             var label: String = ""
-            if let subscriptionFee = state.subscriptionFee, subscriptionFee > 0, let starsState {
-                label = "≈\(formatTonUsdValue(subscriptionFee, divide: false, rate: starsState.usdRate, dateTimeFormat: presentationData.dateTimeFormat)) / month"
+            if let subscriptionFee = state.subscriptionFee, subscriptionFee > 0 {
+                var usdRate = 0.012
+                if let usdWithdrawRate = configuration.usdWithdrawRate {
+                    usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
+                }
+                label = presentationData.strings.InviteLink_Create_FeePerMonth("≈\(formatTonUsdValue(subscriptionFee, divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat))").string
             }
-            entries.append(.subscriptionFee(presentationData.theme, "Stars amount per month", isEditingEnabled, state.subscriptionFee, label, configuration.maxFee))
+            entries.append(.subscriptionFee(presentationData.theme, presentationData.strings.InviteLink_Create_FeePlaceholder, isEditingEnabled, state.subscriptionFee, label, configuration.maxFee))
         }
         let infoText: String
         if let _ = invite, state.subscriptionEnabled {
-            infoText = "If you need to change the subscription fee, create a new invite link with a different price."
+            infoText = presentationData.strings.InviteLink_Create_FeeEditInfo
         } else {
-            infoText = "Charge a subscription fee from people joining your channel via this link. [Learn More >]()"
+            infoText = presentationData.strings.InviteLink_Create_FeeInfo
         }
         entries.append(.subscriptionFeeInfo(presentationData.theme, infoText))
     }
@@ -511,7 +514,7 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
         entries.append(.requestApproval(presentationData.theme, presentationData.strings.InviteLink_Create_RequestApproval, state.requestApproval, isEditingEnabled && !isSubscription))
         var requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
         if isSubscription {
-            requestApprovalInfoText = "You can't enable admin approval for links that require a monthly fee."
+            requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalFeeUnavailable
         } else {
             if state.requestApproval {
                 requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOnInfoChannel
@@ -570,7 +573,7 @@ private struct InviteLinkEditControllerState: Equatable {
     var updating = false
 }
 
-public func inviteLinkEditController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, invite: ExportedInvitation?, starsState: StarsRevenueStats? = nil, completion: ((ExportedInvitation?) -> Void)? = nil) -> ViewController {
+public func inviteLinkEditController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, invite: ExportedInvitation?, completion: ((ExportedInvitation?) -> Void)? = nil) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     let actionsDisposable = DisposableSet()
 
@@ -792,7 +795,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(invite == nil ? presentationData.strings.InviteLink_Create_Title : presentationData.strings.InviteLink_Create_EditTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkEditControllerEntries(invite: invite, state: state, isGroup: isGroup, isPublic: isPublic, presentationData: presentationData, starsState: starsState, configuration: configuration), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkEditControllerEntries(invite: invite, state: state, isGroup: isGroup, isPublic: isPublic, presentationData: presentationData, configuration: configuration), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }
@@ -855,22 +858,22 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
     return controller
 }
 
-private struct StarsSubscriptionConfiguration {
+struct StarsSubscriptionConfiguration {
     static var defaultValue: StarsSubscriptionConfiguration {
-        return StarsSubscriptionConfiguration(maxFee: 2500, usdSellRate: 2000)
+        return StarsSubscriptionConfiguration(maxFee: 2500, usdWithdrawRate: 1200)
     }
     
     let maxFee: Int64?
-    let usdSellRate: Int64?
+    let usdWithdrawRate: Int64?
     
-    fileprivate init(maxFee: Int64?, usdSellRate: Int64?) {
+    fileprivate init(maxFee: Int64?, usdWithdrawRate: Int64?) {
         self.maxFee = maxFee
-        self.usdSellRate = usdSellRate
+        self.usdWithdrawRate = usdWithdrawRate
     }
     
     public static func with(appConfiguration: AppConfiguration) -> StarsSubscriptionConfiguration {
-        if let data = appConfiguration.data, let value = data["stars_subscription_amount_max"] as? Double, let usdRate = data["stars_usd_sell_rate_x1000"] as? Double {
-            return StarsSubscriptionConfiguration(maxFee: Int64(value), usdSellRate: Int64(usdRate))
+        if let data = appConfiguration.data, let value = data["stars_subscription_amount_max"] as? Double, let usdRate = data["stars_usd_withdraw_rate_x1000"] as? Double {
+            return StarsSubscriptionConfiguration(maxFee: Int64(value), usdWithdrawRate: Int64(usdRate))
         } else {
             return .defaultValue
         }

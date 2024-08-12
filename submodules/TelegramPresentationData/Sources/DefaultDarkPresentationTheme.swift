@@ -534,7 +534,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
                     reactionStarsInactiveBackground: UIColor(rgb: 0xFEF1D4, alpha: 1.0),
                     reactionStarsInactiveForeground: UIColor(rgb: 0xD3720A),
                     reactionStarsActiveBackground: UIColor(rgb: 0xD3720A, alpha: 1.0),
-                    reactionStarsActiveForeground: .clear,
+                    reactionStarsActiveForeground: .white,
                     reactionInactiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1),
                     reactionActiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1)
                 ),
@@ -550,7 +550,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
                     reactionStarsInactiveBackground: UIColor(rgb: 0xFEF1D4, alpha: 1.0),
                     reactionStarsInactiveForeground: UIColor(rgb: 0xD3720A),
                     reactionStarsActiveBackground: UIColor(rgb: 0xD3720A, alpha: 1.0),
-                    reactionStarsActiveForeground: .clear,
+                    reactionStarsActiveForeground: .white,
                     reactionInactiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1),
                     reactionActiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1)
                 )
@@ -572,7 +572,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
                     reactionStarsInactiveBackground: UIColor(rgb: 0xFEF1D4, alpha: 1.0),
                     reactionStarsInactiveForeground: UIColor(rgb: 0xD3720A),
                     reactionStarsActiveBackground: UIColor(rgb: 0xD3720A, alpha: 1.0),
-                    reactionStarsActiveForeground: .clear,
+                    reactionStarsActiveForeground: .white,
                     reactionInactiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1),
                     reactionActiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1)
                 ),
@@ -588,7 +588,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
                     reactionStarsInactiveBackground: UIColor(rgb: 0xFEF1D4, alpha: 1.0),
                     reactionStarsInactiveForeground: UIColor(rgb: 0xD3720A),
                     reactionStarsActiveBackground: UIColor(rgb: 0xD3720A, alpha: 1.0),
-                    reactionStarsActiveForeground: .clear,
+                    reactionStarsActiveForeground: .white,
                     reactionInactiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1),
                     reactionActiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1)
                 )
@@ -607,7 +607,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
                 reactionStarsInactiveBackground: UIColor(rgb: 0xFEF1D4, alpha: 1.0),
                 reactionStarsInactiveForeground: UIColor(rgb: 0xD3720A),
                 reactionStarsActiveBackground: UIColor(rgb: 0xD3720A, alpha: 1.0),
-                reactionStarsActiveForeground: .clear,
+                reactionStarsActiveForeground: .white,
                 reactionInactiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1),
                 reactionActiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1)
             ),
@@ -623,7 +623,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
                 reactionStarsInactiveBackground: UIColor(rgb: 0xFEF1D4, alpha: 1.0),
                 reactionStarsInactiveForeground: UIColor(rgb: 0xD3720A),
                 reactionStarsActiveBackground: UIColor(rgb: 0xD3720A, alpha: 1.0),
-                reactionStarsActiveForeground: .clear,
+                reactionStarsActiveForeground: .white,
                 reactionInactiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1),
                 reactionActiveMediaPlaceholder: UIColor(rgb: 0x000000, alpha: 0.1)
             )

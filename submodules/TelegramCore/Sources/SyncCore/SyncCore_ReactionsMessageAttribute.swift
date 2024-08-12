@@ -329,30 +329,42 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
     }
     
     public struct TopPeer: Equatable, PostboxCoding {
-        public var peerId: PeerId
+        public var peerId: PeerId?
         public var count: Int32
         public var isTop: Bool
         public var isMy: Bool
+        public var isAnonymous: Bool
         
-        public init(peerId: PeerId, count: Int32, isTop: Bool, isMy: Bool) {
+        public init(peerId: PeerId?, count: Int32, isTop: Bool, isMy: Bool, isAnonymous: Bool) {
             self.peerId = peerId
             self.count = count
             self.isMy = isMy
             self.isTop = isTop
+            self.isAnonymous = isAnonymous
         }
         
         public init(decoder: PostboxDecoder) {
-            self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
+            if let peerId = decoder.decodeOptionalInt64ForKey("p") {
+                self.peerId = PeerId(peerId)
+            } else {
+                self.peerId = nil
+            }
             self.count = decoder.decodeInt32ForKey("c", orElse: 0)
             self.isTop = decoder.decodeBoolForKey("t", orElse: false)
             self.isMy = decoder.decodeBoolForKey("m", orElse: false)
+            self.isAnonymous = decoder.decodeBoolForKey("anon", orElse: false)
         }
         
         public func encode(_ encoder: PostboxEncoder) {
-            encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
+            if let peerId = self.peerId {
+                encoder.encodeInt64(peerId.toInt64(), forKey: "p")
+            } else {
+                encoder.encodeNil(forKey: "p")
+            }
             encoder.encodeInt32(self.count, forKey: "c")
             encoder.encodeBool(self.isTop, forKey: "t")
             encoder.encodeBool(self.isMy, forKey: "m")
+            encoder.encodeBool(self.isAnonymous, forKey: "anon")
         }
     }
     
@@ -553,6 +565,7 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
 public final class PendingStarsReactionsMessageAttribute: MessageAttribute {
     public let accountPeerId: PeerId?
     public let count: Int32
+    public let isAnonymous: Bool
     
     public var associatedPeerIds: [PeerId] {
         var peerIds: [PeerId] = []
@@ -562,14 +575,16 @@ public final class PendingStarsReactionsMessageAttribute: MessageAttribute {
         return peerIds
     }
     
-    public init(accountPeerId: PeerId?, count: Int32) {
+    public init(accountPeerId: PeerId?, count: Int32, isAnonymous: Bool) {
         self.accountPeerId = accountPeerId
         self.count = count
+        self.isAnonymous = isAnonymous
     }
     
     required public init(decoder: PostboxDecoder) {
         self.accountPeerId = decoder.decodeOptionalInt64ForKey("ap").flatMap(PeerId.init)
         self.count = decoder.decodeInt32ForKey("cnt", orElse: 1)
+        self.isAnonymous = decoder.decodeBoolForKey("anon", orElse: false)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -579,5 +594,6 @@ public final class PendingStarsReactionsMessageAttribute: MessageAttribute {
             encoder.encodeNil(forKey: "ap")
         }
         encoder.encodeInt32(self.count, forKey: "cnt")
+        encoder.encodeBool(self.isAnonymous, forKey: "anon")
     }
 }

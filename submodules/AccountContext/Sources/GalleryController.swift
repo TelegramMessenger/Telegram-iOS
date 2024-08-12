@@ -17,18 +17,32 @@ public final class GalleryControllerActionInteraction {
     public let openPeer: (EnginePeer) -> Void
     public let openHashtag: (String?, String) -> Void
     public let openBotCommand: (String) -> Void
+    public let openAd: (MessageId) -> Void
     public let addContact: (String) -> Void
     public let storeMediaPlaybackState: (MessageId, Double?, Double) -> Void
     public let editMedia: (MessageId, [UIView], @escaping () -> Void) -> Void
     public let updateCanReadHistory: (Bool) -> Void
 
-    public init(openUrl: @escaping (String, Bool) -> Void, openUrlIn: @escaping (String) -> Void, openPeerMention: @escaping (String) -> Void, openPeer: @escaping (EnginePeer) -> Void, openHashtag: @escaping (String?, String) -> Void, openBotCommand: @escaping (String) -> Void, addContact: @escaping (String) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void, editMedia: @escaping (MessageId, [UIView], @escaping () -> Void) -> Void, updateCanReadHistory: @escaping (Bool) -> Void) {
+    public init(
+        openUrl: @escaping (String, Bool) -> Void,
+        openUrlIn: @escaping (String) -> Void,
+        openPeerMention: @escaping (String) -> Void,
+        openPeer: @escaping (EnginePeer) -> Void,
+        openHashtag: @escaping (String?, String) -> Void,
+        openBotCommand: @escaping (String) -> Void,
+        openAd: @escaping (MessageId) -> Void,
+        addContact: @escaping (String) -> Void,
+        storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void, 
+        editMedia: @escaping (MessageId, [UIView], @escaping () -> Void) -> Void,
+        updateCanReadHistory: @escaping (Bool) -> Void)
+    {
         self.openUrl = openUrl
         self.openUrlIn = openUrlIn
         self.openPeerMention = openPeerMention
         self.openPeer = openPeer
         self.openHashtag = openHashtag
         self.openBotCommand = openBotCommand
+        self.openAd = openAd
         self.addContact = addContact
         self.storeMediaPlaybackState = storeMediaPlaybackState
         self.editMedia = editMedia

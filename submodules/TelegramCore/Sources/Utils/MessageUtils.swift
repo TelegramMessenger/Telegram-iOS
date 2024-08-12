@@ -344,10 +344,8 @@ public extension Message {
                 return false
             }
         } else if self.author?.id == accountPeerId {
-            if let channel = self.peers[self.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info {
-                if !info.flags.contains(.messagesShouldHaveProfiles) {
-                    return true
-                }
+            if let channel = self.peers[self.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                return true
             }
             return false
         } else if self.flags.contains(.Incoming) {
@@ -381,7 +379,15 @@ public extension Message {
         }
     }
     
-    func isAgeRestricted() -> Bool {
+    func isSensitiveContent(platform: String) -> Bool {
+        if let rule = self.restrictedContentAttribute?.rules.first(where: { $0.reason == "sensitive" }) {
+            if rule.platform == "all" || rule.platform == platform {
+                return true
+            }
+        }
+        if let peer = self.peers[self.id.peerId], peer.hasSensitiveContent(platform: platform) {
+            return true
+        }
         return false
     }
 }

@@ -1655,7 +1655,7 @@ private final class StoryContainerScreenComponent: Component {
                                         }
                                         
                                         if case let .user(user) = slice.peer, user.botInfo != nil {
-                                            //TODO:localize
+                                            //TODO:release
                                             let _ = component.context.engine.messages.deleteBotPreviews(peerId: slice.peer.id, language: nil, media: [slice.item.storyItem.media._asMedia()]).startStandalone()
                                         } else {
                                             let _ = component.context.engine.messages.deleteStories(peerId: slice.peer.id, ids: [slice.item.storyItem.id]).startStandalone()
