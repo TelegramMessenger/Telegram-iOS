@@ -342,6 +342,10 @@ public extension TelegramEngine {
             let _ = cancelPendingSendStarsReactionInteractively(account: self.account, messageId: id).startStandalone()
         }
         
+        public func forceSendPendingSendStarsReaction(id: EngineMessage.Id) {
+            let _ = _internal_forceSendPendingSendStarsReaction(account: self.account, messageId: id).startStandalone()
+        }
+        
         public func updateStarsReactionIsAnonymous(id: EngineMessage.Id, isAnonymous: Bool) -> Signal<Never, NoError> {
             return _internal_updateStarsReactionIsAnonymous(account: self.account, messageId: id, isAnonymous: isAnonymous)
         }

@@ -338,14 +338,16 @@ private final class StarsContextImpl {
         }))
     }
     
-    func add(balance: Int64) {
+    func add(balance: Int64, addTransaction: Bool) {
         guard let state = self._state else {
             return
         }
         var transactions = state.transactions
-        transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, media: [], subscriptionPeriod: nil), at: 0)
+        if addTransaction {
+            transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, media: [], subscriptionPeriod: nil), at: 0)
+        }
         
-        self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: state.balance + balance, subscriptions: state.subscriptions, canLoadMoreSubscriptions: state.canLoadMoreSubscriptions, transactions: transactions, canLoadMoreTransactions: state.canLoadMoreTransactions, isLoading: state.isLoading))
+        self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: max(0, state.balance + balance), subscriptions: state.subscriptions, canLoadMoreSubscriptions: state.canLoadMoreSubscriptions, transactions: transactions, canLoadMoreTransactions: state.canLoadMoreTransactions, isLoading: state.isLoading))
     }
     
     fileprivate func updateBalance(_ balance: Int64, transactions: [StarsContext.State.Transaction]?) {
@@ -696,9 +698,9 @@ public final class StarsContext {
         return state
     }
     
-    public func add(balance: Int64) {
+    public func add(balance: Int64, addTransaction: Bool = true) {
         self.impl.with {
-            $0.add(balance: balance)
+            $0.add(balance: balance, addTransaction: addTransaction)
         }
     }
     

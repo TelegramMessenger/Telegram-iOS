@@ -369,6 +369,12 @@ extension ChatControllerImpl {
     }
     
     func openMessageSendStarsScreen(message: Message) {
+        if let current = self.currentSendStarsUndoController {
+            self.currentSendStarsUndoController = nil
+            current.dismiss()
+        }
+        self.context.engine.messages.forceSendPendingSendStarsReaction(id: message.id)
+        
         let reactionsAttribute = mergedMessageReactions(attributes: message.attributes, isTags: false)
         let _ = (ChatSendStarsScreen.initialData(context: self.context, peerId: message.id.peerId, messageId: message.id, topPeers: reactionsAttribute?.topPeers ?? [])
         |> deliverOnMainQueue).start(next: { [weak self] initialData in
