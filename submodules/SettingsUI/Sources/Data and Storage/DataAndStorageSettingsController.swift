@@ -922,10 +922,7 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
     }, openIntents: {
         let controller = intentsSettingsController(context: context)
         pushControllerImpl?(controller)
-    }, toggleSensitiveContent: { value in
-        let _ = updateMediaDisplaySettingsInteractively(accountManager: context.sharedContext.accountManager, {
-            $0.withUpdatedShowSensitiveContent(value)
-        }).startStandalone()
+    }, toggleSensitiveContent: { _ in
     }, toggleOtherSensitiveContent: { value in
         let _ = (contentSettingsConfiguration.get()
         |> take(1)
