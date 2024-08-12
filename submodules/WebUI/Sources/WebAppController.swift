@@ -767,9 +767,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                         inputData.get(),
                                         starsContext.state
                                     )
-                                    |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
+                                    |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?, EnginePeer?)? in
                                         if let data, let state {
-                                            return (state, data.form, data.botPeer)
+                                            return (state, data.form, data.botPeer, nil)
                                         } else {
                                             return nil
                                         }

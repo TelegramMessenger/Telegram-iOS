@@ -30,7 +30,7 @@ public extension Peer {
         
         if let restrictionInfo = restrictionInfo {
             for rule in restrictionInfo.rules {
-                if rule.isSensitive {
+                if rule.reason == "sensitive" {
                     continue
                 }
                 if rule.platform == "all" || rule.platform == platform || contentSettings.addContentRestrictionReasons.contains(rule.platform) {
@@ -234,7 +234,7 @@ public extension Peer {
             break
         }
         
-        if let restrictionInfo, let rule = restrictionInfo.rules.first(where: { $0.isSensitive }) {
+        if let restrictionInfo, let rule = restrictionInfo.rules.first(where: { $0.reason == "sensitive" }) {
             if rule.platform == "all" || rule.platform == platform {
                 return true
             }

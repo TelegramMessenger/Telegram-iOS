@@ -562,7 +562,22 @@ public class BrowserScreen: ViewController, MinimizableController {
                     content.navigateForward()
                 case .share:
                     let presentationData = self.presentationData
-                    let shareController = ShareController(context: self.context, subject: .url(url))
+                    let subject: ShareControllerSubject
+                    var isDocument = false
+                    if let content = self.content.last {
+                        if let documentContent = content as? BrowserDocumentContent {
+                            subject = .media(.standalone(media: documentContent.file))
+                            isDocument = true
+                        } else if let documentContent = content as? BrowserPdfContent {
+                            subject = .media(.standalone(media: documentContent.file))
+                            isDocument = true
+                        } else {
+                            subject = .url(url)
+                        }
+                    } else {
+                        subject = .url(url)
+                    }
+                    let shareController = ShareController(context: self.context, subject: subject)
                     shareController.completed = { [weak self] peerIds in
                         guard let strongSelf = self else {
                             return
@@ -582,20 +597,21 @@ public class BrowserScreen: ViewController, MinimizableController {
                             
                             let text: String
                             var savedMessages = false
-                            if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
+                            if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId && !isDocument {
                                 text = presentationData.strings.WebBrowser_LinkAddedToBookmarks
                                 savedMessages = true
                             } else {
                                 if peers.count == 1, let peer = peers.first {
                                     let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                    text = presentationData.strings.WebBrowser_LinkForwardTooltip_Chat_One(peerName).string
+                                    text = isDocument ? presentationData.strings.WebBrowser_FileForwardTooltip_Chat_One(peerName).string : presentationData.strings.WebBrowser_LinkForwardTooltip_Chat_One(peerName).string
+                                    savedMessages = peer.id == strongSelf.context.account.peerId
                                 } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
                                     let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                     let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                    text = presentationData.strings.WebBrowser_LinkForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
+                                    text = isDocument ? presentationData.strings.WebBrowser_FileForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string : presentationData.strings.WebBrowser_LinkForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
                                 } else if let peer = peers.first {
                                     let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                    text = presentationData.strings.WebBrowser_LinkForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
+                                    text = isDocument ? presentationData.strings.WebBrowser_FileForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string : presentationData.strings.WebBrowser_LinkForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
                                 } else {
                                     text = ""
                                 }
@@ -1442,6 +1458,17 @@ public class BrowserScreen: ViewController, MinimizableController {
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.template",
         "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    ]
+    
+    public static let supportedDocumentExtensions: [String] = [
+        "txt",
+        "rtf",
+        "pdf",
+        "doc",
+        "docx",
+        "xls",
+        "xlsx",
+        "pptx"
     ]
     
     public init(context: AccountContext, subject: Subject, preferredConfiguration: WKWebViewConfiguration? = nil, openPreviousOnClose: Bool = false) {

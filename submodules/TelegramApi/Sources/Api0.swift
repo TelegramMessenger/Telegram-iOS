@@ -803,7 +803,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1929860175] = { return Api.RequestedPeer.parse_requestedPeerChat($0) }
     dict[-701500310] = { return Api.RequestedPeer.parse_requestedPeerUser($0) }
     dict[-797791052] = { return Api.RestrictionReason.parse_restrictionReason($0) }
-    dict[2007669447] = { return Api.RestrictionReason.parse_restrictionReasonSensitive($0) }
     dict[894777186] = { return Api.RichText.parse_textAnchor($0) }
     dict[1730456516] = { return Api.RichText.parse_textBold($0) }
     dict[2120376535] = { return Api.RichText.parse_textConcat($0) }

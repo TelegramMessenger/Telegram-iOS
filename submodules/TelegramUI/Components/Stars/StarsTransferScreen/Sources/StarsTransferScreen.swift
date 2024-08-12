@@ -28,7 +28,7 @@ private final class SheetContent: CombinedComponent {
     let invoice: TelegramMediaInvoice
     let source: BotPaymentInvoiceSource
     let extendedMedia: [TelegramExtendedMedia]
-    let inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
+    let inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?, EnginePeer?)?, NoError>
     let navigateToPeer: (EnginePeer) -> Void
     let dismiss: () -> Void
     
@@ -38,7 +38,7 @@ private final class SheetContent: CombinedComponent {
         invoice: TelegramMediaInvoice,
         source: BotPaymentInvoiceSource,
         extendedMedia: [TelegramExtendedMedia],
-        inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>,
+        inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?, EnginePeer?)?, NoError>,
         navigateToPeer: @escaping (EnginePeer) -> Void,
         dismiss: @escaping () -> Void
     ) {
@@ -101,7 +101,7 @@ private final class SheetContent: CombinedComponent {
             source: BotPaymentInvoiceSource,
             extendedMedia: [TelegramExtendedMedia],
             invoice: TelegramMediaInvoice,
-            inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>,
+            inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?, EnginePeer?)?, NoError>,
             navigateToPeer: @escaping (EnginePeer) -> Void
         ) {
             self.context = context
@@ -132,6 +132,7 @@ private final class SheetContent: CombinedComponent {
                 self.form = inputData?.1
                 self.botPeer = inputData?.2
                 self.chatPeer = chatPeer
+                self.authorPeer = inputData?.3
                 self.updated(transition: .immediate)
                 
                 if self.optionsDisposable == nil, let balance = self.balance, balance < self.invoice.totalAmount {
@@ -404,7 +405,13 @@ private final class SheetContent: CombinedComponent {
                     }
                 }
                 
-                if let botPeerName = state.botPeer?.compactDisplayTitle {
+                if let authorPeerName = state.authorPeer?.compactDisplayTitle {
+                    infoText = strings.Stars_Transfer_UnlockBotInfo(
+                        description,
+                        authorPeerName,
+                        strings.Stars_Transfer_Info_Stars(Int32(amount))
+                    ).string
+                } else if let botPeerName = state.botPeer?.compactDisplayTitle {
                     infoText = strings.Stars_Transfer_UnlockBotInfo(
                         description,
                         botPeerName,
@@ -664,7 +671,7 @@ private final class StarsTransferSheetComponent: CombinedComponent {
     private let invoice: TelegramMediaInvoice
     private let source: BotPaymentInvoiceSource
     private let extendedMedia: [TelegramExtendedMedia]
-    private let inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
+    private let inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?, EnginePeer?)?, NoError>
     private let navigateToPeer: (EnginePeer) -> Void
     
     init(
@@ -673,7 +680,7 @@ private final class StarsTransferSheetComponent: CombinedComponent {
         invoice: TelegramMediaInvoice,
         source: BotPaymentInvoiceSource,
         extendedMedia: [TelegramExtendedMedia],
-        inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>,
+        inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?, EnginePeer?)?, NoError>,
         navigateToPeer: @escaping (EnginePeer) -> Void
     ) {
         self.context = context
@@ -776,7 +783,7 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
         invoice: TelegramMediaInvoice,
         source: BotPaymentInvoiceSource,
         extendedMedia: [TelegramExtendedMedia] = [],
-        inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>,
+        inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?, EnginePeer?)?, NoError>,
         navigateToPeer: @escaping (EnginePeer) -> Void = { _ in },
         completion: @escaping (Bool) -> Void
     ) {

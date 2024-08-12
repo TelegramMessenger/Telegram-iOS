@@ -380,7 +380,7 @@ public extension Message {
     }
     
     func isSensitiveContent(platform: String) -> Bool {
-        if let rule = self.restrictedContentAttribute?.rules.first(where: { $0.isSensitive }) {
+        if let rule = self.restrictedContentAttribute?.rules.first(where: { $0.reason == "sensitive" }) {
             if rule.platform == "all" || rule.platform == platform {
                 return true
             }
