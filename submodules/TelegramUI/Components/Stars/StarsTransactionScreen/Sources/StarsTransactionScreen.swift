@@ -277,9 +277,23 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     }
                     isCancelled = true
                 } else {
-                    statusText = strings.Stars_Transaction_Subscription_Active(stringForMediumDate(timestamp: subscription.untilDate, strings: strings, dateTimeFormat: dateTimeFormat, withTime: false)).string
-                    buttonText = strings.Stars_Transaction_Subscription_Cancel
-                    buttonIsDestructive = true
+                    if subscription.flags.contains(.isCancelled) {
+                        statusText = strings.Stars_Transaction_Subscription_Cancelled
+                        statusIsDestructive = true
+                        if date > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
+                            buttonText = strings.Stars_Transaction_Subscription_Renew
+                        } else {
+                            if let _ = subscription.inviteHash, !isKicked {
+                                buttonText = strings.Stars_Transaction_Subscription_JoinAgainChannel
+                            } else {
+                                buttonText = strings.Common_OK
+                            }
+                        }
+                    } else {
+                        statusText = strings.Stars_Transaction_Subscription_Active(stringForMediumDate(timestamp: subscription.untilDate, strings: strings, dateTimeFormat: dateTimeFormat, withTime: false)).string
+                        buttonText = strings.Stars_Transaction_Subscription_Cancel
+                        buttonIsDestructive = true
+                    }
                 }
             case let .transaction(transaction, parentPeer):
                 if let _ = transaction.subscriptionPeriod {

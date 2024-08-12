@@ -346,7 +346,7 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
         self.updateScrollingOffset(isReset: true, transition: .spring(duration: 0.4))
     }
     
-    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!)
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         self.updateFontState(self.currentFontState, force: true)
     }
     
@@ -375,37 +375,6 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
     func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
         decisionHandler(.prompt)
     }
-    
-    
-//    @available(iOS 13.0, *)
-//    func webView(_ webView: WKWebView, contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo, completionHandler: @escaping (UIContextMenuConfiguration?) -> Void) {
-//        guard let url = elementInfo.linkURL else {
-//            completionHandler(nil)
-//            return
-//        }
-//        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-//        let configuration = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
-//            return UIMenu(title: "", children: [
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_Open, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Browser"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
-//                    self?.open(url: url.absoluteString, new: false)
-//                }),
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_OpenInNewTab, image: generateTintedImage(image: UIImage(bundleImageName: "Instant View/NewTab"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
-//                    self?.open(url: url.absoluteString, new: true)
-//                }),
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_AddToReadingList, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReadingList"), color: presentationData.theme.contextMenu.primaryColor), handler: { _ in
-//                    let _ = try? SSReadingList.default()?.addItem(with: url, title: nil, previewText: nil)
-//                }),
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_CopyLink, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
-//                    UIPasteboard.general.string = url.absoluteString
-//                    self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
-//                }),
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_Share, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
-//                    self?.share(url: url.absoluteString)
-//                })
-//            ])
-//        }
-//        completionHandler(configuration)
-//    }
     
     private func open(url: String, new: Bool) {
         let subject: BrowserScreen.Subject = .webPage(url: url)
