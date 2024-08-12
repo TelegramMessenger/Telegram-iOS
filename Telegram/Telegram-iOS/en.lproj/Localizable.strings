@@ -12753,6 +12753,10 @@ Sorry for the inconvenience.";
 "SensitiveContent.ViewAnyway" = "View Anyway";
 "SensitiveContent.SettingsInfo" = "You can update the visibility of sensitive media in [Data and Storage > Show 18+ Content]().";
 
+"SensitiveContent.Enable.Title" = "18+ Content";
+"SensitiveContent.Enable.Text" = "Confirm that you are over 18 years old and update settings to see potentially explicit and sensitive content.";
+"SensitiveContent.Enable.Confirm" = "Confirm";
+
 "Notification.Refund" = "You received a refund of {amount} from {name}";
 
 "InviteLink.SubscriptionFee.Title" = "SUBSCRIPTION FEE";
