@@ -742,8 +742,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     if case .channels = key {
                         headerType = .channels
                     } else if case .apps = key {
-                        //TODO:localize
-                        headerType = .text("APPS", AnyHashable("apps"))
+                        headerType = .text(strings.ChatList_Search_SectionApps, AnyHashable("apps"))
                     } else {
                         if filter.contains(.onlyGroups) {
                             headerType = .chats

@@ -12779,3 +12779,29 @@ Sorry for the inconvenience.";
 
 "ChatList.SubscriptionsLowBalance.Multiple.Title" = "%@ for your subscriptions";
 "ChatList.SubscriptionsLowBalance.Multiple.Text" = "Insufficient funds to cover your subscriptions.";
+
+"ChatList.Search.SectionApps" = "APPS";
+
+"Channel.ShowAuthors" = "Show Authors' Profiles";
+"Channel.ShowAuthorsFooter" = "Add names and photos of admins to the messages they post, linking to their profiles.";
+
+"SendStarReactions.Title" = "React with Stars";
+"SendStarReactions.Balance" = "Balance";
+"SendStarReactions.UserLabelAnonymous" = "Anonymous";
+"SendStarReactions.SliderTop" = "TOP";
+"SendStarReactions.TextSentStars_1" = "You sent **1** star to support this post.";
+"SendStarReactions.TextSentStars_any" = "You sent **%d** stars to support this post.";
+"SendStarReactions.TextGeneric" = "Choose how many stars you want to send to **%@** to support this post.";
+"SendStarReactions.SectionTop" = "Top Senders";
+"SendStarReactions.ShowMyselfInTop" = "Show me in Top Senders";
+"SendStarReactions.SendButtonTitle" = "Send  # %@";
+"SendStarReactions.TermsOfServiceFooter" = "By sending Stars you agree to the [Terms of Service](https://telegram.org/privacy)";
+
+"PeerInfo.AllowedReactions.StarReactions" = "Enable Paid Reactions";
+"PeerInfo.AllowedReactions.StarReactionsFooter" = "Switch this on to let your subscribers set paid reactions with Telegram Stars, which you will be able to withdraw later as TON. [Learn More >](https://telegram.org/privacy)";
+
+"Chat.ToastStarsSent.Title_1" = "Star sent!";
+"Chat.ToastStarsSent.Title_any" = "Stars sent!";
+"Chat.ToastStarsSent.Text" = "You have reacted with %1$@ %2$@.";
+"Chat.ToastStarsSent.TextStarAmount_1" = "star";
+"Chat.ToastStarsSent.TextStarAmount_any" = "stars";

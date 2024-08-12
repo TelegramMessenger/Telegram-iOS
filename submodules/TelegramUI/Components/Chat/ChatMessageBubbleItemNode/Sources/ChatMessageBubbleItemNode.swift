@@ -1550,7 +1550,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
             }
             
-            //TODO:release
             if let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, firstMessage.author?.id != channel.id {
                 if info.flags.contains(.messagesShouldHaveProfiles) {
                     var allowAuthor = incoming

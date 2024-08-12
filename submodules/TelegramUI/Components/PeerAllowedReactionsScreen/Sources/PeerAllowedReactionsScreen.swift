@@ -907,8 +907,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         self.paidReactionsSection = paidReactionsSection
                     }
                     
-                    //TODO:localize
-                    let parsedString = parseMarkdownIntoAttributedString("Switch this on to let your subscribers set paid reactions with Telegram Stars, which you will be able to withdraw later as TON. [Learn More >](https://telegram.org/privacy)", attributes: MarkdownAttributes(
+                    let parsedString = parseMarkdownIntoAttributedString(environment.strings.PeerInfo_AllowedReactions_StarReactionsFooter, attributes: MarkdownAttributes(
                         body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor),
                         bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.freeTextColor),
                         link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemAccentColor),
@@ -925,7 +924,6 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         paidReactionsFooterText.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: paidReactionsFooterText.string))
                     }
                     
-                    //TODO:localize
                     let paidReactionsSectionSize = paidReactionsSection.update(
                         transition: transition,
                         component: AnyComponent(ListSectionComponent(
@@ -953,7 +951,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             items: [
                                 AnyComponentWithIdentity(id: 0, component: AnyComponent(ListSwitchItemComponent(
                                     theme: environment.theme,
-                                    title: "Enable Paid Reactions",
+                                    title: environment.strings.PeerInfo_AllowedReactions_StarReactions,
                                     value: self.areStarsReactionsEnabled,
                                     valueUpdated: { [weak self] value in
                                         guard let self, let component = self.component else {

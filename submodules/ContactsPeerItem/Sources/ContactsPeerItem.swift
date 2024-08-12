@@ -1093,7 +1093,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                         } else if peer.id.isReplies, case .generalSearch = item.peerMode {
                                             overrideImage = .repliesIcon
                                         } else if peer.id.isAnonymousSavedMessages, case .generalSearch = item.peerMode {
-                                            overrideImage = .anonymousSavedMessagesIcon
+                                            overrideImage = .anonymousSavedMessagesIcon(isColored: true)
                                         } else if peer.isDeleted {
                                             overrideImage = .deletedIcon
                                         }

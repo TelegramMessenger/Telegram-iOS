@@ -1729,7 +1729,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return
                             }
                             
-                            strongSelf.context.engine.messages.sendStarsReaction(id: message.id, count: 1)
+                            strongSelf.context.engine.messages.sendStarsReaction(id: message.id, count: 1, isAnonymous: false)
                             strongSelf.displayOrUpdateSendStarsUndo(messageId: message.id, count: 1)
                         })
                     } else {
@@ -5092,7 +5092,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 } else if peer.id.isReplies {
                                     imageOverride = .repliesIcon
                                 } else if peer.id.isAnonymousSavedMessages {
-                                    imageOverride = .anonymousSavedMessagesIcon
+                                    imageOverride = .anonymousSavedMessagesIcon(isColored: true)
                                 } else if peer.isDeleted {
                                     imageOverride = .deletedIcon
                                 } else {
@@ -5888,7 +5888,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             } else if savedMessagesPeerId.isReplies {
                                 imageOverride = .repliesIcon
                             } else if savedMessagesPeerId.isAnonymousSavedMessages {
-                                imageOverride = .anonymousSavedMessagesIcon
+                                imageOverride = .anonymousSavedMessagesIcon(isColored: true)
                             } else if let peer = savedMessagesPeer?.peer, peer.isDeleted {
                                 imageOverride = .deletedIcon
                             } else {

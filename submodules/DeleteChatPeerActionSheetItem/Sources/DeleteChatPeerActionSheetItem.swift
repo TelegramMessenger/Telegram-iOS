@@ -85,7 +85,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         } else if chatPeer.id.isReplies {
             self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .repliesIcon)
         } else if chatPeer.id.isAnonymousSavedMessages {
-            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .anonymousSavedMessagesIcon)
+            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .anonymousSavedMessagesIcon(isColored: true))
         } else {
             var overrideImage: AvatarNodeImageOverride?
             if chatPeer.isDeleted {
