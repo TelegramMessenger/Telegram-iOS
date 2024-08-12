@@ -537,9 +537,9 @@ private final class PeerComponent: Component {
             let avatarFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: avatarSize)
             avatarNode.frame = avatarFrame
             if let peer = component.peer {
-                avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer)
+                avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, synchronousLoad: true)
             } else {
-                avatarNode.setPeer(context: component.context, theme: component.theme, peer: nil, overrideImage: .anonymousSavedMessagesIcon)
+                avatarNode.setPeer(context: component.context, theme: component.theme, peer: nil, overrideImage: .anonymousSavedMessagesIcon(isColored: false), synchronousLoad: true)
             }
             avatarNode.updateSize(size: avatarFrame.size)
             
@@ -657,7 +657,7 @@ private final class SliderBackgroundComponent: Component {
         }
         
         func update(component: SliderBackgroundComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-            self.sliderBackground.backgroundColor = UIColor(rgb: 0xEEEEEF)
+            self.sliderBackground.backgroundColor = component.theme.list.itemPrimaryTextColor.withMultipliedAlpha(component.theme.overallDarkAppearance ? 0.2 : 0.07)
             self.sliderForeground.backgroundColor = UIColor(rgb: 0xFFB10D)
             self.topForegroundLine.backgroundColor = component.theme.list.plainBackgroundColor.cgColor
             self.topBackgroundLine.backgroundColor = component.theme.list.plainBackgroundColor.cgColor
@@ -687,7 +687,7 @@ private final class SliderBackgroundComponent: Component {
             let topTextSize = self.topForegroundText.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "TOP", font: Font.medium(17.0), textColor: UIColor(white: 1.0, alpha: 0.4)))
+                    text: .plain(NSAttributedString(string: "TOP", font: Font.semibold(15.0), textColor: UIColor(white: 1.0, alpha: 0.4)))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
@@ -695,7 +695,7 @@ private final class SliderBackgroundComponent: Component {
             let _ = self.topBackgroundText.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "TOP", font: Font.medium(17.0), textColor: UIColor(white: 0.0, alpha: 0.1)))
+                    text: .plain(NSAttributedString(string: "TOP", font: Font.semibold(15.0), textColor: component.theme.overallDarkAppearance ? UIColor(white: 1.0, alpha: 0.22) : UIColor(white: 0.0, alpha: 0.2)))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
