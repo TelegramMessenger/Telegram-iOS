@@ -12548,6 +12548,11 @@ Sorry for the inconvenience.";
 "WebBrowser.LinkForwardTooltip.ManyChats.One" = "Link forwarded to **%@** and %@ others";
 "WebBrowser.LinkForwardTooltip.SavedMessages.One" = "Link forwarded to **Saved Messages**";
 
+"WebBrowser.FileForwardTooltip.Chat.One" = "Document forwarded to **%@**";
+"WebBrowser.FileForwardTooltip.TwoChats.One" = "Document forwarded to **%@** and **%@**";
+"WebBrowser.FileForwardTooltip.ManyChats.One" = "Document forwarded to **%@** and %@ others";
+"WebBrowser.FileForwardTooltip.SavedMessages.One" = "Document forwarded to **Saved Messages**";
+
 "Stars.Intro.StarsSent_1" = "%@ Star sent.";
 "Stars.Intro.StarsSent_any" = "%@ Stars sent.";
 "Stars.Intro.StarsSent.ViewChat" = "View Chat";

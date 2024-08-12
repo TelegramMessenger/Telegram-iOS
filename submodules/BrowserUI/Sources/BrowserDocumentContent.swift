@@ -20,6 +20,7 @@ import UrlEscaping
 final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
+    let file: TelegramMediaFile
     
     private let webView: WKWebView
         
@@ -50,6 +51,7 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
         self.context = context
         self.uuid = UUID()
         self.presentationData = presentationData
+        self.file = file
         
         let configuration = WKWebViewConfiguration()
         self.webView = WKWebView(frame: CGRect(), configuration: configuration)

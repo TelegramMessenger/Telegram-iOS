@@ -232,7 +232,13 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 } else if let rootController = params.navigationController?.view.window?.rootViewController {
                     let proceed = {
                         let canShare = !params.message.isCopyProtected()
+                        var useBrowserScreen = false
                         if BrowserScreen.supportedDocumentMimeTypes.contains(file.mimeType) {
+                            useBrowserScreen = true
+                        } else if let fileName = file.fileName as? NSString, BrowserScreen.supportedDocumentExtensions.contains(fileName.pathExtension.lowercased())  {
+                            useBrowserScreen = true
+                        }
+                        if useBrowserScreen {
                             let subject: BrowserScreen.Subject
                             if file.mimeType == "application/pdf" {
                                 subject = .pdfDocument(file: file, canShare: canShare)

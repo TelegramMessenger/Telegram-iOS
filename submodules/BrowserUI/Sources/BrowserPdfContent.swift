@@ -20,6 +20,7 @@ import PDFKit
 final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDFDocumentDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
+    let file: TelegramMediaFile
     
     private let pdfView: PDFView
     private let scrollView: UIScrollView!
@@ -51,6 +52,7 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         self.context = context
         self.uuid = UUID()
         self.presentationData = presentationData
+        self.file = file
         
         self.pdfView = PDFView()
 
