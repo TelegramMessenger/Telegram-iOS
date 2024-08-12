@@ -346,7 +346,7 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
         self.updateScrollingOffset(isReset: true, transition: .spring(duration: 0.4))
     }
     
-    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!)
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         self.updateFontState(self.currentFontState, force: true)
     }
     

@@ -1993,9 +1993,17 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                         case .all:
                             label = presentationData.strings.PeerInfo_LabelAllReactions
                         case .empty:
-                            label = presentationData.strings.PeerInfo_ReactionsDisabled
+                            if let starsAllowed = reactionSettings.starsAllowed, starsAllowed {
+                                label = "1"
+                            } else {
+                                label = presentationData.strings.PeerInfo_ReactionsDisabled
+                            }
                         case let .limited(reactions):
-                            label = "\(reactions.count)"
+                            var countValue = reactions.count
+                            if let starsAllowed = reactionSettings.starsAllowed, starsAllowed {
+                                countValue += 1
+                            }
+                            label = "\(countValue)"
                         }
                     } else {
                         label = ""

@@ -1402,6 +1402,9 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
                 case .empty:
                     isEnabled = false
                 }
+                if let starsAllowed = reactionSettings.starsAllowed, starsAllowed {
+                    isEnabled = true
+                }
             }
             
             var missingReactionFiles: [Int64] = []
