@@ -262,28 +262,6 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
         
         self.webView.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         self.webView.scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
-        
-//        if let error = self.currentError {
-//            let errorSize = self.errorView.update(
-//                transition: .immediate,
-//                component: AnyComponent(
-//                    ErrorComponent(
-//                        theme: self.presentationData.theme,
-//                        title: self.presentationData.strings.Browser_ErrorTitle,
-//                        text: error.localizedDescription
-//                    )
-//                ),
-//                environment: {},
-//                containerSize: CGSize(width: size.width - insets.left - insets.right - 72.0, height: size.height)
-//            )
-//            if self.errorView.superview == nil {
-//                self.addSubview(self.errorView)
-//                self.errorView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-//            }
-//            self.errorView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - errorSize.width) / 2.0), y: insets.top + floorToScreenPixels((size.height - insets.top - insets.bottom - errorSize.height) / 2.0)), size: errorSize)
-//        } else if self.errorView.superview != nil {
-//            self.errorView.removeFromSuperview()
-//        }
     }
     
     private func updateState(_ f: (BrowserContentState) -> BrowserContentState) {
@@ -368,8 +346,7 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
         self.updateScrollingOffset(isReset: true, transition: .spring(duration: 0.4))
     }
     
-    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-//        self.currentError = nil
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!)
         self.updateFontState(self.currentFontState, force: true)
     }
     
@@ -380,29 +357,7 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
                 .withUpdatedForwardList(webView.backForwardList.forwardList.map { BrowserContentState.HistoryItem(webItem: $0) })
         }
     }
-    
-//    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-//        if (error as NSError).code != -999 {
-//            self.currentError = error
-//        } else {
-//            self.currentError = nil
-//        }
-//        if let (size, insets) = self.validLayout {
-//            self.updateLayout(size: size, insets: insets, transition: .immediate)
-//        }
-//    }
-//    
-//    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-//        if (error as NSError).code != -999 {
-//            self.currentError = error
-//        } else {
-//            self.currentError = nil
-//        }
-//        if let (size, insets) = self.validLayout {
-//            self.updateLayout(size: size, insets: insets, transition: .immediate)
-//        }
-//    }
-    
+        
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil {
             if let url = navigationAction.request.url?.absoluteString {
@@ -478,6 +433,14 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
     }
     
     func makeContentSnapshotView() -> UIView? {
-        return nil
+        let configuration = WKSnapshotConfiguration()
+        configuration.rect = CGRect(origin: .zero, size: self.webView.frame.size)
+
+        let imageView = UIImageView()
+        imageView.frame = CGRect(origin: .zero, size: self.webView.frame.size)
+        self.webView.takeSnapshot(with: configuration, completionHandler: { image, _ in
+            imageView.image = image
+        })
+        return imageView
     }
 }
