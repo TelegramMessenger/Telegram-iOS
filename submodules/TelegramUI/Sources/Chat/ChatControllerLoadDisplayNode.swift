@@ -298,11 +298,16 @@ extension ChatControllerImpl {
                         allPeers = peers
                         
                         var hasAnonymousPeer = false
+                        var hasSelfPeer = false
                         for peer in peers {
                             if peer.peer.id == channel.id {
                                 hasAnonymousPeer = true
-                                break
+                            } else if peer.peer.id == strongSelf.context.account.peerId {
+                                hasSelfPeer = true
                             }
+                        }
+                        if !hasSelfPeer {
+                            allPeers?.insert(currentAccountPeer, at: 0)
                         }
                         if !hasAnonymousPeer {
                             allPeers?.insert(SendAsPeer(peer: channel, subscribers: 0, isPremiumRequired: false), at: 0)
