@@ -62,10 +62,9 @@ private final class BalanceComponent: CombinedComponent {
         return { context in
             var size = CGSize(width: 0.0, height: 0.0)
             
-            //TODO:localize
             let title = title.update(
                 component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Balance", font: Font.regular(14.0), textColor: context.component.theme.list.itemPrimaryTextColor))
+                    text: .plain(NSAttributedString(string: context.component.strings.SendStarReactions_Balance, font: Font.regular(14.0), textColor: context.component.theme.list.itemPrimaryTextColor))
                 ),
                 availableSize: context.availableSize,
                 transition: .immediate
@@ -566,8 +565,7 @@ private final class PeerComponent: Component {
             if let peer = component.peer {
                 peerTitle = peer.compactDisplayTitle
             } else {
-                //TODO:localize
-                peerTitle = "Anonymous"
+                peerTitle = component.strings.SendStarReactions_UserLabelAnonymous
             }
             
             let titleSize = self.title.update(
@@ -601,21 +599,27 @@ private final class PeerComponent: Component {
 
 private final class SliderBackgroundComponent: Component {
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let value: CGFloat
     let topCutoff: CGFloat?
     
     init(
         theme: PresentationTheme,
+        strings: PresentationStrings,
         value: CGFloat,
         topCutoff: CGFloat?
     ) {
         self.theme = theme
+        self.strings = strings
         self.value = value
         self.topCutoff = topCutoff
     }
     
     static func ==(lhs: SliderBackgroundComponent, rhs: SliderBackgroundComponent) -> Bool {
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.value != rhs.value {
@@ -739,11 +743,10 @@ private final class SliderBackgroundComponent: Component {
             topLineFrameTransition.setFrame(layer: self.topBackgroundLine, frame: topLineFrame)
             topLineAlphaTransition.setAlpha(layer: self.topBackgroundLine, alpha: topLineAlpha)
             
-            //TODO:localize
             let topTextSize = self.topForegroundText.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "TOP", font: Font.semibold(15.0), textColor: UIColor(white: 1.0, alpha: 0.4)))
+                    text: .plain(NSAttributedString(string: component.strings.SendStarReactions_SliderTop, font: Font.semibold(15.0), textColor: UIColor(white: 1.0, alpha: 0.4)))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
@@ -751,7 +754,7 @@ private final class SliderBackgroundComponent: Component {
             let _ = self.topBackgroundText.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "TOP", font: Font.semibold(15.0), textColor: component.theme.overallDarkAppearance ? UIColor(white: 1.0, alpha: 0.22) : UIColor(white: 0.0, alpha: 0.2)))
+                    text: .plain(NSAttributedString(string: component.strings.SendStarReactions_SliderTop, font: Font.semibold(15.0), textColor: component.theme.overallDarkAppearance ? UIColor(white: 1.0, alpha: 0.22) : UIColor(white: 0.0, alpha: 0.2)))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
@@ -1256,6 +1259,7 @@ private final class ChatSendStarsScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(SliderBackgroundComponent(
                     theme: environment.theme,
+                    strings: environment.strings,
                     value: progressFraction,
                     topCutoff: topCutoffFraction
                 )),
@@ -1388,7 +1392,7 @@ private final class ChatSendStarsScreenComponent: Component {
             let titleSize = title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "React with Stars", font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                    text: .plain(NSAttributedString(string: environment.strings.SendStarReactions_Title, font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
@@ -1406,9 +1410,9 @@ private final class ChatSendStarsScreenComponent: Component {
             
             let text: String
             if let currentSentAmount = component.currentSentAmount {
-                text = "You sent **\(currentSentAmount)** stars to support this post."
+                text = environment.strings.SendStarReactions_TextSentStars(Int32(currentSentAmount))
             } else {
-                text = "Choose how many stars you want to send to **\(component.peer.debugDisplayTitle)** to support this post."
+                text = environment.strings.SendStarReactions_TextGeneric(component.peer.debugDisplayTitle).string
             }
                 
             let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
@@ -1482,11 +1486,10 @@ private final class ChatSendStarsScreenComponent: Component {
                 topPeersLeftSeparator.backgroundColor = environment.theme.list.itemPlainSeparatorColor.cgColor
                 topPeersRightSeparator.backgroundColor = environment.theme.list.itemPlainSeparatorColor.cgColor
                 
-                //TODO:localize
                 let topPeersTitleSize = topPeersTitle.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "Top Senders", font: Font.semibold(15.0), textColor: .white))
+                        text: .plain(NSAttributedString(string: environment.strings.SendStarReactions_SectionTop, font: Font.semibold(15.0), textColor: .white))
                     )),
                     environment: {},
                     containerSize: CGSize(width: 300.0, height: 100.0)
@@ -1675,7 +1678,7 @@ private final class ChatSendStarsScreenComponent: Component {
                                 selected: !self.isAnonymous
                             ))),
                             AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
-                                text: .plain(NSAttributedString(string: "Show me in Top Senders", font: Font.regular(16.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                                text: .plain(NSAttributedString(string: environment.strings.SendStarReactions_ShowMyselfInTop, font: Font.regular(16.0), textColor: environment.theme.list.itemPrimaryTextColor))
                             )))
                             ],
                             spacing: 10.0
@@ -1720,7 +1723,7 @@ private final class ChatSendStarsScreenComponent: Component {
                 self.cachedStarImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: .white)!, environment.theme)
             }
             
-            let buttonString = "Send  # \(self.amount)"
+            let buttonString = environment.strings.SendStarReactions_SendButtonTitle("\(self.amount)").string
             let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .center)
             if let range = buttonAttributedString.string.range(of: "#"), let starImage = self.cachedStarImage?.0 {
                 buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
@@ -1801,7 +1804,7 @@ private final class ChatSendStarsScreenComponent: Component {
             let buttonDescriptionTextSize = self.buttonDescriptionText.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .markdown(text: "By sending Stars you agree to the [Terms of Service]()", attributes: MarkdownAttributes(
+                    text: .markdown(text: environment.strings.SendStarReactions_TermsOfServiceFooter, attributes: MarkdownAttributes(
                         body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemSecondaryTextColor),
                         bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemSecondaryTextColor),
                         link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemAccentColor),

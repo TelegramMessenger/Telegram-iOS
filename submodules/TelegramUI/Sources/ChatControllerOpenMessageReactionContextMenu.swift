@@ -481,21 +481,14 @@ extension ChatControllerImpl {
             self.currentSendStarsUndoCount = count
         }
         
-        //TODO:localize
-        let title: String
-        if self.currentSendStarsUndoCount == 1 {
-            title = "Star sent!"
-        } else {
-            title = "Stars sent!"
-        }
+        let title: String = self.presentationData.strings.Chat_ToastStarsSent_Title(Int32(self.currentSendStarsUndoCount))
         
-        var textItems: [AnimatedTextComponent.Item] = []
-        textItems.append(AnimatedTextComponent.Item(id: AnyHashable(0), isUnbreakable: true, content: .text("You have reacted with ")))
-        textItems.append(AnimatedTextComponent.Item(id: AnyHashable(1), content: .number(self.currentSendStarsUndoCount, minDigits: 1)))
-        textItems.append(AnimatedTextComponent.Item(id: AnyHashable(2), isUnbreakable: true, content: .text(self.currentSendStarsUndoCount == 1 ? " star." : " stars.")))
+        let textItems = extractAnimatedTextString(string: self.presentationData.strings.Chat_ToastStarsSent_Text("", ""), id: "text", mapping: [
+            0: .number(self.currentSendStarsUndoCount, minDigits: 1),
+            1: .text(self.presentationData.strings.Chat_ToastStarsSent_TextStarAmount(Int32(self.currentSendStarsUndoCount)))
+        ])
         
         self.currentSendStarsUndoMessageId = messageId
-        //TODO:localize
         if let current = self.currentSendStarsUndoController {
             current.content = .starsSent(context: self.context, title: title, text: textItems)
         } else {
@@ -512,4 +505,32 @@ extension ChatControllerImpl {
             self.present(controller, in: .current)
         }
     }
+}
+
+private func extractAnimatedTextString(string: PresentationStrings.FormattedString, id: String, mapping: [Int: AnimatedTextComponent.Item.Content]) -> [AnimatedTextComponent.Item] {
+    var textItems: [AnimatedTextComponent.Item] = []
+    
+    var previousIndex = 0
+    let nsString = string.string as NSString
+    for range in string.ranges.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
+        if range.range.lowerBound > previousIndex {
+            textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_text_before_\(range.index)"), isUnbreakable: true, content: .text(nsString.substring(with: NSRange(location: previousIndex, length: range.range.lowerBound - previousIndex)))))
+        }
+        if let value = mapping[range.index] {
+            let isUnbreakable: Bool
+            switch value {
+            case .text:
+                isUnbreakable = true
+            case .number:
+                isUnbreakable = false
+            }
+            textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_item_\(range.index)"), isUnbreakable: isUnbreakable, content: value))
+        }
+        previousIndex = range.range.upperBound
+    }
+    if nsString.length > previousIndex {
+        textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_text_end"), isUnbreakable: true, content: .text(nsString.substring(with: NSRange(location: previousIndex, length: nsString.length - previousIndex)))))
+    }
+    
+    return textItems
 }

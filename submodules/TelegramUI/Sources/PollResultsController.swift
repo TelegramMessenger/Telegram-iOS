@@ -223,7 +223,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .solutionText(text, entities):
             let _ = entities
-            //TODO:localize
+            //TODO:release
             return ItemListMultilineTextItem(presentationData: presentationData, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks)
         case let .optionPeer(optionId, _, peer, optionText, optionTextEntities, optionAdditionalText, optionCount, optionExpanded, opaqueIdentifier, shimmeringAlternation, isFirstInOption):
             let font = Font.regular(13.0)
