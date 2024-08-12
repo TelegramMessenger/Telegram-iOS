@@ -969,13 +969,15 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                     return
                 }
                 if subscription.untilDate > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
-                    if let channel = subscription.peer._asPeer() as? TelegramChannel, channel.participationStatus == .left {
+                    var updated = false
+                    if let channel = subscription.peer._asPeer() as? TelegramChannel, channel.participationStatus == .left && !subscription.flags.contains(.isCancelled) {
                         let _ = self.context.engine.payments.fulfillStarsSubscription(peerId: context.account.peerId, subscriptionId: subscription.id).startStandalone()
+                        updated = true
+                    }
+                    if !updated {
                         if subscription.flags.contains(.isCancelled) {
                             self.subscriptionsContext.updateSubscription(id: subscription.id, cancel: false)
-                        }
-                    } else {
-                        if !subscription.flags.contains(.isCancelled) {
+                        } else {
                             self.subscriptionsContext.updateSubscription(id: subscription.id, cancel: true)
                         }
                     }
@@ -1103,5 +1105,9 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
     
     deinit {
         self.navigateDisposable.dispose()
+    }
+    
+    public func update() {
+        self.subscriptionsContext.loadMore()
     }
 }
