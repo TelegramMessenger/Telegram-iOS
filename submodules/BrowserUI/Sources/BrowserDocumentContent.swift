@@ -262,28 +262,6 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
         
         self.webView.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         self.webView.scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
-        
-//        if let error = self.currentError {
-//            let errorSize = self.errorView.update(
-//                transition: .immediate,
-//                component: AnyComponent(
-//                    ErrorComponent(
-//                        theme: self.presentationData.theme,
-//                        title: self.presentationData.strings.Browser_ErrorTitle,
-//                        text: error.localizedDescription
-//                    )
-//                ),
-//                environment: {},
-//                containerSize: CGSize(width: size.width - insets.left - insets.right - 72.0, height: size.height)
-//            )
-//            if self.errorView.superview == nil {
-//                self.addSubview(self.errorView)
-//                self.errorView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-//            }
-//            self.errorView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - errorSize.width) / 2.0), y: insets.top + floorToScreenPixels((size.height - insets.top - insets.bottom - errorSize.height) / 2.0)), size: errorSize)
-//        } else if self.errorView.superview != nil {
-//            self.errorView.removeFromSuperview()
-//        }
     }
     
     private func updateState(_ f: (BrowserContentState) -> BrowserContentState) {
@@ -369,7 +347,6 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
     }
     
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-//        self.currentError = nil
         self.updateFontState(self.currentFontState, force: true)
     }
     
@@ -380,29 +357,7 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
                 .withUpdatedForwardList(webView.backForwardList.forwardList.map { BrowserContentState.HistoryItem(webItem: $0) })
         }
     }
-    
-//    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-//        if (error as NSError).code != -999 {
-//            self.currentError = error
-//        } else {
-//            self.currentError = nil
-//        }
-//        if let (size, insets) = self.validLayout {
-//            self.updateLayout(size: size, insets: insets, transition: .immediate)
-//        }
-//    }
-//    
-//    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-//        if (error as NSError).code != -999 {
-//            self.currentError = error
-//        } else {
-//            self.currentError = nil
-//        }
-//        if let (size, insets) = self.validLayout {
-//            self.updateLayout(size: size, insets: insets, transition: .immediate)
-//        }
-//    }
-    
+        
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil {
             if let url = navigationAction.request.url?.absoluteString {
@@ -420,37 +375,6 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
     func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
         decisionHandler(.prompt)
     }
-    
-    
-//    @available(iOS 13.0, *)
-//    func webView(_ webView: WKWebView, contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo, completionHandler: @escaping (UIContextMenuConfiguration?) -> Void) {
-//        guard let url = elementInfo.linkURL else {
-//            completionHandler(nil)
-//            return
-//        }
-//        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-//        let configuration = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
-//            return UIMenu(title: "", children: [
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_Open, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Browser"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
-//                    self?.open(url: url.absoluteString, new: false)
-//                }),
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_OpenInNewTab, image: generateTintedImage(image: UIImage(bundleImageName: "Instant View/NewTab"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
-//                    self?.open(url: url.absoluteString, new: true)
-//                }),
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_AddToReadingList, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReadingList"), color: presentationData.theme.contextMenu.primaryColor), handler: { _ in
-//                    let _ = try? SSReadingList.default()?.addItem(with: url, title: nil, previewText: nil)
-//                }),
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_CopyLink, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
-//                    UIPasteboard.general.string = url.absoluteString
-//                    self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
-//                }),
-//                UIAction(title: presentationData.strings.Browser_ContextMenu_Share, image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: presentationData.theme.contextMenu.primaryColor), handler: { [weak self] _ in
-//                    self?.share(url: url.absoluteString)
-//                })
-//            ])
-//        }
-//        completionHandler(configuration)
-//    }
     
     private func open(url: String, new: Bool) {
         let subject: BrowserScreen.Subject = .webPage(url: url)
@@ -478,6 +402,14 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
     }
     
     func makeContentSnapshotView() -> UIView? {
-        return nil
+        let configuration = WKSnapshotConfiguration()
+        configuration.rect = CGRect(origin: .zero, size: self.webView.frame.size)
+
+        let imageView = UIImageView()
+        imageView.frame = CGRect(origin: .zero, size: self.webView.frame.size)
+        self.webView.takeSnapshot(with: configuration, completionHandler: { image, _ in
+            imageView.image = image
+        })
+        return imageView
     }
 }
