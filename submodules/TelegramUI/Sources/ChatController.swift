@@ -4423,9 +4423,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 if alwaysShow {
-                    let _ = updateMediaDisplaySettingsInteractively(accountManager: context.sharedContext.accountManager, {
-                        $0.withUpdatedShowSensitiveContent(true)
-                    }).startStandalone()
+                    let _ = updateRemoteContentSettingsConfiguration(postbox: context.account.postbox, network: context.account.network, sensitiveContentEnabled: true).start()
                     
                     self.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.SensitiveContent_SettingsInfo, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { [weak self] action in
                         if case .info = action, let self {

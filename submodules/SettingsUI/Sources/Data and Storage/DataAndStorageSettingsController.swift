@@ -451,7 +451,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .sensitiveContent(text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleSensitiveContent(value)
+                    arguments.toggleOtherSensitiveContent(value)
                 }, tag: DataAndStorageEntryTag.sensitiveContent)
             case let .sensitiveContentInfo(text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
@@ -674,7 +674,7 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.raiseToListen(presentationData.theme, presentationData.strings.Settings_RaiseToListen, data.mediaInputSettings.enableRaiseToSpeak))
     entries.append(.raiseToListenInfo(presentationData.theme, presentationData.strings.Settings_RaiseToListenInfo))
 
-    entries.append(.sensitiveContent(presentationData.strings.Settings_SensitiveContent, mediaSettings.showSensitiveContent))
+    entries.append(.sensitiveContent(presentationData.strings.Settings_SensitiveContent, contentSettingsConfiguration?.sensitiveContentEnabled ?? false))
     entries.append(.sensitiveContentInfo(presentationData.strings.Settings_SensitiveContentInfo))
     
     let proxyValue: String
@@ -691,11 +691,11 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.connectionHeader(presentationData.theme, presentationData.strings.ChatSettings_ConnectionType_Title.uppercased()))
     entries.append(.connectionProxy(presentationData.theme, presentationData.strings.SocksProxySetup_Title, proxyValue))
     
-    #if DEBUG
-    if let contentSettingsConfiguration = contentSettingsConfiguration, contentSettingsConfiguration.canAdjustSensitiveContent {
-        entries.append(.otherSensitiveContent("Display Sensitive Content", contentSettingsConfiguration.sensitiveContentEnabled))
-    }
-    #endif
+//    #if DEBUG
+//    if let contentSettingsConfiguration = contentSettingsConfiguration, contentSettingsConfiguration.canAdjustSensitiveContent {
+//        entries.append(.otherSensitiveContent("Display Sensitive Content", contentSettingsConfiguration.sensitiveContentEnabled))
+//    }
+//    #endif
     
     return entries
 }
