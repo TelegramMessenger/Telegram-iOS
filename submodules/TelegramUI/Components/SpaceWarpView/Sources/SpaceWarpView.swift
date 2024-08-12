@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import ComponentFlow
 import STCMeshView
+import UIKitRuntimeUtils
 
 private final class FPSView: UIView {
     private var lastTimestamp: Double?
@@ -327,6 +328,49 @@ private final class MaskGridLayer: SimpleLayer {
     }
 }
 
+private final class PrivateContentLayerRestoreContext {
+    final class Reference {
+        weak var layer: CALayer?
+        
+        init(layer: CALayer) {
+            self.layer = layer
+        }
+    }
+    
+    private static func collectPrivateContentLayers(layer: CALayer, into references: inout [Reference]) {
+        if getLayerDisableScreenshots(layer) {
+            references.append(Reference(layer: layer))
+        }
+        if let sublayers = layer.sublayers {
+            for sublayer in sublayers {
+                collectPrivateContentLayers(layer: sublayer, into: &references)
+            }
+        }
+    }
+    
+    private let references: [Reference]
+    
+    init(rootLayer: CALayer) {
+        var references: [Reference] = []
+        PrivateContentLayerRestoreContext.collectPrivateContentLayers(layer: rootLayer, into: &references)
+        self.references = references
+        
+        for reference in self.references {
+            if let layer = reference.layer {
+                setLayerDisableScreenshots(layer, false)
+            }
+        }
+    }
+    
+    func restore() {
+        for reference in self.references {
+            if let layer = reference.layer {
+                setLayerDisableScreenshots(layer, true)
+            }
+        }
+    }
+}
+
 open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
     private final class Shockwave {
         let startPoint: CGPoint
@@ -345,6 +389,8 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
     private let backgroundView: UIView
     private var currentCloneView: UIView?
     private var meshView: STCMeshView?
+    
+    private var privateContentRestoreContext: PrivateContentLayerRestoreContext?
     
     private var gradientLayer: SimpleGradientLayer?
     private var gradientMaskLayer: MaskGridLayer?
@@ -382,7 +428,25 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         #endif
     }
     
+    public static func supportsHierarchy(layer: CALayer) -> Bool {
+        if getLayerDisableScreenshots(layer) {
+            return false
+        }
+        if let sublayers = layer.sublayers {
+            for sublayer in sublayers {
+                if !supportsHierarchy(layer: sublayer) {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    
     public func triggerRipple(at point: CGPoint) {
+        if !SpaceWarpNodeImpl.supportsHierarchy(layer: self.contentNodeSource.view.layer) {
+            return
+        }
+        
         self.shockwaves.append(Shockwave(startPoint: point))
         if self.shockwaves.count > 8 {
             self.shockwaves.removeFirst()
@@ -480,7 +544,16 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
                 gradientMaskLayer.removeFromSuperlayer()
             }
             
+            if let privateContentRestoreContext = self.privateContentRestoreContext {
+                self.privateContentRestoreContext = nil
+                privateContentRestoreContext.restore()
+            }
+            
             return
+        }
+        
+        if self.privateContentRestoreContext == nil {
+            self.privateContentRestoreContext = PrivateContentLayerRestoreContext(rootLayer: self.contentNodeSource.view.layer)
         }
         
         self.backgroundView.isHidden = false

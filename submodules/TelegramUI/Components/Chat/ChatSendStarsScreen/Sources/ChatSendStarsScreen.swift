@@ -958,12 +958,15 @@ private final class ChatSendStarsScreenComponent: Component {
         
         private var topOffsetDistance: CGFloat?
         
+        private var balance: Int64?
         private var amount: Int64 = 1
         private var isAnonymous: Bool = false
         private var cachedStarImage: (UIImage, PresentationTheme)?
         private var cachedCloseImage: UIImage?
         
         private var isPastTopCutoff: Bool?
+        
+        private var balanceDisposable: Disposable?
         
         override init(frame: CGRect) {
             self.bottomOverscrollLimit = 200.0
@@ -1017,6 +1020,10 @@ private final class ChatSendStarsScreenComponent: Component {
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.balanceDisposable?.dispose()
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -1127,9 +1134,25 @@ private final class ChatSendStarsScreenComponent: Component {
             let sideInset: CGFloat = 16.0
             
             if self.component == nil {
+                self.balance = component.balance
                 self.amount = 50
                 if let myTopPeer = component.myTopPeer {
                     self.isAnonymous = myTopPeer.isAnonymous
+                }
+                
+                if let starsContext = component.context.starsContext {
+                    self.balanceDisposable = (starsContext.state
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] state in
+                        guard let self else {
+                            return
+                        }
+                        if let state {
+                            if self.balance != state.balance {
+                                self.balance = state.balance
+                                self.state?.updated(transition: .immediate)
+                            }
+                        }
+                    })
                 }
             }
             
@@ -1335,7 +1358,7 @@ private final class ChatSendStarsScreenComponent: Component {
                     context: component.context,
                     theme: environment.theme,
                     strings: environment.strings,
-                    balance: component.balance
+                    balance: self.balance
                 )),
                 environment: {},
                 containerSize: CGSize(width: 120.0, height: 100.0)
@@ -1751,7 +1774,7 @@ private final class ChatSendStarsScreenComponent: Component {
                         guard let self, let component = self.component else {
                             return
                         }
-                        guard let balance = component.balance else {
+                        guard let balance = self.balance else {
                             return
                         }
                         

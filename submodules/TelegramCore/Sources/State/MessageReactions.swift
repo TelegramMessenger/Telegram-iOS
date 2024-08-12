@@ -220,6 +220,12 @@ func cancelPendingSendStarsReactionInteractively(account: Account, messageId: Me
     |> ignoreValues
 }
 
+func _internal_forceSendPendingSendStarsReaction(account: Account, messageId: MessageId) -> Signal<Never, NoError> {
+    account.stateManager.forceSendPendingStarsReaction(messageId: messageId)
+    
+    return .complete()
+}
+
 func _internal_updateStarsReactionIsAnonymous(account: Account, messageId: MessageId, isAnonymous: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         transaction.updateMessage(messageId, update: { currentMessage in
@@ -388,6 +394,9 @@ private func requestSendStarsReaction(postbox: Postbox, network: Network, stateM
                 return .generic
             }
             |> mapToSignal { result -> Signal<Never, RequestUpdateMessageReactionError> in
+                stateManager.starsContext?.add(balance: Int64(-count), addTransaction: false)
+                //stateManager.starsContext?.load(force: true)
+                
                 return postbox.transaction { transaction -> Void in
                     transaction.setPendingMessageAction(type: .sendStarsReaction, id: messageId, action: UpdateMessageReactionsAction())
                     transaction.updateMessage(messageId, update: { currentMessage in
@@ -568,8 +577,20 @@ func managedApplyPendingMessageStarsReactionsActions(postbox: Postbox, network: 
                 let signal = withTakenStarsAction(postbox: postbox, type: .sendStarsReaction, id: entry.id, { transaction, entry -> Signal<Never, NoError> in
                     if let entry = entry {
                         if let _ = entry.action as? SendStarsReactionsAction {
-                            return synchronizeMessageStarsReactions(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, id: entry.id)
-                            |> delay(5.0, queue: .mainQueue())
+                            let triggerSignal: Signal<Void, NoError> = stateManager.forceSendPendingStarsReaction
+                            |> filter {
+                                $0 == entry.id
+                            }
+                            |> map { _ -> Void in
+                                return Void()
+                            }
+                            |> take(1)
+                            |> timeout(5.0, queue: .mainQueue(), alternate: .single(Void()))
+                            
+                            return triggerSignal
+                            |> mapToSignal { _ -> Signal<Never, NoError> in
+                                return synchronizeMessageStarsReactions(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, id: entry.id)
+                            }
                         } else {
                             assertionFailure()
                         }
