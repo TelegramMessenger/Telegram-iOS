@@ -32,6 +32,7 @@ swift_library(
         "//submodules/AvatarNode",
         "//submodules/Components/BundleIconComponent",
         "//submodules/CheckNode",
+        "//submodules/TextFormat",
     ],
     visibility = [
         "//visibility:public",

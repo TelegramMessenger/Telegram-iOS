@@ -131,7 +131,6 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
     private var searchResultsCount: Int = 0
     private var searchResults: [PDFSelection] = []
     private var searchCompletion: ((Int) -> Void)?
-    private var searchDimmingView: UIView?
     
     private let matchColor = UIColor(rgb: 0xd4d4d, alpha: 0.2)
     private let selectedColor = UIColor(rgb: 0xffe438)
@@ -299,9 +298,6 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         
         let pdfViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - insets.bottom))
         transition.setFrame(view: self.pdfView, frame: pdfViewFrame)
-        if let searchDimmingView = self.searchDimmingView {
-            transition.setFrame(view: searchDimmingView, frame: CGRect(origin: .zero, size: self.pdfView.bounds.size))
-        }
         
         if isFirstTime {
             self.pdfView.setNeedsLayout()

@@ -19,6 +19,7 @@ import RoundedRectWithTailPath
 import AvatarNode
 import BundleIconComponent
 import CheckNode
+import TextFormat
 
 private final class BalanceComponent: CombinedComponent {
     let context: AccountContext
@@ -1808,12 +1809,26 @@ private final class ChatSendStarsScreenComponent: Component {
                         body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemSecondaryTextColor),
                         bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemSecondaryTextColor),
                         link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemAccentColor),
-                        linkAttribute: { url in
-                            return ("URL", url)
+                        linkAttribute: { contents in
+                            return (TelegramTextAttributes.URL, contents)
                         }
                     )),
                     horizontalAlignment: .center,
-                    maximumNumberOfLines: 0
+                    maximumNumberOfLines: 0,
+                    highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.2),
+                    highlightAction: { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                        } else {
+                            return nil
+                        }
+                    },
+                    tapAction: { [weak self] attributes, _ in
+                        if let controller = self?.environment?.controller(), let navigationController = controller.navigationController as? NavigationController, let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                            component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: url, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                        }
+                    }
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset, height: 1000.0)
