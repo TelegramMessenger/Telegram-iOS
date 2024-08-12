@@ -627,6 +627,37 @@ private final class SliderBackgroundComponent: Component {
         return true
     }
     
+    private enum TopTextOverflowState {
+        case left
+        case center
+        case right
+        
+        func animates(from: TopTextOverflowState) -> Bool {
+            switch self {
+            case .left:
+                return false
+            case .center:
+                switch from {
+                case .left:
+                    return false
+                case .center:
+                    return false
+                case .right:
+                    return true
+                }
+            case .right:
+                switch from {
+                case .left:
+                    return false
+                case .center:
+                    return true
+                case .right:
+                    return false
+                }
+            }
+        }
+    }
+    
     final class View: UIView {
         private let sliderBackground = UIView()
         private let sliderForeground = UIView()
@@ -636,6 +667,8 @@ private final class SliderBackgroundComponent: Component {
         private let topBackgroundLine = SimpleLayer()
         private let topForegroundText = ComponentView<Empty>()
         private let topBackgroundText = ComponentView<Empty>()
+        
+        private var topTextOverflowState: TopTextOverflowState?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -679,9 +712,32 @@ private final class SliderBackgroundComponent: Component {
             
             let topCutoff = component.topCutoff ?? 0.0
             
-            let topLineFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(sliderAreaWidth * topCutoff), y: 0.0), size: CGSize(width: 1.0, height: availableSize.height))
-            transition.setFrame(layer: self.topForegroundLine, frame: topLineFrame)
-            transition.setFrame(layer: self.topBackgroundLine, frame: topLineFrame)
+            let topX = floorToScreenPixels(sliderAreaWidth * topCutoff)
+            let topLineAvoidDistance = 6.0
+            let knobWidth: CGFloat = 30.0
+            let topLineClosestEdge = min(abs(sliderForegroundFrame.maxX - topX), abs(sliderForegroundFrame.maxX - knobWidth - topX))
+            var topLineOverlayFactor = topLineClosestEdge / topLineAvoidDistance
+            topLineOverlayFactor = max(0.0, min(1.0, topLineOverlayFactor))
+            if sliderForegroundFrame.maxX - knobWidth <= topX && sliderForegroundFrame.maxX >= topX {
+                topLineOverlayFactor = 0.0
+            }
+            
+            let topLineHeight: CGFloat = availableSize.height
+            let topLineAlpha: CGFloat = topLineOverlayFactor * topLineOverlayFactor
+            
+            let topLineFrameTransition = transition
+            let topLineAlphaTransition = transition
+            /*if transition.userData(ChatSendStarsScreenComponent.IsAdjustingAmountHint.self) != nil {
+                topLineFrameTransition = .easeInOut(duration: 0.12)
+                topLineAlphaTransition = .easeInOut(duration: 0.12)
+            }*/
+            
+            let topLineFrame = CGRect(origin: CGPoint(x: topX, y: (availableSize.height - topLineHeight) * 0.5), size: CGSize(width: 1.0, height: topLineHeight))
+            
+            topLineFrameTransition.setFrame(layer: self.topForegroundLine, frame: topLineFrame)
+            topLineAlphaTransition.setAlpha(layer: self.topForegroundLine, alpha: topLineAlpha)
+            topLineFrameTransition.setFrame(layer: self.topBackgroundLine, frame: topLineFrame)
+            topLineAlphaTransition.setAlpha(layer: self.topBackgroundLine, alpha: topLineAlpha)
             
             //TODO:localize
             let topTextSize = self.topForegroundText.update(
@@ -700,7 +756,25 @@ private final class SliderBackgroundComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
             )
-            let topTextFrame = CGRect(origin: CGPoint(x: topLineFrame.maxX + 6.0, y: floor((availableSize.height - topTextSize.height) * 0.5)), size: topTextSize)
+            
+            var topTextFrame = CGRect(origin: CGPoint(x: topLineFrame.maxX + 6.0, y: floor((availableSize.height - topTextSize.height) * 0.5)), size: topTextSize)
+            
+            let topTextFrameTransition = transition
+            
+            let topTextLeftInset: CGFloat = 4.0
+            var topTextOverflowWidth: CGFloat = 0.0
+            let topTextOverflowState: TopTextOverflowState
+            if sliderForegroundFrame.maxX < topTextFrame.minX - topTextLeftInset {
+                topTextOverflowState = .left
+            } else if sliderForegroundFrame.maxX >= topTextFrame.minX - topTextLeftInset && sliderForegroundFrame.maxX - knobWidth < topTextFrame.maxX + topTextLeftInset {
+                topTextOverflowWidth = sliderForegroundFrame.maxX - (topTextFrame.minX - topTextLeftInset)
+                topTextOverflowState = .center
+            } else {
+                topTextOverflowState = .right
+            }
+            
+            topTextFrame.origin.x += topTextOverflowWidth
+            
             if let topForegroundTextView = self.topForegroundText.view, let topBackgroundTextView = self.topBackgroundText.view {
                 if topForegroundTextView.superview == nil {
                     topBackgroundTextView.layer.anchorPoint = CGPoint()
@@ -710,17 +784,30 @@ private final class SliderBackgroundComponent: Component {
                     self.sliderForeground.addSubview(topForegroundTextView)
                 }
                 
-                transition.setPosition(view: topForegroundTextView, position: topTextFrame.origin)
-                transition.setPosition(view: topBackgroundTextView, position: topTextFrame.origin)
+                var animateTopTextAdditionalX: CGFloat = 0.0
+                if transition.userData(ChatSendStarsScreenComponent.IsAdjustingAmountHint.self) != nil {
+                    if let previousState = self.topTextOverflowState, previousState != topTextOverflowState, topTextOverflowState.animates(from: previousState) {
+                        animateTopTextAdditionalX = topForegroundTextView.center.x - topTextFrame.origin.x
+                    }
+                }
+                
+                topTextFrameTransition.setPosition(view: topForegroundTextView, position: topTextFrame.origin)
+                topTextFrameTransition.setPosition(view: topBackgroundTextView, position: topTextFrame.origin)
                 
                 topForegroundTextView.bounds = CGRect(origin: CGPoint(), size: topTextFrame.size)
                 topBackgroundTextView.bounds = CGRect(origin: CGPoint(), size: topTextFrame.size)
                 
-                topForegroundTextView.isHidden = component.topCutoff == nil || topTextFrame.minX <= 10.0 || topTextFrame.maxX >= availableSize.width - 4.0
+                if animateTopTextAdditionalX != 0.0 {
+                    topForegroundTextView.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: animateTopTextAdditionalX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.3, damping: 100.0, additive: true)
+                    topBackgroundTextView.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: animateTopTextAdditionalX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.3, damping: 100.0, additive: true)
+                }
+                
+                topForegroundTextView.isHidden = component.topCutoff == nil
                 topBackgroundTextView.isHidden = topForegroundTextView.isHidden
-                self.topBackgroundLine.isHidden = topForegroundTextView.isHidden
-                self.topForegroundLine.isHidden = topForegroundTextView.isHidden
+                self.topBackgroundLine.isHidden = topX < 10.0
+                self.topForegroundLine.isHidden = self.topBackgroundLine.isHidden
             }
+            self.topTextOverflowState = topTextOverflowState
             
             return availableSize
         }
@@ -736,7 +823,7 @@ private final class SliderBackgroundComponent: Component {
 }
 
 private final class ChatSendStarsScreenComponent: Component {
-    private final class IsAdjustingAmountHint {
+    final class IsAdjustingAmountHint {
     }
     
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -1138,7 +1225,18 @@ private final class ChatSendStarsScreenComponent: Component {
             
             let progressFraction: CGFloat = CGFloat(self.amount) / CGFloat(component.maxAmount - 1)
             
-            let topCount = component.topPeers.max(by: { $0.count < $1.count })?.count
+            let topOthersCount: Int? = component.topPeers.filter({ !$0.isMy }).max(by: { $0.count < $1.count })?.count
+            var topCount: Int?
+            if let topOthersCount {
+                if let myTopPeer = component.myTopPeer {
+                    topCount = max(0, topOthersCount - myTopPeer.count + 1)
+                } else {
+                    topCount = topOthersCount
+                }
+                if topCount == 0 {
+                    topCount = nil
+                }
+            }
             
             var topCutoffFraction: CGFloat?
             if let topCount {
