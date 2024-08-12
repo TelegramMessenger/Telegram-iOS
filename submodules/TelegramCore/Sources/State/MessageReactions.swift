@@ -389,7 +389,7 @@ private func requestSendStarsReaction(postbox: Postbox, network: Network, stateM
                 flags |= 1 << 0
             }
             
-            let signal: Signal<Never, RequestUpdateMessageReactionError> = network.request(Api.functions.messages.sendPaidReaction(flags: 0, peer: inputPeer, msgId: messageId.id, count: count, randomId: Int64(bitPattern: randomId)))
+            let signal: Signal<Never, RequestUpdateMessageReactionError> = network.request(Api.functions.messages.sendPaidReaction(flags: flags, peer: inputPeer, msgId: messageId.id, count: count, randomId: Int64(bitPattern: randomId)))
             |> mapError { _ -> RequestUpdateMessageReactionError in
                 return .generic
             }
