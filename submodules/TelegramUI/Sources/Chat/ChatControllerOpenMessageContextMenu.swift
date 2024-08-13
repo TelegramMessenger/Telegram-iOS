@@ -387,8 +387,46 @@ extension ChatControllerImpl {
                             }
                         }
                         
-                        self.context.engine.messages.sendStarsReaction(id: message.id, count: 1, isAnonymous: false)
-                        self.displayOrUpdateSendStarsUndo(messageId: message.id, count: 1)
+                        guard let starsContext = self.context.starsContext else {
+                            return
+                        }
+                        let _ = (starsContext.state
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak self] state in
+                            guard let strongSelf = self, let balance = state?.balance else {
+                                return
+                            }
+                            
+                            if balance < 1 {
+                                controller?.dismiss(completion: {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    
+                                    let _ = (strongSelf.context.engine.payments.starsTopUpOptions()
+                                    |> take(1)
+                                    |> deliverOnMainQueue).startStandalone(next: { [weak strongSelf] options in
+                                        guard let strongSelf, let peerId = strongSelf.chatLocation.peerId else {
+                                            return
+                                        }
+                                        guard let starsContext = strongSelf.context.starsContext else {
+                                            return
+                                        }
+                                        
+                                        let purchaseScreen = strongSelf.context.sharedContext.makeStarsPurchaseScreen(context: strongSelf.context, starsContext: starsContext, options: options, purpose: .transfer(peerId: peerId, requiredStars: 1), completion: { result in
+                                            let _ = result
+                                            //TODO:release
+                                        })
+                                        strongSelf.push(purchaseScreen)
+                                    })
+                                })
+                                
+                                return
+                            }
+                            
+                            strongSelf.context.engine.messages.sendStarsReaction(id: message.id, count: 1, isAnonymous: false)
+                            strongSelf.displayOrUpdateSendStarsUndo(messageId: message.id, count: 1)
+                        })
                     } else {
                         let chosenReaction: MessageReaction.Reaction = chosenUpdatedReaction.reaction
                         

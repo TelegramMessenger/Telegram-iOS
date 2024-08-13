@@ -479,14 +479,14 @@ private final class PeerComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let peer: EnginePeer?
-    let count: Int
+    let count: String
     
     init(
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
         peer: EnginePeer?,
-        count: Int
+        count: String
     ) {
         self.context = context
         self.theme = theme
@@ -555,7 +555,7 @@ private final class PeerComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(PeerBadgeComponent(
                     theme: component.theme,
-                    title: "\(component.count)"
+                    title: component.count
                 )),
                 environment: {},
                 containerSize: CGSize(width: 200.0, height: 200.0)
@@ -1046,6 +1046,7 @@ private final class ChatSendStarsScreenComponent: Component {
         private var balance: Int64?
         
         private var amount: Amount = Amount(realValue: 1, maxRealValue: 1000, maxSliderValue: 1000, isLogarithmic: true)
+        private var didChangeAmount: Bool = false
         
         private var isAnonymous: Bool = false
         private var cachedStarImage: (UIImage, PresentationTheme)?
@@ -1291,6 +1292,7 @@ private final class ChatSendStarsScreenComponent: Component {
                             return
                         }
                         self.amount = self.amount.withSliderValue(value)
+                        self.didChangeAmount = true
                         
                         self.state?.updated(transition: ComponentTransition(animation: .none).withUserData(IsAdjustingAmountHint()))
                         
@@ -1640,10 +1642,16 @@ private final class ChatSendStarsScreenComponent: Component {
                 if let index = mappedTopPeers.firstIndex(where: { $0.isMy }) {
                     mappedTopPeers.remove(at: index)
                 }
-                var myCount = Int(self.amount.realValue)
+                
+                var myCount = 0
                 if let myTopPeer = component.myTopPeer {
                     myCount += myTopPeer.count
                 }
+                var myCountAddition = 0
+                if self.didChangeAmount {
+                    myCountAddition = Int(self.amount.realValue)
+                }
+                myCount += myCountAddition
                 mappedTopPeers.append(ChatSendStarsScreen.TopPeer(
                     peer: self.isAnonymous ? nil : component.myPeer,
                     isMy: true,
@@ -1676,6 +1684,11 @@ private final class ChatSendStarsScreenComponent: Component {
                         self.topPeerItems[topPeer.id] = itemView
                     }
                     
+                    var itemCountString = "\(topPeer.count)"
+                    if topPeer.isMy && myCountAddition != 0 && topPeer.count > myCountAddition {
+                        itemCountString = "\(topPeer.count - myCountAddition) +\(myCountAddition)"
+                    }
+                    
                     let itemSize = itemView.update(
                         transition: .immediate,
                         component: AnyComponent(PlainButtonComponent(
@@ -1684,7 +1697,7 @@ private final class ChatSendStarsScreenComponent: Component {
                                 theme: environment.theme,
                                 strings: environment.strings,
                                 peer: topPeer.peer,
-                                count: topPeer.count
+                                count: itemCountString
                             )),
                             effectAlignment: .center,
                             action: { [weak self] in
