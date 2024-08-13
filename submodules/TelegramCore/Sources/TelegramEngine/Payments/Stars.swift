@@ -230,7 +230,7 @@ private func _internal_requestStarsSubscriptions(account: Account, peerId: Engin
     }
     |> castError(RequestStarsSubscriptionsError.self)
     |> mapToSignal { peer -> Signal<InternalStarsStatus, RequestStarsSubscriptionsError> in
-        guard let peer, let inputPeer = apiInputPeer(peer) else {
+        guard let peer, let inputPeer = apiInputPeerOrSelf(peer, accountPeerId: peerId) else {
             return .fail(.generic)
         }
         var flags: Int32 = 0
@@ -965,6 +965,7 @@ private final class StarsSubscriptionsContextImpl {
             guard let self else {
                 return
             }
+
             self.nextOffset = status.nextSubscriptionsOffset
             
             var updatedState = self._state
@@ -1002,13 +1003,18 @@ private final class StarsSubscriptionsContextImpl {
     func load(force: Bool) {
         assert(Queue.mainQueue().isCurrent())
         
+        guard !self._state.isLoading else {
+            return
+        }
+        
         let currentTimestamp = CFAbsoluteTimeGetCurrent()
         if let previousLoadTimestamp = self.previousLoadTimestamp, currentTimestamp - previousLoadTimestamp < 60 && !force {
             return
         }
         self.previousLoadTimestamp = currentTimestamp
+        self._state.isLoading = true
         
-        self.disposable.set((_internal_requestStarsSubscriptions(account: self.account, peerId: self.account.peerId, offset: "", missingBalance: false)
+        self.disposable.set((_internal_requestStarsSubscriptions(account: self.account, peerId: self.account.peerId, offset: "", missingBalance: self.missingBalance)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             guard let self else {
                 return
