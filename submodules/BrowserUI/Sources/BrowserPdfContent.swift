@@ -55,7 +55,8 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         self.file = file
         
         self.pdfView = PDFView()
-
+        self.pdfView.clipsToBounds = false
+        
         var scrollView: UIScrollView?
         for view in self.pdfView.subviews {
             if let view = view as? UIScrollView {
@@ -69,6 +70,7 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
             }
         }
         self.scrollView = scrollView
+        scrollView?.clipsToBounds = false
         
         self.pdfView.displayDirection = .vertical
         self.pdfView.autoScales = true
@@ -296,7 +298,14 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         
         self.previousScrollingOffset = ScrollingOffsetState(value: self.scrollView.contentOffset.y, isDraggingOrDecelerating: self.scrollView.isDragging || self.scrollView.isDecelerating)
         
-        let pdfViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - insets.bottom))
+        let currentBounds = self.scrollView.bounds
+        let offsetToBottomEdge = max(0.0, self.scrollView.contentSize.height - currentBounds.maxY)
+        var bottomInset = insets.bottom
+        if offsetToBottomEdge < 128.0 {
+            bottomInset = fullInsets.bottom
+        }
+        
+        let pdfViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - bottomInset))
         transition.setFrame(view: self.pdfView, frame: pdfViewFrame)
         
         if isFirstTime {
@@ -370,6 +379,10 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         }
         if !decelerate {
             self.snapScrollingOffsetToInsets()
+            
+            if self.ignoreUpdatesUntilScrollingStopped {
+                self.ignoreUpdatesUntilScrollingStopped = false
+            }
         }
     }
     
@@ -378,9 +391,16 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
             scrollViewDelegate.scrollViewDidEndDecelerating?(scrollView)
         }
         self.snapScrollingOffsetToInsets()
+        
+        if self.ignoreUpdatesUntilScrollingStopped {
+            self.ignoreUpdatesUntilScrollingStopped = false
+        }
     }
     
     private func updateScrollingOffset(isReset: Bool, transition: ComponentTransition) {
+        guard !self.ignoreUpdatesUntilScrollingStopped else {
+            return
+        }
         guard let scrollView = self.scrollView else {
             return
         }
@@ -412,8 +432,12 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         }
     }
     
+    private var ignoreUpdatesUntilScrollingStopped = false
     func resetScrolling() {
         self.updateScrollingOffset(isReset: true, transition: .spring(duration: 0.4))
+        if self.scrollView.isDecelerating {
+            self.ignoreUpdatesUntilScrollingStopped = true
+        }
     }
     
     private func open(url: String, new: Bool) {
