@@ -1466,6 +1466,9 @@ public extension TelegramEngine {
         public func updateExtendedMedia(messageIds: [EngineMessage.Id]) -> Signal<Never, NoError> {
             return _internal_updateExtendedMedia(account: self.account, messageIds: messageIds)
         }
+        public func markAdAction(peerId: EnginePeer.Id, opaqueId: Data) {
+            _internal_markAdAction(account: self.account, peerId: peerId, opaqueId: opaqueId)
+        }
         
         public func getAllLocalChannels(count: Int) -> Signal<[EnginePeer.Id], NoError> {
             return self.account.postbox.transaction { transaction -> [EnginePeer.Id] in
