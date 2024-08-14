@@ -1684,10 +1684,10 @@ private final class ChatSendStarsScreenComponent: Component {
                         self.topPeerItems[topPeer.id] = itemView
                     }
                     
-                    var itemCountString = "\(topPeer.count)"
-                    if topPeer.isMy && myCountAddition != 0 && topPeer.count > myCountAddition {
+                    let itemCountString = "\(topPeer.count)"
+                    /*if topPeer.isMy && myCountAddition != 0 && topPeer.count > myCountAddition {
                         itemCountString = "\(topPeer.count - myCountAddition) +\(myCountAddition)"
-                    }
+                    }*/
                     
                     let itemSize = itemView.update(
                         transition: .immediate,

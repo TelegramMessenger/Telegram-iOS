@@ -843,7 +843,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if peerId != item.context.account.peerId {
                     if peerId.isGroupOrChannel && item.message.author != nil {
                         if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case let .broadcast(info) = peer.info {
-                            if item.message.author?.id != peer.id, info.flags.contains(.messagesShouldHaveProfiles) {
+                            if info.flags.contains(.messagesShouldHaveProfiles) {
                                 hasAvatar = incoming
                             }
                         } else {
