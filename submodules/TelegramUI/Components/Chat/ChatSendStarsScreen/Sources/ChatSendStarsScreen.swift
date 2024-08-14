@@ -1652,11 +1652,14 @@ private final class ChatSendStarsScreenComponent: Component {
                     myCountAddition = Int(self.amount.realValue)
                 }
                 myCount += myCountAddition
-                mappedTopPeers.append(ChatSendStarsScreen.TopPeer(
-                    peer: self.isAnonymous ? nil : component.myPeer,
-                    isMy: true,
-                    count: myCount
-                ))
+                if myCount != 0 {
+                    mappedTopPeers.append(ChatSendStarsScreen.TopPeer(
+                        randomIndex: -1,
+                        peer: self.isAnonymous ? nil : component.myPeer,
+                        isMy: true,
+                        count: myCount
+                    ))
+                }
                 mappedTopPeers.sort(by: { $0.count > $1.count })
                 if mappedTopPeers.count > 3 {
                     mappedTopPeers = Array(mappedTopPeers.prefix(3))
@@ -2064,7 +2067,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
     
     fileprivate final class TopPeer: Equatable {
         enum Id: Hashable {
-            case anonymous
+            case anonymous(Int)
             case my
             case peer(EnginePeer.Id)
         }
@@ -2075,7 +2078,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             } else if let peer = self.peer {
                 return .peer(peer.id)
             } else {
-                return .anonymous
+                return .anonymous(self.randomIndex)
             }
         }
         
@@ -2083,17 +2086,22 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             return self.peer == nil
         }
         
+        let randomIndex: Int
         let peer: EnginePeer?
         let isMy: Bool
         let count: Int
         
-        init(peer: EnginePeer?, isMy: Bool, count: Int) {
+        init(randomIndex: Int, peer: EnginePeer?, isMy: Bool, count: Int) {
+            self.randomIndex = randomIndex
             self.peer = peer
             self.isMy = isMy
             self.count = count
         }
         
         static func ==(lhs: TopPeer, rhs: TopPeer) -> Bool {
+            if lhs.randomIndex != rhs.randomIndex {
+                return false
+            }
             if lhs.peer != rhs.peer {
                 return false
             }
@@ -2210,6 +2218,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                 return nil
             }
             
+            var nextRandomIndex = 0
             return InitialData(
                 peer: peer,
                 myPeer: myPeer,
@@ -2218,7 +2227,10 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                 currentSentAmount: currentSentAmount,
                 topPeers: topPeers.compactMap { topPeer -> ChatSendStarsScreen.TopPeer? in
                     guard let topPeerId = topPeer.peerId else {
+                        let randomIndex = nextRandomIndex
+                        nextRandomIndex += 1
                         return ChatSendStarsScreen.TopPeer(
+                            randomIndex: randomIndex,
                             peer: nil,
                             isMy: topPeer.isMy,
                             count: Int(topPeer.count)
@@ -2230,7 +2242,10 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                     guard let topPeerValue else {
                         return nil
                     }
+                    let randomIndex = nextRandomIndex
+                    nextRandomIndex += 1
                     return ChatSendStarsScreen.TopPeer(
+                        randomIndex: randomIndex,
                         peer: topPeer.isAnonymous ? nil : topPeerValue,
                         isMy: topPeer.isMy,
                         count: Int(topPeer.count)
@@ -2239,6 +2254,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                 myTopPeer: myTopPeer.flatMap { topPeer -> ChatSendStarsScreen.TopPeer? in
                     guard let topPeerId = topPeer.peerId else {
                         return ChatSendStarsScreen.TopPeer(
+                            randomIndex: -1,
                             peer: nil,
                             isMy: topPeer.isMy,
                             count: Int(topPeer.count)
@@ -2251,6 +2267,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                         return nil
                     }
                     return ChatSendStarsScreen.TopPeer(
+                        randomIndex: -1,
                         peer: topPeer.isAnonymous ? nil : topPeerValue,
                         isMy: topPeer.isMy,
                         count: Int(topPeer.count)

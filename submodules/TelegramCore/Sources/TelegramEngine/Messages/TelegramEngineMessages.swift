@@ -334,7 +334,7 @@ public extension TelegramEngine {
             ).startStandalone()
         }
         
-        public func sendStarsReaction(id: EngineMessage.Id, count: Int, isAnonymous: Bool) {
+        public func sendStarsReaction(id: EngineMessage.Id, count: Int, isAnonymous: Bool?) {
             let _ = sendStarsReactionsInteractively(account: self.account, messageId: id, count: count, isAnonymous: isAnonymous).startStandalone()
         }
         

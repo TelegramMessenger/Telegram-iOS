@@ -424,7 +424,7 @@ extension ChatControllerImpl {
                                 return
                             }
                             
-                            strongSelf.context.engine.messages.sendStarsReaction(id: message.id, count: 1, isAnonymous: false)
+                            strongSelf.context.engine.messages.sendStarsReaction(id: message.id, count: 1, isAnonymous: nil)
                             strongSelf.displayOrUpdateSendStarsUndo(messageId: message.id, count: 1)
                         })
                     } else {
