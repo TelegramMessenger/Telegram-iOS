@@ -124,13 +124,14 @@ def load_codesigning_data_from_git(working_dir, repo_url, temp_key_path, branch,
 
     encrypted_working_dir = working_dir + '/encrypted'
     if os.path.exists(encrypted_working_dir):
+        original_working_dir = os.getcwd()
+        os.chdir(encrypted_working_dir)
         if always_fetch:
-            original_working_dir = os.getcwd()
-            os.chdir(encrypted_working_dir)
             check_run_system('GIT_SSH_COMMAND="{ssh_command}" git fetch'.format(ssh_command=ssh_command))
-            check_run_system('git checkout "{branch}"'.format(branch=branch))
+        check_run_system('git checkout "{branch}"'.format(branch=branch))
+        if always_fetch:
             check_run_system('GIT_SSH_COMMAND="{ssh_command}" git pull'.format(ssh_command=ssh_command))
-            os.chdir(original_working_dir)
+        os.chdir(original_working_dir)
     else:
         os.makedirs(encrypted_working_dir, exist_ok=True)
         original_working_dir = os.getcwd()

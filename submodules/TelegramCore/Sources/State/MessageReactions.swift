@@ -172,7 +172,7 @@ public func updateMessageReactionsInteractively(account: Account, messageIds: [M
     |> ignoreValues
 }
 
-public func sendStarsReactionsInteractively(account: Account, messageId: MessageId, count: Int, isAnonymous: Bool) -> Signal<Never, NoError> {
+public func sendStarsReactionsInteractively(account: Account, messageId: MessageId, count: Int, isAnonymous: Bool?) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
         transaction.setPendingMessageAction(type: .sendStarsReaction, id: messageId, action: SendStarsReactionsAction(randomId: Int64.random(in: Int64.min ... Int64.max)))
         transaction.updateMessage(messageId, update: { currentMessage in
@@ -182,15 +182,28 @@ public func sendStarsReactionsInteractively(account: Account, messageId: Message
             }
             var mappedCount = Int32(count)
             var attributes = currentMessage.attributes
+            var resolvedIsAnonymous = false
+            for attribute in attributes {
+                if let attribute = attribute as? ReactionsMessageAttribute {
+                    if let myReaction = attribute.topPeers.first(where: { $0.isMy }) {
+                        resolvedIsAnonymous = myReaction.isAnonymous
+                    }
+                }
+            }
             loop: for j in 0 ..< attributes.count {
                 if let current = attributes[j] as? PendingStarsReactionsMessageAttribute {
                     mappedCount += current.count
+                    resolvedIsAnonymous = current.isAnonymous
                     attributes.remove(at: j)
                     break loop
                 }
             }
+            
+            if let isAnonymous {
+                resolvedIsAnonymous = isAnonymous
+            }
                 
-            attributes.append(PendingStarsReactionsMessageAttribute(accountPeerId: account.peerId, count: mappedCount, isAnonymous: isAnonymous))
+            attributes.append(PendingStarsReactionsMessageAttribute(accountPeerId: account.peerId, count: mappedCount, isAnonymous: resolvedIsAnonymous))
             
             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
         })
@@ -395,7 +408,6 @@ private func requestSendStarsReaction(postbox: Postbox, network: Network, stateM
             }
             |> mapToSignal { result -> Signal<Never, RequestUpdateMessageReactionError> in
                 stateManager.starsContext?.add(balance: Int64(-count), addTransaction: false)
-                //stateManager.starsContext?.load(force: true)
                 
                 return postbox.transaction { transaction -> Void in
                     transaction.setPendingMessageAction(type: .sendStarsReaction, id: messageId, action: UpdateMessageReactionsAction())

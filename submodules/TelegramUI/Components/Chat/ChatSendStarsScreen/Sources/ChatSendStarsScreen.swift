@@ -227,6 +227,14 @@ private final class BadgeComponent: Component {
         required init(coder: NSCoder) {
             preconditionFailure()
         }
+        
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if self.badgeView.frame.contains(point) {
+                return self
+            } else {
+                return nil
+            }
+        }
                 
         func update(component: BadgeComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             if self.component == nil {
@@ -471,14 +479,14 @@ private final class PeerComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let peer: EnginePeer?
-    let count: Int
+    let count: String
     
     init(
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
         peer: EnginePeer?,
-        count: Int
+        count: String
     ) {
         self.context = context
         self.theme = theme
@@ -547,7 +555,7 @@ private final class PeerComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(PeerBadgeComponent(
                     theme: component.theme,
-                    title: "\(component.count)"
+                    title: component.count
                 )),
                 environment: {},
                 containerSize: CGSize(width: 200.0, height: 200.0)
@@ -806,7 +814,7 @@ private final class SliderBackgroundComponent: Component {
                     topBackgroundTextView.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: animateTopTextAdditionalX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.3, damping: 100.0, additive: true)
                 }
                 
-                topForegroundTextView.isHidden = component.topCutoff == nil
+                topForegroundTextView.isHidden = component.topCutoff == nil || topLineFrame.maxX + topTextSize.width + 20.0 > availableSize.width
                 topBackgroundTextView.isHidden = topForegroundTextView.isHidden
                 self.topBackgroundLine.isHidden = topX < 10.0
                 self.topForegroundLine.isHidden = self.topBackgroundLine.isHidden
@@ -915,6 +923,83 @@ private final class ChatSendStarsScreenComponent: Component {
         }
     }
     
+    private struct Amount: Equatable {
+        private let sliderSteps: [Int]
+        private let maxRealValue: Int
+        let maxSliderValue: Int
+        private let isLogarithmic: Bool
+        
+        private(set) var realValue: Int
+        private(set) var sliderValue: Int
+        
+        private static func makeSliderSteps(maxRealValue: Int, isLogarithmic: Bool) -> [Int] {
+            if isLogarithmic {
+                var sliderSteps: [Int] = [ 1, 10, 50, 100, 500, 1_000, 2_000, 5_000, 7_500, 10_000 ]
+                sliderSteps.removeAll(where: { $0 >= maxRealValue })
+                sliderSteps.append(maxRealValue)
+                return sliderSteps
+            } else {
+                return [1, maxRealValue]
+            }
+        }
+        
+        private static func remapValueToSlider(realValue: Int, maxSliderValue: Int, steps: [Int]) -> Int {
+            guard realValue >= steps.first!, realValue <= steps.last! else { return 0 }
+
+            for i in 0 ..< steps.count - 1 {
+                if realValue >= steps[i] && realValue <= steps[i + 1] {
+                    let range = steps[i + 1] - steps[i]
+                    let relativeValue = realValue - steps[i]
+                    let stepFraction = Float(relativeValue) / Float(range)
+                    return Int(Float(i) * Float(maxSliderValue) / Float(steps.count - 1)) + Int(stepFraction * Float(maxSliderValue) / Float(steps.count - 1))
+                }
+            }
+            return maxSliderValue // Return max slider position if value equals the last step
+        }
+
+        private static func remapSliderToValue(sliderValue: Int, maxSliderValue: Int, steps: [Int]) -> Int {
+            guard sliderValue >= 0, sliderValue <= maxSliderValue else { return steps.first! }
+
+            let stepIndex = Int(Float(sliderValue) / Float(maxSliderValue) * Float(steps.count - 1))
+            let fraction = Float(sliderValue) / Float(maxSliderValue) * Float(steps.count - 1) - Float(stepIndex)
+            
+            if stepIndex >= steps.count - 1 {
+                return steps.last!
+            } else {
+                let range = steps[stepIndex + 1] - steps[stepIndex]
+                return steps[stepIndex] + Int(fraction * Float(range))
+            }
+        }
+        
+        init(realValue: Int, maxRealValue: Int, maxSliderValue: Int, isLogarithmic: Bool) {
+            self.sliderSteps = Amount.makeSliderSteps(maxRealValue: maxRealValue, isLogarithmic: isLogarithmic)
+            self.maxRealValue = maxRealValue
+            self.maxSliderValue = maxSliderValue
+            self.isLogarithmic = isLogarithmic
+            
+            self.realValue = realValue
+            self.sliderValue = Amount.remapValueToSlider(realValue: self.realValue, maxSliderValue: self.maxSliderValue, steps: self.sliderSteps)
+        }
+        
+        init(sliderValue: Int, maxRealValue: Int, maxSliderValue: Int, isLogarithmic: Bool) {
+            self.sliderSteps = Amount.makeSliderSteps(maxRealValue: maxRealValue, isLogarithmic: isLogarithmic)
+            self.maxRealValue = maxRealValue
+            self.maxSliderValue = maxSliderValue
+            self.isLogarithmic = isLogarithmic
+            
+            self.sliderValue = sliderValue
+            self.realValue = Amount.remapSliderToValue(sliderValue: self.sliderValue, maxSliderValue: self.maxSliderValue, steps: self.sliderSteps)
+        }
+        
+        func withRealValue(_ realValue: Int) -> Amount {
+            return Amount(realValue: realValue, maxRealValue: self.maxRealValue, maxSliderValue: self.maxSliderValue, isLogarithmic: self.isLogarithmic)
+        }
+        
+        func withSliderValue(_ sliderValue: Int) -> Amount {
+            return Amount(sliderValue: sliderValue, maxRealValue: self.maxRealValue, maxSliderValue: self.maxSliderValue, isLogarithmic: self.isLogarithmic)
+        }
+    }
+    
     final class View: UIView, UIScrollViewDelegate {
         private let dimView: UIView
         private let backgroundLayer: SimpleLayer
@@ -959,7 +1044,10 @@ private final class ChatSendStarsScreenComponent: Component {
         private var topOffsetDistance: CGFloat?
         
         private var balance: Int64?
-        private var amount: Int64 = 1
+        
+        private var amount: Amount = Amount(realValue: 1, maxRealValue: 1000, maxSliderValue: 1000, isLogarithmic: true)
+        private var didChangeAmount: Bool = false
+        
         private var isAnonymous: Bool = false
         private var cachedStarImage: (UIImage, PresentationTheme)?
         private var cachedCloseImage: UIImage?
@@ -1058,6 +1146,12 @@ private final class ChatSendStarsScreenComponent: Component {
                 return result
             }
             
+            if let badgeView = self.badge.view, badgeView.hitTest(self.convert(point, to: badgeView), with: event) != nil {
+                if let sliderView = self.slider.view as? SliderComponent.View, let hitTestTarget = sliderView.hitTestTarget {
+                    return hitTestTarget
+                }
+            }
+            
             let result = super.hitTest(point, with: event)
             return result
         }
@@ -1135,7 +1229,11 @@ private final class ChatSendStarsScreenComponent: Component {
             
             if self.component == nil {
                 self.balance = component.balance
-                self.amount = 50
+                var isLogarithmic = true
+                if let data = component.context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_stars_reaction_logarithmic_scale"] as? Double {
+                    isLogarithmic = Int(value) != 0
+                }
+                self.amount = Amount(realValue: 50, maxRealValue: component.maxAmount, maxSliderValue: 999, isLogarithmic: isLogarithmic)
                 if let myTopPeer = component.myTopPeer {
                     self.isAnonymous = myTopPeer.isAnonymous
                 }
@@ -1182,8 +1280,8 @@ private final class ChatSendStarsScreenComponent: Component {
             let sliderSize = self.slider.update(
                 transition: transition,
                 component: AnyComponent(SliderComponent(
-                    valueCount: component.maxAmount,
-                    value: Int(self.amount),
+                    valueCount: self.amount.maxSliderValue + 1,
+                    value: self.amount.sliderValue,
                     markPositions: false,
                     trackBackgroundColor: .clear,
                     trackForegroundColor: .clear,
@@ -1193,7 +1291,9 @@ private final class ChatSendStarsScreenComponent: Component {
                         guard let self, let component = self.component else {
                             return
                         }
-                        self.amount = 1 + Int64(value)
+                        self.amount = self.amount.withSliderValue(value)
+                        self.didChangeAmount = true
+                        
                         self.state?.updated(transition: ComponentTransition(animation: .none).withUserData(IsAdjustingAmountHint()))
                         
                         let sliderValue = Float(value) / Float(component.maxAmount)
@@ -1250,7 +1350,7 @@ private final class ChatSendStarsScreenComponent: Component {
             let sliderFrame = CGRect(origin: CGPoint(x: sliderInset, y: contentHeight + 127.0), size: sliderSize)
             let sliderBackgroundFrame = CGRect(origin: CGPoint(x: sliderFrame.minX - 8.0, y: sliderFrame.minY + 7.0), size: CGSize(width: sliderFrame.width + 16.0, height: sliderFrame.height - 14.0))
             
-            let progressFraction: CGFloat = CGFloat(self.amount) / CGFloat(component.maxAmount - 1)
+            let progressFraction: CGFloat = CGFloat(self.amount.sliderValue) / CGFloat(self.amount.maxSliderValue)
             
             let topOthersCount: Int? = component.topPeers.filter({ !$0.isMy }).max(by: { $0.count < $1.count })?.count
             var topCount: Int?
@@ -1310,7 +1410,7 @@ private final class ChatSendStarsScreenComponent: Component {
                     transition: transition,
                     component: AnyComponent(BadgeComponent(
                         theme: environment.theme, 
-                        title: "\(self.amount)",
+                        title: "\(self.amount.realValue)",
                         inertiaDirection: effectiveInertiaDirection
                     )),
                     environment: {},
@@ -1542,15 +1642,24 @@ private final class ChatSendStarsScreenComponent: Component {
                 if let index = mappedTopPeers.firstIndex(where: { $0.isMy }) {
                     mappedTopPeers.remove(at: index)
                 }
-                var myCount = Int(self.amount)
+                
+                var myCount = 0
                 if let myTopPeer = component.myTopPeer {
                     myCount += myTopPeer.count
                 }
-                mappedTopPeers.append(ChatSendStarsScreen.TopPeer(
-                    peer: self.isAnonymous ? nil : component.myPeer,
-                    isMy: true,
-                    count: myCount
-                ))
+                var myCountAddition = 0
+                if self.didChangeAmount {
+                    myCountAddition = Int(self.amount.realValue)
+                }
+                myCount += myCountAddition
+                if myCount != 0 {
+                    mappedTopPeers.append(ChatSendStarsScreen.TopPeer(
+                        randomIndex: -1,
+                        peer: self.isAnonymous ? nil : component.myPeer,
+                        isMy: true,
+                        count: myCount
+                    ))
+                }
                 mappedTopPeers.sort(by: { $0.count > $1.count })
                 if mappedTopPeers.count > 3 {
                     mappedTopPeers = Array(mappedTopPeers.prefix(3))
@@ -1578,6 +1687,11 @@ private final class ChatSendStarsScreenComponent: Component {
                         self.topPeerItems[topPeer.id] = itemView
                     }
                     
+                    let itemCountString = "\(topPeer.count)"
+                    /*if topPeer.isMy && myCountAddition != 0 && topPeer.count > myCountAddition {
+                        itemCountString = "\(topPeer.count - myCountAddition) +\(myCountAddition)"
+                    }*/
+                    
                     let itemSize = itemView.update(
                         transition: .immediate,
                         component: AnyComponent(PlainButtonComponent(
@@ -1586,7 +1700,7 @@ private final class ChatSendStarsScreenComponent: Component {
                                 theme: environment.theme,
                                 strings: environment.strings,
                                 peer: topPeer.peer,
-                                count: topPeer.count
+                                count: itemCountString
                             )),
                             effectAlignment: .center,
                             action: { [weak self] in
@@ -1747,7 +1861,7 @@ private final class ChatSendStarsScreenComponent: Component {
                 self.cachedStarImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: .white)!, environment.theme)
             }
             
-            let buttonString = environment.strings.SendStarReactions_SendButtonTitle("\(self.amount)").string
+            let buttonString = environment.strings.SendStarReactions_SendButtonTitle("\(self.amount.realValue)").string
             let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .center)
             if let range = buttonAttributedString.string.range(of: "#"), let starImage = self.cachedStarImage?.0 {
                 buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
@@ -1778,7 +1892,7 @@ private final class ChatSendStarsScreenComponent: Component {
                             return
                         }
                         
-                        if balance < self.amount {
+                        if balance < self.amount.realValue {
                             let _ = (component.context.engine.payments.starsTopUpOptions()
                             |> take(1)
                             |> deliverOnMainQueue).startStandalone(next: { [weak self] options in
@@ -1789,7 +1903,7 @@ private final class ChatSendStarsScreenComponent: Component {
                                     return
                                 }
                                 
-                                let purchaseScreen = component.context.sharedContext.makeStarsPurchaseScreen(context: component.context, starsContext: starsContext, options: options, purpose: .transfer(peerId: component.peer.id, requiredStars: self.amount), completion: { result in
+                                let purchaseScreen = component.context.sharedContext.makeStarsPurchaseScreen(context: component.context, starsContext: starsContext, options: options, purpose: .transfer(peerId: component.peer.id, requiredStars: Int64(self.amount.realValue)), completion: { result in
                                     let _ = result
                                     //TODO:release
                                 })
@@ -1805,13 +1919,13 @@ private final class ChatSendStarsScreenComponent: Component {
                         }
                         let isBecomingTop: Bool
                         if let topCount {
-                            isBecomingTop = self.amount > topCount
+                            isBecomingTop = self.amount.realValue > topCount
                         } else {
                             isBecomingTop = true
                         }
                         
                         component.completion(
-                            self.amount,
+                            Int64(self.amount.realValue),
                             self.isAnonymous,
                             isBecomingTop,
                             ChatSendStarsScreen.TransitionOut(
@@ -1953,7 +2067,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
     
     fileprivate final class TopPeer: Equatable {
         enum Id: Hashable {
-            case anonymous
+            case anonymous(Int)
             case my
             case peer(EnginePeer.Id)
         }
@@ -1964,7 +2078,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             } else if let peer = self.peer {
                 return .peer(peer.id)
             } else {
-                return .anonymous
+                return .anonymous(self.randomIndex)
             }
         }
         
@@ -1972,17 +2086,22 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             return self.peer == nil
         }
         
+        let randomIndex: Int
         let peer: EnginePeer?
         let isMy: Bool
         let count: Int
         
-        init(peer: EnginePeer?, isMy: Bool, count: Int) {
+        init(randomIndex: Int, peer: EnginePeer?, isMy: Bool, count: Int) {
+            self.randomIndex = randomIndex
             self.peer = peer
             self.isMy = isMy
             self.count = count
         }
         
         static func ==(lhs: TopPeer, rhs: TopPeer) -> Bool {
+            if lhs.randomIndex != rhs.randomIndex {
+                return false
+            }
             if lhs.peer != rhs.peer {
                 return false
             }
@@ -2099,6 +2218,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                 return nil
             }
             
+            var nextRandomIndex = 0
             return InitialData(
                 peer: peer,
                 myPeer: myPeer,
@@ -2107,7 +2227,10 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                 currentSentAmount: currentSentAmount,
                 topPeers: topPeers.compactMap { topPeer -> ChatSendStarsScreen.TopPeer? in
                     guard let topPeerId = topPeer.peerId else {
+                        let randomIndex = nextRandomIndex
+                        nextRandomIndex += 1
                         return ChatSendStarsScreen.TopPeer(
+                            randomIndex: randomIndex,
                             peer: nil,
                             isMy: topPeer.isMy,
                             count: Int(topPeer.count)
@@ -2119,7 +2242,10 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                     guard let topPeerValue else {
                         return nil
                     }
+                    let randomIndex = nextRandomIndex
+                    nextRandomIndex += 1
                     return ChatSendStarsScreen.TopPeer(
+                        randomIndex: randomIndex,
                         peer: topPeer.isAnonymous ? nil : topPeerValue,
                         isMy: topPeer.isMy,
                         count: Int(topPeer.count)
@@ -2128,6 +2254,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                 myTopPeer: myTopPeer.flatMap { topPeer -> ChatSendStarsScreen.TopPeer? in
                     guard let topPeerId = topPeer.peerId else {
                         return ChatSendStarsScreen.TopPeer(
+                            randomIndex: -1,
                             peer: nil,
                             isMy: topPeer.isMy,
                             count: Int(topPeer.count)
@@ -2140,6 +2267,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                         return nil
                     }
                     return ChatSendStarsScreen.TopPeer(
+                        randomIndex: -1,
                         peer: topPeer.isAnonymous ? nil : topPeerValue,
                         isMy: topPeer.isMy,
                         count: Int(topPeer.count)

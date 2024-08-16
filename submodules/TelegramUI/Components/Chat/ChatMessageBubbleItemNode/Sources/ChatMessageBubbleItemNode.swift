@@ -1550,7 +1550,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
             }
             
-            if let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, firstMessage.author?.id != channel.id {
+            if let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info {
                 if info.flags.contains(.messagesShouldHaveProfiles) {
                     var allowAuthor = incoming
                     overrideEffectiveAuthor = true
