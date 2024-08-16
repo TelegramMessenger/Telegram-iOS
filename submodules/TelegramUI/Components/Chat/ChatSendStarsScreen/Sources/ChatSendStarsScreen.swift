@@ -247,7 +247,7 @@ private final class BadgeComponent: Component {
             
             self.badgeView.bounds = CGRect(origin: .zero, size: badgeFullSize)
             
-            self.badgeForeground.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 600.0, height: badgeFullSize.height))
+            self.badgeForeground.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 600.0, height: badgeFullSize.height + 10.0))
     
             self.badgeIcon.frame = CGRect(x: 10.0, y: 9.0, width: 30.0, height: 30.0)
             self.badgeLabelMaskView.frame = CGRect(x: 0.0, y: 0.0, width: 100.0, height: 36.0)
@@ -314,7 +314,7 @@ private final class BadgeComponent: Component {
                 } else {
                     badgeNewValue = -300.0
                 }
-                self.badgeForeground.position = CGPoint(x: badgeNewValue, y: self.badgeForeground.bounds.size.height)
+                self.badgeForeground.position = CGPoint(x: badgeNewValue, y: 0.0)
                 
                 let badgeAnimation = CABasicAnimation(keyPath: "position.x")
                 badgeAnimation.duration = 4.5
