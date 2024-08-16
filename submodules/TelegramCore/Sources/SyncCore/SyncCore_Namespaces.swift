@@ -135,6 +135,7 @@ public struct Namespaces {
         public static let cachedStarsRevenueStats: Int8 = 38
         public static let cachedRevenueStats: Int8 = 39
         public static let recommendedApps: Int8 = 40
+        public static let starsReactionDefaultToPrivate: Int8 = 41
     }
     
     public struct UnorderedItemList {

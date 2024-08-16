@@ -22,6 +22,7 @@ public let repostStoryIcon = generateTintedImage(image: UIImage(bundleImageName:
 private let archivedChatsIcon = UIImage(bundleImageName: "Avatar/ArchiveAvatarIcon")?.precomposed()
 private let repliesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/RepliesMessagesIcon"), color: .white)
 private let anonymousSavedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/AnonymousSenderIcon"), color: .white)
+private let anonymousSavedMessagesDarkIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/AnonymousSenderIcon"), color: UIColor(white: 1.0, alpha: 0.4))
 private let myNotesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/MyNotesIcon"), color: .white)
 
 public func avatarPlaceholderFont(size: CGFloat) -> UIFont {
@@ -98,7 +99,11 @@ private func calculateColors(context: AccountContext?, explicitColorIndex: Int?,
             if isColored {
                 colors = AvatarNode.savedMessagesColors
             } else {
-                colors = AvatarNode.grayscaleColors
+                if let theme, theme.overallDarkAppearance {
+                    colors = AvatarNode.grayscaleDarkColors
+                } else {
+                    colors = AvatarNode.grayscaleColors
+                }
             }
         } else if case .myNotesIcon = icon {
             colors = AvatarNode.savedMessagesColors
@@ -267,6 +272,10 @@ public final class AvatarNode: ASDisplayNode {
     
     static let grayscaleColors: [UIColor] = [
         UIColor(rgb: 0xb1b1b1), UIColor(rgb: 0xcdcdcd)
+    ]
+    
+    static let grayscaleDarkColors: [UIColor] = [
+        UIColor(white: 1.0, alpha: 0.22), UIColor(white: 1.0, alpha: 0.18)
     ]
     
     static let savedMessagesColors: [UIColor] = [
@@ -928,8 +937,14 @@ public final class AvatarNode: ASDisplayNode {
                     context.scaleBy(x: factor, y: -factor)
                     context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
                     
-                    if let anonymousSavedMessagesIcon = anonymousSavedMessagesIcon {
-                        context.draw(anonymousSavedMessagesIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - anonymousSavedMessagesIcon.size.width) / 2.0), y: floor((bounds.size.height - anonymousSavedMessagesIcon.size.height) / 2.0)), size: anonymousSavedMessagesIcon.size))
+                    if let theme = parameters.theme, theme.overallDarkAppearance {
+                        if let anonymousSavedMessagesDarkIcon = anonymousSavedMessagesDarkIcon {
+                            context.draw(anonymousSavedMessagesDarkIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - anonymousSavedMessagesDarkIcon.size.width) / 2.0), y: floor((bounds.size.height - anonymousSavedMessagesDarkIcon.size.height) / 2.0)), size: anonymousSavedMessagesDarkIcon.size))
+                        }
+                    } else {
+                        if let anonymousSavedMessagesIcon = anonymousSavedMessagesIcon {
+                            context.draw(anonymousSavedMessagesIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - anonymousSavedMessagesIcon.size.width) / 2.0), y: floor((bounds.size.height - anonymousSavedMessagesIcon.size.height) / 2.0)), size: anonymousSavedMessagesIcon.size))
+                        }
                     }
                 } else if case .myNotesIcon = parameters.icon {
                     let factor = bounds.size.width / 60.0

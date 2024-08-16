@@ -172,7 +172,7 @@ public func updateMessageReactionsInteractively(account: Account, messageIds: [M
     |> ignoreValues
 }
 
-public func sendStarsReactionsInteractively(account: Account, messageId: MessageId, count: Int, isAnonymous: Bool) -> Signal<Never, NoError> {
+public func sendStarsReactionsInteractively(account: Account, messageId: MessageId, count: Int, isAnonymous: Bool?) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
         transaction.setPendingMessageAction(type: .sendStarsReaction, id: messageId, action: SendStarsReactionsAction(randomId: Int64.random(in: Int64.min ... Int64.max)))
         transaction.updateMessage(messageId, update: { currentMessage in
@@ -182,15 +182,29 @@ public func sendStarsReactionsInteractively(account: Account, messageId: Message
             }
             var mappedCount = Int32(count)
             var attributes = currentMessage.attributes
+            var resolvedIsAnonymous = _internal_getStarsReactionDefaultToPrivate(peerId: messageId.peerId, transaction: transaction)
+            for attribute in attributes {
+                if let attribute = attribute as? ReactionsMessageAttribute {
+                    if let myReaction = attribute.topPeers.first(where: { $0.isMy }) {
+                        resolvedIsAnonymous = myReaction.isAnonymous
+                    }
+                }
+            }
             loop: for j in 0 ..< attributes.count {
                 if let current = attributes[j] as? PendingStarsReactionsMessageAttribute {
                     mappedCount += current.count
+                    resolvedIsAnonymous = current.isAnonymous
                     attributes.remove(at: j)
                     break loop
                 }
             }
+            
+            if let isAnonymous {
+                resolvedIsAnonymous = isAnonymous
+                _internal_setStarsReactionDefaultToPrivate(peerId: messageId.peerId, isPrivate: isAnonymous, transaction: transaction)
+            }
                 
-            attributes.append(PendingStarsReactionsMessageAttribute(accountPeerId: account.peerId, count: mappedCount, isAnonymous: isAnonymous))
+            attributes.append(PendingStarsReactionsMessageAttribute(accountPeerId: account.peerId, count: mappedCount, isAnonymous: resolvedIsAnonymous))
             
             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
         })
@@ -228,6 +242,8 @@ func _internal_forceSendPendingSendStarsReaction(account: Account, messageId: Me
 
 func _internal_updateStarsReactionIsAnonymous(account: Account, messageId: MessageId, isAnonymous: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
+        _internal_setStarsReactionDefaultToPrivate(peerId: messageId.peerId, isPrivate: isAnonymous, transaction: transaction)
+        
         transaction.updateMessage(messageId, update: { currentMessage in
             var storeForwardInfo: StoreMessageForwardInfo?
             if let forwardInfo = currentMessage.forwardInfo {
@@ -395,7 +411,6 @@ private func requestSendStarsReaction(postbox: Postbox, network: Network, stateM
             }
             |> mapToSignal { result -> Signal<Never, RequestUpdateMessageReactionError> in
                 stateManager.starsContext?.add(balance: Int64(-count), addTransaction: false)
-                //stateManager.starsContext?.load(force: true)
                 
                 return postbox.transaction { transaction -> Void in
                     transaction.setPendingMessageAction(type: .sendStarsReaction, id: messageId, action: UpdateMessageReactionsAction())
@@ -1011,4 +1026,32 @@ func _internal_updateDefaultReaction(account: Account, reaction: MessageReaction
         return .single(.boolFalse)
     }
     |> ignoreValues
+}
+
+struct StarsReactionDefaultToPrivateData: Codable {
+    var isPrivate: Bool
+    
+    init(isPrivate: Bool) {
+        self.isPrivate = isPrivate
+    }
+    
+    static func key(peerId: PeerId) -> ValueBoxKey {
+        let value = ValueBoxKey(length: 8)
+        value.setInt64(0, value: peerId.toInt64())
+        return value
+    }
+}
+
+func _internal_getStarsReactionDefaultToPrivate(peerId: PeerId, transaction: Transaction) -> Bool {
+    guard let value = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.starsReactionDefaultToPrivate, key: StarsReactionDefaultToPrivateData.key(peerId: peerId)))?.get(StarsReactionDefaultToPrivateData.self) else {
+        return false
+    }
+    return value.isPrivate
+}
+
+func _internal_setStarsReactionDefaultToPrivate(peerId: PeerId, isPrivate: Bool, transaction: Transaction) {
+    guard let entry = CodableEntry(StarsReactionDefaultToPrivateData(isPrivate: isPrivate)) else {
+        return
+    }
+    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.starsReactionDefaultToPrivate, key: StarsReactionDefaultToPrivateData.key(peerId: peerId)), entry: entry)
 }
