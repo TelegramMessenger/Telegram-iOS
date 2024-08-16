@@ -128,22 +128,15 @@ private final class BalanceComponent: CombinedComponent {
 }
 
 private final class BadgeComponent: Component {
-    enum Direction {
-        case left
-        case right
-    }
     let theme: PresentationTheme
     let title: String
-    let inertiaDirection: Direction?
     
     init(
         theme: PresentationTheme,
-        title: String,
-        inertiaDirection: Direction?
+        title: String
     ) {
         self.theme = theme
         self.title = title
-        self.inertiaDirection = inertiaDirection
     }
     
     static func ==(lhs: BadgeComponent, rhs: BadgeComponent) -> Bool {
@@ -151,9 +144,6 @@ private final class BadgeComponent: Component {
             return false
         }
         if lhs.title != rhs.title {
-            return false
-        }
-        if lhs.inertiaDirection != rhs.inertiaDirection {
             return false
         }
         return true
@@ -175,7 +165,6 @@ private final class BadgeComponent: Component {
         private var component: BadgeComponent?
         
         private var previousAvailableSize: CGSize?
-        private var previousInertiaDirection: BadgeComponent.Direction?
         
         override init(frame: CGRect) {
             self.badgeView = UIView()
@@ -189,6 +178,7 @@ private final class BadgeComponent: Component {
             self.badgeView.mask = self.badgeMaskView
             
             self.badgeForeground = SimpleLayer()
+            self.badgeForeground.anchorPoint = CGPoint()
             
             self.badgeIcon = UIImageView()
             self.badgeIcon.contentMode = .center
@@ -257,31 +247,7 @@ private final class BadgeComponent: Component {
             
             self.badgeView.bounds = CGRect(origin: .zero, size: badgeFullSize)
             
-            transition.setAnchorPoint(layer: self.badgeView.layer, anchorPoint: CGPoint(x: 0.5, y: 1.0))
-            
-            if component.inertiaDirection != self.previousInertiaDirection {
-                self.previousInertiaDirection = component.inertiaDirection
-                
-                var angle: CGFloat = 0.0
-                let transition: ContainedViewLayoutTransition
-                if let inertiaDirection = component.inertiaDirection {
-                    switch inertiaDirection {
-                    case .left:
-                        angle = 0.22
-                    case .right:
-                        angle = -0.22
-                    }
-                    transition = .animated(duration: 0.45, curve: .spring)
-                } else {
-                    transition = .animated(duration: 0.45, curve: .customSpring(damping: 65.0, initialVelocity: 0.0))
-                }
-                transition.updateTransformRotation(view: self.badgeView, angle: angle)
-            }
-            
-            self.badgeForeground.bounds = CGRect(origin: CGPoint(), size: CGSize(width: badgeFullSize.width * 3.0, height: badgeFullSize.height))
-            if self.badgeForeground.animation(forKey: "movement") == nil {
-                self.badgeForeground.position = CGPoint(x: badgeSize.width * 3.0 / 2.0 - self.badgeForeground.frame.width * 0.35, y: badgeFullSize.height / 2.0)
-            }
+            self.badgeForeground.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 600.0, height: badgeFullSize.height))
     
             self.badgeIcon.frame = CGRect(x: 10.0, y: 9.0, width: 30.0, height: 30.0)
             self.badgeLabelMaskView.frame = CGRect(x: 0.0, y: 0.0, width: 100.0, height: 36.0)
@@ -320,7 +286,17 @@ private final class BadgeComponent: Component {
             tailPosition += overflowWidth
             tailPosition = max(0.0, min(size.width, tailPosition))
             
-            self.badgeShapeLayer.path = generateRoundedRectWithTailPath(rectSize: size, tailPosition: tailPosition / size.width).cgPath
+            let tailPositionFraction = tailPosition / size.width
+            self.badgeShapeLayer.path = generateRoundedRectWithTailPath(rectSize: size, tailPosition: tailPositionFraction).cgPath
+            
+            let transition: ContainedViewLayoutTransition = .immediate
+            transition.updateAnchorPoint(layer: self.badgeView.layer, anchorPoint: CGPoint(x: tailPositionFraction, y: 1.0))
+            transition.updatePosition(layer: self.badgeView.layer, position: CGPoint(x: (tailPositionFraction - 0.5) * size.width, y: 0.0))
+        }
+        
+        func updateBadgeAngle(angle: CGFloat) {
+            let transition: ContainedViewLayoutTransition = .immediate
+            transition.updateTransformRotation(view: self.badgeView, angle: angle)
         }
         
         private func setupGradientAnimations() {
@@ -331,13 +307,14 @@ private final class BadgeComponent: Component {
             } else {
                 CATransaction.begin()
                 
-                let badgeOffset = (self.badgeForeground.frame.width - self.badgeView.bounds.width) / 2.0
                 let badgePreviousValue = self.badgeForeground.position.x
-                var badgeNewValue: CGFloat = badgeOffset
-                if badgeOffset - badgePreviousValue < self.badgeForeground.frame.width * 0.25 {
-                    badgeNewValue -= self.badgeForeground.frame.width * 0.35
+                let badgeNewValue: CGFloat
+                if self.badgeForeground.position.x == -300.0 {
+                    badgeNewValue = 0.0
+                } else {
+                    badgeNewValue = -300.0
                 }
-                self.badgeForeground.position = CGPoint(x: badgeNewValue, y: self.badgeForeground.bounds.size.height / 2.0)
+                self.badgeForeground.position = CGPoint(x: badgeNewValue, y: self.badgeForeground.bounds.size.height)
                 
                 let badgeAnimation = CABasicAnimation(keyPath: "position.x")
                 badgeAnimation.duration = 4.5
@@ -1007,6 +984,7 @@ private final class ChatSendStarsScreenComponent: Component {
         private let scrollView: ScrollView
         private let scrollContentClippingView: SparseContainerView
         private let scrollContentView: UIView
+        private let hierarchyTrackingNode: HierarchyTrackingNode
         
         private let leftButton = ComponentView<Empty>()
         private let closeButton = ComponentView<Empty>()
@@ -1056,6 +1034,8 @@ private final class ChatSendStarsScreenComponent: Component {
         
         private var balanceDisposable: Disposable?
         
+        private var badgePhysicsLink: SharedDisplayLinkDriver.Link?
+        
         override init(frame: CGRect) {
             self.bottomOverscrollLimit = 200.0
             
@@ -1073,6 +1053,8 @@ private final class ChatSendStarsScreenComponent: Component {
             self.scrollContentClippingView.clipsToBounds = true
             
             self.scrollContentView = UIView()
+            
+            self.hierarchyTrackingNode = HierarchyTrackingNode()
             
             super.init(frame: frame)
             
@@ -1104,6 +1086,30 @@ private final class ChatSendStarsScreenComponent: Component {
             self.addSubview(self.navigationBarContainer)
             
             self.dimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
+            
+            self.addSubnode(self.hierarchyTrackingNode)
+            
+            self.hierarchyTrackingNode.updated = { [weak self] value in
+                guard let self else {
+                    return
+                }
+                if value {
+                    if self.badgePhysicsLink == nil {
+                        let badgePhysicsLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            self.updateBadgePhysics()
+                        })
+                        self.badgePhysicsLink = badgePhysicsLink
+                    }
+                } else {
+                    if let badgePhysicsLink = self.badgePhysicsLink {
+                        self.badgePhysicsLink = nil
+                        badgePhysicsLink.invalidate()
+                    }
+                }
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -1175,7 +1181,7 @@ private final class ChatSendStarsScreenComponent: Component {
             
             transition.setPosition(view: self.navigationBarContainer, position: CGPoint(x: 0.0, y: topOffset + itemLayout.containerInset))
             
-            let topOffsetDistance: CGFloat = min(200.0, floor(itemLayout.containerSize.height * 0.25))
+            let topOffsetDistance: CGFloat = min(60.0, floor(itemLayout.containerSize.height * 0.25))
             self.topOffsetDistance = topOffsetDistance
             var topOffsetFraction = topOffset / topOffsetDistance
             topOffsetFraction = max(0.0, min(1.0, topOffsetFraction))
@@ -1217,7 +1223,78 @@ private final class ChatSendStarsScreenComponent: Component {
         
         private var previousSliderValue: Float = 0.0
         private var previousTimestamp: Double?
-        private var inertiaDirection: BadgeComponent.Direction?
+        
+        private var badgeAngularSpeed: CGFloat = 0.0
+        private var badgeAngle: CGFloat = 0.0
+        private var previousBadgeX: CGFloat?
+        private var previousPhysicsTimestamp: Double?
+        
+        private func updateBadgePhysics() {
+            let timestamp = CACurrentMediaTime()
+            
+            let deltaTime: CGFloat
+            if let previousPhysicsTimestamp = self.previousPhysicsTimestamp {
+                deltaTime = CGFloat(min(1.0 / 60.0, timestamp - previousPhysicsTimestamp))
+            } else {
+                deltaTime = CGFloat(1.0 / 60.0)
+            }
+            self.previousPhysicsTimestamp = timestamp
+            
+            guard let badgeView = self.badge.view as? BadgeComponent.View else {
+                return
+            }
+            let badgeX = badgeView.center.x
+            
+            let horizontalVelocity: CGFloat
+            if let previousBadgeX = self.previousBadgeX {
+                horizontalVelocity = (badgeX - previousBadgeX) / deltaTime
+            } else {
+                horizontalVelocity = 0.0
+            }
+            self.previousBadgeX = badgeX
+            
+            let testSpringFriction: CGFloat = 9.0
+            let testSpringConstant: CGFloat = 243.0
+            
+            let frictionConstant: CGFloat = testSpringFriction
+            let springConstant: CGFloat = testSpringConstant
+            let time: CGFloat = deltaTime
+            
+            var badgeAngle = self.badgeAngle
+            
+            badgeAngle -= horizontalVelocity * 0.0001
+            if abs(badgeAngle) > 0.22 {
+                badgeAngle = badgeAngle < 0.0 ? -0.22 : 0.22
+            }
+            
+            // friction force = velocity * friction constant
+            let frictionForce = self.badgeAngularSpeed * frictionConstant
+            // spring force = (target point - current position) * spring constant
+            let springForce = -badgeAngle * springConstant
+            // force = spring force - friction force
+            let force = springForce - frictionForce
+            
+            // velocity = current velocity + force * time / mass
+            self.badgeAngularSpeed = self.badgeAngularSpeed + force * time
+            // position = current position + velocity * time
+            badgeAngle = badgeAngle + self.badgeAngularSpeed * time
+            badgeAngle = badgeAngle.isNaN ? 0.0 : badgeAngle
+            
+            let epsilon: CGFloat = 0.01
+            if abs(badgeAngle) < epsilon && abs(self.badgeAngularSpeed) < epsilon {
+                badgeAngle = 0.0
+                self.badgeAngularSpeed = 0.0
+            }
+            
+            if abs(badgeAngle) > 0.22 {
+                badgeAngle = badgeAngle < 0.0 ? -0.22 : 0.22
+            }
+            
+            if self.badgeAngle != badgeAngle {
+                self.badgeAngle = badgeAngle
+                badgeView.updateBadgeAngle(angle: self.badgeAngle)
+            }
+        }
         
         func update(component: ChatSendStarsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
@@ -1225,7 +1302,13 @@ private final class ChatSendStarsScreenComponent: Component {
             
             let resetScrolling = self.scrollView.bounds.width != availableSize.width
             
-            let sideInset: CGFloat = 16.0
+            let fillingSize: CGFloat
+            if case .regular = environment.metrics.widthClass {
+                fillingSize = min(availableSize.width, 414.0) - environment.safeInsets.left * 2.0
+            } else {
+                fillingSize = min(availableSize.width, 428.0) - environment.safeInsets.left * 2.0
+            }
+            let sideInset: CGFloat = floor((availableSize.width - fillingSize) * 0.5) + 16.0
             
             if self.component == nil {
                 self.balance = component.balance
@@ -1307,21 +1390,7 @@ private final class ChatSendStarsScreenComponent: Component {
                             let speed = deltaValue / Float(deltaTime)
                             let newSpeed = max(0, min(65.0, speed * 70.0))
                             
-                            var inertiaDirection: BadgeComponent.Direction?
-                            if newSpeed >= 1.0 {
-                                if delta > 0.0 {
-                                    inertiaDirection = .right
-                                } else {
-                                    inertiaDirection = .left
-                                }
-                            }
-                            if inertiaDirection != self.inertiaDirection {
-                                self.inertiaDirection = inertiaDirection
-                                self.state?.updated(transition: .immediate)
-                            }
-                            
                             if newSpeed < 0.01 && deltaValue < 0.001 {
-                                
                             } else {
                                 self.badgeStars.update(speed: newSpeed, delta: delta)
                             }
@@ -1337,10 +1406,6 @@ private final class ChatSendStarsScreenComponent: Component {
                         if !isTracking {
                             self.previousTimestamp = nil
                             self.badgeStars.update(speed: 0.0)
-                        }
-                        if self.inertiaDirection != nil {
-                            self.inertiaDirection = nil
-                            self.state?.updated(transition: .immediate)
                         }
                     }
                 )),
@@ -1401,17 +1466,11 @@ private final class ChatSendStarsScreenComponent: Component {
                 
                 transition.setFrame(view: sliderBackgroundView, frame: sliderBackgroundFrame)
                 
-                var effectiveInertiaDirection = self.inertiaDirection
-                if progressFraction <= 0.03 || progressFraction >= 0.97 {
-                    effectiveInertiaDirection = nil
-                }
-                
                 let badgeSize = self.badge.update(
                     transition: transition,
                     component: AnyComponent(BadgeComponent(
                         theme: environment.theme, 
-                        title: "\(self.amount.realValue)",
-                        inertiaDirection: effectiveInertiaDirection
+                        title: "\(self.amount.realValue)"
                     )),
                     environment: {},
                     containerSize: CGSize(width: 200.0, height: 200.0)
@@ -1463,7 +1522,7 @@ private final class ChatSendStarsScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 120.0, height: 100.0)
             )
-            let leftButtonFrame = CGRect(origin: CGPoint(x: 16.0, y: floor((56.0 - leftButtonSize.height) * 0.5)), size: leftButtonSize)
+            let leftButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((56.0 - leftButtonSize.height) * 0.5)), size: leftButtonSize)
             if let leftButtonView = self.leftButton.view {
                 if leftButtonView.superview == nil {
                     self.navigationBarContainer.addSubview(leftButtonView)
@@ -2005,7 +2064,7 @@ private final class ChatSendStarsScreenComponent: Component {
             transition.setFrame(view: self.scrollContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + containerInset), size: CGSize(width: availableSize.width, height: contentHeight)))
             
             transition.setPosition(layer: self.backgroundLayer, position: CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0))
-            transition.setBounds(layer: self.backgroundLayer, bounds: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setBounds(layer: self.backgroundLayer, bounds: CGRect(origin: CGPoint(), size: CGSize(width: fillingSize, height: availableSize.height)))
             
             let scrollClippingFrame = CGRect(origin: CGPoint(x: 0.0, y: containerInset), size: CGSize(width: availableSize.width, height: clippingY - containerInset))
             transition.setPosition(view: self.scrollContentClippingView, position: scrollClippingFrame.center)

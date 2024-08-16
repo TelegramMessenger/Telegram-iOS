@@ -375,7 +375,9 @@ extension ChatControllerImpl {
                                                 }
                                                 if let itemNode = itemNode, let targetView = itemNode.targetReactionView(value: chosenReaction) {
                                                     if !"".isEmpty {
-                                                        self.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: self.chatDisplayNode.view))
+                                                        if self.context.sharedContext.energyUsageSettings.fullTranslucency {
+                                                            self.chatDisplayNode.wrappingNode.triggerRipple(at: targetView.convert(targetView.bounds.center, to: self.chatDisplayNode.view))
+                                                        }
                                                     }
                                                 }
                                             }, completion: {})
@@ -390,10 +392,26 @@ extension ChatControllerImpl {
                         guard let starsContext = self.context.starsContext else {
                             return
                         }
-                        let _ = (starsContext.state
+                        guard let peerId = self.chatLocation.peerId else {
+                            return
+                        }
+                        let _ = (combineLatest(
+                            starsContext.state,
+                            self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ReactionSettings(id: peerId))
+                        )
                         |> take(1)
-                        |> deliverOnMainQueue).start(next: { [weak self] state in
+                        |> deliverOnMainQueue).start(next: { [weak self] state, reactionSettings in
                             guard let strongSelf = self, let balance = state?.balance else {
+                                return
+                            }
+                            
+                            if case let .known(reactionSettings) = reactionSettings, let starsAllowed = reactionSettings.starsAllowed, !starsAllowed {
+                                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer {
+                                    //TODO:localize
+                                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: "Star Reactions were disabled in \(peer.debugDisplayTitle).", actions: [
+                                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {})
+                                    ]), in: .window(.root))
+                                }
                                 return
                             }
                             
@@ -406,7 +424,7 @@ extension ChatControllerImpl {
                                     let _ = (strongSelf.context.engine.payments.starsTopUpOptions()
                                     |> take(1)
                                     |> deliverOnMainQueue).startStandalone(next: { [weak strongSelf] options in
-                                        guard let strongSelf, let peerId = strongSelf.chatLocation.peerId else {
+                                        guard let strongSelf else {
                                             return
                                         }
                                         guard let starsContext = strongSelf.context.starsContext else {

@@ -57,11 +57,13 @@ private let lockedBackgroundImage: UIImage = generateFilledCircleImage(diameter:
 private let lockedBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/PanelBadgeLock"), color: .white)
 
 private final class StarsButtonEffectLayer: SimpleLayer {
+    let gradientLayer = SimpleGradientLayer()
     let emitterLayer = CAEmitterLayer()
     
     override init() {
         super.init()
         
+        self.addSublayer(self.gradientLayer)
         self.addSublayer(self.emitterLayer)
     }
     
@@ -73,8 +75,8 @@ private final class StarsButtonEffectLayer: SimpleLayer {
         fatalError("init(coder:) has not been implemented")
     }
     
-    private func setup() {
-        let color = UIColor(rgb: 0xffbe27)
+    private func setup(theme: PresentationTheme) {
+        let color = UIColor(rgb: 0xffbe27, alpha: theme.overallDarkAppearance ? 0.2 : 1.0)
         
         let emitter = CAEmitterCell()
         emitter.name = "emitter"
@@ -101,17 +103,31 @@ private final class StarsButtonEffectLayer: SimpleLayer {
         emitter.setValue([staticColorBehavior], forKey: "emitterBehaviors")
         
         self.emitterLayer.emitterCells = [emitter]
+        
+        let gradientColor = UIColor(rgb: 0xffbe27, alpha: theme.overallDarkAppearance ? 0.2 : 1.0)
+        
+        self.gradientLayer.type = .radial
+        self.gradientLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
+        self.gradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
+        self.gradientLayer.colors = [
+            gradientColor.withMultipliedAlpha(0.4).cgColor,
+            gradientColor.withMultipliedAlpha(0.4).cgColor,
+            gradientColor.withMultipliedAlpha(0.25).cgColor,
+            gradientColor.withMultipliedAlpha(0.0).cgColor
+        ] as [CGColor]
     }
     
-    func update(size: CGSize) {
+    func update(theme: PresentationTheme, size: CGSize, transition: ContainedViewLayoutTransition) {
         if self.emitterLayer.emitterCells == nil {
-            self.setup()
+            self.setup(theme: theme)
         }
         self.emitterLayer.emitterShape = .circle
         self.emitterLayer.emitterSize = CGSize(width: size.width * 0.7, height: size.height * 0.7)
         self.emitterLayer.emitterMode = .surface
         self.emitterLayer.frame = CGRect(origin: .zero, size: size)
         self.emitterLayer.emitterPosition = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+        
+        transition.updateFrame(layer: self.gradientLayer, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -6.0, dy: -6.0).offsetBy(dx: 0.0, dy: 2.0))
     }
 }
 
@@ -307,7 +323,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         
         if let starsEffectLayer = self.starsEffectLayer {
             transition.updateFrame(layer: starsEffectLayer, frame: CGRect(origin: CGPoint(), size: size))
-            starsEffectLayer.update(size: size)
+            starsEffectLayer.update(theme: self.theme, size: size, transition: transition)
         }
         
         let animationSize = self.item.stillAnimation.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
