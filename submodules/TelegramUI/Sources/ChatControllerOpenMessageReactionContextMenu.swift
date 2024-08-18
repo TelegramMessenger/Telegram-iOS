@@ -398,8 +398,7 @@ extension ChatControllerImpl {
                     
                     if case let .known(reactionSettings) = reactionSettings, let starsAllowed = reactionSettings.starsAllowed, !starsAllowed {
                         if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer {
-                            //TODO:localize
-                            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: "Star Reactions were disabled in \(peer.debugDisplayTitle).", actions: [
+                            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.Chat_ToastStarsReactionsDisabled(peer.debugDisplayTitle).string, actions: [
                                 TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: {})
                             ]), in: .window(.root))
                         }
