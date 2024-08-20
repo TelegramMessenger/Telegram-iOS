@@ -2052,7 +2052,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                             for attribute in item.file.attributes {
                                                 switch attribute {
                                                 case let .CustomEmoji(_, _, alt, _):
-                                                    if !item.file.isPremiumEmoji || hasPremium {
+                                                    if !item.file.isPremiumEmoji {
                                                         if !alt.isEmpty, let keyword = allEmoticons[alt] {
                                                             result.append((alt, item.file, keyword))
                                                         } else if alt == query {
@@ -2079,7 +2079,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                                     animationData: animationData,
                                                     content: .animation(animationData),
                                                     itemFile: itemFile, subgroupId: nil,
-                                                    icon: .none,
+                                                    icon: (!hasPremium && itemFile.isPremiumEmoji) ? .locked : .none,
                                                     tintMode: animationData.isTemplate ? .primary : .none
                                                 )
                                                 items.append(item)
@@ -2141,7 +2141,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                                         content: .animation(animationData),
                                                         itemFile: item.file,
                                                         subgroupId: nil,
-                                                        icon: .none,
+                                                        icon: (!hasPremium && item.file.isPremiumEmoji) ? .locked : .none,
                                                         tintMode: tintMode
                                                     )
                                                     

@@ -129,7 +129,8 @@ private final class CallScreenVideoView: UIView, VideoRenderingView {
                 return
             }
             
-            self.videoLayer.video = self.videoSource.currentOutput
+            let videoOutput = self.videoSource.currentOutput
+            self.videoLayer.video = videoOutput
             
             var notifyOrientationUpdated = false
             var notifyIsMirroredUpdated = false
@@ -139,7 +140,7 @@ private final class CallScreenVideoView: UIView, VideoRenderingView {
                 notifyIsMirroredUpdated = true
             }
             
-            if let currentOutput = self.videoSource.currentOutput {
+            if let currentOutput = videoOutput {
                 let currentAspect: CGFloat
                 if currentOutput.resolution.height > 0.0 {
                     currentAspect = currentOutput.resolution.width / currentOutput.resolution.height
@@ -152,16 +153,20 @@ private final class CallScreenVideoView: UIView, VideoRenderingView {
                 }
                 
                 let currentOrientation: PresentationCallVideoView.Orientation
-                if abs(currentOutput.rotationAngle - 0.0) < .ulpOfOne {
+                if currentOutput.followsDeviceOrientation {
                     currentOrientation = .rotation0
-                } else if abs(currentOutput.rotationAngle - Float.pi * 0.5) < .ulpOfOne {
-                    currentOrientation = .rotation90
-                } else if abs(currentOutput.rotationAngle - Float.pi) < .ulpOfOne {
-                    currentOrientation = .rotation180
-                } else if abs(currentOutput.rotationAngle - Float.pi * 3.0 / 2.0) < .ulpOfOne {
-                    currentOrientation = .rotation270
                 } else {
-                    currentOrientation = .rotation0
+                    if abs(currentOutput.rotationAngle - 0.0) < .ulpOfOne {
+                        currentOrientation = .rotation0
+                    } else if abs(currentOutput.rotationAngle - Float.pi * 0.5) < .ulpOfOne {
+                        currentOrientation = .rotation90
+                    } else if abs(currentOutput.rotationAngle - Float.pi) < .ulpOfOne {
+                        currentOrientation = .rotation180
+                    } else if abs(currentOutput.rotationAngle - Float.pi * 3.0 / 2.0) < .ulpOfOne {
+                        currentOrientation = .rotation270
+                    } else {
+                        currentOrientation = .rotation0
+                    }
                 }
                 if self.currentOrientation != currentOrientation {
                     self.currentOrientation = currentOrientation

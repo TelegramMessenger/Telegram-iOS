@@ -1743,6 +1743,15 @@ public final class SparseItemGrid: ASDisplayNode {
             }
             items.itemBinding.onTagTap()
         }
+        self.scrollingArea.isDecelerating = { [weak self] in
+            guard let self else {
+                return false
+            }
+            guard let currentViewport = self.currentViewport else {
+                return false
+            }
+            return currentViewport.scrollView.isDecelerating
+        }
     }
 
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {

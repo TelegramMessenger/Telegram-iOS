@@ -324,10 +324,14 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                     }
                     if let selectionState = presentationInterfaceState.interfaceState.selectionState {
                         context.engine.messages.setMessageReactions(ids: Array(selectionState.selectedIds), reactions: mappedUpdatedReactions)
+                    } else {
+                        context.engine.messages.setMessageReactions(ids: Array(self.selectedMessages), reactions: mappedUpdatedReactions)
                     }
                 } else {
                     if let selectionState = presentationInterfaceState.interfaceState.selectionState {
                         context.engine.messages.addMessageReactions(ids: Array(selectionState.selectedIds), reactions: [updateReaction])
+                    } else {
+                        context.engine.messages.addMessageReactions(ids: Array(self.selectedMessages), reactions: [updateReaction])
                     }
                 }
                 
