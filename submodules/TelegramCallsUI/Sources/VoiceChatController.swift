@@ -245,11 +245,13 @@ public protocol VoiceChatController: ViewController {
     var call: PresentationGroupCall { get }
     var currentOverlayController: VoiceChatOverlayController? { get }
     var parentNavigationController: NavigationController? { get set }
+    var onViewDidAppear: (() -> Void)? { get set }
+    var onViewDidDisappear: (() -> Void)? { get set }
     
     func dismiss(closing: Bool, manual: Bool)
 }
 
-public final class VoiceChatControllerImpl: ViewController, VoiceChatController {
+final class VoiceChatControllerImpl: ViewController, VoiceChatController {
     enum DisplayMode {
         case modal(isExpanded: Bool, isFilled: Bool)
         case fullscreen(controlsHidden: Bool)
@@ -7092,5 +7094,13 @@ private final class VoiceChatContextReferenceContentSource: ContextReferenceCont
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+public func makeVoiceChatController(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall) -> VoiceChatController {
+    if sharedContext.immediateExperimentalUISettings.callV2 {
+        return VideoChatScreenV2Impl(call: call)
+    } else {
+        return VoiceChatControllerImpl(sharedContext: sharedContext, accountContext: accountContext, call: call)
     }
 }
