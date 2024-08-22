@@ -160,7 +160,6 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
             guard let self else {
                 return
             }
-            self.webPage = result
             self.updateWebPage(result, anchor: self.initialAnchor)
         })
     }

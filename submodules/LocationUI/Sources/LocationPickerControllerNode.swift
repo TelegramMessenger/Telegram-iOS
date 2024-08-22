@@ -266,6 +266,7 @@ struct LocationPickerState {
     var mapMode: LocationMapMode
     var displayingMapModeOptions: Bool
     var selectedLocation: LocationPickerLocation
+    var appxCoordinate: CLLocationCoordinate2D?
     var geoAddress: MapGeoAddress?
     var city: String?
     var street: String?
@@ -279,6 +280,7 @@ struct LocationPickerState {
         self.mapMode = .map
         self.displayingMapModeOptions = false
         self.selectedLocation = .none
+        self.appxCoordinate = nil
         self.geoAddress = nil
         self.city = nil
         self.street = nil
@@ -636,7 +638,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                         let title: String
                         var coordinate = userLocation?.coordinate
                         switch strongSelf.mode {
-                            case .share:
+                        case .share:
                             if source == .story {
                                 if let initialLocation = strongSelf.controller?.initialLocation {
                                     title = presentationData.strings.Location_AddThisLocation
@@ -647,12 +649,24 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             } else {
                                 title = presentationData.strings.Map_SendMyCurrentLocation
                             }
-                            case .pick:
-                                title = presentationData.strings.Map_SetThisLocation
+                        case .pick:
+                            title = presentationData.strings.Map_SetThisLocation
                         }
                         if source == .story {
                             if state.city != "" {
-                                entries.append(.city(presentationData.theme, state.city ?? presentationData.strings.Map_Locating, presentationData.strings.Location_TypeCity, nil, nil, nil, coordinate, state.city, state.geoAddress))
+                                let title: String
+                                let name: String?
+                                let geoAddress: MapGeoAddress?
+                                if let city = state.city, let _ = state.appxCoordinate {
+                                    title = city
+                                    name = city
+                                    geoAddress = state.geoAddress
+                                } else {
+                                    title = presentationData.strings.Map_Locating
+                                    name = nil
+                                    geoAddress = nil
+                                }
+                                entries.append(.city(presentationData.theme, title, presentationData.strings.Location_TypeCity, nil, nil, nil, state.appxCoordinate, name, geoAddress))
                             }
                             if state.street != "" {
                                 entries.append(.location(presentationData.theme, state.street ?? presentationData.strings.Map_Locating, state.isStreet ? presentationData.strings.Location_TypeStreet : presentationData.strings.Location_TypeLocation, nil, nil, nil, coordinate, state.street, state.geoAddress, false))
@@ -801,13 +815,44 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 let locale = localeWithStrings(presentationData.strings)
                 let enLocale = Locale(identifier: "en-US")
                 
-                let setupGeocoding: (CLLocationCoordinate2D, @escaping (MapGeoAddress?, String, String?, String?, String?, Bool) -> Void) -> Void = { coordinate, completion in
+                let setupGeocoding: (CLLocationCoordinate2D, Bool, @escaping (MapGeoAddress?, CLLocationCoordinate2D?, String, String?, String?, String?, Bool) -> Void) -> Void = { coordinate, current, completion in
                     strongSelf.geocodingDisposable.set(
                         combineLatest(
                             queue: Queue.mainQueue(),
                             reverseGeocodeLocation(latitude: coordinate.latitude, longitude: coordinate.longitude, locale: locale),
                             reverseGeocodeLocation(latitude: coordinate.latitude, longitude: coordinate.longitude, locale: enLocale)
-                        ).start(next: { placemark, enPlacemark in
+                            |> mapToSignal { placemark -> Signal<(ReverseGeocodedPlacemark, CLLocationCoordinate2D)?, NoError> in
+                                guard let placemark else {
+                                    return .single(nil)
+                                }
+                                if current {
+                                    var cityName: String
+                                    if let city = placemark.city {
+                                        if let countryCode = placemark.countryCode {
+                                            cityName = "\(city), \(displayCountryName(countryCode, locale: locale))"
+                                        } else {
+                                            cityName = city
+                                        }
+                                    } else {
+                                        cityName = ""
+                                    }
+                                    if !cityName.isEmpty {
+                                        return geocodeLocation(address: cityName, locale: enLocale)
+                                        |> map { placemarks in
+                                            if let location = placemarks?.first(where: { $0.thoroughfare == nil })?.location {
+                                                return (placemark, location.coordinate)
+                                            } else {
+                                                return (placemark, coordinate)
+                                            }
+                                        }
+                                    } else {
+                                        return .single((placemark, coordinate))
+                                    }
+                                } else {
+                                    return .single((placemark, coordinate))
+                                }
+                            }
+                        ).start(next: { placemark, enPlacemarkAndAppCoordinate in
                             var address = placemark?.fullAddress ?? ""
                             if address.isEmpty {
                                 address = presentationData.strings.Map_Unknown
@@ -842,16 +887,24 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             }
                             
                             var mapGeoAddress: MapGeoAddress?
-                            if let countryCode, let enPlacemark {
+                            if let countryCode, let enPlacemark = enPlacemarkAndAppCoordinate?.0 {
                                 mapGeoAddress = MapGeoAddress(country: countryCode, state: enPlacemark.state, city: enPlacemark.city, street: enPlacemark.street)
                             }
-                            completion(mapGeoAddress, address, cityName, streetName, countryCode, placemark?.street != nil)
+                            var resolvedAppxCoordinate: CLLocationCoordinate2D?
+                            if current, let appxCoordinate = enPlacemarkAndAppCoordinate?.1 {
+                                let loc = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                                let appxLoc = CLLocation(latitude: appxCoordinate.latitude, longitude: appxCoordinate.longitude)
+                                if appxLoc.distance(from: loc) < 1000000 {
+                                    resolvedAppxCoordinate = appxCoordinate
+                                }
+                            }
+                            completion(mapGeoAddress, resolvedAppxCoordinate, address, cityName, streetName, countryCode, placemark?.street != nil)
                         }
                     ))
                 }
                 
                 if case let .location(coordinate, address, global) = state.selectedLocation, address == nil {
-                    setupGeocoding(coordinate, { [weak self] geoAddress, address, cityName, streetName, countryCode, isStreet in
+                    setupGeocoding(coordinate, false, { [weak self] geoAddress, _, address, cityName, streetName, countryCode, isStreet in
                         self?.updateState { state in
                             var state = state
                             state.selectedLocation = .location(coordinate, address, global)
@@ -866,10 +919,11 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 } else {
                     let coordinate = controller.initialLocation ?? userLocation?.coordinate
                     if case .none = state.selectedLocation, let coordinate, state.city == nil {
-                        setupGeocoding(coordinate, { [weak self] geoAddress, address, cityName, streetName, countryCode, isStreet in
+                        setupGeocoding(coordinate, true, { [weak self] geoAddress, appxCoordinate, address, cityName, streetName, countryCode, isStreet in
                             self?.updateState { state in
                                 var state = state
                                 state.geoAddress = geoAddress
+                                state.appxCoordinate = appxCoordinate
                                 state.city = cityName
                                 state.street = streetName
                                 state.countryCode = countryCode
