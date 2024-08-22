@@ -294,7 +294,7 @@ extension ChatControllerImpl {
                         if !hasAnonymousPeer {
                             allPeers?.insert(SendAsPeer(peer: channel, subscribers: 0, isPremiumRequired: false), at: 0)
                         }
-                    } else if let channel = peerViewMainPeer(peerView) as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.messagesShouldHaveProfiles) {
+                    } else if let channel = peerViewMainPeer(peerView) as? TelegramChannel, case let .broadcast(info) = channel.info, (info.flags.contains(.messagesShouldHaveSignatures) || info.flags.contains(.messagesShouldHaveProfiles)) {
                         allPeers = peers
                         
                         var hasAnonymousPeer = false

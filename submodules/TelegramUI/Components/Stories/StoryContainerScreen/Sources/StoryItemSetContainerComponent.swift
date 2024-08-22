@@ -4464,6 +4464,23 @@ public final class StoryItemSetContainerComponent: Component {
                                 return EmojiComponentReactionItem(reaction: reaction.reaction.rawValue, file: reaction.stillAnimation)
                             }
                             
+                            var selectedItems: Set<AnyHashable> = Set()
+                            if let myReaction = component.slice.item.storyItem.myReaction {
+                                switch myReaction {
+                                case .builtin, .stars:
+                                    if let availableReactions = component.availableReactions {
+                                        for availableReaction in availableReactions.reactionItems {
+                                            if availableReaction.reaction.rawValue == myReaction {
+                                                selectedItems.insert(AnyHashable(availableReaction.stillAnimation.fileId))
+                                                break
+                                            }
+                                        }
+                                    }
+                                case let .custom(fileId):
+                                    selectedItems.insert(AnyHashable(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)))
+                                }
+                            }
+                            
                             return EmojiPagerContentComponent.emojiInputData(
                                 context: component.context,
                                 animationCache: animationCache,
@@ -4475,7 +4492,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 areUnicodeEmojiEnabled: false,
                                 areCustomEmojiEnabled: true,
                                 chatPeerId: component.context.account.peerId,
-                                selectedItems: Set(),
+                                selectedItems: selectedItems,
                                 premiumIfSavedMessages: false
                             )
                         },

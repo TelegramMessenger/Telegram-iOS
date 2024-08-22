@@ -2108,12 +2108,11 @@ public func chatMessageVideo(postbox: Postbox, userLocation: MediaResourceUserLo
 }
 
 private func chatSecretMessageVideoData(account: Account, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, synchronousLoad: Bool) -> Signal<Data?, NoError> {
+    let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
     if let smallestRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
         let thumbnailResource = smallestRepresentation.resource
         
         let fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: userLocation, userContentType: MediaResourceUserContentType(file: fileReference.media), reference: fileReference.resourceReference(thumbnailResource))
-        
-        let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
         
         let thumbnail = Signal<Data?, NoError> { subscriber in
             let fetchedDisposable = fetchedThumbnail.start()
@@ -2129,7 +2128,7 @@ private func chatSecretMessageVideoData(account: Account, userLocation: MediaRes
         }
         return thumbnail
     } else {
-        return .single(nil)
+        return .single(decodedThumbnailData)
     }
 }
 

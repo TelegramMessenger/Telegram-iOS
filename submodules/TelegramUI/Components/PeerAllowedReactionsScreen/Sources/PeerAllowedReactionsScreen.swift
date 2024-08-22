@@ -154,13 +154,17 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 if Set(availableReactions.reactions.filter({ $0.isEnabled }).map(\.value)) == Set(enabledReactions.map(\.reaction)) {
                     allowedReactions = .all
                 } else {
-                    allowedReactions = .limited(enabledReactions.map(\.reaction))
+                    if enabledReactions.isEmpty {
+                        allowedReactions = .empty
+                    } else {
+                        allowedReactions = .limited(enabledReactions.map(\.reaction))
+                    }
                 }
             } else {
                 allowedReactions = .empty
             }
             
-            let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: self.allowedReactionCount >= 11 ? nil : Int32(self.allowedReactionCount), starsAllowed: self.areStarsReactionsEnabled)
+            let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: self.allowedReactionCount >= 11 ? nil : Int32(self.allowedReactionCount), starsAllowed: self.isEnabled && self.areStarsReactionsEnabled)
             
             if self.appliedReactionSettings != reactionSettings {
                 if case .empty = allowedReactions {
@@ -255,7 +259,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
             } else {
                 allowedReactions = .empty
             }
-            let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: self.allowedReactionCount == 11 ? nil : Int32(self.allowedReactionCount), starsAllowed: self.areStarsReactionsEnabled)
+            let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: self.allowedReactionCount == 11 ? nil : Int32(self.allowedReactionCount), starsAllowed: self.isEnabled && self.areStarsReactionsEnabled)
             
             let applyDisposable = (component.context.engine.peers.updatePeerReactionSettings(peerId: component.peerId, reactionSettings: reactionSettings)
             |> deliverOnMainQueue).start(error: { [weak self] error in
@@ -603,7 +607,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                 self.displayInput = false
                             }
                             
-                            self.state?.updated(transition: .easeInOut(duration: 0.25))
+                            self.state?.updated(transition: .immediate)
                         }
                     }
                 )),

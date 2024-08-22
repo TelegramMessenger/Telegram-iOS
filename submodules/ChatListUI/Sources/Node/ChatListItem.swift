@@ -3665,8 +3665,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         } else {
                             starView = StarView()
                             strongSelf.starView = starView
-                            strongSelf.view.addSubview(starView)
-//                            strongSelf.mainContentContainerNode.view.addSubview(starView)
+                            strongSelf.contextContainer.view.addSubview(starView)
                         }
                         starView.outlineColor = effectiveBackgroundColor
                         

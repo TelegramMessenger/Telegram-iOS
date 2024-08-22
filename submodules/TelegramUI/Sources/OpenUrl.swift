@@ -925,8 +925,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
-                                    if queryItem.name == "balance" {
-                                        amount = Int64(value)
+                                    if queryItem.name == "balance", let amountValue = Int64(value), amountValue > 0 && amountValue < Int32.max {
+                                        amount = amountValue
                                     } else if queryItem.name == "purpose" {
                                         purpose = value
                                     }

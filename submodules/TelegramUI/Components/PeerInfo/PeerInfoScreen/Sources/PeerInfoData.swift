@@ -844,12 +844,6 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
     let starsState: Signal<StarsContext.State?, NoError>
     if let starsContext {
         starsState = starsContext.state
-        |> map { state in
-            if let state, state.balance > 0 || !state.transactions.isEmpty {
-                return state
-            }
-            return nil
-        }
     } else {
         starsState = .single(nil)
     }

@@ -628,7 +628,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                     
                     let dateLayoutInput: ChatMessageDateAndStatusNode.LayoutInput
-                    dateLayoutInput = .trailingContent(contentWidth: trailingWidthToMeasure, reactionSettings: item.presentationData.isPreview ? nil : ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions), preferAdditionalInset: false))
+                    dateLayoutInput = .trailingContent(contentWidth: trailingWidthToMeasure, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions), preferAdditionalInset: false))
                     
                     statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
                         context: item.context,
@@ -1514,9 +1514,10 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         guard let item = self.item else {
             return nil
         }
-        guard let string = self.textNode.textNode.cachedLayout?.attributedString else {
+        guard let string = self.textNode.attributedString else {
             return nil
         }
+        
         let nsString = string.string as NSString
         let substring = nsString.substring(with: range)
         let offset = range.location

@@ -94,6 +94,7 @@ public final class ReactionIconView: PortalSourceView {
     private var animateIdle: Bool?
     private var reaction: MessageReaction.Reaction?
     
+    private var isPaused: Bool = false
     private var isAnimationHidden: Bool = false
     
     private var disposable: Disposable?
@@ -198,6 +199,29 @@ public final class ReactionIconView: PortalSourceView {
         }
     }
     
+    func updateIsPaused(isPaused: Bool) {
+        guard let context = self.context, let animateIdle = self.animateIdle, let animationLayer = self.animationLayer else {
+            return
+        }
+        self.isPaused = isPaused
+        
+        let isVisibleForAnimations = !self.isPaused && animateIdle && context.sharedContext.energyUsageSettings.loopEmoji
+        if isVisibleForAnimations != animationLayer.isVisibleForAnimations {
+            if isPaused {
+                animationLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak animationLayer] _ in
+                    animationLayer?.removeFromSuperlayer()
+                })
+                self.animationLayer = nil
+                self.reloadFile()
+                if let animationLayer = self.animationLayer {
+                    animationLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
+                }
+            } else {
+                animationLayer.isVisibleForAnimations = !self.isPaused && animateIdle && context.sharedContext.energyUsageSettings.loopEmoji
+            }
+        }
+    }
+    
     private func reloadFile() {
         guard let context = self.context, let file = self.file, let animationCache = self.animationCache, let animationRenderer = self.animationRenderer, let placeholderColor = self.placeholderColor, let size = self.size, let animateIdle = self.animateIdle, let reaction = self.reaction else {
             return
@@ -217,7 +241,7 @@ public final class ReactionIconView: PortalSourceView {
         }
         
         let animationLayer = InlineStickerItemLayer(
-            context: context,
+            context: .account(context),
             userLocation: .other,
             attemptSynchronousLoad: false,
             emoji: ChatTextInputTextCustomEmojiAttribute(
@@ -228,6 +252,7 @@ public final class ReactionIconView: PortalSourceView {
             file: file,
             cache: animationCache,
             renderer: animationRenderer,
+            unique: true,
             placeholderColor: placeholderColor,
             pointSize: CGSize(width: iconSize.width * 2.0, height: iconSize.height * 2.0)
         )
@@ -248,7 +273,7 @@ public final class ReactionIconView: PortalSourceView {
         
         animationLayer.frame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
         
-        animationLayer.isVisibleForAnimations = animateIdle && context.sharedContext.energyUsageSettings.loopEmoji
+        animationLayer.isVisibleForAnimations = !self.isPaused && animateIdle && context.sharedContext.energyUsageSettings.loopEmoji
         self.updateTintColor()
     }
     
@@ -883,10 +908,14 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
         self.beginDelay = 0.0
         
         self.containerView.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, _ in
-            guard let strongSelf = self else {
+            guard let self else {
                 return
             }
-            strongSelf.buttonNode.updateIsExtracted(isExtracted: isExtracted, animated: true)
+            self.buttonNode.updateIsExtracted(isExtracted: isExtracted, animated: true)
+            
+            if let iconView = self.iconView {
+                iconView.updateIsPaused(isPaused: isExtracted)
+            }
         }
         
         if self.activateAfterCompletion {

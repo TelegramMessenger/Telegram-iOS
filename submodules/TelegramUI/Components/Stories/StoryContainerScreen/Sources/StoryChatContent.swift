@@ -1472,7 +1472,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
     
     private var currentPeerData: (EnginePeer.Id, Promise<PeerData>)?
     
-    public init(context: AccountContext, listContext: StoryListContext, initialId: Int32?, splitIndexIntoDays: Bool) {
+    public init(context: AccountContext, listContext: StoryListContext, initialId: StoryId?, splitIndexIntoDays: Bool) {
         self.context = context
         
         let preferHighQualityStories: Signal<Bool, NoError> = combineLatest(
@@ -1511,9 +1511,9 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                     focusedIndex = nil
                 }
             } else if let initialId = initialId {
-                if let index = state.items.firstIndex(where: { $0.storyItem.id == initialId }) {
+                if let index = state.items.firstIndex(where: { $0.id == initialId }) {
                     focusedIndex = index
-                } else if let index = state.items.firstIndex(where: { $0.storyItem.id <= initialId }) {
+                } else if let index = state.items.firstIndex(where: { $0.storyItem.id <= initialId.id }) {
                     focusedIndex = index
                 } else {
                     focusedIndex = nil

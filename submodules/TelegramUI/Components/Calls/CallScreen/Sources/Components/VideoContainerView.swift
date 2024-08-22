@@ -9,7 +9,7 @@ private let shadowImage: UIImage? = {
     UIImage(named: "Call/VideoGradient")?.precomposed()
 }()
 
-func resolveVideoRotationAngle(angle: Float, followsDeviceOrientation: Bool, interfaceOrientation: UIInterfaceOrientation) -> Float {
+public func resolveCallVideoRotationAngle(angle: Float, followsDeviceOrientation: Bool, interfaceOrientation: UIInterfaceOrientation) -> Float {
     if !followsDeviceOrientation {
         return angle
     }
@@ -408,7 +408,7 @@ final class VideoContainerView: HighlightTrackingButton {
             self.dragPositionAnimatorLink = nil
             return
         }
-        let videoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: videoMetrics, resolvedRotationAngle: resolveVideoRotationAngle(angle: videoMetrics.rotationAngle, followsDeviceOrientation: videoMetrics.followsDeviceOrientation, interfaceOrientation: params.interfaceOrientation), applyDragPosition: false)
+        let videoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: videoMetrics, resolvedRotationAngle: resolveCallVideoRotationAngle(angle: videoMetrics.rotationAngle, followsDeviceOrientation: videoMetrics.followsDeviceOrientation, interfaceOrientation: params.interfaceOrientation), applyDragPosition: false)
         let targetPosition = videoLayout.rotatedVideoFrame.center
         
         self.dragVelocity = self.updateVelocityUsingSpring(
@@ -558,7 +558,7 @@ final class VideoContainerView: HighlightTrackingButton {
         }
         self.appliedVideoMetrics = videoMetrics
         
-        let resolvedRotationAngle = resolveVideoRotationAngle(angle: videoMetrics.rotationAngle, followsDeviceOrientation: videoMetrics.followsDeviceOrientation, interfaceOrientation: params.interfaceOrientation)
+        let resolvedRotationAngle = resolveCallVideoRotationAngle(angle: videoMetrics.rotationAngle, followsDeviceOrientation: videoMetrics.followsDeviceOrientation, interfaceOrientation: params.interfaceOrientation)
         
         if params.isMinimized {
             self.isFillingBounds = false
@@ -588,7 +588,7 @@ final class VideoContainerView: HighlightTrackingButton {
             if let disappearingVideoLayer = self.disappearingVideoLayer {
                 self.disappearingVideoLayer = nil
                 
-                let disappearingVideoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: disappearingVideoLayer.videoMetrics, resolvedRotationAngle: resolveVideoRotationAngle(angle: disappearingVideoLayer.videoMetrics.rotationAngle, followsDeviceOrientation: disappearingVideoLayer.videoMetrics.followsDeviceOrientation, interfaceOrientation: params.interfaceOrientation), applyDragPosition: true)
+                let disappearingVideoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: disappearingVideoLayer.videoMetrics, resolvedRotationAngle: resolveCallVideoRotationAngle(angle: disappearingVideoLayer.videoMetrics.rotationAngle, followsDeviceOrientation: disappearingVideoLayer.videoMetrics.followsDeviceOrientation, interfaceOrientation: params.interfaceOrientation), applyDragPosition: true)
                 let initialDisappearingVideoSize = disappearingVideoLayout.effectiveVideoFrame.size
                 
                 if !disappearingVideoLayer.isAlphaAnimationInitiated {

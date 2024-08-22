@@ -109,13 +109,7 @@ func _internal_peerSendAsAvailablePeers(accountPeerId: PeerId, network: Network,
             return .single([])
         }
         
-        if let channel = peer as? TelegramChannel {
-            if case .group = channel.info {
-            } else if case let .broadcast(info) = channel.info {
-                if !info.flags.contains(.messagesShouldHaveProfiles) {
-                    return .single([])
-                }
-            }
+        if let _ = peer as? TelegramChannel {
         } else {
             return .single([])
         }

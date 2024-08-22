@@ -12811,6 +12811,15 @@ Sorry for the inconvenience.";
 
 "Chat.ToastStarsSent.Title_1" = "Star sent!";
 "Chat.ToastStarsSent.Title_any" = "Stars sent!";
+
+"Chat.ToastStarsSent.AnonymousTitle_1" = "Star sent anonymously!";
+"Chat.ToastStarsSent.AnonymousTitle_any" = "Stars sent anonymously!";
+
 "Chat.ToastStarsSent.Text" = "You have reacted with %1$@ %2$@.";
 "Chat.ToastStarsSent.TextStarAmount_1" = "star";
 "Chat.ToastStarsSent.TextStarAmount_any" = "stars";
+
+"Stars.Purchase.StarsReactionsNeededInfo" = "Buy Stars to send paid reactions **%@** and other channels.";
+"Chat.ToastStarsReactionsDisabled" = "Star Reactions were disabled in %@";
+
+"ChatContextMenu.SingleReactionEmojiSet" = "This reaction is from #[%@]() emoji pack.";
