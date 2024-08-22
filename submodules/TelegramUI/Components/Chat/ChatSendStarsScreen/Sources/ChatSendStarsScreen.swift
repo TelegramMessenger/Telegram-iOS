@@ -1962,7 +1962,7 @@ private final class ChatSendStarsScreenComponent: Component {
                                     return
                                 }
                                 
-                                let purchaseScreen = component.context.sharedContext.makeStarsPurchaseScreen(context: component.context, starsContext: starsContext, options: options, purpose: .transfer(peerId: component.peer.id, requiredStars: Int64(self.amount.realValue)), completion: { result in
+                                let purchaseScreen = component.context.sharedContext.makeStarsPurchaseScreen(context: component.context, starsContext: starsContext, options: options, purpose: .reactions(peerId: component.peer.id, requiredStars: Int64(self.amount.realValue)), completion: { result in
                                     let _ = result
                                     //TODO:release
                                 })

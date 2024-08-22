@@ -407,8 +407,7 @@ extension ChatControllerImpl {
                             
                             if case let .known(reactionSettings) = reactionSettings, let starsAllowed = reactionSettings.starsAllowed, !starsAllowed {
                                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer {
-                                    //TODO:localize
-                                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: "Star Reactions were disabled in \(peer.debugDisplayTitle).", actions: [
+                                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Chat_ToastStarsReactionsDisabled(peer.debugDisplayTitle).string, actions: [
                                         TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {})
                                     ]), in: .window(.root))
                                 }
@@ -431,7 +430,7 @@ extension ChatControllerImpl {
                                             return
                                         }
                                         
-                                        let purchaseScreen = strongSelf.context.sharedContext.makeStarsPurchaseScreen(context: strongSelf.context, starsContext: starsContext, options: options, purpose: .transfer(peerId: peerId, requiredStars: 1), completion: { result in
+                                        let purchaseScreen = strongSelf.context.sharedContext.makeStarsPurchaseScreen(context: strongSelf.context, starsContext: starsContext, options: options, purpose: .reactions(peerId: peerId, requiredStars: 1), completion: { result in
                                             let _ = result
                                             //TODO:release
                                         })
@@ -442,8 +441,13 @@ extension ChatControllerImpl {
                                 return
                             }
                             
-                            strongSelf.context.engine.messages.sendStarsReaction(id: message.id, count: 1, isAnonymous: nil)
-                            strongSelf.displayOrUpdateSendStarsUndo(messageId: message.id, count: 1)
+                            let _ = (strongSelf.context.engine.messages.sendStarsReaction(id: message.id, count: 1, isAnonymous: nil)
+                            |> deliverOnMainQueue).startStandalone(next: { isAnonymous in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.displayOrUpdateSendStarsUndo(messageId: message.id, count: 1, isAnonymous: isAnonymous)
+                            })
                         })
                     } else {
                         let chosenReaction: MessageReaction.Reaction = chosenUpdatedReaction.reaction

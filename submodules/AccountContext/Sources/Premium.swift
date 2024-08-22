@@ -126,6 +126,7 @@ public enum StarsPurchasePurpose: Equatable {
     case generic
     case topUp(requiredStars: Int64, purpose: String?)
     case transfer(peerId: EnginePeer.Id, requiredStars: Int64)
+    case reactions(peerId: EnginePeer.Id, requiredStars: Int64)
     case subscription(peerId: EnginePeer.Id, requiredStars: Int64, renew: Bool)
     case gift(peerId: EnginePeer.Id)
     case unlockMedia(requiredStars: Int64)

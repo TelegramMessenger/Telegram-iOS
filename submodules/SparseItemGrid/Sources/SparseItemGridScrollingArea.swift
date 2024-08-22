@@ -838,16 +838,25 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
 }
 
 public final class SparseItemGridScrollingArea: ASDisplayNode {
+    private struct ShouldBegin {
+        var shouldDelay: Bool
+        
+        init(shouldDelay: Bool) {
+            self.shouldDelay = shouldDelay
+        }
+    }
+    
     private final class DragGesture: UIGestureRecognizer {
-        private let shouldBegin: (CGPoint) -> Bool
+        private let shouldBegin: (CGPoint) -> ShouldBegin?
         private let began: () -> Void
         private let ended: () -> Void
         private let moved: (CGFloat) -> Void
 
         private var initialLocation: CGPoint?
+        private var beginDelayTimer: SwiftSignalKit.Timer?
 
         public init(
-            shouldBegin: @escaping (CGPoint) -> Bool,
+            shouldBegin: @escaping (CGPoint) -> ShouldBegin?,
             began: @escaping () -> Void,
             ended: @escaping () -> Void,
             moved: @escaping (CGFloat) -> Void
@@ -868,6 +877,9 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
 
             self.initialLocation = nil
             self.initialLocation = nil
+            
+            self.beginDelayTimer?.invalidate()
+            self.beginDelayTimer = nil
         }
 
         override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
@@ -881,10 +893,29 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
 
             if self.state == .possible {
                 if let location = touches.first?.location(in: self.view) {
-                    if self.shouldBegin(location) {
+                    if let shouldBeginValue = self.shouldBegin(location) {
                         self.initialLocation = location
-                        self.state = .began
-                        self.began()
+                        
+                        if shouldBeginValue.shouldDelay {
+                            self.state = .began
+                            if self.beginDelayTimer == nil {
+                                self.beginDelayTimer = SwiftSignalKit.Timer(timeout: 0.2, repeat: false, completion: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    
+                                    self.beginDelayTimer = nil
+                                    
+                                    if self.initialLocation != nil {
+                                        self.began()
+                                    }
+                                }, queue: .mainQueue())
+                                self.beginDelayTimer?.start()
+                            }
+                        } else {
+                            self.state = .began
+                            self.began()
+                        }
                     } else {
                         self.state = .failed
                     }
@@ -919,10 +950,20 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
             super.touchesMoved(touches, with: event)
 
-            if (self.state == .began || self.state == .changed), let initialLocation = self.initialLocation, let location = touches.first?.location(in: self.view) {
-                self.state = .changed
+            if let initialLocation = self.initialLocation, let location = touches.first?.location(in: self.view) {
                 let offset = location.y - initialLocation.y
-                self.moved(offset)
+                
+                if self.beginDelayTimer != nil {
+                    if abs(offset) > 16.0 {
+                        self.ended()
+                        self.state = .failed
+                    } else {
+                        self.initialLocation = location
+                    }
+                } else if (self.state == .began || self.state == .changed) {
+                    self.state = .changed
+                    self.moved(offset)
+                }
             }
         }
     }
@@ -951,6 +992,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     public var finishedScrolling: (() -> Void)?
     public var setContentOffset: ((CGPoint) -> Void)?
     public var openCurrentDate: (() -> Void)?
+    public var isDecelerating: (() -> Bool)?
 
     private var offsetBarTimer: SwiftSignalKit.Timer?
     private var beganAtDateIndicator = false
@@ -1002,7 +1044,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         let dragGesture = DragGesture(
             shouldBegin: { [weak self] point in
                 guard let strongSelf = self else {
-                    return false
+                    return nil
                 }
 
                 if strongSelf.dateIndicator.frame.contains(point) {
@@ -1011,7 +1053,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                     strongSelf.beganAtDateIndicator = false
                 }
 
-                return true
+                return ShouldBegin(shouldDelay: strongSelf.isDecelerating?() ?? false)
             },
             began: { [weak self] in
                 guard let strongSelf = self else {
@@ -1115,6 +1157,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     }
 
     private var currentDate: (String, Int32)?
+    private var isScrolling: Bool = false
     
     public func update(
         containerSize: CGSize,
@@ -1130,6 +1173,8 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         self.theme = theme
         let previousDate = self.currentDate
         self.currentDate = date
+        
+        self.isScrolling = isScrolling
 
         if self.dateIndicator.alpha.isZero {
             let transition: ContainedViewLayoutTransition = .immediate

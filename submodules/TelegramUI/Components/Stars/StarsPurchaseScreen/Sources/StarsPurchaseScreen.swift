@@ -230,6 +230,8 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                 textString = strings.Stars_Purchase_GiftInfo(component.peers.first?.value.compactDisplayTitle ?? "").string
             case .transfer:
                 textString = strings.Stars_Purchase_StarsNeededInfo(component.peers.first?.value.compactDisplayTitle ?? "").string
+            case .reactions:
+                textString = strings.Stars_Purchase_StarsReactionsNeededInfo(component.peers.first?.value.compactDisplayTitle ?? "").string
             case let .subscription(_, _, renew):
                 textString = renew ? strings.Stars_Purchase_SubscriptionRenewInfo(component.peers.first?.value.compactDisplayTitle ?? "").string : strings.Stars_Purchase_SubscriptionInfo(component.peers.first?.value.compactDisplayTitle ?? "").string
             case .unlockMedia:
@@ -837,7 +839,7 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                 titleText = strings.Stars_Purchase_StarsNeeded(Int32(requiredStars))
             case .gift:
                 titleText = strings.Stars_Purchase_GiftStars
-            case let .transfer(_, requiredStars), let .subscription(_, requiredStars, _), let .unlockMedia(requiredStars):
+            case let .transfer(_, requiredStars), let .reactions(_, requiredStars), let .subscription(_, requiredStars, _), let .unlockMedia(requiredStars):
                 titleText = strings.Stars_Purchase_StarsNeeded(Int32(requiredStars))
             }
             
@@ -1230,6 +1232,8 @@ private extension StarsPurchasePurpose {
             return [peerId]
         case let .transfer(peerId, _):
             return [peerId]
+        case let .reactions(peerId, _):
+            return [peerId]
         case let .subscription(peerId, _, _):
             return [peerId]
         default:
@@ -1242,6 +1246,8 @@ private extension StarsPurchasePurpose {
         case let .topUp(requiredStars, _):
             return requiredStars
         case let .transfer(_, requiredStars):
+            return requiredStars
+        case let .reactions(_, requiredStars):
             return requiredStars
         case let .subscription(_, requiredStars, _):
             return requiredStars

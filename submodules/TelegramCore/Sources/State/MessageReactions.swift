@@ -172,9 +172,10 @@ public func updateMessageReactionsInteractively(account: Account, messageIds: [M
     |> ignoreValues
 }
 
-public func sendStarsReactionsInteractively(account: Account, messageId: MessageId, count: Int, isAnonymous: Bool?) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> Void in
+func _internal_sendStarsReactionsInteractively(account: Account, messageId: MessageId, count: Int, isAnonymous: Bool?) -> Signal<Bool, NoError> {
+    return account.postbox.transaction { transaction -> Bool in
         transaction.setPendingMessageAction(type: .sendStarsReaction, id: messageId, action: SendStarsReactionsAction(randomId: Int64.random(in: Int64.min ... Int64.max)))
+        var resolvedIsAnonymousValue = false
         transaction.updateMessage(messageId, update: { currentMessage in
             var storeForwardInfo: StoreMessageForwardInfo?
             if let forwardInfo = currentMessage.forwardInfo {
@@ -206,10 +207,13 @@ public func sendStarsReactionsInteractively(account: Account, messageId: Message
                 
             attributes.append(PendingStarsReactionsMessageAttribute(accountPeerId: account.peerId, count: mappedCount, isAnonymous: resolvedIsAnonymous))
             
+            resolvedIsAnonymousValue = resolvedIsAnonymous
+            
             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
         })
+        
+        return resolvedIsAnonymousValue
     }
-    |> ignoreValues
 }
 
 func cancelPendingSendStarsReactionInteractively(account: Account, messageId: MessageId) -> Signal<Never, NoError> {

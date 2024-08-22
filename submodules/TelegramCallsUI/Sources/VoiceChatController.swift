@@ -245,11 +245,13 @@ public protocol VoiceChatController: ViewController {
     var call: PresentationGroupCall { get }
     var currentOverlayController: VoiceChatOverlayController? { get }
     var parentNavigationController: NavigationController? { get set }
+    var onViewDidAppear: (() -> Void)? { get set }
+    var onViewDidDisappear: (() -> Void)? { get set }
     
     func dismiss(closing: Bool, manual: Bool)
 }
 
-public final class VoiceChatControllerImpl: ViewController, VoiceChatController {
+final class VoiceChatControllerImpl: ViewController, VoiceChatController {
     enum DisplayMode {
         case modal(isExpanded: Bool, isFilled: Bool)
         case fullscreen(controlsHidden: Bool)
@@ -3927,7 +3929,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
             transition.updateAlpha(node: self.bottomGradientNode, alpha: self.isLandscape ? 0.0 : 1.0)
             
             var isTablet = false
-            let videoFrame: CGRect
+            var videoFrame: CGRect
             let videoContainerFrame: CGRect
             if case .regular = layout.metrics.widthClass {
                 isTablet = true
@@ -3941,6 +3943,11 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 videoFrame = CGRect(x: 0.0, y: videoTopEdgeY, width: isLandscape ? max(0.0, layout.size.width - layout.safeInsets.right - 92.0) : layout.size.width, height: videoBottomEdgeY - videoTopEdgeY)
                 videoContainerFrame = CGRect(origin: CGPoint(), size: layout.size)
             }
+            
+            if videoFrame.width < 0.0 || videoFrame.height < 0.0 || !videoFrame.width.isNormal || !videoFrame.height.isNormal {
+                videoFrame = CGRect()
+            }
+            
             transition.updateFrame(node: self.mainStageContainerNode, frame: videoContainerFrame)
             transition.updateFrame(node: self.mainStageBackgroundNode, frame: videoFrame)
             if !self.mainStageNode.animating {
@@ -7087,5 +7094,13 @@ private final class VoiceChatContextReferenceContentSource: ContextReferenceCont
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+public func makeVoiceChatController(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall) -> VoiceChatController {
+    if sharedContext.immediateExperimentalUISettings.callV2 {
+        return VideoChatScreenV2Impl(call: call)
+    } else {
+        return VoiceChatControllerImpl(sharedContext: sharedContext, accountContext: accountContext, call: call)
     }
 }

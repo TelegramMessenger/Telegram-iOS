@@ -317,7 +317,7 @@ extension ChatControllerImpl {
                         |> mapToSignal { result -> Signal<ContextController.Tip?, NoError> in
                             if case let .result(info, items, _) = result, let presentationContext = presentationContext {
                                 let tip: ContextController.Tip = .animatedEmoji(
-                                    text: presentationData.strings.ChatContextMenu_ReactionEmojiSetSingle(info.title).string,
+                                    text: presentationData.strings.ChatContextMenu_SingleReactionEmojiSet(info.title).string,
                                     arguments: TextNodeWithEntities.Arguments(
                                         context: context,
                                         cache: presentationContext.animationCache,
@@ -398,8 +398,7 @@ extension ChatControllerImpl {
                     
                     if case let .known(reactionSettings) = reactionSettings, let starsAllowed = reactionSettings.starsAllowed, !starsAllowed {
                         if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer {
-                            //TODO:localize
-                            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: "Star Reactions were disabled in \(peer.debugDisplayTitle).", actions: [
+                            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.Chat_ToastStarsReactionsDisabled(peer.debugDisplayTitle).string, actions: [
                                 TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: {})
                             ]), in: .window(.root))
                         }
@@ -486,14 +485,14 @@ extension ChatControllerImpl {
                         }
                     }
                     
-                    let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount), isAnonymous: isAnonymous)
-                    self.displayOrUpdateSendStarsUndo(messageId: message.id, count: Int(amount))
+                    let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount), isAnonymous: isAnonymous).startStandalone()
+                    self.displayOrUpdateSendStarsUndo(messageId: message.id, count: Int(amount), isAnonymous: isAnonymous)
                 }))
             })
         })
     }
     
-    func displayOrUpdateSendStarsUndo(messageId: EngineMessage.Id, count: Int) {
+    func displayOrUpdateSendStarsUndo(messageId: EngineMessage.Id, count: Int, isAnonymous: Bool) {
         if self.currentSendStarsUndoMessageId != messageId {
             if let current = self.currentSendStarsUndoController {
                 self.currentSendStarsUndoController = nil
@@ -507,7 +506,12 @@ extension ChatControllerImpl {
             self.currentSendStarsUndoCount = count
         }
         
-        let title: String = self.presentationData.strings.Chat_ToastStarsSent_Title(Int32(self.currentSendStarsUndoCount))
+        let title: String
+        if isAnonymous {
+            title = self.presentationData.strings.Chat_ToastStarsSent_AnonymousTitle(Int32(self.currentSendStarsUndoCount))
+        } else {
+            title = self.presentationData.strings.Chat_ToastStarsSent_Title(Int32(self.currentSendStarsUndoCount))
+        }
         
         let textItems = extractAnimatedTextString(string: self.presentationData.strings.Chat_ToastStarsSent_Text("", ""), id: "text", mapping: [
             0: .number(self.currentSendStarsUndoCount, minDigits: 1),
