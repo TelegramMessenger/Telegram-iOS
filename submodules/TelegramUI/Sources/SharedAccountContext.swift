@@ -906,22 +906,29 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                 strongSelf.groupCallController = groupCallController
                                 navigationController.pushViewController(groupCallController)
                             } else {
-                                strongSelf.hasGroupCallOnScreenPromise.set(true)
-                                let groupCallController = makeVoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
-                                groupCallController.onViewDidAppear = { [weak self] in
-                                    if let strongSelf = self {
-                                        strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                let _ = (makeVoiceChatControllerInitialData(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
+                                |> deliverOnMainQueue).start(next: { [weak strongSelf, weak navigationController] initialData in
+                                    guard let strongSelf, let navigationController else {
+                                        return
                                     }
-                                }
-                                groupCallController.onViewDidDisappear = { [weak self] in
-                                    if let strongSelf = self {
-                                        strongSelf.hasGroupCallOnScreenPromise.set(false)
+                                    
+                                    strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                    let groupCallController = makeVoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call, initialData: initialData)
+                                    groupCallController.onViewDidAppear = { [weak strongSelf] in
+                                        if let strongSelf {
+                                            strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                        }
                                     }
-                                }
-                                groupCallController.navigationPresentation = .flatModal
-                                groupCallController.parentNavigationController = navigationController
-                                strongSelf.groupCallController = groupCallController
-                                navigationController.pushViewController(groupCallController)
+                                    groupCallController.onViewDidDisappear = { [weak strongSelf] in
+                                        if let strongSelf {
+                                            strongSelf.hasGroupCallOnScreenPromise.set(false)
+                                        }
+                                    }
+                                    groupCallController.navigationPresentation = .flatModal
+                                    groupCallController.parentNavigationController = navigationController
+                                    strongSelf.groupCallController = groupCallController
+                                    navigationController.pushViewController(groupCallController)
+                                })
                             }
                                 
                             strongSelf.hasOngoingCall.set(true)
