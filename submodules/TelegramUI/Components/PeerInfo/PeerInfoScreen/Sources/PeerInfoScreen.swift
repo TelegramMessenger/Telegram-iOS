@@ -5966,6 +5966,20 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             })))
                         }
                         
+                        var addedPrivacy = false
+                        if let privacyPolicyUrl = (data.cachedData as? CachedUserData)?.botInfo?.privacyPolicyUrl {
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_BotPrivacy, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                
+                                guard let self else {
+                                    return
+                                }
+                                self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: privacyPolicyUrl, forceExternal: false, presentationData: self.presentationData, navigationController: self.controller?.navigationController as? NavigationController, dismissInput: {})
+                            })))
+                            addedPrivacy = true
+                        }
                         if let cachedData = data.cachedData as? CachedUserData, let botInfo = cachedData.botInfo {
                             for command in botInfo.commands {
                                 if command.text == "settings" {
@@ -5982,7 +5996,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                         f(.dismissWithoutContent)
                                         self?.performBotCommand(command: .help)
                                     })))
-                                } else if command.text == "privacy" {
+                                } else if command.text == "privacy" && !addedPrivacy {
                                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_BotPrivacy, icon: { theme in
                                         generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor)
                                     }, action: { [weak self] _, f in

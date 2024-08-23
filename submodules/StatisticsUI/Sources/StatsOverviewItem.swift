@@ -873,7 +873,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.presentationData,
                     presentationStringsFormattedNumber(Int32(stats.balances.availableBalance), item.presentationData.dateTimeFormat.groupingSeparator),
                     item.presentationData.strings.Monetization_StarsProceeds_Available,
-                    (stats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.availableBalance, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
+                    (stats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.availableBalance, divide: false, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                     .stars
                 )
                 
@@ -883,7 +883,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.presentationData,
                     presentationStringsFormattedNumber(Int32(stats.balances.currentBalance), item.presentationData.dateTimeFormat.groupingSeparator),
                     item.presentationData.strings.Monetization_StarsProceeds_Current,
-                    (stats.balances.currentBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.currentBalance, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
+                    (stats.balances.currentBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.currentBalance, divide: false, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                     .stars
                 )
                 
@@ -893,7 +893,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.presentationData,
                     presentationStringsFormattedNumber(Int32(stats.balances.overallRevenue), item.presentationData.dateTimeFormat.groupingSeparator),
                     item.presentationData.strings.Monetization_StarsProceeds_Total,
-                    (stats.balances.overallRevenue == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.overallRevenue, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
+                    (stats.balances.overallRevenue == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.overallRevenue, divide: false, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                     .stars
                 )
                 
