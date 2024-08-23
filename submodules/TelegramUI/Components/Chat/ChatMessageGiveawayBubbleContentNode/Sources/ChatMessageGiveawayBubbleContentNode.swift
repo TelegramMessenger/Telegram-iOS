@@ -259,22 +259,35 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
             if badgeTextColor.distance(to: accentColor) < 1 {
                 badgeTextColor = incoming ? item.presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill.first! : item.presentationData.theme.theme.chat.message.outgoing.bubble.withoutWallpaper.fill.first!
             }
-            
-            var updatedBadgeImage: UIImage?
-            if themeUpdated {
-                updatedBadgeImage = generateStretchableFilledCircleImage(diameter: 21.0, color: accentColor, strokeColor: backgroundColor, strokeWidth: 1.0 + UIScreenPixel, backgroundColor: nil)
-            }
-            
+                       
+            var isStars = false
             let badgeText: String
             if let giveaway {
-                badgeText = "X\(giveaway.quantity)"
+                switch giveaway.prize {
+                case .premium:
+                    badgeText = "X\(giveaway.quantity)"
+                case let .stars(amount):
+                    badgeText = "\(amount)"
+                    isStars = true
+                }
             } else if let giveawayResults {
-                badgeText = "X\(giveawayResults.winnersCount)"
+                switch giveawayResults.prize {
+                case .premium:
+                    badgeText = "X\(giveawayResults.winnersCount)"
+                case let .stars(amount):
+                    badgeText = "\(amount)"
+                    isStars = true
+                }
             } else {
                 badgeText = ""
             }
             let badgeString = NSAttributedString(string: badgeText, font: Font.with(size: 10.0, design: .round , weight: .bold, traits: .monospacedNumbers), textColor: badgeTextColor)
-                        
+             
+            var updatedBadgeImage: UIImage?
+            if themeUpdated {
+                updatedBadgeImage = generateStretchableFilledCircleImage(diameter: 21.0, color: isStars ? UIColor(rgb: 0xffaf0a) : accentColor, strokeColor: backgroundColor, strokeWidth: 1.0 + UIScreenPixel, backgroundColor: nil)
+            }
+            
             let prizeTitleText: String
             if let giveawayResults {
                 if giveawayResults.winnersCount > 1 {
@@ -316,17 +329,33 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                     subscriptionsString = subscriptionsString.replacingOccurrences(of: "**\(giveaway.quantity)** ", with: "")
                 }
                 
-                prizeTextString = parseMarkdownIntoAttributedString(item.presentationData.strings.Chat_Giveaway_Message_PrizeText(
-                    subscriptionsString,
-                    item.presentationData.strings.Chat_Giveaway_Message_Months(giveaway.months)
-                ).string, attributes: MarkdownAttributes(
-                    body: MarkdownAttributeSet(font: textFont, textColor: textColor),
-                    bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
-                    link: MarkdownAttributeSet(font: textFont, textColor: textColor),
-                    linkAttribute: { url in
-                        return ("URL", url)
-                    }
-                ), textAlignment: .center)
+                switch giveaway.prize {
+                case let .premium(months):
+                    prizeTextString = parseMarkdownIntoAttributedString(item.presentationData.strings.Chat_Giveaway_Message_PrizeText(
+                        subscriptionsString,
+                        item.presentationData.strings.Chat_Giveaway_Message_Months(months)
+                    ).string, attributes: MarkdownAttributes(
+                        body: MarkdownAttributeSet(font: textFont, textColor: textColor),
+                        bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
+                        link: MarkdownAttributeSet(font: textFont, textColor: textColor),
+                        linkAttribute: { url in
+                            return ("URL", url)
+                        }
+                    ), textAlignment: .center)
+                case let .stars(amount):
+                    let starsString = item.presentationData.strings.Chat_Giveaway_Message_Stars_Stars(Int32(amount))
+                    prizeTextString = parseMarkdownIntoAttributedString(item.presentationData.strings.Chat_Giveaway_Message_Stars_PrizeText(
+                        starsString,
+                        item.presentationData.strings.Chat_Giveaway_Message_Stars_Winners(giveaway.quantity)
+                    ).string, attributes: MarkdownAttributes(
+                        body: MarkdownAttributeSet(font: textFont, textColor: textColor),
+                        bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
+                        link: MarkdownAttributeSet(font: textFont, textColor: textColor),
+                        linkAttribute: { url in
+                            return ("URL", url)
+                        }
+                    ), textAlignment: .center)
+                }
             } else if let giveawayResults {
                 prizeTextString = parseMarkdownIntoAttributedString(item.presentationData.strings.Chat_Giveaway_Message_WinnersSelectedText(giveawayResults.winnersCount), attributes: MarkdownAttributes(
                     body: MarkdownAttributeSet(font: textFont, textColor: textColor),
@@ -548,7 +577,21 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                 let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, nil, nil, false, item.presentationData.strings.Chat_Giveaway_Message_LearnMore.uppercased(), titleColor, false, true)
                 
                 let animationName: String
-                let months = giveaway?.months ?? 0
+                var months: Int32 = 0
+                if let giveaway {
+                    switch giveaway.prize {
+                    case let .premium(monthsValue):
+                        months = monthsValue
+                    case let .stars(amount):
+                        if amount <= 1000 {
+                            months = 3
+                        } else if amount < 2500 {
+                            months = 6
+                        } else {
+                            months = 12
+                        }
+                    }
+                }
                 if let _ = giveaway {
                     switch months {
                     case 12:

@@ -19,6 +19,8 @@ public final class GiftOptionItem: ListViewItem, ItemListItem {
             case green
             case red
             case violet
+            case premium
+            case stars
         }
         
         case peer(EnginePeer)
@@ -62,10 +64,11 @@ public final class GiftOptionItem: ListViewItem, ItemListItem {
     let label: Label?
     let badge: String?
     let isSelected: Bool?
+    let stars: Int64?
     public let sectionId: ItemListSectionId
     let action: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, context: AccountContext, icon: Icon? = nil, title: String, titleFont: Font = .regular, titleBadge: String? = nil, subtitle: String?, subtitleFont: SubtitleFont = .regular, subtitleActive: Bool = false, label: Label? = nil, badge: String? = nil, isSelected: Bool? = nil, sectionId: ItemListSectionId, action: (() -> Void)?) {
+    public init(presentationData: ItemListPresentationData, context: AccountContext, icon: Icon? = nil, title: String, titleFont: Font = .regular, titleBadge: String? = nil, subtitle: String?, subtitleFont: SubtitleFont = .regular, subtitleActive: Bool = false, label: Label? = nil, badge: String? = nil, isSelected: Bool? = nil, stars: Int64? = nil, sectionId: ItemListSectionId, action: (() -> Void)?) {
         self.presentationData = presentationData
         self.icon = icon
         self.context = context
@@ -78,6 +81,7 @@ public final class GiftOptionItem: ListViewItem, ItemListItem {
         self.label = label
         self.badge = badge
         self.isSelected = isSelected
+        self.stars = stars
         self.sectionId = sectionId
         self.action = action
     }
@@ -148,6 +152,7 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
     private let titleBadge = ComponentView<Empty>()
     private let statusNode: TextNode
     private var statusArrowNode: ASImageNode?
+    private var starsIconNode: ASImageNode?
     
     private var labelBackgroundNode: ASImageNode?
     private let labelNode: TextNode
@@ -387,6 +392,7 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
                             }
                             
                             let colors: [UIColor]
+                            var diagonal = false
                             switch color {
                             case .blue:
                                 colors = [UIColor(rgb: 0x2a9ef1), UIColor(rgb: 0x71d4fc)]
@@ -396,9 +402,21 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
                                 colors = [UIColor(rgb: 0xff516a), UIColor(rgb: 0xff885e)]
                             case .violet:
                                 colors = [UIColor(rgb: 0xd569ec), UIColor(rgb: 0xe0a2f3)]
+                            case .premium:
+                                colors = [
+                                    UIColor(rgb: 0x6b93ff),
+                                    UIColor(rgb: 0x6b93ff),
+                                    UIColor(rgb: 0x8d77ff),
+                                    UIColor(rgb: 0xb56eec),
+                                    UIColor(rgb: 0xb56eec)
+                                ]
+                                diagonal = true
+                            case .stars:
+                                colors = [UIColor(rgb: 0xdd6f12), UIColor(rgb: 0xfec80f)]
+                                diagonal = true
                             }
                             if iconNode.image == nil || iconUpdated {
-                                iconNode.image = generateAvatarImage(size: iconSize, icon: generateTintedImage(image: UIImage(bundleImageName: name), color: .white), iconScale: 1.0, cornerRadius: 20.0, color: .blue, customColors: colors)
+                                iconNode.image = generateAvatarImage(size: iconSize, icon: generateTintedImage(image: UIImage(bundleImageName: name), color: .white), iconScale: 1.0, cornerRadius: 20.0, color: .blue, customColors: colors, diagonal: diagonal)
                             }
                             iconNode.frame = iconFrame
                         }
@@ -436,6 +454,26 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
                         transition.updateFrame(node: selectableControlNode, frame: selectableControlFrame, completion: { [weak selectableControlNode] _ in
                             selectableControlNode?.removeFromSupernode()
                         })
+                    }
+                    
+                    var titleOffset: CGFloat = 0.0
+                    if let stars = item.stars {
+                        let starsIconNode: ASImageNode
+                        if let current = strongSelf.starsIconNode {
+                            starsIconNode = current
+                        } else {
+                            starsIconNode = ASImageNode()
+                            starsIconNode.displaysAsynchronously = false
+                            strongSelf.addSubnode(starsIconNode)
+                            strongSelf.starsIconNode = starsIconNode
+                            
+                            starsIconNode.image = generateStarsIcon(amount: stars)
+                        }
+                        
+                        if let icon = starsIconNode.image {
+                            starsIconNode.frame = CGRect(origin: CGPoint(x: leftInset + editingOffset + avatarInset, y: 10.0), size: icon.size)
+                            titleOffset += icon.size.width + 3.0
+                        }
                     }
                                         
                     let _ = titleApply()
@@ -494,7 +532,7 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         titleVerticalOriginY = floorToScreenPixels((contentSize.height - titleLayout.size.height) / 2.0)
                     }
-                    let titleFrame = CGRect(origin: CGPoint(x: leftInset + editingOffset + avatarInset, y: titleVerticalOriginY), size: titleLayout.size)
+                    let titleFrame = CGRect(origin: CGPoint(x: leftInset + editingOffset + avatarInset + titleOffset, y: titleVerticalOriginY), size: titleLayout.size)
                     transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame)
                     
                     var badgeOffset: CGFloat = 0.0
@@ -677,4 +715,78 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
+}
+
+private func generateStarsIcon(amount: Int64) -> UIImage {
+    let stars: [Int64: Int] = [
+        15: 1,
+        75: 2,
+        250: 3,
+        500: 4,
+        1000: 5,
+        2500: 6,
+
+        25: 1,
+        50: 1,
+        100: 2,
+        150: 2,
+        350: 3,
+        750: 4,
+        1500: 5,
+        
+        5000: 6,
+        10000: 6,
+        25000: 7,
+        35000: 7
+    ]
+    let count = stars[amount] ?? 1
+    
+    let image = generateGradientTintedImage(
+        image: UIImage(bundleImageName: "Peer Info/PremiumIcon"),
+        colors: [
+            UIColor(rgb: 0xfed219),
+            UIColor(rgb: 0xf3a103),
+            UIColor(rgb: 0xe78104)
+        ],
+        direction: .diagonal
+    )!
+    
+    let imageSize = CGSize(width: 20.0, height: 20.0)
+    let partImage = generateImage(imageSize, contextGenerator: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        if let cgImage = image.cgImage {
+            context.draw(cgImage, in: CGRect(origin: .zero, size: size), byTiling: false)
+            context.saveGState()
+            context.clip(to: CGRect(origin: .zero, size: size).insetBy(dx: -1.0, dy: -1.0).offsetBy(dx: -2.0, dy: 0.0), mask: cgImage)
+            
+            context.setBlendMode(.clear)
+            context.setFillColor(UIColor.clear.cgColor)
+            context.fill(CGRect(origin: .zero, size: size))
+            context.restoreGState()
+            
+            context.setBlendMode(.clear)
+            context.setFillColor(UIColor.clear.cgColor)
+            context.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width / 2.0, height: size.height - 4.0)))
+        }
+    })!
+    
+    let spacing: CGFloat = (3.0 - UIScreenPixel)
+    let totalWidth = 20.0 + spacing * CGFloat(count - 1)
+    
+    return generateImage(CGSize(width: ceil(totalWidth), height: 20.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        
+        var originX = floorToScreenPixels((size.width - totalWidth) / 2.0)
+        
+        let mainImage = UIImage(bundleImageName: "Premium/Stars/StarLarge")
+        if let cgImage = mainImage?.cgImage, let partCGImage = partImage.cgImage {
+            context.draw(cgImage, in: CGRect(origin: CGPoint(x: originX, y: 0.0), size: imageSize).insetBy(dx: -1.5, dy: -1.5), byTiling: false)
+            originX += spacing + UIScreenPixel
+            
+            for _ in 0 ..< count - 1 {
+                context.draw(partCGImage, in: CGRect(origin: CGPoint(x: originX, y: -UIScreenPixel), size: imageSize).insetBy(dx: -1.0 + UIScreenPixel, dy: -1.0 + UIScreenPixel), byTiling: false)
+                originX += spacing
+            }
+        }
+    })!
 }

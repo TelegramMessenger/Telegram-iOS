@@ -715,6 +715,7 @@ public extension Api {
         case inputStorePaymentPremiumGiveaway(flags: Int32, boostPeer: Api.InputPeer, additionalPeers: [Api.InputPeer]?, countriesIso2: [String]?, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64)
         case inputStorePaymentPremiumSubscription(flags: Int32)
         case inputStorePaymentStarsGift(userId: Api.InputUser, stars: Int64, currency: String, amount: Int64)
+        case inputStorePaymentStarsGiveaway(flags: Int32, stars: Int64, boostPeer: Api.InputPeer, additionalPeers: [Api.InputPeer]?, countriesIso2: [String]?, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64, users: Int32)
         case inputStorePaymentStarsTopup(stars: Int64, currency: String, amount: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -778,6 +779,30 @@ public extension Api {
                     serializeString(currency, buffer: buffer, boxed: false)
                     serializeInt64(amount, buffer: buffer, boxed: false)
                     break
+                case .inputStorePaymentStarsGiveaway(let flags, let stars, let boostPeer, let additionalPeers, let countriesIso2, let prizeDescription, let randomId, let untilDate, let currency, let amount, let users):
+                    if boxed {
+                        buffer.appendInt32(1964968186)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(stars, buffer: buffer, boxed: false)
+                    boostPeer.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(additionalPeers!.count))
+                    for item in additionalPeers! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 2) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(countriesIso2!.count))
+                    for item in countriesIso2! {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeString(prizeDescription!, buffer: buffer, boxed: false)}
+                    serializeInt64(randomId, buffer: buffer, boxed: false)
+                    serializeInt32(untilDate, buffer: buffer, boxed: false)
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(amount, buffer: buffer, boxed: false)
+                    serializeInt32(users, buffer: buffer, boxed: false)
+                    break
                 case .inputStorePaymentStarsTopup(let stars, let currency, let amount):
                     if boxed {
                         buffer.appendInt32(-572715178)
@@ -801,6 +826,8 @@ public extension Api {
                 return ("inputStorePaymentPremiumSubscription", [("flags", flags as Any)])
                 case .inputStorePaymentStarsGift(let userId, let stars, let currency, let amount):
                 return ("inputStorePaymentStarsGift", [("userId", userId as Any), ("stars", stars as Any), ("currency", currency as Any), ("amount", amount as Any)])
+                case .inputStorePaymentStarsGiveaway(let flags, let stars, let boostPeer, let additionalPeers, let countriesIso2, let prizeDescription, let randomId, let untilDate, let currency, let amount, let users):
+                return ("inputStorePaymentStarsGiveaway", [("flags", flags as Any), ("stars", stars as Any), ("boostPeer", boostPeer as Any), ("additionalPeers", additionalPeers as Any), ("countriesIso2", countriesIso2 as Any), ("prizeDescription", prizeDescription as Any), ("randomId", randomId as Any), ("untilDate", untilDate as Any), ("currency", currency as Any), ("amount", amount as Any), ("users", users as Any)])
                 case .inputStorePaymentStarsTopup(let stars, let currency, let amount):
                 return ("inputStorePaymentStarsTopup", [("stars", stars as Any), ("currency", currency as Any), ("amount", amount as Any)])
     }
@@ -926,6 +953,53 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_inputStorePaymentStarsGiveaway(_ reader: BufferReader) -> InputStorePaymentPurpose? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            var _4: [Api.InputPeer]?
+            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
+            } }
+            var _5: [String]?
+            if Int(_1!) & Int(1 << 2) != 0 {if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            } }
+            var _6: String?
+            if Int(_1!) & Int(1 << 4) != 0 {_6 = parseString(reader) }
+            var _7: Int64?
+            _7 = reader.readInt64()
+            var _8: Int32?
+            _8 = reader.readInt32()
+            var _9: String?
+            _9 = parseString(reader)
+            var _10: Int64?
+            _10 = reader.readInt64()
+            var _11: Int32?
+            _11 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = _9 != nil
+            let _c10 = _10 != nil
+            let _c11 = _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.InputStorePaymentPurpose.inputStorePaymentStarsGiveaway(flags: _1!, stars: _2!, boostPeer: _3!, additionalPeers: _4, countriesIso2: _5, prizeDescription: _6, randomId: _7!, untilDate: _8!, currency: _9!, amount: _10!, users: _11!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_inputStorePaymentStarsTopup(_ reader: BufferReader) -> InputStorePaymentPurpose? {
             var _1: Int64?
             _1 = reader.readInt64()
@@ -998,78 +1072,6 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.InputTheme.inputThemeSlug(slug: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputThemeSettings: TypeConstructorDescription {
-        case inputThemeSettings(flags: Int32, baseTheme: Api.BaseTheme, accentColor: Int32, outboxAccentColor: Int32?, messageColors: [Int32]?, wallpaper: Api.InputWallPaper?, wallpaperSettings: Api.WallPaperSettings?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputThemeSettings(let flags, let baseTheme, let accentColor, let outboxAccentColor, let messageColors, let wallpaper, let wallpaperSettings):
-                    if boxed {
-                        buffer.appendInt32(-1881255857)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    baseTheme.serialize(buffer, true)
-                    serializeInt32(accentColor, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(outboxAccentColor!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(messageColors!.count))
-                    for item in messageColors! {
-                        serializeInt32(item, buffer: buffer, boxed: false)
-                    }}
-                    if Int(flags) & Int(1 << 1) != 0 {wallpaper!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 1) != 0 {wallpaperSettings!.serialize(buffer, true)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputThemeSettings(let flags, let baseTheme, let accentColor, let outboxAccentColor, let messageColors, let wallpaper, let wallpaperSettings):
-                return ("inputThemeSettings", [("flags", flags as Any), ("baseTheme", baseTheme as Any), ("accentColor", accentColor as Any), ("outboxAccentColor", outboxAccentColor as Any), ("messageColors", messageColors as Any), ("wallpaper", wallpaper as Any), ("wallpaperSettings", wallpaperSettings as Any)])
-    }
-    }
-    
-        public static func parse_inputThemeSettings(_ reader: BufferReader) -> InputThemeSettings? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.BaseTheme?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.BaseTheme
-            }
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            if Int(_1!) & Int(1 << 3) != 0 {_4 = reader.readInt32() }
-            var _5: [Int32]?
-            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
-            } }
-            var _6: Api.InputWallPaper?
-            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.InputWallPaper
-            } }
-            var _7: Api.WallPaperSettings?
-            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.WallPaperSettings
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.InputThemeSettings.inputThemeSettings(flags: _1!, baseTheme: _2!, accentColor: _3!, outboxAccentColor: _4, messageColors: _5, wallpaper: _6, wallpaperSettings: _7)
             }
             else {
                 return nil

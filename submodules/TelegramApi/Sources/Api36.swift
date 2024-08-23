@@ -6426,6 +6426,21 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func getPaidReactionPrivacy() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1193563562)
+                    
+                    return (FunctionDescription(name: "messages.getPaidReactionPrivacy", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func getPeerDialogs(peers: [Api.InputDialogPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.PeerDialogs>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-462373635)
@@ -7935,15 +7950,16 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func sendPaidReaction(flags: Int32, peer: Api.InputPeer, msgId: Int32, count: Int32, randomId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func sendPaidReaction(flags: Int32, peer: Api.InputPeer, msgId: Int32, count: Int32, randomId: Int64, `private`: Api.Bool?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(633929278)
+                    buffer.appendInt32(-1646877061)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
                     serializeInt64(randomId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.sendPaidReaction", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("count", String(describing: count)), ("randomId", String(describing: randomId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 0) != 0 {`private`!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "messages.sendPaidReaction", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("count", String(describing: count)), ("randomId", String(describing: randomId)), ("`private`", String(describing: `private`))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -8958,6 +8974,21 @@ public extension Api.functions.payments {
                         var result: [Api.StarsGiftOption]?
                         if let _ = reader.readInt32() {
                             result = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarsGiftOption.self)
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
+                static func getStarsGiveawayOptions() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.StarsGiveawayOption]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1122042562)
+                    
+                    return (FunctionDescription(name: "payments.getStarsGiveawayOptions", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.StarsGiveawayOption]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.StarsGiveawayOption]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarsGiveawayOption.self)
                         }
                         return result
                     })

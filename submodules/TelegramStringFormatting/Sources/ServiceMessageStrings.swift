@@ -966,13 +966,18 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 } else {
                     attributedString = NSAttributedString(string: strings.Notification_GiftLink, font: titleFont, textColor: primaryTextColor)
                 }
-            case .giveawayLaunched:
+            case let .giveawayLaunched(stars):
                 var isGroup = false
                 let messagePeer = message.peers[message.id.peerId]
                 if let channel = messagePeer as? TelegramChannel, case .group = channel.info {
                     isGroup = true
                 }
-                let resultTitleString = isGroup ? strings.Notification_GiveawayStartedGroup(compactAuthorName) : strings.Notification_GiveawayStarted(compactAuthorName)
+                let resultTitleString: PresentationStrings.FormattedString
+                if let stars {
+                    resultTitleString = isGroup ? strings.Notification_GiveawayStartedStarsGroup(compactAuthorName, "\(stars)") : strings.Notification_GiveawayStartedStars(compactAuthorName, "\(stars)")
+                } else {
+                    resultTitleString = isGroup ? strings.Notification_GiveawayStartedGroup(compactAuthorName) : strings.Notification_GiveawayStarted(compactAuthorName)
+                }
                 attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
             case .joinedChannel:
                 attributedString = NSAttributedString(string: strings.Notification_ChannelJoinedByYou, font: titleBoldFont, textColor: primaryTextColor)
@@ -1035,6 +1040,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     mutableString.addAttribute(NSAttributedString.Key(TelegramTextAttributes.PeerMention), value: TelegramPeerMention(peerId: peerId, mention: ""), range: NSMakeRange(range.location, (peerName as NSString).length))
                 }
                 attributedString = mutableString
+            case .prizeStars:
+                attributedString = NSAttributedString(string: strings.Notification_StarsPrize, font: titleFont, textColor: primaryTextColor)
             case .unknown:
                 attributedString = nil
             }

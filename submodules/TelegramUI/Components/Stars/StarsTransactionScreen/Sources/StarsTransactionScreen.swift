@@ -97,6 +97,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 peerIds.append(receipt.botPaymentId)
             case let .gift(message):
                 peerIds.append(message.id.peerId)
+                if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .prizeStars(_, _, boostPeerId, _, _) = action.action, let boostPeerId {
+                    peerIds.append(boostPeerId)
+                }
             case let .subscription(subscription):
                 peerIds.append(subscription.peer.id)
             case let .importer(_, _, importer, _):
@@ -213,6 +216,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var isSubscriptionFee = false
             var isCancelled = false
             var isReaction = false
+            var giveawayMessageId: MessageId?
             
             var delayedCloseOnOpenPeer = true
             switch subject {
@@ -424,25 +428,41 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 delayedCloseOnOpenPeer = false
             case let .gift(message):
                 let incoming = message.flags.contains(.Incoming)
-                titleText = incoming ? strings.Stars_Gift_Received_Title : strings.Stars_Gift_Sent_Title
+
                 let peerName = state.peerMap[message.id.peerId]?.compactDisplayTitle ?? ""
                 descriptionText = incoming ? strings.Stars_Gift_Received_Text : strings.Stars_Gift_Sent_Text(peerName).string
-                if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .giftStars(_, _, countValue, _, _, _) = action.action {
-                    count = countValue
-                    if !incoming {
-                        countIsGeneric = true
+                if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction {
+                    if case let .giftStars(_, _, countValue, _, _, _) = action.action {
+                        titleText = incoming ? strings.Stars_Gift_Received_Title : strings.Stars_Gift_Sent_Title
+                        
+                        count = countValue
+                        if !incoming {
+                            countIsGeneric = true
+                        }
+                        countOnTop = true
+                        transactionId = nil
+                        if message.id.peerId.id._internalGetInt64Value() == 777000 {
+                            toPeer = nil
+                        } else {
+                            toPeer = state.peerMap[message.id.peerId]
+                        }
+                    } else if case let .prizeStars(countValue, _, boostPeerId, _, giveawayMessageIdValue) = action.action {
+                        titleText = "Received Prize"
+                        
+                        count = countValue
+                        countOnTop = true
+                        transactionId = nil//transactionIdValue
+                        giveawayMessageId = giveawayMessageIdValue
+                        if let boostPeerId {
+                            toPeer = state.peerMap[boostPeerId]
+                        }
+                    } else {
+                        fatalError()
                     }
-                    countOnTop = true
-                    transactionId = nil
                 } else {
                     fatalError()
                 }
                 date = message.timestamp
-                if message.id.peerId.id._internalGetInt64Value() == 777000 {
-                    toPeer = nil
-                } else {
-                    toPeer = state.peerMap[message.id.peerId]
-                }
                 isGift = true
                 delayedCloseOnOpenPeer = false
             }
@@ -619,6 +639,34 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     title: strings.Stars_Transaction_Via,
                     component: AnyComponent(
                         MultilineTextComponent(text: .plain(NSAttributedString(string: via, font: tableFont, textColor: tableTextColor)))
+                    )
+                ))
+            }
+            
+            if let giveawayMessageId {
+                tableItems.append(.init(
+                    id: "gift",
+                    title: "Gift",
+                    component: AnyComponent(
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: "\(count) Stars", font: tableFont, textColor: tableTextColor)))
+                    )
+                ))
+                
+                tableItems.append(.init(
+                    id: "reason",
+                    title: "Reason",
+                    component: AnyComponent(
+                        Button(
+                            content: AnyComponent(
+                                MultilineTextComponent(text: .plain(NSAttributedString(string: "Giveaway", font: tableFont, textColor: tableLinkColor)))
+                            ),
+                            action: {
+                                component.openMessage(giveawayMessageId)
+                                Queue.mainQueue().after(1.0, {
+                                    component.cancel(false)
+                                })
+                            }
+                        )
                     )
                 ))
             }

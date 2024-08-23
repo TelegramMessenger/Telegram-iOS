@@ -145,6 +145,130 @@ func _internal_starsGiftOptions(account: Account, peerId: EnginePeer.Id?) -> Sig
     }
 }
 
+
+
+public struct StarsGiveawayOption: Equatable, Codable {
+    enum CodingKeys: String, CodingKey {
+        case count
+        case currency
+        case amount
+        case yearlyBoosts
+        case storeProductId
+        case winners
+        case isExtended
+        case isDefault
+    }
+    
+    public struct Winners: Equatable, Codable {
+        enum CodingKeys: String, CodingKey {
+            case users
+            case starsPerUser
+            case isDefault
+        }
+        
+        public let users: Int32
+        public let starsPerUser: Int64
+        public let isDefault: Bool
+        
+        public init(users: Int32, starsPerUser: Int64, isDefault: Bool) {
+            self.users = users
+            self.starsPerUser = starsPerUser
+            self.isDefault = isDefault
+        }
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.users = try container.decode(Int32.self, forKey: .users)
+            self.starsPerUser = try container.decode(Int64.self, forKey: .starsPerUser)
+            self.isDefault = try container.decodeIfPresent(Bool.self, forKey: .isDefault) ?? false
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.users, forKey: .users)
+            try container.encode(self.starsPerUser, forKey: .starsPerUser)
+            try container.encode(self.isDefault, forKey: .isDefault)
+        }
+    }
+    
+    public let count: Int64
+    public let yearlyBoosts: Int32
+    public let currency: String
+    public let amount: Int64
+    public let storeProductId: String?
+    public let winners: [Winners]
+    public let isExtended: Bool
+    public let isDefault: Bool
+    
+    public init(count: Int64, yearlyBoosts: Int32, storeProductId: String?, currency: String, amount: Int64, winners: [Winners], isExtended: Bool, isDefault: Bool) {
+        self.count = count
+        self.yearlyBoosts = yearlyBoosts
+        self.currency = currency
+        self.amount = amount
+        self.storeProductId = storeProductId
+        self.winners = winners
+        self.isExtended = isExtended
+        self.isDefault = isDefault
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.count = try container.decode(Int64.self, forKey: .count)
+        self.yearlyBoosts = try container.decode(Int32.self, forKey: .yearlyBoosts)
+        self.storeProductId = try container.decodeIfPresent(String.self, forKey: .storeProductId)
+        self.currency = try container.decode(String.self, forKey: .currency)
+        self.amount = try container.decode(Int64.self, forKey: .amount)
+        self.winners = try container.decode([StarsGiveawayOption.Winners].self, forKey: .winners)
+        self.isExtended = try container.decodeIfPresent(Bool.self, forKey: .isExtended) ?? false
+        self.isDefault = try container.decodeIfPresent(Bool.self, forKey: .isDefault) ?? false
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.count, forKey: .count)
+        try container.encode(self.yearlyBoosts, forKey: .yearlyBoosts)
+        try container.encodeIfPresent(self.storeProductId, forKey: .storeProductId)
+        try container.encode(self.currency, forKey: .currency)
+        try container.encode(self.amount, forKey: .amount)
+        try container.encode(self.winners, forKey: .winners)
+        try container.encode(self.isExtended, forKey: .isExtended)
+        try container.encode(self.isDefault, forKey: .isDefault)
+    }
+}
+
+extension StarsGiveawayOption.Winners {
+    init(apiStarsGiveawayWinnersOption: Api.StarsGiveawayWinnersOption) {
+        switch apiStarsGiveawayWinnersOption {
+        case let .starsGiveawayWinnersOption(flags, users, starsPerUser):
+            self.init(users: users, starsPerUser: starsPerUser, isDefault: (flags & (1 << 0)) != 0)
+        }
+    }
+}
+
+extension StarsGiveawayOption {
+    init(apiStarsGiveawayOption: Api.StarsGiveawayOption) {
+        switch apiStarsGiveawayOption {
+        case let .starsGiveawayOption(flags, stars, yearlyBoosts, storeProduct, currency, amount, winners):
+            self.init(count: stars, yearlyBoosts: yearlyBoosts, storeProductId: storeProduct, currency: currency, amount: amount, winners: winners.map { StarsGiveawayOption.Winners(apiStarsGiveawayWinnersOption: $0) }, isExtended: (flags & (1 << 0)) != 0, isDefault: (flags & (1 << 1)) != 0)
+        }
+    }
+}
+
+func _internal_starsGiveawayOptions(account: Account) -> Signal<[StarsGiveawayOption], NoError> {
+    return account.network.request(Api.functions.payments.getStarsGiveawayOptions())
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<[Api.StarsGiveawayOption]?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { results -> Signal<[StarsGiveawayOption], NoError> in
+        if let results = results {
+            return .single(results.map { StarsGiveawayOption(apiStarsGiveawayOption: $0) })
+        } else {
+            return .single([])
+        }
+    }
+}
+
 struct InternalStarsStatus {
     let balance: Int64
     let subscriptionsMissingBalance: Int64?
@@ -344,7 +468,7 @@ private final class StarsContextImpl {
         }
         var transactions = state.transactions
         if addTransaction {
-            transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, media: [], subscriptionPeriod: nil), at: 0)
+            transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, giveawayMessageId: nil, media: [], subscriptionPeriod: nil), at: 0)
         }
         
         self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: max(0, state.balance + balance), subscriptions: state.subscriptions, canLoadMoreSubscriptions: state.canLoadMoreSubscriptions, transactions: transactions, canLoadMoreTransactions: state.canLoadMoreTransactions, isLoading: state.isLoading))
@@ -366,9 +490,11 @@ private final class StarsContextImpl {
 private extension StarsContext.State.Transaction {
     init?(apiTransaction: Api.StarsTransaction, peerId: EnginePeer.Id?, transaction: Transaction) {
         switch apiTransaction {
-        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId, extendedMedia, subscriptionPeriod):
+        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId, extendedMedia, subscriptionPeriod, giveawayPostId):
             let parsedPeer: StarsContext.State.Transaction.Peer
             var paidMessageId: MessageId?
+            var giveawayMessageId: MessageId?
+           
             switch transactionPeer {
             case .starsTransactionPeerAppStore:
                 parsedPeer = .appStore
@@ -394,6 +520,9 @@ private extension StarsContext.State.Transaction {
                         paidMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: messageId)
                     }
                 }
+                if let giveawayPostId {
+                    giveawayMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: giveawayPostId)
+                }
             }
             
             var flags: Flags = []
@@ -415,7 +544,7 @@ private extension StarsContext.State.Transaction {
             
             let media = extendedMedia.flatMap({ $0.compactMap { textMediaAndExpirationTimerFromApiMedia($0, PeerId(0)).media } }) ?? []
             let _ = subscriptionPeriod
-            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId, media: media, subscriptionPeriod: subscriptionPeriod)
+            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId, giveawayMessageId: giveawayMessageId, media: media, subscriptionPeriod: subscriptionPeriod)
         }
     }
 }
@@ -481,6 +610,7 @@ public final class StarsContext {
             public let transactionDate: Int32?
             public let transactionUrl: String?
             public let paidMessageId: MessageId?
+            public let giveawayMessageId: MessageId?
             public let media: [Media]
             public let subscriptionPeriod: Int32?
             
@@ -496,6 +626,7 @@ public final class StarsContext {
                 transactionDate: Int32?,
                 transactionUrl: String?,
                 paidMessageId: MessageId?,
+                giveawayMessageId: MessageId?,
                 media: [Media],
                 subscriptionPeriod: Int32?
             ) {
@@ -510,6 +641,7 @@ public final class StarsContext {
                 self.transactionDate = transactionDate
                 self.transactionUrl = transactionUrl
                 self.paidMessageId = paidMessageId
+                self.giveawayMessageId = giveawayMessageId
                 self.media = media
                 self.subscriptionPeriod = subscriptionPeriod
             }
@@ -546,6 +678,9 @@ public final class StarsContext {
                     return false
                 }
                 if lhs.paidMessageId != rhs.paidMessageId {
+                    return false
+                }
+                if lhs.giveawayMessageId != rhs.giveawayMessageId {
                     return false
                 }
                 if !areMediaArraysEqual(lhs.media, rhs.media) {

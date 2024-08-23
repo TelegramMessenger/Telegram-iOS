@@ -79,12 +79,13 @@ public enum PremiumGiveawayInfo: Equatable {
     
     public enum ResultStatus: Equatable {
         case notWon
-        case won(slug: String)
+        case wonPremium(slug: String)
+        case wonStars(stars: Int64)
         case refunded
     }
     
     case ongoing(startDate: Int32, status: OngoingStatus)
-    case finished(status: ResultStatus, startDate: Int32, finishDate: Int32, winnersCount: Int32, activatedCount: Int32)
+    case finished(status: ResultStatus, startDate: Int32, finishDate: Int32, winnersCount: Int32, activatedCount: Int32?)
 }
 
 public struct PrepaidGiveaway: Equatable {
@@ -122,12 +123,14 @@ func _internal_getPremiumGiveawayInfo(account: Account, peerId: EnginePeer.Id, m
                     } else {
                         return .ongoing(startDate: startDate, status: .notQualified)
                     }
-                case let .giveawayInfoResults(flags, startDate, giftCodeSlug, finishDate, winnersCount, activatedCount):
+                case let .giveawayInfoResults(flags, startDate, giftCodeSlug, stars, finishDate, winnersCount, activatedCount):
                     let status: PremiumGiveawayInfo.ResultStatus
                     if (flags & (1 << 1)) != 0 {
                         status = .refunded
+                    } else if let stars {
+                        status = .wonStars(stars: stars)
                     } else if let giftCodeSlug = giftCodeSlug {
-                        status = .won(slug: giftCodeSlug)
+                        status = .wonPremium(slug: giftCodeSlug)
                     } else {
                         status = .notWon
                     }

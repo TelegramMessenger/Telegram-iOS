@@ -1189,6 +1189,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case let .giftCode(slug, _, _, _, _, _, _, _, _):
                             strongSelf.openResolved(result: .premiumGiftCode(slug: slug), sourceMessageId: message.id, progress: params.progress)
                             return true
+                        case .prizeStars:
+                            let controller = strongSelf.context.sharedContext.makeStarsGiftScreen(context: strongSelf.context, message: EngineMessage(message))
+                            strongSelf.push(controller)
+                            return true
                         case let .suggestedProfilePhoto(image):
                             strongSelf.chatDisplayNode.dismissInput()
                             if let image = image {

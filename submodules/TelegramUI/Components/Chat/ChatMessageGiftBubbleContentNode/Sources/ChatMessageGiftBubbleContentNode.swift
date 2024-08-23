@@ -268,6 +268,20 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             title = item.presentationData.strings.Notification_StarsGift_Title(Int32(count))
                             text = incoming ? item.presentationData.strings.Notification_StarsGift_Subtitle : item.presentationData.strings.Notification_StarsGift_SubtitleYou(peerName).string
+                        case let .prizeStars(count, _, channelId, _, _):
+                            if count <= 1000 {
+                                months = 3
+                            } else if count < 2500 {
+                                months = 6
+                            } else {
+                                months = 12
+                            }
+                            var peerName = ""
+                            if let channelId, let channel = item.message.peers[channelId] {
+                                peerName = EnginePeer(channel).compactDisplayTitle
+                            }
+                            title = "Congratulations!" //""item.presentationData.strings.Notification_StarsGift_Title(Int32(count))
+                            text = "You won a prize in a giveaway organized by **\(peerName)**.\n\nYour prize is **\(count) Stars**." //item.presentationData.strings.Notification_StarsGift_Subtitle
                         case let .giftCode(_, fromGiveaway, unclaimed, channelId, monthsValue, _, _, _, _):
                             if channelId == nil {
                                 months = monthsValue

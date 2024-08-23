@@ -19,6 +19,7 @@ public enum AppStoreTransactionPurpose {
     case giveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64)
     case stars(count: Int64, currency: String, amount: Int64)
     case starsGift(peerId: EnginePeer.Id, count: Int64, currency: String, amount: Int64)
+    case starsGiveaway(stars: Int64, boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64, users: Int32)
 }
 
 private func apiInputStorePaymentPurpose(account: Account, purpose: AppStoreTransactionPurpose) -> Signal<Api.InputStorePaymentPurpose, NoError> {
@@ -101,6 +102,36 @@ private func apiInputStorePaymentPurpose(account: Account, purpose: AppStoreTran
             }
             return .single(.inputStorePaymentStarsGift(userId: inputUser, stars: count, currency: currency, amount: amount))
         }
+    case let .starsGiveaway(stars, boostPeerId, additionalPeerIds, countries, onlyNewSubscribers, showWinners, prizeDescription, randomId, untilDate, currency, amount, users):
+        return account.postbox.transaction { transaction -> Signal<Api.InputStorePaymentPurpose, NoError> in
+            guard let peer = transaction.getPeer(boostPeerId), let apiBoostPeer = apiInputPeer(peer) else {
+                return .complete()
+            }
+            var flags: Int32 = 0
+            if onlyNewSubscribers {
+                flags |= (1 << 0)
+            }
+            if showWinners {
+                flags |= (1 << 3)
+            }
+            var additionalPeers: [Api.InputPeer] = []
+            if !additionalPeerIds.isEmpty {
+                flags |= (1 << 1)
+                for peerId in additionalPeerIds {
+                    if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                        additionalPeers.append(inputPeer)
+                    }
+                }
+            }
+            if !countries.isEmpty {
+                flags |= (1 << 2)
+            }
+            if let _ = prizeDescription {
+                flags |= (1 << 4)
+            }
+            return .single(.inputStorePaymentStarsGiveaway(flags: flags, stars: stars, boostPeer: apiBoostPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount, users: users))
+        }
+        |> switchToLatest
     }
 }
 
