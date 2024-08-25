@@ -645,8 +645,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             
             if let giveawayMessageId {
                 tableItems.append(.init(
-                    id: "gift",
-                    title: "Gift",
+                    id: "prize",
+                    title: "Prize",
                     component: AnyComponent(
                         MultilineTextComponent(text: .plain(NSAttributedString(string: "\(count) Stars", font: tableFont, textColor: tableTextColor)))
                     )
