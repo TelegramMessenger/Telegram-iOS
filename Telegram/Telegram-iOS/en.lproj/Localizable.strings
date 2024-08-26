@@ -12844,3 +12844,10 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Info.Stars.EndedIntro" = "The giveaway was sponsored by the admins of **%1$@**, who acquired %2$@ for its followers.";
 "Chat.Giveaway.Info.Stars.Group.OngoingIntro" = "The giveaway is sponsored by the admins of **%1$@**, who acquired %2$@ for its members.";
 "Chat.Giveaway.Info.Stars.Group.EndedIntro" = "The giveaway was sponsored by the admins of **%1$@**, who acquired %2$@ for its members.";
+
+"Stars.Transaction.Giveaway.Title" = "Received Prize";
+"Stars.Transaction.Giveaway.Reason" = "Reason";
+"Stars.Transaction.Giveaway.Giveaway" = "Giveaway";
+"Stars.Transaction.Giveaway.Prize" = "Prize";
+"Stars.Transaction.Giveaway.Stars_1" = "%@ Star";
+"Stars.Transaction.Giveaway.Stars_any" = "%@ Stars";

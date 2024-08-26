@@ -1576,7 +1576,7 @@ private func monetizationEntries(
     
     if canViewRevenue {
         entries.append(.adsTonBalanceTitle(presentationData.theme, presentationData.strings.Monetization_TonBalanceTitle))
-        entries.append(.adsTonBalance(presentationData.theme, data, isCreator && data.balances.availableBalance > 0, monetizationConfiguration.withdrawalAvailable))
+        entries.append(.adsTonBalance(presentationData.theme, data, isCreator && data.balances.availableBalance > 0, data.balances.withdrawEnabled))
     
         if isCreator {
             let withdrawalInfoText: String
