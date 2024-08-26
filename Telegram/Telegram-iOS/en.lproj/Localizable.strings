@@ -12264,6 +12264,7 @@ Sorry for the inconvenience.";
 "Stars.Intro.Incoming" = "Incoming";
 "Stars.Intro.Outgoing" = "Outgoing";
 
+"Stars.Intro.Transaction.GiveawayPrize" = "Giveaway Prize";
 "Stars.Intro.Transaction.MediaPurchase" = "Media Purchase";
 "Stars.Intro.Transaction.AppleTopUp.Title" = "Stars Top-Up";
 "Stars.Intro.Transaction.AppleTopUp.Subtitle" = "via App Store";
@@ -12823,3 +12824,16 @@ Sorry for the inconvenience.";
 "Chat.ToastStarsReactionsDisabled" = "Star Reactions were disabled in %@";
 
 "ChatContextMenu.SingleReactionEmojiSet" = "This reaction is from #[%@]() emoji pack.";
+
+"Channel.AdminLog.MessageParticipantSubscriptionExtended" = "%@ extended their subscription";
+
+"Notification.StarsPrize" = "You received a gift";
+
+"Notification.GiveawayStartedStars" = "%1$@ just started a giveaway of %2$@ Telegram Stars for its followers.";
+"Notification.GiveawayStartedStarsGroup" = "%1$@ just started a giveaway of %2$@ Telegram Stars for its members.";
+
+"Chat.Giveaway.Message.Stars.PrizeText" = "%1$@ will be distributed %2$@.";
+"Chat.Giveaway.Message.Stars.Stars_1" = "**%@** Stars";
+"Chat.Giveaway.Message.Stars.Stars_any" = "**%@** Stars";
+"Chat.Giveaway.Message.Stars.Winners_1" = "to **%@** winner";
+"Chat.Giveaway.Message.Stars.Winners_any" = "among **%@** winners";

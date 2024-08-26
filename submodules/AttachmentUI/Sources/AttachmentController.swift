@@ -215,8 +215,11 @@ public protocol AttachmentMediaPickerContext {
     
     var loadingProgress: Signal<CGFloat?, NoError> { get }
     var mainButtonState: Signal<AttachmentMainButtonState?, NoError> { get }
+    var secondaryButtonState: Signal<AttachmentMainButtonState?, NoError> { get }
+    var bottomPanelBackgroundColor: Signal<UIColor?, NoError> { get }
     
     func mainButtonAction()
+    func secondaryButtonAction()
     
     func setCaption(_ caption: NSAttributedString)
     func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?)
@@ -261,6 +264,14 @@ public extension AttachmentMediaPickerContext {
     var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
         return .single(nil)
     }
+    
+    var secondaryButtonState: Signal<AttachmentMainButtonState?, NoError> {
+        return .single(nil)
+    }
+    
+    var bottomPanelBackgroundColor: Signal<UIColor?, NoError> {
+        return .single(nil)
+    }
             
     func setCaption(_ caption: NSAttributedString) {
     }
@@ -272,6 +283,9 @@ public extension AttachmentMediaPickerContext {
     }
     
     func mainButtonAction() {
+    }
+    
+    func secondaryButtonAction() {
     }
 }
 
@@ -364,6 +378,8 @@ public class AttachmentController: ViewController, MinimizableController {
         
         private let loadingProgressDisposable = MetaDisposable()
         private let mainButtonStateDisposable = MetaDisposable()
+        private let secondaryButtonStateDisposable = MetaDisposable()
+        private let bottomPanelBackgroundColorDisposable = MetaDisposable()
         
         private var selectionCount: Int = 0
         
@@ -408,11 +424,44 @@ public class AttachmentController: ViewController, MinimizableController {
                             })
                         }
                     }))
+                    self.secondaryButtonStateDisposable.set((mediaPickerContext.secondaryButtonState
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] mainButtonState in
+                        if let strongSelf = self {
+                            let _ = (strongSelf.panel.animatingTransitionPromise.get()
+                            |> filter { value in
+                                return !value
+                            }
+                            |> take(1)).startStandalone(next: { [weak self] _ in
+                                if let strongSelf = self {
+                                    strongSelf.panel.updateSecondaryButtonState(mainButtonState)
+                                    if let layout = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
+                                    }
+                                }
+                            })
+                        }
+                    }))
+                    self.bottomPanelBackgroundColorDisposable.set((mediaPickerContext.bottomPanelBackgroundColor
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] color in
+                        if let strongSelf = self {
+                            let _ = (strongSelf.panel.animatingTransitionPromise.get()
+                            |> filter { value in
+                                return !value
+                            }
+                            |> take(1)).startStandalone(next: { [weak self] _ in
+                                if let strongSelf = self {
+                                    strongSelf.panel.updateCustomBottomPanelBackgroundColor(color)
+                                }
+                            })
+                        }
+                    }))
                 } else {
                     self.updateSelectionCount(0)
                     self.mediaSelectionCountDisposable.set(nil)
                     self.loadingProgressDisposable.set(nil)
                     self.mainButtonStateDisposable.set(nil)
+                    self.secondaryButtonStateDisposable.set(nil)
+                    self.bottomPanelBackgroundColorDisposable.set(nil)
                 }
             }
         }
@@ -590,9 +639,15 @@ public class AttachmentController: ViewController, MinimizableController {
                 }
             }
             
-            self.panel.mainButtonPressed = { [weak self] in
+            self.panel.onMainButtonPressed = { [weak self] in
                 if let strongSelf = self {
                     strongSelf.mediaPickerContext?.mainButtonAction()
+                }
+            }
+            
+            self.panel.onSecondaryButtonPressed = { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.mediaPickerContext?.secondaryButtonAction()
                 }
             }
             
@@ -628,6 +683,8 @@ public class AttachmentController: ViewController, MinimizableController {
             self.mediaSelectionCountDisposable.dispose()
             self.loadingProgressDisposable.dispose()
             self.mainButtonStateDisposable.dispose()
+            self.secondaryButtonStateDisposable.dispose()
+            self.bottomPanelBackgroundColorDisposable.dispose()
         }
         
         private var inputContainerHeight: CGFloat?
@@ -985,10 +1042,7 @@ public class AttachmentController: ViewController, MinimizableController {
             
             var containerLayout = layout
             let containerRect: CGRect
-            var isCompact = true
             if case .regular = layout.metrics.widthClass {
-                isCompact = false
-                
                 let availableHeight = layout.size.height - (layout.inputHeight ?? 0.0) - 60.0
                 
                 let size = CGSize(width: 390.0, height: min(620.0, availableHeight))
@@ -1055,7 +1109,7 @@ public class AttachmentController: ViewController, MinimizableController {
                         
             var containerInsets = containerLayout.intrinsicInsets
             var hasPanel = false
-            let previousHasButton = self.hasButton
+//            let previousHasButton = self.hasButton
             let hasButton = self.panel.isButtonVisible && !self.isDismissing
             self.hasButton = hasButton
             if let controller = self.controller, controller.buttons.count > 1 || controller.hasTextInput {
@@ -1066,22 +1120,9 @@ public class AttachmentController: ViewController, MinimizableController {
             }
                             
             let isEffecitvelyCollapsedUpdated = (self.selectionCount > 0) != (self.panel.isSelecting)
-            var panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, elevateProgress: !hasPanel && !hasButton, transition: transition)
-            if fromMenu && !hasButton, let inputContainerHeight = self.inputContainerHeight {
-               panelHeight = inputContainerHeight
-            }
+            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, elevateProgress: !hasPanel && !hasButton, transition: transition)
             if hasPanel || hasButton {
                 containerInsets.bottom = panelHeight
-            }
-            
-            var transitioning = false
-            if fromMenu && previousHasButton != hasButton, let (_, _, getTransition) = controller.getInputContainerNode(), let inputTransition = getTransition() {
-                if hasButton {
-                    self.panel.animateTransitionIn(inputTransition: inputTransition, transition: transition)
-                } else {
-                    self.panel.animateTransitionOut(inputTransition: inputTransition, dismissed: false, transition: transition)
-                }
-                transitioning = true
             }
                         
             var panelTransition = transition
@@ -1089,30 +1130,11 @@ public class AttachmentController: ViewController, MinimizableController {
                 panelTransition = .animated(duration: 0.25, curve: .easeInOut)
             }
             var panelY = containerRect.height - panelHeight
-            if fromMenu && isCompact {
-                panelY = layout.size.height - panelHeight
-            } else if !hasPanel && !hasButton {
+            if !hasPanel && !hasButton {
                 panelY = containerRect.height
             }
-            
-            if fromMenu && isCompact {
-                if hasButton {
-                    self.panel.isHidden = false
-                    self.inputContainerNode?.isHidden = true
-                } else if !transitioning {
-                    if !self.panel.animatingTransition {
-                        self.panel.isHidden = true
-                        self.inputContainerNode?.isHidden = false
-                    }
-                }
-            }
-            
-            panelTransition.updateFrame(node: self.panel, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: containerRect.width, height: panelHeight)), completion: { [weak self] finished in
-                if transitioning && finished, isCompact {
-                    self?.panel.isHidden = !hasButton
-                    self?.inputContainerNode?.isHidden = hasButton
-                }
-            })
+                        
+            panelTransition.updateFrame(node: self.panel, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: containerRect.width, height: panelHeight)))
             
             var shadowFrame = containerRect.insetBy(dx: -60.0, dy: -60.0)
             shadowFrame.size.height -= 12.0

@@ -284,28 +284,6 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             size.height += 21.0
             
             context.component.externalState.descriptionHeight = text.size.height
-
-            let stars: [Int64: Int] = [
-                15: 1,
-                75: 2,
-                250: 3,
-                500: 4,
-                1000: 5,
-                2500: 6,
-
-                25: 1,
-                50: 1,
-                100: 2,
-                150: 2,
-                350: 3,
-                750: 4,
-                1500: 5,
-                
-                5000: 6,
-                10000: 6,
-                25000: 7,
-                35000: 7
-            ]
             
             let externalStateUpdated = context.component.stateUpdated
             
@@ -369,7 +347,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                                 title: titleComponent,
                                 contentInsets: UIEdgeInsets(top: 12.0, left: -6.0, bottom: 12.0, right: 0.0),
                                 leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(StarsIconComponent(
-                                    count: stars[product.count] ?? 1
+                                    amount: product.count
                                 ))), true),
                                 accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
@@ -1131,7 +1109,30 @@ public final class StarsPurchaseScreen: ViewControllerComponentContainer {
     }
 }
 
-func generateStarsIcon(count: Int) -> UIImage {
+func generateStarsIcon(amount: Int64) -> UIImage {
+    let stars: [Int64: Int] = [
+        15: 1,
+        75: 2,
+        250: 3,
+        500: 4,
+        1000: 5,
+        2500: 6,
+
+        25: 1,
+        50: 1,
+        100: 2,
+        150: 2,
+        350: 3,
+        750: 4,
+        1500: 5,
+        
+        5000: 6,
+        10000: 6,
+        25000: 7,
+        35000: 7
+    ]
+    let count = stars[amount] ?? 1
+    
     let image = generateGradientTintedImage(
         image: UIImage(bundleImageName: "Peer Info/PremiumIcon"),
         colors: [
@@ -1183,16 +1184,16 @@ func generateStarsIcon(count: Int) -> UIImage {
 }
 
 final class StarsIconComponent: CombinedComponent {
-    let count: Int
+    let amount: Int64
     
     init(
-        count: Int
+        amount: Int64
     ) {
-        self.count = count
+        self.amount = amount
     }
     
     static func ==(lhs: StarsIconComponent, rhs: StarsIconComponent) -> Bool {
-        if lhs.count != rhs.count {
+        if lhs.amount != rhs.amount {
             return false
         }
         return true
@@ -1201,11 +1202,11 @@ final class StarsIconComponent: CombinedComponent {
     static var body: Body {
         let icon = Child(Image.self)
         
-        var image: (UIImage, Int)?
+        var image: (UIImage, Int64)?
         
         return { context in
-            if image == nil || image?.1 != context.component.count {
-                image = (generateStarsIcon(count: context.component.count), context.component.count)
+            if image == nil || image?.1 != context.component.amount {
+                image = (generateStarsIcon(amount: context.component.amount), context.component.amount)
             }
             
             let iconSize = CGSize(width: image!.0.size.width, height: 20.0)

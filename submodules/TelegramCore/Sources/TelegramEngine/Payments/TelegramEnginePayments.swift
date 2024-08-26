@@ -74,6 +74,10 @@ public extension TelegramEngine {
             return _internal_starsGiftOptions(account: self.account, peerId: peerId)
         }
         
+        public func starsGiveawayOptions() -> Signal<[StarsGiveawayOption], NoError> {
+            return _internal_starsGiveawayOptions(account: self.account)
+        }
+        
         public func peerStarsContext() -> StarsContext {
             return StarsContext(account: self.account)
         }
