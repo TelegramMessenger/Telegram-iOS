@@ -395,6 +395,7 @@ public extension Api {
         case channelAdminLogEventActionParticipantJoinByRequest(invite: Api.ExportedChatInvite, approvedBy: Int64)
         case channelAdminLogEventActionParticipantLeave
         case channelAdminLogEventActionParticipantMute(participant: Api.GroupCallParticipant)
+        case channelAdminLogEventActionParticipantSubExtend(prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant)
         case channelAdminLogEventActionParticipantToggleAdmin(prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant)
         case channelAdminLogEventActionParticipantToggleBan(prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant)
         case channelAdminLogEventActionParticipantUnmute(participant: Api.GroupCallParticipant)
@@ -631,6 +632,13 @@ public extension Api {
                     }
                     participant.serialize(buffer, true)
                     break
+                case .channelAdminLogEventActionParticipantSubExtend(let prevParticipant, let newParticipant):
+                    if boxed {
+                        buffer.appendInt32(1684286899)
+                    }
+                    prevParticipant.serialize(buffer, true)
+                    newParticipant.serialize(buffer, true)
+                    break
                 case .channelAdminLogEventActionParticipantToggleAdmin(let prevParticipant, let newParticipant):
                     if boxed {
                         buffer.appendInt32(-714643696)
@@ -811,6 +819,8 @@ public extension Api {
                 return ("channelAdminLogEventActionParticipantLeave", [])
                 case .channelAdminLogEventActionParticipantMute(let participant):
                 return ("channelAdminLogEventActionParticipantMute", [("participant", participant as Any)])
+                case .channelAdminLogEventActionParticipantSubExtend(let prevParticipant, let newParticipant):
+                return ("channelAdminLogEventActionParticipantSubExtend", [("prevParticipant", prevParticipant as Any), ("newParticipant", newParticipant as Any)])
                 case .channelAdminLogEventActionParticipantToggleAdmin(let prevParticipant, let newParticipant):
                 return ("channelAdminLogEventActionParticipantToggleAdmin", [("prevParticipant", prevParticipant as Any), ("newParticipant", newParticipant as Any)])
                 case .channelAdminLogEventActionParticipantToggleBan(let prevParticipant, let newParticipant):
@@ -1309,6 +1319,24 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantMute(participant: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionParticipantSubExtend(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.ChannelParticipant?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
+            }
+            var _2: Api.ChannelParticipant?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantSubExtend(prevParticipant: _1!, newParticipant: _2!)
             }
             else {
                 return nil

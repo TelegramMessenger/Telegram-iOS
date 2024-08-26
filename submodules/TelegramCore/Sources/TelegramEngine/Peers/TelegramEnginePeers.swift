@@ -1623,9 +1623,9 @@ public extension TelegramEngine {
             }
         }
         
-        public func setStarsReactionDefaultToPrivate(peerId: EnginePeer.Id, isPrivate: Bool) {
+        public func setStarsReactionDefaultToPrivate(isPrivate: Bool) {
             let _ = self.account.postbox.transaction({ transaction in
-                _internal_setStarsReactionDefaultToPrivate(peerId: peerId, isPrivate: isPrivate, transaction: transaction)
+                _internal_setStarsReactionDefaultToPrivate(isPrivate: isPrivate, transaction: transaction)
             }).startStandalone()
         }
     }

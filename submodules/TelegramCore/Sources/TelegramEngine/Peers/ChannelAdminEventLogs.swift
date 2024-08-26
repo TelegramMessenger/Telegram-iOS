@@ -449,6 +449,9 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                     action = .changeEmojiPack(prev: StickerPackReference(apiInputSet: prevStickerset), new: StickerPackReference(apiInputSet: newStickerset))
                                 case let .channelAdminLogEventActionToggleSignatureProfiles(newValue):
                                     action = .toggleSignatureProfiles(boolFromApiValue(newValue))
+                                case .channelAdminLogEventActionParticipantSubExtend:
+                                    //TODO:release
+                                    action = nil
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

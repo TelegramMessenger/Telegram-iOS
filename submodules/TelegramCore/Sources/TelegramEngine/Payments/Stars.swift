@@ -366,7 +366,7 @@ private final class StarsContextImpl {
 private extension StarsContext.State.Transaction {
     init?(apiTransaction: Api.StarsTransaction, peerId: EnginePeer.Id?, transaction: Transaction) {
         switch apiTransaction {
-        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId, extendedMedia, subscriptionPeriod):
+        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId, extendedMedia, subscriptionPeriod, _):
             let parsedPeer: StarsContext.State.Transaction.Peer
             var paidMessageId: MessageId?
             switch transactionPeer {

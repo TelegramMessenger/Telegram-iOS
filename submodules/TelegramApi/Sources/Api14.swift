@@ -1000,6 +1000,7 @@ public extension Api {
         case messageActionPaymentSentMe(flags: Int32, currency: String, totalAmount: Int64, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, charge: Api.PaymentCharge)
         case messageActionPhoneCall(flags: Int32, callId: Int64, reason: Api.PhoneCallDiscardReason?, duration: Int32?)
         case messageActionPinMessage
+        case messageActionPrizeStars(flags: Int32, stars: Int64, transactionId: String?, boostPeer: Api.Peer?, giveawayMsgId: Int32?)
         case messageActionRequestedPeer(buttonId: Int32, peers: [Api.Peer])
         case messageActionRequestedPeerSentMe(buttonId: Int32, peers: [Api.RequestedPeer])
         case messageActionScreenshotTaken
@@ -1267,6 +1268,16 @@ public extension Api {
                     }
                     
                     break
+                case .messageActionPrizeStars(let flags, let stars, let transactionId, let boostPeer, let giveawayMsgId):
+                    if boxed {
+                        buffer.appendInt32(-1177995427)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(stars, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(transactionId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {boostPeer!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(giveawayMsgId!, buffer: buffer, boxed: false)}
+                    break
                 case .messageActionRequestedPeer(let buttonId, let peers):
                     if boxed {
                         buffer.appendInt32(827428507)
@@ -1444,6 +1455,8 @@ public extension Api {
                 return ("messageActionPhoneCall", [("flags", flags as Any), ("callId", callId as Any), ("reason", reason as Any), ("duration", duration as Any)])
                 case .messageActionPinMessage:
                 return ("messageActionPinMessage", [])
+                case .messageActionPrizeStars(let flags, let stars, let transactionId, let boostPeer, let giveawayMsgId):
+                return ("messageActionPrizeStars", [("flags", flags as Any), ("stars", stars as Any), ("transactionId", transactionId as Any), ("boostPeer", boostPeer as Any), ("giveawayMsgId", giveawayMsgId as Any)])
                 case .messageActionRequestedPeer(let buttonId, let peers):
                 return ("messageActionRequestedPeer", [("buttonId", buttonId as Any), ("peers", peers as Any)])
                 case .messageActionRequestedPeerSentMe(let buttonId, let peers):
@@ -1941,6 +1954,31 @@ public extension Api {
         }
         public static func parse_messageActionPinMessage(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionPinMessage
+        }
+        public static func parse_messageActionPrizeStars(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_3 = parseString(reader) }
+            var _4: Api.Peer?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.Peer
+            } }
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 4) != 0 {_5 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.MessageAction.messageActionPrizeStars(flags: _1!, stars: _2!, transactionId: _3, boostPeer: _4, giveawayMsgId: _5)
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_messageActionRequestedPeer(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?

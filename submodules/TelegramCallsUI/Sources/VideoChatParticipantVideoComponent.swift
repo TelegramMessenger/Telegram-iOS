@@ -123,7 +123,10 @@ final class VideoChatParticipantVideoComponent: Component {
                 } else {
                     videoLayer = PrivateCallVideoLayer()
                     self.videoLayer = videoLayer
-                    self.layer.insertSublayer(videoLayer, above: videoBackgroundLayer)
+                    self.layer.insertSublayer(videoLayer.blurredLayer, above: videoBackgroundLayer)
+                    self.layer.insertSublayer(videoLayer, above: videoLayer.blurredLayer)
+                    
+                    videoLayer.blurredLayer.opacity = 0.25
                     
                     if let input = (component.call as! PresentationGroupCallImpl).video(endpointId: videoDescription.endpointId) {
                         let videoSource = AdaptedCallVideoSource(videoStreamSignal: input)
@@ -229,6 +232,8 @@ final class VideoChatParticipantVideoComponent: Component {
                     let rotatedResolution = videoSpec.resolution
                     let videoSize = rotatedResolution.aspectFitted(availableSize)
                     let videoFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - videoSize.width) * 0.5), y: floorToScreenPixels((availableSize.height - videoSize.height) * 0.5)), size: videoSize)
+                    let blurredVideoSize = rotatedResolution.aspectFilled(availableSize)
+                    let blurredVideoFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - blurredVideoSize.width) * 0.5), y: floorToScreenPixels((availableSize.height - blurredVideoSize.height) * 0.5)), size: blurredVideoSize)
                     
                     let videoResolution = rotatedResolution.aspectFitted(CGSize(width: availableSize.width * 3.0, height: availableSize.height * 3.0))
                     let rotatedVideoResolution = videoResolution
@@ -236,6 +241,9 @@ final class VideoChatParticipantVideoComponent: Component {
                     transition.setPosition(layer: videoLayer, position: videoFrame.center)
                     transition.setBounds(layer: videoLayer, bounds: CGRect(origin: CGPoint(), size: videoFrame.size))
                     videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(rotatedVideoResolution.width), height: Int(rotatedVideoResolution.height)), edgeInset: 2)
+                    
+                    transition.setPosition(layer: videoLayer.blurredLayer, position: blurredVideoFrame.center)
+                    transition.setBounds(layer: videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: blurredVideoFrame.size))
                 }
             } else {
                 if let videoBackgroundLayer = self.videoBackgroundLayer {
@@ -244,6 +252,7 @@ final class VideoChatParticipantVideoComponent: Component {
                 }
                 if let videoLayer = self.videoLayer {
                     self.videoLayer = nil
+                    videoLayer.blurredLayer.removeFromSuperlayer()
                     videoLayer.removeFromSuperlayer()
                 }
                 self.videoDisposable?.dispose()

@@ -148,6 +148,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             transactionId = id
         }
         return TelegramMediaAction(action: .paymentRefunded(peerId: peer.peerId, currency: currency, totalAmount: totalAmount, payload: payload?.makeData(), transactionId: transactionId))
+    case .messageActionPrizeStars:
+        return nil
     }
 }
 

@@ -227,7 +227,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             }
             
             switch action {
-            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL, .messageActionGroupCallScheduled, .messageActionSetChatTheme, .messageActionChatJoinedByRequest, .messageActionWebViewDataSent, .messageActionWebViewDataSentMe, .messageActionGiftPremium, .messageActionGiftStars, .messageActionTopicCreate, .messageActionTopicEdit, .messageActionSuggestProfilePhoto, .messageActionSetChatWallPaper, .messageActionGiveawayLaunch, .messageActionGiveawayResults, .messageActionBoostApply, .messageActionRequestedPeerSentMe:
+            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL, .messageActionGroupCallScheduled, .messageActionSetChatTheme, .messageActionChatJoinedByRequest, .messageActionWebViewDataSent, .messageActionWebViewDataSentMe, .messageActionGiftPremium, .messageActionGiftStars, .messageActionTopicCreate, .messageActionTopicEdit, .messageActionSuggestProfilePhoto, .messageActionSetChatWallPaper, .messageActionGiveawayLaunch, .messageActionGiveawayResults, .messageActionBoostApply, .messageActionRequestedPeerSentMe, .messageActionPrizeStars:
                     break
                 case let .messageActionChannelMigrateFrom(_, chatId):
                     result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId)))
@@ -425,13 +425,13 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
         case let .messageMediaStory(flags, peerId, id, _):
             let isMention = (flags & (1 << 1)) != 0
             return (TelegramMediaStory(storyId: StoryId(peerId: peerId.peerId, id: id), isMention: isMention), nil, nil, nil, nil)
-        case let .messageMediaGiveaway(apiFlags, channels, countries, prizeDescription, quantity, months, untilDate):
+        case let .messageMediaGiveaway(apiFlags, channels, countries, prizeDescription, quantity, months, _, untilDate):
             var flags: TelegramMediaGiveaway.Flags = []
             if (apiFlags & (1 << 0)) != 0 {
                 flags.insert(.onlyNewSubscribers)
             }
-            return (TelegramMediaGiveaway(flags: flags, channelPeerIds: channels.map { PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value($0)) }, countries: countries ?? [], quantity: quantity, months: months, untilDate: untilDate, prizeDescription: prizeDescription), nil, nil, nil, nil)
-        case let .messageMediaGiveawayResults(apiFlags, channelId, additionalPeersCount, launchMsgId, winnersCount, unclaimedCount, winners, months, prizeDescription, untilDate):
+            return (TelegramMediaGiveaway(flags: flags, channelPeerIds: channels.map { PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value($0)) }, countries: countries ?? [], quantity: quantity, months: months ?? 0, untilDate: untilDate, prizeDescription: prizeDescription), nil, nil, nil, nil)
+        case let .messageMediaGiveawayResults(apiFlags, channelId, additionalPeersCount, launchMsgId, winnersCount, unclaimedCount, winners, months, _, prizeDescription, untilDate):
             var flags: TelegramMediaGiveawayResults.Flags = []
             if (apiFlags & (1 << 0)) != 0 {
                 flags.insert(.onlyNewSubscribers)
@@ -439,7 +439,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
             if (apiFlags & (1 << 2)) != 0 {
                 flags.insert(.refunded)
             }
-            return (TelegramMediaGiveawayResults(flags: flags, launchMessageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), namespace: Namespaces.Message.Cloud, id: launchMsgId), additionalChannelsCount: additionalPeersCount ?? 0, winnersPeerIds: winners.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }, winnersCount: winnersCount, unclaimedCount: unclaimedCount, months: months, untilDate: untilDate, prizeDescription: prizeDescription), nil, nil, nil, nil)
+            return (TelegramMediaGiveawayResults(flags: flags, launchMessageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), namespace: Namespaces.Message.Cloud, id: launchMsgId), additionalChannelsCount: additionalPeersCount ?? 0, winnersPeerIds: winners.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }, winnersCount: winnersCount, unclaimedCount: unclaimedCount, months: months ?? 0, untilDate: untilDate, prizeDescription: prizeDescription), nil, nil, nil, nil)
         case let .messageMediaPaidMedia(starsAmount, apiExtendedMedia):
             return (TelegramMediaPaidContent(amount: starsAmount, extendedMedia: apiExtendedMedia.compactMap({ TelegramExtendedMedia(apiExtendedMedia: $0, peerId: peerId) })), nil, nil, nil, nil)
         }

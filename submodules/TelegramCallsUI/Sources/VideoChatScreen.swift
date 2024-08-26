@@ -13,6 +13,8 @@ import LottieComponent
 import BundleIconComponent
 import ContextUI
 import TelegramPresentationData
+import DeviceAccess
+import TelegramVoip
 
 private final class VideoChatScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -51,6 +53,8 @@ private final class VideoChatScreenComponent: Component {
         private var panGestureState: PanGestureState?
         private var notifyDismissedInteractivelyOnPanGestureApply: Bool = false
         private var completionOnPanGestureApply: (() -> Void)?
+        
+        private let videoRenderingContext = VideoRenderingContext()
         
         private let title = ComponentView<Empty>()
         private let navigationLeftButton = ComponentView<Empty>()
@@ -193,6 +197,56 @@ private final class VideoChatScreenComponent: Component {
             let presentationData = component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
             let contextController = ContextController(presentationData: presentationData, source: .reference(VoiceChatContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
             controller.presentInGlobalOverlay(contextController)
+        }
+        
+        private func onCameraPressed() {
+            guard let component = self.component, let environment = self.environment else {
+                return
+            }
+            
+            HapticFeedback().impact(.light)
+            if component.call.hasVideo {
+                component.call.disableVideo()
+            } else {
+                let presentationData = component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+                DeviceAccess.authorizeAccess(to: .camera(.videoCall), onlyCheck: true, presentationData: presentationData, present: { [weak self] c, a in
+                    guard let self, let environment = self.environment, let controller = environment.controller() else {
+                        return
+                    }
+                    controller.present(c, in: .window(.root), with: a)
+                }, openSettings: { [weak self] in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    component.call.accountContext.sharedContext.applicationBindings.openSettings()
+                }, _: { [weak self] ready in
+                    guard let self, let component = self.component, let environment = self.environment, ready else {
+                        return
+                    }
+                    var isFrontCamera = true
+                    let videoCapturer = OngoingCallVideoCapturer()
+                    let input = videoCapturer.video()
+                    if let videoView = self.videoRenderingContext.makeView(input: input) {
+                        videoView.updateIsEnabled(true)
+                        
+                        let cameraNode = GroupVideoNode(videoView: videoView, backdropVideoView: nil)
+                        let controller = VoiceChatCameraPreviewController(sharedContext: component.call.accountContext.sharedContext, cameraNode: cameraNode, shareCamera: { [weak self] _, unmuted in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            
+                            component.call.setIsMuted(action: unmuted ? .unmuted : .muted(isPushToTalkActive: false))
+                            (component.call as! PresentationGroupCallImpl).requestVideo(capturer: videoCapturer, useFrontCamera: isFrontCamera)
+                        }, switchCamera: {
+                            Queue.mainQueue().after(0.1) {
+                                isFrontCamera = !isFrontCamera
+                                videoCapturer.switchVideoInput(isFront: isFrontCamera)
+                            }
+                        })
+                        environment.controller()?.present(controller, in: .window(.root))
+                    }
+                })
+            }
         }
         
         func update(component: VideoChatScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
@@ -463,8 +517,11 @@ private final class VideoChatScreenComponent: Component {
                         microphoneState: actionButtonMicrophoneState
                     )),
                     effectAlignment: .center,
-                    action: {
-                        
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.onCameraPressed()
                     },
                     animateAlpha: false
                 )),
