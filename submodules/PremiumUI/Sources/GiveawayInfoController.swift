@@ -43,11 +43,23 @@ public func presentGiveawayInfoController(
         }
         
         var months: Int32 = 0
+        var stars: Int64 = 0
         if let giveaway {
-            months = giveaway.months
+            switch giveaway.prize {
+            case let .premium(monthsValue):
+                months = monthsValue
+            case let .stars(amount):
+                stars = amount
+            }
         } else if let giveawayResults {
-            months = giveawayResults.months
+            switch giveawayResults.prize {
+            case let .premium(monthsValue):
+                months = monthsValue
+            case let .stars(amount):
+                stars = amount
+            }
         }
+        let _ = stars
         
         var prizeDescription: String?
         if let giveaway {
@@ -265,7 +277,7 @@ public func presentGiveawayInfoController(
                 }
             }
             
-            if activatedCount > 0 {
+            if let activatedCount, activatedCount > 0 {
                 ending += " " + presentationData.strings.Chat_Giveaway_Info_ActivatedLinks(activatedCount)
             }
                         
@@ -279,11 +291,20 @@ public func presentGiveawayInfoController(
                 })]
             case .notWon:
                 result = "**\(presentationData.strings.Chat_Giveaway_Info_DidntWin)**\n\n"
-            case let .won(slug):
+            case let .wonPremium(slug):
                 result = "**\(presentationData.strings.Chat_Giveaway_Info_Won("").string)**\n\n"
                 actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Chat_Giveaway_Info_ViewPrize, action: {
                     dismissImpl?()
                     openLink(slug)
+                }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                    dismissImpl?()
+                })]
+            case let .wonStars(stars):
+                let _ = stars
+                result = "**\(presentationData.strings.Chat_Giveaway_Info_Won("").string)**\n\n"
+                actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Chat_Giveaway_Info_ViewPrize, action: {
+                    dismissImpl?()
+                    openLink("")
                 }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
                     dismissImpl?()
                 })]

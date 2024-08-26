@@ -123,12 +123,13 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case setChatWallpaper(wallpaper: TelegramWallpaper, forBoth: Bool)
     case setSameChatWallpaper(wallpaper: TelegramWallpaper)
     case giftCode(slug: String, fromGiveaway: Bool, isUnclaimed: Bool, boostPeerId: PeerId?, months: Int32, currency: String?, amount: Int64?, cryptoCurrency: String?, cryptoAmount: Int64?)
-    case giveawayLaunched
+    case giveawayLaunched(stars: Int64?)
     case joinedChannel
     case giveawayResults(winners: Int32, unclaimed: Int32)
     case boostsApplied(boosts: Int32)
     case paymentRefunded(peerId: PeerId, currency: String, totalAmount: Int64, payload: Data?, transactionId: String)
     case giftStars(currency: String, amount: Int64, count: Int64, cryptoCurrency: String?, cryptoAmount: Int64?, transactionId: String?)
+    case prizeStars(amount: Int64, isUnclaimed: Bool, boostPeerId: PeerId?, transactionId: String?, giveawayMessageId: MessageId?)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -230,7 +231,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case 36:
             self = .giftCode(slug: decoder.decodeStringForKey("slug", orElse: ""), fromGiveaway: decoder.decodeBoolForKey("give", orElse: false), isUnclaimed: decoder.decodeBoolForKey("unclaimed", orElse: false), boostPeerId: decoder.decodeOptionalInt64ForKey("pi").flatMap { PeerId($0) }, months: decoder.decodeInt32ForKey("months", orElse: 0), currency: decoder.decodeOptionalStringForKey("currency"), amount: decoder.decodeOptionalInt64ForKey("amount"), cryptoCurrency: decoder.decodeOptionalStringForKey("cryptoCurrency"), cryptoAmount: decoder.decodeOptionalInt64ForKey("cryptoAmount"))
         case 37:
-            self = .giveawayLaunched
+            self = .giveawayLaunched(stars: decoder.decodeOptionalInt64ForKey("stars"))
         case 38:
             self = .joinedChannel
         case 39:
@@ -241,6 +242,14 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             self = .paymentRefunded(peerId: PeerId(decoder.decodeInt64ForKey("pi", orElse: 0)), currency: decoder.decodeStringForKey("currency", orElse: ""), totalAmount: decoder.decodeInt64ForKey("amount", orElse: 0), payload: decoder.decodeDataForKey("payload"), transactionId: decoder.decodeStringForKey("transactionId", orElse: ""))
         case 42:
             self = .giftStars(currency: decoder.decodeStringForKey("currency", orElse: ""), amount: decoder.decodeInt64ForKey("amount", orElse: 0), count: decoder.decodeInt64ForKey("count", orElse: 0), cryptoCurrency: decoder.decodeOptionalStringForKey("cryptoCurrency"), cryptoAmount: decoder.decodeOptionalInt64ForKey("cryptoAmount"), transactionId: decoder.decodeOptionalStringForKey("transactionId"))
+        case 43:
+            let boostPeerId = decoder.decodeOptionalInt64ForKey("pi").flatMap { PeerId($0) }
+            let giveawayMsgId = decoder.decodeOptionalInt32ForKey("giveawayMsgId")
+            var giveawayMessageId: MessageId?
+            if let boostPeerId, let giveawayMsgId {
+                giveawayMessageId = MessageId(peerId: boostPeerId, namespace: Namespaces.Message.Cloud, id: giveawayMsgId)
+            }
+            self = .prizeStars(amount: decoder.decodeInt64ForKey("amount", orElse: 0), isUnclaimed: decoder.decodeBoolForKey("unclaimed", orElse: false), boostPeerId: boostPeerId, transactionId: decoder.decodeOptionalStringForKey("transactionId"), giveawayMessageId: giveawayMessageId)
         default:
             self = .unknown
         }
@@ -452,8 +461,13 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             } else {
                 encoder.encodeNil(forKey: "cryptoAmount")
             }
-        case .giveawayLaunched:
+        case let .giveawayLaunched(stars):
             encoder.encodeInt32(37, forKey: "_rawValue")
+            if let stars = stars {
+                encoder.encodeInt64(stars, forKey: "stars")
+            } else {
+                encoder.encodeNil(forKey: "stars")
+            }
         case .joinedChannel:
             encoder.encodeInt32(38, forKey: "_rawValue")
         case let .giveawayResults(winners, unclaimed):
@@ -491,6 +505,25 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             } else {
                 encoder.encodeNil(forKey: "transactionId")
             }
+        case let .prizeStars(amount, isUnclaimed, boostPeerId, transactionId, giveawayMessageId):
+            encoder.encodeInt32(43, forKey: "_rawValue")
+            encoder.encodeInt64(amount, forKey: "amount")
+            encoder.encodeBool(isUnclaimed, forKey: "unclaimed")
+            if let boostPeerId = boostPeerId {
+                encoder.encodeInt64(boostPeerId.toInt64(), forKey: "pi")
+            } else {
+                encoder.encodeNil(forKey: "pi")
+            }
+            if let transactionId {
+                encoder.encodeString(transactionId, forKey: "transactionId")
+            } else {
+                encoder.encodeNil(forKey: "transactionId")
+            }
+            if let giveawayMessageId {
+                encoder.encodeInt32(giveawayMessageId.id, forKey: "giveawayMsgId")
+            } else {
+                encoder.encodeNil(forKey: "giveawayMsgId")
+            }
         }
     }
     
@@ -516,6 +549,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             return boostPeerId.flatMap { [$0] } ?? []
         case let .paymentRefunded(peerId, _, _, _, _):
             return [peerId]
+        case let .prizeStars(_, _, boostPeerId, _, _):
+            return boostPeerId.flatMap { [$0] } ?? []
         default:
             return []
         }

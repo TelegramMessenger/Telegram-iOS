@@ -278,6 +278,7 @@ public extension Api {
         case updateBotMessageReactions(peer: Api.Peer, msgId: Int32, date: Int32, reactions: [Api.ReactionCount], qts: Int32)
         case updateBotNewBusinessMessage(flags: Int32, connectionId: String, message: Api.Message, replyToMessage: Api.Message?, qts: Int32)
         case updateBotPrecheckoutQuery(flags: Int32, queryId: Int64, userId: Int64, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, currency: String, totalAmount: Int64)
+        case updateBotPurchasedPaidMedia(userId: Int64, payload: String, qts: Int32)
         case updateBotShippingQuery(queryId: Int64, userId: Int64, payload: Buffer, shippingAddress: Api.PostAddress)
         case updateBotStopped(userId: Int64, date: Int32, stopped: Api.Bool, qts: Int32)
         case updateBotWebhookJSON(data: Api.DataJSON)
@@ -348,6 +349,7 @@ public extension Api {
         case updateNewStickerSet(stickerset: Api.messages.StickerSet)
         case updateNewStoryReaction(storyId: Int32, peer: Api.Peer, reaction: Api.Reaction)
         case updateNotifySettings(peer: Api.NotifyPeer, notifySettings: Api.PeerNotifySettings)
+        case updatePaidReactionPrivacy(private: Api.Bool)
         case updatePeerBlocked(flags: Int32, peerId: Api.Peer)
         case updatePeerHistoryTTL(flags: Int32, peer: Api.Peer, ttlPeriod: Int32?)
         case updatePeerLocated(peers: [Api.PeerLocated])
@@ -576,6 +578,14 @@ public extension Api {
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(shippingOptionId!, buffer: buffer, boxed: false)}
                     serializeString(currency, buffer: buffer, boxed: false)
                     serializeInt64(totalAmount, buffer: buffer, boxed: false)
+                    break
+                case .updateBotPurchasedPaidMedia(let userId, let payload, let qts):
+                    if boxed {
+                        buffer.appendInt32(675009298)
+                    }
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeString(payload, buffer: buffer, boxed: false)
+                    serializeInt32(qts, buffer: buffer, boxed: false)
                     break
                 case .updateBotShippingQuery(let queryId, let userId, let payload, let shippingAddress):
                     if boxed {
@@ -1173,6 +1183,12 @@ public extension Api {
                     peer.serialize(buffer, true)
                     notifySettings.serialize(buffer, true)
                     break
+                case .updatePaidReactionPrivacy(let `private`):
+                    if boxed {
+                        buffer.appendInt32(1372224236)
+                    }
+                    `private`.serialize(buffer, true)
+                    break
                 case .updatePeerBlocked(let flags, let peerId):
                     if boxed {
                         buffer.appendInt32(-337610926)
@@ -1649,6 +1665,8 @@ public extension Api {
                 return ("updateBotNewBusinessMessage", [("flags", flags as Any), ("connectionId", connectionId as Any), ("message", message as Any), ("replyToMessage", replyToMessage as Any), ("qts", qts as Any)])
                 case .updateBotPrecheckoutQuery(let flags, let queryId, let userId, let payload, let info, let shippingOptionId, let currency, let totalAmount):
                 return ("updateBotPrecheckoutQuery", [("flags", flags as Any), ("queryId", queryId as Any), ("userId", userId as Any), ("payload", payload as Any), ("info", info as Any), ("shippingOptionId", shippingOptionId as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any)])
+                case .updateBotPurchasedPaidMedia(let userId, let payload, let qts):
+                return ("updateBotPurchasedPaidMedia", [("userId", userId as Any), ("payload", payload as Any), ("qts", qts as Any)])
                 case .updateBotShippingQuery(let queryId, let userId, let payload, let shippingAddress):
                 return ("updateBotShippingQuery", [("queryId", queryId as Any), ("userId", userId as Any), ("payload", payload as Any), ("shippingAddress", shippingAddress as Any)])
                 case .updateBotStopped(let userId, let date, let stopped, let qts):
@@ -1789,6 +1807,8 @@ public extension Api {
                 return ("updateNewStoryReaction", [("storyId", storyId as Any), ("peer", peer as Any), ("reaction", reaction as Any)])
                 case .updateNotifySettings(let peer, let notifySettings):
                 return ("updateNotifySettings", [("peer", peer as Any), ("notifySettings", notifySettings as Any)])
+                case .updatePaidReactionPrivacy(let `private`):
+                return ("updatePaidReactionPrivacy", [("`private`", `private` as Any)])
                 case .updatePeerBlocked(let flags, let peerId):
                 return ("updatePeerBlocked", [("flags", flags as Any), ("peerId", peerId as Any)])
                 case .updatePeerHistoryTTL(let flags, let peer, let ttlPeriod):
@@ -2276,6 +2296,23 @@ public extension Api {
             let _c8 = _8 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
                 return Api.Update.updateBotPrecheckoutQuery(flags: _1!, queryId: _2!, userId: _3!, payload: _4!, info: _5, shippingOptionId: _6, currency: _7!, totalAmount: _8!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateBotPurchasedPaidMedia(_ reader: BufferReader) -> Update? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateBotPurchasedPaidMedia(userId: _1!, payload: _2!, qts: _3!)
             }
             else {
                 return nil
@@ -3524,6 +3561,19 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updateNotifySettings(peer: _1!, notifySettings: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updatePaidReactionPrivacy(_ reader: BufferReader) -> Update? {
+            var _1: Api.Bool?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updatePaidReactionPrivacy(private: _1!)
             }
             else {
                 return nil
