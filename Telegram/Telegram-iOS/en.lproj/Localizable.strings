@@ -12851,3 +12851,7 @@ Sorry for the inconvenience.";
 "Stars.Transaction.Giveaway.Prize" = "Prize";
 "Stars.Transaction.Giveaway.Stars_1" = "%@ Star";
 "Stars.Transaction.Giveaway.Stars_any" = "%@ Stars";
+
+"Stats.RevenueInTon" = "Revenue in TON";
+"Stats.RevenueInStars" = "Revenue in Stars";
+"Stats.RevenueInUsd" = "Revenue in USD";
