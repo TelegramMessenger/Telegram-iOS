@@ -2160,20 +2160,14 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
         
-        public struct StarsReactionDefaultToPrivate: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+        public struct StarsReactionDefaultToPrivate: TelegramEngineDataItem, PostboxViewDataItem {
             public typealias Result = Bool
             
-            fileprivate var id: EnginePeer.Id
-            public var mapKey: EnginePeer.Id {
-                return self.id
-            }
-            
-            public init(id: EnginePeer.Id) {
-                self.id = id
+            public init() {
             }
             
             var key: PostboxViewKey {
-                return .cachedItem(ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.starsReactionDefaultToPrivate, key: StarsReactionDefaultToPrivateData.key(peerId: self.id)))
+                return .cachedItem(ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.starsReactionDefaultToPrivate, key: StarsReactionDefaultToPrivateData.key()))
             }
             
             func extract(view: PostboxView) -> Result {

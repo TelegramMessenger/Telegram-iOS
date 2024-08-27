@@ -548,7 +548,7 @@ final class StoryItemSetViewListComponent: Component {
                             title: item.peer.displayTitle(strings: component.strings, displayOrder: .firstLast),
                             peer: item.peer,
                             storyStats: item.storyStats,
-                            subtitle: dateText,
+                            subtitle: PeerListItemComponent.Subtitle(text: dateText, color: .neutral),
                             subtitleAccessory: subtitleAccessory,
                             presence: nil,
                             reaction: item.reaction.flatMap { reaction -> PeerListItemComponent.Reaction in
@@ -929,7 +929,7 @@ final class StoryItemSetViewListComponent: Component {
                     sideInset: 0.0,
                     title: "AAAAAAAAAAAA",
                     peer: nil,
-                    subtitle: "BBBBBBB",
+                    subtitle: PeerListItemComponent.Subtitle(text: "BBBBBBB", color: .neutral),
                     subtitleAccessory: .checks,
                     presence: nil,
                     selectionState: .none,

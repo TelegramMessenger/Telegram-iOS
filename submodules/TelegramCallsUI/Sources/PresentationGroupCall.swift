@@ -408,7 +408,7 @@ private extension CurrentImpl {
         }
     }
 
-    func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError>? {
+    func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
         switch self {
         case let .call(callContext):
             return callContext.video(endpointId: endpointId)
@@ -662,6 +662,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         var isPresentation: Bool
     }
     private var ssrcMapping: [UInt32: SsrcMapping] = [:]
+    
+    private var requestedVideoChannels: [OngoingGroupCallContext.VideoChannel] = []
+    private var suspendVideoChannelRequests: Bool = false
+    private var pendingVideoSubscribers = Bag<(String, MetaDisposable, (OngoingGroupCallContext.VideoFrameData) -> Void)>()
     
     private var summaryInfoState = Promise<SummaryInfoState?>(nil)
     private var summaryParticipantsState = Promise<SummaryParticipantsState?>(nil)
@@ -1695,6 +1699,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                 self.genericCallContext = genericCallContext
                 self.stateVersionValue += 1
+                
+                genericCallContext.setRequestedVideoChannels(self.suspendVideoChannelRequests ? [] : self.requestedVideoChannels)
+                self.connectPendingVideoSubscribers()
             }
             
             self.joinDisposable.set((genericCallContext.joinPayload
@@ -3055,7 +3062,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     public func setRequestedVideoList(items: [PresentationGroupCallRequestedVideo]) {
-        self.genericCallContext?.setRequestedVideoChannels(items.compactMap { item -> OngoingGroupCallContext.VideoChannel in
+        self.requestedVideoChannels = items.compactMap { item -> OngoingGroupCallContext.VideoChannel in
             let mappedMinQuality: OngoingGroupCallContext.VideoChannel.Quality
             let mappedMaxQuality: OngoingGroupCallContext.VideoChannel.Quality
             switch item.minQuality {
@@ -3083,7 +3090,20 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 minQuality: mappedMinQuality,
                 maxQuality: mappedMaxQuality
             )
-        })
+        }
+        if let genericCallContext = self.genericCallContext, !self.suspendVideoChannelRequests {
+            genericCallContext.setRequestedVideoChannels(self.requestedVideoChannels)
+        }
+    }
+    
+    public func setSuspendVideoChannelRequests(_ value: Bool) {
+        if self.suspendVideoChannelRequests != value {
+            self.suspendVideoChannelRequests = value
+            
+            if let genericCallContext = self.genericCallContext {
+                genericCallContext.setRequestedVideoChannels(self.suspendVideoChannelRequests ? [] : self.requestedVideoChannels)
+            }
+        }
     }
     
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {
@@ -3538,7 +3558,49 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
 
     func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError>? {
-        return self.genericCallContext?.video(endpointId: endpointId)
+        return Signal { [weak self] subscriber in
+            guard let self else {
+                return EmptyDisposable
+            }
+            
+            if let genericCallContext = self.genericCallContext {
+                return genericCallContext.video(endpointId: endpointId).start(next: { value in
+                    subscriber.putNext(value)
+                })
+            } else {
+                let disposable = MetaDisposable()
+                let index = self.pendingVideoSubscribers.add((endpointId, disposable, { value in
+                    subscriber.putNext(value)
+                }))
+                
+                return ActionDisposable { [weak self] in
+                    disposable.dispose()
+                    
+                    Queue.mainQueue().async {
+                        guard let self else {
+                            return
+                        }
+                        self.pendingVideoSubscribers.remove(index)
+                    }
+                }
+            }
+        }
+        |> runOn(.mainQueue())
+    }
+    
+    private func connectPendingVideoSubscribers() {
+        guard let genericCallContext = self.genericCallContext else {
+            return
+        }
+        
+        let items = self.pendingVideoSubscribers.copyItems()
+        self.pendingVideoSubscribers.removeAll()
+        
+        for (endpointId, disposable, f) in items {
+            disposable.set(genericCallContext.video(endpointId: endpointId).start(next: { value in
+                f(value)
+            }))
+        }
     }
     
     public func loadMoreMembers(token: String) {

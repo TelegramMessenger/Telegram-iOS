@@ -112,6 +112,8 @@ swift_library(
         "//submodules/MetalEngine",
         "//submodules/TelegramUI/Components/Calls/VoiceChatActionButton",
         "//submodules/TelegramUI/Components/PlainButtonComponent",
+        "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/TelegramUI/Components/Stories/PeerListItemComponent",
     ],
     visibility = [
         "//visibility:public",

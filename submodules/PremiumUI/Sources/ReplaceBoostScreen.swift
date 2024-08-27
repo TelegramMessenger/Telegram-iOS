@@ -236,7 +236,7 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
                                 sideInset: 0.0,
                                 title: peer.compactDisplayTitle,
                                 peer: peer,
-                                subtitle: subtitle,
+                                subtitle: PeerListItemComponent.Subtitle(text: subtitle, color: .neutral),
                                 subtitleAccessory: .none,
                                 presence: nil,
                                 selectionState: hasSelection ? .editing(isSelected: state.selectedSlots.contains(boost.slot), isTinted: false) : .none,

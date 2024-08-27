@@ -335,14 +335,14 @@ public enum PresentationGroupCallTone {
     case recordingStarted
 }
 
-public struct PresentationGroupCallRequestedVideo {
+public struct PresentationGroupCallRequestedVideo: Equatable {
     public enum Quality {
         case thumbnail
         case medium
         case full
     }
 
-    public struct SsrcGroup {
+    public struct SsrcGroup: Equatable {
         public var semantics: String
         public var ssrcs: [UInt32]
     }
@@ -441,6 +441,7 @@ public protocol PresentationGroupCall: AnyObject {
     func updateDefaultParticipantsAreMuted(isMuted: Bool)
     func setVolume(peerId: EnginePeer.Id, volume: Int32, sync: Bool)
     func setRequestedVideoList(items: [PresentationGroupCallRequestedVideo])
+    func setSuspendVideoChannelRequests(_ value: Bool)
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
 
     func playTone(_ tone: PresentationGroupCallTone)

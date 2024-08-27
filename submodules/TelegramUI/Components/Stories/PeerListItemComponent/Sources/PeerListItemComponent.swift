@@ -164,6 +164,21 @@ public final class PeerListItemComponent: Component {
         }
     }
     
+    public struct Subtitle: Equatable {
+        public enum Color: Equatable {
+            case neutral
+            case accent
+        }
+        
+        public var text: String
+        public var color: Color
+        
+        public init(text: String, color: Color) {
+            self.text = text
+            self.color = color
+        }
+    }
+    
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
@@ -173,7 +188,7 @@ public final class PeerListItemComponent: Component {
     let avatar: Avatar?
     let peer: EnginePeer?
     let storyStats: PeerStoryStats?
-    let subtitle: String?
+    let subtitle: Subtitle?
     let subtitleAccessory: SubtitleAccessory
     let presence: EnginePeer.Presence?
     let rightAccessory: RightAccessory
@@ -199,7 +214,7 @@ public final class PeerListItemComponent: Component {
         avatar: Avatar? = nil,
         peer: EnginePeer?,
         storyStats: PeerStoryStats? = nil,
-        subtitle: String?,
+        subtitle: Subtitle?,
         subtitleAccessory: SubtitleAccessory,
         presence: EnginePeer.Presence?,
         rightAccessory: RightAccessory = .none,
@@ -574,15 +589,16 @@ public final class PeerListItemComponent: Component {
             
             self.avatarButtonView.isUserInteractionEnabled = component.storyStats != nil && component.openStories != nil
             
-            let labelData: (String, Bool)
+            let labelData: (String, Subtitle.Color)
             if let presence = component.presence {
                 let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                 let dateTimeFormat = component.context.sharedContext.currentPresentationData.with { $0 }.dateTimeFormat
-                labelData = stringAndActivityForUserPresence(strings: component.strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
+                let labelDataValue = stringAndActivityForUserPresence(strings: component.strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
+                labelData = (labelDataValue.0, labelDataValue.1 ? .accent : .neutral)
             } else if let subtitle = component.subtitle {
-                labelData = (subtitle, false)
+                labelData = (subtitle.text, subtitle.color)
             } else {
-                labelData = ("", false)
+                labelData = ("", .neutral)
             }
             
             let contextInset: CGFloat = self.isExtractedToContextMenu ? 12.0 : 0.0
@@ -779,10 +795,17 @@ public final class PeerListItemComponent: Component {
             )
             
             let labelAvailableWidth = component.style == .compact ? availableTextWidth - titleSize.width : availableSize.width - leftInset - rightInset
+            let labelColor: UIColor
+            switch labelData.1 {
+            case .neutral:
+                labelColor = component.theme.list.itemSecondaryTextColor
+            case .accent:
+                labelColor = component.theme.list.itemAccentColor
+            }
             let labelSize = self.label.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: labelData.0, font: subtitleFont, textColor: labelData.1 ? component.theme.list.itemAccentColor : component.theme.list.itemSecondaryTextColor))
+                    text: .plain(NSAttributedString(string: labelData.0, font: subtitleFont, textColor: labelColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: labelAvailableWidth, height: 100.0)
