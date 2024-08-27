@@ -23,20 +23,24 @@ public struct RevenueStats: Equatable, Codable {
             case currentBalance
             case availableBalance
             case overallRevenue
+            case withdrawEnabled
         }
         
         public let currentBalance: Int64
         public let availableBalance: Int64
         public let overallRevenue: Int64
+        public let withdrawEnabled: Bool
         
         init(
             currentBalance: Int64,
             availableBalance: Int64,
-            overallRevenue: Int64
+            overallRevenue: Int64,
+            withdrawEnabled: Bool
         ) {
             self.currentBalance = currentBalance
             self.availableBalance = availableBalance
             self.overallRevenue = overallRevenue
+            self.withdrawEnabled = withdrawEnabled
         }
         
         public init(from decoder: Decoder) throws {
@@ -44,6 +48,7 @@ public struct RevenueStats: Equatable, Codable {
             self.currentBalance = try container.decode(Int64.self, forKey: .currentBalance)
             self.availableBalance = try container.decode(Int64.self, forKey: .availableBalance)
             self.overallRevenue = try container.decode(Int64.self, forKey: .overallRevenue)
+            self.withdrawEnabled = try container.decode(Bool.self, forKey: .withdrawEnabled)
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -51,6 +56,7 @@ public struct RevenueStats: Equatable, Codable {
             try container.encode(self.currentBalance, forKey: .currentBalance)
             try container.encode(self.availableBalance, forKey: .availableBalance)
             try container.encode(self.overallRevenue, forKey: .overallRevenue)
+            try container.encode(self.withdrawEnabled, forKey: .withdrawEnabled)
         }
     }
     
@@ -122,8 +128,8 @@ extension RevenueStats {
 extension RevenueStats.Balances {
     init(apiRevenueBalances: Api.BroadcastRevenueBalances) {
         switch apiRevenueBalances {
-        case let .broadcastRevenueBalances(currentBalance, availableBalance, overallRevenue):
-            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue)
+        case let .broadcastRevenueBalances(flags, currentBalance, availableBalance, overallRevenue):
+            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue, withdrawEnabled: ((flags & (1 << 0)) != 0))
         }
     }
 }
