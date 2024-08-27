@@ -819,13 +819,21 @@ final class VideoChatParticipantsComponent: Component {
             if let members = component.members {
                 for participant in members.participants {
                     var maxVideoQuality: PresentationGroupCallRequestedVideo.Quality = .medium
-                    if let expandedVideoState = component.expandedVideoState, expandedVideoState.mainParticipant.id == participant.peer.id, !expandedVideoState.mainParticipant.isPresentation {
-                        maxVideoQuality = .full
+                    if let expandedVideoState = component.expandedVideoState {
+                        if expandedVideoState.mainParticipant.id == participant.peer.id, !expandedVideoState.mainParticipant.isPresentation {
+                            maxVideoQuality = .full
+                        } else {
+                            maxVideoQuality = .thumbnail
+                        }
                     }
                     
                     var maxPresentationQuality: PresentationGroupCallRequestedVideo.Quality = .medium
-                    if let expandedVideoState = component.expandedVideoState, expandedVideoState.mainParticipant.id == participant.peer.id, expandedVideoState.mainParticipant.isPresentation {
-                        maxPresentationQuality = .full
+                    if let expandedVideoState = component.expandedVideoState {
+                        if expandedVideoState.mainParticipant.id == participant.peer.id, expandedVideoState.mainParticipant.isPresentation {
+                            maxPresentationQuality = .full
+                        } else {
+                            maxPresentationQuality = .thumbnail
+                        }
                     }
                     
                     if let videoChannel = participant.requestedVideoChannel(minQuality: .thumbnail, maxQuality: maxVideoQuality) {
