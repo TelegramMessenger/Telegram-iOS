@@ -14,15 +14,21 @@ final class VideoChatMicButtonComponent: Component {
     }
     
     let content: Content
+    let isCollapsed: Bool
 
     init(
-        content: Content
+        content: Content,
+        isCollapsed: Bool
     ) {
         self.content = content
+        self.isCollapsed = isCollapsed
     }
 
     static func ==(lhs: VideoChatMicButtonComponent, rhs: VideoChatMicButtonComponent) -> Bool {
         if lhs.content != rhs.content {
+            return false
+        }
+        if lhs.isCollapsed != rhs.isCollapsed {
             return false
         }
         return true
@@ -52,6 +58,8 @@ final class VideoChatMicButtonComponent: Component {
             
             self.component = component
             
+            let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.2)
+            
             let titleText: String
             let backgroundColor: UIColor
             switch component.content {
@@ -79,9 +87,10 @@ final class VideoChatMicButtonComponent: Component {
             
             let _ = self.background.update(
                 transition: transition,
-                component: AnyComponent(RoundedRectangle(
+                component: AnyComponent(FilledRoundedRectangleComponent(
                     color: backgroundColor,
-                    cornerRadius: nil
+                    cornerRadius: size.width * 0.5,
+                    smoothCorners: false
                 )),
                 environment: {},
                 containerSize: size
@@ -100,6 +109,7 @@ final class VideoChatMicButtonComponent: Component {
                 }
                 transition.setPosition(view: titleView, position: titleFrame.center)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
+                alphaTransition.setAlpha(view: titleView, alpha: component.isCollapsed ? 0.0 : 1.0)
             }
             
             let iconSize = self.icon.update(
@@ -118,7 +128,9 @@ final class VideoChatMicButtonComponent: Component {
                 if iconView.superview == nil {
                     self.addSubview(iconView)
                 }
-                transition.setFrame(view: iconView, frame: iconFrame)
+                transition.setPosition(view: iconView, position: iconFrame.center)
+                transition.setBounds(view: iconView, bounds: CGRect(origin: CGPoint(), size: iconFrame.size))
+                transition.setScale(view: iconView, scale: component.isCollapsed ? ((iconSize.width - 24.0) / iconSize.width) : 1.0)
             }
             
             return size

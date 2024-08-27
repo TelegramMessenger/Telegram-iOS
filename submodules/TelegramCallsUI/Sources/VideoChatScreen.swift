@@ -73,6 +73,11 @@ private final class VideoChatScreenComponent: Component {
         private var members: PresentationGroupCallMembers?
         private var membersDisposable: Disposable?
         
+        private let isPresentedValue = ValuePromise<Bool>(false, ignoreRepeated: true)
+        private var applicationStateDisposable: Disposable?
+        
+        private var expandedParticipantsVideoState: VideoChatParticipantsComponent.ExpandedVideoState?
+        
         override init(frame: CGRect) {
             self.containerView = UIView()
             self.containerView.clipsToBounds = true
@@ -96,6 +101,7 @@ private final class VideoChatScreenComponent: Component {
         deinit {
             self.stateDisposable?.dispose()
             self.membersDisposable?.dispose()
+            self.applicationStateDisposable?.dispose()
         }
         
         func animateIn() {
@@ -272,7 +278,7 @@ private final class VideoChatScreenComponent: Component {
                         self.members = members
                         
                         if !self.isUpdating {
-                            self.state?.updated(transition: .immediate)
+                            self.state?.updated(transition: .spring(duration: 0.4))
                         }
                     }
                 })
@@ -290,7 +296,21 @@ private final class VideoChatScreenComponent: Component {
                         }
                     }
                 })
+                
+                self.applicationStateDisposable = (combineLatest(queue: .mainQueue(),
+                    component.call.accountContext.sharedContext.applicationBindings.applicationIsActive,
+                    self.isPresentedValue.get()
+                )
+                |> deliverOnMainQueue).startStrict(next: { [weak self] applicationIsActive, isPresented in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    let suspendVideoChannelRequests = !applicationIsActive || !isPresented
+                    component.call.setSuspendVideoChannelRequests(suspendVideoChannelRequests)
+                })
             }
+            
+            self.isPresentedValue.set(environment.isVisible)
             
             self.component = component
             self.environment = environment
@@ -419,7 +439,7 @@ private final class VideoChatScreenComponent: Component {
             }
             
             let actionButtonDiameter: CGFloat = 56.0
-            let microphoneButtonDiameter: CGFloat = 116.0
+            let microphoneButtonDiameter: CGFloat = self.expandedParticipantsVideoState == nil ? 116.0 : actionButtonDiameter
             
             let maxActionMicrophoneButtonSpacing: CGFloat = 38.0
             let buttonsSideInset: CGFloat = 42.0
@@ -428,23 +448,60 @@ private final class VideoChatScreenComponent: Component {
             let remainingButtonsSpace: CGFloat = availableSize.width - buttonsSideInset * 2.0 - buttonsWidth
             let actionMicrophoneButtonSpacing = min(maxActionMicrophoneButtonSpacing, floor(remainingButtonsSpace * 0.5))
             
-            let microphoneButtonFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - microphoneButtonDiameter) * 0.5), y: availableSize.height - 48.0 - environment.safeInsets.bottom - microphoneButtonDiameter), size: CGSize(width: microphoneButtonDiameter, height: microphoneButtonDiameter))
+            let microphoneButtonFrame: CGRect
+            if self.expandedParticipantsVideoState == nil {
+                microphoneButtonFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - microphoneButtonDiameter) * 0.5), y: availableSize.height - 48.0 - environment.safeInsets.bottom - microphoneButtonDiameter), size: CGSize(width: microphoneButtonDiameter, height: microphoneButtonDiameter))
+            } else {
+                microphoneButtonFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - microphoneButtonDiameter) * 0.5), y: availableSize.height - environment.safeInsets.bottom - microphoneButtonDiameter - 12.0), size: CGSize(width: microphoneButtonDiameter, height: microphoneButtonDiameter))
+            }
+            
+            let participantsClippingY: CGFloat
+            if self.expandedParticipantsVideoState == nil {
+                participantsClippingY = microphoneButtonFrame.minY
+            } else {
+                participantsClippingY = microphoneButtonFrame.minY - 24.0
+            }
+            
             let leftActionButtonFrame = CGRect(origin: CGPoint(x: microphoneButtonFrame.minX - actionMicrophoneButtonSpacing - actionButtonDiameter, y: microphoneButtonFrame.minY + floor((microphoneButtonFrame.height - actionButtonDiameter) * 0.5)), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
             let rightActionButtonFrame = CGRect(origin: CGPoint(x: microphoneButtonFrame.maxX + actionMicrophoneButtonSpacing, y: microphoneButtonFrame.minY + floor((microphoneButtonFrame.height - actionButtonDiameter) * 0.5)), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
             
-            let participantsSize = self.participants.update(
+            let participantsSize = availableSize
+            let participantsCollapsedInsets = UIEdgeInsets(top: navigationHeight, left: environment.safeInsets.left, bottom: availableSize.height - participantsClippingY, right: environment.safeInsets.right)
+            let participantsExpandedInsets = UIEdgeInsets(top: environment.statusBarHeight, left: environment.safeInsets.left, bottom: availableSize.height - participantsClippingY, right: environment.safeInsets.right)
+            
+            let _ = self.participants.update(
                 transition: transition,
                 component: AnyComponent(VideoChatParticipantsComponent(
                     call: component.call,
                     members: self.members,
+                    expandedVideoState: self.expandedParticipantsVideoState,
                     theme: environment.theme,
                     strings: environment.strings,
-                    sideInset: sideInset
+                    collapsedContainerInsets: participantsCollapsedInsets,
+                    expandedContainerInsets: participantsExpandedInsets,
+                    sideInset: sideInset,
+                    updateMainParticipant: { [weak self] key in
+                        guard let self else {
+                            return
+                        }
+                        if let key {
+                            if let expandedParticipantsVideoState = self.expandedParticipantsVideoState, expandedParticipantsVideoState.mainParticipant == key {
+                                return
+                            }
+                            self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: key, isMainParticipantPinned: false)
+                            self.state?.updated(transition: .spring(duration: 0.4))
+                        } else if self.expandedParticipantsVideoState != nil {
+                            self.expandedParticipantsVideoState = nil
+                            self.state?.updated(transition: .spring(duration: 0.4))
+                        }
+                    },
+                    updateIsMainParticipantPinned: { isPinned in
+                    }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: microphoneButtonFrame.minY - navigationHeight)
+                containerSize: participantsSize
             )
-            let participantsFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: participantsSize)
+            let participantsFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: participantsSize)
             if let participantsView = self.participants.view {
                 if participantsView.superview == nil {
                     self.containerView.addSubview(participantsView)
@@ -477,7 +534,8 @@ private final class VideoChatScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(PlainButtonComponent(
                     content: AnyComponent(VideoChatMicButtonComponent(
-                        content: micButtonContent
+                        content: micButtonContent,
+                        isCollapsed: self.expandedParticipantsVideoState != nil
                     )),
                     effectAlignment: .center,
                     action: { [weak self] in
@@ -514,7 +572,8 @@ private final class VideoChatScreenComponent: Component {
                 component: AnyComponent(PlainButtonComponent(
                     content: AnyComponent(VideoChatActionButtonComponent(
                         content: .video(isActive: false),
-                        microphoneState: actionButtonMicrophoneState
+                        microphoneState: actionButtonMicrophoneState,
+                        isCollapsed: self.expandedParticipantsVideoState != nil
                     )),
                     effectAlignment: .center,
                     action: { [weak self] in
@@ -541,7 +600,8 @@ private final class VideoChatScreenComponent: Component {
                 component: AnyComponent(PlainButtonComponent(
                     content: AnyComponent(VideoChatActionButtonComponent(
                         content: .leave,
-                        microphoneState: actionButtonMicrophoneState
+                        microphoneState: actionButtonMicrophoneState,
+                        isCollapsed: self.expandedParticipantsVideoState != nil
                     )),
                     effectAlignment: .center,
                     action: { [weak self] in
@@ -665,7 +725,9 @@ final class VideoChatScreenV2Impl: ViewControllerComponentContainer, VoiceChatCo
             self.idleTimerExtensionDisposable = self.call.accountContext.sharedContext.applicationBindings.pushIdleTimerExtension()
         }
         
-        self.onViewDidAppear?()
+        DispatchQueue.main.async {
+            self.onViewDidAppear?()
+        }
     }
     
     override public func viewDidDisappear(_ animated: Bool) {

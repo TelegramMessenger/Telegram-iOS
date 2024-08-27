@@ -12,18 +12,32 @@ import AccountContext
 import SwiftSignalKit
 
 final class VideoChatParticipantVideoComponent: Component {
+    struct ExpandedState: Equatable {
+        var isPinned: Bool
+        
+        init(isPinned: Bool) {
+            self.isPinned = isPinned
+        }
+    }
+    
     let call: PresentationGroupCall
     let participant: GroupCallParticipantsContext.Participant
     let isPresentation: Bool
+    let expandedState: ExpandedState?
+    let action: (() -> Void)?
     
     init(
         call: PresentationGroupCall,
         participant: GroupCallParticipantsContext.Participant,
-        isPresentation: Bool
+        isPresentation: Bool,
+        expandedState: ExpandedState?,
+        action: (() -> Void)?
     ) {
         self.call = call
         self.participant = participant
         self.isPresentation = isPresentation
+        self.expandedState = expandedState
+        self.action = action
     }
     
     static func ==(lhs: VideoChatParticipantVideoComponent, rhs: VideoChatParticipantVideoComponent) -> Bool {
@@ -31,6 +45,12 @@ final class VideoChatParticipantVideoComponent: Component {
             return false
         }
         if lhs.isPresentation != rhs.isPresentation {
+            return false
+        }
+        if lhs.expandedState != rhs.expandedState {
+            return false
+        }
+        if (lhs.action == nil) != (rhs.action == nil) {
             return false
         }
         return true
@@ -46,9 +66,9 @@ final class VideoChatParticipantVideoComponent: Component {
         }
     }
     
-    final class View: UIView {
+    final class View: HighlightTrackingButton {
         private var component: VideoChatParticipantVideoComponent?
-        private weak var state: EmptyComponentState?
+        private weak var componentState: EmptyComponentState?
         private var isUpdating: Bool = false
         
         private let title = ComponentView<Empty>()
@@ -62,8 +82,11 @@ final class VideoChatParticipantVideoComponent: Component {
         override init(frame: CGRect) {
             super.init(frame: frame)
             
+            //TODO:release optimize
             self.clipsToBounds = true
             self.layer.cornerRadius = 10.0
+            
+            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
         }
         
         required init?(coder: NSCoder) {
@@ -74,6 +97,13 @@ final class VideoChatParticipantVideoComponent: Component {
             self.videoDisposable?.dispose()
         }
         
+        @objc private func pressed() {
+            guard let component = self.component, let action = component.action else {
+                return
+            }
+            action()
+        }
+        
         func update(component: VideoChatParticipantVideoComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -81,7 +111,7 @@ final class VideoChatParticipantVideoComponent: Component {
             }
             
             self.component = component
-            self.state = state
+            self.componentState = state
             
             let nameColor = component.participant.peer.nameColor ?? .blue
             let nameColors = component.call.accountContext.peerNameColors.get(nameColor, dark: true)
@@ -146,14 +176,14 @@ final class VideoChatParticipantVideoComponent: Component {
                                 if self.videoSpec != videoSpec {
                                     self.videoSpec = videoSpec
                                     if !self.isUpdating {
-                                        self.state?.updated(transition: .immediate, isLocal: true)
+                                        self.componentState?.updated(transition: .immediate, isLocal: true)
                                     }
                                 }
                             } else {
                                 if self.videoSpec != nil {
                                     self.videoSpec = nil
                                     if !self.isUpdating {
-                                        self.state?.updated(transition: .immediate, isLocal: true)
+                                        self.componentState?.updated(transition: .immediate, isLocal: true)
                                     }
                                 }
                             }

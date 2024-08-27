@@ -664,6 +664,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var ssrcMapping: [UInt32: SsrcMapping] = [:]
     
     private var requestedVideoChannels: [OngoingGroupCallContext.VideoChannel] = []
+    private var suspendVideoChannelRequests: Bool = false
     private var pendingVideoSubscribers = Bag<(String, MetaDisposable, (OngoingGroupCallContext.VideoFrameData) -> Void)>()
     
     private var summaryInfoState = Promise<SummaryInfoState?>(nil)
@@ -1699,7 +1700,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 self.genericCallContext = genericCallContext
                 self.stateVersionValue += 1
                 
-                genericCallContext.setRequestedVideoChannels(self.requestedVideoChannels)
+                genericCallContext.setRequestedVideoChannels(self.suspendVideoChannelRequests ? [] : self.requestedVideoChannels)
                 self.connectPendingVideoSubscribers()
             }
             
@@ -3090,8 +3091,18 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 maxQuality: mappedMaxQuality
             )
         }
-        if let genericCallContext = self.genericCallContext {
+        if let genericCallContext = self.genericCallContext, !self.suspendVideoChannelRequests {
             genericCallContext.setRequestedVideoChannels(self.requestedVideoChannels)
+        }
+    }
+    
+    public func setSuspendVideoChannelRequests(_ value: Bool) {
+        if self.suspendVideoChannelRequests != value {
+            self.suspendVideoChannelRequests = value
+            
+            if let genericCallContext = self.genericCallContext {
+                genericCallContext.setRequestedVideoChannels(self.suspendVideoChannelRequests ? [] : self.requestedVideoChannels)
+            }
         }
     }
     

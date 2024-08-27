@@ -34,13 +34,16 @@ final class VideoChatActionButtonComponent: Component {
     
     let content: Content
     let microphoneState: MicrophoneState
+    let isCollapsed: Bool
 
     init(
         content: Content,
-        microphoneState: MicrophoneState
+        microphoneState: MicrophoneState,
+        isCollapsed: Bool
     ) {
         self.content = content
         self.microphoneState = microphoneState
+        self.isCollapsed = isCollapsed
     }
 
     static func ==(lhs: VideoChatActionButtonComponent, rhs: VideoChatActionButtonComponent) -> Bool {
@@ -48,6 +51,9 @@ final class VideoChatActionButtonComponent: Component {
             return false
         }
         if lhs.microphoneState != rhs.microphoneState {
+            return false
+        }
+        if lhs.isCollapsed != rhs.isCollapsed {
             return false
         }
         return true
@@ -79,6 +85,8 @@ final class VideoChatActionButtonComponent: Component {
             
             let previousComponent = self.component
             self.component = component
+            
+            let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.2)
             
             let titleText: String
             let backgroundColor: UIColor
@@ -138,9 +146,10 @@ final class VideoChatActionButtonComponent: Component {
             
             let _ = self.background.update(
                 transition: transition,
-                component: AnyComponent(RoundedRectangle(
+                component: AnyComponent(FilledRoundedRectangleComponent(
                     color: backgroundColor,
-                    cornerRadius: nil
+                    cornerRadius: size.width * 0.5,
+                    smoothCorners: false
                 )),
                 environment: {},
                 containerSize: size
@@ -159,6 +168,7 @@ final class VideoChatActionButtonComponent: Component {
                 }
                 transition.setPosition(view: titleView, position: titleFrame.center)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
+                alphaTransition.setAlpha(view: titleView, alpha: component.isCollapsed ? 0.0 : 1.0)
             }
             
             let iconSize = self.icon.update(
