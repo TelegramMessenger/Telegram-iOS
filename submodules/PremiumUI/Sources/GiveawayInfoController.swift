@@ -272,10 +272,21 @@ public func presentGiveawayInfoController(
             title = presentationData.strings.Chat_Giveaway_Info_EndedTitle
             
             let intro: String
-            if isGroup {
-                intro = presentationData.strings.Chat_Giveaway_Info_Group_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(quantity), presentationData.strings.Chat_Giveaway_Info_Months(months)).string
+            if stars > 0 {
+                let starsString = presentationData.strings.Chat_Giveaway_Info_Stars_Stars(Int32(stars))
+                if isGroup {
+                    intro = presentationData.strings.Chat_Giveaway_Info_Stars_Group_EndedIntro(peerName, starsString).string
+                } else {
+                    intro = presentationData.strings.Chat_Giveaway_Info_Stars_EndedIntro(peerName, starsString).string
+                }
             } else {
-                intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(quantity), presentationData.strings.Chat_Giveaway_Info_Months(months)).string
+                let subscriptionsString = presentationData.strings.Chat_Giveaway_Info_Subscriptions(quantity)
+                let monthsString = presentationData.strings.Chat_Giveaway_Info_Months(months)
+                if isGroup {
+                    intro = presentationData.strings.Chat_Giveaway_Info_Group_EndedIntro(peerName, subscriptionsString, monthsString).string
+                } else {
+                    intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, subscriptionsString, monthsString).string
+                }
             }
             
             var ending: String
