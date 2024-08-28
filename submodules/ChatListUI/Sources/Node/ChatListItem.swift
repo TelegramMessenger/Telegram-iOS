@@ -3658,7 +3658,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     strongSelf.onlineNode.setImage(onlineIcon, color: item.presentationData.theme.list.itemCheckColors.foregroundColor, transition: .immediate)
                     
-                    if isSubscription {
+                    if isSubscription, autoremoveTimeout == nil {
                         let starView: StarView
                         if let current = strongSelf.starView {
                             starView = current
