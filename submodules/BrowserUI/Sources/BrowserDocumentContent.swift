@@ -36,7 +36,7 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
         return self.statePromise.get()
     }
     
-    var pushContent: (BrowserScreen.Subject) -> Void = { _ in }
+    var pushContent: (BrowserScreen.Subject, BrowserContent?) -> Void = { _, _ in }
     var openAppUrl: (String) -> Void = { _ in }
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
     var minimize: () -> Void = { }
@@ -120,6 +120,9 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
         let textSizeAdjust = state.size != 100 ? "'\(state.size)%'" : "null"
         let js = "\(setupFontFunctions) setTelegramFontOverrides(\(fontFamily), \(textSizeAdjust))";
         self.webView.evaluateJavaScript(js) { _, _ in }
+    }
+    
+    func toggleInstantView(_ enabled: Bool) {
     }
     
     private var didSetupSearch = false
@@ -385,7 +388,7 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
             navigationController._keepModalDismissProgress = true
             navigationController.pushViewController(controller)
         } else {
-            self.pushContent(subject)
+            self.pushContent(subject, nil)
         }
     }
     

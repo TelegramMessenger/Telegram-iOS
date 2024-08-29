@@ -39,12 +39,12 @@ public final class InstantPageDetailsItem: InstantPageItem {
         self.index = index
     }
     
-    public func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
+    public func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?, getPreloadedResource: @escaping (String) -> Data?) -> InstantPageNode? {
         var expanded: Bool?
         if let expandedDetails = currentExpandedDetails, let currentlyExpanded = expandedDetails[self.index] {
             expanded = currentlyExpanded
         }
-        return InstantPageDetailsNode(context: context, sourceLocation: sourceLocation, strings: strings, nameDisplayOrder: nameDisplayOrder, theme: theme, item: self, openMedia: openMedia, longPressMedia: longPressMedia, activatePinchPreview: activatePinchPreview, pinchPreviewFinished: pinchPreviewFinished, openPeer: openPeer, openUrl: openUrl, currentlyExpanded: expanded, updateDetailsExpanded: updateDetailsExpanded)
+        return InstantPageDetailsNode(context: context, sourceLocation: sourceLocation, strings: strings, nameDisplayOrder: nameDisplayOrder, theme: theme, item: self, openMedia: openMedia, longPressMedia: longPressMedia, activatePinchPreview: activatePinchPreview, pinchPreviewFinished: pinchPreviewFinished, openPeer: openPeer, openUrl: openUrl, currentlyExpanded: expanded, updateDetailsExpanded: updateDetailsExpanded, getPreloadedResource: getPreloadedResource)
     }
     
     public func matchesAnchor(_ anchor: String) -> Bool {

@@ -81,10 +81,20 @@ public func presentGiveawayInfoController(
             onlyNewSubscribers = true
         }
         
-        let author = message.forwardInfo?.author ?? message.author?._asPeer()
+        var author = message.forwardInfo?.author ?? message.author?._asPeer()
+        if author is TelegramChannel {
+        } else {
+            if let peer = message.forwardInfo?.source ?? message.peers[message.id.peerId] {
+                author = peer
+            }
+        }
         var isGroup = false
         if let channel = author as? TelegramChannel, case .group = channel.info {
             isGroup = true
+        }
+        var peerName = ""
+        if let author {
+            peerName = EnginePeer(author).compactDisplayTitle
         }
         
         var groupsAndChannels = false
@@ -113,10 +123,7 @@ public func presentGiveawayInfoController(
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
-        var peerName = ""
-        if let channel = author as? TelegramChannel {
-            peerName = EnginePeer(channel).compactDisplayTitle
-        }
+
         
         let timeZone = TimeZone.current
         let untilDate = stringForDate(timestamp: untilDateValue, timeZone: timeZone, strings: presentationData.strings)
