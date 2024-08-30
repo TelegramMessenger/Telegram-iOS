@@ -279,7 +279,7 @@ private final class ChannelBoostersContextImpl {
                             var resultBoosts: [ChannelBoostersContext.State.Boost] = []
                             for boost in boosts {
                                 switch boost {
-                                case let .boost(flags, id, userId, giveawayMessageId, date, expires, usedGiftSlug, multiplier):
+                                case let .boost(flags, id, userId, giveawayMessageId, date, expires, usedGiftSlug, multiplier, stars):
                                     var boostFlags: ChannelBoostersContext.State.Boost.Flags = []
                                     var boostPeer: EnginePeer?
                                     if let userId = userId {
@@ -297,7 +297,7 @@ private final class ChannelBoostersContextImpl {
                                     if (flags & (1 << 3)) != 0 {
                                         boostFlags.insert(.isUnclaimed)
                                     }
-                                    resultBoosts.append(ChannelBoostersContext.State.Boost(flags: boostFlags, id: id, peer: boostPeer, date: date, expires: expires, multiplier: multiplier ?? 1, slug: usedGiftSlug, giveawayMessageId: giveawayMessageId.flatMap { EngineMessage.Id(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
+                                    resultBoosts.append(ChannelBoostersContext.State.Boost(flags: boostFlags, id: id, peer: boostPeer, date: date, expires: expires, multiplier: multiplier ?? 1, stars: stars, slug: usedGiftSlug, giveawayMessageId: giveawayMessageId.flatMap { EngineMessage.Id(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
                                 }
                             }
                             if populateCache {
@@ -388,6 +388,7 @@ public final class ChannelBoostersContext {
             public var date: Int32
             public var expires: Int32
             public var multiplier: Int32
+            public var stars: Int64?
             public var slug: String?
             public var giveawayMessageId: EngineMessage.Id?
         }

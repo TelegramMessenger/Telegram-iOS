@@ -30,6 +30,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     private let sourceLocation: InstantPageSourceLocation
     private let preloadedResouces: [Any]?
     private var originalContent: BrowserContent?
+    private let url: String
     
     private var webPage: TelegramMediaWebpage?
     
@@ -102,6 +103,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         self.sourceLocation = sourceLocation
         self.preloadedResouces = preloadedResouces
         self.originalContent = originalContent
+        self.url = url
         
         self.uuid = UUID()
         
@@ -904,6 +906,12 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
             anchor = String(baseUrl[anchorRange.upperBound...]).removingPercentEncoding
             baseUrl = String(baseUrl[..<anchorRange.lowerBound])
         }
+        
+        if !baseUrl.hasPrefix("http://") && !baseUrl.hasPrefix("https://") {
+            if let updatedUrl = URL(string: baseUrl, relativeTo: URL(string: "/", relativeTo: URL(string: self.url))) {
+                baseUrl = updatedUrl.absoluteString
+            }
+        }
 
         if let webPage = self.webPage, case let .Loaded(content) = webPage.content, let page = content.instantPage, page.url == baseUrl || baseUrl.isEmpty, let anchor = anchor {
             self.scrollToAnchor(anchor)
@@ -914,7 +922,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         self.loadProgress.set(0.02)
     
         self.loadWebpageDisposable.set(nil)
-        self.resolveUrlDisposable.set((self.context.sharedContext.resolveUrl(context: self.context, peerId: nil, url: url.url, skipUrlAuth: true)
+        self.resolveUrlDisposable.set((self.context.sharedContext.resolveUrl(context: self.context, peerId: nil, url: baseUrl, skipUrlAuth: true)
         |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.loadProgress.set(0.07)
@@ -997,8 +1005,15 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     }
     
     private func openUrlIn(_ url: InstantPageUrlItem) {
+        var baseUrl = url.url
+        if !baseUrl.hasPrefix("http://") && !baseUrl.hasPrefix("https://") {
+            if let updatedUrl = URL(string: baseUrl, relativeTo: URL(string: "/", relativeTo: URL(string: self.url))) {
+                baseUrl = updatedUrl.absoluteString
+            }
+        }
+        
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = OpenInActionSheetController(context: self.context, item: .url(url: url.url), openUrl: { [weak self] url in
+        let actionSheet = OpenInActionSheetController(context: self.context, item: .url(url: baseUrl), openUrl: { [weak self] url in
             if let self {
                 self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
             }
@@ -1182,11 +1197,18 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
                             }
                         case .longTap:
                             if let url = self.urlForTapLocation(location) {
-                                let canOpenIn = availableOpenInOptions(context: self.context, item: .url(url: url.url)).count > 1
+                                var baseUrl = url.url
+                                if !baseUrl.hasPrefix("http://") && !baseUrl.hasPrefix("https://") {
+                                    if let updatedUrl = URL(string: baseUrl, relativeTo: URL(string: "/", relativeTo: URL(string: self.url))) {
+                                        baseUrl = updatedUrl.absoluteString
+                                    }
+                                }
+                                
+                                let canOpenIn = availableOpenInOptions(context: self.context, item: .url(url: baseUrl)).count > 1
                                 let openText = canOpenIn ? self.presentationData.strings.Conversation_FileOpenIn : self.presentationData.strings.Conversation_LinkDialogOpen
                                 let actionSheet = ActionSheetController(instantPageTheme: self.theme)
                                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                                    ActionSheetTextItem(title: url.url),
+                                    ActionSheetTextItem(title: baseUrl),
                                     ActionSheetButtonItem(title: openText, color: .accent, action: { [weak self, weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                         if let strongSelf = self {
@@ -1199,11 +1221,11 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
                                     }),
                                     ActionSheetButtonItem(title: self.presentationData.strings.ShareMenu_CopyShareLink, color: .accent, action: { [weak actionSheet] in
                                         actionSheet?.dismissAnimated()
-                                        UIPasteboard.general.string = url.url
+                                        UIPasteboard.general.string = baseUrl
                                     }),
                                     ActionSheetButtonItem(title: self.presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
                                         actionSheet?.dismissAnimated()
-                                        if let link = URL(string: url.url) {
+                                        if let link = URL(string: baseUrl) {
                                             let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
                                         }
                                     })

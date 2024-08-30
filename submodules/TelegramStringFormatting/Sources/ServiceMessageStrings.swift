@@ -981,7 +981,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
             case .joinedChannel:
                 attributedString = NSAttributedString(string: strings.Notification_ChannelJoinedByYou, font: titleBoldFont, textColor: primaryTextColor)
-            case let .giveawayResults(winners, unclaimed):
+            case let .giveawayResults(winners, unclaimed, _):
                 if winners == 0 {
                     attributedString = parseMarkdownIntoAttributedString(strings.Notification_GiveawayResultsNoWinners(unclaimed), attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }))
                 } else if unclaimed > 0 {

@@ -211,6 +211,7 @@ private func parseRichText(_ input: [Any], _ media: inout [MediaId: Media]) -> R
             result.append(parseRichText(string))
         } else if let item = item as? [String: Any], let tag = item["tag"] as? String {
             var text: RichText?
+            var addLineBreak = false
             switch tag {
             case "b", "strong":
                 text = .bold(parseRichText(item, &media))
@@ -273,6 +274,9 @@ private func parseRichText(_ input: [Any], _ media: inout [MediaId: Media]) -> R
                         flags: []
                     )
                     text = .image(id: id, dimensions: PixelDimensions(width: width, height: height))
+                    if width > 100 {
+                        addLineBreak = true
+                    }
                 }
             case "br":
                 if let last = result.last {
@@ -284,6 +288,9 @@ private func parseRichText(_ input: [Any], _ media: inout [MediaId: Media]) -> R
             if var text {
                 text = applyAnchor(text, item: item)
                 result.append(text)
+                if addLineBreak {
+                    result.append(.plain("\n"))
+                }
             }
         }
     }
@@ -298,15 +305,130 @@ private func parseRichText(_ input: [Any], _ media: inout [MediaId: Media]) -> R
 }
 
 private func trimStart(_ input: RichText) -> RichText {
-    return input
+    var text = input
+    switch input {
+    case .empty:
+        text = .empty
+    case let .plain(string):
+        text = .plain(string.replacingOccurrences(of: "^[ \t\r\n]+", with: "", options: .regularExpression, range: nil))
+    case let .bold(richText):
+        text = .bold(trimStart(richText))
+    case let .italic(richText):
+        text = .italic(trimStart(richText))
+    case let .underline(richText):
+        text = .underline(trimStart(richText))
+    case let .strikethrough(richText):
+        text = .strikethrough(trimStart(richText))
+    case let .fixed(richText):
+        text = .fixed(trimStart(richText))
+    case let .url(richText, url, webpageId):
+        text = .url(text: trimStart(richText), url: url, webpageId: webpageId)
+    case let .email(richText, email):
+        text = .email(text: trimStart(richText), email: email)
+    case let .subscript(richText):
+        text = .subscript(trimStart(richText))
+    case let .superscript(richText):
+        text = .superscript(trimStart(richText))
+    case let .marked(richText):
+        text = .marked(trimStart(richText))
+    case let .phone(richText, phone):
+        text = .phone(text: trimStart(richText), phone: phone)
+    case let .anchor(richText, name):
+        text = .anchor(text: trimStart(richText), name: name)
+    case var .concat(array):
+        if !array.isEmpty {
+            array[0] = trimStart(array[0])
+            text = .concat(array)
+        }
+    case .image:
+        break
+    }
+    return text
 }
 
 private func trimEnd(_ input: RichText) -> RichText {
-    return input
+    var text = input
+    switch input {
+    case .empty:
+        text = .empty
+    case let .plain(string):
+        text = .plain(string.replacingOccurrences(of: "[ \t\r\n]+$", with: "", options: .regularExpression, range: nil))
+    case let .bold(richText):
+        text = .bold(trimStart(richText))
+    case let .italic(richText):
+        text = .italic(trimStart(richText))
+    case let .underline(richText):
+        text = .underline(trimStart(richText))
+    case let .strikethrough(richText):
+        text = .strikethrough(trimStart(richText))
+    case let .fixed(richText):
+        text = .fixed(trimStart(richText))
+    case let .url(richText, url, webpageId):
+        text = .url(text: trimStart(richText), url: url, webpageId: webpageId)
+    case let .email(richText, email):
+        text = .email(text: trimStart(richText), email: email)
+    case let .subscript(richText):
+        text = .subscript(trimStart(richText))
+    case let .superscript(richText):
+        text = .superscript(trimStart(richText))
+    case let .marked(richText):
+        text = .marked(trimStart(richText))
+    case let .phone(richText, phone):
+        text = .phone(text: trimStart(richText), phone: phone)
+    case let .anchor(richText, name):
+        text = .anchor(text: trimStart(richText), name: name)
+    case var .concat(array):
+        if !array.isEmpty {
+            array[array.count - 1] = trimStart(array[array.count - 1])
+            text = .concat(array)
+        }
+    case .image:
+        break
+    }
+    return text
 }
 
 private func trim(_ input: RichText) -> RichText {
-    return input
+    var text = input
+    switch input {
+    case .empty:
+        text = .empty
+    case let .plain(string):
+        text = .plain(string.trimmingCharacters(in: .whitespacesAndNewlines))
+    case let .bold(richText):
+        text = .bold(trimStart(richText))
+    case let .italic(richText):
+        text = .italic(trimStart(richText))
+    case let .underline(richText):
+        text = .underline(trimStart(richText))
+    case let .strikethrough(richText):
+        text = .strikethrough(trimStart(richText))
+    case let .fixed(richText):
+        text = .fixed(trimStart(richText))
+    case let .url(richText, url, webpageId):
+        text = .url(text: trimStart(richText), url: url, webpageId: webpageId)
+    case let .email(richText, email):
+        text = .email(text: trimStart(richText), email: email)
+    case let .subscript(richText):
+        text = .subscript(trimStart(richText))
+    case let .superscript(richText):
+        text = .superscript(trimStart(richText))
+    case let .marked(richText):
+        text = .marked(trimStart(richText))
+    case let .phone(richText, phone):
+        text = .phone(text: trimStart(richText), phone: phone)
+    case let .anchor(richText, name):
+        text = .anchor(text: trimStart(richText), name: name)
+    case var .concat(array):
+        if !array.isEmpty {
+            array[0] = trimStart(array[0])
+            array[array.count - 1] = trimEnd(array[array.count - 1])
+            text = .concat(array)
+        }
+    case .image:
+        break
+    }
+    return text
 }
 
 private func addNewLine(_ input: RichText) -> RichText {
@@ -341,8 +463,10 @@ private func addNewLine(_ input: RichText) -> RichText {
     case let .anchor(richText, name):
         text = .anchor(text: addNewLine(richText), name: name)
     case var .concat(array):
-        array[array.count - 1] = addNewLine(array[array.count - 1])
-        text = .concat(array)
+        if !array.isEmpty {
+            array[array.count - 1] = addNewLine(array[array.count - 1])
+            text = .concat(array)
+        }
     case .image:
         break
     }
@@ -442,7 +566,7 @@ private func parseDetails(_ item: [String: Any], _ url: String, _ media: inout [
     )
 }
 
-private func parseList(_ input: [String: Any], _ media: inout [MediaId: Media]) -> InstantPageBlock? {
+private func parseList(_ input: [String: Any], _ url: String, _ media: inout [MediaId: Media]) -> InstantPageBlock? {
     guard let content = input["content"] as? [Any], let tag = input["tag"] as? String else {
         return nil
     }
@@ -451,9 +575,40 @@ private func parseList(_ input: [String: Any], _ media: inout [MediaId: Media]) 
         guard let item = item as? [String: Any], let tag = item["tag"] as? String, tag == "li" else {
             continue
         }
-        items.append(.text(trim(parseRichText(item, &media)), nil))
+        var parseAsBlocks = false
+        if let subcontent = item["content"] as? [Any] {
+            for item in subcontent {
+                if let item = item as? [String: Any], let tag = item["tag"] as? String, ["ul", "ol"].contains(tag) {
+                    parseAsBlocks = true
+                }
+            }
+            if parseAsBlocks {
+                let blocks = parsePageBlocks(subcontent, url, &media)
+                if !blocks.isEmpty {
+                    items.append(.blocks(blocks, nil))
+                }
+            } else {
+                items.append(.text(trim(parseRichText(item, &media)), nil))
+            }
+        }
     }
     let ordered = tag == "ol"
+    var allEmpty = true
+    for item in items {
+        if case let .text(text, _) = item {
+            if case .empty = text {
+            } else {
+                allEmpty = false
+                break
+            }
+        } else {
+            allEmpty = false
+            break
+        }
+    }
+    guard !allEmpty else {
+        return nil
+    }
     return .list(items: items, ordered: ordered)
 }
 
@@ -511,6 +666,36 @@ private func parseImage(_ input: [String: Any], _ media: inout [MediaId: Media])
     )
 }
 
+private func parseVideo(_ input: [String: Any], _ media: inout [MediaId: Media]) -> InstantPageBlock? {
+    guard let src = input["src"] as? String else {
+        return nil
+    }
+    
+    let width: Int32
+    if let value = input["width"] as? String, let intValue = Int32(value) {
+        width = intValue
+    } else {
+        width = 0
+    }
+    
+    let height: Int32
+    if let value = input["height"] as? String, let intValue = Int32(value) {
+        height = intValue
+    } else {
+        height = 0
+    }
+    
+    return .webEmbed(
+        url: src,
+        html: nil,
+        dimensions: PixelDimensions(width: width, height: height),
+        caption: InstantPageCaption(text: .empty, credit: .empty),
+        stretchToWidth: true,
+        allowScrolling: false,
+        coverId: nil
+    )
+}
+
 private func parseFigure(_ input: [String: Any], _ media: inout [MediaId: Media]) -> InstantPageBlock? {
     guard let content = input["content"] as? [Any] else {
         return nil
@@ -519,9 +704,19 @@ private func parseFigure(_ input: [String: Any], _ media: inout [MediaId: Media]
     var caption: RichText?
     for item in content {
         if let item = item as? [String: Any], let tag = item["tag"] as? String {
-            if tag == "img" {
+            if tag == "p", let content = item["content"] as? [Any] {
+                for item in content {
+                    if let item = item as? [String: Any], let tag = item["tag"] as? String {
+                        if tag == "iframe" {
+                            block = parseVideo(item, &media)
+                        }
+                    }
+                }
+            } else if tag == "iframe" {
+                block = parseVideo(item, &media)
+            } else if tag == "img" {
                 block = parseImage(item, &media)
-            } else if tag == "figurecaption" {
+            } else if tag == "figcaption" {
                 caption = trim(parseRichText(item, &media))
             }
         }
@@ -539,7 +734,7 @@ private func parsePageBlocks(_ input: [Any], _ url: String, _ media: inout [Medi
     var result: [InstantPageBlock] = []
     for item in input {
         if let string = item as? String {
-            result.append(.paragraph(parseRichText(string)))
+            result.append(.paragraph(trim(parseRichText(string))))
         } else if let item = item as? [String: Any], let tag = item["tag"] as? String {
             let content = item["content"] as? [Any]
             switch tag {
@@ -557,7 +752,10 @@ private func parsePageBlocks(_ input: [Any], _ url: String, _ media: inout [Medi
                 if let image = parseImage(item, &media) {
                     result.append(image)
                 }
-                break
+            case "iframe":
+                if let video = parseVideo(item, &media) {
+                    result.append(video)
+                }
             case "figure":
                 if let figure = parseFigure(item, &media) {
                     result.append(figure)
@@ -565,7 +763,7 @@ private func parsePageBlocks(_ input: [Any], _ url: String, _ media: inout [Medi
             case "table":
                 result.append(parseTable(item, &media))
             case "ul", "ol":
-                if let list = parseList(item, &media) {
+                if let list = parseList(item, url, &media) {
                     result.append(list)
                 }
             case "hr":
