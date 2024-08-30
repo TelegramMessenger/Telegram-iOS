@@ -234,69 +234,6 @@ final class VideoChatParticipantThumbnailComponent: Component {
                                     }
                                 }
                             }
-                            
-                            /*var notifyOrientationUpdated = false
-                            var notifyIsMirroredUpdated = false
-                            
-                            if !self.didReportFirstFrame {
-                                notifyOrientationUpdated = true
-                                notifyIsMirroredUpdated = true
-                            }
-                            
-                            if let currentOutput = videoOutput {
-                                let currentAspect: CGFloat
-                                if currentOutput.resolution.height > 0.0 {
-                                    currentAspect = currentOutput.resolution.width / currentOutput.resolution.height
-                                } else {
-                                    currentAspect = 1.0
-                                }
-                                if self.currentAspect != currentAspect {
-                                    self.currentAspect = currentAspect
-                                    notifyOrientationUpdated = true
-                                }
-                                
-                                let currentOrientation: PresentationCallVideoView.Orientation
-                                if currentOutput.followsDeviceOrientation {
-                                    currentOrientation = .rotation0
-                                } else {
-                                    if abs(currentOutput.rotationAngle - 0.0) < .ulpOfOne {
-                                        currentOrientation = .rotation0
-                                    } else if abs(currentOutput.rotationAngle - Float.pi * 0.5) < .ulpOfOne {
-                                        currentOrientation = .rotation90
-                                    } else if abs(currentOutput.rotationAngle - Float.pi) < .ulpOfOne {
-                                        currentOrientation = .rotation180
-                                    } else if abs(currentOutput.rotationAngle - Float.pi * 3.0 / 2.0) < .ulpOfOne {
-                                        currentOrientation = .rotation270
-                                    } else {
-                                        currentOrientation = .rotation0
-                                    }
-                                }
-                                if self.currentOrientation != currentOrientation {
-                                    self.currentOrientation = currentOrientation
-                                    notifyOrientationUpdated = true
-                                }
-                                
-                                let currentIsMirrored = !currentOutput.mirrorDirection.isEmpty
-                                if self.currentIsMirrored != currentIsMirrored {
-                                    self.currentIsMirrored = currentIsMirrored
-                                    notifyIsMirroredUpdated = true
-                                }
-                            }
-                            
-                            if !self.didReportFirstFrame {
-                                self.didReportFirstFrame = true
-                                self.onFirstFrameReceived?(Float(self.currentAspect))
-                            }
-                            
-                            if notifyOrientationUpdated {
-                                self.onOrientationUpdated?(self.currentOrientation, self.currentAspect)
-                            }
-                            
-                            if notifyIsMirroredUpdated {
-                                self.onIsMirroredUpdated?(self.currentIsMirrored)
-                            }*/
-                            
-                            
                         }
                     }
                 }
@@ -308,21 +245,40 @@ final class VideoChatParticipantThumbnailComponent: Component {
                     videoLayer.blurredLayer.isHidden = component.isSelected
                     videoLayer.isHidden = component.isSelected
                     
-                    let rotatedResolution = videoSpec.resolution
+                    var rotatedResolution = videoSpec.resolution
+                    var videoIsRotated = false
+                    if abs(videoSpec.rotationAngle - Float.pi * 0.5) < .ulpOfOne || abs(videoSpec.rotationAngle - Float.pi * 3.0 / 2.0) < .ulpOfOne {
+                        videoIsRotated = true
+                    }
+                    if videoIsRotated {
+                        rotatedResolution = CGSize(width: rotatedResolution.height, height: rotatedResolution.width)
+                    }
+                    
                     let videoSize = rotatedResolution.aspectFilled(availableSize)
                     let videoFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - videoSize.width) * 0.5), y: floorToScreenPixels((availableSize.height - videoSize.height) * 0.5)), size: videoSize)
                     let blurredVideoSize = rotatedResolution.aspectFilled(availableSize)
                     let blurredVideoFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - blurredVideoSize.width) * 0.5), y: floorToScreenPixels((availableSize.height - blurredVideoSize.height) * 0.5)), size: blurredVideoSize)
                     
                     let videoResolution = rotatedResolution.aspectFitted(CGSize(width: availableSize.width * 3.0, height: availableSize.height * 3.0))
-                    let rotatedVideoResolution = videoResolution
                     
-                    transition.setPosition(layer: videoLayer, position: videoFrame.center)
-                    transition.setBounds(layer: videoLayer, bounds: CGRect(origin: CGPoint(), size: videoFrame.size))
+                    var rotatedVideoResolution = videoResolution
+                    var rotatedVideoFrame = videoFrame
+                    var rotatedBlurredVideoFrame = blurredVideoFrame
+                    
+                    if videoIsRotated {
+                        rotatedVideoResolution = CGSize(width: rotatedVideoResolution.height, height: rotatedVideoResolution.width)
+                        rotatedVideoFrame = rotatedVideoFrame.size.centered(around: rotatedVideoFrame.center)
+                        rotatedBlurredVideoFrame = rotatedBlurredVideoFrame.size.centered(around: rotatedBlurredVideoFrame.center)
+                    }
+                    
+                    transition.setPosition(layer: videoLayer, position: rotatedVideoFrame.center)
+                    transition.setBounds(layer: videoLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoFrame.size))
+                    transition.setTransform(layer: videoLayer, transform: CATransform3DMakeRotation(CGFloat(videoSpec.rotationAngle), 0.0, 0.0, 1.0))
                     videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(rotatedVideoResolution.width), height: Int(rotatedVideoResolution.height)), edgeInset: 2)
                     
-                    transition.setPosition(layer: videoLayer.blurredLayer, position: blurredVideoFrame.center)
-                    transition.setBounds(layer: videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: blurredVideoFrame.size))
+                    transition.setPosition(layer: videoLayer.blurredLayer, position: rotatedBlurredVideoFrame.center)
+                    transition.setBounds(layer: videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: rotatedBlurredVideoFrame.size))
+                    transition.setTransform(layer: videoLayer.blurredLayer, transform: CATransform3DMakeRotation(CGFloat(videoSpec.rotationAngle), 0.0, 0.0, 1.0))
                 }
             } else {
                 if let videoBackgroundLayer = self.videoBackgroundLayer {

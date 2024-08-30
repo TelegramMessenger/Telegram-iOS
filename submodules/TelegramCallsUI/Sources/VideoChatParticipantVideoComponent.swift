@@ -364,21 +364,40 @@ final class VideoChatParticipantVideoComponent: Component {
                 if let videoSpec = self.videoSpec {
                     videoBackgroundLayer.isHidden = false
                     
-                    let rotatedResolution = videoSpec.resolution
+                    var rotatedResolution = videoSpec.resolution
+                    var videoIsRotated = false
+                    if abs(videoSpec.rotationAngle - Float.pi * 0.5) < .ulpOfOne || abs(videoSpec.rotationAngle - Float.pi * 3.0 / 2.0) < .ulpOfOne {
+                        videoIsRotated = true
+                    }
+                    if videoIsRotated {
+                        rotatedResolution = CGSize(width: rotatedResolution.height, height: rotatedResolution.width)
+                    }
+                    
                     let videoSize = rotatedResolution.aspectFitted(availableSize)
                     let videoFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - videoSize.width) * 0.5), y: floorToScreenPixels((availableSize.height - videoSize.height) * 0.5)), size: videoSize)
                     let blurredVideoSize = rotatedResolution.aspectFilled(availableSize)
                     let blurredVideoFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - blurredVideoSize.width) * 0.5), y: floorToScreenPixels((availableSize.height - blurredVideoSize.height) * 0.5)), size: blurredVideoSize)
                     
                     let videoResolution = rotatedResolution.aspectFitted(CGSize(width: availableSize.width * 3.0, height: availableSize.height * 3.0))
-                    let rotatedVideoResolution = videoResolution
                     
-                    transition.setPosition(layer: videoLayer, position: videoFrame.center)
-                    transition.setBounds(layer: videoLayer, bounds: CGRect(origin: CGPoint(), size: videoFrame.size))
+                    var rotatedVideoResolution = videoResolution
+                    var rotatedVideoFrame = videoFrame
+                    var rotatedBlurredVideoFrame = blurredVideoFrame
+                    
+                    if videoIsRotated {
+                        rotatedVideoResolution = CGSize(width: rotatedVideoResolution.height, height: rotatedVideoResolution.width)
+                        rotatedVideoFrame = rotatedVideoFrame.size.centered(around: rotatedVideoFrame.center)
+                        rotatedBlurredVideoFrame = rotatedBlurredVideoFrame.size.centered(around: rotatedBlurredVideoFrame.center)
+                    }
+                    
+                    transition.setPosition(layer: videoLayer, position: rotatedVideoFrame.center)
+                    transition.setBounds(layer: videoLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoFrame.size))
+                    transition.setTransform(layer: videoLayer, transform: CATransform3DMakeRotation(CGFloat(videoSpec.rotationAngle), 0.0, 0.0, 1.0))
                     videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(rotatedVideoResolution.width), height: Int(rotatedVideoResolution.height)), edgeInset: 2)
                     
-                    transition.setPosition(layer: videoLayer.blurredLayer, position: blurredVideoFrame.center)
-                    transition.setBounds(layer: videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: blurredVideoFrame.size))
+                    transition.setPosition(layer: videoLayer.blurredLayer, position: rotatedBlurredVideoFrame.center)
+                    transition.setBounds(layer: videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: rotatedBlurredVideoFrame.size))
+                    transition.setTransform(layer: videoLayer.blurredLayer, transform: CATransform3DMakeRotation(CGFloat(videoSpec.rotationAngle), 0.0, 0.0, 1.0))
                 }
             } else {
                 if let videoBackgroundLayer = self.videoBackgroundLayer {
