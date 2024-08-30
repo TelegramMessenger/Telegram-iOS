@@ -244,7 +244,11 @@ final class VideoChatParticipantVideoComponent: Component {
                     videoBackgroundLayer = SimpleLayer()
                     videoBackgroundLayer.backgroundColor = UIColor(white: 0.1, alpha: 1.0).cgColor
                     self.videoBackgroundLayer = videoBackgroundLayer
-                    self.layer.insertSublayer(videoBackgroundLayer, at: 0)
+                    if let blurredAvatarView = self.blurredAvatarView {
+                        self.layer.insertSublayer(videoBackgroundLayer, above: blurredAvatarView.layer)
+                    } else {
+                        self.layer.insertSublayer(videoBackgroundLayer, at: 0)
+                    }
                     videoBackgroundLayer.isHidden = true
                 }
                 

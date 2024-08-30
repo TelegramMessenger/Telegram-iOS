@@ -73,6 +73,18 @@ final class VideoChatMicButtonComponent: Component {
         }
         
         override func endTracking(_ touch: UITouch?, with event: UIEvent?) {
+            performEndOrCancelTracking()
+            
+            return super.endTracking(touch, with: event)
+        }
+        
+        override func cancelTracking(with event: UIEvent?) {
+            performEndOrCancelTracking()
+            
+            return super.cancelTracking(with: event)
+        }
+        
+        private func performEndOrCancelTracking() {
             if let component = self.component {
                 let timestamp = CFAbsoluteTimeGetCurrent()
                 
@@ -93,12 +105,6 @@ final class VideoChatMicButtonComponent: Component {
                     }
                 }
             }
-            
-            return super.endTracking(touch, with: event)
-        }
-        
-        override func cancelTracking(with event: UIEvent?) {
-            return super.cancelTracking(with: event)
         }
         
         required init?(coder: NSCoder) {
@@ -117,10 +123,12 @@ final class VideoChatMicButtonComponent: Component {
             
             let titleText: String
             let backgroundColor: UIColor
+            var isEnabled = true
             switch component.content {
             case .connecting:
                 titleText = "Connecting..."
                 backgroundColor = UIColor(white: 1.0, alpha: 0.1)
+                isEnabled = false
             case .muted:
                 titleText = "Unmute"
                 backgroundColor = UIColor(rgb: 0x0086FF)
@@ -128,6 +136,7 @@ final class VideoChatMicButtonComponent: Component {
                 titleText = "Mute"
                 backgroundColor = UIColor(rgb: 0x34C659)
             }
+            self.isEnabled = isEnabled
             
             let titleSize = self.title.update(
                 transition: .immediate,
