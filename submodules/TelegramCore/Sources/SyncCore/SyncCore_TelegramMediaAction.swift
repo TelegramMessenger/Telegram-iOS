@@ -125,7 +125,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case giftCode(slug: String, fromGiveaway: Bool, isUnclaimed: Bool, boostPeerId: PeerId?, months: Int32, currency: String?, amount: Int64?, cryptoCurrency: String?, cryptoAmount: Int64?)
     case giveawayLaunched(stars: Int64?)
     case joinedChannel
-    case giveawayResults(winners: Int32, unclaimed: Int32)
+    case giveawayResults(winners: Int32, unclaimed: Int32, stars: Bool)
     case boostsApplied(boosts: Int32)
     case paymentRefunded(peerId: PeerId, currency: String, totalAmount: Int64, payload: Data?, transactionId: String)
     case giftStars(currency: String, amount: Int64, count: Int64, cryptoCurrency: String?, cryptoAmount: Int64?, transactionId: String?)
@@ -235,7 +235,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case 38:
             self = .joinedChannel
         case 39:
-            self = .giveawayResults(winners: decoder.decodeInt32ForKey("winners", orElse: 0), unclaimed: decoder.decodeInt32ForKey("unclaimed", orElse: 0))
+            self = .giveawayResults(winners: decoder.decodeInt32ForKey("winners", orElse: 0), unclaimed: decoder.decodeInt32ForKey("unclaimed", orElse: 0), stars: decoder.decodeBoolForKey("stars", orElse: false))
         case 40:
             self = .boostsApplied(boosts: decoder.decodeInt32ForKey("boosts", orElse: 0))
         case 41:
@@ -470,10 +470,11 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             }
         case .joinedChannel:
             encoder.encodeInt32(38, forKey: "_rawValue")
-        case let .giveawayResults(winners, unclaimed):
+        case let .giveawayResults(winners, unclaimed, stars):
             encoder.encodeInt32(39, forKey: "_rawValue")
             encoder.encodeInt32(winners, forKey: "winners")
             encoder.encodeInt32(unclaimed, forKey: "unclaimed")
+            encoder.encodeBool(stars, forKey: "stars")
         case let .boostsApplied(boosts):
             encoder.encodeInt32(40, forKey: "_rawValue")
             encoder.encodeInt32(boosts, forKey: "boosts")

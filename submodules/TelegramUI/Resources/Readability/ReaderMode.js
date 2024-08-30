@@ -7,12 +7,16 @@
     try {
         const docStr = new XMLSerializer().serializeToString(document);
         
-        const clean = DOMPurify.sanitize(docStr, {WHOLE_DOCUMENT: true});
+        const clean = DOMPurify.sanitize(docStr, {WHOLE_DOCUMENT: true, ADD_TAGS: ["iframe"]});
         const cleanDoc = new DOMParser().parseFromString(clean, "text/html");
                 
         const readability = new Readability(cleanDoc)
         const result = readability.parse()
-                
+        
+        if (result.length && result.length < 1000) {
+            return null
+        }
+        
         const doc = new DOMParser().parseFromString(result.content, 'text/html').body
         
         const parse = e => [...(e.childNodes || [])].map(node => {

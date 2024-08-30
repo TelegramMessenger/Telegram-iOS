@@ -459,15 +459,26 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .prepaid(_, title, subtitle, prepaidGiveaway):
             let color: GiftOptionItem.Icon.Color
-            switch prepaidGiveaway.months {
-            case 3:
-                color = .green
-            case 6:
-                color = .blue
-            case 12:
-                color = .red
-            default:
-                color = .blue
+            switch prepaidGiveaway.prize {
+            case let .premium(months):
+                switch months {
+                case 3:
+                    color = .green
+                case 6:
+                    color = .blue
+                case 12:
+                    color = .red
+                default:
+                    color = .blue
+                }
+            case let .stars(amount):
+                if amount <= 1000 {
+                    color = .green
+                } else if amount < 2500 {
+                    color = .blue
+                } else {
+                    color = .red
+                }
             }
             return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, titleBadge: "\(prepaidGiveaway.quantity * 4)", subtitle: subtitle, sectionId: self.section, action: nil)
         case let .starsHeader(_, text, additionalText):
@@ -760,7 +771,18 @@ private func createGiveawayControllerEntries(
         entries.append(.giftStars(presentationData.theme, presentationData.strings.BoostGift_Prize_Stars, presentationData.strings.BoostGift_CreateGiveawayInfo, state.mode == .starsGiveaway))
     case let .prepaid(prepaidGiveaway):
         entries.append(.prepaidHeader(presentationData.theme, presentationData.strings.BoostGift_PrepaidGiveawayTitle))
-        entries.append(.prepaid(presentationData.theme, presentationData.strings.BoostGift_PrepaidGiveawayCount(prepaidGiveaway.quantity), presentationData.strings.BoostGift_PrepaidGiveawayMonths("\(prepaidGiveaway.months)").string, prepaidGiveaway))
+        let title: String
+        let text: String
+        switch prepaidGiveaway.prize {
+        case let .premium(months):
+            title = presentationData.strings.BoostGift_PrepaidGiveawayCount(prepaidGiveaway.quantity)
+            text = presentationData.strings.BoostGift_PrepaidGiveawayMonths("\(months)").string
+        case let .stars(stars):
+            //TODO:localize
+            title = "\(stars) Telegram Stars"
+            text = "among \(prepaidGiveaway.quantity) winners"
+        }
+        entries.append(.prepaid(presentationData.theme, title, text, prepaidGiveaway))
     }
     
     if case .starsGiveaway = state.mode, !starsGiveawayOptions.isEmpty  {
@@ -988,10 +1010,20 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let actionsDisposable = DisposableSet()
     
     let initialSubscriptions: Int32
+    let initialStars: Int64
+    let initialWinners: Int32
     if case let .prepaid(prepaidGiveaway) = subject {
+        if case let .stars(stars) = prepaidGiveaway.prize {
+            initialStars = stars
+        } else {
+            initialStars = 500
+        }
         initialSubscriptions = prepaidGiveaway.quantity
+        initialWinners = prepaidGiveaway.quantity
     } else {
         initialSubscriptions = 5
+        initialStars = 500
+        initialWinners = 5
     }
     let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
     
@@ -1009,7 +1041,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let minDate = currentTime + 60 * 1
     let maxDate = currentTime + context.userLimits.maxGiveawayPeriodSeconds
     
-    let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, stars: 500, winners: 5, time: expiryTime)
+    let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, stars: initialStars, winners: initialWinners, time: expiryTime)
 
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)

@@ -12876,3 +12876,7 @@ Sorry for the inconvenience.";
 
 "BoostGift.Group.StarsDateInfo" = "Choose when %@ of your group will be randomly selected to receive Stars.";
 "BoostGift.StarsDateInfo" = "Choose when %@ of your channel will be randomly selected to receive Stars.";
+
+"BoostGift.PrepaidGiveawayStarsCount_1" = "%@ Telegram Premium";
+"BoostGift.PrepaidGiveawayStarsCount_any" = "%@ Telegram Premium";
+"BoostGift.PrepaidGiveawayStarsMonths" = "%@-month subscriptions";
