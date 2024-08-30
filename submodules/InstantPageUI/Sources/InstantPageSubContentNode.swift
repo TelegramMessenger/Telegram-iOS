@@ -198,7 +198,7 @@ final class InstantPageSubContentNode : ASDisplayNode {
                         }, updateWebEmbedHeight: { _ in
                         }, updateDetailsExpanded: { [weak self] expanded in
                             self?.updateDetailsExpanded(detailsIndex, expanded)
-                        }, currentExpandedDetails: self.currentExpandedDetails) {
+                        }, currentExpandedDetails: self.currentExpandedDetails, getPreloadedResource: { _ in return nil }) {
                         newNode.frame = itemFrame
                         newNode.updateLayout(size: itemFrame.size, transition: transition)
                         if let topNode = topNode {

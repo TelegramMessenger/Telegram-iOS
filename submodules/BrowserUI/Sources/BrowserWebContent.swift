@@ -173,6 +173,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     private var presentationData: PresentationData
     
     let webView: WebView
+    var readability: Readability?
     
     private let errorView: ComponentHostView<Empty>
     private var currentError: Error?
@@ -191,7 +192,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     
     private let faviconDisposable = MetaDisposable()
     
-    var pushContent: (BrowserScreen.Subject) -> Void = { _ in }
+    var pushContent: (BrowserScreen.Subject, BrowserContent?) -> Void = { _, _ in }
     var openAppUrl: (String) -> Void = { _ in }
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
     var minimize: () -> Void = { }
@@ -238,7 +239,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             contentController.add(WeakScriptMessageHandler { message in
                 handleScriptMessageImpl?(message)
             }, name: "performAction")
-
+            
             configuration.userContentController = contentController
             configuration.applicationNameForUserAgent = computedUserAgent()
         }
@@ -377,13 +378,36 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.evaluateJavaScript(js) { _, _ in }
     }
     
+    func toggleInstantView(_ enabled: Bool) {
+        if enabled {
+            if let instantPage = self.instantPage {
+                self.pushContent(.instantPage(webPage: instantPage, anchor: nil, sourceLocation: InstantPageSourceLocation(userLocation: .other, peerType: .channel), preloadedResources: self.instantPageResources), self)
+            } else if let readability = self.readability {
+                readability.webView.frame = self.webView.frame
+                self.addSubview(readability.webView)
+                
+                var collapsedFrame = readability.webView.frame
+                collapsedFrame.size.height = 0.0
+                readability.webView.clipsToBounds = true
+                readability.webView.layer.animateFrame(from: collapsedFrame, to: readability.webView.frame, duration: 0.3)
+            }
+        } else if let readability = self.readability {
+            var collapsedFrame = readability.webView.frame
+            collapsedFrame.size.height = 0.0
+            readability.webView.layer.animateFrame(from: readability.webView.frame, to: collapsedFrame, duration: 0.3, removeOnCompletion: false, completion: { _ in
+                readability.webView.removeFromSuperview()
+                readability.webView.layer.removeAllAnimations()
+            })
+        }
+    }
+    
     private var didSetupSearch = false
     private func setupSearch(completion: @escaping () -> Void) {
         guard !self.didSetupSearch else {
             completion()
             return
         }
-        
+                
         let bundle = getAppBundle()
         guard let scriptPath = bundle.path(forResource: "UIWebViewSearch", ofType: "js") else {
             return
@@ -764,6 +788,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
     }
         
+    private var instantPage: TelegramMediaWebpage?
+    private var instantPageResources: [Any]?
+    
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         if let _ = self.currentError {
             self.currentError = nil
@@ -772,6 +799,10 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             }
         }
         self.updateFontState(self.currentFontState, force: true)
+        
+        self.readability = nil
+        self.instantPage = nil
+        self.instantPageResources = nil
     }
     
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -780,6 +811,49 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             .withUpdatedForwardList(webView.backForwardList.forwardList.map { BrowserContentState.HistoryItem(webItem: $0) })
         }
         self.parseFavicon()
+        
+        guard let url = URL(string: self._state.url) else {
+            return
+        }
+        
+        if #available(iOS 14.5, *) {
+            self.webView.createWebArchiveData { [weak self] result in
+                guard let self, case let .success(data) = result else {
+                    return
+                }
+                let readability = Readability(url: url, archiveData: data, completionHandler: { [weak self] result, error in
+                    guard let self else {
+                        return
+                    }
+                    if let (webPage, resources) = result {
+                        self.updateState {$0
+                            .withUpdatedHasInstantView(true)
+                        }
+                        self.instantPage = webPage
+                        self.instantPageResources = resources
+                        let _ = (updatedRemoteWebpage(postbox: self.context.account.postbox, network: self.context.account.network, accountPeerId: self.context.account.peerId, webPage: WebpageReference(TelegramMediaWebpage(webpageId: MediaId(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(url: self._state.url, displayUrl: "", hash: 0, type: nil, websiteName: nil, title: nil, text: nil, embedUrl: nil, embedType: nil, embedSize: nil, duration: nil, author: nil, isMediaLargeByDefault: nil, image: nil, file: nil, story: nil, attributes: [], instantPage: nil)))))
+                        |> deliverOnMainQueue).start(next: { [weak self] webPage in
+                            guard let self, let webPage, case let .Loaded(result) = webPage.content, let _ = result.instantPage else {
+                                return
+                            }
+//                            let _ = self
+//                            #if DEBUG
+//                            
+//                            #else
+                            self.instantPage = webPage
+//                            #endif
+                        })
+                    } else {
+                        self.instantPage = nil
+                        self.instantPageResources = nil
+                        self.updateState {$0
+                            .withUpdatedHasInstantView(false)
+                        }
+                    }
+                })
+                self.readability = readability
+            }
+        }
     }
     
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
@@ -951,7 +1025,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             navigationController.pushViewController(controller)
             return (controller.node.content.last as? BrowserWebContent)?.webView
         } else {
-            self.pushContent(subject)
+            self.pushContent(subject, nil)
         }
         return nil
     }

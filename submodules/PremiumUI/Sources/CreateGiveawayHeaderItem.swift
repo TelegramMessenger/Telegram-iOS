@@ -15,13 +15,15 @@ final class CreateGiveawayHeaderItem: ItemListControllerHeaderItem {
     let strings: PresentationStrings
     let title: String
     let text: String
+    let isStars: Bool
     let cancel: () -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, title: String, text: String, cancel: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, title: String, text: String, isStars: Bool, cancel: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         self.title = title
         self.text = text
+        self.isStars = isStars
         self.cancel = cancel
     }
     

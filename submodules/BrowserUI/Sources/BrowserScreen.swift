@@ -492,6 +492,7 @@ public class BrowserScreen: ViewController, MinimizableController {
         case increaseFontSize
         case resetFontSize
         case updateFontIsSerif(Bool)
+        case toggleInstantView(Bool)
         case addBookmark
         case openBookmarks
         case openAddressBar
@@ -519,7 +520,7 @@ public class BrowserScreen: ViewController, MinimizableController {
         private var presentationData: PresentationData
         private var presentationDataDisposable: Disposable?
         private var validLayout: (ContainerViewLayout, CGFloat)?
-        
+                
         init(controller: BrowserScreen) {
             self.context = controller.context
             self.controller = controller
@@ -755,6 +756,8 @@ public class BrowserScreen: ViewController, MinimizableController {
                         return updatedState
                     })
                     content.updateFontState(self.presentationState.fontState)
+                case let .toggleInstantView(enabled):
+                    content.toggleInstantView(enabled)
                 case .addBookmark:
                     if let content = self.content.last {
                         self.addBookmark(content.currentState.url, showArrow: true)
@@ -822,7 +825,7 @@ public class BrowserScreen: ViewController, MinimizableController {
             self.requestLayout(transition: transition)
         }
         
-        func pushContent(_ content: BrowserScreen.Subject, transition: ComponentTransition) {
+        func pushContent(_ content: BrowserScreen.Subject, additionalContent: BrowserContent? = nil, transition: ComponentTransition) {
             let browserContent: BrowserContent
             switch content {
             case let .webPage(url):
@@ -834,13 +837,19 @@ public class BrowserScreen: ViewController, MinimizableController {
                 }
                 browserContent = webContent
                 self.controller?.preferredConfiguration = nil
-            case let .instantPage(webPage, anchor, sourceLocation):
-                let instantPageContent = BrowserInstantPageContent(context: self.context, presentationData: self.presentationData, webPage: webPage, anchor: anchor, url: webPage.content.url ?? "", sourceLocation: sourceLocation)
+            case let .instantPage(webPage, anchor, sourceLocation, preloadedResouces):
+                let instantPageContent = BrowserInstantPageContent(context: self.context, presentationData: self.presentationData, webPage: webPage, anchor: anchor, url: webPage.content.url ?? "", sourceLocation: sourceLocation, preloadedResouces: preloadedResouces, originalContent: additionalContent)
                 instantPageContent.openPeer = { [weak self] peer in
                     guard let self else {
                         return
                     }
                     self.openPeer(peer)
+                }
+                instantPageContent.restoreContent = { [weak self, weak instantPageContent] content in
+                    guard let self, let instantPageContent else {
+                        return
+                    }
+                    self.pushBrowserContent(content, additionalContent: instantPageContent, transition: .easeInOut(duration: 0.3).withUserData(NavigationStackComponent<Empty>.CurlTransition.hide))
                 }
                 browserContent = instantPageContent
             case let .document(file, _):
@@ -848,11 +857,17 @@ public class BrowserScreen: ViewController, MinimizableController {
             case let .pdfDocument(file, _):
                 browserContent = BrowserPdfContent(context: self.context, presentationData: self.presentationData, file: file)
             }
-            browserContent.pushContent = { [weak self] content in
+            browserContent.pushContent = { [weak self] content, additionalContent in
                 guard let self else {
                     return
                 }
-                self.pushContent(content, transition: .spring(duration: 0.4))
+                var transition: ComponentTransition
+                if let _ = additionalContent {
+                    transition = .easeInOut(duration: 0.3).withUserData(NavigationStackComponent<Empty>.CurlTransition.show)
+                } else {
+                    transition = .spring(duration: 0.4)
+                }
+                self.pushContent(content, additionalContent: additionalContent, transition: transition)
             }
             browserContent.openAppUrl = { [weak self] url in
                 guard let self else {
@@ -896,7 +911,15 @@ public class BrowserScreen: ViewController, MinimizableController {
                 }
             }
             
-            self.content.append(browserContent)
+            self.pushBrowserContent(browserContent, additionalContent: additionalContent, transition: transition)
+        }
+        
+        func pushBrowserContent(_ browserContent: BrowserContent, additionalContent: BrowserContent? = nil, transition: ComponentTransition) {
+            if let additionalContent, let index = self.content.firstIndex(where: { $0 === additionalContent }) {
+                self.content[index] = browserContent
+            } else {
+                self.content.append(browserContent)
+            }
             self.requestLayout(transition: transition)
             
             self.setupContentStateUpdates()
@@ -1050,16 +1073,20 @@ public class BrowserScreen: ViewController, MinimizableController {
                 return
             }
             
+            guard let controller = self.controller, let content = self.content.last else {
+                return
+            }
+            
             if let animationComponentView = referenceView.componentView.view as? LottieComponent.View {
                 animationComponentView.playOnce()
             }
 
             self.view.endEditing(true)
             
-            let checkIcon: (PresentationTheme) -> UIImage? = { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Check"), color: theme.contextMenu.primaryColor) }
-            let emptyIcon: (PresentationTheme) -> UIImage? = { _ in
-                return nil
-            }
+//            let checkIcon: (PresentationTheme) -> UIImage? = { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Check"), color: theme.contextMenu.primaryColor) }
+//            let emptyIcon: (PresentationTheme) -> UIImage? = { _ in
+//                return nil
+//            }
             
             let settings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings])
             |> take(1)
@@ -1071,17 +1098,21 @@ public class BrowserScreen: ViewController, MinimizableController {
                 }
             }
             
-            let _ = (settings
-            |> deliverOnMainQueue).start(next: { [weak self] settings in
-                guard let self, let controller = self.controller, let contentState = self.contentState, let layout = self.validLayout?.0 else {
-                    return
+            let source: ContextContentSource = .reference(BrowserReferenceContentSource(controller: controller, sourceView: referenceView.referenceNode.view))
+            
+            let items: Signal<ContextController.Items, NoError> = combineLatest(
+                queue: Queue.mainQueue(),
+                settings,
+                content.state
+            )
+            |> map { [weak self] settings, contentState -> ContextController.Items in
+                guard let self, let layout = self.validLayout?.0 else {
+                    return ContextController.Items(content: .list([]))
                 }
-                
-                let source: ContextContentSource = .reference(BrowserReferenceContentSource(controller: controller, sourceView: referenceView.referenceNode.view))
                 
                 let performAction = self.performAction
                 
-                let forceIsSerif = self.presentationState.fontState.isSerif
+//                let forceIsSerif = self.presentationState.fontState.isSerif
                 let fontItem = BrowserFontSizeContextMenuItem(
                     value: self.presentationState.fontState.size,
                     decrease: { [weak self] in
@@ -1140,16 +1171,20 @@ public class BrowserScreen: ViewController, MinimizableController {
                     
                 } else {
                     items.append(.custom(fontItem, false))
+                    //TODO:localize
                     
-                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontSanFrancisco, icon: forceIsSerif ? emptyIcon : checkIcon, action: { (controller, action) in
-                        performAction.invoke(.updateFontIsSerif(false))
-                        action(.default)
-                    })))
-                    
-                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_FontNewYork, textFont: .custom(font: Font.with(size: 17.0, design: .serif, traits: []), height: nil, verticalOffset: nil), icon: forceIsSerif ? checkIcon : emptyIcon, action: { (controller, action) in
-                        performAction.invoke(.updateFontIsSerif(true))
-                        action(.default)
-                    })))
+                    if case .webPage = contentState.contentType {
+                        let isAvailable = contentState.hasInstantView
+                        items.append(.action(ContextMenuActionItem(text: "Show Instant View", textColor: isAvailable ? .primary : .disabled, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: isAvailable ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withAlphaComponent(0.3)) }, action: isAvailable ? { (controller, action) in
+                            performAction.invoke(.toggleInstantView(true))
+                            action(.default)
+                        } : nil)))
+                    } else if case .instantPage = contentState.contentType, contentState.isInnerInstantViewEnabled {
+                        items.append(.action(ContextMenuActionItem(text: "Hide Instant View", textColor: .primary, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                            performAction.invoke(.toggleInstantView(false))
+                            action(.default)
+                        })))
+                    }
                 }
                 
                 if !items.isEmpty {
@@ -1190,10 +1225,11 @@ public class BrowserScreen: ViewController, MinimizableController {
                         })))
                     }
                 }
-                
-                let contextController = ContextController(presentationData: self.presentationData, source: source, items: .single(ContextController.Items(content: .list(items))))
-                self.controller?.present(contextController, in: .window(.root))
-            })
+                return ContextController.Items(content: .list(items))
+            }
+            
+            let contextController = ContextController(presentationData: self.presentationData, source: source, items: items)
+            self.controller?.present(contextController, in: .window(.root))
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -1434,7 +1470,7 @@ public class BrowserScreen: ViewController, MinimizableController {
     
     public enum Subject {
         case webPage(url: String)
-        case instantPage(webPage: TelegramMediaWebpage, anchor: String?, sourceLocation: InstantPageSourceLocation)
+        case instantPage(webPage: TelegramMediaWebpage, anchor: String?, sourceLocation: InstantPageSourceLocation, preloadedResources: [Any]?)
         case document(file: TelegramMediaFile, canShare: Bool)
         case pdfDocument(file: TelegramMediaFile, canShare: Bool)
     }

@@ -321,7 +321,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         self.headerNode = LocationMapHeaderNode(presentationData: presentationData, toggleMapModeSelection: interaction.toggleMapModeSelection, goToUserLocation: interaction.toggleTrackingMode, setupProximityNotification: { reset in
             setupProximityNotificationImpl?(reset)
         })
-        self.headerNode.mapNode.isRotateEnabled = false
+        //self.headerNode.mapNode.isRotateEnabled = false
         
         self.optionsNode = LocationOptionsNode(presentationData: presentationData, updateMapMode: interaction.updateMapMode)
         

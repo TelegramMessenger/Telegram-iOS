@@ -300,7 +300,18 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     }
                 }
             case let .transaction(transaction, parentPeer):
-                if let _ = transaction.subscriptionPeriod {
+                if let giveawayMessageIdValue = transaction.giveawayMessageId {
+                    titleText = strings.Stars_Transaction_Giveaway_Title
+                    descriptionText = ""
+                    count = transaction.count
+                    transactionId = transaction.id
+                    date = transaction.date
+                    giveawayMessageId = giveawayMessageIdValue
+                    if case let .peer(peer) = transaction.peer {
+                        toPeer = peer
+                    }
+                    transactionPeer = transaction.peer
+                } else if let _ = transaction.subscriptionPeriod {
                     titleText = strings.Stars_Transaction_SubscriptionFee
                     descriptionText = ""
                     count = transaction.count
@@ -447,11 +458,11 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                             toPeer = state.peerMap[message.id.peerId]
                         }
                     } else if case let .prizeStars(countValue, _, boostPeerId, _, giveawayMessageIdValue) = action.action {
-                        titleText = "Received Prize"
+                        titleText = strings.Stars_Transaction_Giveaway_Title
                         
                         count = countValue
                         countOnTop = true
-                        transactionId = nil//transactionIdValue
+                        transactionId = nil
                         giveawayMessageId = giveawayMessageIdValue
                         if let boostPeerId {
                             toPeer = state.peerMap[boostPeerId]
@@ -526,7 +537,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             } else {
                 imageSubject = .none
             }
-            if isSubscription || isSubscriber || isSubscriptionFee {
+            if isSubscription || isSubscriber || isSubscriptionFee || giveawayMessageId != nil {
                 imageIcon = .star
             } else {
                 imageIcon = nil
@@ -646,19 +657,19 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             if let giveawayMessageId {
                 tableItems.append(.init(
                     id: "prize",
-                    title: "Prize",
+                    title: strings.Stars_Transaction_Giveaway_Prize,
                     component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: "\(count) Stars", font: tableFont, textColor: tableTextColor)))
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Stars_Transaction_Giveaway_Stars(Int32(count)), font: tableFont, textColor: tableTextColor)))
                     )
                 ))
                 
                 tableItems.append(.init(
                     id: "reason",
-                    title: "Reason",
+                    title: strings.Stars_Transaction_Giveaway_Reason,
                     component: AnyComponent(
                         Button(
                             content: AnyComponent(
-                                MultilineTextComponent(text: .plain(NSAttributedString(string: "Giveaway", font: tableFont, textColor: tableLinkColor)))
+                                MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Stars_Transaction_Giveaway_Giveaway, font: tableFont, textColor: tableLinkColor)))
                             ),
                             action: {
                                 component.openMessage(giveawayMessageId)
@@ -1206,7 +1217,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             theme: forceDark ? .dark : .default
         )
         
-        self.navigationPresentation = .standaloneFlatModal
+        self.navigationPresentation = .flatModal
         self.automaticallyControlPresentationContextLayout = false
         
         openPeerImpl = { [weak self] peer in

@@ -19,6 +19,8 @@ import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import ChatMessageAttachedContentButtonNode
 import ChatControllerInteraction
+import TextNodeWithEntities
+import TextFormat
 
 private let titleFont = Font.medium(15.0)
 private let textFont = Font.regular(13.0)
@@ -48,7 +50,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
     private let dateTextNode: TextNode
     
     private let badgeBackgroundNode: ASImageNode
-    private let badgeTextNode: TextNode
+    private let badgeTextNode: TextNodeWithEntities
     
     private var giveaway: TelegramMediaGiveaway?
     
@@ -104,7 +106,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
         self.badgeBackgroundNode = ASImageNode()
         self.badgeBackgroundNode.displaysAsynchronously = false
         
-        self.badgeTextNode = TextNode()
+        self.badgeTextNode = TextNodeWithEntities()
         
         self.buttonNode = ChatMessageAttachedContentButtonNode()
         self.channelButtons = PeerButtonsStackNode()
@@ -126,7 +128,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
         self.addSubnode(self.channelButtons)
         self.addSubnode(self.animationNode)
         self.addSubnode(self.badgeBackgroundNode)
-        self.addSubnode(self.badgeTextNode)
+        self.addSubnode(self.badgeTextNode.textNode)
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
@@ -221,7 +223,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
         let makeDateTitleLayout = TextNode.asyncLayout(self.dateTitleNode)
         let makeDateTextLayout = TextNode.asyncLayout(self.dateTextNode)
 
-        let makeBadgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
+        let makeBadgeTextLayout = TextNodeWithEntities.asyncLayout(self.badgeTextNode)
 
         let makeButtonLayout = ChatMessageAttachedContentButtonNode.asyncLayout(self.buttonNode)
         
@@ -267,7 +269,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                 case .premium:
                     badgeText = "X\(giveaway.quantity)"
                 case let .stars(amount):
-                    badgeText = "\(amount)"
+                    badgeText = "⭐️\(presentationStringsFormattedNumber(Int32(amount), item.presentationData.dateTimeFormat.groupingSeparator)) "
                     isStars = true
                 }
             } else if let giveawayResults {
@@ -275,14 +277,18 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                 case .premium:
                     badgeText = "X\(giveawayResults.winnersCount)"
                 case let .stars(amount):
-                    badgeText = "\(amount)"
+                    badgeText = "⭐️\(presentationStringsFormattedNumber(Int32(amount), item.presentationData.dateTimeFormat.groupingSeparator)) "
                     isStars = true
                 }
             } else {
                 badgeText = ""
             }
-            let badgeString = NSAttributedString(string: badgeText, font: Font.with(size: 10.0, design: .round , weight: .bold, traits: .monospacedNumbers), textColor: badgeTextColor)
-             
+            let badgeString = NSMutableAttributedString(string: badgeText, font: Font.with(size: 10.0, design: .round , weight: .bold, traits: .monospacedNumbers), textColor: badgeTextColor)
+            if let range = badgeString.string.range(of: "⭐️") {
+                badgeString.addAttribute(.attachment, value: UIImage(bundleImageName: "Chat/Message/Stars")!, range: NSRange(range, in: badgeString.string))
+                badgeString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: badgeString.string))
+            }
+            
             var updatedBadgeImage: UIImage?
             if themeUpdated {
                 updatedBadgeImage = generateStretchableFilledCircleImage(diameter: 21.0, color: isStars ? UIColor(rgb: 0xffaf0a) : accentColor, strokeColor: backgroundColor, strokeWidth: 1.0 + UIScreenPixel, backgroundColor: nil)
@@ -690,7 +696,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                             strongSelf.giveaway = giveaway
                             
                             let displaysAsynchronously = !item.presentationData.isPreview
-                            strongSelf.badgeTextNode.displaysAsynchronously = displaysAsynchronously
+                            strongSelf.badgeTextNode.textNode.displaysAsynchronously = displaysAsynchronously
                             strongSelf.prizeTitleNode.displaysAsynchronously = displaysAsynchronously
                             strongSelf.prizeTextNode.displaysAsynchronously = displaysAsynchronously
                             strongSelf.additionalPrizeTextNode.displaysAsynchronously = displaysAsynchronously
@@ -705,7 +711,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                             
                             strongSelf.updateVisibility()
                             
-                            let _ = badgeTextApply()
+                            let _ = badgeTextApply(TextNodeWithEntities.Arguments(context: item.context, cache: item.context.animationCache, renderer: item.context.animationRenderer, placeholderColor: .clear, attemptSynchronous: true))
                             let _ = prizeTitleApply()
                             let _ = prizeTextApply()
                             let _ = additionalPrizeSeparatorApply()
@@ -728,7 +734,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                             strongSelf.animationNode.updateLayout(size: iconSize)
                             
                             let badgeTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - badgeTextLayout.size.width) / 2.0) + 1.0, y: originY + 88.0), size: badgeTextLayout.size)
-                            strongSelf.badgeTextNode.frame = badgeTextFrame
+                            strongSelf.badgeTextNode.textNode.frame = badgeTextFrame
                             strongSelf.badgeBackgroundNode.frame = badgeTextFrame.insetBy(dx: -6.0, dy: -5.0).offsetBy(dx: -1.0, dy: 0.0)
                             if let updatedBadgeImage {
                                 strongSelf.badgeBackgroundNode.image = updatedBadgeImage

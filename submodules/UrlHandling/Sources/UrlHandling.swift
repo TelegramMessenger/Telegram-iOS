@@ -249,7 +249,7 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                         return .share(url: url, text: text, to: to)
                     } else if peerName == "boost" {
                         for queryItem in queryItems {
-                            if queryItem.name == "c", let value = queryItem.value, let channelId = Int64(value) {
+                            if queryItem.name == "c", let value = queryItem.value, let channelId = Int64(value), channelId > 0 {
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
                                 return .peer(.id(peerId), .boost)
                             }
@@ -502,7 +502,7 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                 } else if pathComponents[0] == "m" {
                     return .messageLink(slug: pathComponents[1])
                 } else if pathComponents.count == 3 && pathComponents[0] == "c" {
-                    if let channelId = Int64(pathComponents[1]), let messageId = Int32(pathComponents[2]) {
+                    if let channelId = Int64(pathComponents[1]), let messageId = Int32(pathComponents[2]), channelId > 0 {
                         var threadId: Int32?
                         var timecode: Double?
                         if let queryItems = components.queryItems {
@@ -531,7 +531,7 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                         return nil
                     }
                 } else if pathComponents.count == 4 && pathComponents[0] == "c" {
-                    if let channelId = Int64(pathComponents[1]), let threadId = Int32(pathComponents[2]), let messageId = Int32(pathComponents[3]) {
+                    if let channelId = Int64(pathComponents[1]),  let threadId = Int32(pathComponents[2]), let messageId = Int32(pathComponents[3]), channelId > 0 {
                         var timecode: Double?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
@@ -549,7 +549,7 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                         return nil
                     }
                 } else if pathComponents.count == 2 && pathComponents[0] == "c" {
-                    if let channelId = Int64(pathComponents[1]) {
+                    if let channelId = Int64(pathComponents[1]), channelId > 0 {
                         var threadId: Int32?
                         var boost: Bool = false
                         if let queryItems = components.queryItems {

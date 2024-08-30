@@ -12837,3 +12837,42 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Message.Stars.Stars_any" = "**%@** Stars";
 "Chat.Giveaway.Message.Stars.Winners_1" = "to **%@** winner";
 "Chat.Giveaway.Message.Stars.Winners_any" = "among **%@** winners";
+
+"Chat.Giveaway.Info.Stars.Stars_1" = "**%@ Star**";
+"Chat.Giveaway.Info.Stars.Stars_any" = "**%@ Stars**";
+"Chat.Giveaway.Info.Stars.OngoingIntro" = "The giveaway is sponsored by the admins of **%1$@**, who acquired %2$@ for its followers.";
+"Chat.Giveaway.Info.Stars.EndedIntro" = "The giveaway was sponsored by the admins of **%1$@**, who acquired %2$@ for its followers.";
+"Chat.Giveaway.Info.Stars.Group.OngoingIntro" = "The giveaway is sponsored by the admins of **%1$@**, who acquired %2$@ for its members.";
+"Chat.Giveaway.Info.Stars.Group.EndedIntro" = "The giveaway was sponsored by the admins of **%1$@**, who acquired %2$@ for its members.";
+
+"Stars.Transaction.Giveaway.Title" = "Received Prize";
+"Stars.Transaction.Giveaway.Reason" = "Reason";
+"Stars.Transaction.Giveaway.Giveaway" = "Giveaway";
+"Stars.Transaction.Giveaway.Prize" = "Prize";
+"Stars.Transaction.Giveaway.Stars_1" = "%@ Star";
+"Stars.Transaction.Giveaway.Stars_any" = "%@ Stars";
+
+"Stats.RevenueInTon" = "Revenue in TON";
+"Stats.RevenueInStars" = "Revenue in Stars";
+"Stats.RevenueInUsd" = "Revenue in USD";
+
+"BoostGift.NewDescriptionGroup" = "Get more boosts and members for\nyour group by giving away prizes.";
+"BoostGift.NewDescription" = "Get more boosts and subscribers for\nyour channel by giving away prizes.";
+"BoostGift.Prize" = "PRIZE";
+"BoostGift.Prize.Premium" = "Telegram Premium";
+"BoostGift.Prize.Stars" = "Telegram Stars";
+"BoostGift.Stars.Title" = "STARS TO DISTRIBUTE";
+"BoostGift.Stars.Boosts_1" = "%@ BOOST";
+"BoostGift.Stars.Boosts_any" = "%@ BOOSTS";
+"BoostGift.Stars.Stars_1" = "%@ Star";
+"BoostGift.Stars.Stars_any" = "%@ Stars";
+"BoostGift.Stars.PerUser" = "%@ per user";
+"BoostGift.Stars.ShowMoreOptions" = "Show More Options";
+"BoostGift.Stars.Info" = "Choose how many stars to give away and how many boosts to receive for 1 year.";
+"BoostGift.AdditionalPrizesInfoStarsOff" = "Turn this on if you want to give the winners your own prizes in addition to Stars.";
+
+"BoostGift.Stars.Winners" = "NUMBER OF WINNERS";
+"BoostGift.Stars.WinnersInfo" = "Choose how many winners you want to distribute stars among.";
+
+"BoostGift.Group.StarsDateInfo" = "Choose when %@ of your group will be randomly selected to receive Stars.";
+"BoostGift.StarsDateInfo" = "Choose when %@ of your channel will be randomly selected to receive Stars.";

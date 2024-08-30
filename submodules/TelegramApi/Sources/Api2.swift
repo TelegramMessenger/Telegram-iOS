@@ -772,14 +772,15 @@ public extension Api {
 }
 public extension Api {
     enum BroadcastRevenueBalances: TypeConstructorDescription {
-        case broadcastRevenueBalances(currentBalance: Int64, availableBalance: Int64, overallRevenue: Int64)
+        case broadcastRevenueBalances(flags: Int32, currentBalance: Int64, availableBalance: Int64, overallRevenue: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .broadcastRevenueBalances(let currentBalance, let availableBalance, let overallRevenue):
+                case .broadcastRevenueBalances(let flags, let currentBalance, let availableBalance, let overallRevenue):
                     if boxed {
-                        buffer.appendInt32(-2076642874)
+                        buffer.appendInt32(-1006669337)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(currentBalance, buffer: buffer, boxed: false)
                     serializeInt64(availableBalance, buffer: buffer, boxed: false)
                     serializeInt64(overallRevenue, buffer: buffer, boxed: false)
@@ -789,23 +790,26 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .broadcastRevenueBalances(let currentBalance, let availableBalance, let overallRevenue):
-                return ("broadcastRevenueBalances", [("currentBalance", currentBalance as Any), ("availableBalance", availableBalance as Any), ("overallRevenue", overallRevenue as Any)])
+                case .broadcastRevenueBalances(let flags, let currentBalance, let availableBalance, let overallRevenue):
+                return ("broadcastRevenueBalances", [("flags", flags as Any), ("currentBalance", currentBalance as Any), ("availableBalance", availableBalance as Any), ("overallRevenue", overallRevenue as Any)])
     }
     }
     
         public static func parse_broadcastRevenueBalances(_ reader: BufferReader) -> BroadcastRevenueBalances? {
-            var _1: Int64?
-            _1 = reader.readInt64()
+            var _1: Int32?
+            _1 = reader.readInt32()
             var _2: Int64?
             _2 = reader.readInt64()
             var _3: Int64?
             _3 = reader.readInt64()
+            var _4: Int64?
+            _4 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.BroadcastRevenueBalances.broadcastRevenueBalances(currentBalance: _1!, availableBalance: _2!, overallRevenue: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.BroadcastRevenueBalances.broadcastRevenueBalances(flags: _1!, currentBalance: _2!, availableBalance: _3!, overallRevenue: _4!)
             }
             else {
                 return nil
