@@ -10,33 +10,47 @@ import CallScreen
 import TelegramCore
 import AccountContext
 import SwiftSignalKit
+import DirectMediaImageCache
+import FastBlur
+
+private func blurredAvatarImage(_ dataImage: UIImage) -> UIImage? {
+    let imageContextSize = CGSize(width: 64.0, height: 64.0)
+    if let imageContext = DrawingContext(size: imageContextSize, scale: 1.0, clear: true) {
+        imageContext.withFlippedContext { c in
+            if let cgImage = dataImage.cgImage {
+                c.draw(cgImage, in: CGRect(origin: CGPoint(), size: imageContextSize))
+            }
+        }
+        
+        telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
+        
+        return imageContext.generateImage()
+    } else {
+        return nil
+    }
+}
 
 final class VideoChatParticipantVideoComponent: Component {
-    struct ExpandedState: Equatable {
-        var isPinned: Bool
-        
-        init(isPinned: Bool) {
-            self.isPinned = isPinned
-        }
-    }
-    
     let call: PresentationGroupCall
     let participant: GroupCallParticipantsContext.Participant
     let isPresentation: Bool
-    let expandedState: ExpandedState?
+    let isExpanded: Bool
+    let bottomInset: CGFloat
     let action: (() -> Void)?
     
     init(
         call: PresentationGroupCall,
         participant: GroupCallParticipantsContext.Participant,
         isPresentation: Bool,
-        expandedState: ExpandedState?,
+        isExpanded: Bool,
+        bottomInset: CGFloat,
         action: (() -> Void)?
     ) {
         self.call = call
         self.participant = participant
         self.isPresentation = isPresentation
-        self.expandedState = expandedState
+        self.isExpanded = isExpanded
+        self.bottomInset = bottomInset
         self.action = action
     }
     
@@ -47,7 +61,10 @@ final class VideoChatParticipantVideoComponent: Component {
         if lhs.isPresentation != rhs.isPresentation {
             return false
         }
-        if lhs.expandedState != rhs.expandedState {
+        if lhs.isExpanded != rhs.isExpanded {
+            return false
+        }
+        if lhs.bottomInset != rhs.bottomInset {
             return false
         }
         if (lhs.action == nil) != (rhs.action == nil) {
@@ -71,7 +88,11 @@ final class VideoChatParticipantVideoComponent: Component {
         private weak var componentState: EmptyComponentState?
         private var isUpdating: Bool = false
         
+        private let muteStatus = ComponentView<Empty>()
         private let title = ComponentView<Empty>()
+        
+        private var blurredAvatarDisposable: Disposable?
+        private var blurredAvatarView: UIImageView?
         
         private var videoSource: AdaptedCallVideoSource?
         private var videoDisposable: Disposable?
@@ -95,6 +116,7 @@ final class VideoChatParticipantVideoComponent: Component {
         
         deinit {
             self.videoDisposable?.dispose()
+            self.blurredAvatarDisposable?.dispose()
         }
         
         @objc private func pressed() {
@@ -115,17 +137,95 @@ final class VideoChatParticipantVideoComponent: Component {
             
             let nameColor = component.participant.peer.nameColor ?? .blue
             let nameColors = component.call.accountContext.peerNameColors.get(nameColor, dark: true)
-            self.backgroundColor = nameColors.main
+            self.backgroundColor = nameColors.main.withMultiplied(hue: 1.0, saturation: 1.0, brightness: 0.4)
+            
+            if let smallProfileImage = component.participant.peer.smallProfileImage {
+                let blurredAvatarView: UIImageView
+                if let current = self.blurredAvatarView {
+                    blurredAvatarView = current
+                    
+                    transition.setFrame(view: blurredAvatarView, frame: CGRect(origin: CGPoint(), size: availableSize))
+                } else {
+                    blurredAvatarView = UIImageView()
+                    blurredAvatarView.contentMode = .scaleAspectFill
+                    self.blurredAvatarView = blurredAvatarView
+                    self.insertSubview(blurredAvatarView, at: 0)
+                    
+                    blurredAvatarView.frame = CGRect(origin: CGPoint(), size: availableSize)
+                }
+                
+                if self.blurredAvatarDisposable == nil {
+                    //TODO:release synchronous
+                    if let imageCache = component.call.accountContext.imageCache as? DirectMediaImageCache, let peerReference = PeerReference(component.participant.peer) {
+                        if let result = imageCache.getAvatarImage(peer: peerReference, resource: MediaResourceReference.avatar(peer: peerReference, resource: smallProfileImage.resource), immediateThumbnail: component.participant.peer.profileImageRepresentations.first?.immediateThumbnailData, size: 64, synchronous: false) {
+                            if let image = result.image {
+                                blurredAvatarView.image = blurredAvatarImage(image)
+                            }
+                            if let loadSignal = result.loadSignal {
+                                self.blurredAvatarDisposable = (loadSignal
+                                |> deliverOnMainQueue).startStrict(next: { [weak self] image in
+                                    guard let self else {
+                                        return
+                                    }
+                                    if let image {
+                                        self.blurredAvatarView?.image = blurredAvatarImage(image)
+                                    } else {
+                                        self.blurredAvatarView?.image = nil
+                                    }
+                                })
+                            }
+                        }
+                    }
+                }
+            } else {
+                if let blurredAvatarView = self.blurredAvatarView {
+                    self.blurredAvatarView = nil
+                    blurredAvatarView.removeFromSuperview()
+                }
+                if let blurredAvatarDisposable = self.blurredAvatarDisposable {
+                    self.blurredAvatarDisposable = nil
+                    blurredAvatarDisposable.dispose()
+                }
+            }
+            
+            let muteStatusSize = self.muteStatus.update(
+                transition: transition,
+                component: AnyComponent(VideoChatMuteIconComponent(
+                    color: .white,
+                    isMuted: component.participant.muteState != nil
+                )),
+                environment: {},
+                containerSize: CGSize(width: 36.0, height: 36.0)
+            )
+            let muteStatusFrame: CGRect
+            if component.isExpanded {
+                muteStatusFrame = CGRect(origin: CGPoint(x: 5.0, y: availableSize.height - component.bottomInset + 1.0 - muteStatusSize.height), size: muteStatusSize)
+            } else {
+                muteStatusFrame = CGRect(origin: CGPoint(x: 1.0, y: availableSize.height - component.bottomInset + 3.0 - muteStatusSize.height), size: muteStatusSize)
+            }
+            if let muteStatusView = self.muteStatus.view {
+                if muteStatusView.superview == nil {
+                    self.addSubview(muteStatusView)
+                }
+                transition.setPosition(view: muteStatusView, position: muteStatusFrame.center)
+                transition.setBounds(view: muteStatusView, bounds: CGRect(origin: CGPoint(), size: muteStatusFrame.size))
+                transition.setScale(view: muteStatusView, scale: component.isExpanded ? 1.0 : 0.7)
+            }
             
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.participant.peer.debugDisplayTitle, font: Font.regular(14.0), textColor: .white))
+                    text: .plain(NSAttributedString(string: component.participant.peer.debugDisplayTitle, font: Font.semibold(16.0), textColor: .white))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - 8.0 * 2.0, height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: 8.0, y: availableSize.height - 8.0 - titleSize.height), size: titleSize)
+            let titleFrame: CGRect
+            if component.isExpanded {
+                titleFrame = CGRect(origin: CGPoint(x: 36.0, y: availableSize.height - component.bottomInset - 8.0 - titleSize.height), size: titleSize)
+            } else {
+                titleFrame = CGRect(origin: CGPoint(x: 29.0, y: availableSize.height - component.bottomInset - 4.0 - titleSize.height), size: titleSize)
+            }
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.layer.anchorPoint = CGPoint()
@@ -133,6 +233,7 @@ final class VideoChatParticipantVideoComponent: Component {
                 }
                 transition.setPosition(view: titleView, position: titleFrame.origin)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
+                transition.setScale(view: titleView, scale: component.isExpanded ? 1.0 : 0.825)
             }
             
             if let videoDescription = component.isPresentation ? component.participant.presentationDescription : component.participant.videoDescription {

@@ -6,32 +6,13 @@ import MultilineTextComponent
 import TelegramPresentationData
 
 final class VideoChatTitleComponent: Component {
-    enum Status: Equatable {
-        enum Key {
-            case idle
-            case speaking
-        }
-        
-        case idle(count: Int)
-        case speaking(titles: [String])
-        
-        var key: Key {
-            switch self {
-            case .idle:
-                return .idle
-            case .speaking:
-                return .speaking
-            }
-        }
-    }
-
     let title: String
-    let status: Status
+    let status: String
     let strings: PresentationStrings
 
     init(
         title: String,
-        status: Status,
+        status: String,
         strings: PresentationStrings
     ) {
         self.title = title
@@ -73,7 +54,6 @@ final class VideoChatTitleComponent: Component {
                 self.isUpdating = false
             }
             
-            let previousComponent = self.component
             self.component = component
             
             let spacing: CGFloat = 1.0
@@ -87,18 +67,6 @@ final class VideoChatTitleComponent: Component {
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
             )
             
-            if previousComponent?.status.key != component.status.key {
-                if let status = self.status {
-                    self.status = nil
-                    if let statusView = status.view {
-                        transition.setAlpha(view: statusView, alpha: 0.0, completion: { [weak statusView] _ in
-                            statusView?.removeFromSuperview()
-                        })
-                        transition.setPosition(view: statusView, position: statusView.center.offsetBy(dx: 0.0, dy: -10.0))
-                    }
-                }
-            }
-            
             let status: ComponentView<Empty>
             if let current = self.status {
                 status = current
@@ -107,16 +75,9 @@ final class VideoChatTitleComponent: Component {
                 self.status = status
             }
             let statusComponent: AnyComponent<Empty>
-            switch component.status {
-            case let .idle(count):
-                statusComponent = AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.strings.VoiceChat_Panel_Members(Int32(count)), font: Font.regular(13.0), textColor: UIColor(white: 1.0, alpha: 0.5)))
-                ))
-            case let .speaking(titles):
-                statusComponent = AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: titles.joined(separator: ", "), font: Font.regular(13.0), textColor: UIColor(rgb: 0x34c759)))
-                ))
-            }
+            statusComponent = AnyComponent(MultilineTextComponent(
+                text: .plain(NSAttributedString(string: component.status, font: Font.regular(13.0), textColor: UIColor(white: 1.0, alpha: 0.5)))
+            ))
             
             let statusSize = status.update(
                 transition: .immediate,

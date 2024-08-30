@@ -295,7 +295,7 @@ public final class PresentationCallImpl: PresentationCall {
         if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_call_device"] {
             self.sharedAudioDevice = nil
         } else {
-            self.sharedAudioDevice = OngoingCallContext.AudioDevice.create()
+            self.sharedAudioDevice = OngoingCallContext.AudioDevice.create(enableSystemMute: context.sharedContext.immediateExperimentalUISettings.experimentalCallMute)
         }
         
         self.audioSessionActiveDisposable = (self.audioSessionActive.get()

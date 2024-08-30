@@ -70,6 +70,8 @@ private final class VideoChatScreenComponent: Component {
         private var callState: PresentationGroupCallState?
         private var stateDisposable: Disposable?
         
+        private var isPushToTalkActive: Bool = false
+        
         private var members: PresentationGroupCallMembers?
         private var membersDisposable: Disposable?
         
@@ -137,6 +139,9 @@ private final class VideoChatScreenComponent: Component {
                     if abs(panGestureState.offsetFraction) > 0.6 || abs(velocity.y) >= 100.0 {
                         self.panGestureState = PanGestureState(offsetFraction: panGestureState.offsetFraction < 0.0 ? -1.0 : 1.0)
                         self.notifyDismissedInteractivelyOnPanGestureApply = true
+                        if let controller = self.environment?.controller() as? VideoChatScreenV2Impl {
+                            controller.notifyDismissed()
+                        }
                     }
                     
                     self.state?.updated(transition: .spring(duration: 0.4))
@@ -277,6 +282,27 @@ private final class VideoChatScreenComponent: Component {
                     if self.members != members {
                         self.members = members
                         
+                        if let expandedParticipantsVideoState = self.expandedParticipantsVideoState {
+                            if let _ = members?.participants.first(where: { participant in
+                                if participant.peer.id == expandedParticipantsVideoState.mainParticipant.id {
+                                    if expandedParticipantsVideoState.mainParticipant.isPresentation {
+                                        if participant.presentationDescription == nil {
+                                            return false
+                                        }
+                                    } else {
+                                        if participant.videoDescription == nil {
+                                            return false
+                                        }
+                                    }
+                                    return true
+                                }
+                                return false
+                            }) {
+                            } else {
+                                self.expandedParticipantsVideoState = nil
+                            }
+                        }
+                        
                         if !self.isUpdating {
                             self.state?.updated(transition: .spring(duration: 0.4))
                         }
@@ -337,7 +363,13 @@ private final class VideoChatScreenComponent: Component {
                     self.notifyDismissedInteractivelyOnPanGestureApply = false
                     
                     if let controller = self.environment?.controller() as? VideoChatScreenV2Impl {
-                        controller.superDismiss()
+                        if self.isUpdating {
+                            DispatchQueue.main.async { [weak controller] in
+                                controller?.superDismiss()
+                            }
+                        } else {
+                            controller.superDismiss()
+                        }
                     }
                 }
                 if let completionOnPanGestureApply = self.completionOnPanGestureApply {
@@ -420,11 +452,17 @@ private final class VideoChatScreenComponent: Component {
                 transition.setFrame(view: navigationRightButtonView, frame: navigationRightButtonFrame)
             }
             
+            let idleTitleStatusText: String
+            if let callState = self.callState, callState.networkState == .connected, let members = self.members {
+                idleTitleStatusText = environment.strings.VoiceChat_Panel_Members(Int32(max(1, members.totalCount)))
+            } else {
+                idleTitleStatusText = "connecting..."
+            }
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(VideoChatTitleComponent(
                     title: self.peer?.debugDisplayTitle ?? " ",
-                    status: .idle(count: self.members?.totalCount ?? 1),
+                    status: idleTitleStatusText,
                     strings: environment.strings
                 )),
                 environment: {},
@@ -518,8 +556,13 @@ private final class VideoChatScreenComponent: Component {
                     actionButtonMicrophoneState = .connecting
                 case .connected:
                     if let _ = callState.muteState {
-                        micButtonContent = .muted
-                        actionButtonMicrophoneState = .muted
+                        if self.isPushToTalkActive {
+                            micButtonContent = .unmuted
+                            actionButtonMicrophoneState = .unmuted
+                        } else {
+                            micButtonContent = .muted
+                            actionButtonMicrophoneState = .muted
+                        }
                     } else {
                         micButtonContent = .unmuted
                         actionButtonMicrophoneState = .unmuted
@@ -532,29 +575,43 @@ private final class VideoChatScreenComponent: Component {
             
             let _ = self.microphoneButton.update(
                 transition: transition,
-                component: AnyComponent(PlainButtonComponent(
-                    content: AnyComponent(VideoChatMicButtonComponent(
-                        content: micButtonContent,
-                        isCollapsed: self.expandedParticipantsVideoState != nil
-                    )),
-                    effectAlignment: .center,
-                    action: { [weak self] in
+                component: AnyComponent(VideoChatMicButtonComponent(
+                    content: micButtonContent,
+                    isCollapsed: self.expandedParticipantsVideoState != nil,
+                    updateUnmutedStateIsPushToTalk: { [weak self] unmutedStateIsPushToTalk in
                         guard let self, let component = self.component else {
                             return
                         }
                         guard let callState = self.callState else {
                             return
                         }
-                        if let muteState = callState.muteState {
-                            if muteState.canUnmute {
-                                component.call.setIsMuted(action: .unmuted)
+                        
+                        if let unmutedStateIsPushToTalk {
+                            if unmutedStateIsPushToTalk {
+                                if let muteState = callState.muteState {
+                                    if muteState.canUnmute {
+                                        self.isPushToTalkActive = true
+                                        component.call.setIsMuted(action: .muted(isPushToTalkActive: true))
+                                    } else {
+                                        self.isPushToTalkActive = false
+                                    }
+                                } else {
+                                    self.isPushToTalkActive = true
+                                    component.call.setIsMuted(action: .muted(isPushToTalkActive: true))
+                                }
+                            } else {
+                                if let muteState = callState.muteState {
+                                    if muteState.canUnmute {
+                                        component.call.setIsMuted(action: .unmuted)
+                                    }
+                                }
+                                self.isPushToTalkActive = false
                             }
+                            self.state?.updated(transition: .spring(duration: 0.5))
                         } else {
                             component.call.setIsMuted(action: .muted(isPushToTalkActive: false))
                         }
-                    },
-                    animateAlpha: false,
-                    animateScale: false
+                    }
                 )),
                 environment: {},
                 containerSize: CGSize(width: microphoneButtonDiameter, height: microphoneButtonDiameter)
@@ -737,11 +794,16 @@ final class VideoChatScreenV2Impl: ViewControllerComponentContainer, VoiceChatCo
         self.idleTimerExtensionDisposable = nil
         
         self.didAppearOnce = false
+        self.notifyDismissed()
+    }
+    
+    func notifyDismissed() {
         if !self.isDismissed {
             self.isDismissed = true
+            DispatchQueue.main.async {
+                self.onViewDidDisappear?()
+            }
         }
-        
-        self.onViewDidDisappear?()
     }
 
     public func dismiss(closing: Bool, manual: Bool) {
@@ -750,6 +812,8 @@ final class VideoChatScreenV2Impl: ViewControllerComponentContainer, VoiceChatCo
     
     override public func dismiss(completion: (() -> Void)? = nil) {
         if !self.isAnimatingDismiss {
+            self.notifyDismissed()
+            
             if let componentView = self.node.hostView.componentView as? VideoChatScreenComponent.View {
                 self.isAnimatingDismiss = true
                 componentView.animateOut(completion: { [weak self] in
