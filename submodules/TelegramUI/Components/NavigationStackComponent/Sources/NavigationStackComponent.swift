@@ -79,6 +79,11 @@ private final class NavigationContainer: UIView, UIGestureRecognizerDelegate {
 }
 
 public final class NavigationStackComponent<ChildEnvironment: Equatable>: Component {
+    public enum CurlTransition {
+        case show
+        case hide
+    }
+    
     public let items: [AnyComponentWithIdentity<ChildEnvironment>]
     public let requestPop: () -> Void
     
@@ -105,7 +110,7 @@ public final class NavigationStackComponent<ChildEnvironment: Equatable>: Compon
             super.init(frame: frame)
             
             self.dimView.alpha = 0.0
-            self.dimView.backgroundColor = UIColor.black.withAlphaComponent(0.2)
+            self.dimView.backgroundColor = UIColor.black.withAlphaComponent(0.3)
             self.dimView.isUserInteractionEnabled = false
             self.addSubview(self.dimView)
         }
@@ -166,11 +171,20 @@ public final class NavigationStackComponent<ChildEnvironment: Equatable>: Compon
             self.component = component
             self.state = state
             
+            var transition = transition
+            var curlTransition: NavigationStackComponent<ChildEnvironment>.CurlTransition?
+            if let curlTransitionValue = transition.userData(NavigationStackComponent<ChildEnvironment>.CurlTransition.self) {
+                transition = .immediate
+                curlTransition = curlTransitionValue
+            }
+            
             let navigationTransitionFraction = self.navigationContainer.transitionFraction
             self.navigationContainer.isNavigationEnabled = component.items.count > 1
                                     
             var validItemIds: [AnyHashable] = []
         
+            var removeImpl: (() -> Void)?
+            
             var readyItems: [ReadyItem] = []
             for i in 0 ..< component.items.count {
                 let item = component.items[i]
@@ -184,6 +198,7 @@ public final class NavigationStackComponent<ChildEnvironment: Equatable>: Compon
                 } else {
                     itemTransition = itemTransition.withAnimation(.none)
                     itemView = ItemView()
+                    itemView.clipsToBounds = true
                     self.itemViews[itemId] = itemView
                     itemView.contents.parentState = state
                 }
@@ -242,7 +257,18 @@ public final class NavigationStackComponent<ChildEnvironment: Equatable>: Compon
                     readyItem.itemTransition.setFrame(view: readyItem.itemView.dimView, frame: CGRect(origin: .zero, size: availableSize))
                     readyItem.itemTransition.setAlpha(view: readyItem.itemView.dimView, alpha: 1.0 - alphaTransitionFraction)
                     
-                    if readyItem.index > 0 && isAdded {
+                    if curlTransition == .show && isAdded {
+                        var fromFrame = itemFrame
+                        fromFrame.size.height = 0.0
+                        let transition = ComponentTransition.easeInOut(duration: 0.3)
+                        transition.animateBoundsSize(view: readyItem.itemView, from: fromFrame.size, to: itemFrame.size, completion: { _ in
+                            removeImpl?()
+                        })
+                        transition.animatePosition(view: readyItem.itemView, from: fromFrame.center, to: itemFrame.center)
+                    } else if curlTransition == .hide && isAdded {
+                        let transition = ComponentTransition.easeInOut(duration: 0.3)
+                        transition.animateAlpha(view: readyItem.itemView.dimView, from: 1.0, to: 0.0)
+                    } else if readyItem.index > 0 && isAdded {
                         transition.animatePosition(view: itemComponentView, from: CGPoint(x: itemFrame.width, y: 0.0), to: .zero, additive: true, completion: nil)
                     }
                 }
@@ -263,21 +289,47 @@ public final class NavigationStackComponent<ChildEnvironment: Equatable>: Compon
                     removedItemIds.append(id)
                 }
             }
-            for id in removedItemIds {
-                guard let itemView = self.itemViews[id] else {
-                    continue
-                }
-                if let itemComponeentView = itemView.contents.view {
-                    var position = itemComponeentView.center
-                    position.x += itemComponeentView.bounds.width
-                    transition.setPosition(view: itemComponeentView, position: position, completion: { _ in
+            
+            removeImpl = {
+                for id in removedItemIds {
+                    guard let itemView = self.itemViews[id] else {
+                        continue
+                    }
+                    if let itemComponentView = itemView.contents.view, curlTransition != .show {
+                        if curlTransition == .hide {
+                            itemView.superview?.bringSubviewToFront(itemView)
+                            var toFrame = itemView.frame
+                            toFrame.size.height = 0.0
+                            let transition = ComponentTransition.easeInOut(duration: 0.3)
+                            transition.setFrame(view: itemView, frame: toFrame, completion: { _ in
+                                itemView.removeFromSuperview()
+                                self.itemViews.removeValue(forKey: id)
+                            })
+                        } else {
+                            var position = itemComponentView.center
+                            position.x += itemComponentView.bounds.width
+                            transition.setPosition(view: itemComponentView, position: position, completion: { _ in
+                                itemView.removeFromSuperview()
+                                self.itemViews.removeValue(forKey: id)
+                            })
+                        }
+                    } else {
                         itemView.removeFromSuperview()
                         self.itemViews.removeValue(forKey: id)
-                    })
-                } else {
-                    itemView.removeFromSuperview()
-                    self.itemViews.removeValue(forKey: id)
+                    }
                 }
+            }
+            
+            if curlTransition == .show {
+                let transition = ComponentTransition.easeInOut(duration: 0.3)
+                for id in removedItemIds {
+                    guard let itemView = self.itemViews[id] else {
+                        continue
+                    }
+                    transition.setAlpha(view: itemView.dimView, alpha: 1.0)
+                }
+            } else {
+                removeImpl?()
             }
             
             let contentSize = CGSize(width: availableSize.width, height: contentHeight)

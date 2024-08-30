@@ -205,7 +205,7 @@ public struct StarsGiveawayOption: Equatable, Codable {
         self.yearlyBoosts = yearlyBoosts
         self.currency = currency
         self.amount = amount
-        self.storeProductId = storeProductId
+        self.storeProductId = storeProductId?.replacingOccurrences(of: "telegram_stars.topup", with: "org.telegram.telegramStars.topup")
         self.winners = winners
         self.isExtended = isExtended
         self.isDefault = isDefault
@@ -1273,6 +1273,12 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                                                 }
                                             }
                                         case let .premiumGiveaway(_, _, _, _, _, _, randomId, _, _, _, _):
+                                            if message.globallyUniqueId == randomId {
+                                                if case let .Id(id) = message.id {
+                                                    receiptMessageId = id
+                                                }
+                                            }
+                                        case let .starsGiveaway(_, _, _, _, _, _, _, randomId, _, _, _, _):
                                             if message.globallyUniqueId == randomId {
                                                 if case let .Id(id) = message.id {
                                                     receiptMessageId = id

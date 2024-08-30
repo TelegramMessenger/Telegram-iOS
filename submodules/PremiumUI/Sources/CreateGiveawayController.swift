@@ -88,7 +88,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
     case prepaid(PresentationTheme, String, String, PrepaidGiveaway)
     
     case starsHeader(PresentationTheme, String, String)
-    case stars(Int32, PresentationTheme, Int32, String, String, String, Bool)
+    case stars(Int32, PresentationTheme, Int32, String, String, String, Bool, Int32)
     case starsMore(PresentationTheme, String)
     case starsInfo(PresentationTheme, String)
     
@@ -163,7 +163,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             return 3
         case .starsHeader:
             return 4
-        case let .stars(_, _, stars, _, _, _, _):
+        case let .stars(_, _, stars, _, _, _, _, _):
             return 5 + stars
         case .starsMore:
             return 100000
@@ -262,8 +262,8 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .stars(lhsIndex, lhsTheme, lhsStars, lhsTitle, lhsSubtitle, lhsLabel, lhsIsSelected):
-            if case let .stars(rhsIndex, rhsTheme, rhsStars, rhsTitle, rhsSubtitle, rhsLabel, rhsIsSelected) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStars == rhsStars, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsLabel == rhsLabel, lhsIsSelected == rhsIsSelected {
+        case let .stars(lhsIndex, lhsTheme, lhsStars, lhsTitle, lhsSubtitle, lhsLabel, lhsIsSelected, lhsMaxWinners):
+            if case let .stars(rhsIndex, rhsTheme, rhsStars, rhsTitle, rhsSubtitle, rhsLabel, rhsIsSelected, rhsMaxWinners) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStars == rhsStars, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsLabel == rhsLabel, lhsIsSelected == rhsIsSelected, lhsMaxWinners == rhsMaxWinners {
                 return true
             } else {
                 return false
@@ -459,24 +459,36 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .prepaid(_, title, subtitle, prepaidGiveaway):
             let color: GiftOptionItem.Icon.Color
-            switch prepaidGiveaway.months {
-            case 3:
-                color = .green
-            case 6:
-                color = .blue
-            case 12:
-                color = .red
-            default:
-                color = .blue
+            switch prepaidGiveaway.prize {
+            case let .premium(months):
+                switch months {
+                case 3:
+                    color = .green
+                case 6:
+                    color = .blue
+                case 12:
+                    color = .red
+                default:
+                    color = .blue
+                }
+            case let .stars(amount):
+                if amount <= 1000 {
+                    color = .green
+                } else if amount < 2500 {
+                    color = .blue
+                } else {
+                    color = .red
+                }
             }
             return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, titleBadge: "\(prepaidGiveaway.quantity * 4)", subtitle: subtitle, sectionId: self.section, action: nil)
         case let .starsHeader(_, text, additionalText):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: additionalText, color: .generic), sectionId: self.section)
-        case let .stars(_, _, stars, title, subtitle, label, isSelected):
+        case let .stars(_, _, stars, title, subtitle, label, isSelected, maxWinners):
             return GiftOptionItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: subtitle, subtitleFont: .small, label: .generic(label), badge: nil, isSelected: isSelected, stars: Int64(stars), sectionId: self.section, action: {
                 arguments.updateState { state in
                     var updatedState = state
                     updatedState.stars = Int64(stars)
+                    updatedState.winners = min(updatedState.winners, maxWinners)
                     return updatedState
                 }
             })
@@ -753,42 +765,54 @@ private func createGiveawayControllerEntries(
             recipientsText = presentationData.strings.BoostGift_CreateGiveawayInfo //presentationData.strings.BoostGift_SelectRecipients
         }
         
-        //TODO:localize
-        entries.append(.modeHeader(presentationData.theme, "PRIZE"))
-        entries.append(.giftPremium(presentationData.theme, "Telegram Premium", recipientsText, state.mode == .giveaway || state.mode == .gift))
+        entries.append(.modeHeader(presentationData.theme, presentationData.strings.BoostGift_Prize.uppercased()))
+        entries.append(.giftPremium(presentationData.theme, presentationData.strings.BoostGift_Prize_Premium, recipientsText, state.mode == .giveaway || state.mode == .gift))
         
-        entries.append(.giftStars(presentationData.theme, "Telegram Stars", presentationData.strings.BoostGift_CreateGiveawayInfo, state.mode == .starsGiveaway))
+        entries.append(.giftStars(presentationData.theme, presentationData.strings.BoostGift_Prize_Stars, presentationData.strings.BoostGift_CreateGiveawayInfo, state.mode == .starsGiveaway))
     case let .prepaid(prepaidGiveaway):
         entries.append(.prepaidHeader(presentationData.theme, presentationData.strings.BoostGift_PrepaidGiveawayTitle))
-        entries.append(.prepaid(presentationData.theme, presentationData.strings.BoostGift_PrepaidGiveawayCount(prepaidGiveaway.quantity), presentationData.strings.BoostGift_PrepaidGiveawayMonths("\(prepaidGiveaway.months)").string, prepaidGiveaway))
+        let title: String
+        let text: String
+        switch prepaidGiveaway.prize {
+        case let .premium(months):
+            title = presentationData.strings.BoostGift_PrepaidGiveawayCount(prepaidGiveaway.quantity)
+            text = presentationData.strings.BoostGift_PrepaidGiveawayMonths("\(months)").string
+        case let .stars(stars):
+            //TODO:localize
+            title = "\(stars) Telegram Stars"
+            text = "among \(prepaidGiveaway.quantity) winners"
+        }
+        entries.append(.prepaid(presentationData.theme, title, text, prepaidGiveaway))
     }
     
     if case .starsGiveaway = state.mode, !starsGiveawayOptions.isEmpty  {
         let selectedOption = starsGiveawayOptions.first(where: { $0.giveawayOption.count == state.stars })!
-        entries.append(.starsHeader(presentationData.theme, "STARS TO DISTRIBUTE".uppercased(), "\(selectedOption.giveawayOption.yearlyBoosts) BOOSTS"))
+        entries.append(.starsHeader(presentationData.theme, presentationData.strings.BoostGift_Stars_Title.uppercased(), presentationData.strings.BoostGift_Stars_Boosts(selectedOption.giveawayOption.yearlyBoosts).uppercased()))
         
         var i: Int32 = 0
         for product in starsGiveawayOptions {
             if !state.starsExpanded && product.giveawayOption.isExtended {
                 continue
             }
-            let giftTitle: String = "\(product.giveawayOption.count) Stars"
+            let giftTitle: String = presentationData.strings.BoostGift_Stars_Stars(Int32(product.giveawayOption.count))
             let winners = product.giveawayOption.winners.first(where: { $0.users == state.winners }) ?? product.giveawayOption.winners.first!
             
-            let subtitle = "\(winners.starsPerUser) per user"
+            let maxWinners = product.giveawayOption.winners.sorted(by: { $0.users < $1.users }).last?.users ?? 1
+            
+            let subtitle = presentationData.strings.BoostGift_Stars_PerUser("\(winners.starsPerUser)").string
             let label = product.storeProduct.price
             
             let isSelected = product.giveawayOption.count == state.stars
-            entries.append(.stars(i, presentationData.theme, Int32(product.giveawayOption.count), giftTitle, subtitle, label, isSelected))
+            entries.append(.stars(i, presentationData.theme, Int32(product.giveawayOption.count), giftTitle, subtitle, label, isSelected, maxWinners))
             
             i += 1
         }
         
         if !state.starsExpanded {
-            entries.append(.starsMore(presentationData.theme, "Show More Options"))
+            entries.append(.starsMore(presentationData.theme, presentationData.strings.BoostGift_Stars_ShowMoreOptions))
         }
         
-        entries.append(.starsInfo(presentationData.theme, "Choose how many stars to give away and how many boosts to receive for 1 year."))
+        entries.append(.starsInfo(presentationData.theme, presentationData.strings.BoostGift_Stars_Info))
     }
     
     let appendDurationEntries = {
@@ -847,9 +871,11 @@ private func createGiveawayControllerEntries(
             if let selectedOption = starsGiveawayOptions.first(where: { $0.giveawayOption.count == state.stars }) {
                 values = selectedOption.giveawayOption.winners.map { $0.users }
             }
-            entries.append(.subscriptionsHeader(presentationData.theme, "NUMBER OF WINNERS", ""))
-            entries.append(.subscriptions(presentationData.theme, state.winners, values))
-            entries.append(.subscriptionsInfo(presentationData.theme, "Choose how many winners you want to distribute stars among."))
+            if values.count > 1 {
+                entries.append(.subscriptionsHeader(presentationData.theme, presentationData.strings.BoostGift_Stars_Winners, ""))
+                entries.append(.subscriptions(presentationData.theme, state.winners, values))
+                entries.append(.subscriptionsInfo(presentationData.theme, presentationData.strings.BoostGift_Stars_WinnersInfo))
+            }
         } else {
             if case .generic = subject {
                 entries.append(.subscriptionsHeader(presentationData.theme, presentationData.strings.BoostGift_QuantityTitle.uppercased(), presentationData.strings.BoostGift_QuantityBoosts(state.subscriptions * 4)))
@@ -904,7 +930,7 @@ private func createGiveawayControllerEntries(
         }
         
         entries.append(.prizeDescription(presentationData.theme, presentationData.strings.BoostGift_AdditionalPrizes, state.showPrizeDescription))
-        var prizeDescriptionInfoText = state.mode == .starsGiveaway ? "Turn this on if you want to give the winners your own prizes in addition to Stars." : presentationData.strings.BoostGift_AdditionalPrizesInfoOff
+        var prizeDescriptionInfoText = state.mode == .starsGiveaway ? presentationData.strings.BoostGift_AdditionalPrizesInfoStarsOff : presentationData.strings.BoostGift_AdditionalPrizesInfoOff
         if state.showPrizeDescription {
             entries.append(.prizeDescriptionText(presentationData.theme, presentationData.strings.BoostGift_AdditionalPrizesPlaceholder, state.prizeDescription, state.subscriptions))
            
@@ -926,13 +952,13 @@ private func createGiveawayControllerEntries(
         let timeInfoText: String
         if isGroup {
             if case .starsGiveaway = state.mode {
-                timeInfoText = "Choose when \(presentationData.strings.BoostGift_Group_DateInfoMembers(Int32(state.winners))) of your group will be randomly selected to receive Stars."
+                timeInfoText = presentationData.strings.BoostGift_Group_StarsDateInfo(presentationData.strings.BoostGift_Group_DateInfoMembers(Int32(state.winners))).string
             } else {
                 timeInfoText = presentationData.strings.BoostGift_Group_DateInfo(presentationData.strings.BoostGift_Group_DateInfoMembers(Int32(state.subscriptions))).string
             }
         } else {
             if case .starsGiveaway = state.mode {
-                timeInfoText = "Choose when \(presentationData.strings.BoostGift_DateInfoSubscribers(Int32(state.winners))) of your channel will be randomly selected to receive Stars."
+                timeInfoText = presentationData.strings.BoostGift_StarsDateInfo(presentationData.strings.BoostGift_DateInfoSubscribers(Int32(state.winners))).string
             } else {
                 timeInfoText = presentationData.strings.BoostGift_DateInfo(presentationData.strings.BoostGift_DateInfoSubscribers(Int32(state.subscriptions))).string
             }
@@ -984,10 +1010,20 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let actionsDisposable = DisposableSet()
     
     let initialSubscriptions: Int32
+    let initialStars: Int64
+    let initialWinners: Int32
     if case let .prepaid(prepaidGiveaway) = subject {
+        if case let .stars(stars) = prepaidGiveaway.prize {
+            initialStars = stars
+        } else {
+            initialStars = 500
+        }
         initialSubscriptions = prepaidGiveaway.quantity
+        initialWinners = prepaidGiveaway.quantity
     } else {
         initialSubscriptions = 5
+        initialStars = 500
+        initialWinners = 5
     }
     let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
     
@@ -1005,7 +1041,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let minDate = currentTime + 60 * 1
     let maxDate = currentTime + context.userLimits.maxGiveawayPeriodSeconds
     
-    let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, stars: 500, winners: 5, time: expiryTime)
+    let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, stars: initialStars, winners: initialWinners, time: expiryTime)
 
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -1142,9 +1178,8 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         }
         let _ = isGroupValue.swap(isGroup)
                 
-        //TODO:localize
-        let headerText = isGroup ? "Get more boosts and members for\nyour group by giving away prizes." : "Get more boosts and subscribers for\nyour channel by giving away prizes."
-        let headerItem = CreateGiveawayHeaderItem(theme: presentationData.theme, strings: presentationData.strings, title: presentationData.strings.BoostGift_Title, text: headerText, cancel: {
+        let headerText = isGroup ? presentationData.strings.BoostGift_NewDescriptionGroup : presentationData.strings.BoostGift_NewDescription
+        let headerItem = CreateGiveawayHeaderItem(theme: presentationData.theme, strings: presentationData.strings, title: presentationData.strings.BoostGift_Title, text: headerText, isStars: state.mode == .starsGiveaway, cancel: {
             dismissImpl?()
         })
         

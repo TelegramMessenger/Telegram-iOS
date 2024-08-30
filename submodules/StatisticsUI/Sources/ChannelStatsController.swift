@@ -1038,15 +1038,26 @@ private enum StatsEntry: ItemListNodeEntry {
                 })
             case let .boostPrepaid(_, _, title, subtitle, prepaidGiveaway):
                 let color: GiftOptionItem.Icon.Color
-                switch prepaidGiveaway.months {
-                case 3:
-                    color = .green
-                case 6:
-                    color = .blue
-                case 12:
-                    color = .red
-                default:
-                    color = .blue
+                switch prepaidGiveaway.prize {
+                case let .premium(months):
+                    switch months {
+                    case 3:
+                        color = .green
+                    case 6:
+                        color = .blue
+                    case 12:
+                        color = .red
+                    default:
+                        color = .blue
+                    }
+                case let .stars(amount):
+                    if amount <= 1000 {
+                        color = .green
+                    } else if amount < 2500 {
+                        color = .blue
+                    } else {
+                        color = .red
+                    }
                 }
                 return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, titleBadge: "\(prepaidGiveaway.quantity * 4)", subtitle: subtitle, label: nil, sectionId: self.section, action: {
                     arguments.createPrepaidGiveaway(prepaidGiveaway)
@@ -1423,7 +1434,17 @@ private func boostsEntries(
         entries.append(.boostPrepaidTitle(presentationData.theme, presentationData.strings.Stats_Boosts_PrepaidGiveawaysTitle))
         var i: Int32 = 0
         for giveaway in boostData.prepaidGiveaways {
-            entries.append(.boostPrepaid(i, presentationData.theme, presentationData.strings.Stats_Boosts_PrepaidGiveawayCount(giveaway.quantity), presentationData.strings.Stats_Boosts_PrepaidGiveawayMonths("\(giveaway.months)").string, giveaway))
+            let title: String
+            let text: String
+            switch giveaway.prize {
+            case let .premium(months):
+                title = presentationData.strings.Stats_Boosts_PrepaidGiveawayCount(giveaway.quantity)
+                text = presentationData.strings.Stats_Boosts_PrepaidGiveawayMonths("\(months)").string
+            case let .stars(stars):
+                title = "\(stars) Telegram Stars"
+                text = "among \(giveaway.quantity) winners"
+            }
+            entries.append(.boostPrepaid(i, presentationData.theme, title, text, giveaway))
             i += 1
         }
         entries.append(.boostPrepaidInfo(presentationData.theme, presentationData.strings.Stats_Boosts_PrepaidGiveawaysInfo))

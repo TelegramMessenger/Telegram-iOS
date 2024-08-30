@@ -255,7 +255,7 @@ private final class SubscriptionsCountItemNode: ListViewItemNode {
                         textNode.isHidden = false
                         var position = params.leftInset + 18.0 + delta * CGFloat(i)
                         if i == textNodes.count - 1 {
-                            position -= textSize.width
+                            position -= textSize.width / 2.0 + 2.0
                         } else if i > 0 {
                             position -= textSize.width / 2.0
                         }
@@ -290,30 +290,12 @@ private final class SubscriptionsCountItemNode: ListViewItemNode {
     }
     
     @objc func sliderValueChanged() {
-        guard let sliderView = self.sliderView else {
+        guard let sliderView = self.sliderView, let item = self.item else {
             return
         }
-        
-        var mappedValue: Int32 = 1
-        switch Int(sliderView.value) {
-        case 0:
-            mappedValue = 1
-        case 1:
-            mappedValue = 3
-        case 2:
-            mappedValue = 5
-        case 3:
-            mappedValue = 7
-        case 4:
-            mappedValue = 10
-        case 5:
-            mappedValue = 25
-        case 6:
-            mappedValue = 50
-        default:
-            mappedValue = 1
+        let value = Int(sliderView.value)
+        if value >= 0 && value < item.values.count {
+            self.item?.updated(item.values[value])
         }
-        
-        self.item?.updated(Int32(mappedValue))
     }
 }

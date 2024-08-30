@@ -1728,7 +1728,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                                         attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
                                     }
                                     if let range = attributedString.string.range(of: "*") {
-                                        attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
+                                        attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 1, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
                                         attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
                                     }
                                     
@@ -5967,7 +5967,17 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         }
                         
                         var addedPrivacy = false
-                        if let privacyPolicyUrl = (data.cachedData as? CachedUserData)?.botInfo?.privacyPolicyUrl {
+                        var privacyPolicyUrl: String?
+                        if let cachedData = (data.cachedData as? CachedUserData), let botInfo = cachedData.botInfo {
+                            if let url = botInfo.privacyPolicyUrl {
+                                privacyPolicyUrl = url
+                            } else if botInfo.commands.contains(where: { $0.text == "privacy" }) {
+                                
+                            } else {
+                                privacyPolicyUrl = presentationData.strings.WebApp_PrivacyPolicy_URL
+                            }
+                        }
+                        if let privacyPolicyUrl {
                             items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_BotPrivacy, icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor)
                             }, action: { [weak self] _, f in

@@ -24,7 +24,12 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
     
     private let pdfView: PDFView
     private let scrollView: UIScrollView!
-        
+    
+    private let pageIndicatorBackgorund: UIVisualEffectView
+    private let pageIndicator = ComponentView<Empty>()
+    private var pageNumber: (Int, Int)?
+    private var pageTimer: SwiftSignalKit.Timer?
+    
     let uuid: UUID
     
     private var _state: BrowserContentState
@@ -37,7 +42,7 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         return self.statePromise.get()
     }
     
-    var pushContent: (BrowserScreen.Subject) -> Void = { _ in }
+    var pushContent: (BrowserScreen.Subject, BrowserContent?) -> Void = { _, _ in }
     var openAppUrl: (String) -> Void = { _ in }
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
     var minimize: () -> Void = { }
@@ -56,6 +61,10 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         
         self.pdfView = PDFView()
         self.pdfView.clipsToBounds = false
+        
+        self.pageIndicatorBackgorund = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+        self.pageIndicatorBackgorund.clipsToBounds = true
+        self.pageIndicatorBackgorund.layer.cornerRadius = 10.0
         
         var scrollView: UIScrollView?
         for view in self.pdfView.subviews {
@@ -104,6 +113,10 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
                 scrollView.delegate = self
             }
         }
+        
+        self.pageNumber = (1, self.pdfView.document?.pageCount ?? 1)
+        
+        self.startPageIndicatorTimer()
     }
     
     required init?(coder: NSCoder) {
@@ -120,11 +133,26 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         }
     }
             
+    func startPageIndicatorTimer() {
+        self.pageTimer?.invalidate()
+        
+        self.pageTimer = SwiftSignalKit.Timer(timeout: 2.0, repeat: false, completion: { [weak self] in
+            guard let self else {
+                return
+            }
+            let transition = ComponentTransition.easeInOut(duration: 0.25)
+            transition.setAlpha(view: self.pageIndicatorBackgorund, alpha: 0.0)
+        }, queue: Queue.mainQueue())
+        self.pageTimer?.start()
+    }
     
     func updateFontState(_ state: BrowserPresentationState.FontState) {
         
     }
     func updateFontState(_ state: BrowserPresentationState.FontState, force: Bool) {
+    }
+    
+    func toggleInstantView(_ enabled: Bool) {
     }
         
     private var findSession: Any?
@@ -308,6 +336,29 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         let pdfViewFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: size.width - insets.left - insets.right, height: size.height - insets.top - bottomInset))
         transition.setFrame(view: self.pdfView, frame: pdfViewFrame)
         
+        let pageIndicatorSize = self.pageIndicator.update(
+            transition: .immediate,
+            component: AnyComponent(
+                Text(text: "\(self.pageNumber?.0 ?? 1) of \(self.pageNumber?.1 ?? 1)", font: Font.with(size: 15.0, weight: .semibold, traits: .monospacedNumbers), color: self.presentationData.theme.list.itemSecondaryTextColor)
+            ),
+            environment: {},
+            containerSize: size
+        )
+        if let view = self.pageIndicator.view {
+            if view.superview == nil {
+                self.addSubview(self.pageIndicatorBackgorund)
+                self.pageIndicatorBackgorund.contentView.addSubview(view)
+            }
+            
+            let horizontalPadding: CGFloat = 10.0
+            let verticalPadding: CGFloat = 8.0
+            let pageBackgroundFrame = CGRect(origin: CGPoint(x: insets.left + 20.0, y: insets.top + 16.0), size: CGSize(width: horizontalPadding * 2.0 + pageIndicatorSize.width, height: verticalPadding * 2.0 + pageIndicatorSize.height))
+            
+            self.pageIndicatorBackgorund.bounds = CGRect(origin: .zero, size: pageBackgroundFrame.size)
+            transition.setPosition(view: self.pageIndicatorBackgorund, position: pageBackgroundFrame.center)
+            view.frame = CGRect(origin: CGPoint(x: horizontalPadding, y: verticalPadding), size: pageIndicatorSize)
+        }
+                
         if isFirstTime {
             self.pdfView.setNeedsLayout()
             self.pdfView.layoutIfNeeded()
@@ -370,7 +421,29 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         }
         if !scrollView.isZooming && !self.wasZooming {
             self.updateScrollingOffset(isReset: false, transition: .immediate)
+            
+            if let document = self.pdfView.document, let page = self.pdfView.currentPage {
+                let number = document.index(for: page) + 1
+                if number != self.pageNumber?.0 {
+                    self.pageNumber = (number, document.pageCount)
+                    if let (size, insets, fullInsets) = self.validLayout {
+                        self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, safeInsets: .zero, transition: .immediate)
+                    }
+                }
+            }
         }
+    }
+    
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        if let scrollViewDelegate = scrollView as? UIScrollViewDelegate {
+            scrollViewDelegate.scrollViewWillBeginDragging?(scrollView)
+        }
+        
+        let transition = ComponentTransition.easeInOut(duration: 0.1)
+        transition.setAlpha(view: self.pageIndicatorBackgorund, alpha: 1.0)
+        
+        self.pageTimer?.invalidate()
+        self.pageTimer = nil
     }
     
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
@@ -383,6 +456,8 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
             if self.ignoreUpdatesUntilScrollingStopped {
                 self.ignoreUpdatesUntilScrollingStopped = false
             }
+            
+            self.startPageIndicatorTimer()
         }
     }
     
@@ -395,6 +470,8 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         if self.ignoreUpdatesUntilScrollingStopped {
             self.ignoreUpdatesUntilScrollingStopped = false
         }
+        
+        self.startPageIndicatorTimer()
     }
     
     private func updateScrollingOffset(isReset: Bool, transition: ComponentTransition) {
@@ -449,7 +526,7 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
             navigationController._keepModalDismissProgress = true
             navigationController.pushViewController(controller)
         } else {
-            self.pushContent(subject)
+            self.pushContent(subject, nil)
         }
     }
     

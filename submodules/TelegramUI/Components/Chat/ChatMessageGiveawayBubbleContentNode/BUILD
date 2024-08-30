@@ -29,6 +29,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/TelegramUI/Components/Chat/ChatMessageAttachedContentButtonNode",
         "//submodules/TelegramUI/Components/ChatControllerInteraction",
+        "//submodules/TelegramUI/Components/TextNodeWithEntities",
+        "//submodules/TextFormat",
     ],
     visibility = [
         "//visibility:public",

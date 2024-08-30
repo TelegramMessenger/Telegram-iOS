@@ -990,7 +990,7 @@ public extension Api {
         case messageActionGiftPremium(flags: Int32, currency: String, amount: Int64, months: Int32, cryptoCurrency: String?, cryptoAmount: Int64?)
         case messageActionGiftStars(flags: Int32, currency: String, amount: Int64, stars: Int64, cryptoCurrency: String?, cryptoAmount: Int64?, transactionId: String?)
         case messageActionGiveawayLaunch(flags: Int32, stars: Int64?)
-        case messageActionGiveawayResults(winnersCount: Int32, unclaimedCount: Int32)
+        case messageActionGiveawayResults(flags: Int32, winnersCount: Int32, unclaimedCount: Int32)
         case messageActionGroupCall(flags: Int32, call: Api.InputGroupCall, duration: Int32?)
         case messageActionGroupCallScheduled(call: Api.InputGroupCall, scheduleDate: Int32)
         case messageActionHistoryClear
@@ -1183,10 +1183,11 @@ public extension Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt64(stars!, buffer: buffer, boxed: false)}
                     break
-                case .messageActionGiveawayResults(let winnersCount, let unclaimedCount):
+                case .messageActionGiveawayResults(let flags, let winnersCount, let unclaimedCount):
                     if boxed {
-                        buffer.appendInt32(715107781)
+                        buffer.appendInt32(-2015170219)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(winnersCount, buffer: buffer, boxed: false)
                     serializeInt32(unclaimedCount, buffer: buffer, boxed: false)
                     break
@@ -1436,8 +1437,8 @@ public extension Api {
                 return ("messageActionGiftStars", [("flags", flags as Any), ("currency", currency as Any), ("amount", amount as Any), ("stars", stars as Any), ("cryptoCurrency", cryptoCurrency as Any), ("cryptoAmount", cryptoAmount as Any), ("transactionId", transactionId as Any)])
                 case .messageActionGiveawayLaunch(let flags, let stars):
                 return ("messageActionGiveawayLaunch", [("flags", flags as Any), ("stars", stars as Any)])
-                case .messageActionGiveawayResults(let winnersCount, let unclaimedCount):
-                return ("messageActionGiveawayResults", [("winnersCount", winnersCount as Any), ("unclaimedCount", unclaimedCount as Any)])
+                case .messageActionGiveawayResults(let flags, let winnersCount, let unclaimedCount):
+                return ("messageActionGiveawayResults", [("flags", flags as Any), ("winnersCount", winnersCount as Any), ("unclaimedCount", unclaimedCount as Any)])
                 case .messageActionGroupCall(let flags, let call, let duration):
                 return ("messageActionGroupCall", [("flags", flags as Any), ("call", call as Any), ("duration", duration as Any)])
                 case .messageActionGroupCallScheduled(let call, let scheduleDate):
@@ -1794,10 +1795,13 @@ public extension Api {
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionGiveawayResults(winnersCount: _1!, unclaimedCount: _2!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessageAction.messageActionGiveawayResults(flags: _1!, winnersCount: _2!, unclaimedCount: _3!)
             }
             else {
                 return nil

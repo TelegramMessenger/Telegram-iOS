@@ -219,6 +219,7 @@ public final class LocationMapNode: ASDisplayNode, MKMapViewDelegateTarget {
     private let pickerAnnotationContainerView: PickerAnnotationContainerView
     private weak var userLocationAnnotationView: MKAnnotationView?
     private var headingArrowView: UIImageView?
+    private var compassView: MKCompassButton?
     
     private weak var defaultUserLocationAnnotation: MKAnnotation?
     
@@ -301,11 +302,15 @@ public final class LocationMapNode: ASDisplayNode, MKMapViewDelegateTarget {
     override public func didLoad() {
         super.didLoad()
         
+        guard let mapView = self.mapView else {
+            return
+        }
+        
         self.headingArrowView = UIImageView()
         self.headingArrowView?.frame = CGRect(origin: CGPoint(), size: CGSize(width: 88.0, height: 88.0))
         self.headingArrowView?.image = generateHeadingArrowImage()
         
-        self.mapView?.interactiveTransitionGestureRecognizerTest = { p in
+        mapView.interactiveTransitionGestureRecognizerTest = { p in
             if p.x > 44.0 {
                 return true
             } else {
@@ -313,19 +318,25 @@ public final class LocationMapNode: ASDisplayNode, MKMapViewDelegateTarget {
             }
         }
         
-        self.mapView?.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
+        mapView.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
             return self?.disableHorizontalTransitionGesture == true
         }
         
         let delegateImpl = MKMapViewDelegateImpl(target: self)
         self.delegateImpl = delegateImpl
         
-        self.mapView?.delegate = delegateImpl
-        self.mapView?.mapType = self.mapMode.mapType
-        self.mapView?.isRotateEnabled = self.isRotateEnabled
-        self.mapView?.showsUserLocation = true
-        self.mapView?.showsPointsOfInterest = false
-        self.mapView?.customHitTest = { [weak self] point in
+        let compassView = MKCompassButton(mapView: mapView)
+        compassView.isUserInteractionEnabled = true
+        self.compassView = compassView
+        mapView.addSubview(compassView)
+        
+        mapView.delegate = delegateImpl
+        mapView.mapType = self.mapMode.mapType
+        mapView.isRotateEnabled = self.isRotateEnabled
+        mapView.showsUserLocation = true
+        mapView.showsPointsOfInterest = false
+        mapView.showsCompass = false
+        mapView.customHitTest = { [weak self] point in
             guard let strongSelf = self else {
                 return false
             }
@@ -826,7 +837,7 @@ public final class LocationMapNode: ASDisplayNode, MKMapViewDelegateTarget {
         }
     }
     
-    public func updateLayout(size: CGSize, topPadding: CGFloat) {
+    public func updateLayout(size: CGSize, topPadding: CGFloat, inset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.hasValidLayout = true
         
         self.topPadding = topPadding
@@ -835,6 +846,10 @@ public final class LocationMapNode: ASDisplayNode, MKMapViewDelegateTarget {
         self.pickerAnnotationContainerView.frame = CGRect(x: 0.0, y: floorToScreenPixels((size.height - size.width) / 2.0), width: size.width, height: size.width)
         if let pickerAnnotationView = self.pickerAnnotationView {
             pickerAnnotationView.center = CGPoint(x: self.pickerAnnotationContainerView.frame.width / 2.0, y: self.pickerAnnotationContainerView.frame.height / 2.0)
+        }
+        
+        if let compassView = self.compassView {
+            transition.updateFrame(view: compassView, frame:  CGRect(origin: CGPoint(x: size.width - compassView.frame.width - 11.0, y: inset + 110.0 + topPadding), size: compassView.frame.size))
         }
         
         self.applyPendingSetMapCenter()
