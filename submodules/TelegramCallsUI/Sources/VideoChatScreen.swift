@@ -610,6 +610,8 @@ private final class VideoChatScreenComponent: Component {
                             self.state?.updated(transition: .spring(duration: 0.5))
                         } else {
                             component.call.setIsMuted(action: .muted(isPushToTalkActive: false))
+                            self.isPushToTalkActive = false
+                            self.state?.updated(transition: .spring(duration: 0.5))
                         }
                     }
                 )),
