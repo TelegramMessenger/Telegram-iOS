@@ -962,7 +962,7 @@ private enum StatsEntry: ItemListNodeEntry {
             case let .booster(_, _, _, boost):
                 let count = boost.multiplier
                 let expiresValue = stringForDate(timestamp: boost.expires, strings: presentationData.strings)
-                let expiresString: String
+                var expiresString: String
                 
                 let durationMonths = Int32(round(Float(boost.expires - boost.date) / (86400.0 * 30.0)))
                 let durationString = presentationData.strings.Stats_Boosts_ShortMonth("\(durationMonths)").string
@@ -998,17 +998,23 @@ private enum StatsEntry: ItemListNodeEntry {
                         expiresString = presentationData.strings.Stats_Boosts_ExpiresOn(expiresValue).string
                     }
                 } else {
+                    expiresString = "\(durationString) • \(expiresValue)"
                     if boost.flags.contains(.isUnclaimed) {
                         title = presentationData.strings.Stats_Boosts_Unclaimed
                         icon = .image(color: color, name: "Premium/Unclaimed")
                     } else if boost.flags.contains(.isGiveaway) {
-                        title = presentationData.strings.Stats_Boosts_ToBeDistributed
-                        icon = .image(color: color, name: "Premium/ToBeDistributed")
+                        if let stars = boost.stars {
+                            title = presentationData.strings.Stats_Boosts_Stars(Int32(stars))
+                            icon = .image(color: .stars, name: "Premium/PremiumStar")
+                            expiresString = expiresValue
+                        } else {
+                            title = presentationData.strings.Stats_Boosts_ToBeDistributed
+                            icon = .image(color: color, name: "Premium/ToBeDistributed")
+                        }
                     } else {
                         title = "Unknown"
                         icon = .image(color: color, name: "Premium/ToBeDistributed")
                     }
-                    expiresString = "\(durationString) • \(expiresValue)"
                 }
                 return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: icon, title: title, titleFont: .bold, titleBadge: count > 1 ? "\(count)" : nil, subtitle: expiresString, label: label.flatMap { .semitransparent($0) }, sectionId: self.section, action: {
                     arguments.openBoost(boost)
@@ -1038,6 +1044,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 })
             case let .boostPrepaid(_, _, title, subtitle, prepaidGiveaway):
                 let color: GiftOptionItem.Icon.Color
+                let icon: String
+                var boosts: Int32
                 switch prepaidGiveaway.prize {
                 case let .premium(months):
                     switch months {
@@ -1050,16 +1058,14 @@ private enum StatsEntry: ItemListNodeEntry {
                     default:
                         color = .blue
                     }
-                case let .stars(amount, _):
-                    if amount <= 1000 {
-                        color = .green
-                    } else if amount < 2500 {
-                        color = .blue
-                    } else {
-                        color = .red
-                    }
+                    icon = "Premium/Giveaway"
+                    boosts = prepaidGiveaway.quantity * 4
+                case let .stars(_, boostCount):
+                    color = .stars
+                    icon = "Premium/PremiumStar"
+                    boosts = boostCount
                 }
-                return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, titleBadge: "\(prepaidGiveaway.quantity * 4)", subtitle: subtitle, label: nil, sectionId: self.section, action: {
+                return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: icon), title: title, titleFont: .bold, titleBadge: "\(boosts)", subtitle: subtitle, label: nil, sectionId: self.section, action: {
                     arguments.createPrepaidGiveaway(prepaidGiveaway)
                 })
             case let .adsHeader(_, text):
@@ -1441,8 +1447,8 @@ private func boostsEntries(
                 title = presentationData.strings.Stats_Boosts_PrepaidGiveawayCount(giveaway.quantity)
                 text = presentationData.strings.Stats_Boosts_PrepaidGiveawayMonths("\(months)").string
             case let .stars(stars, _):
-                title = "\(stars) Telegram Stars"
-                text = "among \(giveaway.quantity) winners"
+                title = presentationData.strings.Stats_Boosts_Stars(Int32(stars))
+                text = presentationData.strings.Stats_Boosts_StarsBoosts
             }
             entries.append(.boostPrepaid(i, presentationData.theme, title, text, giveaway))
             i += 1
@@ -1942,8 +1948,13 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         }
         
         if boost.peer == nil, boost.flags.contains(.isGiveaway) && !boost.flags.contains(.isUnclaimed) {
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Stats_Boosts_TooltipToBeDistributed, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
+            if let _ = boost.stars {
+                let controller = context.sharedContext.makeStarsGiveawayBoostScreen(context: context, peerId: peerId, boost: boost)
+                pushImpl?(controller)
+            } else {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                presentImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Stats_Boosts_TooltipToBeDistributed, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
+            }
             return
         }
         

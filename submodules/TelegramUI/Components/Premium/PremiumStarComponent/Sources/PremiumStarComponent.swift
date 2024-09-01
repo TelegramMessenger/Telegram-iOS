@@ -76,6 +76,7 @@ public final class PremiumStarComponent: Component {
     let hasIdleAnimations: Bool
     let colors: [UIColor]?
     let particleColor: UIColor?
+    let backgroundColor: UIColor?
     
     public init(
         theme: PresentationTheme,
@@ -83,7 +84,8 @@ public final class PremiumStarComponent: Component {
         isVisible: Bool,
         hasIdleAnimations: Bool,
         colors: [UIColor]? = nil,
-        particleColor: UIColor? = nil
+        particleColor: UIColor? = nil,
+        backgroundColor: UIColor? = nil
     ) {
         self.theme = theme
         self.isIntro = isIntro
@@ -91,10 +93,11 @@ public final class PremiumStarComponent: Component {
         self.hasIdleAnimations = hasIdleAnimations
         self.colors = colors
         self.particleColor = particleColor
+        self.backgroundColor = backgroundColor
     }
     
     public static func ==(lhs: PremiumStarComponent, rhs: PremiumStarComponent) -> Bool {
-        return lhs.theme === rhs.theme && lhs.isIntro == rhs.isIntro && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations && lhs.colors == rhs.colors && lhs.particleColor == rhs.particleColor
+        return lhs.theme === rhs.theme && lhs.isIntro == rhs.isIntro && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations && lhs.colors == rhs.colors && lhs.particleColor == rhs.particleColor && lhs.backgroundColor == rhs.backgroundColor
     }
     
     public final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
@@ -694,8 +697,10 @@ public final class PremiumStarComponent: Component {
                 self.playAppearanceAnimation(velocity: nil, mirror: component.colors?.contains(UIColor(rgb: 0xe57d02)) == true, explode: true, force: true)
             }
             
-            if let _ = component.particleColor {
-                self.sceneView.backgroundColor = component.theme.list.blocksBackgroundColor
+            if let backgroundColor = component.backgroundColor {
+                self.sceneView.backgroundColor = backgroundColor
+            } else {
+                self.sceneView.backgroundColor = .clear
             }
             
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))

@@ -459,6 +459,8 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .prepaid(_, title, subtitle, prepaidGiveaway):
             let color: GiftOptionItem.Icon.Color
+            let icon: String
+            let boosts: Int32
             switch prepaidGiveaway.prize {
             case let .premium(months):
                 switch months {
@@ -471,16 +473,14 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 default:
                     color = .blue
                 }
-            case let .stars(amount, _):
-                if amount <= 1000 {
-                    color = .green
-                } else if amount < 2500 {
-                    color = .blue
-                } else {
-                    color = .red
-                }
+                icon = "Premium/Giveaway"
+                boosts = prepaidGiveaway.quantity * 4
+            case let .stars(_, boostCount):
+                color = .stars
+                icon = "Premium/PremiumStar"
+                boosts = boostCount
             }
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, titleBadge: "\(prepaidGiveaway.quantity * 4)", subtitle: subtitle, sectionId: self.section, action: nil)
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: icon), title: title, titleFont: .bold, titleBadge: "\(boosts)", subtitle: subtitle, sectionId: self.section, action: nil)
         case let .starsHeader(_, text, additionalText):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: additionalText, color: .generic), sectionId: self.section)
         case let .stars(_, _, stars, title, subtitle, label, isSelected, maxWinners):
@@ -778,9 +778,8 @@ private func createGiveawayControllerEntries(
             title = presentationData.strings.BoostGift_PrepaidGiveawayCount(prepaidGiveaway.quantity)
             text = presentationData.strings.BoostGift_PrepaidGiveawayMonths("\(months)").string
         case let .stars(stars, _):
-            //TODO:localize
-            title = "\(stars) Telegram Stars"
-            text = "among \(prepaidGiveaway.quantity) winners"
+            title = presentationData.strings.BoostGift_PrepaidGiveaway_StarsCount(Int32(stars))
+            text = presentationData.strings.BoostGift_PrepaidGiveaway_StarsBoosts
         }
         entries.append(.prepaid(presentationData.theme, title, text, prepaidGiveaway))
     }

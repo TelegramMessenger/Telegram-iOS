@@ -2791,6 +2791,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsTransactionScreen(context: context, subject: .gift(message))
     }
     
+    public func makeStarsGiveawayBoostScreen(context: AccountContext, peerId: EnginePeer.Id, boost: ChannelBoostersContext.State.Boost) -> ViewController {
+        return StarsTransactionScreen(context: context, subject: .boost(peerId, boost))
+    }
+    
     public func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError> {
         return MiniAppListScreen.initialData(context: context)
     }

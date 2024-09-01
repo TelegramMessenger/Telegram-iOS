@@ -5633,6 +5633,8 @@ Sorry for the inconvenience.";
 
 "Settings.RemoveConfirmation" = "Remove";
 
+"Conversation.ContextMenuOpenInfo" = "Open Info";
+
 "Conversation.ContextMenuOpenProfile" = "Open Profile";
 "Conversation.ContextMenuSendMessage" = "Send Message";
 "Conversation.ContextMenuMention" = "Mention";
@@ -12883,3 +12885,22 @@ Sorry for the inconvenience.";
 
 "WebBrowser.ShowInstantView" = "Show Instant View";
 "WebBrowser.HideInstantView" = "Hide Instant View";
+
+"Stats.Boosts.Stars_1" = "%@ Star";
+"Stats.Boosts.Stars_any" = "%@ Stars";
+"Stats.Boosts.StarsBoosts" = "12-month boosts";
+
+"BoostGift.PrepaidGiveaway.StarsCount_1" = "%@ Star";
+"BoostGift.PrepaidGiveaway.StarsCount_any" = "%@ Stars";
+"BoostGift.PrepaidGiveaway.StarsBoosts" = "12-month boosts";
+
+"Stars.Transaction.Giveaway.Boost.Stars_1" = "%@ Star";
+"Stars.Transaction.Giveaway.Boost.Stars_any" = "%@ Stars";
+"Stars.Transaction.Giveaway.Boost.Boosts_1" = "%@ Boost";
+"Stars.Transaction.Giveaway.Boost.Boosts_any" = "%@ Boosts";
+"Stars.Transaction.Giveaway.Boost.Members_1" = "%@ Member";
+"Stars.Transaction.Giveaway.Boost.Members_any" = "%@ Members";
+"Stars.Transaction.Giveaway.Boost.Subscriber_1" = "%@ Subscriber";
+"Stars.Transaction.Giveaway.Boost.Subscriber_any" = "%@ Subscribers";
+
+"Conversation.ContextMenuCopyEmail" = "Copy Email";

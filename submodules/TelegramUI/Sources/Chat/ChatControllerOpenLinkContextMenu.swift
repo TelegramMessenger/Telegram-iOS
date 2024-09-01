@@ -128,13 +128,15 @@ extension ChatControllerImpl {
         var canAddToReadingList = true
         let canOpenIn = availableOpenInOptions(context: self.context, item: .url(url: url)).count > 1
         
+        var isEmail = false
         let mailtoString = "mailto:"
         var openText = self.presentationData.strings.Conversation_LinkDialogOpen
-        
+        var copyText = self.presentationData.strings.Conversation_ContextMenuCopyLink
         if cleanUrl.hasPrefix(mailtoString) {
             canAddToReadingList = false
             cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: mailtoString.distance(from: mailtoString.startIndex, to: mailtoString.endIndex))...])
-//            isEmail = true
+            copyText = self.presentationData.strings.Conversation_ContextMenuCopyEmail
+            isEmail = true
         } else if canOpenIn {
             openText = self.presentationData.strings.Conversation_FileOpenIn
         }
@@ -168,16 +170,16 @@ extension ChatControllerImpl {
         )
         
         items.append(
-            .action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuCopyLink, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
+            .action(ContextMenuActionItem(text: copyText, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
                 f(.default)
 
                 guard let self else {
                     return
                 }
                 
-                UIPasteboard.general.string = url
+                UIPasteboard.general.string = cleanUrl
 
-                self.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                self.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: isEmail ? presentationData.strings.Conversation_EmailCopied : presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
             }))
         )
         

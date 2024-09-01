@@ -223,7 +223,9 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
             isVisible: true,
             hasIdleAnimations: true,
             colors: colors,
-            particleColor: particleColor
+            particleColor: particleColor,
+            backgroundColor: self.item.theme.list.blocksBackgroundColor
+            
         ))
         let containerSize = CGSize(width: min(414.0, layout.size.width), height: 220.0)
         

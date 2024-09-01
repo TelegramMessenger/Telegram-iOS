@@ -707,7 +707,11 @@ public final class StarsImageComponent: Component {
                     } else {
                         avatarNode = ImageNode()
                         avatarNode.displaysAsynchronously = false
-                        containerNode.view.addSubview(avatarNode.view)
+                        if let smallIconOutlineView = self.smallIconOutlineView {
+                            containerNode.view.insertSubview(avatarNode.view, belowSubview: smallIconOutlineView)
+                        } else {
+                            containerNode.view.addSubview(avatarNode.view)
+                        }
                         self.avatarNode = avatarNode
                         
                         avatarNode.setSignal(peerAvatarCompleteImage(account: component.context.account, peer: peer, size: imageSize, font: avatarPlaceholderFont(size: 43.0), fullSize: true))
