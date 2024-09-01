@@ -23,7 +23,7 @@
 
 @interface SharedCallAudioDevice : NSObject
 
-- (instancetype _Nonnull)initWithDisableRecording:(bool)disableRecording;
+- (instancetype _Nonnull)initWithDisableRecording:(bool)disableRecording enableSystemMute:(bool)enableSystemMute;
 
 + (void)setupAudioSession;
 
@@ -412,6 +412,7 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
     videoContentType:(OngoingGroupCallVideoContentType)videoContentType
     enableNoiseSuppression:(bool)enableNoiseSuppression
     disableAudioInput:(bool)disableAudioInput
+    enableSystemMute:(bool)enableSystemMute
     preferX264:(bool)preferX264
     logPath:(NSString * _Nonnull)logPath
 onMutedSpeechActivityDetected:(void (^ _Nullable)(bool))onMutedSpeechActivityDetected

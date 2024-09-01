@@ -906,13 +906,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                 strongSelf.groupCallController = groupCallController
                                 navigationController.pushViewController(groupCallController)
                             } else {
+                                strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                
                                 let _ = (makeVoiceChatControllerInitialData(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
                                 |> deliverOnMainQueue).start(next: { [weak strongSelf, weak navigationController] initialData in
                                     guard let strongSelf, let navigationController else {
                                         return
                                     }
                                     
-                                    strongSelf.hasGroupCallOnScreenPromise.set(true)
                                     let groupCallController = makeVoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call, initialData: initialData)
                                     groupCallController.onViewDidAppear = { [weak strongSelf] in
                                         if let strongSelf {

@@ -98,9 +98,9 @@ final class VideoChatActionButtonComponent: Component {
                 case .connecting:
                     backgroundColor = UIColor(white: 1.0, alpha: 0.1)
                 case .muted:
-                    backgroundColor = isActive ? UIColor(rgb: 0x002E5D) : UIColor(rgb: 0x027FFF)
+                    backgroundColor = !isActive ? UIColor(rgb: 0x002E5D) : UIColor(rgb: 0x027FFF)
                 case .unmuted:
-                    backgroundColor = isActive ? UIColor(rgb: 0x124B21) : UIColor(rgb: 0x34C659)
+                    backgroundColor = !isActive ? UIColor(rgb: 0x124B21) : UIColor(rgb: 0x34C659)
                 }
                 iconDiameter = 60.0
             case .leave:

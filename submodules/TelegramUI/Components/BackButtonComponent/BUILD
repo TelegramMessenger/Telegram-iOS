@@ -11,7 +11,7 @@ swift_library(
     ],
     deps = [
         "//submodules/ComponentFlow",
-        "//submodules/Components/BundleIconComponent",
+        "//submodules/Components/MultilineTextComponent",
         "//submodules/Display",
     ],
     visibility = [
