@@ -1175,12 +1175,12 @@ public class BrowserScreen: ViewController, MinimizableController {
                     
                     if case .webPage = contentState.contentType {
                         let isAvailable = contentState.hasInstantView
-                        items.append(.action(ContextMenuActionItem(text: "Show Instant View", textColor: isAvailable ? .primary : .disabled, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: isAvailable ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withAlphaComponent(0.3)) }, action: isAvailable ? { (controller, action) in
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_ShowInstantView, textColor: isAvailable ? .primary : .disabled, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: isAvailable ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withAlphaComponent(0.3)) }, action: isAvailable ? { (controller, action) in
                             performAction.invoke(.toggleInstantView(true))
                             action(.default)
                         } : nil)))
                     } else if case .instantPage = contentState.contentType, contentState.isInnerInstantViewEnabled {
-                        items.append(.action(ContextMenuActionItem(text: "Hide Instant View", textColor: .primary, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_HideInstantView, textColor: .primary, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/InstantViewOff"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
                             performAction.invoke(.toggleInstantView(false))
                             action(.default)
                         })))

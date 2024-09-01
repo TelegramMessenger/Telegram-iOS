@@ -1050,7 +1050,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     default:
                         color = .blue
                     }
-                case let .stars(amount):
+                case let .stars(amount, _):
                     if amount <= 1000 {
                         color = .green
                     } else if amount < 2500 {
@@ -1440,7 +1440,7 @@ private func boostsEntries(
             case let .premium(months):
                 title = presentationData.strings.Stats_Boosts_PrepaidGiveawayCount(giveaway.quantity)
                 text = presentationData.strings.Stats_Boosts_PrepaidGiveawayMonths("\(months)").string
-            case let .stars(stars):
+            case let .stars(stars, _):
                 title = "\(stars) Telegram Stars"
                 text = "among \(giveaway.quantity) winners"
             }

@@ -471,7 +471,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 default:
                     color = .blue
                 }
-            case let .stars(amount):
+            case let .stars(amount, _):
                 if amount <= 1000 {
                     color = .green
                 } else if amount < 2500 {
@@ -777,7 +777,7 @@ private func createGiveawayControllerEntries(
         case let .premium(months):
             title = presentationData.strings.BoostGift_PrepaidGiveawayCount(prepaidGiveaway.quantity)
             text = presentationData.strings.BoostGift_PrepaidGiveawayMonths("\(months)").string
-        case let .stars(stars):
+        case let .stars(stars, _):
             //TODO:localize
             title = "\(stars) Telegram Stars"
             text = "among \(prepaidGiveaway.quantity) winners"
@@ -1013,7 +1013,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let initialStars: Int64
     let initialWinners: Int32
     if case let .prepaid(prepaidGiveaway) = subject {
-        if case let .stars(stars) = prepaidGiveaway.prize {
+        if case let .stars(stars, _) = prepaidGiveaway.prize {
             initialStars = stars
         } else {
             initialStars = 500

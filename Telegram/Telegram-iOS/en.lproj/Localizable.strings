@@ -12880,3 +12880,6 @@ Sorry for the inconvenience.";
 "BoostGift.PrepaidGiveawayStarsCount_1" = "%@ Telegram Premium";
 "BoostGift.PrepaidGiveawayStarsCount_any" = "%@ Telegram Premium";
 "BoostGift.PrepaidGiveawayStarsMonths" = "%@-month subscriptions";
+
+"WebBrowser.ShowInstantView" = "Show Instant View";
+"WebBrowser.HideInstantView" = "Hide Instant View";
