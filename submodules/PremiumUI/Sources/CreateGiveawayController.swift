@@ -1383,18 +1383,40 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                                 let title: String
                                 let text: String
                                 switch state.mode {
-                                case .giveaway, .starsGiveaway:
+                                case .giveaway:
                                     title = presentationData.strings.BoostGift_GiveawayCreated_Title
                                     text = isGroup ? presentationData.strings.BoostGift_Group_GiveawayCreated_Text : presentationData.strings.BoostGift_GiveawayCreated_Text
+                                case .starsGiveaway:
+                                    title = presentationData.strings.BoostGift_StarsGiveawayCreated_Title
+                                    text = isGroup ? presentationData.strings.BoostGift_Group_StarsGiveawayCreated_Text : presentationData.strings.BoostGift_StarsGiveawayCreated_Text
                                 case .gift:
                                     title = presentationData.strings.BoostGift_PremiumGifted_Title
                                     text = isGroup ? presentationData.strings.BoostGift_Group_PremiumGifted_Text : presentationData.strings.BoostGift_PremiumGifted_Text
                                 }
                                 
-                                let tooltipController = UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: title, text: text, customUndoText: nil, timeout: nil, linkAction: { [weak navigationController] _ in
-                                    let statsController = context.sharedContext.makeChannelStatsController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, boosts: true, boostStatus: nil)
-                                    navigationController?.pushViewController(statsController)
-                                }), elevatedLayout: false, action: { _ in
+                                var content: UndoOverlayContent
+                                if case .starsGiveaway = state.mode {
+                                    content = .universal(
+                                        animation: "StarsBuy",
+                                        scale: 0.066,
+                                        colors: [:],
+                                        title: title,
+                                        text: text,
+                                        customUndoText: nil,
+                                        timeout: nil
+                                    )
+                                } else {
+                                    content = .premiumPaywall(title: title, text: text, customUndoText: nil, timeout: nil, linkAction: { [weak navigationController] _ in
+                                        let statsController = context.sharedContext.makeChannelStatsController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, boosts: true, boostStatus: nil)
+                                        navigationController?.pushViewController(statsController)
+                                    })
+                                }
+                                
+                                let tooltipController = UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, action: { [weak navigationController] action in
+                                    if case .info = action {
+                                        let statsController = context.sharedContext.makeChannelStatsController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, boosts: true, boostStatus: nil)
+                                        navigationController?.pushViewController(statsController)
+                                    }
                                     return true
                                 })
                                 (controllers.last as? ViewController)?.present(tooltipController, in: .current)

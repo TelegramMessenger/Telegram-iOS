@@ -1609,7 +1609,7 @@ private final class LimitSheetContent: CombinedComponent {
                         state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, environment.theme)
                     }
                     
-                    let giftString = environment.strings.Premium_BoostByGiftDescription2
+                    let giftString = environment.strings.Premium_BoostByGiveawayDescription
                     let giftAttributedString = parseMarkdownIntoAttributedString(giftString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
                     
                     if let range = giftAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {

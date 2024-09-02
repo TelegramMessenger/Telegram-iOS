@@ -1021,7 +1021,8 @@ private final class SheetContent: CombinedComponent {
                         state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
                     }
                     
-                    let giftString = isGroup ? strings.Premium_Group_BoostByGiftDescription : strings.Premium_BoostByGiftDescription2
+                    
+                    let giftString = isGroup ? strings.Premium_Group_BoostByGiveawayDescription : strings.Premium_BoostByGiveawayDescription
                     let giftAttributedString = parseMarkdownIntoAttributedString(giftString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
                     
                     if let range = giftAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {

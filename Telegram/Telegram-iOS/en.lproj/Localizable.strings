@@ -10292,6 +10292,9 @@ Sorry for the inconvenience.";
 "BoostGift.GiveawayCreated.Text" = "Check your channel's [Statistics]() to see how this giveaway boosted your channel.";
 "BoostGift.PremiumGifted.Title" = "Premium Subscriptions Gifted";
 "BoostGift.PremiumGifted.Text" = "Check your channel's [Statistics]() to see how gifts boosted your channel.";
+"BoostGift.StarsGiveawayCreated.Title" = "Stars Giveaway Created";
+"BoostGift.StarsGiveawayCreated.Text" = "Check your channel's [Statistics]() to see how this giveaway boosted your channel.";
+"BoostGift.Group.StarsGiveawayCreated.Text" = "Check your group's [Boosts]() to see how this giveaway boosted your group.";
 
 "BoostGift.Subscribers.Title" = "Gift Premium";
 "BoostGift.Subscribers.Subtitle" = "select up to %@ subscribers";
@@ -12904,3 +12907,11 @@ Sorry for the inconvenience.";
 "Stars.Transaction.Giveaway.Boost.Subscriber_any" = "%@ Subscribers";
 
 "Conversation.ContextMenuCopyEmail" = "Copy Email";
+
+"Chat.Giveaway.Message.WinnersInfo.Stars_1" = "**%@ Star**";
+"Chat.Giveaway.Message.WinnersInfo.Stars_any" = "**%@ Stars**";
+"Chat.Giveaway.Message.WinnersInfo.Stars.One" = "The winner received %@.";
+"Chat.Giveaway.Message.WinnersInfo.Stars.Many" = "All winners received a total of %@.";
+
+"Premium.BoostByGiveawayDescription" = "Get more boosts and subscribers for your channel by giving away prizes. [Get boosts >]()";
+"Premium.Group.BoostByGiveawayDescription" = "Get more boosts and members for your group by giving away prizes. [Get boosts >]()";
