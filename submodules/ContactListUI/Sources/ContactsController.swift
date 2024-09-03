@@ -787,17 +787,6 @@ public class ContactsController: ViewController {
             })
         })))
         
-        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Contacts_AddPeopleNearby, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Contact List/Context Menu/PeopleNearby"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak self] c, f in
-            c?.dismiss(completion: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.contactsNode.openPeopleNearby?()
-            })
-        })))
-        
         let controller = ContextController(presentationData: self.presentationData, source: .extracted(ContactsTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
         self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
     }
