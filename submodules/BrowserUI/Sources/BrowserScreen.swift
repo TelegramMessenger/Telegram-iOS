@@ -1081,13 +1081,12 @@ public class BrowserScreen: ViewController, MinimizableController {
             if let animationComponentView = referenceView.componentView.view as? LottieComponent.View {
                 animationComponentView.playOnce()
             }
+            
+            if let webContent = content as? BrowserWebContent {
+                webContent.requestInstantView()
+            }
 
             self.view.endEditing(true)
-            
-//            let checkIcon: (PresentationTheme) -> UIImage? = { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Check"), color: theme.contextMenu.primaryColor) }
-//            let emptyIcon: (PresentationTheme) -> UIImage? = { _ in
-//                return nil
-//            }
             
             let settings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings])
             |> take(1)
@@ -1112,8 +1111,6 @@ public class BrowserScreen: ViewController, MinimizableController {
                 }
                 
                 let performAction = self.performAction
-                
-//                let forceIsSerif = self.presentationState.fontState.isSerif
                 let fontItem = BrowserFontSizeContextMenuItem(
                     value: self.presentationState.fontState.size,
                     decrease: { [weak self] in
@@ -1230,6 +1227,11 @@ public class BrowserScreen: ViewController, MinimizableController {
             }
             
             let contextController = ContextController(presentationData: self.presentationData, source: source, items: items)
+            contextController.dismissed = { [weak content] in
+                if let webContent = content as? BrowserWebContent {
+                    webContent.releaseInstantView()
+                }
+            }
             self.controller?.present(contextController, in: .window(.root))
         }
         

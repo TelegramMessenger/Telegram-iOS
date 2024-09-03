@@ -75,7 +75,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         if case let .image(image) = media.media, let largest = largestImageRepresentation(image.representations) {
             if let externalResource = largest.resource as? InstantPageExternalMediaResource {
                 var url = externalResource.url
-                if !url.hasPrefix("http") && !url.hasPrefix("https") {
+                if !url.hasPrefix("http") && !url.hasPrefix("https") && url.hasPrefix("//") {
                     url = "https:\(url)"
                 }
                 let photoData: Signal<Tuple4<Data?, Data?, ChatMessagePhotoQuality, Bool>, NoError>

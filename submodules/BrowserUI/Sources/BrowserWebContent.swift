@@ -121,7 +121,9 @@ private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
 final class WebView: WKWebView {
     var customBottomInset: CGFloat = 0.0 {
         didSet {
-            self.setNeedsLayout()
+            if self.customBottomInset != oldValue {
+                self.setNeedsLayout()
+            }
         }
     }
     
@@ -335,6 +337,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.hasOnlySecureContent))
         
         self.faviconDisposable.dispose()
+        self.instantPageDisposable.dispose()
     }
     
     private func handleScriptMessage(_ message: WKScriptMessage) {
@@ -787,7 +790,9 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             decisionHandler(.allow)
         }
     }
-        
+    
+    private let isLoaded = ValuePromise<Bool>(false)
+    private var instantPageDisposable = MetaDisposable()
     private var instantPage: TelegramMediaWebpage?
     private var instantPageResources: [Any]?
     
@@ -803,6 +808,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.readability = nil
         self.instantPage = nil
         self.instantPageResources = nil
+        self.isLoaded.set(false)
     }
     
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -812,48 +818,65 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
         self.parseFavicon()
         
-        guard let url = URL(string: self._state.url) else {
+        self.isLoaded.set(true)
+    }
+    
+    func releaseInstantView() {
+        self.instantPageDisposable.set(nil)
+    }
+        
+    func requestInstantView() {
+        guard self.readability == nil else {
             return
         }
         
-        if #available(iOS 14.5, *) {
-            self.webView.createWebArchiveData { [weak self] result in
-                guard let self, case let .success(data) = result else {
+        self.instantPageDisposable.set(
+            (self.isLoaded.get()
+            |> filter { $0 }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let self else {
                     return
                 }
-                let readability = Readability(url: url, archiveData: data, completionHandler: { [weak self] result, error in
-                    guard let self else {
-                        return
-                    }
-                    if let (webPage, resources) = result {
-                        self.updateState {$0
-                            .withUpdatedHasInstantView(true)
+                guard let url = URL(string: self._state.url) else {
+                    return
+                }
+                
+                if #available(iOS 14.5, *) {
+                    self.webView.createWebArchiveData { [weak self] result in
+                        guard let self, case let .success(data) = result else {
+                            return
                         }
-                        self.instantPage = webPage
-                        self.instantPageResources = resources
-                        let _ = (updatedRemoteWebpage(postbox: self.context.account.postbox, network: self.context.account.network, accountPeerId: self.context.account.peerId, webPage: WebpageReference(TelegramMediaWebpage(webpageId: MediaId(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(url: self._state.url, displayUrl: "", hash: 0, type: nil, websiteName: nil, title: nil, text: nil, embedUrl: nil, embedType: nil, embedSize: nil, duration: nil, author: nil, isMediaLargeByDefault: nil, image: nil, file: nil, story: nil, attributes: [], instantPage: nil)))))
-                        |> deliverOnMainQueue).start(next: { [weak self] webPage in
-                            guard let self, let webPage, case let .Loaded(result) = webPage.content, let _ = result.instantPage else {
+                        let readability = Readability(url: url, archiveData: data, completionHandler: { [weak self] result, error in
+                            guard let self else {
                                 return
                             }
-//                            let _ = self
-//                            #if DEBUG
-//                            
-//                            #else
-                            self.instantPage = webPage
-//                            #endif
+                            if let (webPage, resources) = result {
+                                self.updateState {$0
+                                    .withUpdatedHasInstantView(true)
+                                }
+                                self.instantPage = webPage
+                                self.instantPageResources = resources
+                                let _ = (updatedRemoteWebpage(postbox: self.context.account.postbox, network: self.context.account.network, accountPeerId: self.context.account.peerId, webPage: WebpageReference(TelegramMediaWebpage(webpageId: MediaId(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(url: self._state.url, displayUrl: "", hash: 0, type: nil, websiteName: nil, title: nil, text: nil, embedUrl: nil, embedType: nil, embedSize: nil, duration: nil, author: nil, isMediaLargeByDefault: nil, image: nil, file: nil, story: nil, attributes: [], instantPage: nil)))))
+                                |> deliverOnMainQueue).start(next: { [weak self] webPage in
+                                    guard let self, let webPage, case let .Loaded(result) = webPage.content, let _ = result.instantPage else {
+                                        return
+                                    }
+                                    self.instantPage = webPage
+                                })
+                            } else {
+                                self.instantPage = nil
+                                self.instantPageResources = nil
+                                self.updateState {$0
+                                    .withUpdatedHasInstantView(false)
+                                }
+                            }
                         })
-                    } else {
-                        self.instantPage = nil
-                        self.instantPageResources = nil
-                        self.updateState {$0
-                            .withUpdatedHasInstantView(false)
-                        }
+                        self.readability = readability
                     }
-                })
-                self.readability = readability
-            }
-        }
+                }
+            })
+        )
     }
     
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
