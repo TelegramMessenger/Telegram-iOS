@@ -779,13 +779,13 @@ private func createGiveawayControllerEntries(
             text = presentationData.strings.BoostGift_PrepaidGiveawayMonths("\(months)").string
         case let .stars(stars, _):
             title = presentationData.strings.BoostGift_PrepaidGiveaway_StarsCount(Int32(stars))
-            text = presentationData.strings.BoostGift_PrepaidGiveaway_StarsBoosts
+            text = presentationData.strings.BoostGift_PrepaidGiveaway_StarsWinners(prepaidGiveaway.quantity)
         }
         entries.append(.prepaid(presentationData.theme, title, text, prepaidGiveaway))
     }
     
     var starsPerUser: Int64 = 0
-    if case .starsGiveaway = state.mode, !starsGiveawayOptions.isEmpty  {
+    if case .generic = subject, case .starsGiveaway = state.mode, !starsGiveawayOptions.isEmpty {
         let selectedOption = starsGiveawayOptions.first(where: { $0.giveawayOption.count == state.stars })!
         entries.append(.starsHeader(presentationData.theme, presentationData.strings.BoostGift_Stars_Title.uppercased(), presentationData.strings.BoostGift_Stars_Boosts(selectedOption.giveawayOption.yearlyBoosts).uppercased()))
         
@@ -868,14 +868,17 @@ private func createGiveawayControllerEntries(
     switch state.mode {
     case .giveaway, .starsGiveaway:
         if case .starsGiveaway = state.mode {
-            var values: [Int32] = [1]
-            if let selectedOption = starsGiveawayOptions.first(where: { $0.giveawayOption.count == state.stars }) {
-                values = selectedOption.giveawayOption.winners.map { $0.users }
-            }
-            if values.count > 1 {
-                entries.append(.subscriptionsHeader(presentationData.theme, presentationData.strings.BoostGift_Stars_Winners, ""))
-                entries.append(.subscriptions(presentationData.theme, state.winners, values))
-                entries.append(.subscriptionsInfo(presentationData.theme, presentationData.strings.BoostGift_Stars_WinnersInfo))
+            if case .prepaid = subject {
+            } else {
+                var values: [Int32] = [1]
+                if let selectedOption = starsGiveawayOptions.first(where: { $0.giveawayOption.count == state.stars }) {
+                    values = selectedOption.giveawayOption.winners.map { $0.users }
+                }
+                if values.count > 1 {
+                    entries.append(.subscriptionsHeader(presentationData.theme, presentationData.strings.BoostGift_Stars_Winners, ""))
+                    entries.append(.subscriptions(presentationData.theme, state.winners, values))
+                    entries.append(.subscriptionsInfo(presentationData.theme, presentationData.strings.BoostGift_Stars_WinnersInfo))
+                }
             }
         } else {
             if case .generic = subject {
@@ -1023,9 +1026,11 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let initialSubscriptions: Int32
     let initialStars: Int64
     let initialWinners: Int32
+    var initialMode: CreateGiveawayControllerState.Mode = .giveaway
     if case let .prepaid(prepaidGiveaway) = subject {
         if case let .stars(stars, _) = prepaidGiveaway.prize {
             initialStars = stars
+            initialMode = .starsGiveaway
         } else {
             initialStars = 500
         }
@@ -1052,7 +1057,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let minDate = currentTime + 60 * 1
     let maxDate = currentTime + context.userLimits.maxGiveawayPeriodSeconds
     
-    let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, stars: initialStars, winners: initialWinners, time: expiryTime)
+    let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: initialMode, subscriptions: initialSubscriptions, stars: initialStars, winners: initialWinners, time: expiryTime)
 
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)

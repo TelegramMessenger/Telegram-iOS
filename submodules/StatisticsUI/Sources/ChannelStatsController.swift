@@ -1448,7 +1448,7 @@ private func boostsEntries(
                 text = presentationData.strings.Stats_Boosts_PrepaidGiveawayMonths("\(months)").string
             case let .stars(stars, _):
                 title = presentationData.strings.Stats_Boosts_Stars(Int32(stars))
-                text = presentationData.strings.Stats_Boosts_StarsBoosts
+                text = presentationData.strings.Stats_Boosts_StarsWinners(giveaway.quantity)
             }
             entries.append(.boostPrepaid(i, presentationData.theme, title, text, giveaway))
             i += 1

@@ -12900,11 +12900,13 @@ Sorry for the inconvenience.";
 
 "Stats.Boosts.Stars_1" = "%@ Star";
 "Stats.Boosts.Stars_any" = "%@ Stars";
-"Stats.Boosts.StarsBoosts" = "12-month boosts";
+"Stats.Boosts.StarsWinners_1" = "for %@ winner";
+"Stats.Boosts.StarsWinners_any" = "among %@ winners";
 
 "BoostGift.PrepaidGiveaway.StarsCount_1" = "%@ Star";
 "BoostGift.PrepaidGiveaway.StarsCount_any" = "%@ Stars";
-"BoostGift.PrepaidGiveaway.StarsBoosts" = "12-month boosts";
+"BoostGift.PrepaidGiveaway.StarsWinners_1" = "for %@ winner";
+"BoostGift.PrepaidGiveaway.StarsWinners_any" = "among %@ winners";
 
 "Stars.Transaction.Giveaway.Boost.Stars_1" = "%@ Star";
 "Stars.Transaction.Giveaway.Boost.Stars_any" = "%@ Stars";
