@@ -224,8 +224,12 @@ func _internal_applyPremiumGiftCode(account: Account, slug: String) -> Signal<Ne
 public enum LaunchPrepaidGiveawayError {
     case generic
 }
+public enum LaunchGiveawayPurpose {
+    case premium
+    case stars(stars: Int64, users: Int32)
+}
 
-func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id: Int64, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32) -> Signal<Never, LaunchPrepaidGiveawayError> {
+func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, purpose: LaunchGiveawayPurpose, id: Int64, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32) -> Signal<Never, LaunchPrepaidGiveawayError> {
     return account.postbox.transaction { transaction -> Signal<Never, LaunchPrepaidGiveawayError> in
         var flags: Int32 = 0
         if onlyNewSubscribers {
@@ -256,7 +260,17 @@ func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id
         guard let inputPeer = inputPeer else {
             return .complete()
         }
-        return account.network.request(Api.functions.payments.launchPrepaidGiveaway(peer: inputPeer, giveawayId: id, purpose: .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: inputPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: "", amount: 0)))
+        
+        let inputPurpose: Api.InputStorePaymentPurpose
+        switch purpose {
+        case let .stars(stars, users):
+            inputPurpose = .inputStorePaymentStarsGiveaway(flags: flags, stars: stars, boostPeer: inputPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: "", amount: 0, users: users)
+        case .premium:
+            inputPurpose = .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: inputPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: "", amount: 0)
+        }
+        
+                
+        return account.network.request(Api.functions.payments.launchPrepaidGiveaway(peer: inputPeer, giveawayId: id, purpose: inputPurpose))
         |> mapError { _ -> LaunchPrepaidGiveawayError in
             return .generic
         }
