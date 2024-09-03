@@ -387,6 +387,7 @@ extension ChatControllerImpl {
                     |> take(1)
                     |> deliverOnMainQueue).startStrict(next: { [weak self] peerView in
                         if let strongSelf = self, let peer = peerView.peers[peerView.peerId], peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil && !strongSelf.presentationInterfaceState.isNotAccessible {
+                                                        
                             if peer.id == strongSelf.context.account.peerId {
                                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer, let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
                                     strongSelf.effectiveNavigationController?.pushViewController(infoController)
@@ -403,6 +404,8 @@ extension ChatControllerImpl {
                                     strongSelf.effectiveNavigationController?.pushViewController(infoController)
                                 }
                             }
+                            
+                            strongSelf.dismissPreviewing?()
                         }
                     }))
                 case .replyThread:

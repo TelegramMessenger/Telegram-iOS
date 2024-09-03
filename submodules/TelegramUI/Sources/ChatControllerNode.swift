@@ -3684,7 +3684,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     }
                 }
             }
-            
+            if let navigationBar = self.navigationBar, let result = navigationBar.view.hitTest(self.view.convert(point, to: navigationBar.view), with: nil) {
+                return result
+            }
             if let result = self.historyNode.view.hitTest(self.view.convert(point, to: self.historyNode.view), with: event), let node = result.asyncdisplaykit_node, node is ChatMessageSelectionNode || node is GridMessageSelectionNode {
                 return result
             }

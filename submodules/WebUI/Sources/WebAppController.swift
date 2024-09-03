@@ -636,6 +636,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if let controller = self.controller {
                     webView.updateMetrics(height: viewportFrame.height, isExpanded: controller.isContainerExpanded(), isStable: !controller.isContainerPanning(), transition: transition)
                 }
+                
+                webView.customBottomInset = layout.intrinsicInsets.bottom
             }
             
             if let placeholderNode = self.placeholderNode {
