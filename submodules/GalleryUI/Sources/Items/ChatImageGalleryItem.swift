@@ -259,6 +259,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let dataDisposable = MetaDisposable()
     private let recognitionDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
+    private var fetchedDimensions: PixelDimensions?
     
     private let pagingEnabledPromise = ValuePromise<Bool>(true)
     
@@ -806,9 +807,9 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         })
     }
     
-    func setFile(context: AccountContext, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference) {
-        if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) {
-            if var largestSize = fileReference.media.dimensions {
+    func setFile(context: AccountContext, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, force: Bool = false) {
+        if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) || force {
+            if var largestSize = (fileReference.media.dimensions ?? self.fetchedDimensions) {
                 var displaySize = largestSize.cgSize.dividedByScreenScale()
                 if let previewDimensions = largestImageRepresentation(fileReference.media.previewRepresentations)?.dimensions {
                     let previewAspect = CGFloat(previewDimensions.width) / CGFloat(previewDimensions.height)
@@ -848,6 +849,22 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: userLocation, userContentType: .image, reference: fileReference.resourceReference(fileReference.media.resource)).start())
             } else {
+                let _ = (chatMessageFileDatas(account: context.account, userLocation: userLocation, fileReference: fileReference, progressive: false, fetched: true)
+                |> mapToSignal { value -> Signal<UIImage?, NoError> in
+                    if value._2, let path = value._1, let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                        return .single(UIImage(data: data))
+                    }
+                    return .complete()
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] image in
+                    if let self, let image {
+                        self.fetchedDimensions = PixelDimensions(image.size)
+                        self.setFile(context: context, userLocation: userLocation, fileReference: fileReference, force: true)
+                    }
+                })
+                
+                
+                
                 self._ready.set(.single(Void()))
             }
         }

@@ -2775,6 +2775,20 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
         }
     }
     
+    var hasTimers: Bool {
+        guard let controller = self.controller else {
+            return false
+        }
+        if let selectionContext = controller.interaction?.selectionState, let editingContext = controller.interaction?.editingState {
+            for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
+                if let time = editingContext.timer(for: item), time.intValue > 0 {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+    
     var captionIsAboveMedia: Signal<Bool, NoError> {
         return Signal { [weak self] subscriber in
             guard let interaction = self?.controller?.interaction else {

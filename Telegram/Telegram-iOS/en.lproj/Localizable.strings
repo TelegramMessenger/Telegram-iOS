@@ -10510,11 +10510,15 @@ Sorry for the inconvenience.";
 
 "Notification.GiveawayResultsNoWinners_1" = "Due to the giveaway terms, no winners could be selected by Telegram, a gift link was forwarded to channel administrators.";
 "Notification.GiveawayResultsNoWinners_any" = "Due to the giveaway terms, no winners could be selected by Telegram, all **%@** gift links were forwarded to channel administrators.";
+"Notification.GiveawayResultsNoWinners.Group_1" = "Due to the giveaway terms, no winners could be selected by Telegram, a gift link was forwarded to group administrators.";
+"Notification.GiveawayResultsNoWinners.Group_any" = "Due to the giveaway terms, no winners could be selected by Telegram, all **%@** gift links were forwarded to group administrators.";
 
 "Notification.GiveawayResultsMixedWinners_1" = "**%@** winner of the giveaway was randomly selected by Telegram and received their gift link in a private message.";
 "Notification.GiveawayResultsMixedWinners_any" = "**%@** winners of the giveaway were randomly selected by Telegram and received their gift links in private messages.";
 "Notification.GiveawayResultsMixedUnclaimed_1" = "**%@** undistributed gift link was forwarded to channel administrators";
 "Notification.GiveawayResultsMixedUnclaimed_any" = "**%@** undistributed gift links were forwarded to channel administrators";
+"Notification.GiveawayResultsMixedUnclaimed.Group_1" = "**%@** undistributed gift link was forwarded to group administrators";
+"Notification.GiveawayResultsMixedUnclaimed.Group_any" = "**%@** undistributed gift links were forwarded to group administrators";
 
 "Chat.Giveaway.DeleteConfirmation.Title" = "Do you want to delete the Giveaway Announcement?";
 "Chat.Giveaway.DeleteConfirmation.Text" = "Deleting this message won't cancel the giveaway - the winners will still be selected on **%@**.\n\nOnce deleted, the Giveaway Announcement cannot be recovered.";
@@ -12876,6 +12880,11 @@ Sorry for the inconvenience.";
 "BoostGift.Stars.Info" = "Choose how many stars to give away and how many boosts to receive for 1 year.";
 "BoostGift.AdditionalPrizesInfoStarsOff" = "Turn this on if you want to give the winners your own prizes in addition to Stars.";
 
+"BoostGift.AdditionalPrizesInfoStars_1" = "**%@** Star";
+"BoostGift.AdditionalPrizesInfoStars_any" = "**%@** Stars";
+"BoostGift.AdditionalPrizesInfoStarsOn" = "All prizes: %1$@%2$@.";
+"BoostGift.AdditionalPrizesInfoStarsAndOther" = " and **%1$@** %2$@";
+
 "BoostGift.Stars.Winners" = "NUMBER OF WINNERS";
 "BoostGift.Stars.WinnersInfo" = "Choose how many winners you want to distribute stars among.";
 
@@ -12915,3 +12924,6 @@ Sorry for the inconvenience.";
 
 "Premium.BoostByGiveawayDescription" = "Get more boosts and subscribers for your channel by giving away prizes. [Get boosts >]()";
 "Premium.Group.BoostByGiveawayDescription" = "Get more boosts and members for your group by giving away prizes. [Get boosts >]()";
+
+"Notification.StarsGiveawayResultsNoWinners" = "Due to the giveaway terms, no winners could be selected by Telegram, all stars were credited to channel administrators.";
+"Notification.StarsGiveawayResultsNoWinners.Group" = "Due to the giveaway terms, no winners could be selected by Telegram, all stars were credited to group administrators.";

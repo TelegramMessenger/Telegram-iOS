@@ -995,7 +995,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     return ChatMessageBubbleContentTapAction(content: .none)
                 } else {
                     if let text = self.textNode.textNode.attributeSubstring(name: "Attribute__Blockquote", index: index) {
-                        return ChatMessageBubbleContentTapAction(content: .copy(text.1))
+                        return ChatMessageBubbleContentTapAction(content: .copy(text.0))
                     } else {
                         return ChatMessageBubbleContentTapAction(content: .none)
                     }

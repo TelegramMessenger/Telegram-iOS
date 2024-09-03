@@ -271,7 +271,7 @@ func chatMessagePhotoDatas(mediaBox: MediaBox, userLocation: MediaResourceUserLo
     }
 }
 
-private func chatMessageFileDatas(account: Account, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, pathExtension: String? = nil, progressive: Bool = false, fetched: Bool = false) -> Signal<Tuple3<Data?, String?, Bool>, NoError> {
+public func chatMessageFileDatas(account: Account, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, pathExtension: String? = nil, progressive: Bool = false, fetched: Bool = false) -> Signal<Tuple3<Data?, String?, Bool>, NoError> {
     let thumbnailResource = fetched ? nil : smallestImageRepresentation(fileReference.media.previewRepresentations)?.resource
     let fullSizeResource = fileReference.media.resource
     

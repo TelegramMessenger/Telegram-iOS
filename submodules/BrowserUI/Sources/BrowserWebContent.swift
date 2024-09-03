@@ -740,7 +740,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
 //            })
 //        } else {
             if let url = navigationAction.request.url?.absoluteString {
-                if (navigationAction.targetFrame == nil || navigationAction.targetFrame?.isMainFrame == true) && (isTelegramMeLink(url) || isTelegraPhLink(url)) && !url.contains("/auth/push?") && !self._state.url.contains("/auth/push?") {
+                if (navigationAction.targetFrame == nil || navigationAction.targetFrame?.isMainFrame == true) && (isTelegramMeLink(url) || isTelegraPhLink(url) || url.hasPrefix("tg://")) && !url.contains("/auth/push?") && !self._state.url.contains("/auth/push?") {
                     decisionHandler(.cancel, preferences)
                     self.minimize()
                     self.openAppUrl(url)
@@ -776,7 +776,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         if let url = navigationAction.request.url?.absoluteString {
-            if (navigationAction.targetFrame == nil || navigationAction.targetFrame?.isMainFrame == true) && (isTelegramMeLink(url) || isTelegraPhLink(url)) {
+            if (navigationAction.targetFrame == nil || navigationAction.targetFrame?.isMainFrame == true) && (isTelegramMeLink(url) || isTelegraPhLink(url) || url.hasPrefix("tg://")) {
                 decisionHandler(.cancel)
                 self.minimize()
                 self.openAppUrl(url)
@@ -858,7 +858,10 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         if [-1003, -1100, 102].contains((error as NSError).code) {
-            self.currentError = error
+            if let url = (error as NSError).userInfo["NSErrorFailingURLKey"] as? URL, url.absoluteString.hasPrefix("itms-appss:") {
+            } else {
+                self.currentError = error
+            }
         } else {
             self.currentError = nil
         }
@@ -870,7 +873,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil {
             if let url = navigationAction.request.url?.absoluteString {
-                if isTelegramMeLink(url) || isTelegraPhLink(url) {
+                if isTelegramMeLink(url) || isTelegraPhLink(url) || url.hasPrefix("tg://") {
                     self.minimize()
                     self.openAppUrl(url)
                 } else {
@@ -1350,7 +1353,7 @@ let setupFontFunctions = """
 """
 
 private let videoSource = """
-function disableWebkitEnterFullscreen(videoElement) {
+function tgBrowserDisableWebkitEnterFullscreen(videoElement) {
   if (videoElement && videoElement.webkitEnterFullscreen) {
     Object.defineProperty(videoElement, 'webkitEnterFullscreen', {
       value: undefined
@@ -1358,11 +1361,11 @@ function disableWebkitEnterFullscreen(videoElement) {
   }
 }
 
-function disableFullscreenOnExistingVideos() {
-  document.querySelectorAll('video').forEach(disableWebkitEnterFullscreen);
+function tgBrowserDisableFullscreenOnExistingVideos() {
+  document.querySelectorAll('video').forEach(tgBrowserDisableWebkitEnterFullscreen);
 }
 
-function handleMutations(mutations) {
+function tgBrowserHandleMutations(mutations) {
   mutations.forEach((mutation) => {
     if (mutation.addedNodes && mutation.addedNodes.length > 0) {
       mutation.addedNodes.forEach((newNode) => {
@@ -1377,17 +1380,17 @@ function handleMutations(mutations) {
   });
 }
 
-disableFullscreenOnExistingVideos();
+tgBrowserDisableFullscreenOnExistingVideos();
 
-const observer = new MutationObserver(handleMutations);
+const _tgbrowser_observer = new MutationObserver(tgBrowserHandleMutations);
 
-observer.observe(document.body, {
+_tgbrowser_observer.observe(document.body, {
   childList: true,
   subtree: true
 });
 
-function disconnectObserver() {
-  observer.disconnect();
+function tgBrowserDisconnectObserver() {
+  _tgbrowser_observer.disconnect();
 }
 """
 

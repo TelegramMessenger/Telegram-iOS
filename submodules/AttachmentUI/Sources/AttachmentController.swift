@@ -213,6 +213,8 @@ public protocol AttachmentMediaPickerContext {
     var price: Int64? { get }
     func setPrice(_ price: Int64) -> Void
     
+    var hasTimers: Bool { get }
+    
     var loadingProgress: Signal<CGFloat?, NoError> { get }
     var mainButtonState: Signal<AttachmentMainButtonState?, NoError> { get }
     var secondaryButtonState: Signal<AttachmentMainButtonState?, NoError> { get }
@@ -255,6 +257,10 @@ public extension AttachmentMediaPickerContext {
     }
     
     func setPrice(_ price: Int64) -> Void {
+    }
+    
+    var hasTimers: Bool {
+        return false
     }
     
     var loadingProgress: Signal<CGFloat?, NoError> {

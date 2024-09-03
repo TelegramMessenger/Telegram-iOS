@@ -1714,6 +1714,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                         shareController.dismissed = { [weak self] _ in
                             self?.interacting?(false)
                         }
+                        
                         shareController.actionCompleted = { [weak self] in
                             if let strongSelf = self, let actionCompletionText = actionCompletionText {
                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }

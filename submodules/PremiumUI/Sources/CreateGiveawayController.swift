@@ -784,6 +784,7 @@ private func createGiveawayControllerEntries(
         entries.append(.prepaid(presentationData.theme, title, text, prepaidGiveaway))
     }
     
+    var starsPerUser: Int64 = 0
     if case .starsGiveaway = state.mode, !starsGiveawayOptions.isEmpty  {
         let selectedOption = starsGiveawayOptions.first(where: { $0.giveawayOption.count == state.stars })!
         entries.append(.starsHeader(presentationData.theme, presentationData.strings.BoostGift_Stars_Title.uppercased(), presentationData.strings.BoostGift_Stars_Boosts(selectedOption.giveawayOption.yearlyBoosts).uppercased()))
@@ -800,6 +801,7 @@ private func createGiveawayControllerEntries(
             
             let subtitle = presentationData.strings.BoostGift_Stars_PerUser("\(winners.starsPerUser)").string
             let label = product.storeProduct.price
+            starsPerUser = winners.starsPerUser
             
             let isSelected = product.giveawayOption.count == state.stars
             entries.append(.stars(i, presentationData.theme, Int32(product.giveawayOption.count), giftTitle, subtitle, label, isSelected, maxWinners))
@@ -933,14 +935,24 @@ private func createGiveawayControllerEntries(
         if state.showPrizeDescription {
             entries.append(.prizeDescriptionText(presentationData.theme, presentationData.strings.BoostGift_AdditionalPrizesPlaceholder, state.prizeDescription, state.subscriptions))
            
-            let monthsString = presentationData.strings.BoostGift_AdditionalPrizesInfoForMonths(state.selectedMonths ?? 12)
-            if state.prizeDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                let subscriptionsString = presentationData.strings.BoostGift_AdditionalPrizesInfoSubscriptions(state.subscriptions).replacingOccurrences(of: "\(state.subscriptions) ", with: "")
-                prizeDescriptionInfoText = presentationData.strings.BoostGift_AdditionalPrizesInfoOn("\(state.subscriptions)", subscriptionsString, monthsString).string
+            if state.mode == .starsGiveaway {
+                let starsString = presentationData.strings.BoostGift_AdditionalPrizesInfoStars(Int32(state.stars))
+                if state.prizeDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let _ = starsPerUser
+                    prizeDescriptionInfoText = presentationData.strings.BoostGift_AdditionalPrizesInfoStarsOn(starsString, "").string
+                } else {
+                    prizeDescriptionInfoText = presentationData.strings.BoostGift_AdditionalPrizesInfoStarsOn(starsString, presentationData.strings.BoostGift_AdditionalPrizesInfoStarsAndOther("\(state.winners)", state.prizeDescription).string).string
+                }
             } else {
-                let subscriptionsString = presentationData.strings.BoostGift_AdditionalPrizesInfoWithSubscriptions(state.subscriptions).replacingOccurrences(of: "\(state.subscriptions) ", with: "")
-                let description = "\(state.prizeDescription) \(subscriptionsString)"
-                prizeDescriptionInfoText = presentationData.strings.BoostGift_AdditionalPrizesInfoOn("\(state.subscriptions)", description, monthsString).string
+                let monthsString = presentationData.strings.BoostGift_AdditionalPrizesInfoForMonths(state.selectedMonths ?? 12)
+                if state.prizeDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let subscriptionsString = presentationData.strings.BoostGift_AdditionalPrizesInfoSubscriptions(state.subscriptions).replacingOccurrences(of: "\(state.subscriptions) ", with: "")
+                    prizeDescriptionInfoText = presentationData.strings.BoostGift_AdditionalPrizesInfoOn("\(state.subscriptions)", subscriptionsString, monthsString).string
+                } else {
+                    let subscriptionsString = presentationData.strings.BoostGift_AdditionalPrizesInfoWithSubscriptions(state.subscriptions).replacingOccurrences(of: "\(state.subscriptions) ", with: "")
+                    let description = "\(state.prizeDescription) \(subscriptionsString)"
+                    prizeDescriptionInfoText = presentationData.strings.BoostGift_AdditionalPrizesInfoOn("\(state.subscriptions)", description, monthsString).string
+                }
             }
         }
         entries.append(.prizeDescriptionInfo(presentationData.theme, prizeDescriptionInfoText))

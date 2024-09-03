@@ -1746,7 +1746,7 @@ private final class ChatSendStarsScreenComponent: Component {
                         self.topPeerItems[topPeer.id] = itemView
                     }
                     
-                    let itemCountString = "\(topPeer.count)"
+                    let itemCountString = presentationStringsFormattedNumber(Int32(topPeer.count), environment.dateTimeFormat.groupingSeparator)
                     /*if topPeer.isMy && myCountAddition != 0 && topPeer.count > myCountAddition {
                         itemCountString = "\(topPeer.count - myCountAddition) +\(myCountAddition)"
                     }*/

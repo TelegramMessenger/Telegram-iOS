@@ -134,7 +134,7 @@ private struct OrderedLinkedList<T: Equatable>: Sequence, Equatable {
     }
 }
 
-private let maxTextLength = 255
+private let maxTextLength = 200
 private let maxOptionLength = 100
 private let maxOptionCount = 10
 

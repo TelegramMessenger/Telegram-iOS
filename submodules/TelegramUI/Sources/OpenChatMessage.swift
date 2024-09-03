@@ -239,6 +239,15 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                             useBrowserScreen = true
                         }
                         if useBrowserScreen {
+                            if let navigationController = params.navigationController, let minimizedContainer = navigationController.minimizedContainer {
+                                for controller in minimizedContainer.controllers {
+                                    if let controller = controller as? BrowserScreen, controller.subject.fileId == file.fileId {
+                                        navigationController.maximizeViewController(controller, animated: true)
+                                        return
+                                    }
+                                }
+                            }
+                            
                             let subject: BrowserScreen.Subject
                             if file.mimeType == "application/pdf" {
                                 subject = .pdfDocument(file: file, canShare: canShare)

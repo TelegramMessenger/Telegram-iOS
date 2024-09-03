@@ -711,7 +711,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         canSendWhenOnline: false,
                         forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [],
                         canMakePaidContent: false,
-                        currentPrice: nil
+                        currentPrice: nil,
+                        hasTimers: false
                     )),
                     hasEntityKeyboard: hasEntityKeyboard,
                     gesture: gesture,

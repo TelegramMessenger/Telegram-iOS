@@ -289,9 +289,10 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                 badgeString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: badgeString.string))
             }
             
+            let badgeBackgroundColor = !incoming || !isStars ? accentColor : UIColor(rgb: 0xffaf0a)
             var updatedBadgeImage: UIImage?
             if themeUpdated {
-                updatedBadgeImage = generateStretchableFilledCircleImage(diameter: 21.0, color: isStars ? UIColor(rgb: 0xffaf0a) : accentColor, strokeColor: backgroundColor, strokeWidth: 1.0 + UIScreenPixel, backgroundColor: nil)
+                updatedBadgeImage = generateStretchableFilledCircleImage(diameter: 21.0, color: badgeBackgroundColor, strokeColor: backgroundColor, strokeWidth: 1.0 + UIScreenPixel, backgroundColor: nil)
             }
             
             let prizeTitleText: String

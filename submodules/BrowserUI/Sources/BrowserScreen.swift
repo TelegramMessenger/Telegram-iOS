@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 import Display
+import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ComponentFlow
@@ -1473,10 +1474,19 @@ public class BrowserScreen: ViewController, MinimizableController {
         case instantPage(webPage: TelegramMediaWebpage, anchor: String?, sourceLocation: InstantPageSourceLocation, preloadedResources: [Any]?)
         case document(file: TelegramMediaFile, canShare: Bool)
         case pdfDocument(file: TelegramMediaFile, canShare: Bool)
+        
+        public var fileId: MediaId? {
+            switch self {
+            case let .document(file, _), let .pdfDocument(file, _):
+                return file.fileId
+            default:
+                return nil
+            }
+        }
     }
     
     private let context: AccountContext
-    fileprivate let subject: Subject
+    public let subject: Subject
     private var preferredConfiguration: WKWebViewConfiguration?
     private var openPreviousOnClose = false
     
