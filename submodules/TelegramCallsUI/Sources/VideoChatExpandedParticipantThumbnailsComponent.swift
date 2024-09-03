@@ -18,6 +18,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
     let participant: GroupCallParticipantsContext.Participant
     let isPresentation: Bool
     let isSelected: Bool
+    let isSpeaking: Bool
     let action: (() -> Void)?
     
     init(
@@ -26,6 +27,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
         participant: GroupCallParticipantsContext.Participant,
         isPresentation: Bool,
         isSelected: Bool,
+        isSpeaking: Bool,
         action: (() -> Void)?
     ) {
         self.call = call
@@ -33,6 +35,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
         self.participant = participant
         self.isPresentation = isPresentation
         self.isSelected = isSelected
+        self.isSpeaking = isSpeaking
         self.action = action
     }
     
@@ -50,6 +53,9 @@ final class VideoChatParticipantThumbnailComponent: Component {
             return false
         }
         if lhs.isSelected != rhs.isSelected {
+            return false
+        }
+        if lhs.isSpeaking != rhs.isSpeaking {
             return false
         }
         return true
@@ -121,6 +127,20 @@ final class VideoChatParticipantThumbnailComponent: Component {
                 self.backgroundColor = UIColor(rgb: 0x1C1C1E)
             }
             
+            let previousComponent = self.component
+            
+            let wasSpeaking = previousComponent?.isSpeaking ?? false
+            let speakingAlphaTransition: ComponentTransition
+            if transition.animation.isImmediate {
+                speakingAlphaTransition = .immediate
+            } else {
+                if !wasSpeaking {
+                    speakingAlphaTransition = .easeInOut(duration: 0.1)
+                } else {
+                    speakingAlphaTransition = .easeInOut(duration: 0.25)
+                }
+            }
+            
             self.component = component
             self.componentState = state
             
@@ -148,19 +168,22 @@ final class VideoChatParticipantThumbnailComponent: Component {
                 transition: transition,
                 component: AnyComponent(VideoChatMuteIconComponent(
                     color: .white,
+                    isFilled: true,
                     isMuted: component.participant.muteState != nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: 36.0, height: 36.0)
             )
             let muteStatusFrame = CGRect(origin: CGPoint(x: availableSize.width + 5.0 - muteStatusSize.width, y: availableSize.height + 5.0 - muteStatusSize.height), size: muteStatusSize)
-            if let muteStatusView = self.muteStatus.view {
+            if let muteStatusView = self.muteStatus.view as? VideoChatMuteIconComponent.View {
                 if muteStatusView.superview == nil {
                     self.addSubview(muteStatusView)
                 }
                 transition.setPosition(view: muteStatusView, position: muteStatusFrame.center)
                 transition.setBounds(view: muteStatusView, bounds: CGRect(origin: CGPoint(), size: muteStatusFrame.size))
                 transition.setScale(view: muteStatusView, scale: 0.65)
+                
+                speakingAlphaTransition.setTintColor(layer: muteStatusView.iconView.layer, color: component.isSpeaking ? UIColor(rgb: 0x33C758) : .white)
             }
             
             let titleSize = self.title.update(
@@ -180,6 +203,8 @@ final class VideoChatParticipantThumbnailComponent: Component {
                 }
                 transition.setPosition(view: titleView, position: titleFrame.origin)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
+                
+                speakingAlphaTransition.setTintColor(layer: titleView.layer, color: component.isSpeaking ? UIColor(rgb: 0x33C758) : .white)
             }
             
             if let videoDescription = component.isPresentation ? component.participant.presentationDescription : component.participant.videoDescription {
@@ -296,23 +321,43 @@ final class VideoChatParticipantThumbnailComponent: Component {
                 self.videoSpec = nil
             }
             
-            if component.isSelected {
+            if component.isSelected || component.isSpeaking {
                 let selectedBorderView: UIImageView
                 if let current = self.selectedBorderView {
                     selectedBorderView = current
+                    
+                    speakingAlphaTransition.setTintColor(layer: selectedBorderView.layer, color: component.isSpeaking ? UIColor(rgb: 0x33C758) : component.theme.list.itemAccentColor)
                 } else {
                     selectedBorderView = UIImageView()
                     self.selectedBorderView = selectedBorderView
                     self.addSubview(selectedBorderView)
                     selectedBorderView.image = View.selectedBorderImage
+                    
+                    selectedBorderView.frame = CGRect(origin: CGPoint(), size: availableSize)
+                    
+                    ComponentTransition.immediate.setTintColor(layer: selectedBorderView.layer, color: component.isSpeaking ? UIColor(rgb: 0x33C758) : component.theme.list.itemAccentColor)
                 }
-                selectedBorderView.tintColor = component.theme.list.itemAccentColor
-                selectedBorderView.frame = CGRect(origin: CGPoint(), size: availableSize)
-            } else {
-                if let selectedBorderView = self.selectedBorderView {
+            } else if let selectedBorderView = self.selectedBorderView {
+                if !speakingAlphaTransition.animation.isImmediate {
+                    if selectedBorderView.alpha != 0.0 {
+                        speakingAlphaTransition.setAlpha(view: selectedBorderView, alpha: 0.0, completion: { [weak self, weak selectedBorderView] completed in
+                            guard let self, let component = self.component, let selectedBorderView, self.selectedBorderView === selectedBorderView, completed else {
+                                return
+                            }
+                            if !component.isSelected && !component.isSpeaking {
+                                selectedBorderView.removeFromSuperview()
+                                self.selectedBorderView = nil
+                            }
+                        })
+                    }
+                } else {
                     self.selectedBorderView = nil
                     selectedBorderView.removeFromSuperview()
                 }
+            }
+            
+            if let selectedBorderView = self.selectedBorderView {
+                transition.setFrame(view: selectedBorderView, frame: CGRect(origin: CGPoint(), size: availableSize))
             }
             
             return availableSize
@@ -373,6 +418,7 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
     let theme: PresentationTheme
     let participants: [Participant]
     let selectedParticipant: Participant.Key?
+    let speakingParticipants: Set<EnginePeer.Id>
     let updateSelectedParticipant: (Participant.Key) -> Void
 
     init(
@@ -380,12 +426,14 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
         theme: PresentationTheme,
         participants: [Participant],
         selectedParticipant: Participant.Key?,
+        speakingParticipants: Set<EnginePeer.Id>,
         updateSelectedParticipant: @escaping (Participant.Key) -> Void
     ) {
         self.call = call
         self.theme = theme
         self.participants = participants
         self.selectedParticipant = selectedParticipant
+        self.speakingParticipants = speakingParticipants
         self.updateSelectedParticipant = updateSelectedParticipant
     }
 
@@ -400,6 +448,9 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
             return false
         }
         if lhs.selectedParticipant != rhs.selectedParticipant {
+            return false
+        }
+        if lhs.speakingParticipants != rhs.speakingParticipants {
             return false
         }
         return true
@@ -441,9 +492,9 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
                 return (0, -1)
             }
             let offsetRect = rect.offsetBy(dx: -self.containerInsets.left, dy: 0.0)
-            var minVisibleRow = Int(floor((offsetRect.minY) / (self.itemSize.width)))
+            var minVisibleRow = Int(floor((offsetRect.minX) / (self.itemSize.width + self.itemSpacing)))
             minVisibleRow = max(0, minVisibleRow)
-            let maxVisibleRow = Int(ceil((offsetRect.maxY) / (self.itemSize.width)))
+            let maxVisibleRow = Int(ceil((offsetRect.maxX) / (self.itemSize.width + self.itemSpacing)))
 
             let minVisibleIndex = minVisibleRow
             let maxVisibleIndex = min(self.itemCount - 1, (maxVisibleRow + 1) - 1)
@@ -536,6 +587,7 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
                             participant: participant.participant,
                             isPresentation: participant.isPresentation,
                             isSelected: component.selectedParticipant == participant.key,
+                            isSpeaking: component.speakingParticipants.contains(participant.participant.peer.id),
                             action: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return

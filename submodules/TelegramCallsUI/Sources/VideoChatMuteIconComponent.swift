@@ -9,18 +9,24 @@ import LottieComponent
 
 final class VideoChatMuteIconComponent: Component {
     let color: UIColor
+    let isFilled: Bool
     let isMuted: Bool
 
     init(
         color: UIColor,
+        isFilled: Bool,
         isMuted: Bool
     ) {
         self.color = color
+        self.isFilled = isFilled
         self.isMuted = isMuted
     }
 
     static func ==(lhs: VideoChatMuteIconComponent, rhs: VideoChatMuteIconComponent) -> Bool {
         if lhs.color != rhs.color {
+            return false
+        }
+        if lhs.isFilled != rhs.isFilled {
             return false
         }
         if lhs.isMuted != rhs.isMuted {
@@ -36,6 +42,10 @@ final class VideoChatMuteIconComponent: Component {
         private var isUpdating: Bool = false
         
         private var contentImage: UIImage?
+        
+        var iconView: UIView {
+            return self.icon.view
+        }
         
         override init(frame: CGRect) {
             self.icon = VoiceChatMicrophoneNode()
@@ -62,7 +72,7 @@ final class VideoChatMuteIconComponent: Component {
                 self.addSubview(self.icon.view)
             }
             transition.setFrame(view: self.icon.view, frame: animationFrame)
-            self.icon.update(state: VoiceChatMicrophoneNode.State(muted: component.isMuted, filled: true, color: component.color), animated: !transition.animation.isImmediate)
+            self.icon.update(state: VoiceChatMicrophoneNode.State(muted: component.isMuted, filled: component.isFilled, color: component.color), animated: !transition.animation.isImmediate)
             
             return availableSize
         }

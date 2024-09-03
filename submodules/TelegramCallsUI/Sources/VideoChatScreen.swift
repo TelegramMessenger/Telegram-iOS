@@ -280,10 +280,65 @@ private final class VideoChatScreenComponent: Component {
                         return
                     }
                     if self.members != members {
+                        #if DEBUG
+                        var members = members
+                        if let membersValue = members {
+                            var participants = membersValue.participants
+                            for i in 1 ... 20 {
+                                for participant in membersValue.participants {
+                                    guard let user = participant.peer as? TelegramUser else {
+                                        continue
+                                    }
+                                    let mappedUser = TelegramUser(
+                                        id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(user.id.id._internalGetInt64Value() + Int64(i))),
+                                        accessHash: user.accessHash,
+                                        firstName: user.firstName,
+                                        lastName: user.lastName,
+                                        username: user.username,
+                                        phone: user.phone,
+                                        photo: user.photo,
+                                        botInfo: user.botInfo,
+                                        restrictionInfo: user.restrictionInfo,
+                                        flags: user.flags,
+                                        emojiStatus: user.emojiStatus,
+                                        usernames: user.usernames,
+                                        storiesHidden: user.storiesHidden,
+                                        nameColor: user.nameColor,
+                                        backgroundEmojiId: user.backgroundEmojiId,
+                                        profileColor: user.profileColor,
+                                        profileBackgroundEmojiId: user.profileBackgroundEmojiId,
+                                        subscriberCount: user.subscriberCount
+                                    )
+                                    participants.append(GroupCallParticipantsContext.Participant(
+                                        peer: mappedUser,
+                                        ssrc: participant.ssrc,
+                                        videoDescription: participant.videoDescription,
+                                        presentationDescription: participant.presentationDescription,
+                                        joinTimestamp: participant.joinTimestamp,
+                                        raiseHandRating: participant.raiseHandRating,
+                                        hasRaiseHand: participant.hasRaiseHand,
+                                        activityTimestamp: participant.activityTimestamp,
+                                        activityRank: participant.activityRank,
+                                        muteState: participant.muteState,
+                                        volume: participant.volume,
+                                        about: participant.about,
+                                        joinedVideo: participant.joinedVideo
+                                    ))
+                                }
+                            }
+                            members = PresentationGroupCallMembers(
+                                participants: participants,
+                                speakingParticipants: membersValue.speakingParticipants,
+                                totalCount: membersValue.totalCount,
+                                loadMoreToken: membersValue.loadMoreToken
+                            )
+                        }
+                        #endif
+                        
                         self.members = members
                         
-                        if let expandedParticipantsVideoState = self.expandedParticipantsVideoState {
-                            if let _ = members?.participants.first(where: { participant in
+                        if let expandedParticipantsVideoState = self.expandedParticipantsVideoState, let members {
+                            if let _ = members.participants.first(where: { participant in
                                 if participant.peer.id == expandedParticipantsVideoState.mainParticipant.id {
                                     if expandedParticipantsVideoState.mainParticipant.isPresentation {
                                         if participant.presentationDescription == nil {
@@ -298,9 +353,25 @@ private final class VideoChatScreenComponent: Component {
                                 }
                                 return false
                             }) {
+                            } else if let participant = members.participants.first(where: { participant in
+                                if participant.presentationDescription != nil {
+                                    return true
+                                }
+                                if participant.videoDescription != nil {
+                                    return true
+                                }
+                                return false
+                            }) {
+                                if participant.presentationDescription != nil {
+                                    self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: true), isMainParticipantPinned: false)
+                                } else {
+                                    self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: false), isMainParticipantPinned: false)
+                                }
                             } else {
                                 self.expandedParticipantsVideoState = nil
                             }
+                        } else {
+                            self.expandedParticipantsVideoState = nil
                         }
                         
                         if !self.isUpdating {
@@ -477,7 +548,10 @@ private final class VideoChatScreenComponent: Component {
             }
             
             let actionButtonDiameter: CGFloat = 56.0
-            let microphoneButtonDiameter: CGFloat = self.expandedParticipantsVideoState == nil ? 116.0 : actionButtonDiameter
+            let expandedMicrophoneButtonDiameter: CGFloat = actionButtonDiameter
+            let collapsedMicrophoneButtonDiameter: CGFloat = 116.0
+            
+            let microphoneButtonDiameter: CGFloat = self.expandedParticipantsVideoState == nil ? collapsedMicrophoneButtonDiameter : expandedMicrophoneButtonDiameter
             
             let maxActionMicrophoneButtonSpacing: CGFloat = 38.0
             let buttonsSideInset: CGFloat = 42.0
@@ -486,32 +560,41 @@ private final class VideoChatScreenComponent: Component {
             let remainingButtonsSpace: CGFloat = availableSize.width - buttonsSideInset * 2.0 - buttonsWidth
             let actionMicrophoneButtonSpacing = min(maxActionMicrophoneButtonSpacing, floor(remainingButtonsSpace * 0.5))
             
+            let collapsedMicrophoneButtonFrame: CGRect = CGRect(origin: CGPoint(x: floor((availableSize.width - collapsedMicrophoneButtonDiameter) * 0.5), y: availableSize.height - 48.0 - environment.safeInsets.bottom - collapsedMicrophoneButtonDiameter), size: CGSize(width: collapsedMicrophoneButtonDiameter, height: collapsedMicrophoneButtonDiameter))
+            let expandedMicrophoneButtonFrame: CGRect = CGRect(origin: CGPoint(x: floor((availableSize.width - expandedMicrophoneButtonDiameter) * 0.5), y: availableSize.height - environment.safeInsets.bottom - expandedMicrophoneButtonDiameter - 12.0), size: CGSize(width: expandedMicrophoneButtonDiameter, height: expandedMicrophoneButtonDiameter))
+            
             let microphoneButtonFrame: CGRect
             if self.expandedParticipantsVideoState == nil {
-                microphoneButtonFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - microphoneButtonDiameter) * 0.5), y: availableSize.height - 48.0 - environment.safeInsets.bottom - microphoneButtonDiameter), size: CGSize(width: microphoneButtonDiameter, height: microphoneButtonDiameter))
+                microphoneButtonFrame = collapsedMicrophoneButtonFrame
             } else {
-                microphoneButtonFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - microphoneButtonDiameter) * 0.5), y: availableSize.height - environment.safeInsets.bottom - microphoneButtonDiameter - 12.0), size: CGSize(width: microphoneButtonDiameter, height: microphoneButtonDiameter))
+                microphoneButtonFrame = expandedMicrophoneButtonFrame
             }
             
-            let participantsClippingY: CGFloat
-            if self.expandedParticipantsVideoState == nil {
-                participantsClippingY = microphoneButtonFrame.minY
-            } else {
-                participantsClippingY = microphoneButtonFrame.minY - 24.0
-            }
+            let collapsedParticipantsClippingY: CGFloat = collapsedMicrophoneButtonFrame.minY
+            let expandedParticipantsClippingY: CGFloat = expandedMicrophoneButtonFrame.minY - 24.0
             
             let leftActionButtonFrame = CGRect(origin: CGPoint(x: microphoneButtonFrame.minX - actionMicrophoneButtonSpacing - actionButtonDiameter, y: microphoneButtonFrame.minY + floor((microphoneButtonFrame.height - actionButtonDiameter) * 0.5)), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
             let rightActionButtonFrame = CGRect(origin: CGPoint(x: microphoneButtonFrame.maxX + actionMicrophoneButtonSpacing, y: microphoneButtonFrame.minY + floor((microphoneButtonFrame.height - actionButtonDiameter) * 0.5)), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
             
             let participantsSize = availableSize
-            let participantsCollapsedInsets = UIEdgeInsets(top: navigationHeight, left: environment.safeInsets.left, bottom: availableSize.height - participantsClippingY, right: environment.safeInsets.right)
-            let participantsExpandedInsets = UIEdgeInsets(top: environment.statusBarHeight, left: environment.safeInsets.left, bottom: availableSize.height - participantsClippingY, right: environment.safeInsets.right)
+            let participantsCollapsedInsets = UIEdgeInsets(top: navigationHeight, left: environment.safeInsets.left, bottom: availableSize.height - collapsedParticipantsClippingY, right: environment.safeInsets.right)
+            let participantsExpandedInsets = UIEdgeInsets(top: environment.statusBarHeight, left: environment.safeInsets.left, bottom: availableSize.height - expandedParticipantsClippingY, right: environment.safeInsets.right)
             
+            var mappedParticipants: VideoChatParticipantsComponent.Participants?
+            if let members = self.members, let callState = self.callState {
+                mappedParticipants = VideoChatParticipantsComponent.Participants(
+                    myPeerId: callState.myPeerId,
+                    participants: members.participants,
+                    totalCount: members.totalCount,
+                    loadMoreToken: members.loadMoreToken
+                )
+            }
             let _ = self.participants.update(
                 transition: transition,
                 component: AnyComponent(VideoChatParticipantsComponent(
                     call: component.call,
-                    members: self.members,
+                    participants: mappedParticipants,
+                    speakingParticipants: members?.speakingParticipants ?? Set(),
                     expandedVideoState: self.expandedParticipantsVideoState,
                     theme: environment.theme,
                     strings: environment.strings,
@@ -557,14 +640,14 @@ private final class VideoChatScreenComponent: Component {
                 case .connected:
                     if let _ = callState.muteState {
                         if self.isPushToTalkActive {
-                            micButtonContent = .unmuted
+                            micButtonContent = .unmuted(pushToTalk: self.isPushToTalkActive)
                             actionButtonMicrophoneState = .unmuted
                         } else {
                             micButtonContent = .muted
                             actionButtonMicrophoneState = .muted
                         }
                     } else {
-                        micButtonContent = .unmuted
+                        micButtonContent = .unmuted(pushToTalk: false)
                         actionButtonMicrophoneState = .unmuted
                     }
                 }
@@ -576,6 +659,7 @@ private final class VideoChatScreenComponent: Component {
             let _ = self.microphoneButton.update(
                 transition: transition,
                 component: AnyComponent(VideoChatMicButtonComponent(
+                    call: component.call,
                     content: micButtonContent,
                     isCollapsed: self.expandedParticipantsVideoState != nil,
                     updateUnmutedStateIsPushToTalk: { [weak self] unmutedStateIsPushToTalk in

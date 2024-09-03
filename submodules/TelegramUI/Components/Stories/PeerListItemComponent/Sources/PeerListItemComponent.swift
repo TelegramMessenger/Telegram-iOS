@@ -168,6 +168,7 @@ public final class PeerListItemComponent: Component {
         public enum Color: Equatable {
             case neutral
             case accent
+            case constructive
         }
         
         public var text: String
@@ -186,12 +187,14 @@ public final class PeerListItemComponent: Component {
     let sideInset: CGFloat
     let title: String
     let avatar: Avatar?
+    let avatarComponent: AnyComponent<Empty>?
     let peer: EnginePeer?
     let storyStats: PeerStoryStats?
     let subtitle: Subtitle?
     let subtitleAccessory: SubtitleAccessory
     let presence: EnginePeer.Presence?
     let rightAccessory: RightAccessory
+    let rightAccessoryComponent: AnyComponent<Empty>?
     let reaction: Reaction?
     let story: EngineStoryItem?
     let message: EngineMessage?
@@ -212,12 +215,14 @@ public final class PeerListItemComponent: Component {
         sideInset: CGFloat,
         title: String,
         avatar: Avatar? = nil,
+        avatarComponent: AnyComponent<Empty>? = nil,
         peer: EnginePeer?,
         storyStats: PeerStoryStats? = nil,
         subtitle: Subtitle?,
         subtitleAccessory: SubtitleAccessory,
         presence: EnginePeer.Presence?,
         rightAccessory: RightAccessory = .none,
+        rightAccessoryComponent: AnyComponent<Empty>? = nil,
         reaction: Reaction? = nil,
         story: EngineStoryItem? = nil,
         message: EngineMessage? = nil,
@@ -237,12 +242,14 @@ public final class PeerListItemComponent: Component {
         self.sideInset = sideInset
         self.title = title
         self.avatar = avatar
+        self.avatarComponent = avatarComponent
         self.peer = peer
         self.storyStats = storyStats
         self.subtitle = subtitle
         self.subtitleAccessory = subtitleAccessory
         self.presence = presence
         self.rightAccessory = rightAccessory
+        self.rightAccessoryComponent = rightAccessoryComponent
         self.reaction = reaction
         self.story = story
         self.message = message
@@ -278,6 +285,9 @@ public final class PeerListItemComponent: Component {
         if lhs.avatar != rhs.avatar {
             return false
         }
+        if lhs.avatarComponent != rhs.avatarComponent {
+            return false
+        }
         if lhs.peer != rhs.peer {
             return false
         }
@@ -294,6 +304,9 @@ public final class PeerListItemComponent: Component {
             return false
         }
         if lhs.rightAccessory != rhs.rightAccessory {
+            return false
+        }
+        if lhs.rightAccessoryComponent != rhs.rightAccessoryComponent {
             return false
         }
         if lhs.reaction != rhs.reaction {
@@ -330,15 +343,18 @@ public final class PeerListItemComponent: Component {
         private let swipeOptionContainer: ListItemSwipeOptionContainer
         
         private let title = ComponentView<Empty>()
-        private let label = ComponentView<Empty>()
+        private var label = ComponentView<Empty>()
         private let separatorLayer: SimpleLayer
-        private let avatarNode: AvatarNode
+        private var avatarNode: AvatarNode?
         private var avatarImageView: UIImageView?
         private let avatarButtonView: HighlightTrackingButton
         private var avatarIcon: ComponentView<Empty>?
         
+        private var avatarComponentView: ComponentView<Empty>?
+        
         private var iconView: UIImageView?
         private var checkLayer: CheckLayer?
+        private var rightAccessoryComponentView: ComponentView<Empty>?
         
         private var reactionLayer: InlineStickerItemLayer?
         private var heartReactionIcon: UIImageView?
@@ -355,7 +371,13 @@ public final class PeerListItemComponent: Component {
         private var presenceManager: PeerPresenceStatusManager?
         
         public var avatarFrame: CGRect {
-            return self.avatarNode.frame
+            if let avatarComponentView = self.avatarComponentView, let avatarComponentViewImpl = avatarComponentView.view {
+                return avatarComponentViewImpl.frame
+            } else if let avatarNode = self.avatarNode {
+                return avatarNode.frame
+            } else {
+                return CGRect(origin: CGPoint(), size: CGSize())
+            }
         }
         
         public var titleFrame: CGRect? {
@@ -388,10 +410,6 @@ public final class PeerListItemComponent: Component {
             
             self.swipeOptionContainer = ListItemSwipeOptionContainer(frame: CGRect())
             
-            self.avatarNode = AvatarNode(font: avatarFont)
-            self.avatarNode.isLayerBacked = false
-            self.avatarNode.isUserInteractionEnabled = false
-            
             self.avatarButtonView = HighlightTrackingButton()
             
             super.init(frame: frame)
@@ -404,7 +422,6 @@ public final class PeerListItemComponent: Component {
             self.swipeOptionContainer.addSubview(self.containerButton)
             
             self.layer.addSublayer(self.separatorLayer)
-            self.containerButton.layer.addSublayer(self.avatarNode.layer)
             
             self.containerButton.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
             
@@ -490,7 +507,9 @@ public final class PeerListItemComponent: Component {
             guard let component = self.component, let peer = component.peer else {
                 return
             }
-            component.openStories?(peer, self.avatarNode)
+            if let avatarNode = self.avatarNode {
+                component.openStories?(peer, avatarNode)
+            }
         }
         
         private func updateReactionLayer() {
@@ -634,6 +653,31 @@ public final class PeerListItemComponent: Component {
                 rightInset += 40.0
             }
             
+            var rightAccessoryComponentSize: CGSize?
+            if let rightAccessoryComponent = component.rightAccessoryComponent {
+                var rightAccessoryComponentTransition = transition
+                let rightAccessoryComponentView: ComponentView<Empty>
+                if let current = self.rightAccessoryComponentView {
+                    rightAccessoryComponentView = current
+                } else {
+                    rightAccessoryComponentTransition = rightAccessoryComponentTransition.withAnimation(.none)
+                    rightAccessoryComponentView = ComponentView()
+                    self.rightAccessoryComponentView = rightAccessoryComponentView
+                }
+                rightAccessoryComponentSize = rightAccessoryComponentView.update(
+                    transition: rightAccessoryComponentTransition,
+                    component: rightAccessoryComponent,
+                    environment: {},
+                    containerSize: CGSize(width: 100.0, height: 100.0)
+                )
+            } else if let rightAccessoryComponentView = self.rightAccessoryComponentView {
+                self.rightAccessoryComponentView = nil
+                rightAccessoryComponentView.view?.removeFromSuperview()
+            }
+            if let rightAccessoryComponentSize {
+                rightInset += 8.0 + rightAccessoryComponentSize.width
+            }
+            
             var avatarLeftInset: CGFloat = component.sideInset + 10.0
             
             if case let .editing(isSelected, isTinted) = component.selectionState {
@@ -685,15 +729,116 @@ public final class PeerListItemComponent: Component {
             let avatarSize: CGFloat = component.style == .compact ? 30.0 : 40.0
             
             let avatarFrame = CGRect(origin: CGPoint(x: avatarLeftInset, y: floorToScreenPixels((height - verticalInset * 2.0 - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
-            if self.avatarNode.bounds.isEmpty {
-                self.avatarNode.frame = avatarFrame
+            
+            var statusIcon: EmojiStatusComponent.Content?
+            if let peer = component.peer {
+                if peer.isScam {
+                    statusIcon = .text(color: component.theme.chat.message.incoming.scamColor, string: component.strings.Message_ScamAccount.uppercased())
+                } else if peer.isFake {
+                    statusIcon = .text(color: component.theme.chat.message.incoming.scamColor, string: component.strings.Message_FakeAccount.uppercased())
+                } else if let emojiStatus = peer.emojiStatus {
+                    statusIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: component.theme.list.mediaPlaceholderColor, themeColor: component.theme.list.itemAccentColor, loopMode: .count(2))
+                } else if peer.isVerified {
+                    statusIcon = .verified(fillColor: component.theme.list.itemCheckColors.fillColor, foregroundColor: component.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
+                } else if peer.isPremium {
+                    statusIcon = .premium(color: component.theme.list.itemAccentColor)
+                }
+            }
+            
+            if let avatarComponent = component.avatarComponent {
+                let avatarComponentView: ComponentView<Empty>
+                var avatarComponentTransition = transition
+                if let current = self.avatarComponentView {
+                    avatarComponentView = current
+                } else {
+                    avatarComponentTransition = avatarComponentTransition.withAnimation(.none)
+                    avatarComponentView = ComponentView()
+                    self.avatarComponentView = avatarComponentView
+                }
+                
+                let _ = avatarComponentView.update(
+                    transition: avatarComponentTransition,
+                    component: avatarComponent,
+                    environment: {},
+                    containerSize: avatarFrame.size
+                )
+                if let avatarComponentViewImpl = avatarComponentView.view {
+                    if avatarComponentViewImpl.superview == nil {
+                        self.containerButton.insertSubview(avatarComponentViewImpl, at: 0)
+                    }
+                    avatarComponentTransition.setFrame(view: avatarComponentViewImpl, frame: avatarFrame)
+                }
+                
+                if let avatarNode = self.avatarNode {
+                    self.avatarNode = nil
+                    avatarNode.layer.removeFromSuperlayer()
+                }
             } else {
-                transition.setFrame(layer: self.avatarNode.layer, frame: avatarFrame)
+                let avatarNode: AvatarNode
+                if let current = self.avatarNode {
+                    avatarNode = current
+                } else {
+                    avatarNode = AvatarNode(font: avatarFont)
+                    avatarNode.isLayerBacked = false
+                    avatarNode.isUserInteractionEnabled = false
+                    self.avatarNode = avatarNode
+                    self.containerButton.layer.insertSublayer(avatarNode.layer, at: 0)
+                }
+                
+                if avatarNode.bounds.isEmpty {
+                    avatarNode.frame = avatarFrame
+                } else {
+                    transition.setFrame(layer: avatarNode.layer, frame: avatarFrame)
+                }
+                
+                if let peer = component.peer {
+                    let clipStyle: AvatarNodeClipStyle
+                    if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                        clipStyle = .roundedRect
+                    } else {
+                        clipStyle = .round
+                    }
+                    let _ = clipStyle
+                    let _ = synchronousLoad
+                    
+                    if peer.smallProfileImage != nil {
+                        avatarNode.setPeerV2(
+                            context: component.context,
+                            theme: component.theme,
+                            peer: peer,
+                            authorOfMessage: nil,
+                            overrideImage: nil,
+                            emptyColor: nil,
+                            clipStyle: .round,
+                            synchronousLoad: synchronousLoad,
+                            displayDimensions: CGSize(width: avatarSize, height: avatarSize)
+                        )
+                    } else {
+                        avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, clipStyle: clipStyle, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
+                    }
+                    avatarNode.setStoryStats(storyStats: component.storyStats.flatMap { storyStats -> AvatarNode.StoryStats in
+                        return AvatarNode.StoryStats(
+                            totalCount: storyStats.totalCount == 0 ? 0 : 1,
+                            unseenCount: storyStats.unseenCount == 0 ? 0 : 1,
+                            hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends
+                        )
+                    }, presentationParams: AvatarNode.StoryPresentationParams(
+                        colors: AvatarNode.Colors(theme: component.theme),
+                        lineWidth: 1.33,
+                        inactiveLineWidth: 1.33
+                    ), transition: transition)
+                    avatarNode.isHidden = false
+                } else {
+                    avatarNode.isHidden = true
+                }
+                
+                if let avatarComponentView = self.avatarComponentView {
+                    self.avatarComponentView = nil
+                    avatarComponentView.view?.removeFromSuperview()
+                }
             }
             
             transition.setFrame(view: self.avatarButtonView, frame: avatarFrame)
-            
-            var statusIcon: EmojiStatusComponent.Content?
             
             if let avatar = component.avatar {
                 let avatarImageView: UIImageView
@@ -713,59 +858,6 @@ public final class PeerListItemComponent: Component {
                     self.avatarImageView = nil
                     avatarImageView.removeFromSuperview()
                 }
-            }
-            
-            if let peer = component.peer {
-                let clipStyle: AvatarNodeClipStyle
-                if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
-                    clipStyle = .roundedRect
-                } else {
-                    clipStyle = .round
-                }
-                let _ = clipStyle
-                let _ = synchronousLoad
-                
-                if peer.smallProfileImage != nil {
-                    self.avatarNode.setPeerV2(
-                        context: component.context,
-                        theme: component.theme,
-                        peer: peer,
-                        authorOfMessage: nil,
-                        overrideImage: nil,
-                        emptyColor: nil,
-                        clipStyle: .round,
-                        synchronousLoad: synchronousLoad,
-                        displayDimensions: CGSize(width: avatarSize, height: avatarSize)
-                    )
-                } else {
-                    self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, clipStyle: clipStyle, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
-                }
-                self.avatarNode.setStoryStats(storyStats: component.storyStats.flatMap { storyStats -> AvatarNode.StoryStats in
-                    return AvatarNode.StoryStats(
-                        totalCount: storyStats.totalCount == 0 ? 0 : 1,
-                        unseenCount: storyStats.unseenCount == 0 ? 0 : 1,
-                        hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends
-                    )
-                }, presentationParams: AvatarNode.StoryPresentationParams(
-                    colors: AvatarNode.Colors(theme: component.theme),
-                    lineWidth: 1.33,
-                    inactiveLineWidth: 1.33
-                ), transition: transition)
-                self.avatarNode.isHidden = false
-                
-                if peer.isScam {
-                    statusIcon = .text(color: component.theme.chat.message.incoming.scamColor, string: component.strings.Message_ScamAccount.uppercased())
-                } else if peer.isFake {
-                    statusIcon = .text(color: component.theme.chat.message.incoming.scamColor, string: component.strings.Message_FakeAccount.uppercased())
-                } else if let emojiStatus = peer.emojiStatus {
-                    statusIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: component.theme.list.mediaPlaceholderColor, themeColor: component.theme.list.itemAccentColor, loopMode: .count(2))
-                } else if peer.isVerified {
-                    statusIcon = .verified(fillColor: component.theme.list.itemCheckColors.fillColor, foregroundColor: component.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
-                } else if peer.isPremium {
-                    statusIcon = .premium(color: component.theme.list.itemAccentColor)
-                }
-            } else {
-                self.avatarNode.isHidden = true
             }
                         
             let previousTitleFrame = self.title.view?.frame
@@ -801,7 +893,29 @@ public final class PeerListItemComponent: Component {
                 labelColor = component.theme.list.itemSecondaryTextColor
             case .accent:
                 labelColor = component.theme.list.itemAccentColor
+            case .constructive:
+                //TODO:release
+                labelColor = UIColor(rgb: 0x33C758)
             }
+            
+            var animateLabelDirection: Bool?
+            if !transition.animation.isImmediate, let previousComponent, let previousSubtitle = previousComponent.subtitle, let subtitle = component.subtitle, subtitle.color != previousSubtitle.color {
+                let animateLabelDirectionValue: Bool
+                if case .constructive = subtitle.color {
+                    animateLabelDirectionValue = true
+                } else {
+                    animateLabelDirectionValue = false
+                }
+                animateLabelDirection = animateLabelDirectionValue
+                if let labelView = self.label.view {
+                    transition.setPosition(view: labelView, position: labelView.center.offsetBy(dx: 0.0, dy: animateLabelDirectionValue ? -6.0 : 6.0))
+                    labelView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak labelView] _ in
+                        labelView?.removeFromSuperview()
+                    })
+                }
+                self.label = ComponentView()
+            }
+            
             let labelSize = self.label.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -921,11 +1035,6 @@ public final class PeerListItemComponent: Component {
                     }
                 }
                 
-                if labelView.superview == nil {
-                    labelView.isUserInteractionEnabled = false
-                    self.containerButton.addSubview(labelView)
-                }
-                
                 let labelFrame: CGRect
                 switch component.style {
                 case .generic:
@@ -934,7 +1043,25 @@ public final class PeerListItemComponent: Component {
                     labelFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floor((height - verticalInset * 2.0 - centralContentHeight) / 2.0)), size: labelSize)
                 }
                 
-                transition.setFrame(view: labelView, frame: labelFrame)
+                
+                if labelView.superview == nil {
+                    labelView.isUserInteractionEnabled = false
+                    labelView.layer.anchorPoint = CGPoint()
+                    self.containerButton.addSubview(labelView)
+                    
+                    labelView.center = labelFrame.origin
+                } else {
+                    transition.setPosition(view: labelView, position: labelFrame.origin)
+                }
+                
+                labelView.bounds = CGRect(origin: CGPoint(), size: labelFrame.size)
+                
+                if let animateLabelDirection {
+                    transition.animatePosition(view: labelView, from: CGPoint(x: 0.0, y: animateLabelDirection ? 6.0 : -6.0), to: CGPoint(), additive: true)
+                    if !transition.animation.isImmediate {
+                        labelView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                    }
+                }
             }
             
             let imageSize = CGSize(width: 22.0, height: 22.0)
@@ -972,6 +1099,15 @@ public final class PeerListItemComponent: Component {
                 if let image = iconView.image {
                     transition.setFrame(view: iconView, frame: CGRect(origin: CGPoint(x: availableSize.width - image.size.width, y: floor((height - verticalInset * 2.0 - image.size.width) / 2.0)), size: image.size))
                 }
+            }
+            
+            if let rightAccessoryComponentViewImpl = self.rightAccessoryComponentView?.view, let rightAccessoryComponentSize {
+                var rightAccessoryComponentTransition = transition
+                if rightAccessoryComponentViewImpl.superview == nil {
+                    rightAccessoryComponentTransition = rightAccessoryComponentTransition.withAnimation(.none)
+                    self.containerButton.addSubview(rightAccessoryComponentViewImpl)
+                }
+                rightAccessoryComponentTransition.setFrame(view: rightAccessoryComponentViewImpl, frame: CGRect(origin: CGPoint(x: availableSize.width - rightAccessoryComponentSize.width, y: floor((height - verticalInset * 2.0 - rightAccessoryComponentSize.width) / 2.0)), size: rightAccessoryComponentSize))
             }
             
             var reactionIconTransition = transition

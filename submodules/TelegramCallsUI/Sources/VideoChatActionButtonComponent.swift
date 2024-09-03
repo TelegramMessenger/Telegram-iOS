@@ -61,7 +61,7 @@ final class VideoChatActionButtonComponent: Component {
 
     final class View: HighlightTrackingButton {
         private let icon = ComponentView<Empty>()
-        private let background = ComponentView<Empty>()
+        private let background: UIImageView
         private let title = ComponentView<Empty>()
 
         private var component: VideoChatActionButtonComponent?
@@ -70,6 +70,8 @@ final class VideoChatActionButtonComponent: Component {
         private var contentImage: UIImage?
         
         override init(frame: CGRect) {
+            self.background = UIImageView()
+            
             super.init(frame: frame)
         }
         
@@ -96,7 +98,7 @@ final class VideoChatActionButtonComponent: Component {
                 titleText = "video"
                 switch component.microphoneState {
                 case .connecting:
-                    backgroundColor = UIColor(white: 1.0, alpha: 0.1)
+                    backgroundColor = UIColor(white: 0.1, alpha: 1.0)
                 case .muted:
                     backgroundColor = !isActive ? UIColor(rgb: 0x002E5D) : UIColor(rgb: 0x027FFF)
                 case .unmuted:
@@ -144,22 +146,20 @@ final class VideoChatActionButtonComponent: Component {
             
             let size = CGSize(width: availableSize.width, height: availableSize.height)
             
-            let _ = self.background.update(
-                transition: transition,
-                component: AnyComponent(FilledRoundedRectangleComponent(
-                    color: backgroundColor,
-                    cornerRadius: size.width * 0.5,
-                    smoothCorners: false
-                )),
-                environment: {},
-                containerSize: size
-            )
-            if let backgroundView = self.background.view {
-                if backgroundView.superview == nil {
-                    self.addSubview(backgroundView)
-                }
-                transition.setFrame(view: backgroundView, frame: CGRect(origin: CGPoint(), size: size))
+            if self.background.superview == nil {
+                self.addSubview(self.background)
+                self.background.image = generateStretchableFilledCircleImage(diameter: 56.0, color: .white)?.withRenderingMode(.alwaysTemplate)
+                self.background.tintColor = backgroundColor
             }
+            transition.setFrame(view: self.background, frame: CGRect(origin: CGPoint(), size: size))
+            
+            let tintTransition: ComponentTransition
+            if !transition.animation.isImmediate {
+                tintTransition = .easeInOut(duration: 0.2)
+            } else {
+                tintTransition = .immediate
+            }
+            tintTransition.setTintColor(layer: self.background.layer, color: backgroundColor)
             
             let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) * 0.5), y: size.height + 8.0), size: titleSize)
             if let titleView = self.title.view {

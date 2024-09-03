@@ -6,23 +6,192 @@ import MultilineTextComponent
 import TelegramPresentationData
 import LottieComponent
 import VoiceChatActionButton
+import CallScreen
+import MetalEngine
+import SwiftSignalKit
+import AccountContext
 
-final class VideoChatMicButtonComponent: Component {
-    enum Content {
-        case connecting
-        case muted
-        case unmuted
+private final class BlobView: UIView {
+    let blobsLayer: CallBlobsLayer
+    
+    private let maxLevel: CGFloat
+    
+    private var displayLinkAnimator: ConstantDisplayLinkAnimator?
+    
+    private var audioLevel: CGFloat = 0.0
+    var presentationAudioLevel: CGFloat = 0.0
+    
+    var scaleUpdated: ((CGFloat) -> Void)? {
+        didSet {
+        }
     }
     
+    private(set) var isAnimating = false
+
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = true
+    
+    init(
+        frame: CGRect,
+        maxLevel: CGFloat
+    ) {
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
+        
+        self.maxLevel = maxLevel
+        
+        self.blobsLayer = CallBlobsLayer()
+        
+        super.init(frame: frame)
+
+        self.addSubnode(self.hierarchyTrackingNode)
+        
+        self.layer.addSublayer(self.blobsLayer)
+        
+        self.displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
+            guard let self else {
+                return
+            }
+
+            if !self.isCurrentlyInHierarchy {
+                return
+            }
+            
+            self.presentationAudioLevel = self.presentationAudioLevel * 0.9 + self.audioLevel * 0.1
+            self.updateAudioLevel()
+        }
+
+        updateInHierarchy = { [weak self] value in
+            guard let self else {
+                return
+            }
+            self.isCurrentlyInHierarchy = value
+            if value {
+                self.startAnimating()
+            } else {
+                self.stopAnimating()
+            }
+        }
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    public func setColor(_ color: UIColor) {
+    }
+    
+    public func updateLevel(_ level: CGFloat, immediately: Bool) {
+        let normalizedLevel = min(1, max(level / maxLevel, 0))
+        
+        self.audioLevel = normalizedLevel
+        if immediately {
+            self.presentationAudioLevel = normalizedLevel
+        }
+    }
+    
+    private func updateAudioLevel() {
+        let additionalAvatarScale = CGFloat(max(0.0, min(self.presentationAudioLevel * 18.0, 5.0)) * 0.05)
+        let blobAmplificationFactor: CGFloat = 2.0
+        let blobScale = 1.0 + additionalAvatarScale * blobAmplificationFactor
+        self.blobsLayer.transform = CATransform3DMakeScale(blobScale, blobScale, 1.0)
+        
+        self.scaleUpdated?(blobScale)
+    }
+    
+    public func startAnimating() {
+        guard !self.isAnimating else { return }
+        self.isAnimating = true
+        
+        self.updateBlobsState()
+        
+        self.displayLinkAnimator?.isPaused = false
+    }
+    
+    public func stopAnimating() {
+        self.stopAnimating(duration: 0.15)
+    }
+    
+    public func stopAnimating(duration: Double) {
+        guard isAnimating else { return }
+        self.isAnimating = false
+        
+        self.updateBlobsState()
+        
+        self.displayLinkAnimator?.isPaused = true
+    }
+    
+    private func updateBlobsState() {
+        /*if self.isAnimating {
+            if self.mediumBlob.frame.size != .zero {
+                self.mediumBlob.startAnimating()
+                self.bigBlob.startAnimating()
+            }
+        } else {
+            self.mediumBlob.stopAnimating()
+            self.bigBlob.stopAnimating()
+        }*/
+    }
+    
+    override public func layoutSubviews() {
+        super.layoutSubviews()
+        
+        //self.mediumBlob.frame = bounds
+        //self.bigBlob.frame = bounds
+        
+        let blobsFrame = bounds.insetBy(dx: floor(bounds.width * 0.12), dy: floor(bounds.height * 0.12))
+        self.blobsLayer.position = blobsFrame.center
+        self.blobsLayer.bounds = CGRect(origin: CGPoint(), size: blobsFrame.size)
+        
+        self.updateBlobsState()
+    }
+}
+
+private final class GlowView: UIView {
+    let maskGradientLayer: SimpleGradientLayer
+    
+    override init(frame: CGRect) {
+        self.maskGradientLayer = SimpleGradientLayer()
+        self.maskGradientLayer.type = .radial
+        self.maskGradientLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
+        self.maskGradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
+        
+        super.init(frame: frame)
+        
+        self.layer.addSublayer(self.maskGradientLayer)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func update(size: CGSize, color: UIColor, transition: ComponentTransition, colorTransition: ComponentTransition) {
+        transition.setFrame(layer: self.maskGradientLayer, frame: CGRect(origin: CGPoint(), size: size))
+        colorTransition.setGradientColors(layer: self.maskGradientLayer, colors: [color.withMultipliedAlpha(1.0), color.withMultipliedAlpha(0.0)])
+    }
+}
+
+final class VideoChatMicButtonComponent: Component {
+    enum Content: Equatable {
+        case connecting
+        case muted
+        case unmuted(pushToTalk: Bool)
+    }
+    
+    let call: PresentationGroupCall
     let content: Content
     let isCollapsed: Bool
     let updateUnmutedStateIsPushToTalk: (Bool?) -> Void
 
     init(
+        call: PresentationGroupCall,
         content: Content,
         isCollapsed: Bool,
         updateUnmutedStateIsPushToTalk: @escaping (Bool?) -> Void
     ) {
+        self.call = call
         self.content = content
         self.isCollapsed = isCollapsed
         self.updateUnmutedStateIsPushToTalk = updateUnmutedStateIsPushToTalk
@@ -39,9 +208,12 @@ final class VideoChatMicButtonComponent: Component {
     }
 
     final class View: HighlightTrackingButton {
-        private let background = ComponentView<Empty>()
+        private let background: UIImageView
         private let title = ComponentView<Empty>()
         private let icon: VoiceChatActionButtonIconNode
+        
+        private var glowView: GlowView?
+        private var blobView: BlobView?
 
         private var component: VideoChatMicButtonComponent?
         private var isUpdating: Bool = false
@@ -49,10 +221,17 @@ final class VideoChatMicButtonComponent: Component {
         private var beginTrackingTimestamp: Double = 0.0
         private var beginTrackingWasPushToTalk: Bool = false
         
+        private var audioLevelDisposable: Disposable?
+        
         override init(frame: CGRect) {
+            self.background = UIImageView()
             self.icon = VoiceChatActionButtonIconNode(isColored: false)
             
             super.init(frame: frame)
+        }
+        
+        deinit {
+            self.audioLevelDisposable?.dispose()
         }
         
         override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
@@ -117,24 +296,21 @@ final class VideoChatMicButtonComponent: Component {
                 self.isUpdating = false
             }
             
+            let previousComponent = self.component
             self.component = component
             
             let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.2)
             
             let titleText: String
-            let backgroundColor: UIColor
             var isEnabled = true
             switch component.content {
             case .connecting:
                 titleText = "Connecting..."
-                backgroundColor = UIColor(white: 1.0, alpha: 0.1)
                 isEnabled = false
             case .muted:
                 titleText = "Unmute"
-                backgroundColor = UIColor(rgb: 0x0086FF)
-            case .unmuted:
-                titleText = "Mute"
-                backgroundColor = UIColor(rgb: 0x34C659)
+            case let .unmuted(isPushToTalk):
+                titleText = isPushToTalk ? "You are Live" : "Tap to Mute"
             }
             self.isEnabled = isEnabled
             
@@ -149,22 +325,52 @@ final class VideoChatMicButtonComponent: Component {
             
             let size = CGSize(width: availableSize.width, height: availableSize.height)
             
-            let _ = self.background.update(
-                transition: transition,
-                component: AnyComponent(FilledRoundedRectangleComponent(
-                    color: backgroundColor,
-                    cornerRadius: size.width * 0.5,
-                    smoothCorners: false
-                )),
-                environment: {},
-                containerSize: size
-            )
-            if let backgroundView = self.background.view {
-                if backgroundView.superview == nil {
-                    backgroundView.isUserInteractionEnabled = false
-                    self.addSubview(backgroundView)
+            if self.background.superview == nil {
+                self.background.isUserInteractionEnabled = false
+                self.addSubview(self.background)
+                self.background.frame = CGRect(origin: CGPoint(), size: CGSize(width: 116.0, height: 116.0))
+            }
+            transition.setPosition(view: self.background, position: CGRect(origin: CGPoint(), size: size).center)
+            transition.setScale(view: self.background, scale: size.width / 116.0)
+            
+            if previousComponent?.content != component.content {
+                let backgroundContentsTransition: ComponentTransition
+                if !transition.animation.isImmediate {
+                    backgroundContentsTransition = .easeInOut(duration: 0.2)
+                } else {
+                    backgroundContentsTransition = .immediate
                 }
-                transition.setFrame(view: backgroundView, frame: CGRect(origin: CGPoint(), size: size))
+                let backgroundImage = generateImage(CGSize(width: 116.0, height: 116.0), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    context.addEllipse(in: CGRect(origin: CGPoint(), size: size))
+                    context.clip()
+                    
+                    switch component.content {
+                    case .connecting:
+                        context.setFillColor(UIColor(white: 0.1, alpha: 1.0).cgColor)
+                        context.fill(CGRect(origin: CGPoint(), size: size))
+                    case .muted, .unmuted:
+                        let colors: [UIColor]
+                        if case .muted = component.content {
+                            colors = [UIColor(rgb: 0x0080FF), UIColor(rgb: 0x00A1FE)]
+                        } else {
+                            colors = [UIColor(rgb: 0x33C659), UIColor(rgb: 0x0BA8A5)]
+                        }
+                        let gradientColors = colors.map { $0.cgColor } as CFArray
+                        let colorSpace = DeviceGraphicsContextSettings.shared.colorSpace
+                        
+                        var locations: [CGFloat] = [0.0, 1.0]
+                        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+                        
+                        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: size.height), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
+                    }
+                })!
+                if let previousImage = self.background.image {
+                    self.background.image = backgroundImage
+                    backgroundContentsTransition.animateContentsImage(layer: self.background.layer, from: previousImage.cgImage!, to: backgroundImage.cgImage!, duration: 0.2, curve: .easeInOut)
+                } else {
+                    self.background.image = backgroundImage
+                }
             }
             
             let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) * 0.5), y: size.height + 16.0), size: titleSize)
@@ -196,6 +402,90 @@ final class VideoChatMicButtonComponent: Component {
                 self.icon.enqueueState(.mute)
             case .unmuted:
                 self.icon.enqueueState(.unmute)
+            }
+            
+            switch component.content {
+            case .muted, .unmuted:
+                let blobSize = CGRect(origin: CGPoint(), size: CGSize(width: 116.0, height: 116.0)).insetBy(dx: -40.0, dy: -40.0).size
+                
+                let blobTintTransition: ComponentTransition
+                
+                let blobView: BlobView
+                if let current = self.blobView {
+                    blobView = current
+                    blobTintTransition = .easeInOut(duration: 0.2)
+                } else {
+                    blobTintTransition = .immediate
+                    blobView = BlobView(frame: CGRect(), maxLevel: 1.5)
+                    blobView.isUserInteractionEnabled = false
+                    self.blobView = blobView
+                    self.insertSubview(blobView, at: 0)
+                    blobView.center = CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5)
+                    blobView.bounds = CGRect(origin: CGPoint(), size: blobSize)
+                    
+                    ComponentTransition.immediate.setScale(view: blobView, scale: 0.001)
+                    if !transition.animation.isImmediate {
+                        blobView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                    }
+                }
+                
+                transition.setPosition(view: blobView, position: CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5))
+                transition.setScale(view: blobView, scale: availableSize.width / 116.0)
+                
+                blobTintTransition.setTintColor(layer: blobView.blobsLayer, color: component.content == .muted ? UIColor(rgb: 0x0086FF) : UIColor(rgb: 0x33C758))
+                
+                if self.audioLevelDisposable == nil {
+                    self.audioLevelDisposable = (component.call.myAudioLevel
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] value in
+                        guard let self, let blobView = self.blobView else {
+                            return
+                        }
+                        blobView.updateLevel(CGFloat(value), immediately: false)
+                    })
+                }
+                
+                var glowFrame = CGRect(origin: CGPoint(), size: availableSize)
+                if component.isCollapsed {
+                    glowFrame = glowFrame.insetBy(dx: -20.0, dy: -20.0)
+                } else {
+                    glowFrame = glowFrame.insetBy(dx: -60.0, dy: -60.0)
+                }
+                
+                let glowView: GlowView
+                if let current = self.glowView {
+                    glowView = current
+                } else {
+                    glowView = GlowView(frame: CGRect())
+                    glowView.isUserInteractionEnabled = false
+                    self.glowView = glowView
+                    self.insertSubview(glowView, aboveSubview: blobView)
+                    
+                    transition.animateScale(view: glowView, from: 0.001, to: 1.0)
+                    glowView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+                
+                let glowColor: UIColor = component.content == .muted ? UIColor(rgb: 0x0086FF) : UIColor(rgb: 0x33C758)
+                glowView.update(size: glowFrame.size, color: glowColor.withMultipliedAlpha(component.isCollapsed ? 0.5 : 0.7), transition: transition, colorTransition: blobTintTransition)
+                transition.setFrame(view: glowView, frame: glowFrame)
+            default:
+                if let blobView = self.blobView {
+                    self.blobView = nil
+                    transition.setScale(view: blobView, scale: 0.001, completion: { [weak blobView] _ in
+                        blobView?.removeFromSuperview()
+                    })
+                }
+                
+                if let glowView = self.glowView {
+                    self.glowView = nil
+                    transition.setScale(view: glowView, scale: 0.001, completion: { [weak glowView] _ in
+                        glowView?.removeFromSuperview()
+                    })
+                }
+                
+                if let audioLevelDisposable = self.audioLevelDisposable {
+                    self.audioLevelDisposable = nil
+                    audioLevelDisposable.dispose()
+                }
             }
             
             return size

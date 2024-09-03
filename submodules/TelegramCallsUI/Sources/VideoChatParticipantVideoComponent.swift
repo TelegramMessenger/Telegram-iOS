@@ -30,10 +30,15 @@ private func blurredAvatarImage(_ dataImage: UIImage) -> UIImage? {
     }
 }
 
+private let activityBorderImage: UIImage = {
+    return generateStretchableFilledCircleImage(diameter: 20.0, color: nil, strokeColor: .white, strokeWidth: 2.0)!.withRenderingMode(.alwaysTemplate)
+}()
+
 final class VideoChatParticipantVideoComponent: Component {
     let call: PresentationGroupCall
     let participant: GroupCallParticipantsContext.Participant
     let isPresentation: Bool
+    let isSpeaking: Bool
     let isExpanded: Bool
     let bottomInset: CGFloat
     let action: (() -> Void)?
@@ -42,6 +47,7 @@ final class VideoChatParticipantVideoComponent: Component {
         call: PresentationGroupCall,
         participant: GroupCallParticipantsContext.Participant,
         isPresentation: Bool,
+        isSpeaking: Bool,
         isExpanded: Bool,
         bottomInset: CGFloat,
         action: (() -> Void)?
@@ -49,6 +55,7 @@ final class VideoChatParticipantVideoComponent: Component {
         self.call = call
         self.participant = participant
         self.isPresentation = isPresentation
+        self.isSpeaking = isSpeaking
         self.isExpanded = isExpanded
         self.bottomInset = bottomInset
         self.action = action
@@ -59,6 +66,9 @@ final class VideoChatParticipantVideoComponent: Component {
             return false
         }
         if lhs.isPresentation != rhs.isPresentation {
+            return false
+        }
+        if lhs.isSpeaking != rhs.isSpeaking {
             return false
         }
         if lhs.isExpanded != rhs.isExpanded {
@@ -87,6 +97,7 @@ final class VideoChatParticipantVideoComponent: Component {
         private var component: VideoChatParticipantVideoComponent?
         private weak var componentState: EmptyComponentState?
         private var isUpdating: Bool = false
+        private var previousSize: CGSize?
         
         private let muteStatus = ComponentView<Empty>()
         private let title = ComponentView<Empty>()
@@ -99,6 +110,8 @@ final class VideoChatParticipantVideoComponent: Component {
         private var videoBackgroundLayer: SimpleLayer?
         private var videoLayer: PrivateCallVideoLayer?
         private var videoSpec: VideoSpec?
+        
+        private var activityBorderView: UIImageView?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -192,6 +205,7 @@ final class VideoChatParticipantVideoComponent: Component {
                 transition: transition,
                 component: AnyComponent(VideoChatMuteIconComponent(
                     color: .white,
+                    isFilled: true,
                     isMuted: component.participant.muteState != nil
                 )),
                 environment: {},
@@ -414,6 +428,48 @@ final class VideoChatParticipantVideoComponent: Component {
                 self.videoSource = nil
                 self.videoSpec = nil
             }
+            
+            if component.isSpeaking && !component.isExpanded {
+                let activityBorderView: UIImageView
+                if let current = self.activityBorderView {
+                    activityBorderView = current
+                } else {
+                    activityBorderView = UIImageView()
+                    self.activityBorderView = activityBorderView
+                    self.addSubview(activityBorderView)
+                    
+                    activityBorderView.image = activityBorderImage
+                    activityBorderView.tintColor = UIColor(rgb: 0x33C758)
+                    
+                    if let previousSize {
+                        activityBorderView.frame = CGRect(origin: CGPoint(), size: previousSize)
+                    }
+                }
+            } else if let activityBorderView = self.activityBorderView {
+                if !transition.animation.isImmediate {
+                    let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
+                    if activityBorderView.alpha != 0.0 {
+                        alphaTransition.setAlpha(view: activityBorderView, alpha: 0.0, completion: { [weak self, weak activityBorderView] completed in
+                            guard let self, let component = self.component, let activityBorderView, self.activityBorderView === activityBorderView, completed else {
+                                return
+                            }
+                            if !component.isSpeaking {
+                                activityBorderView.removeFromSuperview()
+                                self.activityBorderView = nil
+                            }
+                        })
+                    }
+                } else {
+                    self.activityBorderView = nil
+                    activityBorderView.removeFromSuperview()
+                }
+            }
+            
+            if let activityBorderView = self.activityBorderView {
+                transition.setFrame(view: activityBorderView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            }
+            
+            self.previousSize = availableSize
             
             return availableSize
         }
