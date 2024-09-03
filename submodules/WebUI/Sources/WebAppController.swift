@@ -992,7 +992,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         let title = json["title"] as? String
                         var alertButtons: [TextAlertAction] = []
                         
-                        for buttonJson in buttons {
+                        for buttonJson in buttons.reversed() {
                             if let button = buttonJson as? [String: Any], let id = button["id"] as? String, let type = button["type"] as? String {
                                 let buttonAction = {
                                     self.sendAlertButtonEvent(id: id)
@@ -1032,6 +1032,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         var actionLayout: TextAlertContentActionLayout = .horizontal
                         if alertButtons.count > 2 {
                             actionLayout = .vertical
+                            alertButtons = Array(alertButtons.reversed())
                         }
                         let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: title, text: message, actions: alertButtons, actionLayout: actionLayout)
                         alertController.dismissed = { byOutsideTap in
