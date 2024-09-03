@@ -1479,7 +1479,15 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                 return updatedState
             }
             
-            let _ = (context.engine.payments.launchPrepaidGiveaway(peerId: peerId, id: prepaidGiveaway.id, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, showWinners: state.showWinners, prizeDescription: state.prizeDescription.isEmpty ? nil : state.prizeDescription, randomId: Int64.random(in: .min ..< .max), untilDate: state.time)
+            let purpose: LaunchGiveawayPurpose
+            switch prepaidGiveaway.prize {
+            case .premium:
+                purpose = .premium
+            case let .stars(stars, _):
+                purpose = .stars(stars: stars, users: state.winners)
+            }
+            
+            let _ = (context.engine.payments.launchPrepaidGiveaway(peerId: peerId, id: prepaidGiveaway.id, purpose: purpose, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, showWinners: state.showWinners, prizeDescription: state.prizeDescription.isEmpty ? nil : state.prizeDescription, randomId: Int64.random(in: .min ..< .max), untilDate: state.time)
             |> deliverOnMainQueue).startStandalone(completed: {
                 if let controller, let navigationController = controller.navigationController as? NavigationController {
                     var controllers = navigationController.viewControllers

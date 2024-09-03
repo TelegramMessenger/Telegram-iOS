@@ -269,7 +269,6 @@ func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, pu
             inputPurpose = .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: inputPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: "", amount: 0)
         }
         
-                
         return account.network.request(Api.functions.payments.launchPrepaidGiveaway(peer: inputPeer, giveawayId: id, purpose: inputPurpose))
         |> mapError { _ -> LaunchPrepaidGiveawayError in
             return .generic
