@@ -716,10 +716,14 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                 
                     var authorId: PeerId?
                     if let sendAsPeer = sendAsPeer {
-                        if let peer = peer as? TelegramChannel, case let .broadcast(info) = peer.info, info.flags.contains(.messagesShouldHaveProfiles) {
-                            authorId = sendAsPeer.id
+                        if let peer = peer as? TelegramChannel, case let .broadcast(info) = peer.info {
+                            if info.flags.contains(.messagesShouldHaveProfiles) {
+                                authorId = sendAsPeer.id
+                            } else {
+                                authorId = peer.id
+                            }
                         } else {
-                            authorId = peer.id
+                            authorId = sendAsPeer.id
                         }
                     } else if let peer = peer as? TelegramChannel {
                         if case .broadcast = peer.info {
