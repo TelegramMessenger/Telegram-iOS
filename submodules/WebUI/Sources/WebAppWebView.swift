@@ -92,6 +92,18 @@ function disconnectObserver() {
 final class WebAppWebView: WKWebView {
     var handleScriptMessage: (WKScriptMessage) -> Void = { _ in }
     
+    var customBottomInset: CGFloat = 0.0 {
+        didSet {
+            if self.customBottomInset != oldValue {
+                self.setNeedsLayout()
+            }
+        }
+    }
+    
+    override var safeAreaInsets: UIEdgeInsets {
+        return UIEdgeInsets(top: 0.0, left: 0.0, bottom: self.customBottomInset, right: 0.0)
+    }
+    
     init(account: Account) {
         let configuration = WKWebViewConfiguration()
                 

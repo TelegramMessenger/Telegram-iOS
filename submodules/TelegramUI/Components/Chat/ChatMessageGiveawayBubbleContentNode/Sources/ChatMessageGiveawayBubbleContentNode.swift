@@ -289,9 +289,10 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                 badgeString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: badgeString.string))
             }
             
+            let badgeBackgroundColor = !incoming || !isStars ? accentColor : UIColor(rgb: 0xffaf0a)
             var updatedBadgeImage: UIImage?
             if themeUpdated {
-                updatedBadgeImage = generateStretchableFilledCircleImage(diameter: 21.0, color: isStars ? UIColor(rgb: 0xffaf0a) : accentColor, strokeColor: backgroundColor, strokeWidth: 1.0 + UIScreenPixel, backgroundColor: nil)
+                updatedBadgeImage = generateStretchableFilledCircleImage(diameter: 21.0, color: badgeBackgroundColor, strokeColor: backgroundColor, strokeWidth: 1.0 + UIScreenPixel, backgroundColor: nil)
             }
             
             let prizeTitleText: String
@@ -466,7 +467,19 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
             if let giveaway {
                 dateTextString = NSAttributedString(string: stringForFullDate(timestamp: giveaway.untilDate, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat), font: textFont, textColor: textColor)
             } else if let giveawayResults {
-                dateTextString = NSAttributedString(string: giveawayResults.winnersCount > 1 ? item.presentationData.strings.Chat_Giveaway_Message_WinnersInfo_Many : item.presentationData.strings.Chat_Giveaway_Message_WinnersInfo_One, font: textFont, textColor: textColor)
+                if case let .stars(stars) = giveawayResults.prize {
+                    let starsString = item.presentationData.strings.Chat_Giveaway_Message_WinnersInfo_Stars(Int32(stars))
+                    dateTextString = parseMarkdownIntoAttributedString(giveawayResults.winnersCount > 1 ? item.presentationData.strings.Chat_Giveaway_Message_WinnersInfo_Stars_Many(starsString).string : item.presentationData.strings.Chat_Giveaway_Message_WinnersInfo_Stars_One(starsString).string, attributes: MarkdownAttributes(
+                        body: MarkdownAttributeSet(font: textFont, textColor: textColor),
+                        bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
+                        link: MarkdownAttributeSet(font: textFont, textColor: accentColor),
+                        linkAttribute: { url in
+                            return ("URL", url)
+                        }
+                    ), textAlignment: .center)
+                } else {
+                    dateTextString = NSAttributedString(string: giveawayResults.winnersCount > 1 ? item.presentationData.strings.Chat_Giveaway_Message_WinnersInfo_Many : item.presentationData.strings.Chat_Giveaway_Message_WinnersInfo_One, font: textFont, textColor: textColor)
+                }
             }
             let hideHeaders = item.message.forwardInfo == nil
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: hideHeaders, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, hidesHeaders: hideHeaders)

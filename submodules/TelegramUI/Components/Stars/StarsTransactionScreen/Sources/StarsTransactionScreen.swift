@@ -24,6 +24,7 @@ import StarsImageComponent
 import GalleryUI
 import StarsAvatarComponent
 import MiniAppListScreen
+import PremiumStarComponent
 
 private final class StarsTransactionSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -104,6 +105,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 peerIds.append(subscription.peer.id)
             case let .importer(_, _, importer, _):
                 peerIds.append(importer.peer.peerId)
+            case let .boost(peerId, _):
+                peerIds.append(peerId)
             }
             
             self.disposable = (context.engine.data.get(
@@ -141,6 +144,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         let closeButton = Child(Button.self)
         let title = Child(MultilineTextComponent.self)
         let star = Child(StarsImageComponent.self)
+        let activeStar = Child(PremiumStarComponent.self)
+        let amountBackground = Child(RoundedRectangle.self)
         let amount = Child(BalancedTextComponent.self)
         let amountStar = Child(BundleIconComponent.self)
         let description = Child(MultilineTextComponent.self)
@@ -191,6 +196,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let titleText: String
             let amountText: String
             var descriptionText: String
+            var boostsText: String?
             let additionalText = strings.Stars_Transaction_Terms
             var buttonText: String? = strings.Common_OK
             var buttonIsDestructive = false
@@ -206,6 +212,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var via: String?
             var messageId: EngineMessage.Id?
             var toPeer: EnginePeer?
+//            var toString: String?
             var transactionPeer: StarsContext.State.Transaction.Peer?
             var media: [AnyMediaReference] = []
             var photo: TelegramMediaWebFile?
@@ -217,9 +224,24 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var isCancelled = false
             var isReaction = false
             var giveawayMessageId: MessageId?
+            var isBoost = false
             
             var delayedCloseOnOpenPeer = true
             switch subject {
+            case let .boost(peerId, boost):
+                guard let stars = boost.stars else {
+                    fatalError()
+                }
+                let boosts = boost.multiplier
+                titleText = strings.Stars_Transaction_Giveaway_Boost_Stars(Int32(stars))
+                descriptionText = ""
+                boostsText = strings.Stars_Transaction_Giveaway_Boost_Boosts(boosts)
+                count = stars
+                date = boost.date
+                toPeer = state.peerMap[peerId]
+//                toString = strings.Stars_Transaction_Giveaway_Boost_Subscribers(boost.quantity)
+                giveawayMessageId = boost.giveawayMessageId
+                isBoost = true
             case let .importer(peer, pricing, importer, usdRate):
                 let usdValue = formatTonUsdValue(pricing.amount, divide: false, rate: usdRate, dateTimeFormat: environment.dateTimeFormat)
                 titleText = strings.Stars_Transaction_Subscription_Title
@@ -493,7 +515,14 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             
             let formattedAmount = presentationStringsFormattedNumber(abs(Int32(count)), dateTimeFormat.groupingSeparator)
             let countColor: UIColor
-            if isSubscription || isSubscriber {
+            var countFont: UIFont = isSubscription || isSubscriber ? Font.regular(17.0) : Font.semibold(17.0)
+            var countBackgroundColor: UIColor?
+            if let boostsText {
+                amountText = boostsText
+                countColor = .white
+                countBackgroundColor = UIColor(rgb: 0x9671ff)
+                countFont = Font.with(size: 14.0, design: .round, weight: .semibold)
+            } else if isSubscription || isSubscriber {
                 amountText = strings.Stars_Transaction_Subscription_PerMonth(formattedAmount).string
                 countColor = theme.list.itemSecondaryTextColor
             } else if countIsGeneric {
@@ -542,23 +571,45 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             } else {
                 imageIcon = nil
             }
-            let star = star.update(
-                component: StarsImageComponent(
-                    context: component.context,
-                    subject: imageSubject,
-                    theme: theme,
-                    diameter: 90.0,
-                    backgroundColor: theme.actionSheet.opaqueItemBackgroundColor,
-                    icon: imageIcon,
-                    action: !media.isEmpty ? { transitionNode, addToTransitionSurface in
-                        component.openMedia(media.map { $0.media }, transitionNode, addToTransitionSurface)
-                    } : nil
-                ),
-                availableSize: CGSize(width: context.availableSize.width, height: 200.0),
-                transition: .immediate
-            )
-            
-            let amountAttributedText = NSMutableAttributedString(string: amountText, font: isSubscription || isSubscriber ? Font.regular(17.0) : Font.semibold(17.0), textColor: countColor)
+            var starChild: _UpdatedChildComponent
+            if isBoost {
+                starChild = activeStar.update(
+                    component: PremiumStarComponent(
+                        theme: theme,
+                        isIntro: false,
+                        isVisible: true,
+                        hasIdleAnimations: true,
+                        colors: [
+                            UIColor(rgb: 0xe57d02),
+                            UIColor(rgb: 0xf09903),
+                            UIColor(rgb: 0xf9b004),
+                            UIColor(rgb: 0xfdd219)
+                        ],
+                        particleColor: UIColor(rgb: 0xf9b004),
+                        backgroundColor: theme.actionSheet.opaqueItemBackgroundColor
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width, height: 200.0),
+                    transition: .immediate
+                )
+            } else {
+                starChild = star.update(
+                    component: StarsImageComponent(
+                        context: component.context,
+                        subject: imageSubject,
+                        theme: theme,
+                        diameter: 90.0,
+                        backgroundColor: theme.actionSheet.opaqueItemBackgroundColor,
+                        icon: imageIcon,
+                        action: !media.isEmpty ? { transitionNode, addToTransitionSurface in
+                            component.openMedia(media.map { $0.media }, transitionNode, addToTransitionSurface)
+                        } : nil
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width, height: 200.0),
+                    transition: .immediate
+                )
+            }
+                        
+            let amountAttributedText = NSMutableAttributedString(string: amountText, font: countFont, textColor: countColor)
             let amount = amount.update(
                 component: BalancedTextComponent(
                     text: .plain(amountAttributedText),
@@ -572,7 +623,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             
             let amountStar = amountStar.update(
                 component: BundleIconComponent(
-                    name: "Premium/Stars/StarMedium",
+                    name: boostsText != nil ? "Premium/BoostButtonIcon" : "Premium/Stars/StarMedium",
                     tintColor: nil
                 ),
                 availableSize: context.availableSize,
@@ -824,17 +875,17 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
                 transition: .immediate
             )
+                    
+            context.add(starChild
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: starChild.size.height / 2.0 - 19.0))
+            )
         
             context.add(title
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: 31.0 + 125.0))
             )
             
-            context.add(star
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: star.size.height / 2.0 - 19.0))
-            )
-            
             var originY: CGFloat = 0.0
-            originY += star.size.height - 23.0
+            originY += starChild.size.height - 23.0
             
             var descriptionSize: CGSize = .zero
             if !descriptionText.isEmpty {
@@ -884,7 +935,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 originY += description.size.height + 10.0
             }
             
-            let amountSpacing: CGFloat = 1.0
+            let amountSpacing: CGFloat = countBackgroundColor != nil ? 4.0 : 1.0
             var totalAmountWidth: CGFloat = amount.size.width + amountSpacing + amountStar.size.width
             var amountOriginX: CGFloat = floor(context.availableSize.width - totalAmountWidth) / 2.0
             if let (statusText, statusColor) = transactionStatus {
@@ -928,7 +979,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             
             let amountLabelOriginX: CGFloat
             let amountStarOriginX: CGFloat
-            if isSubscription || isSubscriber {
+            if isSubscription || isSubscriber || boostsText != nil {
                 amountStarOriginX = amountOriginX + amountStar.size.width / 2.0
                 amountLabelOriginX = amountOriginX + amountStar.size.width + amountSpacing + amount.size.width / 2.0
             } else {
@@ -936,11 +987,26 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 amountStarOriginX = amountOriginX + amount.size.width + amountSpacing + amountStar.size.width / 2.0
             }
             
+            var amountLabelOffsetY: CGFloat = 0.0
+            var amountStarOffsetY: CGFloat = 0.0
+            if let countBackgroundColor {
+                let amountBackground = amountBackground.update(
+                    component: RoundedRectangle(color: countBackgroundColor, cornerRadius: 23 / 2.0),
+                    availableSize: CGSize(width: totalAmountWidth + 14.0, height: 23.0),
+                    transition: .immediate
+                )
+                context.add(amountBackground
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: amountOrigin + amount.size.height / 2.0 + 1.0))
+                )
+                amountLabelOffsetY = 2.0
+                amountStarOffsetY = 5.0
+            }
+            
             context.add(amount
-                .position(CGPoint(x: amountLabelOriginX, y: amountOrigin + amount.size.height / 2.0))
+                .position(CGPoint(x: amountLabelOriginX, y: amountOrigin + amount.size.height / 2.0 + amountLabelOffsetY))
             )
             context.add(amountStar
-                .position(CGPoint(x: amountStarOriginX, y: amountOrigin + amountStar.size.height / 2.0 - UIScreenPixel))
+                .position(CGPoint(x: amountStarOriginX, y: amountOrigin + amountStar.size.height / 2.0 - UIScreenPixel + amountStarOffsetY))
             )
                
             context.add(table
@@ -1166,6 +1232,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
         case gift(EngineMessage)
         case subscription(StarsContext.State.Subscription)
         case importer(EnginePeer, StarsSubscriptionPricing, PeerInvitationImportersState.Importer, Double)
+        case boost(EnginePeer.Id, ChannelBoostersContext.State.Boost)
     }
     
     private let context: AccountContext

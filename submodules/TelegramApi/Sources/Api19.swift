@@ -1013,7 +1013,7 @@ public extension Api {
 public extension Api {
     enum PrepaidGiveaway: TypeConstructorDescription {
         case prepaidGiveaway(id: Int64, months: Int32, quantity: Int32, date: Int32)
-        case prepaidStarsGiveaway(id: Int64, stars: Int64, quantity: Int32, date: Int32)
+        case prepaidStarsGiveaway(id: Int64, stars: Int64, quantity: Int32, boosts: Int32, date: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1026,13 +1026,14 @@ public extension Api {
                     serializeInt32(quantity, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
-                case .prepaidStarsGiveaway(let id, let stars, let quantity, let date):
+                case .prepaidStarsGiveaway(let id, let stars, let quantity, let boosts, let date):
                     if boxed {
-                        buffer.appendInt32(-1973402371)
+                        buffer.appendInt32(-1700956192)
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(stars, buffer: buffer, boxed: false)
                     serializeInt32(quantity, buffer: buffer, boxed: false)
+                    serializeInt32(boosts, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
     }
@@ -1042,8 +1043,8 @@ public extension Api {
         switch self {
                 case .prepaidGiveaway(let id, let months, let quantity, let date):
                 return ("prepaidGiveaway", [("id", id as Any), ("months", months as Any), ("quantity", quantity as Any), ("date", date as Any)])
-                case .prepaidStarsGiveaway(let id, let stars, let quantity, let date):
-                return ("prepaidStarsGiveaway", [("id", id as Any), ("stars", stars as Any), ("quantity", quantity as Any), ("date", date as Any)])
+                case .prepaidStarsGiveaway(let id, let stars, let quantity, let boosts, let date):
+                return ("prepaidStarsGiveaway", [("id", id as Any), ("stars", stars as Any), ("quantity", quantity as Any), ("boosts", boosts as Any), ("date", date as Any)])
     }
     }
     
@@ -1076,12 +1077,15 @@ public extension Api {
             _3 = reader.readInt32()
             var _4: Int32?
             _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.PrepaidGiveaway.prepaidStarsGiveaway(id: _1!, stars: _2!, quantity: _3!, date: _4!)
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.PrepaidGiveaway.prepaidStarsGiveaway(id: _1!, stars: _2!, quantity: _3!, boosts: _4!, date: _5!)
             }
             else {
                 return nil

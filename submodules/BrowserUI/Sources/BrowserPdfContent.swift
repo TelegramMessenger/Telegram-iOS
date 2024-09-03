@@ -117,10 +117,39 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         self.pageNumber = (1, self.pdfView.document?.pageCount ?? 1)
         
         self.startPageIndicatorTimer()
+        
+        self.pdfView.interactiveTransitionGestureRecognizerTest = { [weak self] point in
+            if let self {
+                if let result = self.pdfView.hitTest(point, with: nil), let scrollView = findScrollView(view: result), scrollView.isDescendant(of: self.pdfView) {
+                    if scrollView.contentSize.width > scrollView.frame.width, scrollView.contentOffset.x > -scrollView.contentInset.left {
+                        return true
+                    }
+                }
+            }
+            return false
+        }
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(self.pageChangeHandler(_:)), name: .PDFViewPageChanged, object: nil)
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: .PDFViewPageChanged, object: nil)
+    }
+    
+    @objc func pageChangeHandler(_ notification: Notification) {
+        if let document = self.pdfView.document, let page = self.pdfView.currentPage {
+            let number = document.index(for: page) + 1
+            if number != self.pageNumber?.0 {
+                self.pageNumber = (number, document.pageCount)
+                if let (size, insets, fullInsets) = self.validLayout {
+                    self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, safeInsets: .zero, transition: .immediate)
+                }
+            }
+        }
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -421,16 +450,6 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         }
         if !scrollView.isZooming && !self.wasZooming {
             self.updateScrollingOffset(isReset: false, transition: .immediate)
-            
-            if let document = self.pdfView.document, let page = self.pdfView.currentPage {
-                let number = document.index(for: page) + 1
-                if number != self.pageNumber?.0 {
-                    self.pageNumber = (number, document.pageCount)
-                    if let (size, insets, fullInsets) = self.validLayout {
-                        self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, safeInsets: .zero, transition: .immediate)
-                    }
-                }
-            }
         }
     }
     
@@ -543,6 +562,17 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
     }
     
     func makeContentSnapshotView() -> UIView? {
+        return nil
+    }
+}
+
+private func findScrollView(view: UIView?) -> UIScrollView? {
+    if let view = view {
+        if let view = view as? UIScrollView {
+            return view
+        }
+        return findScrollView(view: view.superview)
+    } else {
         return nil
     }
 }

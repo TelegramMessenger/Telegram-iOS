@@ -618,20 +618,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
                     }, updateDetailsExpanded: { [weak self] expanded in
                         self?.updateDetailsExpanded(detailsIndex, expanded)
                     }, currentExpandedDetails: self.currentExpandedDetails, getPreloadedResource: { [weak self] url in
-                        if let preloadedResouces = self?.preloadedResouces {
-                            var cleanUrl = url
-                            var components = URLComponents(string: url)
-                            components?.queryItems = nil
-                            cleanUrl = components?.url?.absoluteString ?? cleanUrl
-                            for resource in preloadedResouces {
-                                if let resource = resource as? [String: Any], let resourceUrl = resource["WebResourceURL"] as? String {
-                                    if resourceUrl == url || resourceUrl.hasPrefix(cleanUrl) {
-                                        return resource["WebResourceData"] as? Data
-                                    }
-                                }
-                            }
-                        }
-                        return nil
+                        return self?.getPreloadedResource(url)
                     }) {
                         newNode.frame = itemFrame
                         newNode.updateLayout(size: itemFrame.size, transition: transition)
@@ -742,6 +729,24 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         for index in removeItemIndices {
             self.visibleItemsWithNodes.removeValue(forKey: index)
         }
+    }
+    
+    private func getPreloadedResource(_ url: String) -> Data? {
+        guard let preloadedResouces = self.preloadedResouces else {
+            return nil
+        }
+        var cleanUrl = url
+        var components = URLComponents(string: url)
+        components?.queryItems = nil
+        cleanUrl = components?.url?.absoluteString ?? cleanUrl
+        for resource in preloadedResouces {
+            if let resource = resource as? [String: Any], let resourceUrl = resource["WebResourceURL"] as? String {
+                if resourceUrl == url || resourceUrl.hasPrefix(cleanUrl) {
+                    return resource["WebResourceData"] as? Data
+                }
+            }
+        }
+        return nil
     }
     
     private struct ScrollingOffsetState: Equatable {
@@ -1108,7 +1113,9 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         
         if let centralIndex = centralIndex {
             let controller = InstantPageGalleryController(context: self.context, userLocation: self.sourceLocation.userLocation, webPage: webPage, entries: entries, centralIndex: centralIndex, fromPlayingVideo: fromPlayingVideo, replaceRootController: { _, _ in
-            }, baseNavigationController: self.getNavigationController())
+            }, baseNavigationController: self.getNavigationController(), getPreloadedResource: { [weak self] url in
+                return self?.getPreloadedResource(url)
+            })
             self.hiddenMediaDisposable.set((controller.hiddenMedia |> deliverOnMainQueue).start(next: { [weak self] entry in
                 if let strongSelf = self {
                     for (_, itemNode) in strongSelf.visibleItemsWithNodes {

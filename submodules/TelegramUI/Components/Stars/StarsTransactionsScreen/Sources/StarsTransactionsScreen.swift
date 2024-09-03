@@ -424,7 +424,8 @@ final class StarsTransactionsScreenComponent: Component {
                         UIColor(rgb: 0xf9b004),
                         UIColor(rgb: 0xfdd219)
                     ],
-                    particleColor: UIColor(rgb: 0xf9b004)
+                    particleColor: UIColor(rgb: 0xf9b004),
+                    backgroundColor: environment.theme.list.blocksBackgroundColor
                 )),
                 environment: {},
                 containerSize: CGSize(width: min(414.0, availableSize.width), height: 220.0)

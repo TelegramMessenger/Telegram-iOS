@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 import Display
+import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ComponentFlow
@@ -1080,13 +1081,12 @@ public class BrowserScreen: ViewController, MinimizableController {
             if let animationComponentView = referenceView.componentView.view as? LottieComponent.View {
                 animationComponentView.playOnce()
             }
+            
+            if let webContent = content as? BrowserWebContent {
+                webContent.requestInstantView()
+            }
 
             self.view.endEditing(true)
-            
-//            let checkIcon: (PresentationTheme) -> UIImage? = { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/Check"), color: theme.contextMenu.primaryColor) }
-//            let emptyIcon: (PresentationTheme) -> UIImage? = { _ in
-//                return nil
-//            }
             
             let settings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings])
             |> take(1)
@@ -1111,8 +1111,6 @@ public class BrowserScreen: ViewController, MinimizableController {
                 }
                 
                 let performAction = self.performAction
-                
-//                let forceIsSerif = self.presentationState.fontState.isSerif
                 let fontItem = BrowserFontSizeContextMenuItem(
                     value: self.presentationState.fontState.size,
                     decrease: { [weak self] in
@@ -1175,12 +1173,12 @@ public class BrowserScreen: ViewController, MinimizableController {
                     
                     if case .webPage = contentState.contentType {
                         let isAvailable = contentState.hasInstantView
-                        items.append(.action(ContextMenuActionItem(text: "Show Instant View", textColor: isAvailable ? .primary : .disabled, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: isAvailable ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withAlphaComponent(0.3)) }, action: isAvailable ? { (controller, action) in
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_ShowInstantView, textColor: isAvailable ? .primary : .disabled, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: isAvailable ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withAlphaComponent(0.3)) }, action: isAvailable ? { (controller, action) in
                             performAction.invoke(.toggleInstantView(true))
                             action(.default)
                         } : nil)))
                     } else if case .instantPage = contentState.contentType, contentState.isInnerInstantViewEnabled {
-                        items.append(.action(ContextMenuActionItem(text: "Hide Instant View", textColor: .primary, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_HideInstantView, textColor: .primary, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Instant View/InstantViewOff"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
                             performAction.invoke(.toggleInstantView(false))
                             action(.default)
                         })))
@@ -1229,6 +1227,11 @@ public class BrowserScreen: ViewController, MinimizableController {
             }
             
             let contextController = ContextController(presentationData: self.presentationData, source: source, items: items)
+            contextController.dismissed = { [weak content] in
+                if let webContent = content as? BrowserWebContent {
+                    webContent.releaseInstantView()
+                }
+            }
             self.controller?.present(contextController, in: .window(.root))
         }
         
@@ -1473,10 +1476,19 @@ public class BrowserScreen: ViewController, MinimizableController {
         case instantPage(webPage: TelegramMediaWebpage, anchor: String?, sourceLocation: InstantPageSourceLocation, preloadedResources: [Any]?)
         case document(file: TelegramMediaFile, canShare: Bool)
         case pdfDocument(file: TelegramMediaFile, canShare: Bool)
+        
+        public var fileId: MediaId? {
+            switch self {
+            case let .document(file, _), let .pdfDocument(file, _):
+                return file.fileId
+            default:
+                return nil
+            }
+        }
     }
     
     private let context: AccountContext
-    fileprivate let subject: Subject
+    public let subject: Subject
     private var preferredConfiguration: WKWebViewConfiguration?
     private var openPreviousOnClose = false
     

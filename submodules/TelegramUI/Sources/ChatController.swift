@@ -129,6 +129,7 @@ import PhoneNumberFormat
 import OwnershipTransferController
 import OldChannelsController
 import BrowserUI
+import NotificationPeerExceptionController
 
 public enum ChatControllerPeekActions {
     case standard
@@ -3617,13 +3618,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let _ = (dataSignal
             |> deliverOnMainQueue).startStandalone(next: { [weak self] peer, message in
-                guard let strongSelf = self, let peer = peer, peer.smallProfileImage != nil else {
+                guard let strongSelf = self, let peer = peer else {
                     return
                 }
-              
-                let galleryController = AvatarGalleryController(context: context, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
-                }, synchronousLoad: true)
-                galleryController.setHintWillBePresentedInPreviewingContext(true)
                 
                 var isChannel = false
                 if case let .channel(peer) = peer, case .broadcast = peer.info {
@@ -3681,7 +3678,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 strongSelf.canReadHistory.set(false)
                 
-                let contextController = ContextController(presentationData: strongSelf.presentationData, source: .controller(ChatContextControllerContentSourceImpl(controller: galleryController, sourceNode: node, passthroughTouches: false)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                let source: ContextContentSource
+                if let _ = peer.smallProfileImage {
+                    let galleryController = AvatarGalleryController(context: context, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
+                    }, synchronousLoad: true)
+                    galleryController.setHintWillBePresentedInPreviewingContext(true)
+                    source = .controller(ChatContextControllerContentSourceImpl(controller: galleryController, sourceNode: node, passthroughTouches: false))
+                } else {
+                    source = .reference(ChatControllerContextReferenceContentSource(controller: strongSelf, sourceView: node.view, insets: .zero))
+                }
+                
+                let contextController = ContextController(presentationData: strongSelf.presentationData, source: source, items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                 contextController.dismissed = { [weak self] in
                     self?.canReadHistory.set(true)
                 }
@@ -4655,58 +4662,342 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         case .peer, .replyThread:
             let avatarNode = ChatAvatarNavigationNode()
             avatarNode.contextAction = { [weak self] node, gesture in
-                guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer, peer.smallProfileImage != nil else {
+                guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer else {
                     return
                 }
-                let galleryController = AvatarGalleryController(context: strongSelf.context, peer: EnginePeer(peer), remoteEntries: nil, replaceRootController: { controller, ready in
-                }, synchronousLoad: true)
-                galleryController.setHintWillBePresentedInPreviewingContext(true)
                 
-                let items: Signal<[ContextMenuItem], NoError> = context.engine.data.get(
-                    TelegramEngine.EngineData.Item.Peer.CanViewStats(id: peer.id)
-                )
-                |> map { canViewStats -> [ContextMenuItem] in
-                    var items: [ContextMenuItem] = [
-                        .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, icon: { theme in
+                let items: Signal<[ContextMenuItem], NoError>
+                switch chatLocation {
+                case .peer:
+                    items = context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.CanViewStats(id: peer.id)
+                    )
+                    |> map { canViewStats -> [ContextMenuItem] in
+                        var items: [ContextMenuItem] = []
+                        
+                        let openText = strongSelf.presentationData.strings.Conversation_ContextMenuOpenProfile
+                        items.append(.action(ContextMenuActionItem(text: openText, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
                             f(.dismissWithoutContent)
                             self?.navigationButtonAction(.openChatInfo(expandAvatar: true, recommendedChannels: false))
-                        }))
-                    ]
-                    if canViewStats {
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChannelInfo_Stats, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.actionSheet.primaryTextColor)
+                        })))
+                        
+                        if canViewStats {
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChannelInfo_Stats, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                f(.dismissWithoutContent)
+                                guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer else {
+                                    return
+                                }
+                                strongSelf.view.endEditing(true)
+                                
+                                let statsController: ViewController
+                                if let channel = peer as? TelegramChannel, case .group = channel.info {
+                                    statsController = groupStatsController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id)
+                                } else {
+                                    statsController = channelStatsController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id)
+                                }
+                                strongSelf.push(statsController)
+                            })))
+                        }
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_Search, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Search"), color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
                             f(.dismissWithoutContent)
-                            guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer else {
-                                return
-                            }
-                            strongSelf.view.endEditing(true)
-                            
-                            let statsController: ViewController
-                            if let channel = peer as? TelegramChannel, case .group = channel.info {
-                                statsController = groupStatsController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id)
-                            } else {
-                                statsController = channelStatsController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id)
-                            }
-                            strongSelf.push(statsController)
+                            self?.interfaceInteraction?.beginMessageSearch(.everything, "")
                         })))
+                                                
+                        return items
                     }
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_Search, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Search"), color: theme.actionSheet.primaryTextColor)
-                    }, action: { _, f in
-                        f(.dismissWithoutContent)
-                        self?.interfaceInteraction?.beginMessageSearch(.everything, "")
-                    })))
-                    return items
+                case let .replyThread(message):
+                    let peerId = peer.id
+                    let threadId = message.threadId
+                    
+                    items = context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId),
+                        TelegramEngine.EngineData.Item.Peer.ThreadData(id: peer.id, threadId: threadId),
+                        TelegramEngine.EngineData.Item.NotificationSettings.Global()
+                    )
+                    |> map { peerNotificationSettings, threadData, globalNotificationSettings -> [ContextMenuItem] in
+                        guard let channel = peer as? TelegramChannel else {
+                            return []
+                        }
+                        guard let threadData = threadData else {
+                            return []
+                        }
+                        
+                        var items: [ContextMenuItem] = []
+                        
+                        var isMuted = false
+                        switch threadData.notificationSettings.muteState {
+                        case .muted:
+                            isMuted = true
+                        case .unmuted:
+                            isMuted = false
+                        case .default:
+                            var peerIsMuted = false
+                            if case let .muted(until) = peerNotificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                                peerIsMuted = true
+                            } else if case .default = peerNotificationSettings.muteState {
+                                if case .group = channel.info {
+                                    peerIsMuted = !globalNotificationSettings.groupChats.enabled
+                                }
+                            }
+                            isMuted = peerIsMuted
+                        }
+                        
+                        if !"".isEmpty {
+                            items.append(.action(ContextMenuActionItem(text: isMuted ? presentationData.strings.ChatList_Context_Unmute : presentationData.strings.ChatList_Context_Mute, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
+                                if isMuted {
+                                    let _ = (context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: threadId, muteInterval: 0)
+                                             |> deliverOnMainQueue).startStandalone(completed: {
+                                        f(.default)
+                                    })
+                                } else {
+                                    var items: [ContextMenuItem] = []
+                                    
+                                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_MuteFor, icon: { theme in
+                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Mute2d"), color: theme.contextMenu.primaryColor)
+                                    }, action: { c, _ in
+                                        var subItems: [ContextMenuItem] = []
+                                        
+                                        let presetValues: [Int32] = [
+                                            1 * 60 * 60,
+                                            8 * 60 * 60,
+                                            1 * 24 * 60 * 60,
+                                            7 * 24 * 60 * 60
+                                        ]
+                                        
+                                        for value in presetValues {
+                                            subItems.append(.action(ContextMenuActionItem(text: muteForIntervalString(strings: presentationData.strings, value: value), icon: { _ in
+                                                return nil
+                                            }, action: { _, f in
+                                                f(.default)
+                                                
+                                                let _ = context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: threadId, muteInterval: value).startStandalone()
+                                                
+                                                self?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_mute_for", scale: 0.066, colors: [:], title: nil, text: presentationData.strings.PeerInfo_TooltipMutedFor(mutedForTimeIntervalString(strings: presentationData.strings, value: value)).string, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                                            })))
+                                        }
+                                        
+                                        subItems.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_MuteForCustom, icon: { _ in
+                                            return nil
+                                        }, action: { _, f in
+                                            f(.default)
+                                            
+                                            //                                        if let chatListController = chatListController {
+                                            //                                            openCustomMute(context: context, peerId: peerId, threadId: threadId, baseController: chatListController)
+                                            //                                        }
+                                        })))
+                                        
+                                        c?.setItems(.single(ContextController.Items(content: .list(subItems))), minHeight: nil, animated: true)
+                                    })))
+                                    
+                                    items.append(.separator)
+                                    
+                                    var isSoundEnabled = true
+                                    switch threadData.notificationSettings.messageSound {
+                                    case .none:
+                                        isSoundEnabled = false
+                                    default:
+                                        break
+                                    }
+                                    
+                                    if case .muted = threadData.notificationSettings.muteState {
+                                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_ButtonUnmute, icon: { theme in
+                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SoundOn"), color: theme.contextMenu.primaryColor)
+                                        }, action: { _, f in
+                                            f(.default)
+                                            
+                                            let _ = context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: threadId, muteInterval: nil).startStandalone()
+                                            
+                                            let iconColor: UIColor = .white
+                                            self?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: [
+                                                "Middle.Group 1.Fill 1": iconColor,
+                                                "Top.Group 1.Fill 1": iconColor,
+                                                "Bottom.Group 1.Fill 1": iconColor,
+                                                "EXAMPLE.Group 1.Fill 1": iconColor,
+                                                "Line.Group 1.Stroke 1": iconColor
+                                            ], title: nil, text: presentationData.strings.PeerInfo_TooltipUnmuted, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                                        })))
+                                    } else if !isSoundEnabled {
+                                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_EnableSound, icon: { theme in
+                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SoundOn"), color: theme.contextMenu.primaryColor)
+                                        }, action: { _, f in
+                                            f(.default)
+                                            
+                                            let _ = context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, threadId: threadId, sound: .default).startStandalone()
+                                            
+                                            self?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_sound_on", scale: 0.056, colors: [:], title: nil, text: presentationData.strings.PeerInfo_TooltipSoundEnabled, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                                        })))
+                                    } else {
+                                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_DisableSound, icon: { theme in
+                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SoundOff"), color: theme.contextMenu.primaryColor)
+                                        }, action: { _, f in
+                                            f(.default)
+                                            
+                                            let _ = context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, threadId: threadId, sound: .none).startStandalone()
+                                            
+                                            self?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_sound_off", scale: 0.056, colors: [:], title: nil, text: presentationData.strings.PeerInfo_TooltipSoundDisabled, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                                        })))
+                                    }
+                                    
+                                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_NotificationsCustomize, icon: { theme in
+                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Customize"), color: theme.contextMenu.primaryColor)
+                                    }, action: { _, f in
+                                        f(.dismissWithoutContent)
+                                        
+                                        let _ = (context.engine.data.get(
+                                            TelegramEngine.EngineData.Item.NotificationSettings.Global()
+                                        )
+                                                 |> deliverOnMainQueue).startStandalone(next: { globalSettings in
+                                            let updatePeerSound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
+                                                return context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, threadId: threadId, sound: sound) |> deliverOnMainQueue
+                                            }
+                                            
+                                            let updatePeerNotificationInterval: (PeerId, Int32?) -> Signal<Void, NoError> = { peerId, muteInterval in
+                                                return context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: threadId, muteInterval: muteInterval) |> deliverOnMainQueue
+                                            }
+                                            
+                                            let updatePeerDisplayPreviews: (PeerId, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = {
+                                                peerId, displayPreviews in
+                                                return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, threadId: threadId, displayPreviews: displayPreviews) |> deliverOnMainQueue
+                                            }
+                                            
+                                            let updatePeerStoriesMuted: (PeerId, PeerStoryNotificationSettings.Mute) -> Signal<Void, NoError> = {
+                                                peerId, mute in
+                                                return context.engine.peers.updatePeerStoriesMutedSetting(peerId: peerId, mute: mute) |> deliverOnMainQueue
+                                            }
+                                            
+                                            let updatePeerStoriesHideSender: (PeerId, PeerStoryNotificationSettings.HideSender) -> Signal<Void, NoError> = {
+                                                peerId, hideSender in
+                                                return context.engine.peers.updatePeerStoriesHideSenderSetting(peerId: peerId, hideSender: hideSender) |> deliverOnMainQueue
+                                            }
+                                            
+                                            let updatePeerStorySound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
+                                                return context.engine.peers.updatePeerStorySoundInteractive(peerId: peerId, sound: sound) |> deliverOnMainQueue
+                                            }
+                                            
+                                            let defaultSound: PeerMessageSound
+                                            
+                                            if case .broadcast = channel.info {
+                                                defaultSound = globalSettings.channels.sound._asMessageSound()
+                                            } else {
+                                                defaultSound = globalSettings.groupChats.sound._asMessageSound()
+                                            }
+                                            
+                                            let canRemove = false
+                                            
+                                            let exceptionController = notificationPeerExceptionController(context: context, updatedPresentationData: nil, peer: .channel(channel), threadId: threadId, isStories: nil, canRemove: canRemove, defaultSound: defaultSound, defaultStoriesSound: defaultSound, edit: true, updatePeerSound: { peerId, sound in
+                                                let _ = (updatePeerSound(peerId, sound)
+                                                         |> deliverOnMainQueue).startStandalone(next: { _ in
+                                                })
+                                            }, updatePeerNotificationInterval: { [weak self] peerId, muteInterval in
+                                                let _ = (updatePeerNotificationInterval(peerId, muteInterval)
+                                                         |> deliverOnMainQueue).startStandalone(next: { _ in
+                                                    if let muteInterval = muteInterval, muteInterval == Int32.max {
+                                                        let iconColor: UIColor = .white
+                                                        self?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
+                                                            "Middle.Group 1.Fill 1": iconColor,
+                                                            "Top.Group 1.Fill 1": iconColor,
+                                                            "Bottom.Group 1.Fill 1": iconColor,
+                                                            "EXAMPLE.Group 1.Fill 1": iconColor,
+                                                            "Line.Group 1.Stroke 1": iconColor
+                                                        ], title: nil, text: presentationData.strings.PeerInfo_TooltipMutedForever, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                                                    }
+                                                })
+                                            }, updatePeerDisplayPreviews: { peerId, displayPreviews in
+                                                let _ = (updatePeerDisplayPreviews(peerId, displayPreviews)
+                                                         |> deliverOnMainQueue).startStandalone(next: { _ in
+                                                    
+                                                })
+                                            }, updatePeerStoriesMuted: { peerId, mute in
+                                                let _ = (updatePeerStoriesMuted(peerId, mute)
+                                                         |> deliverOnMainQueue).startStandalone()
+                                            }, updatePeerStoriesHideSender: { peerId, hideSender in
+                                                let _ = (updatePeerStoriesHideSender(peerId, hideSender)
+                                                         |> deliverOnMainQueue).startStandalone()
+                                            }, updatePeerStorySound: { peerId, sound in
+                                                let _ = (updatePeerStorySound(peerId, sound)
+                                                         |> deliverOnMainQueue).startStandalone()
+                                            }, removePeerFromExceptions: {
+                                            }, modifiedPeer: {
+                                            })
+                                            exceptionController.navigationPresentation = .modal
+                                            self?.push(exceptionController)
+                                        })
+                                    })))
+                                    
+                                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_MuteForever, textColor: .destructive, icon: { theme in
+                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Muted"), color: theme.contextMenu.destructiveColor)
+                                    }, action: { _, f in
+                                        f(.default)
+                                        
+                                        let _ = context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: threadId, muteInterval: Int32.max).startStandalone()
+                                        
+                                        let iconColor: UIColor = .white
+                                        self?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
+                                            "Middle.Group 1.Fill 1": iconColor,
+                                            "Top.Group 1.Fill 1": iconColor,
+                                            "Bottom.Group 1.Fill 1": iconColor,
+                                            "EXAMPLE.Group 1.Fill 1": iconColor,
+                                            "Line.Group 1.Stroke 1": iconColor
+                                        ], title: nil, text: presentationData.strings.PeerInfo_TooltipMutedForever, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                                    })))
+                                    
+                                    c?.setItems(.single(ContextController.Items(content: .list(items))), minHeight: nil, animated: true)
+                                }
+                            })))
+                        }
+                        
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_Search, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Search"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { _, f in
+                            f(.dismissWithoutContent)
+                            self?.interfaceInteraction?.beginMessageSearch(.everything, "")
+                        })))
+                        
+                        if threadId != 1 {
+                            var canOpenClose = false
+                            if channel.flags.contains(.isCreator) {
+                                canOpenClose = true
+                            } else if channel.hasPermission(.manageTopics) {
+                                canOpenClose = true
+                            } else if threadData.isOwnedByMe {
+                                canOpenClose = true
+                            }
+                            if canOpenClose {
+                                items.append(.action(ContextMenuActionItem(text: threadData.isClosed ? presentationData.strings.ChatList_Context_ReopenTopic : presentationData.strings.ChatList_Context_CloseTopic, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: threadData.isClosed ? "Chat/Context Menu/Play": "Chat/Context Menu/Pause"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                    f(.default)
+                                    
+                                    let _ = context.engine.peers.setForumChannelTopicClosed(id: peer.id, threadId: threadId, isClosed: !threadData.isClosed).startStandalone()
+                                })))
+                            }
+                        }
+
+                        return items
+                    }
+                default:
+                    items = .single([])
                 }
                 
                 strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
                 
                 strongSelf.canReadHistory.set(false)
                 
-                let contextController = ContextController(presentationData: strongSelf.presentationData, source: .controller(ChatContextControllerContentSourceImpl(controller: galleryController, sourceNode: node, passthroughTouches: false)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+                let source: ContextContentSource
+                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer, peer.smallProfileImage != nil {
+                    let galleryController = AvatarGalleryController(context: strongSelf.context, peer: EnginePeer(peer), remoteEntries: nil, replaceRootController: { controller, ready in
+                    }, synchronousLoad: true)
+                    galleryController.setHintWillBePresentedInPreviewingContext(true)
+                    source = .controller(ChatContextControllerContentSourceImpl(controller: galleryController, sourceNode: node, passthroughTouches: false))
+                } else {
+                    source = .reference(ChatControllerContextReferenceContentSource(controller: strongSelf, sourceView: node.view, insets: .zero))
+                }
+                
+                let contextController = ContextController(presentationData: strongSelf.presentationData, source: source, items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 contextController.dismissed = { [weak self] in
                     self?.canReadHistory.set(true)
                 }
@@ -5123,7 +5414,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     imageOverride = nil
                                 }
                                 (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: EnginePeer(peer), overrideImage: imageOverride)
-                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled = strongSelf.chatLocation.threadId == nil && peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil
+                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled = peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil
                                 strongSelf.chatInfoNavigationButton?.buttonItem.accessibilityLabel = presentationInterfaceState.strings.Conversation_ContextMenuOpenProfile
                                 
                                 strongSelf.storyStats = peerView.storyStats
@@ -5660,7 +5951,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             } else if case let .replyThread(messagePromise) = self.chatLocationInfoData, let peerId = peerId {
                 self.reportIrrelvantGeoNoticePromise.set(.single(nil))
-                
+                                
                 let replyThreadType: ChatTitleContent.ReplyThreadType
                 var replyThreadId: Int64?
                 switch chatLocation {
@@ -6013,6 +6304,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if strongSelf.isNodeLoaded {
                                 strongSelf.chatDisplayNode.overlayTitle = strongSelf.overlayTitle
                             }
+                            (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled = true
                             
                             var peerDiscussionId: PeerId?
                             var peerGeoLocation: PeerGeoLocation?

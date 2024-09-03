@@ -35,6 +35,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stars/StarsAvatarComponent",
         "//submodules/GalleryUI",
         "//submodules/TelegramUI/Components/MiniAppListScreen",
+        "//submodules/TelegramUI/Components/Premium/PremiumStarComponent",
     ],
     visibility = [
         "//visibility:public",

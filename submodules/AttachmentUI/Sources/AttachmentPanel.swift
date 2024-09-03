@@ -1004,10 +1004,12 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                 var captionIsAboveMedia: Signal<Bool, NoError> = .single(false)
                 var canMakePaidContent = false
                 var currentPrice: Int64?
+                var hasTimers = false
                 if let controller = strongSelf.controller, let mediaPickerContext = controller.mediaPickerContext {
                     captionIsAboveMedia = mediaPickerContext.captionIsAboveMedia
                     canMakePaidContent = mediaPickerContext.canMakePaidContent
                     currentPrice = mediaPickerContext.price
+                    hasTimers = mediaPickerContext.hasTimers
                 }
                 
                 let _ = (combineLatest(
@@ -1039,7 +1041,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                             canSendWhenOnline: sendWhenOnlineAvailable,
                             forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [],
                             canMakePaidContent: canMakePaidContent,
-                            currentPrice: currentPrice
+                            currentPrice: currentPrice,
+                            hasTimers: hasTimers
                         )),
                         hasEntityKeyboard: hasEntityKeyboard,
                         gesture: gesture,

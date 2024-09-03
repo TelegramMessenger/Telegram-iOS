@@ -91,7 +91,7 @@ public enum PremiumGiveawayInfo: Equatable {
 public struct PrepaidGiveaway: Equatable {
     public enum Prize: Equatable {
         case premium(months: Int32)
-        case stars(stars: Int64)
+        case stars(stars: Int64, boosts: Int32)
     }
     
     public let id: Int64
@@ -312,9 +312,9 @@ extension PrepaidGiveaway {
             self.prize = .premium(months: months)
             self.quantity = quantity
             self.date = date
-        case let .prepaidStarsGiveaway(id, stars, quantity, date):
+        case let .prepaidStarsGiveaway(id, stars, quantity, boosts, date):
             self.id = id
-            self.prize = .stars(stars: stars)
+            self.prize = .stars(stars: stars, boosts: boosts)
             self.quantity = quantity
             self.date = date
         }
