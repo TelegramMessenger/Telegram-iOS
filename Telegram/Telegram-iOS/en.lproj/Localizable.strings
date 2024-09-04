@@ -12841,6 +12841,11 @@ Sorry for the inconvenience.";
 "Notification.GiveawayStartedStars" = "%1$@ just started a giveaway of %2$@ Telegram Stars for its followers.";
 "Notification.GiveawayStartedStarsGroup" = "%1$@ just started a giveaway of %2$@ Telegram Stars for its members.";
 
+"Notification.StarsGiveawayStarted" = "%1$@ just started a giveaway of %2$@ for its followers.";
+"Notification.StarsGiveawayStartedGroup" = "%1$@ just started a giveaway of %2$@ for its members.";
+"Notification.StarsGiveawayStarted.Stars_1" = "%@ Telegram Star";
+"Notification.StarsGiveawayStarted.Stars_any" = "%@ Telegram Stars";
+
 "Chat.Giveaway.Message.Stars.PrizeText" = "%1$@ will be distributed %2$@.";
 "Chat.Giveaway.Message.Stars.Stars_1" = "**%@** Stars";
 "Chat.Giveaway.Message.Stars.Stars_any" = "**%@** Stars";

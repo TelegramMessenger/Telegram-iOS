@@ -973,7 +973,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
                 let resultTitleString: PresentationStrings.FormattedString
                 if let stars {
-                    resultTitleString = isGroup ? strings.Notification_GiveawayStartedStarsGroup(compactAuthorName, "\(stars)") : strings.Notification_GiveawayStartedStars(compactAuthorName, "\(stars)")
+                    let starsString = strings.Notification_StarsGiveawayStarted_Stars(Int32(stars))
+                    resultTitleString = isGroup ? strings.Notification_StarsGiveawayStartedGroup(compactAuthorName, starsString) : strings.Notification_StarsGiveawayStarted(compactAuthorName, starsString)
                 } else {
                     resultTitleString = isGroup ? strings.Notification_GiveawayStartedGroup(compactAuthorName) : strings.Notification_GiveawayStarted(compactAuthorName)
                 }
