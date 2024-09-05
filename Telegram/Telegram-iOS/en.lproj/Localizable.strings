@@ -12934,3 +12934,8 @@ Sorry for the inconvenience.";
 
 "Notification.StarsGiveawayResultsNoWinners" = "Due to the giveaway terms, no winners could be selected by Telegram, all stars were credited to channel administrators.";
 "Notification.StarsGiveawayResultsNoWinners.Group" = "Due to the giveaway terms, no winners could be selected by Telegram, all stars were credited to group administrators.";
+
+"Notification.StarsGiveaway.Title" = "Congratulations!";
+"Notification.StarsGiveaway.Subtitle" = "You won a prize in a giveaway organized by **%1$@**.\n\nYour prize is **%2$@**.";
+"Notification.StarsGiveaway.Subtitle.Stars_1" = "%@ Star";
+"Notification.StarsGiveaway.Subtitle.Stars_any" = "%@ Stars";
