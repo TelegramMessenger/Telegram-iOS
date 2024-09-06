@@ -10,6 +10,7 @@ import CallScreen
 import MetalEngine
 import SwiftSignalKit
 import AccountContext
+import RadialStatusNode
 
 private final class BlobView: UIView {
     let blobsLayer: CallBlobsLayer
@@ -209,6 +210,8 @@ final class VideoChatMicButtonComponent: Component {
 
     final class View: HighlightTrackingButton {
         private let background: UIImageView
+        private var disappearingBackgrounds: [UIImageView] = []
+        private var progressIndicator: RadialStatusNode?
         private let title = ComponentView<Empty>()
         private let icon: VoiceChatActionButtonIconNode
         
@@ -330,8 +333,38 @@ final class VideoChatMicButtonComponent: Component {
                 self.addSubview(self.background)
                 self.background.frame = CGRect(origin: CGPoint(), size: CGSize(width: 116.0, height: 116.0))
             }
-            transition.setPosition(view: self.background, position: CGRect(origin: CGPoint(), size: size).center)
-            transition.setScale(view: self.background, scale: size.width / 116.0)
+            
+            if case .connecting = component.content {
+                let progressIndicator: RadialStatusNode
+                if let current = self.progressIndicator {
+                    progressIndicator = current
+                } else {
+                    progressIndicator = RadialStatusNode(backgroundNodeColor: .clear)
+                    self.progressIndicator = progressIndicator
+                }
+                progressIndicator.transitionToState(.progress(color: UIColor(rgb: 0x0080FF), lineWidth: 3.0, value: nil, cancelEnabled: false, animateRotation: true))
+                
+                let progressIndicatorView = progressIndicator.view
+                if progressIndicatorView.superview == nil {
+                    self.addSubview(progressIndicatorView)
+                    progressIndicatorView.center = CGRect(origin: CGPoint(), size: size).center
+                    progressIndicatorView.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 116.0, height: 116.0))
+                    progressIndicatorView.layer.transform = CATransform3DMakeScale(size.width / 116.0, size.width / 116.0, 1.0)
+                } else {
+                    transition.setPosition(view: progressIndicatorView, position: CGRect(origin: CGPoint(), size: size).center)
+                    transition.setScale(view: progressIndicatorView, scale: size.width / 116.0)
+                }
+            } else if let progressIndicator = self.progressIndicator {
+                self.progressIndicator = nil
+                if !transition.animation.isImmediate {
+                    let progressIndicatorView = progressIndicator.view
+                    progressIndicatorView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak progressIndicatorView] _ in
+                        progressIndicatorView?.removeFromSuperview()
+                    })
+                } else {
+                    progressIndicator.view.removeFromSuperview()
+                }
+            }
             
             if previousComponent?.content != component.content {
                 let backgroundContentsTransition: ComponentTransition
@@ -340,7 +373,7 @@ final class VideoChatMicButtonComponent: Component {
                 } else {
                     backgroundContentsTransition = .immediate
                 }
-                let backgroundImage = generateImage(CGSize(width: 116.0, height: 116.0), rotatedContext: { size, context in
+                let backgroundImage = generateImage(CGSize(width: 200.0, height: 200.0), rotatedContext: { size, context in
                     context.clear(CGRect(origin: CGPoint(), size: size))
                     context.addEllipse(in: CGRect(origin: CGPoint(), size: size))
                     context.clip()
@@ -366,11 +399,41 @@ final class VideoChatMicButtonComponent: Component {
                     }
                 })!
                 if let previousImage = self.background.image {
+                    let previousBackground = UIImageView()
+                    previousBackground.center = self.background.center
+                    previousBackground.bounds = self.background.bounds
+                    previousBackground.layer.transform = self.background.layer.transform
+                    previousBackground.image = previousImage
+                    self.insertSubview(previousBackground, aboveSubview: self.background)
+                    self.disappearingBackgrounds.append(previousBackground)
+                    
                     self.background.image = backgroundImage
-                    backgroundContentsTransition.animateContentsImage(layer: self.background.layer, from: previousImage.cgImage!, to: backgroundImage.cgImage!, duration: 0.2, curve: .easeInOut)
+                    backgroundContentsTransition.setAlpha(view: previousBackground, alpha: 0.0, completion: { [weak self, weak previousBackground] _ in
+                        guard let self, let previousBackground else {
+                            return
+                        }
+                        previousBackground.removeFromSuperview()
+                        self.disappearingBackgrounds.removeAll(where: { $0 === previousBackground })
+                    })
                 } else {
                     self.background.image = backgroundImage
                 }
+                
+                if !transition.animation.isImmediate, let previousComponent, case .connecting = previousComponent.content {
+                    self.layer.animateSublayerScale(from: 1.0, to: 1.07, duration: 0.12, removeOnCompletion: false, completion: { [weak self] completed in
+                        if let self, completed {
+                            self.layer.removeAnimation(forKey: "sublayerTransform.scale")
+                            self.layer.animateSublayerScale(from: 1.07, to: 1.0, duration: 0.12, removeOnCompletion: true)
+                        }
+                    })
+                }
+            }
+            
+            transition.setPosition(view: self.background, position: CGRect(origin: CGPoint(), size: size).center)
+            transition.setScale(view: self.background, scale: size.width / 116.0)
+            for disappearingBackground in self.disappearingBackgrounds {
+                transition.setPosition(view: disappearingBackground, position: CGRect(origin: CGPoint(), size: size).center)
+                transition.setScale(view: disappearingBackground, scale: size.width / 116.0)
             }
             
             let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) * 0.5), y: size.height + 16.0), size: titleSize)
@@ -434,14 +497,23 @@ final class VideoChatMicButtonComponent: Component {
                 
                 blobTintTransition.setTintColor(layer: blobView.blobsLayer, color: component.content == .muted ? UIColor(rgb: 0x0086FF) : UIColor(rgb: 0x33C758))
                 
-                if self.audioLevelDisposable == nil {
-                    self.audioLevelDisposable = (component.call.myAudioLevel
-                    |> deliverOnMainQueue).startStrict(next: { [weak self] value in
-                        guard let self, let blobView = self.blobView else {
-                            return
-                        }
-                        blobView.updateLevel(CGFloat(value), immediately: false)
-                    })
+                switch component.content {
+                case .unmuted:
+                    if self.audioLevelDisposable == nil {
+                        self.audioLevelDisposable = (component.call.myAudioLevel
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
+                            guard let self, let blobView = self.blobView else {
+                                return
+                            }
+                            blobView.updateLevel(CGFloat(value), immediately: false)
+                        })
+                    }
+                case .connecting, .muted:
+                    if let audioLevelDisposable = self.audioLevelDisposable {
+                        self.audioLevelDisposable = nil
+                        audioLevelDisposable.dispose()
+                        blobView.updateLevel(0.0, immediately: false)
+                    }
                 }
                 
                 var glowFrame = CGRect(origin: CGPoint(), size: availableSize)

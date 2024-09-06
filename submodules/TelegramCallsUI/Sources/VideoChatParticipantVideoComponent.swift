@@ -41,6 +41,7 @@ final class VideoChatParticipantVideoComponent: Component {
     let isSpeaking: Bool
     let isExpanded: Bool
     let bottomInset: CGFloat
+    weak var rootVideoLoadingEffectView: VideoChatVideoLoadingEffectView?
     let action: (() -> Void)?
     
     init(
@@ -50,6 +51,7 @@ final class VideoChatParticipantVideoComponent: Component {
         isSpeaking: Bool,
         isExpanded: Bool,
         bottomInset: CGFloat,
+        rootVideoLoadingEffectView: VideoChatVideoLoadingEffectView?,
         action: (() -> Void)?
     ) {
         self.call = call
@@ -58,6 +60,7 @@ final class VideoChatParticipantVideoComponent: Component {
         self.isSpeaking = isSpeaking
         self.isExpanded = isExpanded
         self.bottomInset = bottomInset
+        self.rootVideoLoadingEffectView = rootVideoLoadingEffectView
         self.action = action
     }
     
@@ -112,6 +115,8 @@ final class VideoChatParticipantVideoComponent: Component {
         private var videoSpec: VideoSpec?
         
         private var activityBorderView: UIImageView?
+        
+        private var loadingEffectView: PortalView?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -427,6 +432,18 @@ final class VideoChatParticipantVideoComponent: Component {
                 self.videoDisposable = nil
                 self.videoSource = nil
                 self.videoSpec = nil
+            }
+            
+            if self.loadingEffectView == nil, let rootVideoLoadingEffectView = component.rootVideoLoadingEffectView {
+                if let loadingEffectView = PortalView(matchPosition: true) {
+                    self.loadingEffectView = loadingEffectView
+                    self.addSubview(loadingEffectView.view)
+                    rootVideoLoadingEffectView.portalSource.addPortal(view: loadingEffectView)
+                    loadingEffectView.view.frame = CGRect(origin: CGPoint(), size: availableSize)
+                }
+            }
+            if let loadingEffectView = self.loadingEffectView {
+                transition.setFrame(view: loadingEffectView.view, frame: CGRect(origin: CGPoint(), size: availableSize))
             }
             
             if component.isSpeaking && !component.isExpanded {

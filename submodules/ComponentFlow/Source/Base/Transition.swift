@@ -471,7 +471,12 @@ public struct ComponentTransition {
             layer.removeAnimation(forKey: "opacity")
             completion?(true)
         case .curve:
-            let previousAlpha = layer.presentation()?.opacity ?? layer.opacity
+            let previousAlpha: Float
+            if layer.animation(forKey: "opacity") != nil {
+                previousAlpha = layer.presentation()?.opacity ?? layer.opacity
+            } else {
+                previousAlpha = layer.opacity
+            }
             layer.opacity = Float(alpha)
             self.animateAlpha(layer: layer, from: CGFloat(previousAlpha), to: alpha, delay: delay, completion: completion)
         }
