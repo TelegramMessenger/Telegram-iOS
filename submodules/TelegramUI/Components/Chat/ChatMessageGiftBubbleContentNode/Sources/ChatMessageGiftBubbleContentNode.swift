@@ -280,8 +280,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             if let channelId, let channel = item.message.peers[channelId] {
                                 peerName = EnginePeer(channel).compactDisplayTitle
                             }
-                            title = "Congratulations!" //""item.presentationData.strings.Notification_StarsGift_Title(Int32(count))
-                            text = "You won a prize in a giveaway organized by **\(peerName)**.\n\nYour prize is **\(count) Stars**." //item.presentationData.strings.Notification_StarsGift_Subtitle
+                            title = item.presentationData.strings.Notification_StarsGiveaway_Title
+                            text = item.presentationData.strings.Notification_StarsGiveaway_Subtitle(peerName, item.presentationData.strings.Notification_StarsGiveaway_Subtitle_Stars(Int32(count))).string
                         case let .giftCode(_, fromGiveaway, unclaimed, channelId, monthsValue, _, _, _, _):
                             if channelId == nil {
                                 months = monthsValue
