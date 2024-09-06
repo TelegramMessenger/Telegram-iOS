@@ -1176,7 +1176,8 @@ public func privacyAndSecurityController(
                     3 * 30 * 24 * 60 * 60,
                     6 * 30 * 24 * 60 * 60,
                     365 * 24 * 60 * 60,
-                    548 * 24 * 60 * 60
+                    548 * 24 * 60 * 60,
+                    730 * 24 * 60 * 60
                 ]
                 var timeoutItems: [ActionSheetItem] = timeoutValues.map { value in
                     return ActionSheetButtonItem(title: presentationData.strings.MessageTimer_Months(max(1, value / (60 * 60 * 24 * 30))), action: {
