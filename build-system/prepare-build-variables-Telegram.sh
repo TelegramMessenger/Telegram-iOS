@@ -37,6 +37,7 @@ prepare_build_variables () {
 		APP_SPECIFIC_URL_SCHEME \
 		PREMIUM_IAP_PRODUCT_ID \
 		TELEGRAM_DISABLE_EXTENSIONS \
+		TELEPORT_APP_REVIEWER_PHONE \
 	)
 
 	local MISSING_VARIABLES="0"
@@ -69,6 +70,7 @@ prepare_build_variables () {
 	echo "telegram_app_specific_url_scheme = \"$APP_SPECIFIC_URL_SCHEME\"" >> "$VARIABLES_PATH"
 	echo "telegram_premium_iap_product_id = \"$PREMIUM_IAP_PRODUCT_ID\"" >> "$VARIABLES_PATH"
 	echo "telegram_aps_environment = \"$APS_ENVIRONMENT\"" >> "$VARIABLES_PATH"
+	echo "teleport_app_reviewer_phone = \"$TELEPORT_APP_REVIEWER_PHONE\"" >> "$VARIABLES_PATH"
 
 	if [  "$TELEGRAM_DISABLE_EXTENSIONS" == "1" ]; then
 		echo "telegram_disable_extensions = True" >> "$VARIABLES_PATH"

@@ -310,7 +310,12 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     private let debugAction: () -> Void
     
     var currentNumber: String {
-        return self.phoneAndCountryNode.phoneInputNode.number
+        get {
+            return self.phoneAndCountryNode.phoneInputNode.number
+        }
+        set {
+            phoneAndCountryNode.phoneInputNode.number = newValue
+        }
     }
     
     var codeAndNumber: (Int32?, String?, String) {

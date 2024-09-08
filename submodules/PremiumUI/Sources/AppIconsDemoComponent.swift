@@ -62,33 +62,33 @@ final class AppIconsDemoComponent: Component {
             
             self.containerView.frame = CGRect(origin: CGPoint(x: -availableSize.width / 2.0, y: 0.0), size: CGSize(width: availableSize.width * 2.0, height: availableSize.height))
             
-            if self.imageViews.isEmpty {
-                for icon in component.appIcons {
-                    let image: UIImage?
-                    switch icon.imageName {
-                        case "Premium":
-                            image = UIImage(bundleImageName: "Premium/Icons/Premium")
-                        case "PremiumBlack":
-                            image = UIImage(bundleImageName: "Premium/Icons/Black")
-                        case "PremiumTurbo":
-                            image = UIImage(bundleImageName: "Premium/Icons/Turbo")
-                        default:
-                            image = nil
-                    }
-                    if let image = image {
-                        let imageView = UIImageView(frame: CGRect(origin: .zero, size: CGSize(width: 90.0, height: 90.0)))
-                        imageView.clipsToBounds = true
-                        imageView.layer.cornerRadius = 24.0
-                        if #available(iOS 13.0, *) {
-                            imageView.layer.cornerCurve = .continuous
-                        }
-                        imageView.image = image
-                        self.containerView.addSubview(imageView)
+            // if self.imageViews.isEmpty {
+                // for icon in component.appIcons {
+                    // let image: UIImage?
+                    // switch icon.imageName {
+                    //     case "Premium":
+                    //         image = UIImage(bundleImageName: "Premium/Icons/Premium")
+                    //     case "PremiumBlack":
+                    //         image = UIImage(bundleImageName: "Premium/Icons/Black")
+                    //     case "PremiumTurbo":
+                    //         image = UIImage(bundleImageName: "Premium/Icons/Turbo")
+                    //     default:
+                    //         image = nil
+                    // }
+                    // if let image = image {
+                    //     let imageView = UIImageView(frame: CGRect(origin: .zero, size: CGSize(width: 90.0, height: 90.0)))
+                    //     imageView.clipsToBounds = true
+                    //     imageView.layer.cornerRadius = 24.0
+                    //     if #available(iOS 13.0, *) {
+                    //         imageView.layer.cornerCurve = .continuous
+                    //     }
+                    //     imageView.image = image
+                    //     self.containerView.addSubview(imageView)
                         
-                        self.imageViews.append(imageView)
-                    }
-                }
-            }
+                    //     self.imageViews.append(imageView)
+                    // }
+                // }
+            // }
  
             var i = 0
             for view in self.imageViews {

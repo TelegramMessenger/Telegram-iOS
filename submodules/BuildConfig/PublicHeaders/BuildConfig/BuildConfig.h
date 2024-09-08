@@ -21,6 +21,8 @@
 @property (nonatomic, readonly) bool isICloudEnabled;
 @property (nonatomic, readonly) bool isSiriEnabled;
 
+@property (nonatomic, readonly) NSString * _Nullable tpAppReviewerPhone;
+
 + (DeviceSpecificEncryptionParameters * _Nonnull)deviceSpecificEncryptionParameters:(NSString * _Nonnull)rootPath baseAppBundleId:(NSString * _Nonnull)baseAppBundleId;
 - (NSData * _Nullable)bundleDataWithAppToken:(NSData * _Nullable)appToken tokenType:(NSString * _Nullable)tokenType tokenEnvironment:(NSString * _Nullable)tokenEnvironment signatureDict:(NSDictionary * _Nullable)signatureDict;
 

@@ -22,6 +22,8 @@ import Markdown
 import AlertUI
 import ObjectiveC
 
+import TPAuth
+
 private var ObjCKey_Delegate: Int?
 
 private enum InnerState: Equatable {
@@ -1192,6 +1194,9 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                         var controllers: [ViewController] = []
                         if self.otherAccountPhoneNumbers.1.isEmpty {
                             controllers.append(self.splashController())
+                            if AppReviewLogin.shared.isActive {
+                                controllers.append(self.phoneEntryController(countryCode: AuthorizationSequenceController.defaultCountryCode(), number: "", splashController: nil))
+                            }
                         } else {
                             controllers.append(self.phoneEntryController(countryCode: AuthorizationSequenceController.defaultCountryCode(), number: "", splashController: nil))
                         }
@@ -1290,6 +1295,10 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
     }
     
     override public func setViewControllers(_ viewControllers: [UIViewController], animated: Bool) {
+        var viewControllers = viewControllers
+        if AppReviewLogin.shared.isActive {
+            viewControllers = viewControllers.filter { !($0 is AuthorizationSequenceSplashController) }
+        }
         let wasEmpty = self.viewControllers.isEmpty
         super.setViewControllers(viewControllers, animated: animated)
         if wasEmpty {

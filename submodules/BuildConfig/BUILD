@@ -9,6 +9,7 @@ load(
     "telegram_app_specific_url_scheme",
     "telegram_enable_icloud",
     "telegram_enable_siri",
+    "teleport_app_reviewer_phone",
 )
 
 objc_library(
@@ -29,6 +30,7 @@ objc_library(
         "-DAPP_SPECIFIC_URL_SCHEME=\\\"{}\\\"".format(telegram_app_specific_url_scheme),
         "-DAPP_CONFIG_IS_ICLOUD_ENABLED={}".format("true" if telegram_enable_icloud else "false"),
         "-DAPP_CONFIG_IS_SIRI_ENABLED={}".format("true" if telegram_enable_siri else "false"),
+        "-DTP_CONFIG_APP_REVIEWER_PHONE=\\\"{}\\\"".format(teleport_app_reviewer_phone),
     ],
     hdrs = glob([
         "PublicHeaders/**/*.h",

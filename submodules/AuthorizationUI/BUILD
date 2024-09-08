@@ -1,5 +1,9 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
+tp_deps = [
+    "//Teleport/TPAuth:TPAuth"
+]
+
 swift_library(
     name = "AuthorizationUI",
     module_name = "AuthorizationUI",
@@ -9,7 +13,7 @@ swift_library(
     copts = [
         "-warnings-as-errors",
     ],
-    deps = [
+    deps = tp_deps + [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/Postbox:Postbox",

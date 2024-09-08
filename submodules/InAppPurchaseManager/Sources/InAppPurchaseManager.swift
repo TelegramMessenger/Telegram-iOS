@@ -8,43 +8,43 @@ import TelegramStringFormatting
 import TelegramUIPreferences
 import PersistentStringHash
 
-private let productIdentifiers = [
-    "org.telegram.telegramPremium.annual",
-    "org.telegram.telegramPremium.semiannual",
-    "org.telegram.telegramPremium.monthly",
-    "org.telegram.telegramPremium.twelveMonths",
-    "org.telegram.telegramPremium.sixMonths",
-    "org.telegram.telegramPremium.threeMonths",
-
-    "org.telegram.telegramPremium.threeMonths.code_x1",
-    "org.telegram.telegramPremium.sixMonths.code_x1",
-    "org.telegram.telegramPremium.twelveMonths.code_x1",
-    
-    "org.telegram.telegramPremium.threeMonths.code_x5",
-    "org.telegram.telegramPremium.sixMonths.code_x5",
-    "org.telegram.telegramPremium.twelveMonths.code_x5",
-    
-    "org.telegram.telegramPremium.threeMonths.code_x10",
-    "org.telegram.telegramPremium.sixMonths.code_x10",
-    "org.telegram.telegramPremium.twelveMonths.code_x10",
-    
-    "org.telegram.telegramStars.topup.x15",
-    "org.telegram.telegramStars.topup.x25",
-    "org.telegram.telegramStars.topup.x50",
-    "org.telegram.telegramStars.topup.x75",
-    "org.telegram.telegramStars.topup.x100",
-    "org.telegram.telegramStars.topup.x150",
-    "org.telegram.telegramStars.topup.x250",
-    "org.telegram.telegramStars.topup.x350",
-    "org.telegram.telegramStars.topup.x500",
-    "org.telegram.telegramStars.topup.x750",
-    "org.telegram.telegramStars.topup.x1000",
-    "org.telegram.telegramStars.topup.x1500",
-    "org.telegram.telegramStars.topup.x2500",
-    "org.telegram.telegramStars.topup.x5000",
-    "org.telegram.telegramStars.topup.x10000",
-    "org.telegram.telegramStars.topup.x25000",
-    "org.telegram.telegramStars.topup.x35000"
+private let productIdentifiers: [String] = [
+//    "org.telegram.telegramPremium.annual",
+//    "org.telegram.telegramPremium.semiannual",
+//    "org.telegram.telegramPremium.monthly",
+//    "org.telegram.telegramPremium.twelveMonths",
+//    "org.telegram.telegramPremium.sixMonths",
+//    "org.telegram.telegramPremium.threeMonths",
+//
+//    "org.telegram.telegramPremium.threeMonths.code_x1",
+//    "org.telegram.telegramPremium.sixMonths.code_x1",
+//    "org.telegram.telegramPremium.twelveMonths.code_x1",
+//    
+//    "org.telegram.telegramPremium.threeMonths.code_x5",
+//    "org.telegram.telegramPremium.sixMonths.code_x5",
+//    "org.telegram.telegramPremium.twelveMonths.code_x5",
+//    
+//    "org.telegram.telegramPremium.threeMonths.code_x10",
+//    "org.telegram.telegramPremium.sixMonths.code_x10",
+//    "org.telegram.telegramPremium.twelveMonths.code_x10",
+//    
+//    "org.telegram.telegramStars.topup.x15",
+//    "org.telegram.telegramStars.topup.x25",
+//    "org.telegram.telegramStars.topup.x50",
+//    "org.telegram.telegramStars.topup.x75",
+//    "org.telegram.telegramStars.topup.x100",
+//    "org.telegram.telegramStars.topup.x150",
+//    "org.telegram.telegramStars.topup.x250",
+//    "org.telegram.telegramStars.topup.x350",
+//    "org.telegram.telegramStars.topup.x500",
+//    "org.telegram.telegramStars.topup.x750",
+//    "org.telegram.telegramStars.topup.x1000",
+//    "org.telegram.telegramStars.topup.x1500",
+//    "org.telegram.telegramStars.topup.x2500",
+//    "org.telegram.telegramStars.topup.x5000",
+//    "org.telegram.telegramStars.topup.x10000",
+//    "org.telegram.telegramStars.topup.x25000",
+//    "org.telegram.telegramStars.topup.x35000"
 ]
 
 private extension NSDecimalNumber {

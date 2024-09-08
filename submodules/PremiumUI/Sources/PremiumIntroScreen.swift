@@ -35,6 +35,9 @@ import EmojiActionIconComponent
 import ScrollComponent
 import PremiumStarComponent
 
+
+import TPStrings
+
 public enum PremiumSource: Equatable {
     public static func == (lhs: PremiumSource, rhs: PremiumSource) -> Bool {
         switch lhs {
@@ -2101,7 +2104,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
 
                             let isPremium = state?.isPremium == true
                             var dismissImpl: (() -> Void)?
-                            let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.perks, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "—").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium, forceDark: forceDark)
+                            let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.perks, buttonText: isPremium ? strings.Common_OK : "Common.OpenTelegram".tp_loc(lang: strings.baseLanguageCode), isPremium: isPremium, forceDark: forceDark)
                             controller.action = { [weak state] in
                                 dismissImpl?()
                                 if state?.isPremium == false {
@@ -2326,7 +2329,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                     fatalError()
                                 }
                                 var dismissImpl: (() -> Void)?
-                                let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.businessPerks, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "—").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium, forceDark: forceDark)
+                                let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.businessPerks, buttonText: isPremium ? strings.Common_OK : "Common.OpenTelegram".tp_loc(lang: strings.baseLanguageCode), isPremium: isPremium, forceDark: forceDark)
                                 controller.action = { [weak state] in
                                     dismissImpl?()
                                     if state?.isPremium == false {
@@ -3044,6 +3047,18 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 return
             }
             
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            let alertController = textAlertController(
+                context: self.context,
+                title: "Common.OpenTelegram".tp_loc(lang: presentationData.strings.baseLanguageCode),
+                text: "Common.UseTelegramForPremium".tp_loc(lang: presentationData.strings.baseLanguageCode),
+                actions: [
+                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                ]
+            )
+            present(alertController)
+            
+            /*
             guard let inAppPurchaseManager = self.context.inAppPurchaseManager,
                   let premiumProduct = self.products?.first(where: { $0.id == self.selectedProductId }) else {
                 return
@@ -3164,6 +3179,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     }
                 }
             })
+            */
         }
         
         func updateIsFocused(_ isFocused: Bool) {
@@ -3568,9 +3584,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 if isUnusedGift {
                     buttonTitle = environment.strings.Premium_Gift_ApplyLink
                 } else if state.isPremium == true && state.canUpgrade {
-                    buttonTitle = state.isAnnual ? environment.strings.Premium_UpgradeForAnnual(state.price ?? "—").string : environment.strings.Premium_UpgradeFor(state.price ?? "—").string
+                    buttonTitle = "Common.OpenTelegram".tp_loc(lang: environment.strings.baseLanguageCode)
                 } else {
-                    buttonTitle = state.isAnnual ? environment.strings.Premium_SubscribeForAnnual(state.price ?? "—").string : environment.strings.Premium_SubscribeFor(state.price ?? "—").string
+                    buttonTitle = "Common.OpenTelegram".tp_loc(lang: environment.strings.baseLanguageCode)
                 }
                 
                 let sideInset: CGFloat = 16.0

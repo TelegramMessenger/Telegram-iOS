@@ -198,6 +198,10 @@ API_AVAILABLE(ios(10))
     return APP_CONFIG_IS_SIRI_ENABLED;
 }
 
+- (NSString * _Nullable)tpAppReviewerPhone {
+    return @(TP_CONFIG_APP_REVIEWER_PHONE);
+}
+
 + (NSString * _Nullable)bundleSeedId {
     NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
        (__bridge NSString *)kSecClassGenericPassword, (__bridge NSString *)kSecClass,
