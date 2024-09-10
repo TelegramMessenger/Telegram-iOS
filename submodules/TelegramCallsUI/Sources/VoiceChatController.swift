@@ -7097,8 +7097,21 @@ final class VoiceChatContextReferenceContentSource: ContextReferenceContentSourc
     }
 }
 
+private func calculateUseV2(context: AccountContext) -> Bool {
+    var useV2 = true
+    if context.sharedContext.immediateExperimentalUISettings.disableCallV2 {
+        useV2 = false
+    }
+    if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_videochatui_v2"] {
+        useV2 = false
+    }
+    return useV2
+}
+
 public func makeVoiceChatControllerInitialData(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall) -> Signal<Any, NoError> {
-    if sharedContext.immediateExperimentalUISettings.callV2 {
+    let useV2 = calculateUseV2(context: accountContext)
+    
+    if useV2 {
         return VideoChatScreenV2Impl.initialData(call: call) |> map { $0 as Any }
     } else {
         return .single(Void())
@@ -7106,7 +7119,9 @@ public func makeVoiceChatControllerInitialData(sharedContext: SharedAccountConte
 }
 
 public func makeVoiceChatController(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall, initialData: Any) -> VoiceChatController {
-    if sharedContext.immediateExperimentalUISettings.callV2 {
+    let useV2 = calculateUseV2(context: accountContext)
+    
+    if useV2 {
         return VideoChatScreenV2Impl(initialData: initialData as! VideoChatScreenV2Impl.InitialData, call: call)
     } else {
         return VoiceChatControllerImpl(sharedContext: sharedContext, accountContext: accountContext, call: call)

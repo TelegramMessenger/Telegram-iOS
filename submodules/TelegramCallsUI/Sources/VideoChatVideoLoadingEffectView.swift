@@ -45,6 +45,8 @@ final class VideoChatVideoLoadingEffectView: UIView {
         
         super.init(frame: .zero)
         
+        self.portalSource.backgroundColor = .red
+        
         self.portalSource.layer.addSublayer(self.hierarchyTrackingLayer)
         self.hierarchyTrackingLayer.didEnterHierarchy = { [weak self] in
             guard let self, self.bounds.width != 0.0 else {

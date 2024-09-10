@@ -415,6 +415,7 @@ final class VideoChatParticipantVideoComponent: Component {
                     self.loadingEffectView = loadingEffectView
                     self.addSubview(loadingEffectView.view)
                     rootVideoLoadingEffectView.portalSource.addPortal(view: loadingEffectView)
+                    loadingEffectView.view.isUserInteractionEnabled = false
                     loadingEffectView.view.frame = CGRect(origin: CGPoint(), size: availableSize)
                 }
             }

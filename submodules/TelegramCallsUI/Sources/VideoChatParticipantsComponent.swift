@@ -119,6 +119,7 @@ final class VideoChatParticipantsComponent: Component {
     let updateMainParticipant: (VideoParticipantKey?) -> Void
     let updateIsMainParticipantPinned: (Bool) -> Void
     let updateIsExpandedUIHidden: (Bool) -> Void
+    let openInviteMembers: () -> Void
 
     init(
         call: PresentationGroupCall,
@@ -134,7 +135,8 @@ final class VideoChatParticipantsComponent: Component {
         openParticipantContextMenu: @escaping (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void,
         updateMainParticipant: @escaping (VideoParticipantKey?) -> Void,
         updateIsMainParticipantPinned: @escaping (Bool) -> Void,
-        updateIsExpandedUIHidden: @escaping (Bool) -> Void
+        updateIsExpandedUIHidden: @escaping (Bool) -> Void,
+        openInviteMembers: @escaping () -> Void
     ) {
         self.call = call
         self.participants = participants
@@ -150,6 +152,7 @@ final class VideoChatParticipantsComponent: Component {
         self.updateMainParticipant = updateMainParticipant
         self.updateIsMainParticipantPinned = updateIsMainParticipantPinned
         self.updateIsExpandedUIHidden = updateIsExpandedUIHidden
+        self.openInviteMembers = openInviteMembers
     }
 
     static func ==(lhs: VideoChatParticipantsComponent, rhs: VideoChatParticipantsComponent) -> Bool {
@@ -527,6 +530,14 @@ final class VideoChatParticipantsComponent: Component {
         }
     }
     
+    private struct ExpandedGridSwipeState {
+        var fraction: CGFloat
+        
+        init(fraction: CGFloat) {
+            self.fraction = fraction
+        }
+    }
+    
     private final class VideoParticipant: Equatable {
         let participant: GroupCallParticipantsContext.Participant
         let isPresentation: Bool
@@ -579,6 +590,7 @@ final class VideoChatParticipantsComponent: Component {
         private let separateVideoScrollView: ScrollView
         
         private var component: VideoChatParticipantsComponent?
+        private weak var state: EmptyComponentState?
         private var isUpdating: Bool = false
         
         private var ignoreScrolling: Bool = false
@@ -602,6 +614,7 @@ final class VideoChatParticipantsComponent: Component {
         private let listItemsBackground = ComponentView<Empty>()
         
         private var itemLayout: ItemLayout?
+        private var expandedGridSwipeState: ExpandedGridSwipeState?
         
         private var appliedGridIsEmpty: Bool = true
         
@@ -664,6 +677,8 @@ final class VideoChatParticipantsComponent: Component {
             
             self.scrollView.addSubview(self.listItemViewContainer)
             self.addSubview(self.expandedGridItemContainer)
+            
+            self.expandedGridItemContainer.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.expandedGridPanGesture(_:))))
         }
         
         required init?(coder: NSCoder) {
@@ -689,6 +704,35 @@ final class VideoChatParticipantsComponent: Component {
                 } else {
                     return nil
                 }
+            }
+        }
+        
+        @objc private func expandedGridPanGesture(_ recognizer: UIPanGestureRecognizer) {
+            guard let component = self.component else {
+                return
+            }
+            if self.bounds.height == 0.0 {
+                return
+            }
+            switch recognizer.state {
+            case .began, .changed:
+                let translation = recognizer.translation(in: self)
+                let fraction = translation.y / self.bounds.height
+                self.expandedGridSwipeState = ExpandedGridSwipeState(fraction: fraction)
+                self.state?.updated(transition: .immediate)
+            case .ended, .cancelled:
+                let translation = recognizer.translation(in: self)
+                let fraction = translation.y / self.bounds.height
+                self.expandedGridSwipeState = nil
+                
+                let velocity = recognizer.velocity(in: self)
+                if abs(velocity.y) > 100.0 || abs(fraction) >= 0.5 {
+                    component.updateMainParticipant(nil)
+                } else {
+                    self.state?.updated(transition: .spring(duration: 0.4))
+                }
+            default:
+                break
             }
         }
         
@@ -726,6 +770,9 @@ final class VideoChatParticipantsComponent: Component {
             var expandedGridItemContainerFrame: CGRect
             if component.expandedVideoState != nil {
                 expandedGridItemContainerFrame = itemLayout.expandedGrid.itemContainerFrame()
+                if let expandedGridSwipeState = self.expandedGridSwipeState {
+                    expandedGridItemContainerFrame.origin.y += expandedGridSwipeState.fraction * itemLayout.containerSize.height
+                }
             } else {
                 if let videoColumn = itemLayout.layout.videoColumn {
                     expandedGridItemContainerFrame = itemLayout.gridItemContainerFrame().offsetBy(dx: itemLayout.separateVideoScrollClippingFrame.minX, dy: 0.0).offsetBy(dx: 0.0, dy: -self.separateVideoScrollView.bounds.minY)
@@ -1322,28 +1369,7 @@ final class VideoChatParticipantsComponent: Component {
             }
             
             self.component = component
-            
-            if !"".isEmpty {
-                let rootVideoLoadingEffectView: VideoChatVideoLoadingEffectView
-                if let current = self.rootVideoLoadingEffectView {
-                    rootVideoLoadingEffectView = current
-                } else {
-                    rootVideoLoadingEffectView = VideoChatVideoLoadingEffectView(
-                        effectAlpha: 0.1,
-                        borderAlpha: 0.0,
-                        gradientWidth: 260.0,
-                        duration: 1.0,
-                        hasCustomBorder: false,
-                        playOnce: false
-                    )
-                    self.rootVideoLoadingEffectView = rootVideoLoadingEffectView
-                    self.insertSubview(rootVideoLoadingEffectView, at: 0)
-                    rootVideoLoadingEffectView.alpha = 0.0
-                    rootVideoLoadingEffectView.isUserInteractionEnabled = false
-                }
-                
-                rootVideoLoadingEffectView.update(size: availableSize, transition: transition)
-            }
+            self.state = state
             
             let measureListItemSize = self.measureListItemView.update(
                 transition: .immediate,
@@ -1371,7 +1397,13 @@ final class VideoChatParticipantsComponent: Component {
                 transition: transition,
                 component: AnyComponent(VideoChatListInviteComponent(
                     title: "Invite Members",
-                    theme: component.theme
+                    theme: component.theme,
+                    action: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.openInviteMembers()
+                    }
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 1000.0)
@@ -1462,6 +1494,11 @@ final class VideoChatParticipantsComponent: Component {
                         } else {
                             maxPresentationQuality = .thumbnail
                         }
+                    }
+                    
+                    if component.layout.videoColumn != nil && gridParticipants.count == 1 {
+                        maxVideoQuality = .full
+                        maxPresentationQuality = .full
                     }
                     
                     if let videoChannel = participant.requestedVideoChannel(minQuality: .thumbnail, maxQuality: maxVideoQuality) {
