@@ -288,20 +288,26 @@ final class VideoChatParticipantThumbnailComponent: Component {
                     var rotatedVideoResolution = videoResolution
                     var rotatedVideoFrame = videoFrame
                     var rotatedBlurredVideoFrame = blurredVideoFrame
+                    var rotatedVideoBoundsSize = videoFrame.size
+                    var rotatedBlurredVideoBoundsSize = blurredVideoFrame.size
                     
                     if videoIsRotated {
-                        rotatedVideoResolution = CGSize(width: rotatedVideoResolution.height, height: rotatedVideoResolution.width)
+                        rotatedVideoBoundsSize = CGSize(width: rotatedVideoBoundsSize.height, height: rotatedVideoBoundsSize.width)
                         rotatedVideoFrame = rotatedVideoFrame.size.centered(around: rotatedVideoFrame.center)
+                        
+                        rotatedBlurredVideoBoundsSize = CGSize(width: rotatedBlurredVideoBoundsSize.height, height: rotatedBlurredVideoBoundsSize.width)
                         rotatedBlurredVideoFrame = rotatedBlurredVideoFrame.size.centered(around: rotatedBlurredVideoFrame.center)
                     }
                     
+                    rotatedVideoResolution = rotatedVideoResolution.aspectFittedOrSmaller(CGSize(width: rotatedVideoFrame.width * UIScreenScale, height: rotatedVideoFrame.height * UIScreenScale))
+                    
                     transition.setPosition(layer: videoLayer, position: rotatedVideoFrame.center)
-                    transition.setBounds(layer: videoLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoFrame.size))
+                    transition.setBounds(layer: videoLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoBoundsSize))
                     transition.setTransform(layer: videoLayer, transform: CATransform3DMakeRotation(CGFloat(videoSpec.rotationAngle), 0.0, 0.0, 1.0))
                     videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(rotatedVideoResolution.width), height: Int(rotatedVideoResolution.height)), edgeInset: 2)
                     
                     transition.setPosition(layer: videoLayer.blurredLayer, position: rotatedBlurredVideoFrame.center)
-                    transition.setBounds(layer: videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: rotatedBlurredVideoFrame.size))
+                    transition.setBounds(layer: videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: rotatedBlurredVideoBoundsSize))
                     transition.setTransform(layer: videoLayer.blurredLayer, transform: CATransform3DMakeRotation(CGFloat(videoSpec.rotationAngle), 0.0, 0.0, 1.0))
                 }
             } else {

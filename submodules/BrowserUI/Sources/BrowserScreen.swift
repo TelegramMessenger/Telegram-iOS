@@ -1370,7 +1370,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                 inputHeight: layout.inputHeight ?? 0.0,
                 metrics: layout.metrics,
                 deviceMetrics: layout.deviceMetrics,
-                orientation: nil,
+                orientation: layout.metrics.orientation,
                 isVisible: true,
                 theme: self.presentationData.theme,
                 strings: self.presentationData.strings,

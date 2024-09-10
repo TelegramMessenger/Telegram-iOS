@@ -481,6 +481,7 @@ public class ReplaceBoostScreen: ViewController {
                 inputHeight: layout.inputHeight ?? 0.0,
                 metrics: layout.metrics,
                 deviceMetrics: layout.deviceMetrics,
+                orientation: layout.metrics.orientation,
                 isVisible: self.currentIsVisible,
                 theme: self.presentationData.theme,
                 strings: self.presentationData.strings,

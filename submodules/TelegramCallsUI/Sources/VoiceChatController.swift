@@ -2418,7 +2418,7 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                         }
                     } else {
                         if let input = (strongSelf.call as! PresentationGroupCallImpl).video(endpointId: endpointId) {
-                            if let videoView = strongSelf.videoRenderingContext.makeView(input: input) {
+                            if let videoView = strongSelf.videoRenderingContext.makeView(input: input, blur: false) {
                                 completion(GroupVideoNode(videoView: videoView, backdropVideoView: strongSelf.videoRenderingContext.makeBlurView(input: input, mainView: videoView)))
                             }
                         }
@@ -3738,7 +3738,7 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                     var isFrontCamera = true
                     let videoCapturer = OngoingCallVideoCapturer()
                     let input = videoCapturer.video()
-                    if let videoView = strongSelf.videoRenderingContext.makeView(input: input) {
+                    if let videoView = strongSelf.videoRenderingContext.makeView(input: input, blur: false) {
                         videoView.updateIsEnabled(true)
                         
                         let cameraNode = GroupVideoNode(videoView: videoView, backdropVideoView: nil)
@@ -5514,7 +5514,7 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                     self.requestedVideoSources.insert(channel.endpointId)
 
                     let input = (self.call as! PresentationGroupCallImpl).video(endpointId: channel.endpointId)
-                    if let input = input, let videoView = self.videoRenderingContext.makeView(input: input) {
+                    if let input = input, let videoView = self.videoRenderingContext.makeView(input: input, blur: false) {
                         let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: self.videoRenderingContext.makeBlurView(input: input, mainView: videoView))
 
                         self.readyVideoDisposables.set((combineLatest(videoNode.ready, .single(false) |> then(.single(true) |> delay(10.0, queue: Queue.mainQueue())))

@@ -114,6 +114,7 @@ final class VideoChatParticipantsComponent: Component {
     let layout: Layout
     let expandedInsets: UIEdgeInsets
     let safeInsets: UIEdgeInsets
+    let interfaceOrientation: UIInterfaceOrientation
     let openParticipantContextMenu: (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void
     let updateMainParticipant: (VideoParticipantKey?) -> Void
     let updateIsMainParticipantPinned: (Bool) -> Void
@@ -129,6 +130,7 @@ final class VideoChatParticipantsComponent: Component {
         layout: Layout,
         expandedInsets: UIEdgeInsets,
         safeInsets: UIEdgeInsets,
+        interfaceOrientation: UIInterfaceOrientation,
         openParticipantContextMenu: @escaping (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void,
         updateMainParticipant: @escaping (VideoParticipantKey?) -> Void,
         updateIsMainParticipantPinned: @escaping (Bool) -> Void,
@@ -143,6 +145,7 @@ final class VideoChatParticipantsComponent: Component {
         self.layout = layout
         self.expandedInsets = expandedInsets
         self.safeInsets = safeInsets
+        self.interfaceOrientation = interfaceOrientation
         self.openParticipantContextMenu = openParticipantContextMenu
         self.updateMainParticipant = updateMainParticipant
         self.updateIsMainParticipantPinned = updateIsMainParticipantPinned
@@ -172,6 +175,9 @@ final class VideoChatParticipantsComponent: Component {
             return false
         }
         if lhs.safeInsets != rhs.safeInsets {
+            return false
+        }
+        if lhs.interfaceOrientation != rhs.interfaceOrientation {
             return false
         }
         return true
@@ -857,6 +863,7 @@ final class VideoChatParticipantsComponent: Component {
                         isUIHidden: isItemUIHidden,
                         contentInsets: itemContentInsets,
                         controlInsets: itemControlInsets,
+                        interfaceOrientation: component.interfaceOrientation,
                         rootVideoLoadingEffectView: self.rootVideoLoadingEffectView,
                         action: { [weak self] in
                             guard let self, let component = self.component else {
@@ -991,7 +998,7 @@ final class VideoChatParticipantsComponent: Component {
                     }
                     
                     let rightAccessoryComponent: AnyComponent<Empty> = AnyComponent(VideoChatParticipantStatusComponent(
-                        isMuted: participant.muteState != nil,
+                        muteState: participant.muteState,
                         isSpeaking: component.speakingParticipants.contains(participant.peer.id),
                         theme: component.theme
                     ))

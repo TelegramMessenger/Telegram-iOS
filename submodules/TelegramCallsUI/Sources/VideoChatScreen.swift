@@ -1545,7 +1545,7 @@ private final class VideoChatScreenComponent: Component {
                     var isFrontCamera = true
                     let videoCapturer = OngoingCallVideoCapturer()
                     let input = videoCapturer.video()
-                    if let videoView = self.videoRenderingContext.makeView(input: input) {
+                    if let videoView = self.videoRenderingContext.makeView(input: input, blur: false) {
                         videoView.updateIsEnabled(true)
                         
                         let cameraNode = GroupVideoNode(videoView: videoView, backdropVideoView: nil)
@@ -2143,6 +2143,7 @@ private final class VideoChatScreenComponent: Component {
                     layout: participantsLayout,
                     expandedInsets: participantsExpandedInsets,
                     safeInsets: participantsSafeInsets,
+                    interfaceOrientation: environment.orientation ?? .portrait,
                     openParticipantContextMenu: { [weak self] id, sourceView, gesture in
                         guard let self else {
                             return
