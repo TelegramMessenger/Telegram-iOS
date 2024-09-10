@@ -40,7 +40,9 @@ final class VideoChatParticipantVideoComponent: Component {
     let isPresentation: Bool
     let isSpeaking: Bool
     let isExpanded: Bool
-    let bottomInset: CGFloat
+    let isUIHidden: Bool
+    let contentInsets: UIEdgeInsets
+    let controlInsets: UIEdgeInsets
     weak var rootVideoLoadingEffectView: VideoChatVideoLoadingEffectView?
     let action: (() -> Void)?
     
@@ -50,7 +52,9 @@ final class VideoChatParticipantVideoComponent: Component {
         isPresentation: Bool,
         isSpeaking: Bool,
         isExpanded: Bool,
-        bottomInset: CGFloat,
+        isUIHidden: Bool,
+        contentInsets: UIEdgeInsets,
+        controlInsets: UIEdgeInsets,
         rootVideoLoadingEffectView: VideoChatVideoLoadingEffectView?,
         action: (() -> Void)?
     ) {
@@ -59,7 +63,9 @@ final class VideoChatParticipantVideoComponent: Component {
         self.isPresentation = isPresentation
         self.isSpeaking = isSpeaking
         self.isExpanded = isExpanded
-        self.bottomInset = bottomInset
+        self.isUIHidden = isUIHidden
+        self.contentInsets = contentInsets
+        self.controlInsets = controlInsets
         self.rootVideoLoadingEffectView = rootVideoLoadingEffectView
         self.action = action
     }
@@ -77,7 +83,13 @@ final class VideoChatParticipantVideoComponent: Component {
         if lhs.isExpanded != rhs.isExpanded {
             return false
         }
-        if lhs.bottomInset != rhs.bottomInset {
+        if lhs.isUIHidden != rhs.isUIHidden {
+            return false
+        }
+        if lhs.contentInsets != rhs.contentInsets {
+            return false
+        }
+        if lhs.controlInsets != rhs.controlInsets {
             return false
         }
         if (lhs.action == nil) != (rhs.action == nil) {
@@ -153,6 +165,15 @@ final class VideoChatParticipantVideoComponent: Component {
             self.component = component
             self.componentState = state
             
+            let alphaTransition: ComponentTransition
+            if !transition.animation.isImmediate {
+                alphaTransition = .easeInOut(duration: 0.2)
+            } else {
+                alphaTransition = .immediate
+            }
+            
+            let controlsAlpha: CGFloat = component.isUIHidden ? 0.0 : 1.0
+            
             let nameColor = component.participant.peer.nameColor ?? .blue
             let nameColors = component.call.accountContext.peerNameColors.get(nameColor, dark: true)
             self.backgroundColor = nameColors.main.withMultiplied(hue: 1.0, saturation: 1.0, brightness: 0.4)
@@ -210,25 +231,26 @@ final class VideoChatParticipantVideoComponent: Component {
                 transition: transition,
                 component: AnyComponent(VideoChatMuteIconComponent(
                     color: .white,
-                    isFilled: true,
-                    isMuted: component.participant.muteState != nil
+                    content: component.isPresentation ? .screenshare : .mute(isFilled: true, isMuted: component.participant.muteState != nil && !component.isSpeaking)
                 )),
                 environment: {},
                 containerSize: CGSize(width: 36.0, height: 36.0)
             )
             let muteStatusFrame: CGRect
             if component.isExpanded {
-                muteStatusFrame = CGRect(origin: CGPoint(x: 5.0, y: availableSize.height - component.bottomInset + 1.0 - muteStatusSize.height), size: muteStatusSize)
+                muteStatusFrame = CGRect(origin: CGPoint(x: 5.0, y: availableSize.height - component.controlInsets.bottom + 1.0 - muteStatusSize.height), size: muteStatusSize)
             } else {
-                muteStatusFrame = CGRect(origin: CGPoint(x: 1.0, y: availableSize.height - component.bottomInset + 3.0 - muteStatusSize.height), size: muteStatusSize)
+                muteStatusFrame = CGRect(origin: CGPoint(x: 1.0, y: availableSize.height - component.controlInsets.bottom + 3.0 - muteStatusSize.height), size: muteStatusSize)
             }
             if let muteStatusView = self.muteStatus.view {
                 if muteStatusView.superview == nil {
                     self.addSubview(muteStatusView)
+                    muteStatusView.alpha = controlsAlpha
                 }
                 transition.setPosition(view: muteStatusView, position: muteStatusFrame.center)
                 transition.setBounds(view: muteStatusView, bounds: CGRect(origin: CGPoint(), size: muteStatusFrame.size))
                 transition.setScale(view: muteStatusView, scale: component.isExpanded ? 1.0 : 0.7)
+                alphaTransition.setAlpha(view: muteStatusView, alpha: controlsAlpha)
             }
             
             let titleSize = self.title.update(
@@ -241,18 +263,20 @@ final class VideoChatParticipantVideoComponent: Component {
             )
             let titleFrame: CGRect
             if component.isExpanded {
-                titleFrame = CGRect(origin: CGPoint(x: 36.0, y: availableSize.height - component.bottomInset - 8.0 - titleSize.height), size: titleSize)
+                titleFrame = CGRect(origin: CGPoint(x: 36.0, y: availableSize.height - component.controlInsets.bottom - 8.0 - titleSize.height), size: titleSize)
             } else {
-                titleFrame = CGRect(origin: CGPoint(x: 29.0, y: availableSize.height - component.bottomInset - 4.0 - titleSize.height), size: titleSize)
+                titleFrame = CGRect(origin: CGPoint(x: 29.0, y: availableSize.height - component.controlInsets.bottom - 4.0 - titleSize.height), size: titleSize)
             }
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.layer.anchorPoint = CGPoint()
                     self.addSubview(titleView)
+                    titleView.alpha = controlsAlpha
                 }
                 transition.setPosition(view: titleView, position: titleFrame.origin)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
                 transition.setScale(view: titleView, scale: component.isExpanded ? 1.0 : 0.825)
+                alphaTransition.setAlpha(view: titleView, alpha: controlsAlpha)
             }
             
             if let videoDescription = component.isPresentation ? component.participant.presentationDescription : component.participant.videoDescription {
@@ -397,7 +421,7 @@ final class VideoChatParticipantVideoComponent: Component {
                     let blurredVideoSize = rotatedResolution.aspectFilled(availableSize)
                     let blurredVideoFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - blurredVideoSize.width) * 0.5), y: floorToScreenPixels((availableSize.height - blurredVideoSize.height) * 0.5)), size: blurredVideoSize)
                     
-                    let videoResolution = rotatedResolution.aspectFitted(CGSize(width: availableSize.width * 3.0, height: availableSize.height * 3.0))
+                    let videoResolution = rotatedResolution
                     
                     var rotatedVideoResolution = videoResolution
                     var rotatedVideoFrame = videoFrame
@@ -408,6 +432,7 @@ final class VideoChatParticipantVideoComponent: Component {
                         rotatedVideoFrame = rotatedVideoFrame.size.centered(around: rotatedVideoFrame.center)
                         rotatedBlurredVideoFrame = rotatedBlurredVideoFrame.size.centered(around: rotatedBlurredVideoFrame.center)
                     }
+                    rotatedVideoResolution = rotatedVideoResolution.aspectFittedOrSmaller(CGSize(width: rotatedVideoFrame.width * UIScreenScale, height: rotatedVideoFrame.height * UIScreenScale))
                     
                     transition.setPosition(layer: videoLayer, position: rotatedVideoFrame.center)
                     transition.setBounds(layer: videoLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoFrame.size))

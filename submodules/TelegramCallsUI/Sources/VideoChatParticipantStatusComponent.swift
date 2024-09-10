@@ -61,8 +61,7 @@ final class VideoChatParticipantStatusComponent: Component {
                 transition: transition,
                 component: AnyComponent(VideoChatMuteIconComponent(
                     color: .white,
-                    isFilled: false,
-                    isMuted: component.isMuted && !component.isSpeaking
+                    content: .mute(isFilled: false, isMuted: component.isMuted && !component.isSpeaking)
                 )),
                 environment: {},
                 containerSize: CGSize(width: 36.0, height: 36.0)
@@ -80,7 +79,9 @@ final class VideoChatParticipantStatusComponent: Component {
                 } else {
                     tintTransition = .immediate
                 }
-                tintTransition.setTintColor(layer: muteStatusView.iconView.layer, color: component.isSpeaking ? UIColor(rgb: 0x33C758) : UIColor(white: 1.0, alpha: 0.4))
+                if let iconView = muteStatusView.iconView {
+                    tintTransition.setTintColor(layer: iconView.layer, color: component.isSpeaking ? UIColor(rgb: 0x33C758) : UIColor(white: 1.0, alpha: 0.4))
+                }
             }
             
             return size

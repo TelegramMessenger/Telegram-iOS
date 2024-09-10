@@ -6,50 +6,49 @@ import MultilineTextComponent
 import TelegramPresentationData
 import AppBundle
 import LottieComponent
+import BundleIconComponent
 
 final class VideoChatMuteIconComponent: Component {
+    enum Content: Equatable {
+        case mute(isFilled: Bool, isMuted: Bool)
+        case screenshare
+    }
+    
     let color: UIColor
-    let isFilled: Bool
-    let isMuted: Bool
+    let content: Content
 
     init(
         color: UIColor,
-        isFilled: Bool,
-        isMuted: Bool
+        content: Content
     ) {
         self.color = color
-        self.isFilled = isFilled
-        self.isMuted = isMuted
+        self.content = content
     }
 
     static func ==(lhs: VideoChatMuteIconComponent, rhs: VideoChatMuteIconComponent) -> Bool {
         if lhs.color != rhs.color {
             return false
         }
-        if lhs.isFilled != rhs.isFilled {
-            return false
-        }
-        if lhs.isMuted != rhs.isMuted {
+        if lhs.content != rhs.content {
             return false
         }
         return true
     }
 
     final class View: HighlightTrackingButton {
-        private let icon: VoiceChatMicrophoneNode
+        private var icon: VoiceChatMicrophoneNode?
+        private var scheenshareIcon: ComponentView<Empty>?
 
         private var component: VideoChatMuteIconComponent?
         private var isUpdating: Bool = false
         
         private var contentImage: UIImage?
         
-        var iconView: UIView {
-            return self.icon.view
+        var iconView: UIView? {
+            return self.icon?.view
         }
         
         override init(frame: CGRect) {
-            self.icon = VoiceChatMicrophoneNode()
-            
             super.init(frame: frame)
         }
         
@@ -65,14 +64,59 @@ final class VideoChatMuteIconComponent: Component {
             
             self.component = component
             
-            let animationSize = availableSize
-            
-            let animationFrame = animationSize.centered(in: CGRect(origin: CGPoint(), size: availableSize))
-            if self.icon.view.superview == nil {
-                self.addSubview(self.icon.view)
+            if case let .mute(isFilled, isMuted) = component.content {
+                let icon: VoiceChatMicrophoneNode
+                if let current = self.icon {
+                    icon = current
+                } else {
+                    icon = VoiceChatMicrophoneNode()
+                    self.icon = icon
+                    self.addSubview(icon.view)
+                }
+                
+                let animationSize = availableSize
+                let animationFrame = animationSize.centered(in: CGRect(origin: CGPoint(), size: availableSize))
+                transition.setFrame(view: icon.view, frame: animationFrame)
+                icon.update(state: VoiceChatMicrophoneNode.State(muted: isMuted, filled: isFilled, color: component.color), animated: !transition.animation.isImmediate)
+            } else {
+                if let icon = self.icon {
+                    self.icon = nil
+                    icon.view.removeFromSuperview()
+                }
             }
-            transition.setFrame(view: self.icon.view, frame: animationFrame)
-            self.icon.update(state: VoiceChatMicrophoneNode.State(muted: component.isMuted, filled: component.isFilled, color: component.color), animated: !transition.animation.isImmediate)
+            
+            if case .screenshare = component.content {
+                let scheenshareIcon: ComponentView<Empty>
+                if let current = self.scheenshareIcon {
+                    scheenshareIcon = current
+                } else {
+                    scheenshareIcon = ComponentView()
+                    self.scheenshareIcon = scheenshareIcon
+                }
+                let scheenshareIconSize = scheenshareIcon.update(
+                    transition: transition,
+                    component: AnyComponent(BundleIconComponent(
+                        name: "Call/StatusScreen",
+                        tintColor: component.color
+                    )),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                let scheenshareIconFrame = scheenshareIconSize.centered(in: CGRect(origin: CGPoint(), size: availableSize))
+                if let scheenshareIconView = scheenshareIcon.view {
+                    if scheenshareIconView.superview == nil {
+                        self.addSubview(scheenshareIconView)
+                    }
+                    transition.setPosition(view: scheenshareIconView, position: scheenshareIconFrame.center)
+                    transition.setBounds(view: scheenshareIconView, bounds: CGRect(origin: CGPoint(), size: scheenshareIconFrame.size))
+                    transition.setScale(view: scheenshareIconView, scale: 1.5)
+                }
+            } else {
+                if let scheenshareIcon = self.scheenshareIcon {
+                    self.scheenshareIcon = nil
+                    scheenshareIcon.view?.removeFromSuperview()
+                }
+            }
             
             return availableSize
         }
