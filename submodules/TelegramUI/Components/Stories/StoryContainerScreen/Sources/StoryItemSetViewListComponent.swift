@@ -589,7 +589,7 @@ final class StoryItemSetViewListComponent: Component {
                             message: item.message,
                             selectionState: .none,
                             hasNext: index != viewListState.totalCount - 1 || itemLayout.premiumFooterSize != nil,
-                            action: { [weak self] peer, messageId, sourceView in
+                            action: { [weak self] peer, messageId, itemView in
                                 guard let self, let component = self.component else {
                                     return
                                 }
@@ -598,7 +598,7 @@ final class StoryItemSetViewListComponent: Component {
                                 }
                                 if let messageId {
                                     component.openMessage(peer, messageId)
-                                } else if let storyItem, let sourceView {
+                                } else if let storyItem, let sourceView = itemView.imageNode?.view {
                                     component.openReposts(peer, storyItem.id, sourceView)
                                 } else {
                                     component.openPeer(peer)

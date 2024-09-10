@@ -114,6 +114,7 @@ final class VideoChatParticipantsComponent: Component {
     let layout: Layout
     let expandedInsets: UIEdgeInsets
     let safeInsets: UIEdgeInsets
+    let openParticipantContextMenu: (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void
     let updateMainParticipant: (VideoParticipantKey?) -> Void
     let updateIsMainParticipantPinned: (Bool) -> Void
     let updateIsExpandedUIHidden: (Bool) -> Void
@@ -128,6 +129,7 @@ final class VideoChatParticipantsComponent: Component {
         layout: Layout,
         expandedInsets: UIEdgeInsets,
         safeInsets: UIEdgeInsets,
+        openParticipantContextMenu: @escaping (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void,
         updateMainParticipant: @escaping (VideoParticipantKey?) -> Void,
         updateIsMainParticipantPinned: @escaping (Bool) -> Void,
         updateIsExpandedUIHidden: @escaping (Bool) -> Void
@@ -141,6 +143,7 @@ final class VideoChatParticipantsComponent: Component {
         self.layout = layout
         self.expandedInsets = expandedInsets
         self.safeInsets = safeInsets
+        self.openParticipantContextMenu = openParticipantContextMenu
         self.updateMainParticipant = updateMainParticipant
         self.updateIsMainParticipantPinned = updateIsMainParticipantPinned
         self.updateIsExpandedUIHidden = updateIsExpandedUIHidden
@@ -1015,12 +1018,21 @@ final class VideoChatParticipantsComponent: Component {
                             rightAccessoryComponent: rightAccessoryComponent,
                             selectionState: .none,
                             hasNext: false,
-                            action: { [weak self] peer, _, _ in
-                                guard let self else {
+                            extractedTheme: PeerListItemComponent.ExtractedTheme(
+                                inset: 2.0,
+                                background: UIColor(white: 0.1, alpha: 1.0)
+                            ),
+                            action: { [weak self] peer, _, itemView in
+                                guard let self, let component = self.component else {
                                     return
                                 }
-                                let _ = self
-                                let _ = peer
+                                component.openParticipantContextMenu(peer.id, itemView.extractedContainerView, nil)
+                            },
+                            contextAction: { [weak self] peer, sourceView, gesture in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.openParticipantContextMenu(peer.id, sourceView, gesture)
                             }
                         )),
                         environment: {},
@@ -1381,7 +1393,7 @@ final class VideoChatParticipantsComponent: Component {
                             gridParticipants.append(videoParticipant)
                         }
                     }
-                    if !hasVideo {
+                    if !hasVideo || component.layout.videoColumn != nil {
                         if participant.peer.id == component.call.accountContext.account.peerId {
                             listParticipants.insert(participant, at: 0)
                         } else {

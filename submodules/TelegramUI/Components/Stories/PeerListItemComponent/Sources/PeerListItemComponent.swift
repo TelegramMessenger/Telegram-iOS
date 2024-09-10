@@ -180,6 +180,29 @@ public final class PeerListItemComponent: Component {
         }
     }
     
+    public final class ExtractedTheme: Equatable {
+        public let inset: CGFloat
+        public let background: UIColor
+        
+        public init(inset: CGFloat, background: UIColor) {
+            self.inset = inset
+            self.background = background
+        }
+        
+        public static func ==(lhs: ExtractedTheme, rhs: ExtractedTheme) -> Bool {
+            if lhs === rhs {
+                return true
+            }
+            if lhs.inset != rhs.inset {
+                return false
+            }
+            if lhs.background != rhs.background {
+                return false
+            }
+            return true
+        }
+    }
+    
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
@@ -202,7 +225,8 @@ public final class PeerListItemComponent: Component {
     let selectionPosition: SelectionPosition
     let isEnabled: Bool
     let hasNext: Bool
-    let action: (EnginePeer, EngineMessage.Id?, UIView?) -> Void
+    let extractedTheme: ExtractedTheme?
+    let action: (EnginePeer, EngineMessage.Id?, PeerListItemComponent.View) -> Void
     let inlineActions: InlineActionsState?
     let contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     let openStories: ((EnginePeer, AvatarNode) -> Void)?
@@ -230,7 +254,8 @@ public final class PeerListItemComponent: Component {
         selectionPosition: SelectionPosition = .left,
         isEnabled: Bool = true,
         hasNext: Bool,
-        action: @escaping (EnginePeer, EngineMessage.Id?, UIView?) -> Void,
+        extractedTheme: ExtractedTheme? = nil,
+        action: @escaping (EnginePeer, EngineMessage.Id?, PeerListItemComponent.View) -> Void,
         inlineActions: InlineActionsState? = nil,
         contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)? = nil,
         openStories: ((EnginePeer, AvatarNode) -> Void)? = nil
@@ -257,6 +282,7 @@ public final class PeerListItemComponent: Component {
         self.selectionPosition = selectionPosition
         self.isEnabled = isEnabled
         self.hasNext = hasNext
+        self.extractedTheme = extractedTheme
         self.action = action
         self.inlineActions = inlineActions
         self.contextAction = contextAction
@@ -337,7 +363,7 @@ public final class PeerListItemComponent: Component {
     }
     
     public final class View: ContextControllerSourceView, ListSectionComponent.ChildView {
-        private let extractedContainerView: ContextExtractedContentContainingView
+        public let extractedContainerView: ContextExtractedContentContainingView
         private let containerButton: HighlightTrackingButton
         
         private let swipeOptionContainer: ListItemSwipeOptionContainer
@@ -432,8 +458,16 @@ public final class PeerListItemComponent: Component {
                 guard let self, let component = self.component else {
                     return
                 }
+                
+                let extractedBackgroundColor: UIColor
+                if let extractedTheme = component.extractedTheme {
+                    extractedBackgroundColor = extractedTheme.background
+                } else {
+                    extractedBackgroundColor = component.theme.rootController.navigationBar.blurredBackgroundColor
+                }
+                
                 self.containerButton.clipsToBounds = value
-                self.containerButton.backgroundColor = value ? component.theme.rootController.navigationBar.blurredBackgroundColor : nil
+                self.containerButton.backgroundColor = value ? extractedBackgroundColor : nil
                 self.containerButton.layer.cornerRadius = value ? 10.0 : 0.0
             }
             self.extractedContainerView.willUpdateIsExtractedToContextPreview = { [weak self] value, transition in
@@ -500,7 +534,7 @@ public final class PeerListItemComponent: Component {
             guard let component = self.component, let peer = component.peer else {
                 return
             }
-            component.action(peer, component.message?.id, self.imageNode?.view)
+            component.action(peer, component.message?.id, self)
         }
         
         @objc private func avatarButtonPressed() {
@@ -620,7 +654,16 @@ public final class PeerListItemComponent: Component {
                 labelData = ("", .neutral)
             }
             
-            let contextInset: CGFloat = self.isExtractedToContextMenu ? 12.0 : 0.0
+            let contextInset: CGFloat
+            if self.isExtractedToContextMenu {
+                if let extractedTheme = component.extractedTheme {
+                    contextInset = extractedTheme.inset
+                } else {
+                    contextInset = 12.0
+                }
+            } else {
+                contextInset = 0.0
+            }
             
             let height: CGFloat
             let titleFont: UIFont
@@ -1104,10 +1147,11 @@ public final class PeerListItemComponent: Component {
             if let rightAccessoryComponentViewImpl = self.rightAccessoryComponentView?.view, let rightAccessoryComponentSize {
                 var rightAccessoryComponentTransition = transition
                 if rightAccessoryComponentViewImpl.superview == nil {
+                    rightAccessoryComponentViewImpl.isUserInteractionEnabled = false
                     rightAccessoryComponentTransition = rightAccessoryComponentTransition.withAnimation(.none)
                     self.containerButton.addSubview(rightAccessoryComponentViewImpl)
                 }
-                rightAccessoryComponentTransition.setFrame(view: rightAccessoryComponentViewImpl, frame: CGRect(origin: CGPoint(x: availableSize.width - rightAccessoryComponentSize.width, y: floor((height - verticalInset * 2.0 - rightAccessoryComponentSize.width) / 2.0)), size: rightAccessoryComponentSize))
+                rightAccessoryComponentTransition.setFrame(view: rightAccessoryComponentViewImpl, frame: CGRect(origin: CGPoint(x: availableSize.width - (contextInset * 2.0 + component.sideInset) - rightAccessoryComponentSize.width, y: floor((height - verticalInset * 2.0 - rightAccessoryComponentSize.width) / 2.0)), size: rightAccessoryComponentSize))
             }
             
             var reactionIconTransition = transition
