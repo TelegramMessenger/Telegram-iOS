@@ -102,7 +102,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case playlistPlayback(Bool)
     case enableQuickReactionSwitch(Bool)
     case disableReloginTokens(Bool)
-    case callV2(Bool)
+    case disableCallV2(Bool)
     case experimentalCallMute(Bool)
     case liveStreamV2(Bool)
     case preferredVideoCodec(Int, String, String?, Bool)
@@ -129,7 +129,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .dustEffect, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .callV2, .experimentalCallMute, .liveStreamV2:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .disableCallV2, .experimentalCallMute, .liveStreamV2:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -242,7 +242,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 49
         case .enableQuickReactionSwitch:
             return 50
-        case .callV2:
+        case .disableCallV2:
             return 51
         case .experimentalCallMute:
             return 52
@@ -1318,12 +1318,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .callV2(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "[WIP] Video Chat V2", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .disableCallV2(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Disable Video Chat V2", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.callV2 = value
+                        settings.disableCallV2 = value
                         return PreferencesEntry(settings)
                     })
                 }).start()
@@ -1502,7 +1502,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         }
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
         entries.append(.enableQuickReactionSwitch(!experimentalSettings.disableQuickReaction))
-        entries.append(.callV2(experimentalSettings.callV2))
+        entries.append(.disableCallV2(experimentalSettings.disableCallV2))
         entries.append(.experimentalCallMute(experimentalSettings.experimentalCallMute))
         entries.append(.liveStreamV2(experimentalSettings.liveStreamV2))
     }

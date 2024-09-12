@@ -3,24 +3,25 @@ import UIKit
 import Display
 import ComponentFlow
 import TelegramPresentationData
+import TelegramCore
 
 final class VideoChatParticipantStatusComponent: Component {
-    let isMuted: Bool
+    let muteState: GroupCallParticipantsContext.Participant.MuteState?
     let isSpeaking: Bool
     let theme: PresentationTheme
 
     init(
-        isMuted: Bool,
+        muteState: GroupCallParticipantsContext.Participant.MuteState?,
         isSpeaking: Bool,
         theme: PresentationTheme
     ) {
-        self.isMuted = isMuted
+        self.muteState = muteState
         self.isSpeaking = isSpeaking
         self.theme = theme
     }
 
     static func ==(lhs: VideoChatParticipantStatusComponent, rhs: VideoChatParticipantStatusComponent) -> Bool {
-        if lhs.isMuted != rhs.isMuted {
+        if lhs.muteState != rhs.muteState {
             return false
         }
         if lhs.isSpeaking != rhs.isSpeaking {
@@ -61,8 +62,7 @@ final class VideoChatParticipantStatusComponent: Component {
                 transition: transition,
                 component: AnyComponent(VideoChatMuteIconComponent(
                     color: .white,
-                    isFilled: false,
-                    isMuted: component.isMuted && !component.isSpeaking
+                    content: .mute(isFilled: false, isMuted: component.muteState != nil && !component.isSpeaking)
                 )),
                 environment: {},
                 containerSize: CGSize(width: 36.0, height: 36.0)
@@ -80,7 +80,24 @@ final class VideoChatParticipantStatusComponent: Component {
                 } else {
                     tintTransition = .immediate
                 }
-                tintTransition.setTintColor(layer: muteStatusView.iconView.layer, color: component.isSpeaking ? UIColor(rgb: 0x33C758) : UIColor(white: 1.0, alpha: 0.4))
+                if let iconView = muteStatusView.iconView {
+                    let iconTintColor: UIColor
+                    if component.isSpeaking {
+                        iconTintColor = UIColor(rgb: 0x33C758)
+                    } else {
+                        if let muteState = component.muteState {
+                            if muteState.canUnmute {
+                                iconTintColor = UIColor(white: 1.0, alpha: 0.4)
+                            } else {
+                                iconTintColor = UIColor(rgb: 0xFF3B30)
+                            }
+                        } else {
+                            iconTintColor = UIColor(white: 1.0, alpha: 0.4)
+                        }
+                    }
+                    
+                    tintTransition.setTintColor(layer: iconView.layer, color: iconTintColor)
+                }
             }
             
             return size

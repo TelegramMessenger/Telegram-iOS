@@ -2418,7 +2418,7 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                         }
                     } else {
                         if let input = (strongSelf.call as! PresentationGroupCallImpl).video(endpointId: endpointId) {
-                            if let videoView = strongSelf.videoRenderingContext.makeView(input: input) {
+                            if let videoView = strongSelf.videoRenderingContext.makeView(input: input, blur: false) {
                                 completion(GroupVideoNode(videoView: videoView, backdropVideoView: strongSelf.videoRenderingContext.makeBlurView(input: input, mainView: videoView)))
                             }
                         }
@@ -3738,7 +3738,7 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                     var isFrontCamera = true
                     let videoCapturer = OngoingCallVideoCapturer()
                     let input = videoCapturer.video()
-                    if let videoView = strongSelf.videoRenderingContext.makeView(input: input) {
+                    if let videoView = strongSelf.videoRenderingContext.makeView(input: input, blur: false) {
                         videoView.updateIsEnabled(true)
                         
                         let cameraNode = GroupVideoNode(videoView: videoView, backdropVideoView: nil)
@@ -5514,7 +5514,7 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                     self.requestedVideoSources.insert(channel.endpointId)
 
                     let input = (self.call as! PresentationGroupCallImpl).video(endpointId: channel.endpointId)
-                    if let input = input, let videoView = self.videoRenderingContext.makeView(input: input) {
+                    if let input = input, let videoView = self.videoRenderingContext.makeView(input: input, blur: false) {
                         let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: self.videoRenderingContext.makeBlurView(input: input, mainView: videoView))
 
                         self.readyVideoDisposables.set((combineLatest(videoNode.ready, .single(false) |> then(.single(true) |> delay(10.0, queue: Queue.mainQueue())))
@@ -7097,8 +7097,21 @@ final class VoiceChatContextReferenceContentSource: ContextReferenceContentSourc
     }
 }
 
+private func calculateUseV2(context: AccountContext) -> Bool {
+    var useV2 = true
+    if context.sharedContext.immediateExperimentalUISettings.disableCallV2 {
+        useV2 = false
+    }
+    if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_videochatui_v2"] {
+        useV2 = false
+    }
+    return useV2
+}
+
 public func makeVoiceChatControllerInitialData(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall) -> Signal<Any, NoError> {
-    if sharedContext.immediateExperimentalUISettings.callV2 {
+    let useV2 = calculateUseV2(context: accountContext)
+    
+    if useV2 {
         return VideoChatScreenV2Impl.initialData(call: call) |> map { $0 as Any }
     } else {
         return .single(Void())
@@ -7106,7 +7119,9 @@ public func makeVoiceChatControllerInitialData(sharedContext: SharedAccountConte
 }
 
 public func makeVoiceChatController(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall, initialData: Any) -> VoiceChatController {
-    if sharedContext.immediateExperimentalUISettings.callV2 {
+    let useV2 = calculateUseV2(context: accountContext)
+    
+    if useV2 {
         return VideoChatScreenV2Impl(initialData: initialData as! VideoChatScreenV2Impl.InitialData, call: call)
     } else {
         return VoiceChatControllerImpl(sharedContext: sharedContext, accountContext: accountContext, call: call)

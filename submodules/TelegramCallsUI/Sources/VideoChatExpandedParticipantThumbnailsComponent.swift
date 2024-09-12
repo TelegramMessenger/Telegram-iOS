@@ -134,10 +134,14 @@ final class VideoChatParticipantThumbnailComponent: Component {
             if transition.animation.isImmediate {
                 speakingAlphaTransition = .immediate
             } else {
-                if !wasSpeaking {
-                    speakingAlphaTransition = .easeInOut(duration: 0.1)
+                if let previousComponent, previousComponent.isSelected == component.isSelected {
+                    if !wasSpeaking {
+                        speakingAlphaTransition = .easeInOut(duration: 0.1)
+                    } else {
+                        speakingAlphaTransition = .easeInOut(duration: 0.25)
+                    }
                 } else {
-                    speakingAlphaTransition = .easeInOut(duration: 0.25)
+                    speakingAlphaTransition = .immediate
                 }
             }
             
@@ -168,8 +172,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
                 transition: transition,
                 component: AnyComponent(VideoChatMuteIconComponent(
                     color: .white,
-                    isFilled: true,
-                    isMuted: component.participant.muteState != nil
+                    content: component.isPresentation ? .screenshare : .mute(isFilled: true, isMuted: component.participant.muteState != nil && !component.isSpeaking)
                 )),
                 environment: {},
                 containerSize: CGSize(width: 36.0, height: 36.0)
@@ -182,8 +185,6 @@ final class VideoChatParticipantThumbnailComponent: Component {
                 transition.setPosition(view: muteStatusView, position: muteStatusFrame.center)
                 transition.setBounds(view: muteStatusView, bounds: CGRect(origin: CGPoint(), size: muteStatusFrame.size))
                 transition.setScale(view: muteStatusView, scale: 0.65)
-                
-                speakingAlphaTransition.setTintColor(layer: muteStatusView.iconView.layer, color: component.isSpeaking ? UIColor(rgb: 0x33C758) : .white)
             }
             
             let titleSize = self.title.update(
@@ -203,8 +204,6 @@ final class VideoChatParticipantThumbnailComponent: Component {
                 }
                 transition.setPosition(view: titleView, position: titleFrame.origin)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
-                
-                speakingAlphaTransition.setTintColor(layer: titleView.layer, color: component.isSpeaking ? UIColor(rgb: 0x33C758) : .white)
             }
             
             if let videoDescription = component.isPresentation ? component.participant.presentationDescription : component.participant.videoDescription {
@@ -289,20 +288,26 @@ final class VideoChatParticipantThumbnailComponent: Component {
                     var rotatedVideoResolution = videoResolution
                     var rotatedVideoFrame = videoFrame
                     var rotatedBlurredVideoFrame = blurredVideoFrame
+                    var rotatedVideoBoundsSize = videoFrame.size
+                    var rotatedBlurredVideoBoundsSize = blurredVideoFrame.size
                     
                     if videoIsRotated {
-                        rotatedVideoResolution = CGSize(width: rotatedVideoResolution.height, height: rotatedVideoResolution.width)
+                        rotatedVideoBoundsSize = CGSize(width: rotatedVideoBoundsSize.height, height: rotatedVideoBoundsSize.width)
                         rotatedVideoFrame = rotatedVideoFrame.size.centered(around: rotatedVideoFrame.center)
+                        
+                        rotatedBlurredVideoBoundsSize = CGSize(width: rotatedBlurredVideoBoundsSize.height, height: rotatedBlurredVideoBoundsSize.width)
                         rotatedBlurredVideoFrame = rotatedBlurredVideoFrame.size.centered(around: rotatedBlurredVideoFrame.center)
                     }
                     
+                    rotatedVideoResolution = rotatedVideoResolution.aspectFittedOrSmaller(CGSize(width: rotatedVideoFrame.width * UIScreenScale, height: rotatedVideoFrame.height * UIScreenScale))
+                    
                     transition.setPosition(layer: videoLayer, position: rotatedVideoFrame.center)
-                    transition.setBounds(layer: videoLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoFrame.size))
+                    transition.setBounds(layer: videoLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoBoundsSize))
                     transition.setTransform(layer: videoLayer, transform: CATransform3DMakeRotation(CGFloat(videoSpec.rotationAngle), 0.0, 0.0, 1.0))
                     videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(rotatedVideoResolution.width), height: Int(rotatedVideoResolution.height)), edgeInset: 2)
                     
                     transition.setPosition(layer: videoLayer.blurredLayer, position: rotatedBlurredVideoFrame.center)
-                    transition.setBounds(layer: videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: rotatedBlurredVideoFrame.size))
+                    transition.setBounds(layer: videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: rotatedBlurredVideoBoundsSize))
                     transition.setTransform(layer: videoLayer.blurredLayer, transform: CATransform3DMakeRotation(CGFloat(videoSpec.rotationAngle), 0.0, 0.0, 1.0))
                 }
             } else {
@@ -330,11 +335,13 @@ final class VideoChatParticipantThumbnailComponent: Component {
                 } else {
                     selectedBorderView = UIImageView()
                     self.selectedBorderView = selectedBorderView
+                    selectedBorderView.alpha = 0.0
                     self.addSubview(selectedBorderView)
                     selectedBorderView.image = View.selectedBorderImage
                     
                     selectedBorderView.frame = CGRect(origin: CGPoint(), size: availableSize)
                     
+                    speakingAlphaTransition.setAlpha(view: selectedBorderView, alpha: 1.0)
                     ComponentTransition.immediate.setTintColor(layer: selectedBorderView.layer, color: component.isSpeaking ? UIColor(rgb: 0x33C758) : component.theme.list.itemAccentColor)
                 }
             } else if let selectedBorderView = self.selectedBorderView {
