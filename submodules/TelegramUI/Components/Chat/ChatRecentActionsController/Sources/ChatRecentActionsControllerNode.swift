@@ -188,27 +188,29 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                     return true
                                 }
                             case let .editExportedInvitation(_, invite), let .revokeExportedInvitation(invite), let .deleteExportedInvitation(invite), let .participantJoinedViaInvite(invite, _), let .participantJoinByRequest(invite, _):
-                                if let inviteLink = invite.link, !inviteLink.hasSuffix("...") {
+                                if let inviteLink = invite.link {
                                     if invite.isPermanent {
-                                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                                        
-                                        var items: [ActionSheetItem] = []
-                                        items.append(ActionSheetTextItem(title: inviteLink))
-                                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.InviteLink_ContextRevoke, color: .destructive, action: { [weak actionSheet] in
-                                            actionSheet?.dismissAnimated()
-                                            if let strongSelf = self {
-                                                let _ = (strongSelf.context.engine.peers.revokePeerExportedInvitation(peerId: peer.id, link: inviteLink)
-                                                |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
-                                                    self?.eventLogContext.reload()
-                                                })
-                                            }
-                                        }))
-                                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                        if !inviteLink.hasSuffix("...") {
+                                            let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                                            
+                                            var items: [ActionSheetItem] = []
+                                            items.append(ActionSheetTextItem(title: inviteLink))
+                                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.InviteLink_ContextRevoke, color: .destructive, action: { [weak actionSheet] in
                                                 actionSheet?.dismissAnimated()
-                                            })
-                                        ])])
-                                        strongSelf.presentController(actionSheet, .window(.root), nil)
+                                                if let strongSelf = self {
+                                                    let _ = (strongSelf.context.engine.peers.revokePeerExportedInvitation(peerId: peer.id, link: inviteLink)
+                                                    |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
+                                                        self?.eventLogContext.reload()
+                                                    })
+                                                }
+                                            }))
+                                            actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                                    actionSheet?.dismissAnimated()
+                                                })
+                                            ])])
+                                            strongSelf.presentController(actionSheet, .window(.root), nil)
+                                        }
                                     } else {
                                         let controller = InviteLinkViewController(
                                             context: strongSelf.context,

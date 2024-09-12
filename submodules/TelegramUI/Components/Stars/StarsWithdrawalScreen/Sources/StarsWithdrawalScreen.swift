@@ -348,7 +348,7 @@ private final class SheetContent: CombinedComponent {
                         }
                     }
                 ),
-                availableSize: CGSize(width: 361.0, height: 50),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50),
                 transition: .immediate
             )
             context.add(button

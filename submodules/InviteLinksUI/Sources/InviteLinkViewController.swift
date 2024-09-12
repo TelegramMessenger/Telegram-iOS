@@ -268,7 +268,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                     } else {
                         interaction.shareLink(invite)
                     }
-                }, contextAction: { node, gesture in
+                }, contextAction: invite.link?.hasSuffix("...") == true ? nil : { node, gesture in
                     interaction.contextAction(invite, node, gesture)
                 }, viewAction: {
                 })

@@ -566,6 +566,7 @@ private func parseDetails(_ item: [String: Any], _ url: String, _ media: inout [
     )
 }
 
+private let nonListCharacters = CharacterSet(charactersIn: "0123456789").inverted
 private func parseList(_ input: [String: Any], _ url: String, _ media: inout [MediaId: Media]) -> InstantPageBlock? {
     guard let content = input["content"] as? [Any], let tag = input["tag"] as? String else {
         return nil
@@ -598,7 +599,10 @@ private func parseList(_ input: [String: Any], _ url: String, _ media: inout [Me
         if case let .text(text, _) = item {
             if case .empty = text {
             } else {
-                allEmpty = false
+                let plainText = text.plainText
+                if !plainText.isEmpty && plainText.rangeOfCharacter(from: nonListCharacters) != nil {
+                    allEmpty = false
+                }
                 break
             }
         } else {

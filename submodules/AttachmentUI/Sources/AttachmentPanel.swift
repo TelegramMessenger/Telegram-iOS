@@ -610,6 +610,12 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         
         self.setupShimmering()
         
+        let colorUpdated = previousState.textColor != state.textColor
+        if let progressNode = self.progressNode, colorUpdated {
+            let diameter: CGFloat = size.height - 22.0
+            progressNode.image = generateIndefiniteActivityIndicatorImage(color: state.textColor, diameter: diameter, lineWidth: 3.0)
+        }
+        
         if let text = state.text {
             let font: UIFont
             switch state.font {
