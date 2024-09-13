@@ -99,7 +99,8 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 result.append(.ImageSize(size: PixelDimensions(width: w, height: h)))
             case .documentAttributeAnimated:
                 result.append(.Animated)
-            case let .documentAttributeVideo(flags, duration, w, h, preloadSize, videoStart):
+            case let .documentAttributeVideo(flags, duration, w, h, preloadSize, videoStart, codec):
+                let _ = codec
                 var videoFlags = TelegramMediaVideoFlags()
                 if (flags & (1 << 0)) != 0 {
                     videoFlags.insert(.instantRoundVideo)

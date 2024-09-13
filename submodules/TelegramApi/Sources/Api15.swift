@@ -710,7 +710,7 @@ public extension Api {
     indirect enum MessageMedia: TypeConstructorDescription {
         case messageMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String, userId: Int64)
         case messageMediaDice(value: Int32, emoticon: String)
-        case messageMediaDocument(flags: Int32, document: Api.Document?, altDocument: Api.Document?, ttlSeconds: Int32?)
+        case messageMediaDocument(flags: Int32, document: Api.Document?, altDocuments: [Api.Document]?, ttlSeconds: Int32?)
         case messageMediaEmpty
         case messageMediaGame(game: Api.Game)
         case messageMediaGeo(geo: Api.GeoPoint)
@@ -745,13 +745,17 @@ public extension Api {
                     serializeInt32(value, buffer: buffer, boxed: false)
                     serializeString(emoticon, buffer: buffer, boxed: false)
                     break
-                case .messageMediaDocument(let flags, let document, let altDocument, let ttlSeconds):
+                case .messageMediaDocument(let flags, let document, let altDocuments, let ttlSeconds):
                     if boxed {
-                        buffer.appendInt32(1291114285)
+                        buffer.appendInt32(-581497899)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {document!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 5) != 0 {altDocument!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 5) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(altDocuments!.count))
+                    for item in altDocuments! {
+                        item.serialize(buffer, true)
+                    }}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(ttlSeconds!, buffer: buffer, boxed: false)}
                     break
                 case .messageMediaEmpty:
@@ -905,8 +909,8 @@ public extension Api {
                 return ("messageMediaContact", [("phoneNumber", phoneNumber as Any), ("firstName", firstName as Any), ("lastName", lastName as Any), ("vcard", vcard as Any), ("userId", userId as Any)])
                 case .messageMediaDice(let value, let emoticon):
                 return ("messageMediaDice", [("value", value as Any), ("emoticon", emoticon as Any)])
-                case .messageMediaDocument(let flags, let document, let altDocument, let ttlSeconds):
-                return ("messageMediaDocument", [("flags", flags as Any), ("document", document as Any), ("altDocument", altDocument as Any), ("ttlSeconds", ttlSeconds as Any)])
+                case .messageMediaDocument(let flags, let document, let altDocuments, let ttlSeconds):
+                return ("messageMediaDocument", [("flags", flags as Any), ("document", document as Any), ("altDocuments", altDocuments as Any), ("ttlSeconds", ttlSeconds as Any)])
                 case .messageMediaEmpty:
                 return ("messageMediaEmpty", [])
                 case .messageMediaGame(let game):
@@ -982,9 +986,9 @@ public extension Api {
             if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
                 _2 = Api.parse(reader, signature: signature) as? Api.Document
             } }
-            var _3: Api.Document?
-            if Int(_1!) & Int(1 << 5) != 0 {if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.Document
+            var _3: [Api.Document]?
+            if Int(_1!) & Int(1 << 5) != 0 {if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
             } }
             var _4: Int32?
             if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
@@ -993,7 +997,7 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 5) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
-                return Api.MessageMedia.messageMediaDocument(flags: _1!, document: _2, altDocument: _3, ttlSeconds: _4)
+                return Api.MessageMedia.messageMediaDocument(flags: _1!, document: _2, altDocuments: _3, ttlSeconds: _4)
             }
             else {
                 return nil

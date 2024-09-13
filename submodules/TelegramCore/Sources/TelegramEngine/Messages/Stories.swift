@@ -2096,7 +2096,7 @@ extension Stories.StoredItem {
                 var parsedAlternativeMedia: Media?
                 switch media {
                 case let .messageMediaDocument(_, _, altDocument, _):
-                    if let altDocument = altDocument {
+                    if let altDocument = altDocument?.first {
                         parsedAlternativeMedia = telegramMediaFileFromApiDocument(altDocument)
                     }
                 default:

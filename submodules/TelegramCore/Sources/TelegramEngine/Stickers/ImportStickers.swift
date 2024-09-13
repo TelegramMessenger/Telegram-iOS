@@ -80,7 +80,7 @@ func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResour
                             var attributes: [Api.DocumentAttribute] = []
                             attributes.append(.documentAttributeSticker(flags: 0, alt: alt, stickerset: .inputStickerSetEmpty, maskCoords: nil))
                             if let duration {
-                                attributes.append(.documentAttributeVideo(flags: 0, duration: duration, w: dimensions.width, h: dimensions.height, preloadPrefixSize: nil, videoStartTs: nil))
+                                attributes.append(.documentAttributeVideo(flags: 0, duration: duration, w: dimensions.width, h: dimensions.height, preloadPrefixSize: nil, videoStartTs: nil, videoCodec: nil))
                             }
                             attributes.append(.documentAttributeImageSize(w: dimensions.width, h: dimensions.height))
                             return account.network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: file, thumb: thumbnailFile, mimeType: mimeType, attributes: attributes, stickers: nil, ttlSeconds: nil)))
