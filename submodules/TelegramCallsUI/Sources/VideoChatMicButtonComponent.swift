@@ -179,23 +179,27 @@ final class VideoChatMicButtonComponent: Component {
         case connecting
         case muted
         case unmuted(pushToTalk: Bool)
+        case raiseHand
     }
     
     let call: PresentationGroupCall
     let content: Content
     let isCollapsed: Bool
     let updateUnmutedStateIsPushToTalk: (Bool?) -> Void
+    let raiseHand: () -> Void
 
     init(
         call: PresentationGroupCall,
         content: Content,
         isCollapsed: Bool,
-        updateUnmutedStateIsPushToTalk: @escaping (Bool?) -> Void
+        updateUnmutedStateIsPushToTalk: @escaping (Bool?) -> Void,
+        raiseHand: @escaping () -> Void
     ) {
         self.call = call
         self.content = content
         self.isCollapsed = isCollapsed
         self.updateUnmutedStateIsPushToTalk = updateUnmutedStateIsPushToTalk
+        self.raiseHand = raiseHand
     }
 
     static func ==(lhs: VideoChatMicButtonComponent, rhs: VideoChatMicButtonComponent) -> Bool {
@@ -241,13 +245,11 @@ final class VideoChatMicButtonComponent: Component {
             self.beginTrackingTimestamp = CFAbsoluteTimeGetCurrent()
             if let component = self.component {
                 switch component.content {
-                case .connecting:
+                case .connecting, .unmuted, .raiseHand:
                     self.beginTrackingWasPushToTalk = false
                 case .muted:
                     self.beginTrackingWasPushToTalk = true
                     component.updateUnmutedStateIsPushToTalk(true)
-                case .unmuted:
-                    self.beginTrackingWasPushToTalk = false
                 }
             }
             
@@ -285,6 +287,10 @@ final class VideoChatMicButtonComponent: Component {
                     } else {
                         component.updateUnmutedStateIsPushToTalk(nil)
                     }
+                case .raiseHand:
+                    self.icon.playRandomAnimation()
+                    
+                    component.raiseHand()
                 }
             }
         }
@@ -314,6 +320,8 @@ final class VideoChatMicButtonComponent: Component {
                 titleText = "Unmute"
             case let .unmuted(isPushToTalk):
                 titleText = isPushToTalk ? "You are Live" : "Tap to Mute"
+            case .raiseHand:
+                titleText = "Raise Hand"
             }
             self.isEnabled = isEnabled
             
@@ -382,10 +390,12 @@ final class VideoChatMicButtonComponent: Component {
                     case .connecting:
                         context.setFillColor(UIColor(white: 0.1, alpha: 1.0).cgColor)
                         context.fill(CGRect(origin: CGPoint(), size: size))
-                    case .muted, .unmuted:
+                    case .muted, .unmuted, .raiseHand:
                         let colors: [UIColor]
                         if case .muted = component.content {
                             colors = [UIColor(rgb: 0x0080FF), UIColor(rgb: 0x00A1FE)]
+                        } else if case .raiseHand = component.content {
+                            colors = [UIColor(rgb: 0x3252EF), UIColor(rgb: 0xC64688)]
                         } else {
                             colors = [UIColor(rgb: 0x33C659), UIColor(rgb: 0x0BA8A5)]
                         }
@@ -465,10 +475,12 @@ final class VideoChatMicButtonComponent: Component {
                 self.icon.enqueueState(.mute)
             case .unmuted:
                 self.icon.enqueueState(.unmute)
+            case .raiseHand:
+                self.icon.enqueueState(.hand)
             }
             
             switch component.content {
-            case .muted, .unmuted:
+            case .muted, .unmuted, .raiseHand:
                 let blobSize = CGRect(origin: CGPoint(), size: CGSize(width: 116.0, height: 116.0)).insetBy(dx: -40.0, dy: -40.0).size
                 
                 let blobTintTransition: ComponentTransition
@@ -495,7 +507,15 @@ final class VideoChatMicButtonComponent: Component {
                 transition.setPosition(view: blobView, position: CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5))
                 transition.setScale(view: blobView, scale: availableSize.width / 116.0)
                 
-                blobTintTransition.setTintColor(layer: blobView.blobsLayer, color: component.content == .muted ? UIColor(rgb: 0x0086FF) : UIColor(rgb: 0x33C758))
+                let blobsColor: UIColor
+                if case .muted = component.content {
+                    blobsColor = UIColor(rgb: 0x0086FF)
+                } else if case .raiseHand = component.content {
+                    blobsColor = UIColor(rgb: 0x914BAD)
+                } else {
+                    blobsColor = UIColor(rgb: 0x33C758)
+                }
+                blobTintTransition.setTintColor(layer: blobView.blobsLayer, color: blobsColor)
                 
                 switch component.content {
                 case .unmuted:
@@ -508,7 +528,7 @@ final class VideoChatMicButtonComponent: Component {
                             blobView.updateLevel(CGFloat(value), immediately: false)
                         })
                     }
-                case .connecting, .muted:
+                case .connecting, .muted, .raiseHand:
                     if let audioLevelDisposable = self.audioLevelDisposable {
                         self.audioLevelDisposable = nil
                         audioLevelDisposable.dispose()
@@ -536,7 +556,14 @@ final class VideoChatMicButtonComponent: Component {
                     glowView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
                 
-                let glowColor: UIColor = component.content == .muted ? UIColor(rgb: 0x0086FF) : UIColor(rgb: 0x33C758)
+                let glowColor: UIColor
+                if case .muted = component.content {
+                    glowColor = UIColor(rgb: 0x0086FF)
+                } else if case .raiseHand = component.content {
+                    glowColor = UIColor(rgb: 0x3252EF)
+                } else {
+                    glowColor = UIColor(rgb: 0x33C758)
+                }
                 glowView.update(size: glowFrame.size, color: glowColor.withMultipliedAlpha(component.isCollapsed ? 0.5 : 0.7), transition: transition, colorTransition: blobTintTransition)
                 transition.setFrame(view: glowView, frame: glowFrame)
             default:

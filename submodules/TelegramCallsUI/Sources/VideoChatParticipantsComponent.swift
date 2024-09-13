@@ -35,16 +35,23 @@ final class VideoChatParticipantsComponent: Component {
     }
     
     final class Participants: Equatable {
+        enum InviteType {
+            case invite
+            case shareLink
+        }
+        
         let myPeerId: EnginePeer.Id
         let participants: [GroupCallParticipantsContext.Participant]
         let totalCount: Int
         let loadMoreToken: String?
+        let inviteType: InviteType?
         
-        init(myPeerId: EnginePeer.Id, participants: [GroupCallParticipantsContext.Participant], totalCount: Int, loadMoreToken: String?) {
+        init(myPeerId: EnginePeer.Id, participants: [GroupCallParticipantsContext.Participant], totalCount: Int, loadMoreToken: String?, inviteType: InviteType?) {
             self.myPeerId = myPeerId
             self.participants = participants
             self.totalCount = totalCount
             self.loadMoreToken = loadMoreToken
+            self.inviteType = inviteType
         }
         
         static func ==(lhs: Participants, rhs: Participants) -> Bool {
@@ -61,6 +68,9 @@ final class VideoChatParticipantsComponent: Component {
                 return false
             }
             if lhs.loadMoreToken != rhs.loadMoreToken {
+                return false
+            }
+            if lhs.inviteType != rhs.inviteType {
                 return false
             }
             return true
@@ -1046,6 +1056,7 @@ final class VideoChatParticipantsComponent: Component {
                     
                     let rightAccessoryComponent: AnyComponent<Empty> = AnyComponent(VideoChatParticipantStatusComponent(
                         muteState: participant.muteState,
+                        hasRaiseHand: participant.hasRaiseHand,
                         isSpeaking: component.speakingParticipants.contains(participant.peer.id),
                         theme: component.theme
                     ))
@@ -1393,10 +1404,21 @@ final class VideoChatParticipantsComponent: Component {
                 containerSize: CGSize(width: availableSize.width, height: 1000.0)
             )
             
+            let inviteText: String
+            if let participants = component.participants, let inviteType = participants.inviteType {
+                switch inviteType {
+                case .invite:
+                    inviteText = "Invite Members"
+                case .shareLink:
+                    inviteText = "Share Invite Link"
+                }
+            } else {
+                inviteText = "Invite Members"
+            }
             let inviteListItemSize = self.inviteListItemView.update(
                 transition: transition,
                 component: AnyComponent(VideoChatListInviteComponent(
-                    title: "Invite Members",
+                    title: inviteText,
                     theme: component.theme,
                     action: { [weak self] in
                         guard let self, let component = self.component else {

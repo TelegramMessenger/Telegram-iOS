@@ -5,19 +5,54 @@ import ComponentFlow
 import MultilineTextComponent
 import TelegramPresentationData
 import AppBundle
+import TelegramAudio
 
 final class VideoChatActionButtonComponent: Component {
     enum Content: Equatable {
-        fileprivate enum IconType {
+        enum BluetoothType: Equatable {
+            case generic
+            case airpods
+            case airpodsPro
+            case airpodsMax
+        }
+        
+        enum Audio: Equatable {
+            case none
+            case builtin
+            case speaker
+            case headphones
+            case bluetooth(BluetoothType)
+        }
+        
+        fileprivate enum IconType: Equatable {
+            enum Audio: Equatable {
+                case speaker
+                case headphones
+                case bluetooth(BluetoothType)
+            }
+            
+            case audio(audio: Audio)
             case video
             case leave
         }
         
+        case audio(audio: Audio)
         case video(isActive: Bool)
         case leave
         
         fileprivate var iconType: IconType {
             switch self {
+            case let .audio(audio):
+                let mappedAudio: IconType.Audio
+                switch audio {
+                case .none, .builtin, .speaker:
+                    mappedAudio = .speaker
+                case .headphones:
+                    mappedAudio = .headphones
+                case let .bluetooth(type):
+                    mappedAudio = .bluetooth(type)
+                }
+                return .audio(audio: mappedAudio)
             case .video:
                 return .video
             case .leave:
@@ -30,23 +65,30 @@ final class VideoChatActionButtonComponent: Component {
         case connecting
         case muted
         case unmuted
+        case raiseHand
     }
     
+    let strings: PresentationStrings
     let content: Content
     let microphoneState: MicrophoneState
     let isCollapsed: Bool
 
     init(
+        strings: PresentationStrings,
         content: Content,
         microphoneState: MicrophoneState,
         isCollapsed: Bool
     ) {
+        self.strings = strings
         self.content = content
         self.microphoneState = microphoneState
         self.isCollapsed = isCollapsed
     }
 
     static func ==(lhs: VideoChatActionButtonComponent, rhs: VideoChatActionButtonComponent) -> Bool {
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.content != rhs.content {
             return false
         }
@@ -94,6 +136,30 @@ final class VideoChatActionButtonComponent: Component {
             let backgroundColor: UIColor
             let iconDiameter: CGFloat
             switch component.content {
+            case let .audio(audio):
+                var isActive = false
+                switch audio {
+                case .none, .builtin:
+                    titleText = component.strings.Call_Speaker
+                case .speaker:
+                    isActive = true
+                    titleText = component.strings.Call_Speaker
+                case .headphones:
+                    titleText = component.strings.Call_Audio
+                case .bluetooth:
+                    titleText = component.strings.Call_Audio
+                }
+                switch component.microphoneState {
+                case .connecting:
+                    backgroundColor = UIColor(white: 0.1, alpha: 1.0)
+                case .muted:
+                    backgroundColor = !isActive ? UIColor(rgb: 0x002E5D) : UIColor(rgb: 0x027FFF)
+                case .unmuted:
+                    backgroundColor = !isActive ? UIColor(rgb: 0x124B21) : UIColor(rgb: 0x34C659)
+                case .raiseHand:
+                    backgroundColor = UIColor(rgb: 0x3252EF)
+                }
+                iconDiameter = 60.0
             case let .video(isActive):
                 titleText = "video"
                 switch component.microphoneState {
@@ -103,6 +169,8 @@ final class VideoChatActionButtonComponent: Component {
                     backgroundColor = !isActive ? UIColor(rgb: 0x002E5D) : UIColor(rgb: 0x027FFF)
                 case .unmuted:
                     backgroundColor = !isActive ? UIColor(rgb: 0x124B21) : UIColor(rgb: 0x34C659)
+                case .raiseHand:
+                    backgroundColor = UIColor(rgb: 0x3252EF)
                 }
                 iconDiameter = 60.0
             case .leave:
@@ -113,6 +181,26 @@ final class VideoChatActionButtonComponent: Component {
             
             if self.contentImage == nil || previousComponent?.content.iconType != component.content.iconType {
                 switch component.content.iconType {
+                case let .audio(audio):
+                    let iconName: String
+                    switch audio {
+                    case .speaker:
+                        iconName = "Call/CallSpeakerButton"
+                    case .headphones:
+                        iconName = "Call/CallHeadphonesButton"
+                    case let .bluetooth(type):
+                        switch type {
+                        case .generic:
+                            iconName = "Call/CallBluetoothButton"
+                        case .airpods:
+                            iconName = "Call/CallAirpodsButton"
+                        case .airpodsPro:
+                            iconName = "Call/CallAirpodsProButton"
+                        case .airpodsMax:
+                            iconName = "Call/CallAirpodsMaxButton"
+                        }
+                    }
+                    self.contentImage = UIImage(bundleImageName: iconName)?.precomposed().withRenderingMode(.alwaysTemplate)
                 case .video:
                     self.contentImage = UIImage(bundleImageName: "Call/CallCameraButton")?.precomposed().withRenderingMode(.alwaysTemplate)
                 case .leave:
