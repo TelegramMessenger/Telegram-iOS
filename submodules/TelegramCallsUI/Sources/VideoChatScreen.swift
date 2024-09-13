@@ -1979,6 +1979,96 @@ private final class VideoChatScreenComponent: Component {
             }
         }
         
+        private func onLeavePressed() {
+            guard let component = self.component, let environment = self.environment else {
+                return
+            }
+            
+            //TODO:release
+            let isScheduled = !"".isEmpty
+            
+            let action: (Bool) -> Void = { [weak self] terminateIfPossible in
+                guard let self, let component = self.component else {
+                    return
+                }
+
+                let _ = component.call.leave(terminateIfPossible: terminateIfPossible).startStandalone()
+                
+                if let controller = self.environment?.controller() as? VideoChatScreenV2Impl {
+                    controller.dismiss(closing: true, manual: false)
+                }
+            }
+            
+            if let callState = self.callState, callState.canManageCall {
+                let presentationData = component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                var items: [ActionSheetItem] = []
+
+                let leaveTitle: String
+                let leaveAndCancelTitle: String
+
+                if case let .channel(channel) = self.peer, case .broadcast = channel.info {
+                    leaveTitle = environment.strings.LiveStream_LeaveConfirmation
+                    leaveAndCancelTitle = isScheduled ? environment.strings.LiveStream_LeaveAndCancelVoiceChat : environment.strings.LiveStream_LeaveAndEndVoiceChat
+                } else {
+                    leaveTitle = environment.strings.VoiceChat_LeaveConfirmation
+                    leaveAndCancelTitle = isScheduled ? environment.strings.VoiceChat_LeaveAndCancelVoiceChat : environment.strings.VoiceChat_LeaveAndEndVoiceChat
+                }
+                
+                items.append(ActionSheetTextItem(title: leaveTitle))
+                items.append(ActionSheetButtonItem(title: leaveAndCancelTitle, color: .destructive, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                    guard let self, let component = self.component, let environment = self.environment else {
+                        return
+                    }
+                    let title: String
+                    let text: String
+                    if case let .channel(channel) = self.peer, case .broadcast = channel.info {
+                        title = isScheduled ? environment.strings.LiveStream_CancelConfirmationTitle : environment.strings.LiveStream_EndConfirmationTitle
+                        text = isScheduled ? environment.strings.LiveStream_CancelConfirmationText :  environment.strings.LiveStream_EndConfirmationText
+                    } else {
+                        title = isScheduled ? environment.strings.VoiceChat_CancelConfirmationTitle : environment.strings.VoiceChat_EndConfirmationTitle
+                        text = isScheduled ? environment.strings.VoiceChat_CancelConfirmationText :  environment.strings.VoiceChat_EndConfirmationText
+                    }
+
+                    if let _ = self.members {
+                        let alertController = textAlertController(context: component.call.accountContext, forceTheme: environment.theme, title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: environment.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: isScheduled ? environment.strings.VoiceChat_CancelConfirmationEnd :  environment.strings.VoiceChat_EndConfirmationEnd, action: {
+                            action(true)
+                        })])
+                        environment.controller()?.present(alertController, in: .window(.root))
+                    } else {
+                        action(true)
+                    }
+                }))
+
+                let leaveText: String
+                if case let .channel(channel) = self.peer, case .broadcast = channel.info {
+                    leaveText = environment.strings.LiveStream_LeaveVoiceChat
+                } else {
+                    leaveText = environment.strings.VoiceChat_LeaveVoiceChat
+                }
+
+                items.append(ActionSheetButtonItem(title: leaveText, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                    action(false)
+                }))
+                
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: environment.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                environment.controller()?.present(actionSheet, in: .window(.root))
+            } else {
+                action(false)
+            }
+        }
+        
         func update(component: VideoChatScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -2473,6 +2563,7 @@ private final class VideoChatScreenComponent: Component {
                 component: AnyComponent(VideoChatTitleComponent(
                     title: self.callState?.title ?? self.peer?.debugDisplayTitle ?? " ",
                     status: idleTitleStatusText,
+                    isRecording: self.callState?.recordingStartTimestamp != nil,
                     strings: environment.strings
                 )),
                 environment: {},
@@ -2886,14 +2977,10 @@ private final class VideoChatScreenComponent: Component {
                     )),
                     effectAlignment: .center,
                     action: { [weak self] in
-                        guard let self, let component = self.component else {
+                        guard let self else {
                             return
                         }
-                        let _ = component.call.leave(terminateIfPossible: false).startStandalone()
-                        
-                        if let controller = self.environment?.controller() as? VideoChatScreenV2Impl {
-                            controller.dismiss(closing: true, manual: false)
-                        }
+                        self.onLeavePressed()
                     },
                     animateAlpha: false
                 )),

@@ -97,19 +97,16 @@ private final class BlobView: UIView {
     }
     
     private func updateAudioLevel() {
-        let additionalAvatarScale = CGFloat(max(0.0, min(self.presentationAudioLevel * 18.0, 5.0)) * 0.05)
-        let blobAmplificationFactor: CGFloat = 2.0
-        let blobScale = 1.0 + additionalAvatarScale * blobAmplificationFactor
+        let additionalAvatarScale = CGFloat(max(0.0, min(self.presentationAudioLevel * 0.3, 1.0)) * 1.0)
+        let blobScale = 1.28 + additionalAvatarScale
         self.blobsLayer.transform = CATransform3DMakeScale(blobScale, blobScale, 1.0)
         
-        self.scaleUpdated?(blobScale)
+        self.scaleUpdated?(additionalAvatarScale)
     }
     
     public func startAnimating() {
         guard !self.isAnimating else { return }
         self.isAnimating = true
-        
-        self.updateBlobsState()
         
         self.displayLinkAnimator?.isPaused = false
     }
@@ -122,34 +119,15 @@ private final class BlobView: UIView {
         guard isAnimating else { return }
         self.isAnimating = false
         
-        self.updateBlobsState()
-        
         self.displayLinkAnimator?.isPaused = true
     }
     
-    private func updateBlobsState() {
-        /*if self.isAnimating {
-            if self.mediumBlob.frame.size != .zero {
-                self.mediumBlob.startAnimating()
-                self.bigBlob.startAnimating()
-            }
-        } else {
-            self.mediumBlob.stopAnimating()
-            self.bigBlob.stopAnimating()
-        }*/
-    }
-    
-    override public func layoutSubviews() {
+    func update(size: CGSize) {
         super.layoutSubviews()
         
-        //self.mediumBlob.frame = bounds
-        //self.bigBlob.frame = bounds
-        
-        let blobsFrame = bounds.insetBy(dx: floor(bounds.width * 0.12), dy: floor(bounds.height * 0.12))
+        let blobsFrame = CGRect(origin: CGPoint(), size: size)
         self.blobsLayer.position = blobsFrame.center
         self.blobsLayer.bounds = CGRect(origin: CGPoint(), size: blobsFrame.size)
-        
-        self.updateBlobsState()
     }
 }
 
@@ -268,8 +246,12 @@ final class VideoChatParticipantAvatarComponent: Component {
                 avatarNode.setPeer(context: component.call.accountContext, theme: component.theme, peer: component.peer, clipStyle: clipStyle, synchronousLoad: false, displayDimensions: avatarSize)
             }
             
-            transition.setFrame(view: avatarNode.view, frame: CGRect(origin: CGPoint(), size: avatarSize))
+            let avatarFrame = CGRect(origin: CGPoint(), size: avatarSize)
+            transition.setPosition(view: avatarNode.view, position: avatarFrame.center)
+            transition.setBounds(view: avatarNode.view, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
             avatarNode.updateSize(size: avatarSize)
+            
+            let blobScale: CGFloat = 1.5
             
             if self.audioLevelDisposable == nil {
                 let peerId = component.peer.id
@@ -314,10 +296,22 @@ final class VideoChatParticipantAvatarComponent: Component {
                                 bigBlobRange: (0.71, 1.0)
                             )
                             self.blobView = blobView
-                            blobView.frame = avatarNode.frame
+                            let blobSize = floor(avatarNode.bounds.width * blobScale)
+                            blobView.center = avatarNode.frame.center
+                            blobView.bounds = CGRect(origin: CGPoint(), size: CGSize(width: blobSize, height: blobSize))
+                            blobView.layer.transform = CATransform3DMakeScale(1.0 / blobScale, 1.0 / blobScale, 1.0)
+                            
+                            blobView.update(size: blobView.bounds.size)
                             self.insertSubview(blobView, belowSubview: avatarNode.view)
                             
-                            blobView.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
+                            blobView.layer.animateScale(from: 0.5, to: 1.0 / blobScale, duration: 0.2)
+                            
+                            blobView.scaleUpdated = { [weak self] additionalScale in
+                                guard let self, let avatarNode = self.avatarNode else {
+                                    return
+                                }
+                                avatarNode.layer.transform = CATransform3DMakeScale(1.0 + additionalScale, 1.0 + additionalScale, 1.0)
+                            }
                             
                             ComponentTransition.immediate.setTintColor(layer: blobView.blobsLayer, color: component.isSpeaking ? UIColor(rgb: 0x33C758) : component.theme.list.itemAccentColor)
                         }
@@ -342,7 +336,11 @@ final class VideoChatParticipantAvatarComponent: Component {
                                     blobView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak blobView] _ in
                                         blobView?.removeFromSuperview()
                                     })
-                                    blobView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, removeOnCompletion: false)
+                                    blobView.layer.animateScale(from: 1.0 / blobScale, to: 0.5, duration: 0.3, removeOnCompletion: false)
+                                    let transition: ComponentTransition = .easeInOut(duration: 0.1)
+                                    if let avatarNode = self.avatarNode {
+                                        transition.setScale(view: avatarNode.view, scale: 1.0)
+                                    }
                                 }
                             })
                         }

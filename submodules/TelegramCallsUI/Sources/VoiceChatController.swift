@@ -7098,15 +7098,14 @@ final class VoiceChatContextReferenceContentSource: ContextReferenceContentSourc
 }
 
 private func calculateUseV2(context: AccountContext) -> Bool {
-    /*var useV2 = true
+    var useV2 = true
     if context.sharedContext.immediateExperimentalUISettings.disableCallV2 {
         useV2 = false
     }
     if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_videochatui_v2"] {
         useV2 = false
     }
-    return useV2*/
-    return false
+    return useV2
 }
 
 public func makeVoiceChatControllerInitialData(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall) -> Signal<Any, NoError> {

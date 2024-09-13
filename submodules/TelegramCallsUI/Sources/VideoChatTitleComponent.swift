@@ -4,19 +4,23 @@ import Display
 import ComponentFlow
 import MultilineTextComponent
 import TelegramPresentationData
+import HierarchyTrackingLayer
 
 final class VideoChatTitleComponent: Component {
     let title: String
     let status: String
+    let isRecording: Bool
     let strings: PresentationStrings
 
     init(
         title: String,
         status: String,
+        isRecording: Bool,
         strings: PresentationStrings
     ) {
         self.title = title
         self.status = status
+        self.isRecording = isRecording
         self.strings = strings
     }
 
@@ -27,6 +31,9 @@ final class VideoChatTitleComponent: Component {
         if lhs.status != rhs.status {
             return false
         }
+        if lhs.isRecording != rhs.isRecording {
+            return false
+        }
         if lhs.strings !== rhs.strings {
             return false
         }
@@ -34,18 +41,44 @@ final class VideoChatTitleComponent: Component {
     }
 
     final class View: UIView {
+        private let hierarchyTrackingLayer: HierarchyTrackingLayer
         private let title = ComponentView<Empty>()
         private var status: ComponentView<Empty>?
+        private var recordingImageView: UIImageView?
 
         private var component: VideoChatTitleComponent?
         private var isUpdating: Bool = false
         
         override init(frame: CGRect) {
+            self.hierarchyTrackingLayer = HierarchyTrackingLayer()
+            
             super.init(frame: frame)
+            
+            self.layer.addSublayer(self.hierarchyTrackingLayer)
+            self.hierarchyTrackingLayer.didEnterHierarchy = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.updateAnimations()
+            }
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        private func updateAnimations() {
+            if let recordingImageView = self.recordingImageView {
+                if recordingImageView.layer.animation(forKey: "blink") == nil {
+                    let animation = CAKeyframeAnimation(keyPath: "opacity")
+                    animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.55 as NSNumber]
+                    animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
+                    animation.duration = 0.7
+                    animation.autoreverses = true
+                    animation.repeatCount = Float.infinity
+                    recordingImageView.layer.add(animation, forKey: "blink")
+                }
+            }
         }
         
         func update(component: VideoChatTitleComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
@@ -104,6 +137,32 @@ final class VideoChatTitleComponent: Component {
                 }
                 transition.setPosition(view: statusView, position: statusFrame.center)
                 statusView.bounds = CGRect(origin: CGPoint(), size: statusFrame.size)
+            }
+            
+            if component.isRecording {
+                var recordingImageTransition = transition
+                let recordingImageView: UIImageView
+                if let current = self.recordingImageView {
+                    recordingImageView = current
+                } else {
+                    recordingImageTransition = recordingImageTransition.withAnimation(.none)
+                    recordingImageView = UIImageView()
+                    recordingImageView.image = generateFilledCircleImage(diameter: 8.0, color: UIColor(rgb: 0xFF3B2F))
+                    self.recordingImageView = recordingImageView
+                    self.addSubview(recordingImageView)
+                    transition.animateScale(view: recordingImageView, from: 0.0001, to: 1.0)
+                }
+                let recordingImageFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 5.0, y: titleFrame.minY + floor(titleFrame.height - 8.0) * 0.5 + 1.0), size: CGSize(width: 8.0, height: 8.0))
+                recordingImageTransition.setFrame(view: recordingImageView, frame: recordingImageFrame)
+                
+                self.updateAnimations()
+            } else {
+                if let recordingImageView = self.recordingImageView {
+                    self.recordingImageView = nil
+                    transition.setScale(view: recordingImageView, scale: 0.0001, completion: { [weak recordingImageView] _ in
+                        recordingImageView?.removeFromSuperview()
+                    })
+                }
             }
             
             return size

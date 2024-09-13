@@ -591,8 +591,6 @@ final class VideoChatParticipantsComponent: Component {
     }
 
     final class View: UIView, UIScrollViewDelegate {
-        private var rootVideoLoadingEffectView: VideoChatVideoLoadingEffectView?
-        
         private let scrollViewClippingContainer: SolidRoundedCornersContainer
         private let scrollView: ScrollView
         
@@ -627,6 +625,8 @@ final class VideoChatParticipantsComponent: Component {
         private var expandedGridSwipeState: ExpandedGridSwipeState?
         
         private var appliedGridIsEmpty: Bool = true
+        
+        private var currentLoadMoreToken: String?
         
         override init(frame: CGRect) {
             self.scrollViewClippingContainer = SolidRoundedCornersContainer()
@@ -885,6 +885,14 @@ final class VideoChatParticipantsComponent: Component {
                     itemFrame = itemLayout.gridItemFrame(at: index)
                 }
                 
+                let itemReferenceX: CGFloat = itemFrame.minX
+                let itemContainerWidth: CGFloat
+                if isItemExpanded {
+                    itemContainerWidth = expandedGridItemContainerFrame.width
+                } else {
+                    itemContainerWidth = itemLayout.grid.containerSize.width
+                }
+                
                 let itemContentInsets: UIEdgeInsets
                 if isItemExpanded {
                     itemContentInsets = itemLayout.expandedGrid.itemContainerInsets()
@@ -912,8 +920,10 @@ final class VideoChatParticipantsComponent: Component {
                 let _ = itemView.view.update(
                     transition: itemTransition,
                     component: AnyComponent(VideoChatParticipantVideoComponent(
+                        strings: component.strings,
                         call: component.call,
                         participant: videoParticipant.participant,
+                        isMyPeer: videoParticipant.participant.peer.id == component.participants?.myPeerId,
                         isPresentation: videoParticipant.isPresentation,
                         isSpeaking: component.speakingParticipants.contains(videoParticipant.participant.peer.id),
                         isExpanded: isItemExpanded,
@@ -921,7 +931,6 @@ final class VideoChatParticipantsComponent: Component {
                         contentInsets: itemContentInsets,
                         controlInsets: itemControlInsets,
                         interfaceOrientation: component.interfaceOrientation,
-                        rootVideoLoadingEffectView: self.rootVideoLoadingEffectView,
                         action: { [weak self] in
                             guard let self, let component = self.component else {
                                 return
@@ -936,7 +945,7 @@ final class VideoChatParticipantsComponent: Component {
                     environment: {},
                     containerSize: itemFrame.size
                 )
-                if let itemComponentView = itemView.view.view {
+                if let itemComponentView = itemView.view.view as? VideoChatParticipantVideoComponent.View {
                     if itemComponentView.superview == nil {
                         itemComponentView.layer.allowsGroupOpacity = true
                         
@@ -952,6 +961,7 @@ final class VideoChatParticipantsComponent: Component {
                         
                         itemComponentView.frame = itemFrame
                         itemComponentView.alpha = itemAlpha
+                        itemComponentView.updateHorizontalReferenceLocation(containerWidth: itemContainerWidth, positionX: itemReferenceX, transition: .immediate)
                         
                         if !resultingItemTransition.animation.isImmediate {
                             resultingItemTransition.animateScale(view: itemComponentView, from: 0.001, to: 1.0)
@@ -986,11 +996,13 @@ final class VideoChatParticipantsComponent: Component {
                                 itemComponentView.center = targetLocalItemFrame.center
                                 itemComponentView.bounds = CGRect(origin: CGPoint(), size: targetLocalItemFrame.size)
                             })
+                            itemComponentView.updateHorizontalReferenceLocation(containerWidth: itemLayout.containerSize.width, positionX: itemFrame.minX, transition: commonGridItemTransition)
                         }
                     }
                     if !itemView.isCollapsing {
                         resultingItemTransition.setPosition(view: itemComponentView, position: itemFrame.center)
                         resultingItemTransition.setBounds(view: itemComponentView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+                        itemComponentView.updateHorizontalReferenceLocation(containerWidth: itemLayout.containerSize.width, positionX: itemFrame.minX, transition: resultingItemTransition)
                         
                         let resultingItemAlphaTransition: ComponentTransition
                         if !resultingItemTransition.animation.isImmediate {
@@ -1237,6 +1249,7 @@ final class VideoChatParticipantsComponent: Component {
                             return VideoChatExpandedParticipantThumbnailsComponent.Participant.Key(id: expandedVideoState.mainParticipant.id, isPresentation: expandedVideoState.mainParticipant.isPresentation)
                         },
                         speakingParticipants: component.speakingParticipants,
+                        interfaceOrientation: component.interfaceOrientation,
                         updateSelectedParticipant: { [weak self] key in
                             guard let self, let component = self.component else {
                                 return
@@ -1369,6 +1382,13 @@ final class VideoChatParticipantsComponent: Component {
                     } else {
                         expandedControlsView.view?.removeFromSuperview()
                     }
+                }
+            }
+            
+            if let participants = component.participants, let loadMoreToken = participants.loadMoreToken, visibleListItemRange.maxIndex >= self.listParticipants.count - 5 {
+                if self.currentLoadMoreToken != loadMoreToken {
+                    self.currentLoadMoreToken = loadMoreToken
+                    component.call.loadMoreMembers(token: loadMoreToken)
                 }
             }
         }
