@@ -13,7 +13,7 @@
         const readability = new Readability(cleanDoc)
         const result = readability.parse()
         
-        if (result.length && result.length < 1000) {
+        if (result.length && result.length < 500) {
             return null
         }
         

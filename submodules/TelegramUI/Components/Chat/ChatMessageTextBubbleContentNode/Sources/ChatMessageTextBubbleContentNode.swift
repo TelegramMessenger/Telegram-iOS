@@ -641,7 +641,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         constrainedSize: textConstrainedSize,
                         availableReactions: item.associatedData.availableReactions,
                         savedMessageTags: item.associatedData.savedMessageTags,
-                        reactions: dateReactionsAndPeers.reactions,
+                        reactions: item.presentationData.isPreview ? [] : dateReactionsAndPeers.reactions,
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                         areReactionsTags: item.topMessage.areReactionsTags(accountPeerId: item.context.account.peerId),

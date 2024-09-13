@@ -505,7 +505,7 @@ private final class SheetContent: CombinedComponent {
             }
             if let range = buttonAttributedString.string.range(of: "#"), let starImage = state.cachedStarImage?.0 {
                 buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
-                buttonAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xffffff), range: NSRange(range, in: buttonAttributedString.string))
+                buttonAttributedString.addAttribute(.foregroundColor, value: environment.theme.list.itemCheckColors.foregroundColor, range: NSRange(range, in: buttonAttributedString.string))
                 buttonAttributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: buttonAttributedString.string))
             }
             
@@ -603,7 +603,7 @@ private final class SheetContent: CombinedComponent {
                         })
                     }
                 ),
-                availableSize: CGSize(width: 361.0, height: 50),
+                availableSize: CGSize(width: context.availableSize.width - 16.0 * 2.0, height: 50),
                 transition: .immediate
             )
             context.add(button
