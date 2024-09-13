@@ -26,11 +26,13 @@ final class VideoChatParticipantsComponent: Component {
         var videoColumn: Column?
         var mainColumn: Column
         var columnSpacing: CGFloat
+        var isMainColumnHidden: Bool
         
-        init(videoColumn: Column?, mainColumn: Column, columnSpacing: CGFloat) {
+        init(videoColumn: Column?, mainColumn: Column, columnSpacing: CGFloat, isMainColumnHidden: Bool) {
             self.videoColumn = videoColumn
             self.mainColumn = mainColumn
             self.columnSpacing = columnSpacing
+            self.isMainColumnHidden = isMainColumnHidden
         }
     }
     
@@ -126,7 +128,7 @@ final class VideoChatParticipantsComponent: Component {
     let safeInsets: UIEdgeInsets
     let interfaceOrientation: UIInterfaceOrientation
     let openParticipantContextMenu: (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void
-    let updateMainParticipant: (VideoParticipantKey?) -> Void
+    let updateMainParticipant: (VideoParticipantKey?, Bool?) -> Void
     let updateIsMainParticipantPinned: (Bool) -> Void
     let updateIsExpandedUIHidden: (Bool) -> Void
     let openInviteMembers: () -> Void
@@ -143,7 +145,7 @@ final class VideoChatParticipantsComponent: Component {
         safeInsets: UIEdgeInsets,
         interfaceOrientation: UIInterfaceOrientation,
         openParticipantContextMenu: @escaping (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void,
-        updateMainParticipant: @escaping (VideoParticipantKey?) -> Void,
+        updateMainParticipant: @escaping (VideoParticipantKey?, Bool?) -> Void,
         updateIsMainParticipantPinned: @escaping (Bool) -> Void,
         updateIsExpandedUIHidden: @escaping (Bool) -> Void,
         openInviteMembers: @escaping () -> Void
@@ -422,7 +424,11 @@ final class VideoChatParticipantsComponent: Component {
             let gridSideInset: CGFloat
             let gridContainerHeight: CGFloat
             if let videoColumn = layout.videoColumn {
-                gridWidth = videoColumn.width
+                if layout.isMainColumnHidden {
+                    gridWidth = videoColumn.width + layout.columnSpacing + layout.mainColumn.width
+                } else {
+                    gridWidth = videoColumn.width
+                }
                 gridSideInset = videoColumn.insets.left
                 gridContainerHeight = containerSize.height - videoColumn.insets.top - videoColumn.insets.bottom
             } else {
@@ -435,7 +441,7 @@ final class VideoChatParticipantsComponent: Component {
             self.list = List(containerSize: CGSize(width: listWidth, height: containerSize.height), sideInset: layout.mainColumn.insets.left, itemCount: listItemCount, itemHeight: listItemHeight, trailingItemHeight: listTrailingItemHeight)
             self.spacing = 4.0
             
-            if let videoColumn = layout.videoColumn, !isUIHidden {
+            if let videoColumn = layout.videoColumn, !isUIHidden && !layout.isMainColumnHidden {
                 self.expandedGrid = ExpandedGrid(containerSize: CGSize(width: videoColumn.width + expandedInsets.left, height: containerSize.height), layout: layout, expandedInsets: UIEdgeInsets(top: expandedInsets.top, left: expandedInsets.left, bottom: expandedInsets.bottom, right: 0.0), isUIHidden: isUIHidden)
             } else {
                 self.expandedGrid = ExpandedGrid(containerSize: containerSize, layout: layout, expandedInsets: expandedInsets, isUIHidden: isUIHidden)
@@ -459,8 +465,8 @@ final class VideoChatParticipantsComponent: Component {
                 var separateVideoGridFrame = CGRect(origin: CGPoint(x: floor((containerSize.width - columnsWidth) * 0.5), y: 0.0), size: CGSize(width: gridWidth, height: containerSize.height))
                 
                 var listFrame = CGRect(origin: CGPoint(x: separateVideoGridFrame.maxX + layout.columnSpacing, y: 0.0), size: CGSize(width: listWidth, height: containerSize.height))
-                if isUIHidden {
-                    listFrame.origin.x += columnsSideInset + layout.mainColumn.width
+                if isUIHidden || layout.isMainColumnHidden {
+                    listFrame.origin.x = containerSize.width + columnsSideInset
                     separateVideoGridFrame = CGRect(origin: CGPoint(x: floor((containerSize.width - columnsWidth) * 0.5), y: 0.0), size: CGSize(width: columnsWidth, height: containerSize.height))
                 }
                 
@@ -597,12 +603,13 @@ final class VideoChatParticipantsComponent: Component {
         private let separateVideoScrollViewClippingContainer: SolidRoundedCornersContainer
         private let separateVideoScrollView: ScrollView
         
-        private var component: VideoChatParticipantsComponent?
+        private(set) var component: VideoChatParticipantsComponent?
         private weak var state: EmptyComponentState?
         private var isUpdating: Bool = false
         
         private var ignoreScrolling: Bool = false
         
+        //TODO:release
         private var gridParticipants: [VideoParticipant] = []
         private var listParticipants: [GroupCallParticipantsContext.Participant] = []
         
@@ -703,9 +710,19 @@ final class VideoChatParticipantsComponent: Component {
             if component.expandedVideoState != nil {
                 if let result = self.expandedGridItemContainer.hitTest(self.convert(point, to: self.expandedGridItemContainer), with: event) {
                     return result
-                } else {
-                    return self
                 }
+                
+                if component.layout.videoColumn != nil {
+                    if let result = self.scrollViewClippingContainer.hitTest(self.convert(point, to: self.scrollViewClippingContainer), with: event) {
+                        return result
+                    }
+                }
+                
+                if !self.expandedGridItemContainer.bounds.contains(self.convert(point, to: self.expandedGridItemContainer)) && !self.scrollViewClippingContainer.bounds.contains(self.convert(point, to: self.scrollViewClippingContainer)) {
+                    return nil
+                }
+                
+                return self
             } else {
                 if let result = self.scrollViewClippingContainer.hitTest(self.convert(point, to: self.scrollViewClippingContainer), with: event) {
                     return result
@@ -737,7 +754,7 @@ final class VideoChatParticipantsComponent: Component {
                 
                 let velocity = recognizer.velocity(in: self)
                 if abs(velocity.y) > 100.0 || abs(fraction) >= 0.5 {
-                    component.updateMainParticipant(nil)
+                    component.updateMainParticipant(nil, nil)
                 } else {
                     self.state?.updated(transition: .spring(duration: 0.4))
                 }
@@ -935,10 +952,19 @@ final class VideoChatParticipantsComponent: Component {
                             guard let self, let component = self.component else {
                                 return
                             }
-                            if let expandedVideoState = component.expandedVideoState, expandedVideoState.mainParticipant == videoParticipantKey {
-                                component.updateIsExpandedUIHidden(!expandedVideoState.isUIHidden)
+                            
+                            if self.gridParticipants.count == 1, component.layout.videoColumn != nil {
+                                if let expandedVideoState = component.expandedVideoState, expandedVideoState.mainParticipant == videoParticipantKey {
+                                    component.updateMainParticipant(nil, false)
+                                } else {
+                                    component.updateMainParticipant(videoParticipantKey, true)
+                                }
                             } else {
-                                component.updateMainParticipant(videoParticipantKey)
+                                if let expandedVideoState = component.expandedVideoState, expandedVideoState.mainParticipant == videoParticipantKey {
+                                    component.updateIsExpandedUIHidden(!expandedVideoState.isUIHidden)
+                                } else {
+                                    component.updateMainParticipant(videoParticipantKey, nil)
+                                }
                             }
                         }
                     )),
@@ -1254,7 +1280,7 @@ final class VideoChatParticipantsComponent: Component {
                             guard let self, let component = self.component else {
                                 return
                             }
-                            component.updateMainParticipant(VideoParticipantKey(id: key.id, isPresentation: key.isPresentation))
+                            component.updateMainParticipant(VideoParticipantKey(id: key.id, isPresentation: key.isPresentation), nil)
                         }
                     )),
                     environment: {},
@@ -1302,7 +1328,7 @@ final class VideoChatParticipantsComponent: Component {
                             guard let self, let component = self.component else {
                                 return
                             }
-                            component.updateMainParticipant(nil)
+                            component.updateMainParticipant(nil, nil)
                         },
                         pinAction: { [weak self] in
                             guard let self, let component = self.component else {
