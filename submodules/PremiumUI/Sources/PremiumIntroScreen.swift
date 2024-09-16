@@ -825,7 +825,7 @@ struct PremiumIntroConfiguration {
             .messagePrivacy,
             .advancedChatManagement,
             .noAds,
-            .appIcons,
+//            .appIcons,
             .uniqueReactions,
             .animatedUserpics,
             .premiumStickers,
@@ -3050,7 +3050,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             let alertController = textAlertController(
                 context: self.context,
-                title: "Common.OpenTelegram".tp_loc(lang: presentationData.strings.baseLanguageCode),
+                title: "Telegram Premium",
                 text: "Common.UseTelegramForPremium".tp_loc(lang: presentationData.strings.baseLanguageCode),
                 actions: [
                     TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
