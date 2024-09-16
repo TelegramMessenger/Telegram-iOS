@@ -574,17 +574,17 @@ public extension Api {
 }
 public extension Api {
     enum StarGift: TypeConstructorDescription {
-        case starGift(flags: Int32, id: Int64, document: Api.Document, stars: Int64, availabilityRemains: Int32?, availabilityTotal: Int32?)
+        case starGift(flags: Int32, id: Int64, sticker: Api.Document, stars: Int64, availabilityRemains: Int32?, availabilityTotal: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .starGift(let flags, let id, let document, let stars, let availabilityRemains, let availabilityTotal):
+                case .starGift(let flags, let id, let sticker, let stars, let availabilityRemains, let availabilityTotal):
                     if boxed {
-                        buffer.appendInt32(-1095743646)
+                        buffer.appendInt32(-384008227)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
-                    document.serialize(buffer, true)
+                    sticker.serialize(buffer, true)
                     serializeInt64(stars, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(availabilityRemains!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(availabilityTotal!, buffer: buffer, boxed: false)}
@@ -594,8 +594,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .starGift(let flags, let id, let document, let stars, let availabilityRemains, let availabilityTotal):
-                return ("starGift", [("flags", flags as Any), ("id", id as Any), ("document", document as Any), ("stars", stars as Any), ("availabilityRemains", availabilityRemains as Any), ("availabilityTotal", availabilityTotal as Any)])
+                case .starGift(let flags, let id, let sticker, let stars, let availabilityRemains, let availabilityTotal):
+                return ("starGift", [("flags", flags as Any), ("id", id as Any), ("sticker", sticker as Any), ("stars", stars as Any), ("availabilityRemains", availabilityRemains as Any), ("availabilityTotal", availabilityTotal as Any)])
     }
     }
     
@@ -621,7 +621,7 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.StarGift.starGift(flags: _1!, id: _2!, document: _3!, stars: _4!, availabilityRemains: _5, availabilityTotal: _6)
+                return Api.StarGift.starGift(flags: _1!, id: _2!, sticker: _3!, stars: _4!, availabilityRemains: _5, availabilityTotal: _6)
             }
             else {
                 return nil

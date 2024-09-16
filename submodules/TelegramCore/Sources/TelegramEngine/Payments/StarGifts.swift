@@ -92,12 +92,12 @@ public struct StarGift: Equatable, Codable {
 extension StarGift {
     init?(apiStarGift: Api.StarGift) {
         switch apiStarGift {
-        case let .starGift(_, id, document, stars, availabilityRemains, availabilityTotal):
+        case let .starGift(_, id, sticker, stars, availabilityRemains, availabilityTotal):
             var availability: Availability?
             if let availabilityRemains, let availabilityTotal {
                 availability = Availability(remains: availabilityRemains, total: availabilityTotal)
             }
-            guard let file = telegramMediaFileFromApiDocument(document) else {
+            guard let file = telegramMediaFileFromApiDocument(sticker) else {
                 return nil
             }
             self.init(id: id, file: file, price: stars, availability: availability)
@@ -123,7 +123,7 @@ func _internal_keepCachedStarGiftsUpdated(postbox: Postbox, network: Network) ->
     let updateSignal = _internal_cachedStarGifts(postbox: postbox)
     |> take(1)
     |> mapToSignal { list -> Signal<Never, NoError> in
-        return network.request(Api.functions.payments.getStarGifts(hash: list?.hashValue ?? 0))
+        return network.request(Api.functions.payments.getStarGifts(hash: 0))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.payments.StarGifts?, NoError> in
             return .single(nil)
