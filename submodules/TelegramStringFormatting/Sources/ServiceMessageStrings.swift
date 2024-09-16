@@ -1051,6 +1051,14 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 attributedString = mutableString
             case .prizeStars:
                 attributedString = NSAttributedString(string: strings.Notification_StarsPrize, font: titleFont, textColor: primaryTextColor)
+            case let .starGift(amount, _, nameHidden, limitNumber, limitTotal, text, entities):
+                let _ = amount
+                let _ = nameHidden
+                let _ = limitNumber
+                let _ = limitTotal
+                let _ = text
+                let _ = entities
+                attributedString = nil
             case .unknown:
                 attributedString = nil
             }

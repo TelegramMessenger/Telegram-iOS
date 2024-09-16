@@ -51,8 +51,14 @@ public final class BotCheckoutController: ViewController {
                 return .generic
             }
             |> mapToSignal { paymentForm -> Signal<InputData, FetchError> in
-                return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: paymentForm.paymentBotId))
-                |> castError(FetchError.self)
+                let botPeer: Signal<EnginePeer?, FetchError>
+                if let paymentBotId = paymentForm.paymentBotId {
+                    botPeer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: paymentBotId))
+                    |> castError(FetchError.self)
+                } else {
+                    botPeer = .single(nil)
+                }
+                return botPeer
                 |> mapToSignal { botPeer -> Signal<InputData, FetchError> in
                     if let current = paymentForm.savedInfo {
                         return context.engine.payments.validateBotPaymentForm(saveInfo: true, source: source, formInfo: current)

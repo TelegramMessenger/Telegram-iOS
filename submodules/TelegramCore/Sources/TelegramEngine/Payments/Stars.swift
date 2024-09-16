@@ -1288,6 +1288,8 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                                             receiptMessageId = nil
                                         case .starsChatSubscription:
                                             receiptMessageId = nil
+                                        case .starGift:
+                                            receiptMessageId = nil
                                         }
                                     }
                                 }

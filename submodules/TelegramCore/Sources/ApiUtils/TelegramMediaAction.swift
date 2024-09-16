@@ -150,6 +150,18 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .paymentRefunded(peerId: peer.peerId, currency: currency, totalAmount: totalAmount, payload: payload?.makeData(), transactionId: transactionId))
     case let .messageActionPrizeStars(flags, stars, transactionId, boostPeer, giveawayMsgId):
         return TelegramMediaAction(action: .prizeStars(amount: stars, isUnclaimed: (flags & (1 << 2)) != 0, boostPeerId: boostPeer.peerId, transactionId: transactionId, giveawayMessageId: MessageId(peerId: boostPeer.peerId, namespace: Namespaces.Message.Cloud, id: giveawayMsgId)))
+    case let .messageActionStarGift(flags, starsAmount, giftId, limitedNumber, limitedTotal, message):
+        let text: String?
+        let entities: [MessageTextEntity]?
+        switch message {
+        case let .textWithEntities(textValue, entitiesValue):
+            text = textValue
+            entities = messageTextEntitiesFromApiEntities(entitiesValue)
+        default:
+            text = nil
+            entities = nil
+        }
+        return TelegramMediaAction(action: .starGift(amount: starsAmount, giftId: giftId, nameHidden: (flags & (1 << 2)) != 0, limitNumber: limitedNumber, limitTotal: limitedTotal, text: text, entities: entities))
     }
 }
 

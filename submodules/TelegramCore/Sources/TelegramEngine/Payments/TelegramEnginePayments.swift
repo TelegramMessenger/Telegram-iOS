@@ -101,5 +101,16 @@ public extension TelegramEngine {
         public func fulfillStarsSubscription(peerId: EnginePeer.Id, subscriptionId: String) -> Signal<Never, FulfillStarsSubsciptionError> {
             return _internal_fulfillStarsSubscription(account: self.account, peerId: peerId, subscriptionId: subscriptionId)
         }
+        
+        public func cachedStarGifts() -> Signal<[StarGift]?, NoError> {
+            return _internal_cachedStarGifts(postbox: self.account.postbox)
+            |> map { starGiftsList in
+                return starGiftsList?.items
+            }
+        }
+        
+        public func keepStarGiftsUpdated() -> Signal<Never, NoError> {
+            return _internal_keepCachedStarGiftsUpdated(postbox: self.account.postbox, network: self.account.network)
+        }
     }
 }

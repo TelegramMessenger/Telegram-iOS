@@ -130,6 +130,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case paymentRefunded(peerId: PeerId, currency: String, totalAmount: Int64, payload: Data?, transactionId: String)
     case giftStars(currency: String, amount: Int64, count: Int64, cryptoCurrency: String?, cryptoAmount: Int64?, transactionId: String?)
     case prizeStars(amount: Int64, isUnclaimed: Bool, boostPeerId: PeerId?, transactionId: String?, giveawayMessageId: MessageId?)
+    case starGift(amount: Int64, giftId: Int64, nameHidden: Bool, limitNumber: Int32?, limitTotal: Int32?, text: String?, entities: [MessageTextEntity]?)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -250,6 +251,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 giveawayMessageId = MessageId(peerId: boostPeerId, namespace: Namespaces.Message.Cloud, id: giveawayMsgId)
             }
             self = .prizeStars(amount: decoder.decodeInt64ForKey("amount", orElse: 0), isUnclaimed: decoder.decodeBoolForKey("unclaimed", orElse: false), boostPeerId: boostPeerId, transactionId: decoder.decodeOptionalStringForKey("transactionId"), giveawayMessageId: giveawayMessageId)
+        case 44:
+            self = .starGift(amount: decoder.decodeInt64ForKey("amount", orElse: 0), giftId: decoder.decodeInt64ForKey("giftId", orElse: 0), nameHidden: decoder.decodeBoolForKey("nameHidden", orElse: false), limitNumber: decoder.decodeOptionalInt32ForKey("limitNumber"), limitTotal: decoder.decodeOptionalInt32ForKey("limitTotal"), text: decoder.decodeOptionalStringForKey("text"), entities: decoder.decodeOptionalObjectArrayWithDecoderForKey("entities"))
         default:
             self = .unknown
         }
@@ -524,6 +527,25 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 encoder.encodeInt32(giveawayMessageId.id, forKey: "giveawayMsgId")
             } else {
                 encoder.encodeNil(forKey: "giveawayMsgId")
+            }
+        case let .starGift(amount, giftId, nameHidden, limitNumber, limitTotal, text, entities):
+            encoder.encodeInt32(44, forKey: "_rawValue")
+            encoder.encodeInt64(amount, forKey: "amount")
+            encoder.encodeInt64(giftId, forKey: "giftId")
+            encoder.encodeBool(nameHidden, forKey: "nameHidden")
+            if let limitNumber, let limitTotal {
+                encoder.encodeInt32(limitNumber, forKey: "limitNumber")
+                encoder.encodeInt32(limitTotal, forKey: "limitTotal")
+            } else {
+                encoder.encodeNil(forKey: "limitNumber")
+                encoder.encodeNil(forKey: "limitTotal")
+            }
+            if let text, let entities {
+                encoder.encodeString(text, forKey: "text")
+                encoder.encodeObjectArray(entities, forKey: "entities")
+            } else {
+                encoder.encodeNil(forKey: "text")
+                encoder.encodeNil(forKey: "entities")
             }
         }
     }
