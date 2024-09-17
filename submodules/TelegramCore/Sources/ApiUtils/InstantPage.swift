@@ -192,7 +192,7 @@ extension InstantPage {
             }
         }
         for file in files {
-            if let file = telegramMediaFileFromApiDocument(file), let id = file.id {
+            if let file = telegramMediaFileFromApiDocument(file, altDocuments: []), let id = file.id {
                 media[id] = file
             }
         }

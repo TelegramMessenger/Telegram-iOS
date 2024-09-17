@@ -1096,6 +1096,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             var hasLinkedStickers = false
             if let content = item.content as? NativeVideoContent {
                 hasLinkedStickers = content.fileReference.media.hasLinkedStickers
+            } else if let content = item.content as? HLSVideoContent {
+                hasLinkedStickers = content.fileReference.media.hasLinkedStickers
             }
             
             var disablePictureInPicture = false
@@ -1241,7 +1243,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 if let file = file {
                     for attribute in file.attributes {
-                        if case let .Video(duration, _, _, _, _) = attribute, duration >= 30 {
+                        if case let .Video(duration, _, _, _, _, _) = attribute, duration >= 30 {
                             hintSeekable = true
                             break
                         }
@@ -1532,6 +1534,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
         if let _ = item.content as? NativeVideoContent {
             self.playbackRate = item.playbackRate()
+        } else if let _ = item.content as? HLSVideoContent {
+            self.playbackRate = item.playbackRate()
         } else if let _ = item.content as? WebEmbedVideoContent {
             self.playbackRate = item.playbackRate()
         }
@@ -1602,6 +1606,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if isLocal || isStreamable {
                 return true
             }
+        } else if let item = self.item, let _ = item.content as? HLSVideoContent {
+            return true
         } else if let item = self.item, let _ = item.content as? PlatformVideoContent {
             return true
         }
@@ -1618,6 +1624,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if isCentral {
                     var isAnimated = false
                     if let item = self.item, let content = item.content as? NativeVideoContent {
+                        isAnimated = content.fileReference.media.isAnimated
+                    } else if let item = self.item, let content = item.content as? HLSVideoContent {
                         isAnimated = content.fileReference.media.isAnimated
                     }
                     
@@ -1712,6 +1720,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     if let time = item.timecode {
                         seek = .timecode(time)
                     }
+                } else if let content = item.content as? HLSVideoContent {
+                    isAnimated = content.fileReference.media.isAnimated
+                    if let time = item.timecode {
+                        seek = .timecode(time)
+                    }
                 } else if let _ = item.content as? WebEmbedVideoContent {
                     if let time = item.timecode {
                         seek = .timecode(time)
@@ -1741,6 +1754,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd {
         if let item = self.item {
             if !item.isSecret, let content = item.content as? NativeVideoContent, content.duration <= 30 {
+                return .loop
+            }
+            if !item.isSecret, let content = item.content as? HLSVideoContent, content.duration <= 30 {
                 return .loop
             }
         }
@@ -2700,6 +2716,35 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             items.append(.separator)
             
+            if let videoQualityState = strongSelf.videoNode?.videoQualityState(), !videoQualityState.available.isEmpty {
+                //TODO:localize
+                
+                let qualityText: String
+                switch videoQualityState.preferred {
+                case .auto:
+                    if videoQualityState.current != 0 {
+                        qualityText = "Auto (\(videoQualityState.current)p)"
+                    } else {
+                        qualityText = "Auto"
+                    }
+                case let .quality(value):
+                    qualityText = "\(value)p"
+                }
+                
+                items.append(.action(ContextMenuActionItem(text: "Video Quality", textLayout: .secondLineWithValue(qualityText), icon: { _ in
+                    return nil
+                }, action: { c, _ in
+                    guard let strongSelf = self else {
+                        c?.dismiss(completion: nil)
+                        return
+                    }
+
+                    c?.setItems(.single(ContextController.Items(content: .list(strongSelf.contextMenuVideoQualityItems(dismiss: dismiss)))), minHeight: nil, animated: true)
+                })))
+                
+                items.append(.separator)
+            }
+            
             if let (message, _, _) = strongSelf.contentInfo() {
                 let context = strongSelf.context
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
@@ -2879,6 +2924,80 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             return items
         }
+    }
+    
+    private func contextMenuVideoQualityItems(dismiss: @escaping () -> Void) -> [ContextMenuItem] {
+        guard let videoNode = self.videoNode else {
+            return []
+        }
+        guard let qualityState = videoNode.videoQualityState(), !qualityState.available.isEmpty else {
+            return []
+        }
+
+        var items: [ContextMenuItem] = []
+        
+        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Common_Back, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+        }, iconPosition: .left, action: { [weak self] c, _ in
+            guard let self else {
+                c?.dismiss(completion: nil)
+                return
+            }
+            c?.setItems(self.contextMenuMainItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
+        })))
+        
+        do {
+            let isSelected = qualityState.preferred == .auto
+            let qualityText: String
+            if qualityState.current != 0 {
+                qualityText = "Auto (\(qualityState.current)p)"
+            } else {
+                qualityText = "Auto"
+            }
+            items.append(.action(ContextMenuActionItem(text: qualityText, icon: { _ in
+                if isSelected {
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
+                } else {
+                    return nil
+                }
+            }, action: { [weak self] _, f in
+                f(.default)
+                
+                guard let self, let videoNode = self.videoNode else {
+                    return
+                }
+                videoNode.setVideoQuality(.auto)
+
+                /*if let controller = strongSelf.galleryController() as? GalleryController {
+                    controller.updateSharedPlaybackRate(rate)
+                }*/
+            })))
+        }
+        
+        for quality in qualityState.available {
+            //TODO:release
+            let isSelected = qualityState.preferred == .quality(quality)
+            items.append(.action(ContextMenuActionItem(text: "\(quality)p", icon: { _ in
+                if isSelected {
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
+                } else {
+                    return nil
+                }
+            }, action: { [weak self] _, f in
+                f(.default)
+                
+                guard let self, let videoNode = self.videoNode else {
+                    return
+                }
+                videoNode.setVideoQuality(.quality(quality))
+
+                /*if let controller = strongSelf.galleryController() as? GalleryController {
+                    controller.updateSharedPlaybackRate(rate)
+                }*/
+            })))
+        }
+
+        return items
     }
     
     private var isAirPlayActive = false

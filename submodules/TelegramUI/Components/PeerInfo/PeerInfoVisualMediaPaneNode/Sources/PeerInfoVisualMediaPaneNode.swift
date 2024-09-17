@@ -709,7 +709,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 immediateThumbnailData: nil,
                 mimeType: "image/jpeg",
                 size: nil,
-                attributes: [.FileName(fileName: "file")]
+                attributes: [.FileName(fileName: "file")],
+                alternativeRepresentations: []
             )
             let fakeMessage = Message(
                 stableId: 1,
@@ -2126,7 +2127,8 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                     immediateThumbnailData: nil,
                     mimeType: "image/jpeg",
                     size: nil,
-                    attributes: [.FileName(fileName: "file")]
+                    attributes: [.FileName(fileName: "file")],
+                    alternativeRepresentations: []
                 )
                 let fakeMessage = Message(
                     stableId: 1,

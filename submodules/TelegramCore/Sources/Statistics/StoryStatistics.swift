@@ -321,7 +321,7 @@ private final class StoryStatsPublicForwardsContextImpl {
                                             timestamp: item.timestamp,
                                             expirationTimestamp: item.expirationTimestamp,
                                             media: EngineMedia(media),
-                                            alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                                            alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                                             mediaAreas: item.mediaAreas,
                                             text: item.text,
                                             entities: item.entities,

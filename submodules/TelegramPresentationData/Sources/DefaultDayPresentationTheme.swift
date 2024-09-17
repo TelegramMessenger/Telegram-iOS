@@ -1380,7 +1380,8 @@ public func defaultBuiltinWallpaper(data: BuiltinWallpaperData, colors: [UInt32]
             attributes: [
                 .ImageSize(size: PixelDimensions(width: 1440, height: 2960)),
                 .FileName(fileName: "pattern.tgv")
-            ]
+            ],
+            alternativeRepresentations: []
         ),
         settings: WallpaperSettings(colors: colors, intensity: intensity, rotation: rotation)
     ))

@@ -1235,8 +1235,8 @@ public extension TelegramEngine {
                         }
                         
                         var selectedMedia: EngineMedia
-                        if let alternativeMedia = itemAndPeer.item.alternativeMedia.flatMap(EngineMedia.init), (!preferHighQuality && !itemAndPeer.item.isMy) {
-                            selectedMedia = alternativeMedia
+                        if let alternativeMediaValue = itemAndPeer.item.alternativeMediaList.first.flatMap(EngineMedia.init), (!preferHighQuality && !itemAndPeer.item.isMy) {
+                            selectedMedia = alternativeMediaValue
                         } else {
                             selectedMedia = EngineMedia(media)
                         }
@@ -1277,7 +1277,7 @@ public extension TelegramEngine {
                                     timestamp: item.timestamp,
                                     expirationTimestamp: item.expirationTimestamp,
                                     media: item.media,
-                                    alternativeMedia: item.alternativeMedia,
+                                    alternativeMediaList: item.alternativeMediaList,
                                     mediaAreas: item.mediaAreas,
                                     text: item.text,
                                     entities: item.entities,

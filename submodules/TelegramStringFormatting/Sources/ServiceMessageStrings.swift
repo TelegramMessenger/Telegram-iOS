@@ -235,7 +235,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                             } else {
                                 for attribute in file.attributes {
                                     switch attribute {
-                                    case let .Video(_, _, flags, _, _):
+                                    case let .Video(_, _, flags, _, _, _):
                                         if flags.contains(.instantRoundVideo) {
                                             type = .round
                                         } else {

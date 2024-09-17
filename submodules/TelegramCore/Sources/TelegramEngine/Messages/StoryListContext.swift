@@ -67,7 +67,7 @@ public final class EngineStoryItem: Equatable {
     public let timestamp: Int32
     public let expirationTimestamp: Int32
     public let media: EngineMedia
-    public let alternativeMedia: EngineMedia?
+    public let alternativeMediaList: [EngineMedia]
     public let mediaAreas: [MediaArea]
     public let text: String
     public let entities: [MessageTextEntity]
@@ -87,12 +87,12 @@ public final class EngineStoryItem: Equatable {
     public let forwardInfo: ForwardInfo?
     public let author: EnginePeer?
     
-    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, alternativeMedia: EngineMedia?, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool, isContacts: Bool, isSelectedContacts: Bool, isForwardingDisabled: Bool, isEdited: Bool, isMy: Bool, myReaction: MessageReaction.Reaction?, forwardInfo: ForwardInfo?, author: EnginePeer?) {
+    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, alternativeMediaList: [EngineMedia], mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool, isContacts: Bool, isSelectedContacts: Bool, isForwardingDisabled: Bool, isEdited: Bool, isMy: Bool, myReaction: MessageReaction.Reaction?, forwardInfo: ForwardInfo?, author: EnginePeer?) {
         self.id = id
         self.timestamp = timestamp
         self.expirationTimestamp = expirationTimestamp
         self.media = media
-        self.alternativeMedia = alternativeMedia
+        self.alternativeMediaList = alternativeMediaList
         self.mediaAreas = mediaAreas
         self.text = text
         self.entities = entities
@@ -126,7 +126,7 @@ public final class EngineStoryItem: Equatable {
         if lhs.media != rhs.media {
             return false
         }
-        if lhs.alternativeMedia != rhs.alternativeMedia {
+        if lhs.alternativeMediaList != rhs.alternativeMediaList {
             return false
         }
         if lhs.mediaAreas != rhs.mediaAreas {
@@ -205,7 +205,7 @@ public extension EngineStoryItem {
             timestamp: self.timestamp,
             expirationTimestamp: self.expirationTimestamp,
             media: self.media._asMedia(),
-            alternativeMedia: self.alternativeMedia?._asMedia(),
+            alternativeMediaList: self.alternativeMediaList.map { $0._asMedia() },
             mediaAreas: self.mediaAreas,
             text: self.text,
             entities: self.entities,
@@ -670,7 +670,7 @@ public final class PeerStoryListContext: StoryListContext {
                             timestamp: item.timestamp,
                             expirationTimestamp: item.expirationTimestamp,
                             media: EngineMedia(media),
-                            alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                            alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                             mediaAreas: item.mediaAreas,
                             text: item.text,
                             entities: item.entities,
@@ -839,7 +839,7 @@ public final class PeerStoryListContext: StoryListContext {
                                             timestamp: item.timestamp,
                                             expirationTimestamp: item.expirationTimestamp,
                                             media: EngineMedia(media),
-                                            alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                                            alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                                             mediaAreas: item.mediaAreas,
                                             text: item.text,
                                             entities: item.entities,
@@ -1013,7 +1013,7 @@ public final class PeerStoryListContext: StoryListContext {
                                                                 timestamp: item.timestamp,
                                                                 expirationTimestamp: item.expirationTimestamp,
                                                                 media: EngineMedia(media),
-                                                                alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                                                                alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                                                                 mediaAreas: item.mediaAreas,
                                                                 text: item.text,
                                                                 entities: item.entities,
@@ -1062,7 +1062,7 @@ public final class PeerStoryListContext: StoryListContext {
                                                             timestamp: item.timestamp,
                                                             expirationTimestamp: item.expirationTimestamp,
                                                             media: EngineMedia(media),
-                                                            alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                                                            alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                                                             mediaAreas: item.mediaAreas,
                                                             text: item.text,
                                                             entities: item.entities,
@@ -1113,7 +1113,7 @@ public final class PeerStoryListContext: StoryListContext {
                                                                 timestamp: item.timestamp,
                                                                 expirationTimestamp: item.expirationTimestamp,
                                                                 media: EngineMedia(media),
-                                                                alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                                                                alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                                                                 mediaAreas: item.mediaAreas,
                                                                 text: item.text,
                                                                 entities: item.entities,
@@ -1170,7 +1170,7 @@ public final class PeerStoryListContext: StoryListContext {
                                                             timestamp: item.timestamp,
                                                             expirationTimestamp: item.expirationTimestamp,
                                                             media: EngineMedia(media),
-                                                            alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                                                            alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                                                             mediaAreas: item.mediaAreas,
                                                             text: item.text,
                                                             entities: item.entities,
@@ -1416,7 +1416,7 @@ public final class SearchStoryListContext: StoryListContext {
                                             timestamp: item.timestamp,
                                             expirationTimestamp: item.expirationTimestamp,
                                             media: EngineMedia(media),
-                                            alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                                            alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                                             mediaAreas: item.mediaAreas,
                                             text: item.text,
                                             entities: item.entities,
@@ -1565,7 +1565,7 @@ public final class SearchStoryListContext: StoryListContext {
                                                     timestamp: item.timestamp,
                                                     expirationTimestamp: item.expirationTimestamp,
                                                     media: EngineMedia(media),
-                                                    alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                                                    alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                                                     mediaAreas: item.mediaAreas,
                                                     text: item.text,
                                                     entities: item.entities,
@@ -1637,7 +1637,7 @@ public final class SearchStoryListContext: StoryListContext {
                                                 timestamp: item.storyItem.timestamp,
                                                 expirationTimestamp: item.storyItem.expirationTimestamp,
                                                 media: item.storyItem.media,
-                                                alternativeMedia: item.storyItem.alternativeMedia,
+                                                alternativeMediaList: item.storyItem.alternativeMediaList,
                                                 mediaAreas: item.storyItem.mediaAreas,
                                                 text: item.storyItem.text,
                                                 entities: item.storyItem.entities,
@@ -1755,7 +1755,7 @@ public final class PeerExpiringStoryListContext {
                                         timestamp: item.timestamp,
                                         expirationTimestamp: item.expirationTimestamp,
                                         media: EngineMedia(media),
-                                        alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                                        alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                                         mediaAreas: item.mediaAreas,
                                         text: item.text,
                                         entities: item.entities,
@@ -2211,7 +2211,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
                                         timestamp: 0,
                                         expirationTimestamp: Int32.max,
                                         media: EngineMedia(item.media),
-                                        alternativeMedia: nil,
+                                        alternativeMediaList: [],
                                         mediaAreas: [],
                                         text: "",
                                         entities: [],
@@ -2260,7 +2260,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
                                     timestamp: item.timestamp,
                                     expirationTimestamp: Int32.max,
                                     media: EngineMedia(item.media),
-                                    alternativeMedia: nil,
+                                    alternativeMediaList: [],
                                     mediaAreas: [],
                                     text: "",
                                     entities: [],
@@ -2371,7 +2371,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
                                 timestamp: item.timestamp,
                                 expirationTimestamp: Int32.max,
                                 media: EngineMedia(item.media),
-                                alternativeMedia: nil,
+                                alternativeMediaList: [],
                                 mediaAreas: [],
                                 text: "",
                                 entities: [],
@@ -2447,7 +2447,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
                                     timestamp: 0,
                                     expirationTimestamp: Int32.max,
                                     media: EngineMedia(item.media),
-                                    alternativeMedia: nil,
+                                    alternativeMediaList: [],
                                     mediaAreas: [],
                                     text: "",
                                     entities: [],
@@ -2510,7 +2510,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
                                     timestamp: item.timestamp,
                                     expirationTimestamp: Int32.max,
                                     media: EngineMedia(item.media),
-                                    alternativeMedia: nil,
+                                    alternativeMediaList: [],
                                     mediaAreas: [],
                                     text: "",
                                     entities: [],

@@ -598,10 +598,10 @@ final class StoryItemContentComponent: Component {
             
             let selectedMedia: EngineMedia
             var messageMedia: EngineMedia?
-            if !component.preferHighQuality, !component.item.isMy, let alternativeMedia = component.item.alternativeMedia {
-                selectedMedia = alternativeMedia
+            if !component.preferHighQuality, !component.item.isMy, let alternativeMediaValue = component.item.alternativeMediaList.first {
+                selectedMedia = alternativeMediaValue
                 
-                switch alternativeMedia {
+                switch alternativeMediaValue {
                 case let .image(image):
                     messageMedia = .image(image)
                 case let .file(file):

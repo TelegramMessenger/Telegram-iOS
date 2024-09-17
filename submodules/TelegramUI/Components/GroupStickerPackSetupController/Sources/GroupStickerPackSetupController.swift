@@ -302,7 +302,7 @@ private func groupStickerPackSetupControllerEntries(context: AccountContext, pre
                     
                     let thumbnail: StickerPackItem?
                     if let thumbnailRep = info.thumbnail {
-                        thumbnail = StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: thumbnailRep.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: info.immediateThumbnailData, mimeType: "", size: nil, attributes: []), indexKeys: [])
+                        thumbnail = StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: thumbnailRep.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: info.immediateThumbnailData, mimeType: "", size: nil, attributes: [], alternativeRepresentations: []), indexKeys: [])
                     } else {
                         thumbnail = entry.firstItem as? StickerPackItem
                     }

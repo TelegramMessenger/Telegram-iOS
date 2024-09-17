@@ -23,6 +23,7 @@ swift_library(
         "//submodules/RadialStatusNode:RadialStatusNode",
         "//submodules/AppBundle:AppBundle",
         "//submodules/Utils/RangeSet:RangeSet",
+        "//submodules/TelegramVoip",
     ],
     visibility = [
         "//visibility:public",

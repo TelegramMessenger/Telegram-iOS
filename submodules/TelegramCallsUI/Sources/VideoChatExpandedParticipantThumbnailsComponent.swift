@@ -201,7 +201,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
                     text: .plain(NSAttributedString(string: EnginePeer(component.participant.peer).compactDisplayTitle, font: Font.semibold(13.0), textColor: .white))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - 6.0 * 2.0 - 8.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - 6.0 * 2.0 - 12.0, height: 100.0)
             )
             let titleFrame = CGRect(origin: CGPoint(x: 6.0, y: availableSize.height - 6.0 - titleSize.height), size: titleSize)
             if let titleView = self.title.view {

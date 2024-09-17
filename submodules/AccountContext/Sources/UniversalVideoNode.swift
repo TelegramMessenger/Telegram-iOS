@@ -10,6 +10,11 @@ import UniversalMediaPlayer
 import AVFoundation
 import RangeSet
 
+public enum UniversalVideoContentVideoQuality: Equatable {
+    case auto
+    case quality(Int)
+}
+
 public protocol UniversalVideoContentNode: AnyObject {
     var ready: Signal<Void, NoError> { get }
     var status: Signal<MediaPlayerStatus, NoError> { get }
@@ -29,6 +34,8 @@ public protocol UniversalVideoContentNode: AnyObject {
     func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd)
     func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool)
     func setBaseRate(_ baseRate: Double)
+    func setVideoQuality(_ videoQuality: UniversalVideoContentVideoQuality)
+    func videoQualityState() -> (current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])?
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int
     func removePlaybackCompleted(_ index: Int)
     func fetchControl(_ control: UniversalVideoNodeFetchControl)
@@ -327,6 +334,24 @@ public final class UniversalVideoNode: ASDisplayNode {
                 contentNode.setBaseRate(baseRate)
             }
         })
+    }
+    
+    public func setVideoQuality(_ videoQuality: UniversalVideoContentVideoQuality) {
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                contentNode.setVideoQuality(videoQuality)
+            }
+        })
+    }
+    
+    public func videoQualityState() -> (current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])? {
+        var result: (current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])?
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode {
+                result = contentNode.videoQualityState()
+            }
+        })
+        return result
     }
     
     public func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd = .loopDisablingSound) {

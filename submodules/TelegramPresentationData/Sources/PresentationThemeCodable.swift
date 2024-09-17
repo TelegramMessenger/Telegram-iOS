@@ -122,7 +122,7 @@ struct TelegramWallpaperStandardizedCodable: Codable {
                         }
                         
                         if let slug = slug {
-                            self.value = .file(TelegramWallpaper.File(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: !colors.isEmpty, isDark: false, slug: slug, file: TelegramMediaFile(fileId: EngineMedia.Id(namespace: 0, id: 0), partialReference: nil, resource: WallpaperDataResource(slug: slug), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, colors: colors.map { $0.argb }, intensity: intensity, rotation: rotation)))
+                            self.value = .file(TelegramWallpaper.File(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: !colors.isEmpty, isDark: false, slug: slug, file: TelegramMediaFile(fileId: EngineMedia.Id(namespace: 0, id: 0), partialReference: nil, resource: WallpaperDataResource(slug: slug), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: [], alternativeRepresentations: []), settings: WallpaperSettings(blur: blur, motion: motion, colors: colors.map { $0.argb }, intensity: intensity, rotation: rotation)))
                         } else if colors.count > 1 {
                             self.value = .gradient(TelegramWallpaper.Gradient(id: nil, colors: colors.map { $0.argb }, settings: WallpaperSettings(blur: blur, motion: motion, rotation: rotation)))
                         } else {

@@ -414,8 +414,8 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
 }
 
 private func selectStoryMedia(item: Stories.Item, preferredHighQuality: Bool) -> Media? {
-    if !preferredHighQuality, let alternativeMedia = item.alternativeMedia {
-        return alternativeMedia
+    if !preferredHighQuality, let alternativeMediaValue = item.alternativeMediaList.first {
+        return alternativeMediaValue
     } else {
         return item.media
     }
@@ -430,7 +430,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     private var highQualityImageNode: TransformImageNode?
 
     private var videoNode: UniversalVideoNode?
-    private var videoContent: NativeVideoContent?
+    private var videoContent: UniversalVideoContent?
     private var animatedStickerNode: AnimatedStickerNode?
     private var statusNode: RadialStatusNode?
     public var videoNodeDecoration: ChatBubbleVideoDecoration?
@@ -678,10 +678,10 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 } else if let media = media as? TelegramMediaImage, let resource = largestImageRepresentation(media.representations)?.resource {
                                     messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: media, resource: resource)
                                 }
-                                if let alternativeMedia = item.alternativeMedia {
-                                    if let media = alternativeMedia as? TelegramMediaFile {
+                                if let alternativeMediaValue = item.alternativeMediaList.first {
+                                    if let media = alternativeMediaValue as? TelegramMediaFile {
                                         messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: media)
-                                    } else if let media = alternativeMedia as? TelegramMediaImage, let resource = largestImageRepresentation(media.representations)?.resource {
+                                    } else if let media = alternativeMediaValue as? TelegramMediaImage, let resource = largestImageRepresentation(media.representations)?.resource {
                                         messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: media, resource: resource)
                                     }
                                 }
@@ -715,7 +715,20 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 }
             } else if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
                 var videoContentMatch = true
-                if let content = self.videoContent, case let .message(stableId, mediaId) = content.nativeId {
+                if let content = self.videoContent as? NativeVideoContent, case let .message(stableId, mediaId) = content.nativeId {
+                    var media = self.media
+                    if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
+                        media = fullMedia
+                    }
+                    
+                    if let storyMedia = media as? TelegramMediaStory, let storyItem = self.message?.associatedStories[storyMedia.storyId]?.get(Stories.StoredItem.self) {
+                        if case let .item(item) = storyItem, let _ = item.media {
+                            media = selectStoryMedia(item: item, preferredHighQuality: self.preferredStoryHighQuality)
+                        }
+                    }
+                    
+                    videoContentMatch = self.message?.stableId == stableId && media?.id == mediaId
+                } else if let content = self.videoContent as? PlatformVideoContent, case let .message(_, stableId, mediaId) = content.nativeId {
                     var media = self.media
                     if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
                         media = fullMedia
@@ -1644,12 +1657,18 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     
                                     let streamVideo = isMediaStreamable(message: message, media: updatedVideoFile)
                                     let loopVideo = updatedVideoFile.isAnimated
-                                    let videoContent = NativeVideoContent(id: .message(message.stableId, updatedVideoFile.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo ? .conservative : .none, loopVideo: loopVideo, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false), continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo, placeholderColor: emptyColor, captureProtected: message.isCopyProtected() || isExtendedMedia, storeAfterDownload: { [weak context] in
-                                        guard let context, let peerId else {
-                                            return
-                                        }
-                                        let _ = storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: .message(message: MessageReference(message), media: updatedVideoFile), peerId: peerId).startStandalone()
-                                    })
+                                    
+                                    let videoContent: UniversalVideoContent
+                                    if NativeVideoContent.isHLSVideo(file: updatedVideoFile), context.sharedContext.immediateExperimentalUISettings.dynamicStreaming {
+                                        videoContent = HLSVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: true, loopVideo: loopVideo)
+                                    } else {
+                                        videoContent = NativeVideoContent(id: .message(message.stableId, updatedVideoFile.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo ? .conservative : .none, loopVideo: loopVideo, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false), continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo, placeholderColor: emptyColor, captureProtected: message.isCopyProtected() || isExtendedMedia, storeAfterDownload: { [weak context] in
+                                            guard let context, let peerId else {
+                                                return
+                                            }
+                                            let _ = storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: .message(message: MessageReference(message), media: updatedVideoFile), peerId: peerId).startStandalone()
+                                        })
+                                    }
                                     let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: videoContent, priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     videoNode.ownsContentNodeUpdated = { [weak self] owns in

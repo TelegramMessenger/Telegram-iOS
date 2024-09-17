@@ -2608,12 +2608,13 @@ public extension Api.functions.channels {
                 }
 }
 public extension Api.functions.channels {
-                static func clickSponsoredMessage(channel: Api.InputChannel, randomId: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func clickSponsoredMessage(flags: Int32, channel: Api.InputChannel, randomId: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(414170259)
+                    buffer.appendInt32(21257589)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     channel.serialize(buffer, true)
                     serializeBytes(randomId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "channels.clickSponsoredMessage", parameters: [("channel", String(describing: channel)), ("randomId", String(describing: randomId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "channels.clickSponsoredMessage", parameters: [("flags", String(describing: flags)), ("channel", String(describing: channel)), ("randomId", String(describing: randomId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

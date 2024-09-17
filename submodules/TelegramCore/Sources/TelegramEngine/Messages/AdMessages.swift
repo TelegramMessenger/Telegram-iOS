@@ -615,7 +615,7 @@ func _internal_markAdAction(account: Account, peerId: EnginePeer.Id, opaqueId: D
         guard let inputChannel = inputChannel else {
             return .complete()
         }
-        return account.network.request(Api.functions.channels.clickSponsoredMessage(channel: inputChannel, randomId: Buffer(data: opaqueId)))
+        return account.network.request(Api.functions.channels.clickSponsoredMessage(flags: 0, channel: inputChannel, randomId: Buffer(data: opaqueId)))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }

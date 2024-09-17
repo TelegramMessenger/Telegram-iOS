@@ -674,6 +674,7 @@ public extension Api {
         case keyboardButton(text: String)
         case keyboardButtonBuy(text: String)
         case keyboardButtonCallback(flags: Int32, text: String, data: Buffer)
+        case keyboardButtonCopy(text: String, copyText: String)
         case keyboardButtonGame(text: String)
         case keyboardButtonRequestGeoLocation(text: String)
         case keyboardButtonRequestPeer(text: String, buttonId: Int32, peerType: Api.RequestPeerType, maxQuantity: Int32)
@@ -734,6 +735,13 @@ public extension Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(text, buffer: buffer, boxed: false)
                     serializeBytes(data, buffer: buffer, boxed: false)
+                    break
+                case .keyboardButtonCopy(let text, let copyText):
+                    if boxed {
+                        buffer.appendInt32(1976723854)
+                    }
+                    serializeString(text, buffer: buffer, boxed: false)
+                    serializeString(copyText, buffer: buffer, boxed: false)
                     break
                 case .keyboardButtonGame(let text):
                     if boxed {
@@ -838,6 +846,8 @@ public extension Api {
                 return ("keyboardButtonBuy", [("text", text as Any)])
                 case .keyboardButtonCallback(let flags, let text, let data):
                 return ("keyboardButtonCallback", [("flags", flags as Any), ("text", text as Any), ("data", data as Any)])
+                case .keyboardButtonCopy(let text, let copyText):
+                return ("keyboardButtonCopy", [("text", text as Any), ("copyText", copyText as Any)])
                 case .keyboardButtonGame(let text):
                 return ("keyboardButtonGame", [("text", text as Any)])
                 case .keyboardButtonRequestGeoLocation(let text):
@@ -963,6 +973,20 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.KeyboardButton.keyboardButtonCallback(flags: _1!, text: _2!, data: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_keyboardButtonCopy(_ reader: BufferReader) -> KeyboardButton? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.KeyboardButton.keyboardButtonCopy(text: _1!, copyText: _2!)
             }
             else {
                 return nil

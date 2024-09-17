@@ -1111,6 +1111,7 @@ final class VideoChatParticipantsComponent: Component {
                             avatarComponent: AnyComponent(VideoChatParticipantAvatarComponent(
                                 call: component.call,
                                 peer: EnginePeer(participant.peer),
+                                myPeerId: component.participants?.myPeerId ?? component.call.accountContext.account.peerId,
                                 isSpeaking: component.speakingParticipants.contains(participant.peer.id),
                                 theme: component.theme
                             )),

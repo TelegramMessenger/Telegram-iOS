@@ -307,6 +307,12 @@ final class VideoChatParticipantVideoComponent: Component {
                 if muteStatusView.superview == nil {
                     self.addSubview(muteStatusView)
                     muteStatusView.alpha = controlsAlpha
+                    
+                    //TODO:release
+                    muteStatusView.layer.shadowOpacity = 0.7
+                    muteStatusView.layer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
+                    muteStatusView.layer.shadowOffset = CGSize(width: 0.0, height: 1.0)
+                    muteStatusView.layer.shadowRadius = 8.0
                 }
                 transition.setPosition(view: muteStatusView, position: muteStatusFrame.center)
                 transition.setBounds(view: muteStatusView, bounds: CGRect(origin: CGPoint(), size: muteStatusFrame.size))
@@ -320,7 +326,7 @@ final class VideoChatParticipantVideoComponent: Component {
                     text: .plain(NSAttributedString(string: component.participant.peer.debugDisplayTitle, font: Font.semibold(16.0), textColor: .white))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - 8.0 * 2.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - 8.0 * 2.0 - 4.0, height: 100.0)
             )
             let titleFrame: CGRect
             if component.isExpanded {
@@ -333,6 +339,12 @@ final class VideoChatParticipantVideoComponent: Component {
                     titleView.layer.anchorPoint = CGPoint()
                     self.addSubview(titleView)
                     titleView.alpha = controlsAlpha
+                    
+                    //TODO:release
+                    titleView.layer.shadowOpacity = 0.7
+                    titleView.layer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
+                    titleView.layer.shadowOffset = CGSize(width: 0.0, height: 1.0)
+                    titleView.layer.shadowRadius = 8.0
                 }
                 transition.setPosition(view: titleView, position: titleFrame.origin)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)

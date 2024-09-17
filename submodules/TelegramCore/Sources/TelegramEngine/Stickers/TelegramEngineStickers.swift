@@ -361,7 +361,7 @@ public func _internal_resolveInlineStickers(postbox: Postbox, network: Network, 
                 for result in documentSets {
                     if let result = result {
                         for document in result {
-                            if let file = telegramMediaFileFromApiDocument(document) {
+                            if let file = telegramMediaFileFromApiDocument(document, altDocuments: []) {
                                 resultFiles[file.fileId.id] = file
                                 transaction.storeMediaIfNotPresent(media: file)
                             }
