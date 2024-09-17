@@ -438,6 +438,8 @@ public final class ChatButtonKeyboardInputNode: ChatInputNode {
                     if let message = self.message {
                         self.controllerInteraction.openRequestedPeerSelection(message.id, peerType, buttonId, maxQuantity)
                     }
+                case let .copyText(payload):
+                    self.controllerInteraction.copyText(payload)
             }
             if dismissIfOnce {
                 if let message = self.message {

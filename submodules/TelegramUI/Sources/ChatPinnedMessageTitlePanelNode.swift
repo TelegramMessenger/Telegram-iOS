@@ -971,6 +971,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         controllerInteraction.openWebView(button.title, url, simple, .generic)
                     case .requestPeer:
                         break
+                    case let .copyText(payload):
+                        controllerInteraction.copyText(payload)
                     }
                     
                     break
