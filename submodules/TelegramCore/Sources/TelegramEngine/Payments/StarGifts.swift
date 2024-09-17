@@ -27,7 +27,7 @@ public final class StarGiftsList: Codable, Equatable {
     }
 }
 
-public struct StarGift: Equatable, Codable {
+public struct StarGift: Equatable, Codable, PostboxCoding {
     enum CodingKeys: String, CodingKey {
         case id
         case file
@@ -35,7 +35,7 @@ public struct StarGift: Equatable, Codable {
         case availability
     }
     
-    public struct Availability: Equatable, Codable {
+    public struct Availability: Equatable, Codable, PostboxCoding {
         enum CodingKeys: String, CodingKey {
             case remains
             case total
@@ -43,6 +43,21 @@ public struct StarGift: Equatable, Codable {
 
         public let remains: Int32
         public let total: Int32
+        
+        init(remains: Int32, total: Int32) {
+            self.remains = remains
+            self.total = total
+        }
+        
+        public init(decoder: PostboxDecoder) {
+            self.remains = decoder.decodeInt32ForKey(CodingKeys.remains.rawValue, orElse: 0)
+            self.total = decoder.decodeInt32ForKey(CodingKeys.total.rawValue, orElse: 0)
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            encoder.encodeInt32(self.remains, forKey: CodingKeys.remains.rawValue)
+            encoder.encodeInt32(self.total, forKey: CodingKeys.total.rawValue)
+        }
     }
     
     public enum DecodingError: Error {
@@ -75,6 +90,13 @@ public struct StarGift: Equatable, Codable {
         self.availability = try container.decodeIfPresent(Availability.self, forKey: .availability)
     }
     
+    public init(decoder: PostboxDecoder) {
+        self.id = decoder.decodeInt64ForKey(CodingKeys.id.rawValue, orElse: 0)
+        self.file = decoder.decodeObjectForKey(CodingKeys.file.rawValue) as! TelegramMediaFile
+        self.price = decoder.decodeInt64ForKey(CodingKeys.price.rawValue, orElse: 0)
+        self.availability = decoder.decodeObjectForKey(CodingKeys.availability.rawValue, decoder: { StarGift.Availability(decoder: $0) }) as? StarGift.Availability
+    }
+    
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.id, forKey: .id)
@@ -86,6 +108,17 @@ public struct StarGift: Equatable, Codable {
         
         try container.encode(self.price, forKey: .price)
         try container.encodeIfPresent(self.availability, forKey: .availability)
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt64(self.id, forKey: CodingKeys.id.rawValue)
+        encoder.encodeObject(self.file, forKey: CodingKeys.file.rawValue)
+        encoder.encodeInt64(self.price, forKey: CodingKeys.price.rawValue)
+        if let availability = self.availability {
+            encoder.encodeObject(availability, forKey: CodingKeys.availability.rawValue)
+        } else {
+            encoder.encodeNil(forKey: CodingKeys.availability.rawValue)
+        }
     }
 }
 
@@ -152,4 +185,216 @@ func _internal_keepCachedStarGiftsUpdated(postbox: Postbox, network: Network) ->
 func managedStarGiftsUpdates(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
     let poll = _internal_keepCachedStarGiftsUpdated(postbox: postbox, network: network)
     return (poll |> then(.complete() |> suspendAwareDelay(2.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+}
+
+func _internal_convertStarGift(account: Account, messageId: EngineMessage.Id) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputUser? in
+        return transaction.getPeer(messageId.peerId).flatMap(apiInputUser)
+    }
+    |> mapToSignal { inputUser -> Signal<Never, NoError> in
+        guard let inputUser else {
+            return .complete()
+        }
+        return account.network.request(Api.functions.payments.convertStarGift(userId: inputUser, msgId: messageId.id))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+            return .single(nil)
+        }
+        |> ignoreValues
+    }
+}
+
+func _internal_saveStarGiftToProfile(account: Account, messageId: EngineMessage.Id) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputUser? in
+        return transaction.getPeer(messageId.peerId).flatMap(apiInputUser)
+    }
+    |> mapToSignal { inputUser -> Signal<Never, NoError> in
+        guard let inputUser else {
+            return .complete()
+        }
+        return account.network.request(Api.functions.payments.saveStarGift(userId: inputUser, msgId: messageId.id))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+            return .single(nil)
+        }
+        |> ignoreValues
+    }
+}
+
+private final class ProfileGiftsContextImpl {
+    private let queue: Queue
+    private let account: Account
+    private let peerId: PeerId
+    
+    private let disposable = MetaDisposable()
+    
+    private var gifts: [ProfileGiftsContext.State.StarGift] = []
+    private var count: Int32?
+    private var dataState: ProfileGiftsContext.State.DataState = .ready(canLoadMore: true, nextOffset: nil)
+    
+    private let stateValue = Promise<ProfileGiftsContext.State>()
+    var state: Signal<ProfileGiftsContext.State, NoError> {
+        return self.stateValue.get()
+    }
+    
+    init(queue: Queue, account: Account, peerId: EnginePeer.Id) {
+        self.queue = queue
+        self.account = account
+        self.peerId = peerId
+        
+        self.loadMore()
+    }
+    
+    deinit {
+        self.disposable.dispose()
+    }
+    
+    func loadMore() {
+        if case let .ready(true, nextOffset) = self.dataState {
+            self.dataState = .loading
+            self.pushState()
+            
+            let peerId = self.peerId
+            let accountPeerId = self.account.peerId
+            let network = self.account.network
+            let postbox = self.account.postbox
+            let signal: Signal<([ProfileGiftsContext.State.StarGift], Int32, String?), NoError> = self.account.postbox.transaction { transaction -> Api.InputUser? in
+                return transaction.getPeer(peerId).flatMap(apiInputUser)
+            }
+            |> mapToSignal { inputUser -> Signal<([ProfileGiftsContext.State.StarGift], Int32, String?), NoError> in
+                guard let inputUser else {
+                    return .single(([], 0, nil))
+                }
+                return network.request(Api.functions.payments.getUserStarGifts(userId: inputUser, offset: nextOffset ?? "", limit: 32))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.payments.UserStarGifts?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<([ProfileGiftsContext.State.StarGift], Int32, String?), NoError> in
+                    guard let result else {
+                        return .single(([], 0, nil))
+                    }
+                    return postbox.transaction { transaction -> ([ProfileGiftsContext.State.StarGift], Int32, String?) in
+                        switch result {
+                        case let .userStarGifts(_, count, apiGifts, nextOffset, users):
+                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                            
+                            let gifts = apiGifts.compactMap { ProfileGiftsContext.State.StarGift(apiUserStarGift: $0, transaction: transaction) }
+                            return (gifts, count, nextOffset)
+                        }
+                    }
+                }
+            }
+            
+            self.disposable.set((signal
+            |> deliverOn(self.queue)).start(next: { [weak self] (gifts, count, nextOffset) in
+                guard let strongSelf = self else {
+                    return
+                }
+                for gift in gifts {
+                    strongSelf.gifts.append(gift)
+                }
+                
+                let updatedCount = max(Int32(strongSelf.gifts.count), count)
+                strongSelf.count = updatedCount
+                strongSelf.dataState = .ready(canLoadMore: count != 0 && updatedCount > strongSelf.gifts.count && nextOffset != nil, nextOffset: nextOffset)
+                strongSelf.pushState()
+            }))
+        }
+    }
+    
+    private func pushState() {
+        self.stateValue.set(.single(ProfileGiftsContext.State(gifts: self.gifts, count: self.count, dataState: self.dataState)))
+    }
+}
+
+public final class ProfileGiftsContext {
+    public struct State: Equatable {
+        public struct StarGift: Equatable {
+            public let gift: TelegramCore.StarGift
+            public let fromPeer: EnginePeer?
+            public let date: Int32
+            public let text: String?
+            public let entities: [MessageTextEntity]?
+            public let messageId: EngineMessage.Id?
+            public let nameHidden: Bool
+            public let convertStars: Int64?
+        }
+        
+        public enum DataState: Equatable {
+            case loading
+            case ready(canLoadMore: Bool, nextOffset: String?)
+        }
+        
+        public var gifts: [ProfileGiftsContext.State.StarGift]
+        public var count: Int32?
+        public var dataState: ProfileGiftsContext.State.DataState
+    }
+    
+    private let queue: Queue = .mainQueue()
+    private let impl: QueueLocalObject<ProfileGiftsContextImpl>
+    
+    public var state: Signal<ProfileGiftsContext.State, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                disposable.set(impl.state.start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            
+            return disposable
+        }
+    }
+    
+    public init(account: Account, peerId: EnginePeer.Id) {
+        let queue = self.queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return ProfileGiftsContextImpl(queue: queue, account: account, peerId: peerId)
+        })
+    }
+    
+    public func loadMore() {
+        self.impl.with { impl in
+            impl.loadMore()
+        }
+    }
+}
+
+private extension ProfileGiftsContext.State.StarGift {
+    init?(apiUserStarGift: Api.UserStarGift, transaction: Transaction) {
+        switch apiUserStarGift {
+        case let .userStarGift(flags, fromId, date, apiGift, message, msgId, convertStars):
+            guard let gift = StarGift(apiStarGift: apiGift) else {
+                return nil
+            }
+            self.gift = gift
+            if let fromPeerId = fromId.flatMap({ EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value($0)) }) {
+                self.fromPeer = transaction.getPeer(fromPeerId).flatMap(EnginePeer.init)
+            } else {
+                self.fromPeer = nil
+            }
+            self.date = date
+
+            if let message {
+                switch message {
+                case let .textWithEntities(text, entities):
+                    self.text = text
+                    self.entities = messageTextEntitiesFromApiEntities(entities)
+                }
+            } else {
+                self.text = nil
+                self.entities = nil
+            }
+            if let fromPeer = self.fromPeer, let msgId {
+                self.messageId = EngineMessage.Id(peerId: fromPeer.id, namespace: Namespaces.Message.Cloud, id: msgId)
+            } else {
+                self.messageId = nil
+            }
+            self.nameHidden = (flags & (1 << 0)) != 0
+            self.convertStars = convertStars
+        }
+    }
 }

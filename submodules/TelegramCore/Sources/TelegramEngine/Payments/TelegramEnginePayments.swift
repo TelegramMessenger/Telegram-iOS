@@ -112,5 +112,15 @@ public extension TelegramEngine {
         public func keepStarGiftsUpdated() -> Signal<Never, NoError> {
             return _internal_keepCachedStarGiftsUpdated(postbox: self.account.postbox, network: self.account.network)
         }
+        
+        
+        public func convertStarGift(messageId: EngineMessage.Id) -> Signal<Never, NoError> {
+            return _internal_convertStarGift(account: self.account, messageId: messageId)
+        }
+
+        public func saveStarGiftToProfile(messageId: EngineMessage.Id) -> Signal<Never, NoError> {
+            return _internal_saveStarGiftToProfile(account: self.account, messageId: messageId)
+        }
+
     }
 }

@@ -1229,10 +1229,7 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
         guard let invoice = invoice else {
             return .fail(.generic)
         }
-        
-        let flags: Int32 = 0
-
-        return account.network.request(Api.functions.payments.sendStarsForm(flags: flags, formId: formId, invoice: invoice))
+        return account.network.request(Api.functions.payments.sendStarsForm(formId: formId, invoice: invoice))
         |> map { result -> SendBotPaymentResult in
             switch result {
                 case let .paymentResult(updates):

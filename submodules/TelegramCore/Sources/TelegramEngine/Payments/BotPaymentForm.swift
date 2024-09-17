@@ -347,7 +347,7 @@ func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInv
         }
         return .inputInvoiceStars(purpose: .inputStorePaymentStarsGiveaway(flags: flags, stars: stars, boostPeer: apiBoostPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount, users: users))
     case let .starGift(hideName, peerId, giftId, text, entities):
-        guard let peer = transaction.getPeer(peerId), let apiPeer = apiInputPeer(peer) else {
+        guard let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) else {
             return nil
         }
         var flags: Int32 = 0
@@ -359,7 +359,7 @@ func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInv
             flags |= (1 << 1)
             message = .textWithEntities(text: text, entities: entities.flatMap { apiEntitiesFromMessageTextEntities($0, associatedPeers: SimpleDictionary()) } ?? [])
         }
-        return .inputInvoiceStarGift(flags: flags, peer: apiPeer, giftId: giftId, message: message)
+        return .inputInvoiceStarGift(flags: flags, userId: inputUser, giftId: giftId, message: message)
     }
 }
 
