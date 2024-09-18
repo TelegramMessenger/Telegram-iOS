@@ -448,6 +448,15 @@ public extension PeerId {
         return false
     }
     
+    var isVerificationCodes: Bool {
+        if self.namespace == Namespaces.Peer.CloudUser {
+            if self.id._internalGetInt64Value() == 489000 {
+                return true
+            }
+        }
+        return false
+    }
+    
     func isRepliesOrSavedMessages(accountPeerId: PeerId) -> Bool {
         if accountPeerId == self {
             return true

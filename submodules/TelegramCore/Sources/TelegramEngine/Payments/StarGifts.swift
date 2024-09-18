@@ -130,7 +130,7 @@ extension StarGift {
             if let availabilityRemains, let availabilityTotal {
                 availability = Availability(remains: availabilityRemains, total: availabilityTotal)
             }
-            guard let file = telegramMediaFileFromApiDocument(sticker) else {
+            guard let file = telegramMediaFileFromApiDocument(sticker, altDocuments: nil) else {
                 return nil
             }
             self.init(id: id, file: file, price: stars, availability: availability)
