@@ -2477,10 +2477,11 @@ private func renderVideo(context: AccountContext, backgroundImage: UIImage, user
         let layerInstruction = compositionLayerInstruction(for: compositionTrack, assetTrack: assetTrack)
         instruction.layerInstructions = [layerInstruction]
 
-        guard let export = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
+        guard let exportValue = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
             completion(nil)
             return
         }
+        nonisolated(unsafe) let export = exportValue
 
         let videoName = UUID().uuidString
         let exportURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(videoName).appendingPathExtension("mp4")

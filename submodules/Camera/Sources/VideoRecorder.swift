@@ -123,6 +123,8 @@ private final class VideoRecorderImpl {
     private var previousAppendTime: Double?
     
     public func appendVideoSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
+        nonisolated(unsafe) let sampleBuffer = sampleBuffer
+        
         self.queue.async {
             guard self.hasError() == nil && !self.stopped else {
                 return
@@ -246,6 +248,8 @@ private final class VideoRecorderImpl {
     }
     
     public func appendAudioSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
+        nonisolated(unsafe) let sampleBuffer = sampleBuffer
+        
         self.queue.async {
             guard self.hasError() == nil && !self.stopped else {
                 return

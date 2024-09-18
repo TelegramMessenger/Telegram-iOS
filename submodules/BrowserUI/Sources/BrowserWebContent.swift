@@ -9,7 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import PresentationDataUtils
 import AccountContext
-import WebKit
+@preconcurrency import WebKit
 import AppBundle
 import PromptUI
 import SafariServices

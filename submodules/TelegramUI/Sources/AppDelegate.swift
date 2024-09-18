@@ -1808,14 +1808,19 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         self.isActiveValue = false
         self.isActivePromise.set(false)
         
-        var taskId: UIBackgroundTaskIdentifier?
-        taskId = application.beginBackgroundTask(withName: "lock", expirationHandler: {
-            if let taskId = taskId {
+        final class TaskIdHolder {
+            var taskId: UIBackgroundTaskIdentifier?
+        }
+        
+        let taskIdHolder = TaskIdHolder()
+        
+        taskIdHolder.taskId = application.beginBackgroundTask(withName: "lock", expirationHandler: {
+            if let taskId = taskIdHolder.taskId {
                 UIApplication.shared.endBackgroundTask(taskId)
             }
         })
         DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 5.0, execute: {
-            if let taskId = taskId {
+            if let taskId = taskIdHolder.taskId {
                 UIApplication.shared.endBackgroundTask(taskId)
             }
         })
