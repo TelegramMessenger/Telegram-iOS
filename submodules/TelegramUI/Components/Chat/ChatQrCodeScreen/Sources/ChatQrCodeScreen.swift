@@ -2481,7 +2481,7 @@ private func renderVideo(context: AccountContext, backgroundImage: UIImage, user
             completion(nil)
             return
         }
-        #if canImport(SwiftData) // Xcode 16
+        #if compiler(>=6.0) // Xcode 16
         nonisolated(unsafe) let export = exportValue
         #else
         let export = exportValue

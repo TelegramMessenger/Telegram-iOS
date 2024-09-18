@@ -2500,7 +2500,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         }))
     }
     var tooltipScreen: UndoOverlayController?
-    #if canImport(SwiftData) // Xcode 16
+    #if compiler(>=6.0) // Xcode 16
     nonisolated(unsafe) var timer: Foundation.Timer?
     #else
     var timer: Foundation.Timer?

@@ -123,7 +123,7 @@ private final class VideoRecorderImpl {
     private var previousAppendTime: Double?
     
     public func appendVideoSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
-        #if canImport(SwiftData) // Xcode 16
+        #if compiler(>=6.0) // Xcode 16
         nonisolated(unsafe) let sampleBuffer = sampleBuffer
         #endif
         
@@ -250,7 +250,7 @@ private final class VideoRecorderImpl {
     }
     
     public func appendAudioSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
-        #if canImport(SwiftData) // Xcode 16
+        #if compiler(>=6.0) // Xcode 16
         nonisolated(unsafe) let sampleBuffer = sampleBuffer
         #endif
         
