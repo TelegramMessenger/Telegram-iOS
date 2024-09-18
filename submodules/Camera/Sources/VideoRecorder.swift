@@ -123,7 +123,9 @@ private final class VideoRecorderImpl {
     private var previousAppendTime: Double?
     
     public func appendVideoSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
+        #if canImport(SwiftData) // Xcode 16
         nonisolated(unsafe) let sampleBuffer = sampleBuffer
+        #endif
         
         self.queue.async {
             guard self.hasError() == nil && !self.stopped else {
@@ -248,7 +250,9 @@ private final class VideoRecorderImpl {
     }
     
     public func appendAudioSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
+        #if canImport(SwiftData) // Xcode 16
         nonisolated(unsafe) let sampleBuffer = sampleBuffer
+        #endif
         
         self.queue.async {
             guard self.hasError() == nil && !self.stopped else {
