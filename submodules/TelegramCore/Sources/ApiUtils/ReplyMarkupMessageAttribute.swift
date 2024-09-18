@@ -89,9 +89,8 @@ extension ReplyMarkupButton {
                     ))
                 }
                 self.init(title: text, titleWhenForwarded: nil, action: .requestPeer(peerType: mappedPeerType, buttonId: buttonId, maxQuantity: maxQuantity))
-            case let .keyboardButtonCopy(text, _):
-                //TODO:release
-                self.init(title: text, titleWhenForwarded: nil, action: .text)
+            case let .keyboardButtonCopy(text, payload):
+                self.init(title: text, titleWhenForwarded: nil, action: .copyText(payload: payload))
         }
     }
 }
