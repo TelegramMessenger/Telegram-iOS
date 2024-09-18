@@ -13,12 +13,12 @@ extension MediaResourceReference {
     }
 }
 
-final class TelegramCloudMediaResourceFetchInfo: MediaResourceFetchInfo {
-    let reference: MediaResourceReference
-    let preferBackgroundReferenceRevalidation: Bool
-    let continueInBackground: Bool
+public final class TelegramCloudMediaResourceFetchInfo: MediaResourceFetchInfo {
+    public let reference: MediaResourceReference
+    public let preferBackgroundReferenceRevalidation: Bool
+    public let continueInBackground: Bool
     
-    init(reference: MediaResourceReference, preferBackgroundReferenceRevalidation: Bool, continueInBackground: Bool) {
+    public init(reference: MediaResourceReference, preferBackgroundReferenceRevalidation: Bool, continueInBackground: Bool) {
         self.reference = reference
         self.preferBackgroundReferenceRevalidation = preferBackgroundReferenceRevalidation
         self.continueInBackground = continueInBackground
@@ -493,7 +493,7 @@ final class MediaReferenceRevalidationContext {
                 return .fail(.generic)
             }
             for document in result {
-                if let file = telegramMediaFileFromApiDocument(document) {
+                if let file = telegramMediaFileFromApiDocument(document, altDocuments: []) {
                     return .single(file)
                 }
             }
@@ -956,9 +956,12 @@ func revalidateMediaResourceReference(accountPeerId: PeerId, postbox: Postbox, n
                         }
                         if let updatedResource = findUpdatedMediaResource(media: media, previousMedia: nil, resource: resource) {
                             return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
-                        } else if let alternativeMedia = item.alternativeMedia, let updatedResource = findUpdatedMediaResource(media: alternativeMedia, previousMedia: nil, resource: resource) {
-                            return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
                         } else {
+                            for alternativeMediaValue in item.alternativeMediaList {
+                                if let updatedResource = findUpdatedMediaResource(media: alternativeMediaValue, previousMedia: nil, resource: resource) {
+                                    return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
+                                }
+                            }
                             return .fail(.generic)
                         }
                     }

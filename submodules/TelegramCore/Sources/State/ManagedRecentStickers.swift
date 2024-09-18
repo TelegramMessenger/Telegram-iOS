@@ -53,7 +53,7 @@ func managedRecentStickers(postbox: Postbox, network: Network, forceFetch: Bool 
                 case let .recentStickers(_, _, stickers, _):
                     var items: [OrderedItemListEntry] = []
                     for sticker in stickers {
-                        if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
+                        if let file = telegramMediaFileFromApiDocument(sticker, altDocuments: []), let id = file.id {
                             if let entry = CodableEntry(RecentMediaItem(file)) {
                                 items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: entry))
                             }
@@ -76,7 +76,7 @@ func managedRecentGifs(postbox: Postbox, network: Network, forceFetch: Bool = fa
                     case let .savedGifs(_, gifs):
                         var items: [OrderedItemListEntry] = []
                         for gif in gifs {
-                            if let file = telegramMediaFileFromApiDocument(gif), let id = file.id {
+                            if let file = telegramMediaFileFromApiDocument(gif, altDocuments: []), let id = file.id {
                                 if let entry = CodableEntry(RecentMediaItem(file)) {
                                     items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: entry))
                                 }
@@ -114,7 +114,7 @@ func managedSavedStickers(postbox: Postbox, network: Network, forceFetch: Bool =
                         
                         var items: [OrderedItemListEntry] = []
                         for sticker in stickers {
-                            if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
+                            if let file = telegramMediaFileFromApiDocument(sticker, altDocuments: []), let id = file.id {
                                 var stringRepresentations: [String] = []
                                 if let representations = fileStringRepresentations[id] {
                                     stringRepresentations = representations
@@ -141,7 +141,7 @@ func managedGreetingStickers(postbox: Postbox, network: Network) -> Signal<Void,
                 case let .stickers(_, stickers):
                     var items: [OrderedItemListEntry] = []
                     for sticker in stickers {
-                        if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
+                        if let file = telegramMediaFileFromApiDocument(sticker, altDocuments: []), let id = file.id {
                             if let entry = CodableEntry(RecentMediaItem(file)) {
                                 items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: entry))
                             }
@@ -165,7 +165,7 @@ func managedPremiumStickers(postbox: Postbox, network: Network) -> Signal<Void, 
                 case let .stickers(_, stickers):
                     var items: [OrderedItemListEntry] = []
                     for sticker in stickers {
-                        if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
+                        if let file = telegramMediaFileFromApiDocument(sticker, altDocuments: []), let id = file.id {
                             if let entry = CodableEntry(RecentMediaItem(file)) {
                                 items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: entry))
                             }
@@ -189,7 +189,7 @@ func managedAllPremiumStickers(postbox: Postbox, network: Network) -> Signal<Voi
                 case let .stickers(_, stickers):
                     var items: [OrderedItemListEntry] = []
                     for sticker in stickers {
-                        if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
+                        if let file = telegramMediaFileFromApiDocument(sticker, altDocuments: []), let id = file.id {
                             if let entry = CodableEntry(RecentMediaItem(file)) {
                                 items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: entry))
                             }

@@ -130,7 +130,7 @@ public final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         let phase = self.phase
         let blobs = self.blobs
         
-        context.renderToLayer(spec: RenderLayerSpec(size: RenderSize(width: Int(self.bounds.width * 3.0), height: Int(self.bounds.height * 3.0)), edgeInset: 4), state: RenderState.self, layer: self, commands: { encoder, placement in
+        context.renderToLayer(spec: RenderLayerSpec(size: RenderSize(width: Int(self.bounds.width * 3.0), height: Int(self.bounds.height * 3.0)), edgeInset: 2), state: RenderState.self, layer: self, commands: { encoder, placement in
             let rect = placement.effectiveRect
             
             for i in 0 ..< blobs.count {

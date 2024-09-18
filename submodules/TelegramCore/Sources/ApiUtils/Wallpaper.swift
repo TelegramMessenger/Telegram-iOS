@@ -67,7 +67,7 @@ extension TelegramWallpaper {
     init(apiWallpaper: Api.WallPaper) {
         switch apiWallpaper {
             case let .wallPaper(id, flags, accessHash, slug, document, settings):
-                if let file = telegramMediaFileFromApiDocument(document) {
+                if let file = telegramMediaFileFromApiDocument(document, altDocuments: []) {
                     let wallpaperSettings: WallpaperSettings
                     if let settings = settings {
                         wallpaperSettings = WallpaperSettings(apiWallpaperSettings: settings)

@@ -795,6 +795,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 if case .animateOut = stateTransition {
                     contentRect.origin.y = self.contentRectDebugNode.frame.maxY - contentRect.size.height
                 }
+                //contentRect.size.height = 200.0
             } else {
                 return
             }

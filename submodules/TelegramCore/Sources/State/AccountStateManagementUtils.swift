@@ -4762,7 +4762,7 @@ func replayFinalState(
                             timestamp: item.timestamp,
                             expirationTimestamp: item.expirationTimestamp,
                             media: item.media,
-                            alternativeMedia: item.alternativeMedia,
+                            alternativeMediaList: item.alternativeMediaList,
                             mediaAreas: item.mediaAreas,
                             text: item.text,
                             entities: item.entities,
@@ -4796,7 +4796,7 @@ func replayFinalState(
                         timestamp: item.timestamp,
                         expirationTimestamp: item.expirationTimestamp,
                         media: item.media,
-                        alternativeMedia: item.alternativeMedia,
+                        alternativeMediaList: item.alternativeMediaList,
                         mediaAreas: item.mediaAreas,
                         text: item.text,
                         entities: item.entities,
@@ -4980,7 +4980,7 @@ func replayFinalState(
                             }
                             
                             for apiDocument in documents {
-                                if let file = telegramMediaFileFromApiDocument(apiDocument), let id = file.id {
+                                if let file = telegramMediaFileFromApiDocument(apiDocument, altDocuments: []), let id = file.id {
                                     let fileIndexKeys: [MemoryBuffer]
                                     if let indexKeys = indexKeysByFile[id] {
                                         fileIndexKeys = indexKeys

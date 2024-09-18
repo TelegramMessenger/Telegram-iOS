@@ -742,7 +742,7 @@ extension TelegramBusinessIntro {
     convenience init(apiBusinessIntro: Api.BusinessIntro) {
         switch apiBusinessIntro {
         case let .businessIntro(_, title, description, sticker):
-            self.init(title: title, text: description, stickerFile: sticker.flatMap(telegramMediaFileFromApiDocument))
+            self.init(title: title, text: description, stickerFile: sticker.flatMap { telegramMediaFileFromApiDocument($0, altDocuments: []) })
         }
     }
     

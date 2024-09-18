@@ -138,7 +138,7 @@ public final class WrappedMediaStreamingContext {
     }
 }
 @available(iOS 12.0, macOS 14.0, *)
-public final class ExternalMediaStreamingContext {
+public final class ExternalMediaStreamingContext: SharedHLSServerSource {
     private final class Impl {
         let queue: Queue
         
@@ -274,21 +274,29 @@ public final class ExternalMediaStreamingContext {
                 )
             }
         }
+        
+        func fileData(id: Int64, range: Range<Int>) -> Signal<(Data, Int)?, NoError> {
+            return .never()
+        }
     }
     
     private let queue = Queue()
-    let id: CallSessionInternalId
+    let internalId: CallSessionInternalId
     private let impl: QueueLocalObject<Impl>
     private var hlsServerDisposable: Disposable?
     
+    public var id: UUID {
+        return self.internalId
+    }
+    
     public init(id: CallSessionInternalId, rejoinNeeded: @escaping () -> Void) {
-        self.id = id
+        self.internalId = id
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
             return Impl(queue: queue, rejoinNeeded: rejoinNeeded)
         })
         
-        self.hlsServerDisposable = SharedHLSServer.shared.registerPlayer(streamingContext: self)
+        self.hlsServerDisposable = SharedHLSServer.shared.registerPlayer(source: self)
     }
     
     deinit {
@@ -322,9 +330,27 @@ public final class ExternalMediaStreamingContext {
             impl.partData(index: index, quality: quality).start(next: subscriber.putNext)
         }
     }
+    
+    public func fileData(id: Int64, range: Range<Int>) -> Signal<(Data, Int)?, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            impl.fileData(id: id, range: range).start(next: subscriber.putNext)
+        }
+    }
 }
+
+public protocol SharedHLSServerSource: AnyObject {
+    var id: UUID { get }
+    
+    func masterPlaylistData() -> Signal<String, NoError>
+    func playlistData(quality: Int) -> Signal<String, NoError>
+    func partData(index: Int, quality: Int) -> Signal<Data?, NoError>
+    func fileData(id: Int64, range: Range<Int>) -> Signal<(Data, Int)?, NoError>
+}
+
 @available(iOS 12.0, macOS 14.0, *)
 public final class SharedHLSServer {
+    public typealias Source = SharedHLSServerSource
+    
     public static let shared: SharedHLSServer = {
         return SharedHLSServer()
     }()
@@ -346,11 +372,11 @@ public final class SharedHLSServer {
         }
     }
     
-    private final class ContextReference {
-        weak var streamingContext: ExternalMediaStreamingContext?
+    private final class SourceReference {
+        weak var source: SharedHLSServerSource?
         
-        init(streamingContext: ExternalMediaStreamingContext) {
-            self.streamingContext = streamingContext
+        init(source: SharedHLSServerSource) {
+            self.source = source
         }
     }
     @available(iOS 12.0, macOS 14.0, *)
@@ -360,7 +386,7 @@ public final class SharedHLSServer {
         private let port: NWEndpoint.Port
         private var listener: NWListener?
         
-        private var contextReferences = Bag<ContextReference>()
+        private var sourceReferences = Bag<SourceReference>()
         
         init(queue: Queue, port: UInt16) {
             self.queue = queue
@@ -443,6 +469,20 @@ public final class SharedHLSServer {
             }
             
             let requestPath = String(firstLine[firstLine.startIndex ..< firstLine.index(firstLine.endIndex, offsetBy: -" HTTP/1.1".count)])
+            var requestRange: Range<Int>?
+            if let rangeRange = requestString.range(of: "Range: bytes=") {
+                if let endRange = requestString.range(of: "\r\n", range: rangeRange.upperBound ..< requestString.endIndex) {
+                    let rangeString = String(requestString[rangeRange.upperBound ..< endRange.lowerBound])
+                    if let dashRange = rangeString.range(of: "-") {
+                        let lowerBoundString = String(rangeString[rangeString.startIndex ..< dashRange.lowerBound])
+                        let upperBoundString = String(rangeString[dashRange.upperBound ..< rangeString.endIndex])
+                        
+                        if let lowerBound = Int(lowerBoundString), let upperBound = Int(upperBoundString) {
+                            requestRange = lowerBound ..< upperBound
+                        }
+                    }
+                }
+            }
             
             guard let firstSlash = requestPath.range(of: "/") else {
                 self.sendErrorAndClose(connection: connection, error: .notFound)
@@ -452,14 +492,14 @@ public final class SharedHLSServer {
                 self.sendErrorAndClose(connection: connection)
                 return
             }
-            guard let streamingContext = self.contextReferences.copyItems().first(where: { $0.streamingContext?.id == streamId })?.streamingContext else {
+            guard let source = self.sourceReferences.copyItems().first(where: { $0.source?.id == streamId })?.source else {
                 self.sendErrorAndClose(connection: connection)
                 return
             }
             
             let filePath = String(requestPath[firstSlash.upperBound...])
             if filePath == "master.m3u8" {
-                let _ = (streamingContext.masterPlaylistData()
+                let _ = (source.masterPlaylistData()
                 |> deliverOn(self.queue)
                 |> take(1)).start(next: { [weak self] result in
                     guard let self else {
@@ -474,7 +514,7 @@ public final class SharedHLSServer {
                     return
                 }
                 
-                let _ = (streamingContext.playlistData(quality: levelIndex)
+                let _ = (source.playlistData(quality: levelIndex)
                 |> deliverOn(self.queue)
                 |> take(1)).start(next: { [weak self] result in
                     guard let self else {
@@ -497,7 +537,7 @@ public final class SharedHLSServer {
                     self.sendErrorAndClose(connection: connection)
                     return
                 }
-                let _ = (streamingContext.partData(index: partIndex, quality: levelIndex)
+                let _ = (source.partData(index: partIndex, quality: levelIndex)
                 |> deliverOn(self.queue)
                 |> take(1)).start(next: { [weak self] result in
                     guard let self else {
@@ -529,6 +569,29 @@ public final class SharedHLSServer {
                         self.sendErrorAndClose(connection: connection, error: .notFound)
                     }
                 })
+            } else if filePath.hasPrefix("partfile") && filePath.hasSuffix(".mp4") {
+                let fileId = String(filePath[filePath.index(filePath.startIndex, offsetBy: "partfile".count) ..< filePath.index(filePath.endIndex, offsetBy: -".mp4".count)])
+                guard let fileIdValue = Int64(fileId) else {
+                    self.sendErrorAndClose(connection: connection)
+                    return
+                }
+                guard let requestRange else {
+                    self.sendErrorAndClose(connection: connection)
+                    return
+                }
+                let _ = (source.fileData(id: fileIdValue, range: requestRange.lowerBound ..< requestRange.upperBound + 1)
+                |> deliverOn(self.queue)
+                |> take(1)).start(next: { [weak self] result in
+                    guard let self else {
+                        return
+                    }
+                    
+                    if let (data, totalSize) = result {
+                        self.sendResponseAndClose(connection: connection, data: data, range: requestRange, totalSize: totalSize)
+                    } else {
+                        self.sendErrorAndClose(connection: connection, error: .internalServerError)
+                    }
+                })
             } else {
                 self.sendErrorAndClose(connection: connection, error: .notFound)
             }
@@ -544,8 +607,16 @@ public final class SharedHLSServer {
             })
         }
         
-        private func sendResponseAndClose(connection: NWConnection, data: Data) {
-            let responseHeaders = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nConnection: close\r\n\r\n"
+        private func sendResponseAndClose(connection: NWConnection, data: Data, range: Range<Int>? = nil, totalSize: Int? = nil) {
+            var responseHeaders = "HTTP/1.1 200 OK\r\n"
+            responseHeaders.append("Content-Length: \(data.count)\r\n")
+            if let range, let totalSize {
+                responseHeaders.append("Content-Range: bytes \(range.lowerBound)-\(range.upperBound)/\(totalSize)\r\n")
+            }
+            responseHeaders.append("Content-Type: application/octet-stream\r\n")
+            responseHeaders.append("Connection: close\r\n")
+            responseHeaders.append("Access-Control-Allow-Origin: *\r\n")
+            responseHeaders.append("\r\n")
             var responseData = Data()
             responseData.append(responseHeaders.data(using: .utf8)!)
             responseData.append(data)
@@ -557,16 +628,16 @@ public final class SharedHLSServer {
             })
         }
         
-        func registerPlayer(streamingContext: ExternalMediaStreamingContext) -> Disposable {
+        func registerPlayer(source: SharedHLSServerSource) -> Disposable {
             let queue = self.queue
-            let index = self.contextReferences.add(ContextReference(streamingContext: streamingContext))
+            let index = self.sourceReferences.add(SourceReference(source: source))
             
             return ActionDisposable { [weak self] in
                 queue.async {
                     guard let self else {
                         return
                     }
-                    self.contextReferences.remove(index)
+                    self.sourceReferences.remove(index)
                 }
             }
         }
@@ -584,11 +655,11 @@ public final class SharedHLSServer {
         })
     }
     
-    fileprivate func registerPlayer(streamingContext: ExternalMediaStreamingContext) -> Disposable {
+    public func registerPlayer(source: SharedHLSServerSource) -> Disposable {
         let disposable = MetaDisposable()
         
         self.impl.with { impl in
-            disposable.set(impl.registerPlayer(streamingContext: streamingContext))
+            disposable.set(impl.registerPlayer(source: source))
         }
         
         return disposable

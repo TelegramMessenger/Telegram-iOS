@@ -19,6 +19,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
     let isPresentation: Bool
     let isSelected: Bool
     let isSpeaking: Bool
+    let interfaceOrientation: UIInterfaceOrientation
     let action: (() -> Void)?
     
     init(
@@ -28,6 +29,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
         isPresentation: Bool,
         isSelected: Bool,
         isSpeaking: Bool,
+        interfaceOrientation: UIInterfaceOrientation,
         action: (() -> Void)?
     ) {
         self.call = call
@@ -36,6 +38,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
         self.isPresentation = isPresentation
         self.isSelected = isSelected
         self.isSpeaking = isSpeaking
+        self.interfaceOrientation = interfaceOrientation
         self.action = action
     }
     
@@ -58,16 +61,21 @@ final class VideoChatParticipantThumbnailComponent: Component {
         if lhs.isSpeaking != rhs.isSpeaking {
             return false
         }
+        if lhs.interfaceOrientation != rhs.interfaceOrientation {
+            return false
+        }
         return true
     }
     
     private struct VideoSpec: Equatable {
         var resolution: CGSize
         var rotationAngle: Float
+        var followsDeviceOrientation: Bool
         
-        init(resolution: CGSize, rotationAngle: Float) {
+        init(resolution: CGSize, rotationAngle: Float, followsDeviceOrientation: Bool) {
             self.resolution = resolution
             self.rotationAngle = rotationAngle
+            self.followsDeviceOrientation = followsDeviceOrientation
         }
     }
     
@@ -193,7 +201,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
                     text: .plain(NSAttributedString(string: EnginePeer(component.participant.peer).compactDisplayTitle, font: Font.semibold(13.0), textColor: .white))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - 6.0 * 2.0 - 8.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - 6.0 * 2.0 - 12.0, height: 100.0)
             )
             let titleFrame = CGRect(origin: CGPoint(x: 6.0, y: availableSize.height - 6.0 - titleSize.height), size: titleSize)
             if let titleView = self.title.view {
@@ -243,7 +251,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
                             videoLayer.video = videoOutput
                             
                             if let videoOutput {
-                                let videoSpec = VideoSpec(resolution: videoOutput.resolution, rotationAngle: videoOutput.rotationAngle)
+                                let videoSpec = VideoSpec(resolution: videoOutput.resolution, rotationAngle: videoOutput.rotationAngle, followsDeviceOrientation: videoOutput.followsDeviceOrientation)
                                 if self.videoSpec != videoSpec {
                                     self.videoSpec = videoSpec
                                     if !self.isUpdating {
@@ -269,9 +277,11 @@ final class VideoChatParticipantThumbnailComponent: Component {
                     videoLayer.blurredLayer.isHidden = component.isSelected
                     videoLayer.isHidden = component.isSelected
                     
+                    let rotationAngle = resolveCallVideoRotationAngle(angle: videoSpec.rotationAngle, followsDeviceOrientation: videoSpec.followsDeviceOrientation, interfaceOrientation: component.interfaceOrientation)
+                    
                     var rotatedResolution = videoSpec.resolution
                     var videoIsRotated = false
-                    if abs(videoSpec.rotationAngle - Float.pi * 0.5) < .ulpOfOne || abs(videoSpec.rotationAngle - Float.pi * 3.0 / 2.0) < .ulpOfOne {
+                    if abs(rotationAngle - Float.pi * 0.5) < .ulpOfOne || abs(rotationAngle - Float.pi * 3.0 / 2.0) < .ulpOfOne {
                         videoIsRotated = true
                     }
                     if videoIsRotated {
@@ -303,12 +313,12 @@ final class VideoChatParticipantThumbnailComponent: Component {
                     
                     transition.setPosition(layer: videoLayer, position: rotatedVideoFrame.center)
                     transition.setBounds(layer: videoLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoBoundsSize))
-                    transition.setTransform(layer: videoLayer, transform: CATransform3DMakeRotation(CGFloat(videoSpec.rotationAngle), 0.0, 0.0, 1.0))
+                    transition.setTransform(layer: videoLayer, transform: CATransform3DMakeRotation(CGFloat(rotationAngle), 0.0, 0.0, 1.0))
                     videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(rotatedVideoResolution.width), height: Int(rotatedVideoResolution.height)), edgeInset: 2)
                     
                     transition.setPosition(layer: videoLayer.blurredLayer, position: rotatedBlurredVideoFrame.center)
                     transition.setBounds(layer: videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: rotatedBlurredVideoBoundsSize))
-                    transition.setTransform(layer: videoLayer.blurredLayer, transform: CATransform3DMakeRotation(CGFloat(videoSpec.rotationAngle), 0.0, 0.0, 1.0))
+                    transition.setTransform(layer: videoLayer.blurredLayer, transform: CATransform3DMakeRotation(CGFloat(rotationAngle), 0.0, 0.0, 1.0))
                 }
             } else {
                 if let videoBackgroundLayer = self.videoBackgroundLayer {
@@ -426,6 +436,7 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
     let participants: [Participant]
     let selectedParticipant: Participant.Key?
     let speakingParticipants: Set<EnginePeer.Id>
+    let interfaceOrientation: UIInterfaceOrientation
     let updateSelectedParticipant: (Participant.Key) -> Void
 
     init(
@@ -434,6 +445,7 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
         participants: [Participant],
         selectedParticipant: Participant.Key?,
         speakingParticipants: Set<EnginePeer.Id>,
+        interfaceOrientation: UIInterfaceOrientation,
         updateSelectedParticipant: @escaping (Participant.Key) -> Void
     ) {
         self.call = call
@@ -441,6 +453,7 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
         self.participants = participants
         self.selectedParticipant = selectedParticipant
         self.speakingParticipants = speakingParticipants
+        self.interfaceOrientation = interfaceOrientation
         self.updateSelectedParticipant = updateSelectedParticipant
     }
 
@@ -458,6 +471,9 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
             return false
         }
         if lhs.speakingParticipants != rhs.speakingParticipants {
+            return false
+        }
+        if lhs.interfaceOrientation != rhs.interfaceOrientation {
             return false
         }
         return true
@@ -595,6 +611,7 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
                             isPresentation: participant.isPresentation,
                             isSelected: component.selectedParticipant == participant.key,
                             isSpeaking: component.speakingParticipants.contains(participant.participant.peer.id),
+                            interfaceOrientation: component.interfaceOrientation,
                             action: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return

@@ -281,7 +281,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         timestamp: item.timestamp,
                         expirationTimestamp: item.expirationTimestamp,
                         media: EngineMedia(media),
-                        alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                        alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                         mediaAreas: item.mediaAreas,
                         text: item.text,
                         entities: item.entities,
@@ -329,7 +329,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                                 timestamp: item.timestamp,
                                 expirationTimestamp: Int32.max,
                                 media: EngineMedia(item.media),
-                                alternativeMedia: nil,
+                                alternativeMediaList: [],
                                 mediaAreas: item.mediaAreas,
                                 text: item.text,
                                 entities: item.entities,
@@ -998,8 +998,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                 }
                 
                 var selectedMedia: EngineMedia
-                if let slice = stateValue.slice, let alternativeMedia = item.alternativeMedia, (!slice.additionalPeerData.preferHighQualityStories && !item.isMy) {
-                    selectedMedia = alternativeMedia
+                if let slice = stateValue.slice, let alternativeMediaValue = item.alternativeMediaList.first, (!slice.additionalPeerData.preferHighQualityStories && !item.isMy) {
+                    selectedMedia = alternativeMediaValue
                 } else {
                     selectedMedia = item.media
                 }
@@ -1315,7 +1315,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     timestamp: itemValue.timestamp,
                     expirationTimestamp: itemValue.expirationTimestamp,
                     media: EngineMedia(media),
-                    alternativeMedia: itemValue.alternativeMedia.flatMap(EngineMedia.init),
+                    alternativeMediaList: itemValue.alternativeMediaList.map(EngineMedia.init),
                     mediaAreas: itemValue.mediaAreas,
                     text: itemValue.text,
                     entities: itemValue.entities,
@@ -1692,8 +1692,8 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                                 }
                                 
                                 var selectedMedia: EngineMedia
-                                if let alternativeMedia = item.storyItem.alternativeMedia, (!preferHighQualityStories && !item.storyItem.isMy) {
-                                    selectedMedia = alternativeMedia
+                                if let alternativeMediaValue = item.storyItem.alternativeMediaList.first, (!preferHighQualityStories && !item.storyItem.isMy) {
+                                    selectedMedia = alternativeMediaValue
                                 } else {
                                     selectedMedia = item.storyItem.media
                                 }
@@ -1820,7 +1820,7 @@ public func preloadStoryMedia(context: AccountContext, info: StoryPreloadInfo) -
     case let .file(file):
         var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
         for attribute in file.attributes {
-            if case let .Video(_, _, _, preloadSize, _) = attribute {
+            if case let .Video(_, _, _, preloadSize, _, _) = attribute {
                 if let preloadSize {
                     fetchRange = (0 ..< Int64(preloadSize), .default)
                 }
@@ -2004,8 +2004,8 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
         var fetchPriorityDisposable: Disposable?
         
         let selectedMedia: EngineMedia
-        if !preferHighQualityStories, let alternativeMedia = storyItem.alternativeMedia {
-            selectedMedia = alternativeMedia
+        if !preferHighQualityStories, let alternativeMediaValue = storyItem.alternativeMediaList.first {
+            selectedMedia = alternativeMediaValue
         } else {
             selectedMedia = storyItem.media
         }
@@ -2047,7 +2047,7 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
         case let .file(file):
             var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
             for attribute in file.attributes {
-                if case let .Video(_, _, _, preloadSize, _) = attribute {
+                if case let .Video(_, _, _, preloadSize, _, _) = attribute {
                     if let preloadSize {
                         fetchRange = (0 ..< Int64(preloadSize), .default)
                     }
@@ -2247,7 +2247,7 @@ private func getCachedStory(storyId: StoryId, transaction: Transaction) -> Engin
             timestamp: item.timestamp,
             expirationTimestamp: item.expirationTimestamp,
             media: EngineMedia(media),
-            alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+            alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
             mediaAreas: item.mediaAreas,
             text: item.text,
             entities: item.entities,
@@ -2940,8 +2940,8 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                 }
                 
                 var selectedMedia: EngineMedia
-                if let slice = stateValue.slice, let alternativeMedia = item.alternativeMedia, (!slice.additionalPeerData.preferHighQualityStories && !item.isMy) {
-                    selectedMedia = alternativeMedia
+                if let slice = stateValue.slice, let alternativeMediaValue = item.alternativeMediaList.first, (!slice.additionalPeerData.preferHighQualityStories && !item.isMy) {
+                    selectedMedia = alternativeMediaValue
                 } else {
                     selectedMedia = item.media
                 }

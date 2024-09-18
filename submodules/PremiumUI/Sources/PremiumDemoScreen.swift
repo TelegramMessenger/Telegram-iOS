@@ -645,7 +645,8 @@ private final class DemoSheetContent: CombinedComponent {
                                         immediateThumbnailData: file.immediateThumbnailData,
                                         mimeType: file.mimeType,
                                         size: file.size,
-                                        attributes: file.attributes
+                                        attributes: file.attributes,
+                                        alternativeRepresentations: file.alternativeRepresentations
                                     )
                                 }
                             default:

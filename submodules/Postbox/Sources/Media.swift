@@ -101,6 +101,18 @@ public func areMediaArraysEqual(_ lhs: [Media], _ rhs: [Media]) -> Bool {
     return true
 }
 
+public func areMediaArraysSemanticallyEqual(_ lhs: [Media], _ rhs: [Media]) -> Bool {
+    if lhs.count != rhs.count {
+        return false
+    }
+    for i in 0 ..< lhs.count {
+        if !lhs[i].isSemanticallyEqual(to: rhs[i]) {
+            return false
+        }
+    }
+    return true
+}
+
 public func areMediaDictionariesEqual(_ lhs: [MediaId: Media], _ rhs: [MediaId: Media]) -> Bool {
     if lhs.count != rhs.count {
         return false

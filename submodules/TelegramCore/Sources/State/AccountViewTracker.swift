@@ -1196,7 +1196,7 @@ public final class AccountViewTracker {
                                         switch result {
                                         case let .stickerSet(_, _, _, documents)?:
                                             for document in documents {
-                                                if let file = telegramMediaFileFromApiDocument(document) {
+                                                if let file = telegramMediaFileFromApiDocument(document, altDocuments: []) {
                                                     if transaction.getMedia(file.fileId) != nil {
                                                         let _ = transaction.updateMedia(file.fileId, update: file)
                                                     }

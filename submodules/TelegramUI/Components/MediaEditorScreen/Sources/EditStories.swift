@@ -87,7 +87,7 @@ public extension MediaEditorScreen {
         if cover, case let .file(file) = storyItem.media {
             videoPlaybackPosition = 0.0
             for attribute in file.attributes {
-                if case let .Video(_, _, _, _, coverTime) = attribute {
+                if case let .Video(_, _, _, _, coverTime, _) = attribute {
                     videoPlaybackPosition = coverTime
                     break
                 }
@@ -258,8 +258,8 @@ public extension MediaEditorScreen {
                             if case let .file(file) = storyItem.media {
                                 var updatedAttributes: [TelegramMediaFileAttribute] = []
                                 for attribute in file.attributes {
-                                    if case let .Video(duration, size, flags, preloadSize, _) = attribute {
-                                        updatedAttributes.append(.Video(duration: duration, size: size, flags: flags, preloadSize: preloadSize, coverTime: min(duration, updatedCoverTimestamp)))
+                                    if case let .Video(duration, size, flags, preloadSize, _, videoCodec) = attribute {
+                                        updatedAttributes.append(.Video(duration: duration, size: size, flags: flags, preloadSize: preloadSize, coverTime: min(duration, updatedCoverTimestamp), videoCodec: videoCodec))
                                     } else {
                                         updatedAttributes.append(attribute)
                                     }

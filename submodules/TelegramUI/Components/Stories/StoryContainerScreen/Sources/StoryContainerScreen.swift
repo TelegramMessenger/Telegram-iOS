@@ -1136,7 +1136,7 @@ private final class StoryContainerScreenComponent: Component {
                 var isSilentVideo = false
                 if case let .file(file) = slice.item.storyItem.media {
                     for attribute in file.attributes {
-                        if case let .Video(_, _, flags, _, _) = attribute {
+                        if case let .Video(_, _, flags, _, _, _) = attribute {
                             if flags.contains(.isSilent) {
                                 isSilentVideo = true
                             }

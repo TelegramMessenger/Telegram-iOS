@@ -598,7 +598,7 @@ extension ChatContextResult {
                 if let photo = photo, let parsedImage = telegramMediaImageFromApiPhoto(photo) {
                     image = parsedImage
                 }
-                if let document = document, let parsedFile = telegramMediaFileFromApiDocument(document) {
+                if let document = document, let parsedFile = telegramMediaFileFromApiDocument(document, altDocuments: []) {
                     file = parsedFile
                 }
                 self = .internalReference(ChatContextResult.InternalReference(queryId: queryId, id: id, type: type, title: title, description: description, image: image, file: file, message: ChatContextResultMessage(apiMessage: sendMessage)))

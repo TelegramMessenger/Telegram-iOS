@@ -291,7 +291,7 @@ func parsePreviewStickerSet(_ set: Api.StickerSetCovered, namespace: ItemCollect
     case let .stickerSetCovered(set, cover):
         let info = StickerPackCollectionInfo(apiSet: set, namespace: namespace)
         var items: [StickerPackItem] = []
-        if let file = telegramMediaFileFromApiDocument(cover), let id = file.id {
+        if let file = telegramMediaFileFromApiDocument(cover, altDocuments: []), let id = file.id {
             items.append(StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: id.id), file: file, indexKeys: []))
         }
         return (info, items)
@@ -299,7 +299,7 @@ func parsePreviewStickerSet(_ set: Api.StickerSetCovered, namespace: ItemCollect
         let info = StickerPackCollectionInfo(apiSet: set, namespace: namespace)
         var items: [StickerPackItem] = []
         for cover in covers {
-            if let file = telegramMediaFileFromApiDocument(cover), let id = file.id {
+            if let file = telegramMediaFileFromApiDocument(cover, altDocuments: []), let id = file.id {
                 items.append(StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: id.id), file: file, indexKeys: []))
             }
         }
@@ -339,7 +339,7 @@ func parsePreviewStickerSet(_ set: Api.StickerSetCovered, namespace: ItemCollect
         let info = StickerPackCollectionInfo(apiSet: set, namespace: namespace)
         var items: [StickerPackItem] = []
         for document in documents {
-            if let file = telegramMediaFileFromApiDocument(document), let id = file.id {
+            if let file = telegramMediaFileFromApiDocument(document, altDocuments: []), let id = file.id {
                 let fileIndexKeys: [MemoryBuffer]
                 if let indexKeys = indexKeysByFile[id] {
                     fileIndexKeys = indexKeys
