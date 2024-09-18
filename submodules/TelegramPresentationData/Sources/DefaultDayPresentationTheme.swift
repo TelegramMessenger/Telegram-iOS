@@ -286,7 +286,6 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                         reactionActiveMediaPlaceholder: UIColor(rgb: 0xffffff, alpha: 0.2)
                     )
                 ),
-                linkHighlightColor: accentColor?.withAlphaComponent(0.3),
                 accentTextColor: accentColor,
                 accentControlColor: accentColor,
                 accentControlDisabledColor: accentColor?.withAlphaComponent(0.7),
@@ -331,7 +330,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                 primaryTextColor: outgoingPrimaryTextColor,
                 secondaryTextColor: outgoingSecondaryTextColor,
                 linkTextColor: outgoingLinkTextColor,
-                linkHighlightColor: day ? nil : accentColor?.withAlphaComponent(0.3),
+                linkHighlightColor: day ? nil : outgoingLinkTextColor?.withAlphaComponent(0.3),
                 scamColor: outgoingScamColor,
                 accentTextColor: outgoingAccentTextColor,
                 accentControlColor: outgoingControlColor,

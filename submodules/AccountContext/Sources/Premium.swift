@@ -276,3 +276,7 @@ public struct PremiumConfiguration {
         }
     }
 }
+
+public protocol GiftOptionsScreenProtocol {
+    
+}

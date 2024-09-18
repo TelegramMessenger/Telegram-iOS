@@ -616,7 +616,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openLargeEmojiInfo: { _, _, _ in
         }, openJoinLink: { _ in
         }, openWebView: { _, _, _, _ in
-        }, activateAdAction: { _, _ in
+        }, activateAdAction: { _, _, _, _ in
         }, openRequestedPeerSelection: { _, _, _, _ in
         }, saveMediaToFiles: { _ in
         }, openNoAdsDemo: {  
@@ -1208,8 +1208,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         if let invoice {
                             let inputData = Promise<BotCheckoutController.InputData?>()
                             inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, source: .slug(slug))
-                                          |> map(Optional.init)
-                                          |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
+                            |> map(Optional.init)
+                            |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
                                 return .single(nil)
                             })
                             strongSelf.controllerInteraction.presentController(BotCheckoutController(context: strongSelf.context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in

@@ -63,6 +63,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let isStandalone: Bool
     public let isInline: Bool
     public let showSensitiveContent: Bool
+    public let starGifts: [Int64: TelegramMediaFile]
     
     public init(
         automaticDownloadPeerType: MediaAutoDownloadPeerType,
@@ -96,7 +97,8 @@ public final class ChatMessageItemAssociatedData: Equatable {
         deviceContactsNumbers: Set<String> = Set(),
         isStandalone: Bool = false,
         isInline: Bool = false,
-        showSensitiveContent: Bool = false
+        showSensitiveContent: Bool = false,
+        starGifts: [Int64: TelegramMediaFile] = [:]
     ) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadPeerId = automaticDownloadPeerId
@@ -130,6 +132,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.isStandalone = isStandalone
         self.isInline = isInline
         self.showSensitiveContent = showSensitiveContent
+        self.starGifts = starGifts
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -221,6 +224,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.showSensitiveContent != rhs.showSensitiveContent {
+            return false
+        }
+        if lhs.starGifts != rhs.starGifts {
             return false
         }
         return true

@@ -204,7 +204,7 @@ func _internal_convertStarGift(account: Account, messageId: EngineMessage.Id) ->
     }
 }
 
-func _internal_saveStarGiftToProfile(account: Account, messageId: EngineMessage.Id) -> Signal<Never, NoError> {
+func _internal_updateStarGiftAddedToProfile(account: Account, messageId: EngineMessage.Id, added: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Api.InputUser? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputUser)
     }
@@ -212,7 +212,11 @@ func _internal_saveStarGiftToProfile(account: Account, messageId: EngineMessage.
         guard let inputUser else {
             return .complete()
         }
-        return account.network.request(Api.functions.payments.saveStarGift(userId: inputUser, msgId: messageId.id))
+        var flags: Int32 = 0
+        if !added {
+            flags |= (1 << 0)
+        }
+        return account.network.request(Api.functions.payments.saveStarGift(flags: flags, userId: inputUser, msgId: messageId.id))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Bool?, NoError> in
             return .single(nil)

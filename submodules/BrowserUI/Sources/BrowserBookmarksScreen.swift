@@ -147,7 +147,7 @@ public final class BrowserBookmarksScreen: ViewController {
             }, openLargeEmojiInfo: { _, _, _ in
             }, openJoinLink: { _ in
             }, openWebView: { _, _, _, _ in
-            }, activateAdAction: { _, _ in
+            }, activateAdAction: { _, _, _, _ in
             }, openRequestedPeerSelection: { _, _, _, _ in
             }, saveMediaToFiles: { _ in
             }, openNoAdsDemo: {

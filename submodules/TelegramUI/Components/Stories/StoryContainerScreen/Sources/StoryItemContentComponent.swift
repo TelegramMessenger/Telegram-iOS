@@ -918,7 +918,7 @@ final class StoryItemContentComponent: Component {
                     }
                 }
                 
-                let shimmeringMediaAreas: [MediaArea] = component.item.mediaAreas.filter { mediaArea in
+                var shimmeringMediaAreas: [MediaArea] = component.item.mediaAreas.filter { mediaArea in
                     if case .link = mediaArea {
                         return true
                     } else if case .venue = mediaArea {
@@ -926,6 +926,10 @@ final class StoryItemContentComponent: Component {
                     } else {
                         return false
                     }
+                }
+                
+                if component.peer.id.isTelegramNotifications {
+                    shimmeringMediaAreas = []
                 }
                 
                 if !shimmeringMediaAreas.isEmpty {

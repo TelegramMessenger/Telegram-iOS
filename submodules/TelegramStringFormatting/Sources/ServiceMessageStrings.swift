@@ -1051,14 +1051,27 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 attributedString = mutableString
             case .prizeStars:
                 attributedString = NSAttributedString(string: strings.Notification_StarsPrize, font: titleFont, textColor: primaryTextColor)
-            case let .starGift(amount, _, nameHidden, limitNumber, limitTotal, text, entities):
-                let _ = amount
+            case let .starGift(gift, _, nameHidden, limitNumber, limitTotal, text, entities):
                 let _ = nameHidden
                 let _ = limitNumber
                 let _ = limitTotal
                 let _ = text
                 let _ = entities
-                attributedString = nil
+                
+                let starsPrice = "\(gift.price) Stars"
+                var authorName = compactAuthorName
+                var peerIds: [(Int, EnginePeer.Id?)] = [(0, message.author?.id)]
+                if message.id.peerId.namespace == Namespaces.Peer.CloudUser && message.id.peerId.id._internalGetInt64Value() == 777000 {
+                    authorName = strings.Notification_StarsGift_UnknownUser
+                    peerIds = []
+                }
+                if message.author?.id == accountPeerId {
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_SentYou(starsPrice)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                } else {
+                    var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
+                    attributes[1] = boldAttributes
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Sent(authorName, starsPrice)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                }
             case .unknown:
                 attributedString = nil
             }

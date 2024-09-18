@@ -1113,12 +1113,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             } else {
                                 strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: message.id), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                             }
-                            /*for attribute in message.attributes {
-                                if let attribute = attribute as? ReplyMessageAttribute {
-                                    //strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId))
-                                    break
-                                }
-                            }*/
                             return true
                         case .setChatTheme:
                             strongSelf.presentThemeSelection()
@@ -1183,6 +1177,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let fromPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? strongSelf.context.account.peerId : message.id.peerId
                             let toPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? message.id.peerId : strongSelf.context.account.peerId
                             let controller = PremiumIntroScreen(context: strongSelf.context, source: .gift(from: fromPeerId, to: toPeerId, duration: duration, giftCode: nil))
+                            strongSelf.push(controller)
+                            return true
+                        case .starGift:
+                            let controller = strongSelf.context.sharedContext.makeGiftViewScreen(context: strongSelf.context, message: EngineMessage(message))
                             strongSelf.push(controller)
                             return true
                         case .giftStars:
@@ -1278,6 +1276,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var standalone = false
             if case .customChatContents = strongSelf.chatLocation {
                 standalone = true
+            }
+            
+            if let adAttribute = message.attributes.first(where: { $0 is AdMessageAttribute }) as? AdMessageAttribute {
+                if let file = message.media.first(where: { $0 is TelegramMediaFile}) as? TelegramMediaFile, file.isVideo && !file.isAnimated {
+                    strongSelf.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId, media: true, fullscreen: false)
+                } else {
+                    strongSelf.controllerInteraction?.activateAdAction(message.id, nil, true, false)
+                    return true
+                }
             }
             
             return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: openChatLocation, chatFilterTag: chatFilterTag, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, mediaIndex: params.mediaIndex, standalone: standalone, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
@@ -1391,7 +1398,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }, openAd: { [weak self] messageId in
                     if let strongSelf = self {
-                        strongSelf.controllerInteraction?.activateAdAction(messageId, nil)
+                        strongSelf.controllerInteraction?.activateAdAction(messageId, nil, true, true)
                     }
                 }, addContact: { [weak self] phoneNumber in
                     if let strongSelf = self {
@@ -3903,7 +3910,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.openWebApp(buttonText: buttonText, url: url, simple: simple, source: source)
-        }, activateAdAction: { [weak self] messageId, progress in
+        }, activateAdAction: { [weak self] messageId, progress, media, fullscreen in
             guard let self, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId), let adAttribute = message.adAttribute else {
                 return
             }
@@ -3917,7 +3924,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            self.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId, media: false, fullscreen: false)
+            self.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId, media: media, fullscreen: fullscreen)
             self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: adAttribute.url, concealed: false, external: true, progress: progress))
         }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId, maxQuantity in
             guard let self else {

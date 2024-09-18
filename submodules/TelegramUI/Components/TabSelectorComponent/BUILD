@@ -13,6 +13,9 @@ swift_library(
         "//submodules/Display",
         "//submodules/ComponentFlow",
         "//submodules/TelegramUI/Components/PlainButtonComponent",
+        "//submodules/Components/MultilineTextWithEntitiesComponent",
+        "//submodules/TextFormat",
+        "//submodules/AccountContext"
     ],
     visibility = [
         "//visibility:public",

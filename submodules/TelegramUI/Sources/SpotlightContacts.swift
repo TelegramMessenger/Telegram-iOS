@@ -186,12 +186,38 @@ private func manageableSpotlightContacts(appBasePath: String, accounts: Signal<[
     return accounts
     |> mapToSignal { accounts -> Signal<[[EnginePeer.Id: SpotlightIndexStorageItem]], NoError> in
         return combineLatest(queue: queue, accounts.map { account -> Signal<[EnginePeer.Id: SpotlightIndexStorageItem], NoError> in
-            return TelegramEngine(account: account).data.subscribe(
-                TelegramEngine.EngineData.Item.Contacts.List(includePresences: false)
+            let engine = TelegramEngine(account: account)
+            let recentApps = engine.peers.recentApps()
+            |> mapToSignal { peerIds -> Signal<[EnginePeer], NoError> in
+                return engine.data.get(
+                    EngineDataMap(
+                        peerIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.Peer in
+                            return TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                        }
+                    )
+                ) 
+                |> map { result -> [EnginePeer] in
+                    var peers: [EnginePeer] = []
+                    for (_, maybePeer) in result {
+                        if let peer = maybePeer {
+                            peers.append(peer)
+                        }
+                    }
+                    return peers
+                }
+            }
+            return combineLatest(
+                engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Contacts.List(includePresences: false)
+                ),
+                recentApps
             )
-            |> map { view -> [EnginePeer.Id: SpotlightIndexStorageItem] in
+            |> map { view, recentApps -> [EnginePeer.Id: SpotlightIndexStorageItem] in
                 var result: [EnginePeer.Id: SpotlightIndexStorageItem] = [:]
-                for peer in view.peers {
+                var peers: [EnginePeer] = []
+                peers.append(contentsOf: view.peers)
+                peers.append(contentsOf: recentApps)
+                for peer in peers {
                     if case let .user(user) = peer {
                         let avatarSourcePath = smallestImageRepresentation(user.photo).flatMap { representation -> String? in
                             let resourcePath = account.postbox.mediaBox.resourcePath(representation.resource)

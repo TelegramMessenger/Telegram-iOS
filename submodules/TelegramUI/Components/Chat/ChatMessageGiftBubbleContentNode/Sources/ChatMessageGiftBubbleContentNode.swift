@@ -243,6 +243,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var months: Int32 = 3
                 var animationName: String = ""
+                var animationFile: TelegramMediaFile?
                 var title = item.presentationData.strings.Notification_PremiumGift_Title
                 var text = ""
                 var buttonTitle = item.presentationData.strings.Notification_PremiumGift_View
@@ -314,6 +315,35 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 buttonTitle = item.presentationData.strings.Notification_PremiumPrize_View
                                 hasServiceMessage = false
                             }
+                        case let .starGift(gift, convertStars, giftText, entities, nameHidden, savedToProfile, converted)://(amount, giftId, nameHidden, limitNumber, limitTotal, giftText, _):
+                            let _ = nameHidden
+                            let authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
+                            title = nameHidden ? "Anonymous Gift" : "Gift from \(authorName)"
+                            if let giftText, !giftText.isEmpty {
+                                text = giftText
+                                let _ = entities
+                            } else {
+                                if incoming {
+                                    if converted {
+                                        text = "You converted this gift to \(convertStars) Stars."
+                                    } else if savedToProfile {
+                                        text = "You are displaying this gift on your page. You can also convert it to \(convertStars) Stars."
+                                    } else {
+                                        text = "Display this gift on your page or convert it to \(convertStars) Stars."
+                                    }
+                                } else {
+                                    var peerName = ""
+                                    if let peer = item.message.peers[item.message.id.peerId] {
+                                        peerName = EnginePeer(peer).compactDisplayTitle
+                                    }
+                                    if peerName.isEmpty {
+                                        text = "Display this gift on your page or convert it to \(convertStars) Stars."
+                                    } else {
+                                        text = "\(peerName) can keep this gift on their page or convert it to \(convertStars) Stars."
+                                    }
+                                }
+                            }
+                            animationFile = gift.file
                         default:
                             break
                         }
@@ -396,7 +426,12 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                         if let strongSelf = self {
                             if strongSelf.item == nil {
                                 strongSelf.animationNode.autoplay = true
-                                strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
+                                
+                                if let file = animationFile {
+                                    strongSelf.animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource), width: 384, height: 384, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                                } else if animationName.hasPrefix("Gift") {
+                                    strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
+                                }
                             }
                             strongSelf.item = item
 
@@ -412,8 +447,13 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.mediaBackgroundNode.update(size: mediaBackgroundFrame.size, transition: .immediate)
                             strongSelf.buttonNode.backgroundColor = item.presentationData.theme.theme.overallDarkAppearance ? UIColor(rgb: 0xffffff, alpha: 0.12) : UIColor(rgb: 0x000000, alpha: 0.12)
                             
-                            let iconSize = CGSize(width: 160.0, height: 160.0)
-                            strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - iconSize.width) / 2.0), y: mediaBackgroundFrame.minY - 16.0), size: iconSize)
+                            var iconSize = CGSize(width: 160.0, height: 160.0)
+                            var iconOffset: CGFloat = 0.0
+                            if let _ = animationFile {
+                                iconSize = CGSize(width: 120.0, height: 120.0)
+                                iconOffset = 32.0
+                            }
+                            strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - iconSize.width) / 2.0), y: mediaBackgroundFrame.minY - 16.0 + iconOffset), size: iconSize)
                             strongSelf.animationNode.updateLayout(size: iconSize)
                             
                             let _ = labelApply()

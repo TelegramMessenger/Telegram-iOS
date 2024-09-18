@@ -9211,12 +9211,13 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
-                static func saveStarGift(userId: Api.InputUser, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func saveStarGift(flags: Int32, userId: Api.InputUser, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1394197223)
+                    buffer.appendInt32(-2018709362)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     userId.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "payments.saveStarGift", parameters: [("userId", String(describing: userId)), ("msgId", String(describing: msgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "payments.saveStarGift", parameters: [("flags", String(describing: flags)), ("userId", String(describing: userId)), ("msgId", String(describing: msgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

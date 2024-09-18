@@ -992,7 +992,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                         sendWhenOnlineAvailable = true
                     }
                 }
-                if peer.id.namespace == Namespaces.Peer.CloudUser && peer.id.id._internalGetInt64Value() == 777000 {
+                if peer.id.isTelegramNotifications {
                     sendWhenOnlineAvailable = false
                 }
                 

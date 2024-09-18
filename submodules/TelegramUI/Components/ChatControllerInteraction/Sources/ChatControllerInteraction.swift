@@ -252,7 +252,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let openLargeEmojiInfo: (String, String?, TelegramMediaFile) -> Void
     public let openJoinLink: (String) -> Void
     public let openWebView: (String, String, Bool, ChatOpenWebViewSource) -> Void
-    public let activateAdAction: (EngineMessage.Id, Promise<Bool>?) -> Void
+    public let activateAdAction: (EngineMessage.Id, Promise<Bool>?, Bool, Bool) -> Void
     public let openRequestedPeerSelection: (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32, Int32) -> Void
     public let saveMediaToFiles: (EngineMessage.Id) -> Void
     public let openNoAdsDemo: () -> Void
@@ -382,7 +382,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         openLargeEmojiInfo: @escaping (String, String?, TelegramMediaFile) -> Void,
         openJoinLink: @escaping (String) -> Void,
         openWebView: @escaping (String, String, Bool, ChatOpenWebViewSource) -> Void,
-        activateAdAction: @escaping (EngineMessage.Id, Promise<Bool>?) -> Void,
+        activateAdAction: @escaping (EngineMessage.Id, Promise<Bool>?, Bool, Bool) -> Void,
         openRequestedPeerSelection: @escaping (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32, Int32) -> Void,
         saveMediaToFiles: @escaping (EngineMessage.Id) -> Void,
         openNoAdsDemo: @escaping () -> Void,

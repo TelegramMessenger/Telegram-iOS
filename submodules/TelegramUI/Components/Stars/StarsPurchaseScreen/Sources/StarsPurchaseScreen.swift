@@ -25,6 +25,7 @@ import TextFormat
 import PremiumStarComponent
 import BundleIconComponent
 import ConfettiEffect
+import ItemShimmeringLoadingComponent
 
 private struct StarsProduct: Equatable {
     enum Option: Equatable {
@@ -328,7 +329,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                     let backgroundComponent: AnyComponent<Empty>?
                     if product.storeProduct.id == context.component.selectedProductId {
                         backgroundComponent = AnyComponent(
-                            ItemLoadingComponent(color: environment.theme.list.itemAccentColor)
+                            ItemShimmeringLoadingComponent(color: environment.theme.list.itemAccentColor)
                         )
                     } else {
                         backgroundComponent = nil
