@@ -171,7 +171,7 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
         }
     }
     if case let .peer(peerId) = presentationInterfaceState.chatLocation {
-        if peerId.isReplies {
+        if peerId.isRepliesOrVerificationCodes {
             if hasMessages {
                 if case .search = currentButton?.action {
                     return currentButton

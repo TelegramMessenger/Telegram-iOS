@@ -177,7 +177,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 }
                 
                 let status: ContactsPeerItemStatus
-                if primaryPeer.id.isReplies {
+                if primaryPeer.id.isRepliesOrVerificationCodes {
                     status = .none
                 } else if case let .user(user) = primaryPeer {
                     let servicePeer = isServicePeer(primaryPeer._asPeer())

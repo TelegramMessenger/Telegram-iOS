@@ -298,7 +298,7 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
         return false
     }
 
-    guard !peer.id.isReplies else {
+    guard !peer.id.isRepliesOrVerificationCodes else {
         return false
     }
     switch chatPresentationInterfaceState.mode {
@@ -725,7 +725,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
     }
     
-    if Namespaces.Message.allNonRegular.contains(message.id.namespace) || message.id.peerId.isReplies {
+    if Namespaces.Message.allNonRegular.contains(message.id.namespace) || message.id.peerId.isRepliesOrVerificationCodes {
         canReply = false
         canPin = false
     } else if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {

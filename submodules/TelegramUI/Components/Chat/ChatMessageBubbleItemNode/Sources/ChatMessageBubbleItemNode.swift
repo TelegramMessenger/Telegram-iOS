@@ -1641,7 +1641,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if let _ = sourceReference {
                 needsShareButton = true
             }
-        } else if item.message.id.peerId.isReplies {
+        } else if item.message.id.peerId.isRepliesOrVerificationCodes {
             needsShareButton = false
         } else if incoming {
             if let _ = sourceReference {
