@@ -2548,7 +2548,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if !ignoreForwardedIcon {
                             if case .savedMessagesChats = item.chatListLocation {
                                 displayForwardedIcon = false
-                            } else if let forwardInfo = message.forwardInfo, !forwardInfo.flags.contains(.isImported) {
+                            } else if let forwardInfo = message.forwardInfo, !forwardInfo.flags.contains(.isImported) && !message.id.peerId.isVerificationCodes {
                                 displayForwardedIcon = true
                             } else if let _ = message.attributes.first(where: { $0 is ReplyStoryAttribute }) {
                                 displayStoryReplyIcon = true

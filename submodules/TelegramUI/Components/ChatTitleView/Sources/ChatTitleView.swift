@@ -299,7 +299,11 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                     }
                                 }
                             }
-                            isEnabled = isEnabledValue
+                            if peerView.peerId.isVerificationCodes {
+                                isEnabled = false
+                            } else {
+                                isEnabled = isEnabledValue
+                            }
                         }
                     case let .replyThread(type, count):
                         let textFont = titleFont
@@ -435,7 +439,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             switch titleContent {
             case let .peer(peerView, _, _, isScheduledMessages, _, _, _):
                 if let peer = peerView.peer {
-                    if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isReplies {
+                    if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isRepliesOrVerificationCodes {
                         inputActivitiesAllowed = false
                     }
                 }
@@ -540,7 +544,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                 state = .info(string, .generic)
                             } else if let peer = peerView.peer {
                                 let servicePeer = isServicePeer(peer)
-                                if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isReplies {
+                                if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isRepliesOrVerificationCodes {
                                     let string = NSAttributedString(string: "", font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                     state = .info(string, .generic)
                                 } else if let user = peer as? TelegramUser {
