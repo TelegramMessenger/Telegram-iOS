@@ -867,8 +867,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         self.overlayContentNode.action = { [weak self] toLandscape in
-            self?.updateControlsVisibility(!toLandscape)
-            self?.updateOrientation(toLandscape ? .landscapeRight : .portrait)
+            guard let self else {
+                return
+            }
+            self.updateControlsVisibility(!toLandscape)
+            self.updateOrientation(toLandscape ? .landscapeRight : .portrait)
         }
         
         self.statusButtonNode.addSubnode(self.statusNode)
@@ -881,7 +884,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if !strongSelf.isPaused {
                     strongSelf.didPause = true
                 }
-                
                 strongSelf.videoNode?.togglePlayPause()
             }
         }
@@ -1015,6 +1017,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         return self._ready.get()
     }
     
+    
+    override func contentTapAction() -> Bool {
+        if case let .message(message, _) = self.item?.contentInfo, let _ = message.adAttribute {
+            self.item?.performAction(.ad(message.id))
+            return true
+        }
+        return false
+    }
     
     override func screenFrameUpdated(_ frame: CGRect) {
         let center = frame.midX - self.frame.width / 2.0
@@ -1268,10 +1278,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         }
                     }
                     let status = messageMediaFileStatus(context: item.context, messageId: message.id, file: file)
-                    if !isWebpage {
-                        if !NativeVideoContent.isHLSVideo(file: file) {
-                            scrubberView.setFetchStatusSignal(status, strings: self.presentationData.strings, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator, fileSize: file.size)
-                        }
+                    if !isWebpage && message.adAttribute == nil && !NativeVideoContent.isHLSVideo(file: file) {
+                        scrubberView.setFetchStatusSignal(status, strings: self.presentationData.strings, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator, fileSize: file.size)
                     }
                     
                     self.requiresDownload = !isMediaStreamable(message: message, media: file)

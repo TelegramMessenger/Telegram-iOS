@@ -1280,6 +1280,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 standalone = true
             }
             
+            if let adAttribute = message.attributes.first(where: { $0 is AdMessageAttribute }) as? AdMessageAttribute {
+                if let file = message.media.first(where: { $0 is TelegramMediaFile}) as? TelegramMediaFile, file.isVideo && !file.isAnimated {
+                    strongSelf.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId, media: true, fullscreen: false)
+                } else {
+                    strongSelf.controllerInteraction?.activateAdAction(message.id, nil, true, false)
+                    return true
+                }
+            }
+            
             return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: openChatLocation, chatFilterTag: chatFilterTag, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, mediaIndex: params.mediaIndex, standalone: standalone, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a, i in
@@ -1391,7 +1400,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }, openAd: { [weak self] messageId in
                     if let strongSelf = self {
-                        strongSelf.controllerInteraction?.activateAdAction(messageId, nil)
+                        strongSelf.controllerInteraction?.activateAdAction(messageId, nil, true, true)
                     }
                 }, addContact: { [weak self] phoneNumber in
                     if let strongSelf = self {
@@ -3903,7 +3912,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.openWebApp(buttonText: buttonText, url: url, simple: simple, source: source)
-        }, activateAdAction: { [weak self] messageId, progress in
+        }, activateAdAction: { [weak self] messageId, progress, media, fullscreen in
             guard let self, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId), let adAttribute = message.adAttribute else {
                 return
             }
@@ -3917,7 +3926,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            self.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId, media: false, fullscreen: false)
+            self.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId, media: media, fullscreen: fullscreen)
             self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: adAttribute.url, concealed: false, external: true, progress: progress))
         }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId, maxQuantity in
             guard let self else {
@@ -4618,6 +4627,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.chatDisplayNode.forceUpdateWarpContents()
+        }, playShakeAnimation: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.playShakeAnimation()
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
         controllerInteraction.enableFullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
         
@@ -7772,10 +7786,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return false
                         }
                     })
-                } else if peerId.namespace == Namespaces.Peer.CloudUser && peerId.id._internalGetInt64Value() == 777000 {
+                } else if peerId.isTelegramNotifications {
                     self.screenCaptureManager = ScreenCaptureDetectionManager(check: { [weak self] in
                         if let strongSelf = self, strongSelf.traceVisibility() {
-                            let loginCodeRegex = try? NSRegularExpression(pattern: "[\\d\\-]{5,7}", options: [])
+                            let loginCodeRegex = try? NSRegularExpression(pattern: "\\b\\d{5,7}\\b", options: [])
                             var loginCodesToInvalidate: [String] = []
                             strongSelf.chatDisplayNode.historyNode.forEachVisibleMessageItemNode({ itemNode in
                                 if let text = itemNode.item?.message.text, let matches = loginCodeRegex?.matches(in: text, options: [], range: NSMakeRange(0, (text as NSString).length)), let match = matches.first {

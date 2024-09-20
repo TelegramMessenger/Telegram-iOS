@@ -2298,7 +2298,7 @@ public final class ChatListNode: ListView {
                         guard !filter.contains(.onlyPrivateChats) || peer.peerId.namespace == Namespaces.Peer.CloudUser else { return false }
                         
                         if let peer = peer.peer {
-                            if peer.id.isReplies {
+                            if peer.id.isRepliesOrVerificationCodes {
                                 return false
                             }
                             
@@ -4249,7 +4249,7 @@ private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: Pres
         }
     }
     
-    if peer.id.isReplies {
+    if peer.id.isReplies || peer.id.isVerificationCodes {
         return nil
     } else if case let .user(user) = peer {
         if user.botInfo != nil || user.flags.contains(.isSupport) {

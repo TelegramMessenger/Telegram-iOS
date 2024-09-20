@@ -118,7 +118,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
         self.contentNode.activateAction = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
                 if let _ = item.message.adAttribute {
-                    item.controllerInteraction.activateAdAction(item.message.id, strongSelf.contentNode.makeProgress())
+                    item.controllerInteraction.activateAdAction(item.message.id, strongSelf.contentNode.makeProgress(), false, false)
                 } else {
                     var webPageContent: TelegramMediaWebpageLoadedContent?
                     for media in item.message.media {

@@ -1776,7 +1776,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, openLargeEmojiInfo: { _, _, _ in
         }, openJoinLink: { _ in
         }, openWebView: { _, _, _, _ in
-        }, activateAdAction: { _, _ in
+        }, activateAdAction: { _, _, _, _ in
         }, openRequestedPeerSelection: { _, _, _, _ in
         }, saveMediaToFiles: { _ in
         }, openNoAdsDemo: {
@@ -1796,6 +1796,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, navigateToStory: { _, _ in
         }, attemptedNavigationToPrivateQuote: { _ in
         }, forceUpdateWarpContents: {
+        }, playShakeAnimation: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode))
         

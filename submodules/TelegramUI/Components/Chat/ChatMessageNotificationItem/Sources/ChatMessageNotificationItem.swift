@@ -167,7 +167,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 }
             }
             var avatarPeer = peer
-            if firstMessage.id.peerId.isReplies, let author = firstMessage.forwardInfo?.author {
+            if firstMessage.id.peerId.isRepliesOrVerificationCodes, let author = firstMessage.forwardInfo?.author {
                 avatarPeer = EnginePeer(author)
             }
             self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: avatarPeer, overrideImage: peer.id == item.context.account.peerId ? .savedMessagesIcon : nil, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
