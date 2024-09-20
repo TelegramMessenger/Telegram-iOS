@@ -764,7 +764,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                 }
             
                 var status: ContactsPeerItemStatus = .none
-                if case let .user(user) = primaryPeer, let _ = user.botInfo {
+                if case let .user(user) = primaryPeer, let _ = user.botInfo, !primaryPeer.id.isVerificationCodes {
                     if let subscriberCount = user.subscriberCount {
                         status = .custom(string: presentationData.strings.Conversation_StatusBotSubscribers(subscriberCount), multiline: false, isActive: false, icon: nil)
                     } else {

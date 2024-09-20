@@ -4062,7 +4062,7 @@ extension ChatControllerImpl {
                     }
                     var isBot = false
                     for message in messages {
-                        if let author = message.author, case let .user(user) = author, user.botInfo != nil {
+                        if let author = message.author, case let .user(user) = author, user.botInfo != nil && !user.id.isVerificationCodes {
                             isBot = true
                             break
                         }
@@ -4071,7 +4071,7 @@ extension ChatControllerImpl {
                     if isBot {
                         type = .bot
                     } else if let user = peer as? TelegramUser {
-                        if user.botInfo != nil {
+                        if user.botInfo != nil && !user.id.isVerificationCodes {
                             type = .bot
                         } else {
                             type = .user
