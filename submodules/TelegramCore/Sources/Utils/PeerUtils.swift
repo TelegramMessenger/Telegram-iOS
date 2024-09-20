@@ -433,6 +433,15 @@ public func isServicePeer(_ peer: Peer) -> Bool {
 }
 
 public extension PeerId {
+    var isTelegramNotifications: Bool {
+        if self.namespace == Namespaces.Peer.CloudUser {
+            if self.id._internalGetInt64Value() == 777000 {
+                return true
+            }
+        }
+        return false
+    }
+    
     var isReplies: Bool {
         if self.namespace == Namespaces.Peer.CloudUser {
             if self.id._internalGetInt64Value() == 708513 || self.id._internalGetInt64Value() == 1271266957 {
