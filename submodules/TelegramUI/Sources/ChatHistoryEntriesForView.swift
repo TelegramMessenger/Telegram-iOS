@@ -446,6 +446,8 @@ func chatHistoryEntriesForView(
             }
             if case let .peer(peerId) = location, peerId.isReplies {
                 entries.insert(.ChatInfoEntry("", presentationData.strings.RepliesChat_DescriptionText, nil, nil, presentationData), at: 0)
+            } else if case let .peer(peerId) = location, peerId.isVerificationCodes {
+                entries.insert(.ChatInfoEntry("", presentationData.strings.VerificationCodes_DescriptionText, nil, nil, presentationData), at: 0)
             } else if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
                 entries.insert(.ChatInfoEntry(presentationData.strings.Bot_DescriptionTitle, botInfo.description, botInfo.photo, botInfo.video, presentationData), at: 0)
             } else {

@@ -7784,10 +7784,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return false
                         }
                     })
-                } else if peerId.namespace == Namespaces.Peer.CloudUser && peerId.id._internalGetInt64Value() == 777000 {
+                } else if peerId.isTelegramNotifications {
                     self.screenCaptureManager = ScreenCaptureDetectionManager(check: { [weak self] in
                         if let strongSelf = self, strongSelf.traceVisibility() {
-                            let loginCodeRegex = try? NSRegularExpression(pattern: "[\\d\\-]{5,7}", options: [])
+                            let loginCodeRegex = try? NSRegularExpression(pattern: "\\b\\d{5,7}\\b", options: [])
                             var loginCodesToInvalidate: [String] = []
                             strongSelf.chatDisplayNode.historyNode.forEachVisibleMessageItemNode({ itemNode in
                                 if let text = itemNode.item?.message.text, let matches = loginCodeRegex?.matches(in: text, options: [], range: NSMakeRange(0, (text as NSString).length)), let match = matches.first {

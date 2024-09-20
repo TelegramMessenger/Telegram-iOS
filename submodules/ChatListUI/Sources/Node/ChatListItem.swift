@@ -576,7 +576,7 @@ private enum RevealOptionKey: Int32 {
 }
 
 private func canArchivePeer(id: EnginePeer.Id, accountPeerId: EnginePeer.Id) -> Bool {
-    if id.namespace == Namespaces.Peer.CloudUser && id.id._internalGetInt64Value() == 777000 {
+    if id.isTelegramNotifications {
         return false
     }
     if id == accountPeerId {
@@ -913,7 +913,7 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
     }
 }
 
-private let loginCodeRegex = try? NSRegularExpression(pattern: "[\\d\\-]{5,7}", options: [])
+private let loginCodeRegex = try? NSRegularExpression(pattern: "\\b\\d{5,8}\\b", options: [])
 
 public class ChatListItemNode: ItemListRevealOptionsItemNode {
     final class TopicItemNode: ASDisplayNode {
@@ -2371,7 +2371,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             }
                         }
                         
-                        if message.id.peerId.namespace == Namespaces.Peer.CloudUser && message.id.peerId.id._internalGetInt64Value() == 777000 {
+                        if message.id.peerId.isTelegramNotifications || message.id.peerId.isVerificationCodes {
                             if let cached = currentCustomTextEntities, cached.matches(text: message.text) {
                                 customTextEntities = cached
                             } else if let matches = loginCodeRegex?.matches(in: message.text, options: [], range: NSMakeRange(0, (message.text as NSString).length)) {
