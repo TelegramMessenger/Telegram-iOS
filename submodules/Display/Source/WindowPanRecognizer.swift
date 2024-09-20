@@ -7,6 +7,7 @@ public final class WindowPanRecognizer: UIGestureRecognizer {
     public var ended: ((CGPoint, CGPoint?) -> Void)?
     
     private var previousPoints: [(CGPoint, Double)] = []
+    private var previousVelocity: CGFloat = 0.0
     
     override public func reset() {
         super.reset()
@@ -45,6 +46,11 @@ public final class WindowPanRecognizer: UIGestureRecognizer {
         }
     }
     
+    func velocity(in view: UIView?) -> CGPoint {
+        let point = CGPoint(x: 0.0, y: self.previousVelocity)
+        return self.view?.convert(point, to: view) ?? .zero
+    }
+    
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         
@@ -68,15 +74,20 @@ public final class WindowPanRecognizer: UIGestureRecognizer {
     override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesEnded(touches, with: event)
         
+        self.state = .ended
+        
         if let touch = touches.first {
             let location = touch.location(in: self.view)
             self.addPoint(location)
+            self.previousVelocity = self.estimateVerticalVelocity()
             self.ended?(location, CGPoint(x: 0.0, y: self.estimateVerticalVelocity()))
         }
     }
     
     override public func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesCancelled(touches, with: event)
+        
+        self.state = .cancelled
         
         if let touch = touches.first {
             self.ended?(touch.location(in: self.view), nil)
