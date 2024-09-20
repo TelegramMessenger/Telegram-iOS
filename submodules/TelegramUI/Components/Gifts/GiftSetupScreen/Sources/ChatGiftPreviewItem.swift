@@ -199,8 +199,7 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                 peers[authorPeerId] = item.accountPeer?._asPeer()
                 
                 let media: [Media] = [
-                    TelegramMediaAction(action: .starGift(gift: item.gift, convertStars: item.gift.price, text: item.text, entities: [], nameHidden: false, savedToProfile: false, converted: false))
-                    //TelegramMediaAction(action: .starGift(amount: item.gift.price, giftId: item.gift.id, nameHidden: false, limitNumber: item.gift.availability != nil ? 1 : nil, limitTotal: item.gift.availability?.total, text: item.text, entities: []))
+                    TelegramMediaAction(action: .starGift(gift: item.gift, convertStars: item.gift.convertStars, text: item.text, entities: [], nameHidden: false, savedToProfile: false, converted: false))
                 ]
                 let message = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[authorPeerId], text: "", attributes: [], media: media, peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                 items.append(item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [message], theme: item.componentTheme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false))

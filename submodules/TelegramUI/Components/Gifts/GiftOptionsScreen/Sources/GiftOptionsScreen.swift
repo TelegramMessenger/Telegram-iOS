@@ -62,13 +62,32 @@ final class GiftOptionsScreenComponent: Component {
         }
     }
     
-    public enum StarsFilter: Int {
+    public enum StarsFilter: Equatable {
         case all
         case limited
-        case stars10
-        case stars25
-        case stars50
-        case stars100
+        case stars(Int64)
+        
+        init(rawValue: Int64) {
+            switch rawValue {
+            case 0:
+                self = .all
+            case -1:
+                self = .limited
+            default:
+                self = .stars(rawValue)
+            }
+        }
+        
+        public var rawValue: Int64 {
+            switch self {
+            case .all:
+                return 0
+            case .limited:
+                return -1
+            case let .stars(stars):
+                return stars
+            }
+        }
     }
     
     final class View: UIView, UIScrollViewDelegate {
@@ -212,30 +231,16 @@ final class GiftOptionsScreenComponent: Component {
                     }
                     
                     if isVisible {
-                        if self.starsFilter != .all {
-                            switch self.starsFilter {
-                            case .all:
-                                break
-                            case .limited:
-                                if gift.availability == nil {
-                                    continue
-                                }
-                            case .stars10:
-                                if gift.price != 10 {
-                                    continue
-                                }
-                            case .stars25:
-                                if gift.price != 25 {
-                                    continue
-                                }
-                            case .stars50:
-                                if gift.price != 50 {
-                                    continue
-                                }
-                            case .stars100:
-                                if gift.price != 100 {
-                                    continue
-                                }
+                        switch self.starsFilter {
+                        case .all:
+                            break
+                        case .limited:
+                            if gift.availability == nil {
+                                continue
+                            }
+                        case let .stars(stars):
+                            if gift.price != stars {
+                                continue
                             }
                         }
                         
@@ -670,6 +675,30 @@ final class GiftOptionsScreenComponent: Component {
             contentHeight += starsDescriptionSize.height
             contentHeight += 16.0
             
+            var tabSelectorItems: [TabSelectorComponent.Item] = []
+            tabSelectorItems.append(TabSelectorComponent.Item(
+                id: AnyHashable(StarsFilter.all.rawValue),
+                title: "All Gifts"
+            ))
+            tabSelectorItems.append(TabSelectorComponent.Item(
+                id: AnyHashable(StarsFilter.limited.rawValue),
+                title: "Limited"
+            ))
+            
+            var starsAmountsSet = Set<Int64>()
+            if let starGifts = self.state?.starGifts {
+                for product in starGifts {
+                    starsAmountsSet.insert(product.price)
+                }
+            }
+            let starsAmounts = Array(starsAmountsSet).sorted()
+            for amount in starsAmounts {
+                tabSelectorItems.append(TabSelectorComponent.Item(
+                    id: AnyHashable(StarsFilter.stars(amount).rawValue),
+                    title: "⭐️\(amount)"
+                ))
+            }
+            
             let tabSelectorSize = self.tabSelector.update(
                 transition: transition,
                 component: AnyComponent(TabSelectorComponent(
@@ -679,37 +708,13 @@ final class GiftOptionsScreenComponent: Component {
                         selection: theme.list.itemSecondaryTextColor.withMultipliedAlpha(0.15),
                         simple: true
                     ),
-                    items: [
-                        TabSelectorComponent.Item(
-                            id: AnyHashable(StarsFilter.all.rawValue),
-                            title: "All Gifts"
-                        ),
-                        TabSelectorComponent.Item(
-                            id: AnyHashable(StarsFilter.limited.rawValue),
-                            title: "Limited"
-                        ),
-                        TabSelectorComponent.Item(
-                            id: AnyHashable(StarsFilter.stars10.rawValue),
-                            title: "⭐️10"
-                        ),
-                        TabSelectorComponent.Item(
-                            id: AnyHashable(StarsFilter.stars25.rawValue),
-                            title: "⭐️25"
-                        ),
-                        TabSelectorComponent.Item(
-                            id: AnyHashable(StarsFilter.stars50.rawValue),
-                            title: "⭐️50"
-                        ),
-                        TabSelectorComponent.Item(
-                            id: AnyHashable(StarsFilter.stars100.rawValue),
-                            title: "⭐️100"
-                        )
-                    ],
+                    items: tabSelectorItems,
                     selectedId: AnyHashable(self.starsFilter.rawValue),
                     setSelectedId: { [weak self] id in
-                        guard let self, let idValue = id.base as? Int, let starsFilter = StarsFilter(rawValue: idValue) else {
+                        guard let self, let idValue = id.base as? Int64 else {
                             return
                         }
+                        let starsFilter = StarsFilter(rawValue: idValue)
                         if self.starsFilter != starsFilter {
                             self.starsFilter = starsFilter
                             self.state?.updated(transition: .easeInOut(duration: 0.25))

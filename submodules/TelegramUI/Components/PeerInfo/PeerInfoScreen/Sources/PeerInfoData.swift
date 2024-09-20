@@ -1258,17 +1258,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     return (starsRevenueStatsContext, state.stats)
                 }
             }
-            
-            let profileGiftsCount: Signal<Int32, NoError>
-            if let profileGiftsContext {
-                profileGiftsCount = profileGiftsContext.state
-                |> map { state in
-                    return state.count ?? 0
-                }
-            } else {
-                profileGiftsCount = .single(0)
-            }
-            
+                        
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: chatLocation, isMyProfile: isMyProfile, chatLocationContextHolder: chatLocationContextHolder),
@@ -1285,23 +1275,29 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 hasBotPreviewItems,
                 peerInfoPersonalChannel(context: context, peerId: peerId, isSettings: false),
                 privacySettings,
-                starsRevenueContextAndState,
-                profileGiftsCount
+                starsRevenueContextAndState
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, hasBotPreviewItems, personalChannel, privacySettings, starsRevenueContextAndState, profileGiftsCount -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, hasBotPreviewItems, personalChannel, privacySettings, starsRevenueContextAndState -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 if isMyProfile {
                     availablePanes?.insert(.stories, at: 0)
                     if let hasStoryArchive, hasStoryArchive {
                         availablePanes?.insert(.storyArchive, at: 1)
                     }
+                    if availablePanes != nil, profileGiftsContext != nil, let cachedData = peerView.cachedData as? CachedUserData {
+                        if let starGiftsCount = cachedData.starGiftsCount, starGiftsCount > 0 {
+                            availablePanes?.insert(.gifts, at: hasStoryArchive == true ? 2 : 1)
+                        }
+                    }
                 } else if let hasStories {
                     if hasStories, peerView.peers[peerView.peerId] is TelegramUser, peerView.peerId != context.account.peerId {
                         availablePanes?.insert(.stories, at: 0)
                     }
                     
-                    if profileGiftsCount > 0 {
-                        availablePanes?.insert(.gifts, at: hasStories ? 1 : 0)
+                    if availablePanes != nil, profileGiftsContext != nil, let cachedData = peerView.cachedData as? CachedUserData {
+                        if let starGiftsCount = cachedData.starGiftsCount, starGiftsCount > 0 {
+                            availablePanes?.insert(.gifts, at: hasStories ? 1 : 0)
+                        }
                     }
                     
                     if availablePanes != nil, groupsInCommon != nil, let cachedData = peerView.cachedData as? CachedUserData {

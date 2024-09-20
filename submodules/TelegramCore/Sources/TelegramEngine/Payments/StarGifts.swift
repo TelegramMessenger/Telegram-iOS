@@ -32,6 +32,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         case id
         case file
         case price
+        case convertStars
         case availability
     }
     
@@ -67,12 +68,14 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
     public let id: Int64
     public let file: TelegramMediaFile
     public let price: Int64
+    public let convertStars: Int64
     public let availability: Availability?
     
-    public init(id: Int64, file: TelegramMediaFile, price: Int64, availability: Availability?) {
+    public init(id: Int64, file: TelegramMediaFile, price: Int64, convertStars: Int64, availability: Availability?) {
         self.id = id
         self.file = file
         self.price = price
+        self.convertStars = convertStars
         self.availability = availability
     }
     
@@ -87,6 +90,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         }
         
         self.price = try container.decode(Int64.self, forKey: .price)
+        self.convertStars = try container.decodeIfPresent(Int64.self, forKey: .convertStars) ?? 0
         self.availability = try container.decodeIfPresent(Availability.self, forKey: .availability)
     }
     
@@ -94,6 +98,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         self.id = decoder.decodeInt64ForKey(CodingKeys.id.rawValue, orElse: 0)
         self.file = decoder.decodeObjectForKey(CodingKeys.file.rawValue) as! TelegramMediaFile
         self.price = decoder.decodeInt64ForKey(CodingKeys.price.rawValue, orElse: 0)
+        self.convertStars = decoder.decodeInt64ForKey(CodingKeys.convertStars.rawValue, orElse: 0)
         self.availability = decoder.decodeObjectForKey(CodingKeys.availability.rawValue, decoder: { StarGift.Availability(decoder: $0) }) as? StarGift.Availability
     }
     
@@ -107,6 +112,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         try container.encode(fileData, forKey: .file)
         
         try container.encode(self.price, forKey: .price)
+        try container.encode(self.convertStars, forKey: .convertStars)
         try container.encodeIfPresent(self.availability, forKey: .availability)
     }
     
@@ -114,6 +120,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         encoder.encodeInt64(self.id, forKey: CodingKeys.id.rawValue)
         encoder.encodeObject(self.file, forKey: CodingKeys.file.rawValue)
         encoder.encodeInt64(self.price, forKey: CodingKeys.price.rawValue)
+        encoder.encodeInt64(self.convertStars, forKey: CodingKeys.convertStars.rawValue)
         if let availability = self.availability {
             encoder.encodeObject(availability, forKey: CodingKeys.availability.rawValue)
         } else {
@@ -125,7 +132,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
 extension StarGift {
     init?(apiStarGift: Api.StarGift) {
         switch apiStarGift {
-        case let .starGift(_, id, sticker, stars, availabilityRemains, availabilityTotal):
+        case let .starGift(_, id, sticker, stars, availabilityRemains, availabilityTotal, convertStars):
             var availability: Availability?
             if let availabilityRemains, let availabilityTotal {
                 availability = Availability(remains: availabilityRemains, total: availabilityTotal)
@@ -133,7 +140,7 @@ extension StarGift {
             guard let file = telegramMediaFileFromApiDocument(sticker, altDocuments: nil) else {
                 return nil
             }
-            self.init(id: id, file: file, price: stars, availability: availability)
+            self.init(id: id, file: file, price: stars, convertStars: convertStars, availability: availability)
         }
     }
 }
@@ -323,6 +330,7 @@ public final class ProfileGiftsContext {
             public let entities: [MessageTextEntity]?
             public let messageId: EngineMessage.Id?
             public let nameHidden: Bool
+            public let savedToProfile: Bool
             public let convertStars: Int64?
         }
         
@@ -398,6 +406,7 @@ private extension ProfileGiftsContext.State.StarGift {
                 self.messageId = nil
             }
             self.nameHidden = (flags & (1 << 0)) != 0
+            self.savedToProfile = (flags & (1 << 5)) == 0
             self.convertStars = convertStars
         }
     }

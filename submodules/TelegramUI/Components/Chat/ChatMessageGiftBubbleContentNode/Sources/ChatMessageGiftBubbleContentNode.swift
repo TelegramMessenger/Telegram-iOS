@@ -69,7 +69,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    private var animationDisposable: Disposable?
+    private var fetchDisposable: Disposable?
     private var setupTimestamp: Double?
     
     required public init() {
@@ -144,7 +144,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     deinit {
-        self.animationDisposable?.dispose()
+        self.fetchDisposable?.dispose()
         self.currentProgressDisposable?.dispose()
     }
     
@@ -318,7 +318,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                         case let .starGift(gift, convertStars, giftText, entities, nameHidden, savedToProfile, converted)://(amount, giftId, nameHidden, limitNumber, limitTotal, giftText, _):
                             let _ = nameHidden
                             let authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
-                            title = nameHidden ? "Anonymous Gift" : "Gift from \(authorName)"
+                            title = "Gift from \(authorName)"
                             if let giftText, !giftText.isEmpty {
                                 text = giftText
                                 let _ = entities
@@ -429,6 +429,9 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 
                                 if let file = animationFile {
                                     strongSelf.animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource), width: 384, height: 384, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                                    if strongSelf.fetchDisposable == nil {
+                                        strongSelf.fetchDisposable = freeMediaFileResourceInteractiveFetched(postbox: item.context.account.postbox, userLocation: .other, fileReference: .message(message: MessageReference(item.message), media: file), resource: file.resource).start()
+                                    }
                                 } else if animationName.hasPrefix("Gift") {
                                     strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
                                 }
