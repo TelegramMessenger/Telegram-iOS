@@ -578,8 +578,8 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
-    public func scheduleGroupCall(peerId: PeerId) {
-        let _ = self.sharedContext.callManager?.scheduleGroupCall(context: self, peerId: peerId, endCurrentIfAny: true)
+    public func scheduleGroupCall(peerId: PeerId, parentController: ViewController) {
+        let _ = self.sharedContext.callManager?.scheduleGroupCall(context: self, peerId: peerId, endCurrentIfAny: true, parentController: parentController)
     }
     
     public func joinGroupCall(peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, activeCall: EngineGroupCallDescription) {

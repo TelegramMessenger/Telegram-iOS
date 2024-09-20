@@ -175,11 +175,17 @@ private final class GlowView: UIView {
 }
 
 final class VideoChatMicButtonComponent: Component {
+    enum ScheduledState: Equatable {
+        case start
+        case toggleSubscription(isSubscribed: Bool)
+    }
+    
     enum Content: Equatable {
         case connecting
         case muted
         case unmuted(pushToTalk: Bool)
         case raiseHand
+        case scheduled(state: ScheduledState)
     }
     
     let call: PresentationGroupCall
@@ -187,19 +193,22 @@ final class VideoChatMicButtonComponent: Component {
     let isCollapsed: Bool
     let updateUnmutedStateIsPushToTalk: (Bool?) -> Void
     let raiseHand: () -> Void
+    let scheduleAction: () -> Void
 
     init(
         call: PresentationGroupCall,
         content: Content,
         isCollapsed: Bool,
         updateUnmutedStateIsPushToTalk: @escaping (Bool?) -> Void,
-        raiseHand: @escaping () -> Void
+        raiseHand: @escaping () -> Void,
+        scheduleAction: @escaping () -> Void
     ) {
         self.call = call
         self.content = content
         self.isCollapsed = isCollapsed
         self.updateUnmutedStateIsPushToTalk = updateUnmutedStateIsPushToTalk
         self.raiseHand = raiseHand
+        self.scheduleAction = scheduleAction
     }
 
     static func ==(lhs: VideoChatMicButtonComponent, rhs: VideoChatMicButtonComponent) -> Bool {
@@ -245,7 +254,7 @@ final class VideoChatMicButtonComponent: Component {
             self.beginTrackingTimestamp = CFAbsoluteTimeGetCurrent()
             if let component = self.component {
                 switch component.content {
-                case .connecting, .unmuted, .raiseHand:
+                case .connecting, .unmuted, .raiseHand, .scheduled:
                     self.beginTrackingWasPushToTalk = false
                 case .muted:
                     self.beginTrackingWasPushToTalk = true
@@ -291,6 +300,8 @@ final class VideoChatMicButtonComponent: Component {
                     self.icon.playRandomAnimation()
                     
                     component.raiseHand()
+                case .scheduled:
+                    component.scheduleAction()
                 }
             }
         }
@@ -322,6 +333,17 @@ final class VideoChatMicButtonComponent: Component {
                 titleText = isPushToTalk ? "You are Live" : "Tap to Mute"
             case .raiseHand:
                 titleText = "Raise Hand"
+            case let .scheduled(state):
+                switch state {
+                case .start:
+                    titleText = "Start Now"
+                case let .toggleSubscription(isSubscribed):
+                    if isSubscribed {
+                        titleText = "Clear Reminder"
+                    } else {
+                        titleText = "Set Reminder"
+                    }
+                }
             }
             self.isEnabled = isEnabled
             
@@ -390,11 +412,13 @@ final class VideoChatMicButtonComponent: Component {
                     case .connecting:
                         context.setFillColor(UIColor(white: 0.1, alpha: 1.0).cgColor)
                         context.fill(CGRect(origin: CGPoint(), size: size))
-                    case .muted, .unmuted, .raiseHand:
+                    case .muted, .unmuted, .raiseHand, .scheduled:
                         let colors: [UIColor]
                         if case .muted = component.content {
                             colors = [UIColor(rgb: 0x0080FF), UIColor(rgb: 0x00A1FE)]
                         } else if case .raiseHand = component.content {
+                            colors = [UIColor(rgb: 0x3252EF), UIColor(rgb: 0xC64688)]
+                        } else if case .scheduled = component.content {
                             colors = [UIColor(rgb: 0x3252EF), UIColor(rgb: 0xC64688)]
                         } else {
                             colors = [UIColor(rgb: 0x33C659), UIColor(rgb: 0x0BA8A5)]
@@ -477,10 +501,21 @@ final class VideoChatMicButtonComponent: Component {
                 self.icon.enqueueState(.unmute)
             case .raiseHand:
                 self.icon.enqueueState(.hand)
+            case let .scheduled(state):
+                switch state {
+                case .start:
+                    self.icon.enqueueState(.start)
+                case let .toggleSubscription(isSubscribed):
+                    if isSubscribed {
+                        self.icon.enqueueState(.unsubscribe)
+                    } else {
+                        self.icon.enqueueState(.subscribe)
+                    }
+                }
             }
             
             switch component.content {
-            case .muted, .unmuted, .raiseHand:
+            case .muted, .unmuted, .raiseHand, .scheduled:
                 let blobSize = CGRect(origin: CGPoint(), size: CGSize(width: 116.0, height: 116.0)).insetBy(dx: -40.0, dy: -40.0).size
                 
                 let blobTintTransition: ComponentTransition
@@ -512,6 +547,8 @@ final class VideoChatMicButtonComponent: Component {
                     blobsColor = UIColor(rgb: 0x0086FF)
                 } else if case .raiseHand = component.content {
                     blobsColor = UIColor(rgb: 0x914BAD)
+                } else if case .scheduled = component.content {
+                    blobsColor = UIColor(rgb: 0x914BAD)
                 } else {
                     blobsColor = UIColor(rgb: 0x33C758)
                 }
@@ -528,7 +565,7 @@ final class VideoChatMicButtonComponent: Component {
                             blobView.updateLevel(CGFloat(value), immediately: false)
                         })
                     }
-                case .connecting, .muted, .raiseHand:
+                case .connecting, .muted, .raiseHand, .scheduled:
                     if let audioLevelDisposable = self.audioLevelDisposable {
                         self.audioLevelDisposable = nil
                         audioLevelDisposable.dispose()
@@ -560,6 +597,8 @@ final class VideoChatMicButtonComponent: Component {
                 if case .muted = component.content {
                     glowColor = UIColor(rgb: 0x0086FF)
                 } else if case .raiseHand = component.content {
+                    glowColor = UIColor(rgb: 0x3252EF)
+                } else if case .scheduled = component.content {
                     glowColor = UIColor(rgb: 0x3252EF)
                 } else {
                     glowColor = UIColor(rgb: 0x33C758)

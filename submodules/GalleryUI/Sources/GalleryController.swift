@@ -578,6 +578,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
     private let landscape: Bool
     private let timecode: Double?
     private var playbackRate: Double?
+    private var videoQuality: UniversalVideoContentVideoQuality = .auto
     
     private let accountInUseDisposable = MetaDisposable()
     private let disposable = MetaDisposable()
@@ -1753,6 +1754,16 @@ public class GalleryController: ViewController, StandalonePresentableController,
         self.galleryNode.pager.forEachItemNode { itemNode in
             if let itemNode = itemNode as? UniversalVideoGalleryItemNode {
                 itemNode.updatePlaybackRate(playbackRate)
+            }
+        }
+    }
+    
+    func updateSharedVideoQuality(_ videoQuality: UniversalVideoContentVideoQuality) {
+        self.videoQuality = videoQuality
+
+        self.galleryNode.pager.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? UniversalVideoGalleryItemNode {
+                itemNode.updateVideoQuality(videoQuality)
             }
         }
     }

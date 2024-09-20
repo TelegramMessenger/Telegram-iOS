@@ -7067,7 +7067,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func scheduleGroupCall() {
-        self.context.scheduleGroupCall(peerId: self.peerId)
+        guard let controller = self.controller else {
+            return
+        }
+        self.context.scheduleGroupCall(peerId: self.peerId, parentController: controller)
     }
     
     private func createExternalStream(credentialsPromise: Promise<GroupCallStreamCredentials>?) {

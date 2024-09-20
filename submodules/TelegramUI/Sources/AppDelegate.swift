@@ -1753,7 +1753,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             if resetOnce {
                 resetOnce = false
                 if count == 0 {
-                    UIApplication.shared.applicationIconBadgeNumber = 1
+                    //UIApplication.shared.applicationIconBadgeNumber = 1
                 }
             }
             UIApplication.shared.applicationIconBadgeNumber = Int(count)

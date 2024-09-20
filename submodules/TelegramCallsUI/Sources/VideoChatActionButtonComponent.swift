@@ -66,6 +66,7 @@ final class VideoChatActionButtonComponent: Component {
         case muted
         case unmuted
         case raiseHand
+        case scheduled
     }
     
     let strings: PresentationStrings
@@ -156,7 +157,7 @@ final class VideoChatActionButtonComponent: Component {
                     backgroundColor = !isActive ? UIColor(rgb: 0x002E5D) : UIColor(rgb: 0x027FFF)
                 case .unmuted:
                     backgroundColor = !isActive ? UIColor(rgb: 0x124B21) : UIColor(rgb: 0x34C659)
-                case .raiseHand:
+                case .raiseHand, .scheduled:
                     backgroundColor = UIColor(rgb: 0x3252EF)
                 }
                 iconDiameter = 60.0
@@ -169,7 +170,7 @@ final class VideoChatActionButtonComponent: Component {
                     backgroundColor = !isActive ? UIColor(rgb: 0x002E5D) : UIColor(rgb: 0x027FFF)
                 case .unmuted:
                     backgroundColor = !isActive ? UIColor(rgb: 0x124B21) : UIColor(rgb: 0x34C659)
-                case .raiseHand:
+                case .raiseHand, .scheduled:
                     backgroundColor = UIColor(rgb: 0x3252EF)
                 }
                 iconDiameter = 60.0

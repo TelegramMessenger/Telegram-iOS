@@ -7097,7 +7097,7 @@ final class VoiceChatContextReferenceContentSource: ContextReferenceContentSourc
     }
 }
 
-private func calculateUseV2(context: AccountContext) -> Bool {
+public func shouldUseV2VideoChatImpl(context: AccountContext) -> Bool {
     var useV2 = true
     if context.sharedContext.immediateExperimentalUISettings.disableCallV2 {
         useV2 = false
@@ -7109,7 +7109,7 @@ private func calculateUseV2(context: AccountContext) -> Bool {
 }
 
 public func makeVoiceChatControllerInitialData(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall) -> Signal<Any, NoError> {
-    let useV2 = calculateUseV2(context: accountContext)
+    let useV2 = shouldUseV2VideoChatImpl(context: accountContext)
     
     if useV2 {
         return VideoChatScreenV2Impl.initialData(call: call) |> map { $0 as Any }
@@ -7119,7 +7119,7 @@ public func makeVoiceChatControllerInitialData(sharedContext: SharedAccountConte
 }
 
 public func makeVoiceChatController(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall, initialData: Any) -> VoiceChatController {
-    let useV2 = calculateUseV2(context: accountContext)
+    let useV2 = shouldUseV2VideoChatImpl(context: accountContext)
     
     if useV2 {
         return VideoChatScreenV2Impl(initialData: initialData as! VideoChatScreenV2Impl.InitialData, call: call)

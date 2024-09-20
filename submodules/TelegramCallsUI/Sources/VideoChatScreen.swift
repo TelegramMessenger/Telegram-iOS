@@ -73,6 +73,7 @@ final class VideoChatScreenComponent: Component {
         let microphoneButton = ComponentView<Empty>()
         
         let participants = ComponentView<Empty>()
+        var scheduleInfo: ComponentView<Empty>?
         
         var reconnectedAsEventsDisposable: Disposable?
         
@@ -559,6 +560,13 @@ final class VideoChatScreenComponent: Component {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
+            }
+            
+            let alphaTransition: ComponentTransition
+            if transition.animation.isImmediate {
+                alphaTransition = .immediate
+            } else {
+                alphaTransition = .easeInOut(duration: 0.25)
             }
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
@@ -1058,10 +1066,16 @@ final class VideoChatScreenComponent: Component {
             }
             
             let idleTitleStatusText: String
-            if let callState = self.callState, callState.networkState == .connected, let members = self.members {
-                idleTitleStatusText = environment.strings.VoiceChat_Panel_Members(Int32(max(1, members.totalCount)))
+            if let callState = self.callState {
+                if callState.networkState == .connected, let members = self.members {
+                    idleTitleStatusText = environment.strings.VoiceChat_Panel_Members(Int32(max(1, members.totalCount)))
+                } else if callState.scheduleTimestamp != nil {
+                    idleTitleStatusText = "scheduled"
+                } else {
+                    idleTitleStatusText = "connecting..."
+                }
             } else {
-                idleTitleStatusText = "connecting..."
+                idleTitleStatusText = " "
             }
             let titleSize = self.title.update(
                 transition: transition,
@@ -1324,35 +1338,88 @@ final class VideoChatScreenComponent: Component {
             let participantsFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: participantsSize)
             if let participantsView = self.participants.view {
                 if participantsView.superview == nil {
+                    participantsView.layer.allowsGroupOpacity = true
                     self.containerView.addSubview(participantsView)
                 }
                 transition.setFrame(view: participantsView, frame: participantsFrame)
+                var participantsAlpha: CGFloat = 1.0
+                if let callState = self.callState, callState.scheduleTimestamp != nil {
+                    participantsAlpha = 0.0
+                }
+                alphaTransition.setAlpha(view: participantsView, alpha: participantsAlpha)
+            }
+            
+            if let callState = self.callState, let scheduleTimestamp = callState.scheduleTimestamp {
+                let scheduleInfo: ComponentView<Empty>
+                var scheduleInfoTransition = transition
+                if let current = self.scheduleInfo {
+                    scheduleInfo = current
+                } else {
+                    scheduleInfoTransition = scheduleInfoTransition.withAnimation(.none)
+                    scheduleInfo = ComponentView()
+                    self.scheduleInfo = scheduleInfo
+                }
+                let scheduleInfoSize = scheduleInfo.update(
+                    transition: scheduleInfoTransition,
+                    component: AnyComponent(VideoChatScheduledInfoComponent(
+                        timestamp: scheduleTimestamp,
+                        strings: environment.strings
+                    )),
+                    environment: {},
+                    containerSize: participantsSize
+                )
+                let scheduleInfoFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: scheduleInfoSize)
+                if let scheduleInfoView = scheduleInfo.view {
+                    if scheduleInfoView.superview == nil {
+                        scheduleInfoView.isUserInteractionEnabled = false
+                        self.containerView.addSubview(scheduleInfoView)
+                    }
+                    scheduleInfoTransition.setFrame(view: scheduleInfoView, frame: scheduleInfoFrame)
+                }
+            } else if let scheduleInfo = self.scheduleInfo {
+                self.scheduleInfo = nil
+                if let scheduleInfoView = scheduleInfo.view {
+                    alphaTransition.setAlpha(view: scheduleInfoView, alpha: 0.0, completion: { [weak scheduleInfoView] _ in
+                        scheduleInfoView?.removeFromSuperview()
+                    })
+                }
             }
             
             let micButtonContent: VideoChatMicButtonComponent.Content
             let actionButtonMicrophoneState: VideoChatActionButtonComponent.MicrophoneState
             if let callState = self.callState {
-                switch callState.networkState {
-                case .connecting:
-                    micButtonContent = .connecting
-                    actionButtonMicrophoneState = .connecting
-                case .connected:
-                    if let callState = callState.muteState {
-                        if callState.canUnmute {
-                            if self.isPushToTalkActive {
-                                micButtonContent = .unmuted(pushToTalk: self.isPushToTalkActive)
-                                actionButtonMicrophoneState = .unmuted
+                if callState.scheduleTimestamp != nil {
+                    let scheduledState: VideoChatMicButtonComponent.ScheduledState
+                    if callState.canManageCall {
+                        scheduledState = .start
+                    } else {
+                        scheduledState = .toggleSubscription(isSubscribed: callState.subscribedToScheduled)
+                    }
+                    micButtonContent = .scheduled(state: scheduledState)
+                    actionButtonMicrophoneState = .scheduled
+                } else {
+                    switch callState.networkState {
+                    case .connecting:
+                        micButtonContent = .connecting
+                        actionButtonMicrophoneState = .connecting
+                    case .connected:
+                        if let callState = callState.muteState {
+                            if callState.canUnmute {
+                                if self.isPushToTalkActive {
+                                    micButtonContent = .unmuted(pushToTalk: self.isPushToTalkActive)
+                                    actionButtonMicrophoneState = .unmuted
+                                } else {
+                                    micButtonContent = .muted
+                                    actionButtonMicrophoneState = .muted
+                                }
                             } else {
-                                micButtonContent = .muted
-                                actionButtonMicrophoneState = .muted
+                                micButtonContent = .raiseHand
+                                actionButtonMicrophoneState = .raiseHand
                             }
                         } else {
-                            micButtonContent = .raiseHand
-                            actionButtonMicrophoneState = .raiseHand
+                            micButtonContent = .unmuted(pushToTalk: false)
+                            actionButtonMicrophoneState = .unmuted
                         }
-                    } else {
-                        micButtonContent = .unmuted(pushToTalk: false)
-                        actionButtonMicrophoneState = .unmuted
                     }
                 }
             } else {
@@ -1411,6 +1478,23 @@ final class VideoChatScreenComponent: Component {
                         }
                         if !callState.raisedHand {
                             component.call.raiseHand()
+                        }
+                    },
+                    scheduleAction: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        guard let callState = self.callState else {
+                            return
+                        }
+                        guard callState.scheduleTimestamp != nil else {
+                            return
+                        }
+                        
+                        if callState.canManageCall {
+                            component.call.startScheduled()
+                        } else {
+                            component.call.toggleScheduledSubscription(!callState.subscribedToScheduled)
                         }
                     }
                 )),

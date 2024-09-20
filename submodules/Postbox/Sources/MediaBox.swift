@@ -140,8 +140,8 @@ public final class MediaBox {
     
     private let statusQueue = Queue()
     private let concurrentQueue = Queue.concurrentDefaultQueue()
-    private let dataQueue = Queue(name: "MediaBox-Data")
-    private let dataFileManager: MediaBoxFileManager
+    public let dataQueue = Queue(name: "MediaBox-Data")
+    public let dataFileManager: MediaBoxFileManager
     private let cacheQueue = Queue()
     private let timeBasedCleanup: TimeBasedCleanup
     
@@ -209,60 +209,6 @@ public final class MediaBox {
         self.dataFileManager = MediaBoxFileManager(queue: self.dataQueue)
         
         let _ = self.ensureDirectoryCreated
-        
-        //self.updateResourceIndex()
-        
-        /*#if DEBUG
-        self.dataQueue.async {
-            for _ in 0 ..< 5 {
-                let tempFile = TempBox.shared.tempFile(fileName: "file")
-                print("MediaBox test: file \(tempFile.path)")
-                let queue2 = Queue.concurrentDefaultQueue()
-                if let fileContext = MediaBoxFileContextV2Impl(queue: self.dataQueue, manager: self.dataFileManager, storageBox: self.storageBox, resourceId: tempFile.path.data(using: .utf8)!, path: tempFile.path + "_complete", partialPath: tempFile.path + "_partial", metaPath: tempFile.path + "_partial" + ".meta") {
-                    let _ = fileContext.fetched(
-                        range: 0 ..< Int64.max,
-                        priority: .default,
-                        fetch: { ranges in
-                            return ranges
-                            |> filter { !$0.isEmpty }
-                            |> take(1)
-                            |> castError(MediaResourceDataFetchError.self)
-                            |> mapToSignal { _ in
-                                return Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
-                                    queue2.async {
-                                        subscriber.putNext(.resourceSizeUpdated(524288))
-                                    }
-                                    queue2.async {
-                                        subscriber.putNext(.resourceSizeUpdated(393216))
-                                    }
-                                    queue2.async {
-                                        subscriber.putNext(.resourceSizeUpdated(655360))
-                                    }
-                                    queue2.async {
-                                        subscriber.putNext(.resourceSizeUpdated(169608))
-                                    }
-                                    queue2.async {
-                                        subscriber.putNext(.dataPart(resourceOffset: 131072, data: Data(repeating: 0xbb, count: 38536), range: 0 ..< 38536, complete: true))
-                                    }
-                                    queue2.async {
-                                        subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(repeating: 0xaa, count: 131072), range: 0 ..< 131072, complete: false))
-                                    }
-                                    
-                                    return EmptyDisposable
-                                }
-                            }
-                        },
-                        error: { _ in
-                        },
-                        completed: {
-                            assert(try! Data(contentsOf: URL(fileURLWithPath: tempFile.path + "_complete")) == Data(repeating: 0xaa, count: 131072) + Data(repeating: 0xbb, count: 38536))
-                            let _ = fileContext.addReference()
-                        }
-                    )
-                }
-            }
-        }
-        #endif*/
     }
     
     public func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
@@ -641,21 +587,12 @@ public final class MediaBox {
                 paths.partial + ".meta"
             ])
             
-            #if true
             if let fileContext = MediaBoxFileContextV2Impl(queue: self.dataQueue, manager: self.dataFileManager, storageBox: self.storageBox, resourceId: id.stringRepresentation.data(using: .utf8)!, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
                 context = fileContext
                 self.fileContexts[resourceId] = fileContext
             } else {
                 return nil
             }
-            #else
-            if let fileContext = MediaBoxFileContextImpl(queue: self.dataQueue, manager: self.dataFileManager, storageBox: self.storageBox, resourceId: id.stringRepresentation.data(using: .utf8)!, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
-                context = fileContext
-                self.fileContexts[resourceId] = fileContext
-            } else {
-                return nil
-            }
-            #endif
         }
         if let context = context {
             let index = context.addReference()
