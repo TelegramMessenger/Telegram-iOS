@@ -3800,8 +3800,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 storeMessageTextInPasteboard(text, entities: nil)
                 
+                var infoText = presentationData.strings.Conversation_TextCopied
+                if let peerId = strongSelf.chatLocation.peerId, peerId.isVerificationCodes && text.rangeOfCharacter(from: CharacterSet.decimalDigits.inverted) == nil {
+                    infoText = presentationData.strings.Conversation_CodeCopied
+                }
+                
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
+                strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: infoText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
                         return true
                 }), in: .current)
             }

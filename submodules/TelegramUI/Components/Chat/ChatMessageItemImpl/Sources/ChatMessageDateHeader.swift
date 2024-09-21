@@ -551,7 +551,11 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
     }
 
     public func setPeer(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor) {
-        self.containerNode.isGestureEnabled = true
+        if let messageReference = self.messageReference, let id = messageReference.id {
+            self.containerNode.isGestureEnabled = !id.peerId.isVerificationCodes
+        } else {
+            self.containerNode.isGestureEnabled = true
+        }
 
         var overrideImage: AvatarNodeImageOverride?
         if peer.isDeleted {

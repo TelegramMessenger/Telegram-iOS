@@ -5822,8 +5822,6 @@ Sorry for the inconvenience.";
 
 "Conversation.EditingPhotoPanelTitle" = "Edit Photo";
 
-"Conversation.TextCopied" = "Text copied to clipboard";
-
 "Media.LimitedAccessTitle" = "Limited Access to Media";
 "Media.LimitedAccessText" = "You've given Telegram access only to select number of photos.";
 "Media.LimitedAccessManage" = "Manage";
@@ -12941,3 +12939,5 @@ Sorry for the inconvenience.";
 "Notification.StarsGiveaway.Subtitle.Stars_any" = "%@ Stars";
 
 "VerificationCodes.DescriptionText" = "This chat is used to receive verification codes from third-party services.";
+
+"Conversation.CodeCopied" = "Code copied to clipboard";

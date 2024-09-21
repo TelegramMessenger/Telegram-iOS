@@ -1376,7 +1376,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                let enableCopy = !item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected()
+                let enableCopy = (!item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected()) || item.message.id.peerId.isVerificationCodes
                 textSelectionNode.enableCopy = enableCopy
                 
                 var enableQuote = !item.message.text.isEmpty
@@ -1390,7 +1390,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 if !item.controllerInteraction.canSendMessages() && !enableCopy {
                     enableQuote = false
                 }
-                if item.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                if item.message.id.peerId.namespace == Namespaces.Peer.SecretChat || item.message.id.peerId.isVerificationCodes {
                     enableQuote = false
                 }
                 if item.message.containsSecretMedia {

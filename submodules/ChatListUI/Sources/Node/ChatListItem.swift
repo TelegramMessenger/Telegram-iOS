@@ -2270,14 +2270,20 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let messagePeer = itemPeer.chatMainPeer {
                             peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                         }
-                    } else if let message = messages.last, let author = message.author?._asPeer(), let peer = itemPeer.chatMainPeer, !isUser {
-                        if case let .channel(peer) = peer, case .broadcast = peer.info {
-                        } else if !displayAsMessage {
-                            if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), let authorSignature = forwardInfo.authorSignature {
-                                peerText = authorSignature
-                            } else {
-                                peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                                authorIsCurrentChat = author.id == peer.id
+                    } else if let message = messages.last, let author = message.author?._asPeer(), let peer = itemPeer.chatMainPeer {
+                        if peer.id.isVerificationCodes {
+                            if let message = messages.last, let forwardInfo = message.forwardInfo, let author = forwardInfo.author {
+                                peerText = EnginePeer(author).compactDisplayTitle
+                            }
+                        } else if !isUser {
+                            if case let .channel(peer) = peer, case .broadcast = peer.info {
+                            } else if !displayAsMessage {
+                                if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), let authorSignature = forwardInfo.authorSignature {
+                                    peerText = authorSignature
+                                } else {
+                                    peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                                    authorIsCurrentChat = author.id == peer.id
+                                }
                             }
                         }
                     }
