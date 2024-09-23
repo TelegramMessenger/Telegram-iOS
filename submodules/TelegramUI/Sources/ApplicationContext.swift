@@ -894,7 +894,7 @@ final class AuthorizedApplicationContext {
         }))
     }
     
-    func openChatWithPeerId(peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false, storyId: StoryId?) {
+    func openChatWithPeerId(peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false, storyId: StoryId?, openAppIfAny: Bool = false) {
         if let storyId {
             var controllers = self.rootController.viewControllers
             controllers = controllers.filter { c in
@@ -945,7 +945,11 @@ final class AuthorizedApplicationContext {
                         chatLocation = .peer(peer)
                     }
                     
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: chatLocation, subject: isOutgoingMessage ? messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false) } : nil, activateInput: activateInput ? .text : nil))
+                    if openAppIfAny, let parentController = self.rootController.viewControllers.last as? ViewController {
+                        self.context.sharedContext.openWebApp(context: self.context, parentController: parentController, updatedPresentationData: nil, peer: peer, threadId: nil, buttonText: "", url: "", simple: true, source: .generic, skipTermsOfService: true)
+                    } else {
+                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: chatLocation, subject: isOutgoingMessage ? messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false) } : nil, activateInput: activateInput ? .text : nil))
+                    }
                 })
             }
         }

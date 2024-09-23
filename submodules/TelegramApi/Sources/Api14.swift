@@ -1009,6 +1009,7 @@ public extension Api {
         case messageActionSetChatTheme(emoticon: String)
         case messageActionSetChatWallPaper(flags: Int32, wallpaper: Api.WallPaper)
         case messageActionSetMessagesTTL(flags: Int32, period: Int32, autoSettingFrom: Int64?)
+        case messageActionStarGift(flags: Int32, gift: Api.StarGift, message: Api.TextWithEntities?, convertStars: Int64)
         case messageActionSuggestProfilePhoto(photo: Api.Photo)
         case messageActionTopicCreate(flags: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?)
         case messageActionTopicEdit(flags: Int32, title: String?, iconEmojiId: Int64?, closed: Api.Bool?, hidden: Api.Bool?)
@@ -1350,6 +1351,15 @@ public extension Api {
                     serializeInt32(period, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt64(autoSettingFrom!, buffer: buffer, boxed: false)}
                     break
+                case .messageActionStarGift(let flags, let gift, let message, let convertStars):
+                    if boxed {
+                        buffer.appendInt32(-1682706620)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    gift.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 1) != 0 {message!.serialize(buffer, true)}
+                    serializeInt64(convertStars, buffer: buffer, boxed: false)
+                    break
                 case .messageActionSuggestProfilePhoto(let photo):
                     if boxed {
                         buffer.appendInt32(1474192222)
@@ -1475,6 +1485,8 @@ public extension Api {
                 return ("messageActionSetChatWallPaper", [("flags", flags as Any), ("wallpaper", wallpaper as Any)])
                 case .messageActionSetMessagesTTL(let flags, let period, let autoSettingFrom):
                 return ("messageActionSetMessagesTTL", [("flags", flags as Any), ("period", period as Any), ("autoSettingFrom", autoSettingFrom as Any)])
+                case .messageActionStarGift(let flags, let gift, let message, let convertStars):
+                return ("messageActionStarGift", [("flags", flags as Any), ("gift", gift as Any), ("message", message as Any), ("convertStars", convertStars as Any)])
                 case .messageActionSuggestProfilePhoto(let photo):
                 return ("messageActionSuggestProfilePhoto", [("photo", photo as Any)])
                 case .messageActionTopicCreate(let flags, let title, let iconColor, let iconEmojiId):
@@ -2101,6 +2113,30 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.MessageAction.messageActionSetMessagesTTL(flags: _1!, period: _2!, autoSettingFrom: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionStarGift(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.StarGift?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.StarGift
+            }
+            var _3: Api.TextWithEntities?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            } }
+            var _4: Int64?
+            _4 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MessageAction.messageActionStarGift(flags: _1!, gift: _2!, message: _3, convertStars: _4!)
             }
             else {
                 return nil

@@ -2370,7 +2370,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         if let primary = primary {
                             for context in contexts {
                                 if let context = context, context.account.id == primary {
-                                    self.openChatWhenReady(accountId: nil, peerId: peerId, threadId: nil, storyId: nil)
+                                    self.openChatWhenReady(accountId: nil, peerId: peerId, threadId: nil, storyId: nil, openAppIfAny: true)
                                     return
                                 }
                             }
@@ -2378,7 +2378,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         
                         for context in contexts {
                             if let context = context {
-                                self.openChatWhenReady(accountId: context.account.id, peerId: peerId, threadId: nil, storyId: nil)
+                                self.openChatWhenReady(accountId: context.account.id, peerId: peerId, threadId: nil, storyId: nil, openAppIfAny: true)
                                 return
                             }
                         }
@@ -2464,7 +2464,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }))
     }
     
-    private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false, storyId: StoryId?) {
+    private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false, storyId: StoryId?, openAppIfAny: Bool = false) {
         let signal = self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue
@@ -2483,7 +2483,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         self.openChatWhenReadyDisposable.set((signal
         |> deliverOnMainQueue).start(next: { context in
-            context.openChatWithPeerId(peerId: peerId, threadId: threadId, messageId: messageId, activateInput: activateInput, storyId: storyId)
+            context.openChatWithPeerId(peerId: peerId, threadId: threadId, messageId: messageId, activateInput: activateInput, storyId: storyId, openAppIfAny: openAppIfAny)
         }))
     }
     

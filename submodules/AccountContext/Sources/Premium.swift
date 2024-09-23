@@ -130,6 +130,7 @@ public enum StarsPurchasePurpose: Equatable {
     case subscription(peerId: EnginePeer.Id, requiredStars: Int64, renew: Bool)
     case gift(peerId: EnginePeer.Id)
     case unlockMedia(requiredStars: Int64)
+    case starGift(peerId: EnginePeer.Id, requiredStars: Int64)
 }
 
 public struct PremiumConfiguration {
@@ -275,4 +276,8 @@ public struct PremiumConfiguration {
             return defaultValue
         }
     }
+}
+
+public protocol GiftOptionsScreenProtocol {
+    
 }

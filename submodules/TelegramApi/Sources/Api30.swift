@@ -1,4 +1,62 @@
 public extension Api.help {
+    enum CountriesList: TypeConstructorDescription {
+        case countriesList(countries: [Api.help.Country], hash: Int32)
+        case countriesListNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .countriesList(let countries, let hash):
+                    if boxed {
+                        buffer.appendInt32(-2016381538)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(countries.count))
+                    for item in countries {
+                        item.serialize(buffer, true)
+                    }
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    break
+                case .countriesListNotModified:
+                    if boxed {
+                        buffer.appendInt32(-1815339214)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .countriesList(let countries, let hash):
+                return ("countriesList", [("countries", countries as Any), ("hash", hash as Any)])
+                case .countriesListNotModified:
+                return ("countriesListNotModified", [])
+    }
+    }
+    
+        public static func parse_countriesList(_ reader: BufferReader) -> CountriesList? {
+            var _1: [Api.help.Country]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.help.Country.self)
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.help.CountriesList.countriesList(countries: _1!, hash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_countriesListNotModified(_ reader: BufferReader) -> CountriesList? {
+            return Api.help.CountriesList.countriesListNotModified
+        }
+    
+    }
+}
+public extension Api.help {
     enum Country: TypeConstructorDescription {
         case country(flags: Int32, iso2: String, defaultName: String, name: String?, countryCodes: [Api.help.CountryCode])
     
@@ -1232,120 +1290,6 @@ public extension Api.messages {
         }
         public static func parse_allStickersNotModified(_ reader: BufferReader) -> AllStickers? {
             return Api.messages.AllStickers.allStickersNotModified
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum ArchivedStickers: TypeConstructorDescription {
-        case archivedStickers(count: Int32, sets: [Api.StickerSetCovered])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .archivedStickers(let count, let sets):
-                    if boxed {
-                        buffer.appendInt32(1338747336)
-                    }
-                    serializeInt32(count, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(sets.count))
-                    for item in sets {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .archivedStickers(let count, let sets):
-                return ("archivedStickers", [("count", count as Any), ("sets", sets as Any)])
-    }
-    }
-    
-        public static func parse_archivedStickers(_ reader: BufferReader) -> ArchivedStickers? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.StickerSetCovered]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.ArchivedStickers.archivedStickers(count: _1!, sets: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum AvailableEffects: TypeConstructorDescription {
-        case availableEffects(hash: Int32, effects: [Api.AvailableEffect], documents: [Api.Document])
-        case availableEffectsNotModified
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .availableEffects(let hash, let effects, let documents):
-                    if boxed {
-                        buffer.appendInt32(-1109696146)
-                    }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(effects.count))
-                    for item in effects {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(documents.count))
-                    for item in documents {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .availableEffectsNotModified:
-                    if boxed {
-                        buffer.appendInt32(-772957605)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .availableEffects(let hash, let effects, let documents):
-                return ("availableEffects", [("hash", hash as Any), ("effects", effects as Any), ("documents", documents as Any)])
-                case .availableEffectsNotModified:
-                return ("availableEffectsNotModified", [])
-    }
-    }
-    
-        public static func parse_availableEffects(_ reader: BufferReader) -> AvailableEffects? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.AvailableEffect]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.AvailableEffect.self)
-            }
-            var _3: [Api.Document]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.messages.AvailableEffects.availableEffects(hash: _1!, effects: _2!, documents: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_availableEffectsNotModified(_ reader: BufferReader) -> AvailableEffects? {
-            return Api.messages.AvailableEffects.availableEffectsNotModified
         }
     
     }

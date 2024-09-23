@@ -21,6 +21,7 @@ import UrlEscaping
 import UrlHandling
 import SaveProgressScreen
 import DeviceModel
+import LegacyMediaPickerUI
 
 private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
     private final class PendingTask {
@@ -170,7 +171,7 @@ private func computedUserAgent() -> String {
     return DeviceModel.current.isIpad ? "Version/\(osVersion) Safari/605.1.15" : "Version/\(osVersion) Mobile/\(firmwareVersion) Safari/604.1"
 }
 
-final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
+final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate, WKDownloadDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     
@@ -733,15 +734,15 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     
     @available(iOS 13.0, *)
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, preferences: WKWebpagePreferences, decisionHandler: @escaping (WKNavigationActionPolicy, WKWebpagePreferences) -> Void) {
-//        if #available(iOS 14.5, *), navigationAction.shouldPerformDownload {
-//            self.presentDownloadConfirmation(fileName: navigationAction.request.mainDocumentURL?.lastPathComponent ?? "file", proceed: { download in
-//                if download {
-//                    decisionHandler(.download, preferences)
-//                } else {
-////                    decisionHandler(.cancel, preferences)
-//                }
-//            })
-//        } else {
+        if #available(iOS 14.5, *), navigationAction.shouldPerformDownload {
+            self.presentDownloadConfirmation(fileName: navigationAction.request.mainDocumentURL?.lastPathComponent ?? "file", proceed: { download in
+                if download {
+                    decisionHandler(.download, preferences)
+                } else {
+                    decisionHandler(.cancel, preferences)
+                }
+            })
+        } else {
             if let url = navigationAction.request.url?.absoluteString {
                 if (navigationAction.targetFrame == nil || navigationAction.targetFrame?.isMainFrame == true) && (isTelegramMeLink(url) || isTelegraPhLink(url) || url.hasPrefix("tg://")) && !url.contains("/auth/push?") && !self._state.url.contains("/auth/push?") {
                     decisionHandler(.cancel, preferences)
@@ -758,24 +759,25 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             } else {
                 decisionHandler(.allow, preferences)
             }
-//        }
+        }
     }
     
-//    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
-//        if navigationResponse.canShowMIMEType {
-//            decisionHandler(.allow)
-//        } else if #available(iOS 14.5, *) {
-//            self.presentDownloadConfirmation(fileName: navigationResponse.response.suggestedFilename ?? "file", proceed: { download in
-//                if download {
-//                    decisionHandler(.download)
-//                } else {
-//                    decisionHandler(.cancel)
-//                }
-//            })
-//        } else {
-//            decisionHandler(.cancel)
-//        }
-//    }
+    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+        if navigationResponse.canShowMIMEType {
+            decisionHandler(.allow)
+        } else if #available(iOS 14.5, *) {
+//            decisionHandler(.download)
+            self.presentDownloadConfirmation(fileName: navigationResponse.response.suggestedFilename ?? "file", proceed: { download in
+                if download {
+                    decisionHandler(.download)
+                } else {
+                    decisionHandler(.cancel)
+                }
+            })
+        } else {
+            decisionHandler(.cancel)
+        }
+    }
     
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         if let url = navigationAction.request.url?.absoluteString {
@@ -789,6 +791,101 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         } else {
             decisionHandler(.allow)
         }
+    }
+
+    private var downloadArguments: (String, String)?
+    private var downloadController: (AlertController, (Int64, Int64) -> Void)?
+    private var downloadProgressObserver: Any?
+    
+    @available(iOS 14.5, *)
+    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+        download.delegate = self
+    }
+    
+    @available(iOS 14.5, *)
+    func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
+        download.delegate = self
+    }
+        
+    @available(iOS 14.5, *)
+    func download(_ download: WKDownload, decideDestinationUsing response: URLResponse, suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
+        let path = NSTemporaryDirectory() + NSUUID().uuidString
+        self.downloadArguments = (path, suggestedFilename)
+        completionHandler(URL(fileURLWithPath: path))
+        
+        let downloadController = progressAlertController(sharedContext: self.context.sharedContext, title: "", cancel: { [weak download] in
+            download?.cancel()
+        })
+        self.downloadController = downloadController
+        self.present(downloadController.0, nil)
+        downloadController.1(download.progress.completedUnitCount, download.progress.totalUnitCount)
+        
+        self.downloadProgressObserver = download.progress.observe(\.fractionCompleted) { [weak self] progress, _ in
+            if let (_, update) = self?.downloadController {
+                update(progress.completedUnitCount, progress.totalUnitCount)
+            }
+        }
+    }
+    
+    @available(iOS 14.5, *)
+    func downloadDidFinish(_ download: WKDownload) {
+        if let (controller, _ ) = self.downloadController {
+            controller.dismissAnimated()
+            self.downloadController = nil
+        }
+        
+        if let (path, fileName) = self.downloadArguments {
+            let tempFile = TempBox.shared.file(path: path, fileName: fileName)
+            let url = URL(fileURLWithPath: tempFile.path)
+            
+            let controller = legacyICloudFilePicker(theme: self.presentationData.theme, mode: .export, url: url, documentTypes: [], forceDarkTheme: false, dismissed: {}, completion: { _ in
+                
+            })
+            self.present(controller, nil)
+            
+            self.downloadArguments = nil
+            self.downloadProgressObserver = nil
+        }
+    }
+    
+    @available(iOS 14.5, *)
+    func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
+        self.downloadArguments = nil
+        self.downloadProgressObserver = nil
+    }
+        
+    func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        if let url = webView.url, !url.absoluteString.contains("beatsnvibes") {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+        var completed = false
+                
+        let host = webView.url?.host ?? ""
+        let authController = authController(sharedContext: self.context.sharedContext, updatedPresentationData: nil, title: "Sign in to \(host)", text: "Your login information will be sent securely.", apply: { result in
+            if !completed {
+                completed = true
+                if let (login, password) = result {
+                    let credential = URLCredential(
+                        user: login,
+                        password: password,
+                        persistence: .permanent
+                    )
+                    completionHandler(.useCredential, credential)
+                } else {
+                    completionHandler(.cancelAuthenticationChallenge, nil)
+                }
+            }
+        })
+        authController.dismissed = { byOutsideTap in
+            if byOutsideTap {
+                if !completed {
+                    completed = true
+                    completionHandler(.cancelAuthenticationChallenge, nil)
+                }
+            }
+        }
+        self.present(authController, nil)
     }
     
     private let isLoaded = ValuePromise<Bool>(false)
@@ -880,7 +977,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        if [-1003, -1100, 102].contains((error as NSError).code) {
+        if [-1003, -1100].contains((error as NSError).code) {
             if let url = (error as NSError).userInfo["NSErrorFailingURLKey"] as? URL, url.absoluteString.hasPrefix("itms-appss:") {
             } else {
                 self.currentError = error

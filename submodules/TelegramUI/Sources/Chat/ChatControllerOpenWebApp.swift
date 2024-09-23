@@ -242,7 +242,7 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
             |> afterDisposed {
                 updateProgress()
             })
-            |> deliverOnMainQueue).startStrict(next: { [weak parentController] result in
+            |> deliverOnMainQueue).startStandalone(next: { [weak parentController] result in
                 guard let parentController else {
                     return
                 }

@@ -12941,3 +12941,8 @@ Sorry for the inconvenience.";
 "VerificationCodes.DescriptionText" = "This chat is used to receive verification codes from third-party services.";
 
 "Conversation.CodeCopied" = "Code copied to clipboard";
+
+"Stars.Purchase.StarGiftInfo" = "Buy Stars to send **%@** gifts that can be kept on the profile or converted to Stars.";
+
+"SharedMedia.GiftCount_1" = "%@ gift";
+"SharedMedia.GiftCount_any" = "%@ gifts";

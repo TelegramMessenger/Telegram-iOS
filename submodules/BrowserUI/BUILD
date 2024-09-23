@@ -49,6 +49,7 @@ swift_library(
         "//submodules/TelegramUI/Components/SaveProgressScreen",
         "//submodules/TelegramUI/Components/ListActionItemComponent",
         "//submodules/Utils/DeviceModel",
+        "//submodules/LegacyMediaPickerUI",
     ],
     visibility = [
         "//visibility:public",
