@@ -72,6 +72,7 @@ import StarsWithdrawalScreen
 import MiniAppListScreen
 import GiftOptionsScreen
 import GiftViewScreen
+import StarsIntroScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2205,8 +2206,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource, completion: (([EnginePeer.Id]) -> Void)?) -> ViewController {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
-//        let limit: Int32 = 10
-//        var reachedLimitImpl: ((Int32) -> Void)?
         var presentBirthdayPickerImpl: (() -> Void)?
         var starsMode: ContactSelectionControllerMode = .generic
         var currentBirthdays: [EnginePeer.Id: TelegramBirthday]?
@@ -2268,9 +2267,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             ))
             let _ = combineLatest(queue: Queue.mainQueue(), contactsController.result, options.get())
             .startStandalone(next: { [weak contactsController] result, options in
-                if let (peers, _, _, _, _, _) = result, let contactPeer = peers.first, case let .peer(peer, _, _) = contactPeer {
+                if let (peers, _, _, _, _, _) = result, let contactPeer = peers.first, case let .peer(peer, _, _) = contactPeer, let starsContext = context.starsContext {
                     let premiumOptions = options.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
-                    let giftController = GiftOptionsScreen(context: context, peerId: peer.id, premiumOptions: premiumOptions)
+                    let giftController = GiftOptionsScreen(context: context, starsContext: starsContext, peerId: peer.id, premiumOptions: premiumOptions)
                     giftController.navigationPresentation = .modal
                     contactsController?.push(giftController)
                     
@@ -2810,6 +2809,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeStarsGiveawayBoostScreen(context: AccountContext, peerId: EnginePeer.Id, boost: ChannelBoostersContext.State.Boost) -> ViewController {
         return StarsTransactionScreen(context: context, subject: .boost(peerId, boost))
+    }
+    
+    public func makeStarsIntroScreen(context: AccountContext) -> ViewController {
+        return StarsIntroScreen(context: context)
     }
     
     public func makeGiftViewScreen(context: AccountContext, message: EngineMessage) -> ViewController {

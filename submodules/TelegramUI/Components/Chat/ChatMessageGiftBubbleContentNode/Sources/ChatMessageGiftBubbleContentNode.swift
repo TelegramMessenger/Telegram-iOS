@@ -31,12 +31,15 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private let backgroundMaskNode: ASImageNode
     private var linkHighlightingNode: LinkHighlightingNode?
     
+    private let mediaBackgroundMaskNode: ASImageNode
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?
-    private let mediaBackgroundNode: NavigationBackgroundNode
     private let titleNode: TextNode
     private let subtitleNode: TextNode
     private let placeholderNode: StickerShimmerEffectNode
     private let animationNode: AnimatedStickerNode
+    
+    private let ribbonBackgroundNode: ASImageNode
+    private let ribbonTextNode: TextNode
     
     private var shimmerEffectNode: ShimmerEffectForegroundNode?
     private let buttonNode: HighlightTrackingButtonNode
@@ -79,9 +82,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
 
         self.backgroundMaskNode = ASImageNode()
         
-        self.mediaBackgroundNode = NavigationBackgroundNode(color: .clear)
-        self.mediaBackgroundNode.clipsToBounds = true
-        self.mediaBackgroundNode.cornerRadius = 24.0
+        self.mediaBackgroundMaskNode = ASImageNode()
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -107,18 +108,29 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.buttonTitleNode.isUserInteractionEnabled = false
         self.buttonTitleNode.displaysAsynchronously = false
         
+        self.ribbonBackgroundNode = ASImageNode()
+        self.ribbonBackgroundNode.displaysAsynchronously = false
+        
+        self.ribbonTextNode = TextNode()
+        self.ribbonTextNode.isUserInteractionEnabled = false
+        self.ribbonTextNode.displaysAsynchronously = false
+        
         super.init()
 
         self.addSubnode(self.labelNode)
         
-        self.addSubnode(self.mediaBackgroundNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode)
+        self.addSubnode(self.subtitleNode)
+        self.addSubnode(self.placeholderNode)
         self.addSubnode(self.animationNode)
         
         self.addSubnode(self.buttonNode)
         self.buttonNode.addSubnode(self.buttonStarsNode)
         self.addSubnode(self.buttonTitleNode)
+        
+        self.addSubnode(self.ribbonBackgroundNode)
+        self.addSubnode(self.ribbonTextNode)
         
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -226,7 +238,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
         let makeButtonTitleLayout = TextNode.asyncLayout(self.buttonTitleNode)
-
+        let makeRibbonTextLayout = TextNode.asyncLayout(self.ribbonTextNode)
+        
         let cachedMaskBackgroundImage = self.cachedMaskBackgroundImage
         
         return { item, layoutConstants, _, _, _, _ in
@@ -247,6 +260,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 var title = item.presentationData.strings.Notification_PremiumGift_Title
                 var text = ""
                 var buttonTitle = item.presentationData.strings.Notification_PremiumGift_View
+                var ribbonTitle = ""
                 var hasServiceMessage = true
                 var textSpacing: CGFloat = 0.0
                 for media in item.message.media {
@@ -315,8 +329,9 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 buttonTitle = item.presentationData.strings.Notification_PremiumPrize_View
                                 hasServiceMessage = false
                             }
-                        case let .starGift(gift, convertStars, giftText, entities, nameHidden, savedToProfile, converted)://(amount, giftId, nameHidden, limitNumber, limitTotal, giftText, _):
+                        case let .starGift(gift, convertStars, giftText, entities, nameHidden, savedToProfile, converted):
                             let _ = nameHidden
+                            //TODO:localize
                             let authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
                             title = "Gift from \(authorName)"
                             if let giftText, !giftText.isEmpty {
@@ -344,6 +359,9 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             animationFile = gift.file
+                            if let availability = gift.availability {
+                                ribbonTitle = "1 of \(availability.total)"
+                            }
                         default:
                             break
                         }
@@ -377,6 +395,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
                 let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: buttonTitle, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                
+                let (ribbonTextLayout, ribbonTextApply) = makeRibbonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: ribbonTitle, font: Font.semibold(11.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
                 giftSize.height = titleLayout.size.height + textSpacing + subtitleLayout.size.height + 212.0
                 
@@ -424,31 +444,10 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in
                         if let strongSelf = self {
-                            if strongSelf.item == nil {
-                                strongSelf.animationNode.autoplay = true
-                                
-                                if let file = animationFile {
-                                    strongSelf.animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource), width: 384, height: 384, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-                                    if strongSelf.fetchDisposable == nil {
-                                        strongSelf.fetchDisposable = freeMediaFileResourceInteractiveFetched(postbox: item.context.account.postbox, userLocation: .other, fileReference: .message(message: MessageReference(item.message), media: file), resource: file.resource).start()
-                                    }
-                                } else if animationName.hasPrefix("Gift") {
-                                    strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
-                                }
-                            }
-                            strongSelf.item = item
-
-                            strongSelf.updateVisibility()
+                            let overlayColor = item.presentationData.theme.theme.overallDarkAppearance ? UIColor(rgb: 0xffffff, alpha: 0.12) : UIColor(rgb: 0x000000, alpha: 0.12)
                             
-                            strongSelf.labelNode.isHidden = !hasServiceMessage
-                                                        
                             let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - giftSize.width) / 2.0), y: hasServiceMessage ? labelLayout.size.height + 16.0 : 0.0), size: giftSize)
                             let mediaBackgroundFrame = imageFrame.insetBy(dx: -2.0, dy: -2.0)
-                            strongSelf.mediaBackgroundNode.frame = mediaBackgroundFrame
-                                                        
-                            strongSelf.mediaBackgroundNode.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
-                            strongSelf.mediaBackgroundNode.update(size: mediaBackgroundFrame.size, transition: .immediate)
-                            strongSelf.buttonNode.backgroundColor = item.presentationData.theme.theme.overallDarkAppearance ? UIColor(rgb: 0xffffff, alpha: 0.12) : UIColor(rgb: 0x000000, alpha: 0.12)
                             
                             var iconSize = CGSize(width: 160.0, height: 160.0)
                             var iconOffset: CGFloat = 0.0
@@ -456,13 +455,56 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 iconSize = CGSize(width: 120.0, height: 120.0)
                                 iconOffset = 32.0
                             }
-                            strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - iconSize.width) / 2.0), y: mediaBackgroundFrame.minY - 16.0 + iconOffset), size: iconSize)
+                            let animationFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - iconSize.width) / 2.0), y: mediaBackgroundFrame.minY - 16.0 + iconOffset), size: iconSize)
+                            strongSelf.animationNode.frame = animationFrame
+                            
+                            if strongSelf.item == nil {
+                                strongSelf.animationNode.started = { [weak self] in
+                                    if let strongSelf = self {
+                                        let current = CACurrentMediaTime()
+                                        if let setupTimestamp = strongSelf.setupTimestamp, current - setupTimestamp > 0.3 {
+                                            if !strongSelf.placeholderNode.alpha.isZero {
+                                                strongSelf.animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                                strongSelf.removePlaceholder(animated: true)
+                                            }
+                                        } else {
+                                            strongSelf.removePlaceholder(animated: false)
+                                        }
+                                    }
+                                }
+                                
+                                strongSelf.animationNode.autoplay = true
+                                
+                                if let file = animationFile {
+                                    strongSelf.animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource), width: 384, height: 384, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                                    if strongSelf.fetchDisposable == nil {
+                                        strongSelf.fetchDisposable = freeMediaFileResourceInteractiveFetched(postbox: item.context.account.postbox, userLocation: .other, fileReference: .message(message: MessageReference(item.message), media: file), resource: file.resource).start()
+                                    }
+                                    
+                                    if let immediateThumbnailData = file.immediateThumbnailData {
+                                        let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
+                                        strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: overlayColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: animationFrame.size, enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency)
+                                    }
+                                } else if animationName.hasPrefix("Gift") {
+                                    strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
+                                }
+                            }
+                            strongSelf.item = item
+                            
+                            strongSelf.updateVisibility()
+                            
+                            strongSelf.labelNode.isHidden = !hasServiceMessage
+                            
+                            strongSelf.buttonNode.backgroundColor = overlayColor
+                            
                             strongSelf.animationNode.updateLayout(size: iconSize)
+                            strongSelf.placeholderNode.frame = animationFrame
                             
                             let _ = labelApply()
                             let _ = titleApply()
                             let _ = subtitleApply()
                             let _ = buttonTitleApply()
+                            let _ = ribbonTextApply()
                             
                             let labelFrame = CGRect(origin: CGPoint(x: 8.0, y: 2.0), size: labelLayout.size)
                             strongSelf.labelNode.frame = labelFrame
@@ -479,23 +521,58 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             let buttonSize = CGSize(width: buttonTitleLayout.size.width + 38.0, height: 34.0)
                             strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - buttonSize.width) / 2.0), y: subtitleFrame.maxY + 10.0), size: buttonSize)
                             strongSelf.buttonStarsNode.frame = CGRect(origin: .zero, size: buttonSize)
-
-                            if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
-                                if strongSelf.mediaBackgroundContent == nil, let backgroundContent = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
-                                    strongSelf.mediaBackgroundNode.isHidden = true
-                                    backgroundContent.clipsToBounds = true
-                                    backgroundContent.allowsGroupOpacity = true
-                                    backgroundContent.cornerRadius = 24.0
-
-                                    strongSelf.mediaBackgroundContent = backgroundContent
-                                    strongSelf.insertSubnode(backgroundContent, at: 0)
+                            
+                            if ribbonTextLayout.size.width > 0.0 {
+                                if strongSelf.ribbonBackgroundNode.image == nil {
+                                    let ribbonImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/GiftRibbon"), color: overlayColor)
+                                    strongSelf.ribbonBackgroundNode.image = ribbonImage
                                 }
+                                if let ribbonImage = strongSelf.ribbonBackgroundNode.image {
+                                    let ribbonFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.maxX - ribbonImage.size.width + 2.0, y: mediaBackgroundFrame.minY - 2.0), size: ribbonImage.size)
+                                    strongSelf.ribbonBackgroundNode.frame = ribbonFrame
+                                    
+                                    strongSelf.ribbonTextNode.transform = CATransform3DMakeRotation(.pi / 4.0, 0.0, 0.0, 1.0)
+                                    strongSelf.ribbonTextNode.bounds = CGRect(origin: .zero, size: ribbonTextLayout.size)
+                                    strongSelf.ribbonTextNode.position = ribbonFrame.center.offsetBy(dx: 7.0, dy: -6.0)
+                                }
+                            }
+                            
+                            if strongSelf.mediaBackgroundContent == nil, let backgroundContent = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                                backgroundContent.clipsToBounds = true
+                                backgroundContent.cornerRadius = 24.0
                                 
-                                strongSelf.mediaBackgroundContent?.frame = mediaBackgroundFrame
-                            } else {
-                                strongSelf.mediaBackgroundNode.isHidden = false
-                                strongSelf.mediaBackgroundContent?.removeFromSupernode()
-                                strongSelf.mediaBackgroundContent = nil
+                                strongSelf.mediaBackgroundContent = backgroundContent
+                                strongSelf.insertSubnode(backgroundContent, at: 0)
+                            }
+                            
+                            if let backgroundContent = strongSelf.mediaBackgroundContent {
+                                if ribbonTextLayout.size.width > 0.0 {
+                                    let backgroundMaskFrame = mediaBackgroundFrame.insetBy(dx: -2.0, dy: -2.0)
+                                    backgroundContent.frame = backgroundMaskFrame
+                                    backgroundContent.cornerRadius = 0.0
+                                    
+                                    if strongSelf.mediaBackgroundMaskNode.image?.size != mediaBackgroundFrame.size {
+                                        strongSelf.mediaBackgroundMaskNode.image = generateImage(backgroundMaskFrame.size, contextGenerator: { size, context in
+                                            let bounds = CGRect(origin: .zero, size: size)
+                                            context.clear(bounds)
+                                            
+                                            context.setFillColor(UIColor.black.cgColor)
+                                            context.addPath(UIBezierPath(roundedRect: bounds.insetBy(dx: 2.0, dy: 2.0), cornerRadius: 24.0).cgPath)
+                                            context.fillPath()
+                                            
+                                            if let ribbonImage = UIImage(bundleImageName: "Chat/Message/GiftRibbon"), let cgImage = ribbonImage.cgImage {
+                                                context.draw(cgImage, in: CGRect(origin: CGPoint(x: bounds.width - ribbonImage.size.width, y: bounds.height - ribbonImage.size.height), size: ribbonImage.size), byTiling: false)
+                                            }
+                                        })
+                                    }
+                                    backgroundContent.view.mask = strongSelf.mediaBackgroundMaskNode.view
+                                    strongSelf.mediaBackgroundMaskNode.frame = CGRect(origin: .zero, size: backgroundMaskFrame.size)
+                                } else {
+                                    backgroundContent.frame = mediaBackgroundFrame
+                                    backgroundContent.clipsToBounds = true
+                                    backgroundContent.cornerRadius = 24.0
+                                    backgroundContent.view.mask = nil
+                                }
                             }
                             
                             let baseBackgroundFrame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
@@ -645,7 +722,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
             return ChatMessageBubbleContentTapAction(content: .ignore)
         } else if let backgroundNode = self.backgroundNode, backgroundNode.frame.contains(point) {
             return ChatMessageBubbleContentTapAction(content: .openMessage)
-        } else if self.mediaBackgroundNode.frame.contains(point) {
+        } else if self.mediaBackgroundContent?.frame.contains(point) == true {
             return ChatMessageBubbleContentTapAction(content: .openMessage)
         } else {
             return ChatMessageBubbleContentTapAction(content: .none)

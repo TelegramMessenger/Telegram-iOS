@@ -90,6 +90,14 @@ final class GiftSetupScreenComponent: Component {
         
         private var starImage: (UIImage, PresentationTheme)?
         
+        private var optionsDisposable: Disposable?
+        private(set) var options: [StarsTopUpOption] = [] {
+            didSet {
+                self.optionsPromise.set(self.options)
+            }
+        }
+        private let optionsPromise = ValuePromise<[StarsTopUpOption]?>(nil)
+        
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
             self.scrollView.showsVerticalScrollIndicator = true
@@ -159,45 +167,77 @@ final class GiftSetupScreenComponent: Component {
         }
         
         func proceed() {
-            guard let component = self.component else {
+            guard let component = self.component, let starsContext = component.context.starsContext, let starsState = starsContext.currentState else {
                 return
             }
-            let source: BotPaymentInvoiceSource = .starGift(hideName: self.hideName, peerId: component.peerId, giftId: component.gift.id, text: self.textInputState.text.string, entities: [])
-            let inputData = BotCheckoutController.InputData.fetch(context: component.context, source: source)
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
-                return .single(nil)
-            }
             
-            let _ = (inputData
-            |> deliverOnMainQueue).startStandalone(next: { [weak self] inputData in
-                guard let inputData else {
+            let proceed = { [weak self] in
+                guard let self else {
                     return
                 }
-                let _ = (component.context.engine.payments.sendStarsPaymentForm(formId: inputData.form.id, source: source)
-                |> deliverOnMainQueue).start(next: { [weak self] result in
-                    guard let self, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController else {
+                let source: BotPaymentInvoiceSource = .starGift(hideName: self.hideName, peerId: component.peerId, giftId: component.gift.id, text: self.textInputState.text.string, entities: [])
+                let inputData = BotCheckoutController.InputData.fetch(context: component.context, source: source)
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
+                    return .single(nil)
+                }
+                
+                let _ = (inputData
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] inputData in
+                    guard let inputData else {
                         return
                     }
-                    
-                    var controllers = navigationController.viewControllers
-                    controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) }
-                    var foundController = false
-                    for controller in controllers.reversed() {
-                        if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
-                            chatController.hintPlayNextOutgoingGift()
-                            foundController = true
-                            break
+                    let _ = (component.context.engine.payments.sendStarsPaymentForm(formId: inputData.form.id, source: source)
+                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                        guard let self, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController else {
+                            return
                         }
-                    }
-                    if !foundController {
-                        let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                        chatController.hintPlayNextOutgoingGift()
-                        controllers.append(chatController)
-                    }
-                    navigationController.setViewControllers(controllers, animated: true)
+                        
+                        var controllers = navigationController.viewControllers
+                        controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) }
+                        var foundController = false
+                        for controller in controllers.reversed() {
+                            if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
+                                chatController.hintPlayNextOutgoingGift()
+                                foundController = true
+                                break
+                            }
+                        }
+                        if !foundController {
+                            let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                            chatController.hintPlayNextOutgoingGift()
+                            controllers.append(chatController)
+                        }
+                        navigationController.setViewControllers(controllers, animated: true)
+                    })
                 })
-            })
+            }
+            
+            if starsState.balance < component.gift.price {
+                let _ = (self.optionsPromise.get()
+                |> filter { $0 != nil }
+                |> take(1)
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] options in
+                    guard let self, let component = self.component, let controller = self.environment?.controller() else {
+                        return
+                    }
+                    let purchaseController = component.context.sharedContext.makeStarsPurchaseScreen(
+                        context: component.context,
+                        starsContext: starsContext,
+                        options: options ?? [],
+                        purpose: .starGift(peerId: component.peerId, requiredStars: component.gift.price),
+                        completion: { [weak starsContext] stars in
+                            starsContext?.add(balance: stars)
+                            Queue.mainQueue().after(0.1) {
+                                proceed()
+                            }
+                        }
+                    )
+                    controller.push(purchaseController)
+                })
+            } else {
+                proceed()
+            }
         }
         
         func update(component: GiftSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {

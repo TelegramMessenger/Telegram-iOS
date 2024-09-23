@@ -20,35 +20,62 @@ public final class GiftItemComponent: Component {
     }
     
     public struct Ribbon: Equatable {
+        public enum Color {
+            case red
+            case blue
+            
+            var colors: [UIColor] {
+                switch self {
+                case .red:
+                    return [
+                        UIColor(rgb: 0xed1c26),
+                        UIColor(rgb: 0xff5c55)
+                        
+                    ]
+                case .blue:
+                    return [
+                        UIColor(rgb: 0x34a4fc),
+                        UIColor(rgb: 0x6fd3ff)
+                    ]
+                }
+            }
+        }
         public let text: String
-        public let color: UIColor
+        public let color: Color
         
-        public init(text: String, color: UIColor) {
+        public init(text: String, color: Color) {
             self.text = text
             self.color = color
         }
     }
     
+    public enum Peer: Equatable {
+        case peer(EnginePeer)
+        case anonymous
+    }
+    
     let context: AccountContext
     let theme: PresentationTheme
-    let peer: EnginePeer?
-    let subject: Subject
+    let peer: GiftItemComponent.Peer?
+    let subject: GiftItemComponent.Subject
     let title: String?
     let subtitle: String?
     let price: String
     let ribbon: Ribbon?
     let isLoading: Bool
+    let isHidden: Bool
     
     public init(
         context: AccountContext,
         theme: PresentationTheme,
-        peer: EnginePeer?,
-        subject: Subject,
+        peer: GiftItemComponent.Peer?,
+        subject: GiftItemComponent.Subject,
         title: String? = nil,
         subtitle: String? = nil,
         price: String,
         ribbon: Ribbon? = nil,
-        isLoading: Bool = false
+        isLoading: Bool = false,
+        isHidden: Bool = false
     ) {
         self.context = context
         self.theme = theme
@@ -59,6 +86,7 @@ public final class GiftItemComponent: Component {
         self.price = price
         self.ribbon = ribbon
         self.isLoading = isLoading
+        self.isHidden = isHidden
     }
 
     public static func ==(lhs: GiftItemComponent, rhs: GiftItemComponent) -> Bool {
@@ -89,6 +117,9 @@ public final class GiftItemComponent: Component {
         if lhs.isLoading != rhs.isLoading {
             return false
         }
+        if lhs.isHidden != rhs.isHidden {
+            return false
+        }
         return true
     }
 
@@ -108,6 +139,9 @@ public final class GiftItemComponent: Component {
         
         private var animationLayer: InlineStickerItemLayer?
         
+        private var hiddenIconBackground: UIVisualEffectView?
+        private var hiddenIcon: UIImageView?
+        
         override init(frame: CGRect) {
             super.init(frame: frame)
             
@@ -125,6 +159,8 @@ public final class GiftItemComponent: Component {
         }
         
         func update(component: GiftItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            let isFirstTime = self.component == nil
+            
             self.component = component
             self.componentState = state
             
@@ -201,8 +237,9 @@ public final class GiftItemComponent: Component {
                 self.layer.addSublayer(animationLayer)
             }
             
+            let animationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - iconSize.width) / 2.0), y: animationOffset), size: iconSize)
             if let animationLayer = self.animationLayer {
-                transition.setFrame(layer: animationLayer, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - iconSize.width) / 2.0), y: animationOffset), size: iconSize))
+                transition.setFrame(layer: animationLayer, frame: animationFrame)
             }
             
             if let title = component.title {
@@ -287,7 +324,7 @@ public final class GiftItemComponent: Component {
                     ribbonTextView.bounds = CGRect(origin: .zero, size: ribbonTextSize)
                     
                     if self.ribbon.image == nil {
-                        self.ribbon.image = generateGradientTintedImage(image: UIImage(bundleImageName: "Premium/GiftRibbon"), colors: [ribbon.color.withMultipliedBrightnessBy(1.1), ribbon.color.withMultipliedBrightnessBy(0.9)], direction: .diagonal)
+                        self.ribbon.image = generateGradientTintedImage(image: UIImage(bundleImageName: "Premium/GiftRibbon"), colors: ribbon.color.colors, direction: .diagonal)
                     }
                     if let ribbonImage = self.ribbon.image {
                         self.ribbon.frame = CGRect(origin: CGPoint(x: size.width - ribbonImage.size.width + 2.0, y: -2.0), size: ribbonImage.size)
@@ -312,12 +349,63 @@ public final class GiftItemComponent: Component {
                     self.avatarNode = avatarNode
                 }
                 
-                avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, displayDimensions: CGSize(width: 20.0, height: 20.0))
+                switch peer {
+                case let .peer(peer):
+                    avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, displayDimensions: CGSize(width: 20.0, height: 20.0))
+                case .anonymous:
+                    avatarNode.setPeer(context: component.context, theme: component.theme, peer: nil, overrideImage: .anonymousSavedMessagesIcon(isColored: true))
+                }
+                
                 avatarNode.frame = CGRect(origin: CGPoint(x: 2.0, y: 2.0), size: CGSize(width: 20.0, height: 20.0))
             }
             
             self.backgroundLayer.backgroundColor = component.theme.list.itemBlocksBackgroundColor.cgColor
             transition.setFrame(layer: self.backgroundLayer, frame: CGRect(origin: .zero, size: size))
+            
+            if component.isHidden {
+                let hiddenIconBackground: UIVisualEffectView
+                let hiddenIcon: UIImageView
+                if let currentBackground = self.hiddenIconBackground, let currentIcon = self.hiddenIcon {
+                    hiddenIconBackground = currentBackground
+                    hiddenIcon = currentIcon
+                } else {
+                    let blurEffect: UIBlurEffect
+                    if #available(iOS 13.0, *) {
+                        blurEffect = UIBlurEffect(style: .systemThinMaterialDark)
+                    } else {
+                        blurEffect = UIBlurEffect(style: .dark)
+                    }
+                    hiddenIconBackground = UIVisualEffectView(effect: blurEffect)
+                    hiddenIconBackground.clipsToBounds = true
+                    hiddenIconBackground.layer.cornerRadius = 15.0
+                    self.hiddenIconBackground = hiddenIconBackground
+                    
+                    hiddenIcon = UIImageView(image: generateTintedImage(image: UIImage(bundleImageName: "Peer Info/HiddenIcon"), color: .white))
+                    self.hiddenIcon = hiddenIcon
+                    
+                    self.addSubview(hiddenIconBackground)
+                    hiddenIconBackground.contentView.addSubview(hiddenIcon)
+                    
+                    if !isFirstTime {
+                        hiddenIconBackground.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                        hiddenIconBackground.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                }
+                
+                let iconSize = CGSize(width: 30.0, height: 30.0)
+                hiddenIconBackground.frame = iconSize.centered(around: animationFrame.center)
+                hiddenIcon.frame = CGRect(origin: .zero, size: iconSize)
+            } else {
+                if let hiddenIconBackground = self.hiddenIconBackground {
+                    self.hiddenIconBackground = nil
+                    self.hiddenIcon = nil
+                    
+                    hiddenIconBackground.layer.animateAlpha(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                        hiddenIconBackground.removeFromSuperview()
+                    })
+                    hiddenIconBackground.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                }
+            }
             
             return size
         }
