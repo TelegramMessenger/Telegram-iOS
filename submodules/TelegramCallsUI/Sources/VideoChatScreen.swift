@@ -110,6 +110,7 @@ final class VideoChatScreenComponent: Component {
         var applicationStateDisposable: Disposable?
         
         var expandedParticipantsVideoState: VideoChatParticipantsComponent.ExpandedVideoState?
+        var focusedSpeakerAutoSwitchDeadline: Double = 0.0
         var isTwoColumnSidebarHidden: Bool = false
         
         let inviteDisposable = MetaDisposable()
@@ -762,7 +763,7 @@ final class VideoChatScreenComponent: Component {
                     if self.members != members {
                         var members = members
                         
-                        #if DEBUG && true
+                        #if DEBUG && false
                         if let membersValue = members {
                             var participants = membersValue.participants
                             for i in 1 ... 20 {
@@ -841,12 +842,13 @@ final class VideoChatScreenComponent: Component {
                             if videoCount == 1, let participantsView = self.participants.view as? VideoChatParticipantsComponent.View, let participantsComponent = participantsView.component {
                                 if participantsComponent.layout.videoColumn != nil {
                                     self.expandedParticipantsVideoState = nil
+                                    self.focusedSpeakerAutoSwitchDeadline = 0.0
                                 }
                             }
                         }
                         
                         if let expandedParticipantsVideoState = self.expandedParticipantsVideoState, let members {
-                            if !expandedParticipantsVideoState.isMainParticipantPinned, let participant = members.participants.first(where: { participant in
+                            if CFAbsoluteTimeGetCurrent() > self.focusedSpeakerAutoSwitchDeadline, !expandedParticipantsVideoState.isMainParticipantPinned, let participant = members.participants.first(where: { participant in
                                 if let callState = self.callState, participant.peer.id == callState.myPeerId {
                                     return false
                                 }
@@ -863,6 +865,7 @@ final class VideoChatScreenComponent: Component {
                                     } else {
                                         self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
                                     }
+                                    self.focusedSpeakerAutoSwitchDeadline = CFAbsoluteTimeGetCurrent() + 1.0
                                 }
                             }
                             
@@ -895,11 +898,14 @@ final class VideoChatScreenComponent: Component {
                                 } else {
                                     self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
                                 }
+                                self.focusedSpeakerAutoSwitchDeadline = CFAbsoluteTimeGetCurrent() + 1.0
                             } else {
                                 self.expandedParticipantsVideoState = nil
+                                self.focusedSpeakerAutoSwitchDeadline = 0.0
                             }
                         } else {
                             self.expandedParticipantsVideoState = nil
+                            self.focusedSpeakerAutoSwitchDeadline = 0.0
                         }
                         
                         if !self.isUpdating {
@@ -1509,6 +1515,7 @@ final class VideoChatScreenComponent: Component {
                             }
                             
                             self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: key, isMainParticipantPinned: false, isUIHidden: isUIHidden)
+                            self.focusedSpeakerAutoSwitchDeadline = CFAbsoluteTimeGetCurrent() + 3.0
                             self.state?.updated(transition: .spring(duration: 0.4))
                         } else if self.expandedParticipantsVideoState != nil {
                             self.expandedParticipantsVideoState = nil

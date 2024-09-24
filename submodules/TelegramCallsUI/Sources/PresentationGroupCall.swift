@@ -2111,7 +2111,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     var topParticipants: [GroupCallParticipantsContext.Participant] = []
                     
                     var reportSpeakingParticipants: [PeerId: UInt32] = [:]
-                    let timestamp = CACurrentMediaTime()
+                    let timestamp = CFAbsoluteTimeGetCurrent()
                     for (peerId, ssrc) in speakingParticipants {
                         let shouldReport: Bool
                         if let previousTimestamp = strongSelf.speakingParticipantsReportTimestamp[peerId] {
