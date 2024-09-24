@@ -5,6 +5,7 @@ import ComponentFlow
 import MultilineTextComponent
 import TelegramPresentationData
 import HierarchyTrackingLayer
+import ChatTitleActivityNode
 
 final class VideoChatTitleComponent: Component {
     let title: String
@@ -43,11 +44,16 @@ final class VideoChatTitleComponent: Component {
     final class View: UIView {
         private let hierarchyTrackingLayer: HierarchyTrackingLayer
         private let title = ComponentView<Empty>()
-        private var status: ComponentView<Empty>?
+        private let status = ComponentView<Empty>()
         private var recordingImageView: UIImageView?
+        
+        private var activityStatusNode: ChatTitleActivityNode?
 
         private var component: VideoChatTitleComponent?
         private var isUpdating: Bool = false
+        
+        private var currentActivityStatus: String?
+        private var currentSize: CGSize?
         
         override init(frame: CGRect) {
             self.hierarchyTrackingLayer = HierarchyTrackingLayer()
@@ -81,6 +87,64 @@ final class VideoChatTitleComponent: Component {
             }
         }
         
+        func updateActivityStatus(value: String?, transition: ComponentTransition) {
+            if self.currentActivityStatus == value {
+                return
+            }
+            self.currentActivityStatus = value
+            
+            guard let currentSize = self.currentSize, let statusView = self.status.view else {
+                return
+            }
+            
+            let alphaTransition: ComponentTransition
+            if transition.animation.isImmediate {
+                alphaTransition = .immediate
+            } else {
+                alphaTransition = .easeInOut(duration: 0.2)
+            }
+            
+            if let value {
+                let activityStatusNode: ChatTitleActivityNode
+                if let current = self.activityStatusNode {
+                    activityStatusNode = current
+                } else {
+                    activityStatusNode = ChatTitleActivityNode()
+                    self.activityStatusNode = activityStatusNode
+                }
+                
+                let _ = activityStatusNode.transitionToState(.recordingVoice(NSAttributedString(string: value, font: Font.regular(13.0), textColor: UIColor(rgb: 0x34c759)), UIColor(rgb: 0x34c759)), animation: .none)
+                let activityStatusSize = activityStatusNode.updateLayout(CGSize(width: currentSize.width, height: 100.0), alignment: .center)
+                let activityStatusFrame = CGRect(origin: CGPoint(x: floor((currentSize.width - activityStatusSize.width) * 0.5), y: statusView.center.y - activityStatusSize.height * 0.5), size: activityStatusSize)
+                
+                let activityStatusNodeView = activityStatusNode.view
+                activityStatusNodeView.center = activityStatusFrame.center
+                activityStatusNodeView.bounds = CGRect(origin: CGPoint(), size: activityStatusFrame.size)
+                if activityStatusNodeView.superview == nil {
+                    self.addSubview(activityStatusNode.view)
+                    ComponentTransition.immediate.setTransform(view: activityStatusNodeView, transform: CATransform3DMakeTranslation(0.0, -10.0, 0.0))
+                    activityStatusNodeView.alpha = 0.0
+                }
+                transition.setTransform(view: activityStatusNodeView, transform: CATransform3DIdentity)
+                alphaTransition.setAlpha(view: activityStatusNodeView, alpha: 1.0)
+                
+                transition.setTransform(view: statusView, transform: CATransform3DMakeTranslation(0.0, 10.0, 0.0))
+                alphaTransition.setAlpha(view: statusView, alpha: 0.0)
+            } else {
+                if let activityStatusNode = self.activityStatusNode {
+                    self.activityStatusNode = nil
+                    let activityStatusNodeView = activityStatusNode.view
+                    transition.setTransform(view: activityStatusNodeView, transform: CATransform3DMakeTranslation(0.0, -10.0, 0.0))
+                    alphaTransition.setAlpha(view: activityStatusNodeView, alpha: 0.0, completion: { [weak activityStatusNodeView] _ in
+                        activityStatusNodeView?.removeFromSuperview()
+                    })
+                }
+                
+                transition.setTransform(view: statusView, transform: CATransform3DIdentity)
+                alphaTransition.setAlpha(view: statusView, alpha: 1.0)
+            }
+        }
+        
         func update(component: VideoChatTitleComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -100,19 +164,12 @@ final class VideoChatTitleComponent: Component {
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
             )
             
-            let status: ComponentView<Empty>
-            if let current = self.status {
-                status = current
-            } else {
-                status = ComponentView()
-                self.status = status
-            }
             let statusComponent: AnyComponent<Empty>
             statusComponent = AnyComponent(MultilineTextComponent(
                 text: .plain(NSAttributedString(string: component.status, font: Font.regular(13.0), textColor: UIColor(white: 1.0, alpha: 0.5)))
             ))
             
-            let statusSize = status.update(
+            let statusSize = self.status.update(
                 transition: .immediate,
                 component: statusComponent,
                 environment: {},
@@ -131,7 +188,7 @@ final class VideoChatTitleComponent: Component {
             }
             
             let statusFrame = CGRect(origin: CGPoint(x: floor((size.width - statusSize.width) * 0.5), y: titleFrame.maxY + spacing), size: statusSize)
-            if let statusView = status.view {
+            if let statusView = self.status.view {
                 if statusView.superview == nil {
                     self.addSubview(statusView)
                 }
@@ -164,6 +221,8 @@ final class VideoChatTitleComponent: Component {
                     })
                 }
             }
+            
+            self.currentSize = size
             
             return size
         }
