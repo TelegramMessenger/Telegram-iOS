@@ -459,7 +459,9 @@ swift_library(
         "//submodules/TelegramUI/Components/MinimizedContainer",
         "//submodules/TelegramUI/Components/SpaceWarpView",
         "//submodules/TelegramUI/Components/MiniAppListScreen",
+        "//submodules/TelegramUI/Components/Stars/StarsIntroScreen",
         "//submodules/TelegramUI/Components/Gifts/GiftOptionsScreen",
+        "//submodules/TelegramUI/Components/ContentReportScreen",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

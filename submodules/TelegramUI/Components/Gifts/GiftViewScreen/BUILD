@@ -25,6 +25,7 @@ swift_library(
         "//submodules/Components/ViewControllerComponent",
         "//submodules/Components/BundleIconComponent",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/Components/MultilineTextWithEntitiesComponent",
         "//submodules/Components/BalancedTextComponent",
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/TelegramUI/Components/ListActionItemComponent",
@@ -36,6 +37,7 @@ swift_library(
         "//submodules/Components/SolidRoundedButtonComponent",
         "//submodules/TelegramUI/Components/Stars/StarsAvatarComponent",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
+        "//submodules/TelegramUI/Components/Gifts/GiftAnimationComponent",
         "//submodules/UndoUI",
     ],
     visibility = [

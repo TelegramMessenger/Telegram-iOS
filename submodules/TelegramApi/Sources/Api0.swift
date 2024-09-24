@@ -631,6 +631,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2083123262] = { return Api.MessageReplies.parse_messageReplies($0) }
     dict[-1346631205] = { return Api.MessageReplyHeader.parse_messageReplyHeader($0) }
     dict[240843065] = { return Api.MessageReplyHeader.parse_messageReplyStoryHeader($0) }
+    dict[2030298073] = { return Api.MessageReportOption.parse_messageReportOption($0) }
     dict[1163625789] = { return Api.MessageViews.parse_messageViews($0) }
     dict[975236280] = { return Api.MessagesFilter.parse_inputMessagesFilterChatPhotos($0) }
     dict[-530392189] = { return Api.MessagesFilter.parse_inputMessagesFilterContacts($0) }
@@ -803,6 +804,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[777640226] = { return Api.ReportReason.parse_inputReportReasonPornography($0) }
     dict[1490799288] = { return Api.ReportReason.parse_inputReportReasonSpam($0) }
     dict[505595789] = { return Api.ReportReason.parse_inputReportReasonViolence($0) }
+    dict[1862904881] = { return Api.ReportResult.parse_reportResultAddComment($0) }
+    dict[-253435722] = { return Api.ReportResult.parse_reportResultChooseOption($0) }
+    dict[-1917633461] = { return Api.ReportResult.parse_reportResultReported($0) }
     dict[865857388] = { return Api.RequestPeerType.parse_requestPeerTypeBroadcast($0) }
     dict[-906990053] = { return Api.RequestPeerType.parse_requestPeerTypeChat($0) }
     dict[1597737472] = { return Api.RequestPeerType.parse_requestPeerTypeUser($0) }
@@ -898,7 +902,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1401868056] = { return Api.StarsSubscription.parse_starsSubscription($0) }
     dict[88173912] = { return Api.StarsSubscriptionPricing.parse_starsSubscriptionPricing($0) }
     dict[198776256] = { return Api.StarsTopupOption.parse_starsTopupOption($0) }
-    dict[-294313259] = { return Api.StarsTransaction.parse_starsTransaction($0) }
+    dict[178185410] = { return Api.StarsTransaction.parse_starsTransaction($0) }
     dict[-670195363] = { return Api.StarsTransactionPeer.parse_starsTransactionPeer($0) }
     dict[1617438738] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerAds($0) }
     dict[-1269320843] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerAppStore($0) }
@@ -1853,6 +1857,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessageReplyHeader:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.MessageReportOption:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.MessageViews:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessagesFilter:
@@ -1968,6 +1974,8 @@ public extension Api {
             case let _1 as Api.ReplyMarkup:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ReportReason:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.ReportResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.RequestPeerType:
                 _1.serialize(buffer, boxed)

@@ -148,6 +148,8 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
     
     private let disposable = MetaDisposable()
     
+    private var initialBubbleHeight: CGFloat?
+    
     init() {
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -235,14 +237,13 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                     })
                     itemNode!.isUserInteractionEnabled = false
                     messageNodes.append(itemNode!)
+                    
+                    self.initialBubbleHeight = itemNode?.frame.height
                 }
                 nodes = messageNodes
             }
             
             var contentSize = CGSize(width: params.width, height: 4.0 + 4.0)
-//            for node in nodes {
-//                contentSize.height += node.frame.size.height
-//            }
             contentSize.height = 346.0
             insets = itemListNeighborsGroupedInsets(neighbors, params)
             if params.width <= 320.0 {
@@ -269,7 +270,13 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                         if node.supernode == nil {
                             strongSelf.containerNode.addSubnode(node)
                         }
-                        node.updateFrame(CGRect(origin: CGPoint(x: 0.0, y: floor((contentSize.height - node.frame.size.height) / 2.0)), size: node.frame.size), within: layoutSize)
+                        let bubbleHeight: CGFloat
+                        if let initialBubbleHeight = strongSelf.initialBubbleHeight {
+                            bubbleHeight = max(node.frame.height, initialBubbleHeight)
+                        } else {
+                            bubbleHeight = node.frame.height
+                        }
+                        node.updateFrame(CGRect(origin: CGPoint(x: 0.0, y: floor((contentSize.height - bubbleHeight) / 2.0)), size: node.frame.size), within: layoutSize)
                         //topOffset += node.frame.size.height
                     }
                     

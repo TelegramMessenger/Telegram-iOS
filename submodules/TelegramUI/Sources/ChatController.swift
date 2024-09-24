@@ -1073,7 +1073,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }
                                     }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatSchedule, action: {
                                         if let strongSelf = self {
-                                            strongSelf.context.scheduleGroupCall(peerId: message.id.peerId)
+                                            strongSelf.context.scheduleGroupCall(peerId: message.id.peerId, parentController: strongSelf)
                                         }
                                     }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
                                 }

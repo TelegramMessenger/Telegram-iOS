@@ -30,15 +30,18 @@ final class GiftOptionsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let starsContext: StarsContext
     let peerId: EnginePeer.Id
     let premiumOptions: [CachedPremiumGiftOption]
 
     init(
         context: AccountContext,
+        starsContext: StarsContext,
         peerId: EnginePeer.Id,
         premiumOptions: [CachedPremiumGiftOption]
     ) {
         self.context = context
+        self.starsContext = starsContext
         self.peerId = peerId
         self.premiumOptions = premiumOptions
     }
@@ -100,10 +103,15 @@ final class GiftOptionsScreenComponent: Component {
         
         private let header = ComponentView<Empty>()
         
+        private let balanceTitle = ComponentView<Empty>()
+        private let balanceValue = ComponentView<Empty>()
+        private let balanceIcon = ComponentView<Empty>()
+        
         private let premiumTitle = ComponentView<Empty>()
         private let premiumDescription = ComponentView<Empty>()
         private var premiumItems: [AnyHashable: ComponentView<Empty>] = [:]
-        private var selectedPremiumGift: String?
+        private var inProgressPremiumGift: String?
+        private let purchaseDisposable = MetaDisposable()
         
         private let starsTitle = ComponentView<Empty>()
         private let starsDescription = ComponentView<Empty>()
@@ -112,6 +120,9 @@ final class GiftOptionsScreenComponent: Component {
         private var starsFilter: StarsFilter = .all
         
         private var isUpdating: Bool = false
+        
+        private var starsStateDisposable: Disposable?
+        private var starsState: StarsContext.State?
         
         private var component: GiftOptionsScreenComponent?
         private(set) weak var state: State?
@@ -147,6 +158,8 @@ final class GiftOptionsScreenComponent: Component {
         }
         
         deinit {
+            self.starsStateDisposable?.dispose()
+            self.purchaseDisposable.dispose()
         }
 
         func scrollToTop() {
@@ -204,7 +217,6 @@ final class GiftOptionsScreenComponent: Component {
                 transition.setPosition(view: premiumTitleView, position: CGPoint(x: availableWidth / 2.0, y: max(premiumTitleInitialPosition - premiumTitleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0) - premiumTitleAdditionalOffset))
                 transition.setScale(view: premiumTitleView, scale: premiumTitleScale)
             }
-            
             
             if let headerView = self.header.view {
                 transition.setPosition(view: headerView, position: CGPoint(x: availableWidth / 2.0, y: topInset + headerView.bounds.height / 2.0 - 30.0 - premiumTitleOffset * premiumTitleScale))
@@ -273,7 +285,7 @@ final class GiftOptionsScreenComponent: Component {
                                             ribbon: gift.availability != nil ?
                                             GiftItemComponent.Ribbon(
                                                 text: "Limited",
-                                                color: UIColor(rgb: 0x58c1fe)
+                                                color: .blue
                                             )
                                             : nil
                                         )
@@ -330,6 +342,88 @@ final class GiftOptionsScreenComponent: Component {
             }
         }
         
+        private func buyPremium(_ product: PremiumGiftProduct) {
+            guard let component = self.component, let inAppPurchaseManager = self.component?.context.inAppPurchaseManager, self.inProgressPremiumGift == nil else {
+                return
+            }
+                        
+            self.inProgressPremiumGift = product.id
+            self.state?.updated()
+                        
+            let (currency, amount) = product.storeProduct.priceCurrencyAndAmount
+                     
+            addAppLogEvent(postbox: component.context.account.postbox, type: "premium_gift.promo_screen_accept")
+
+            let purpose: AppStoreTransactionPurpose = .giftCode(peerIds: [component.peerId], boostPeer: nil, currency: currency, amount: amount)
+            let quantity: Int32 = 1
+                        
+            let _ = (component.context.engine.payments.canPurchasePremium(purpose: purpose)
+            |> deliverOnMainQueue).start(next: { [weak self] available in
+                if let strongSelf = self {
+                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                    if available {
+                        strongSelf.purchaseDisposable.set((inAppPurchaseManager.buyProduct(product.storeProduct, quantity: quantity, purpose: purpose)
+                        |> deliverOnMainQueue).start(next: { [weak self] status in
+                            guard let self, case .purchased = status, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController else {
+                                return
+                            }
+                            
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { !($0 is GiftOptionsScreen) }
+                            var foundController = false
+                            for controller in controllers.reversed() {
+                                if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
+                                    chatController.hintPlayNextOutgoingGift()
+                                    foundController = true
+                                    break
+                                }
+                            }
+                            if !foundController {
+                                let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                                chatController.hintPlayNextOutgoingGift()
+                                controllers.append(chatController)
+                            }
+                            navigationController.setViewControllers(controllers, animated: true)
+                        }, error: { [weak self] error in
+                            guard let self, let controller = self.environment?.controller() else {
+                                return
+                            }
+                            self.inProgressPremiumGift = nil
+                            self.state?.updated(transition: .immediate)
+
+                            var errorText: String?
+                            switch error {
+                                case .generic:
+                                    errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                                case .network:
+                                    errorText = presentationData.strings.Premium_Purchase_ErrorNetwork
+                                case .notAllowed:
+                                    errorText = presentationData.strings.Premium_Purchase_ErrorNotAllowed
+                                case .cantMakePayments:
+                                    errorText = presentationData.strings.Premium_Purchase_ErrorCantMakePayments
+                                case .assignFailed:
+                                    errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                                case .tryLater:
+                                    errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                                case .cancelled:
+                                    break
+                            }
+                            
+                            if let errorText {
+                                addAppLogEvent(postbox: component.context.account.postbox, type: "premium_gift.promo_screen_fail")
+                                
+                                let alertController = textAlertController(context: component.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                                controller.present(alertController, in: .window(.root))
+                            }
+                        }))
+                    } else {
+                        self?.inProgressPremiumGift = nil
+                        self?.state?.updated(transition: .immediate)
+                    }
+                }
+            })
+        }
+        
         func update(component: GiftOptionsScreenComponent, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -340,13 +434,21 @@ final class GiftOptionsScreenComponent: Component {
             let controller = environment.controller
             let themeUpdated = self.environment?.theme !== environment.theme
             self.environment = environment
+            self.state = state
             
             if self.component == nil {
-                
+                self.starsStateDisposable = (component.starsContext.state
+                |> deliverOnMainQueue).start(next: { [weak self] state in
+                    guard let self else {
+                        return
+                    }
+                    self.starsState = state
+                    if !self.isUpdating {
+                        self.state?.updated()
+                    }
+                })
             }
-            
             self.component = component
-            self.state = state
             
             if themeUpdated {
                 self.backgroundColor = environment.theme.list.blocksBackgroundColor
@@ -451,6 +553,55 @@ final class GiftOptionsScreenComponent: Component {
                 transition.setFrame(view: cancelButtonView, frame: cancelButtonFrame)
             }
             
+            let balanceTitleSize = self.balanceTitle.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: strings.Stars_Purchase_Balance,
+                        font: Font.regular(14.0),
+                        textColor: environment.theme.actionSheet.primaryTextColor
+                    )),
+                    maximumNumberOfLines: 1
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+            let balanceValueSize = self.balanceValue.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: presentationStringsFormattedNumber(Int32(self.starsState?.balance ?? 0), environment.dateTimeFormat.groupingSeparator),
+                        font: Font.semibold(14.0),
+                        textColor: environment.theme.actionSheet.primaryTextColor
+                    )),
+                    maximumNumberOfLines: 1
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+            let balanceIconSize = self.balanceIcon.update(
+                transition: .immediate,
+                component: AnyComponent(BundleIconComponent(name: "Premium/Stars/StarSmall", tintColor: nil)),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            if let balanceTitleView = self.balanceTitle.view, let balanceValueView = self.balanceValue.view, let balanceIconView = self.balanceIcon.view {
+                if balanceTitleView.superview == nil {
+                    self.addSubview(balanceTitleView)
+                    self.addSubview(balanceValueView)
+                    self.addSubview(balanceIconView)
+                }
+                let navigationHeight = environment.navigationHeight - environment.statusBarHeight
+                let topBalanceOriginY = environment.statusBarHeight + (navigationHeight - balanceTitleSize.height - balanceValueSize.height) / 2.0
+                balanceTitleView.center = CGPoint(x: availableSize.width - 16.0 - environment.safeInsets.right - balanceTitleSize.width / 2.0, y: topBalanceOriginY + balanceTitleSize.height / 2.0)
+                balanceTitleView.bounds = CGRect(origin: .zero, size: balanceTitleSize)
+                balanceValueView.center = CGPoint(x: availableSize.width - 16.0 - environment.safeInsets.right - balanceValueSize.width / 2.0, y: topBalanceOriginY + balanceTitleSize.height + balanceValueSize.height / 2.0)
+                balanceValueView.bounds = CGRect(origin: .zero, size: balanceValueSize)
+                balanceIconView.center = CGPoint(x: availableSize.width - 16.0 - environment.safeInsets.right - balanceValueSize.width - balanceIconSize.width / 2.0 - 2.0, y: topBalanceOriginY + balanceTitleSize.height + balanceValueSize.height / 2.0 - UIScreenPixel)
+                balanceIconView.bounds = CGRect(origin: .zero, size: balanceIconSize)
+            }
+            
             let premiumTitleSize = self.premiumTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
@@ -494,8 +645,13 @@ final class GiftOptionsScreenComponent: Component {
                             return nil
                         }
                     },
-                    tapAction: { _, _ in
-                        
+                    tapAction: { [weak self] _, _ in
+                        guard let self, let component = self.component, let environment = self.environment else {
+                            return
+                        }
+                        let introController = component.context.sharedContext.makePremiumIntroController(context: component.context, source: .settings, forceDark: false, dismissed: nil)
+                        introController.navigationPresentation = .modal
+                        environment.controller()?.push(introController)
                     }
                 )),
                 environment: {},
@@ -561,21 +717,15 @@ final class GiftOptionsScreenComponent: Component {
                                         ribbon: product.discount.flatMap {
                                             GiftItemComponent.Ribbon(
                                                 text:  "-\($0)%",
-                                                color: UIColor(rgb: 0xfa4846)
+                                                color: .red
                                             )
                                         },
-                                        isLoading: self.selectedPremiumGift == product.id
+                                        isLoading: self.inProgressPremiumGift == product.id
                                     )
                                 ),
                                 effectAlignment: .center,
                                 action: { [weak self] in
-                                    self?.selectedPremiumGift = product.id
-                                    self?.state?.updated()
-                                    
-                                    Queue.mainQueue().after(4.0, {
-                                        self?.selectedPremiumGift = nil
-                                        self?.state?.updated()
-                                    })
+                                    self?.buyPremium(product)
                                 },
                                 animateAlpha: false
                             )
@@ -658,8 +808,13 @@ final class GiftOptionsScreenComponent: Component {
                             return nil
                         }
                     },
-                    tapAction: { _, _ in
-                        
+                    tapAction: { [weak self] _, _ in
+                        guard let self, let component = self.component, let environment = self.environment else {
+                            return
+                        }
+                        let introController = component.context.sharedContext.makeStarsIntroScreen(context: component.context)
+                        introController.navigationPresentation = .modal
+                        environment.controller()?.push(introController)
                     }
                 )),
                 environment: {},
@@ -859,11 +1014,17 @@ final class GiftOptionsScreenComponent: Component {
 public final class GiftOptionsScreen: ViewControllerComponentContainer, GiftOptionsScreenProtocol {
     private let context: AccountContext
     
-    public init(context: AccountContext, peerId: EnginePeer.Id, premiumOptions: [CachedPremiumGiftOption]) {
+    public init(
+        context: AccountContext,
+        starsContext: StarsContext,
+        peerId: EnginePeer.Id,
+        premiumOptions: [CachedPremiumGiftOption]
+    ) {
         self.context = context
         
         super.init(context: context, component: GiftOptionsScreenComponent(
             context: context,
+            starsContext: starsContext,
             peerId: peerId,
             premiumOptions: premiumOptions
         ), navigationBarAppearance: .none, theme: .default, updatedPresentationData: nil)

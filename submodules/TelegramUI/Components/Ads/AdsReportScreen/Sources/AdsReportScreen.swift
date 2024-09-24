@@ -396,6 +396,7 @@ private final class SheetContent: CombinedComponent {
             let navigation = navigation.update(
                 component: NavigationStackComponent(
                     items: items,
+                    clipContent: false,
                     requestPop: { [weak state] in
                         state?.pushedOptions.removeLast()
                         update(.spring(duration: 0.45))

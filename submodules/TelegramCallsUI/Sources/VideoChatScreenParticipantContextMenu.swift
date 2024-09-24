@@ -248,8 +248,8 @@ extension VideoChatScreenComponent.View {
                     }
                 
                     let context = component.call.accountContext
-                    environment.controller()?.dismiss(completion: { [weak navigationController] in
-                        Queue.mainQueue().after(0.3) {
+                    controller.dismiss(completion: { [weak navigationController] in
+                        Queue.mainQueue().after(0.1) {
                             guard let navigationController else {
                                 return
                             }

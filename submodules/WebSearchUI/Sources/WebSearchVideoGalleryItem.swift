@@ -165,7 +165,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             let mediaManager = item.context.sharedContext.mediaManager
             
-            let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
+            let videoNode = UniversalVideoNode(accountId: item.context.account.id, postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
             let videoSize = CGSize(width: item.content.dimensions.width * 2.0, height: item.content.dimensions.height * 2.0)
             videoNode.updateLayout(size: videoSize, transition: .immediate)
             self.videoNode = videoNode

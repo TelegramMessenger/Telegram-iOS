@@ -15,12 +15,13 @@ import MergeLists
 import ItemListUI
 import ChatControllerInteraction
 import MultilineTextComponent
+import BalancedTextComponent
 import Markdown
 import PeerInfoPaneNode
 import GiftItemComponent
 import PlainButtonComponent
 import GiftViewScreen
-import ButtonComponent
+import SolidRoundedButtonNode
 
 public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate {
     private let context: AccountContext
@@ -36,6 +37,10 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     
     private let backgroundNode: ASDisplayNode
     private let scrollNode: ASScrollNode
+    
+    private var unlockBackground: UIImageView?
+    private var unlockText: ComponentView<Empty>?
+    private var unlockButton: SolidRoundedButtonNode?
     
     private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData)?
     
@@ -82,7 +87,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             guard let self else {
                 return
             }
-            self.statusPromise.set(.single(PeerInfoStatusData(text: "\(state.count ?? 0) gifts", isActivity: true, key: .gifts)))
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            self.statusPromise.set(.single(PeerInfoStatusData(text: presentationData.strings.SharedMedia_GiftCount(state.count ?? 0), isActivity: true, key: .gifts)))
             self.starsProducts = state.gifts
             
             if !self.didSetReady {
@@ -149,6 +155,13 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 }
                 
                 if isVisible {
+                    let ribbonText: String?
+                    if let availability = product.gift.availability {
+                        //TODO:localize
+                        ribbonText = "1 of \(compactNumericCountString(Int(availability.total)))"
+                    } else {
+                        ribbonText = nil
+                    }
                     let _ = visibleItem.update(
                         transition: itemTransition,
                         component: AnyComponent(
@@ -157,26 +170,36 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                     GiftItemComponent(
                                         context: self.context,
                                         theme: params.presentationData.theme,
-                                        peer: product.fromPeer,
+                                        peer: product.fromPeer.flatMap { .peer($0) } ?? .anonymous,
                                         subject: .starGift(product.gift.id, product.gift.file),
                                         price: "⭐️ \(product.gift.price)",
-                                        ribbon: product.gift.availability != nil ?
-                                        GiftItemComponent.Ribbon(
-                                            text: "1 of 1K",
-                                            color: UIColor(rgb: 0x58c1fe)
-                                        )
-                                        : nil
+                                        ribbon: ribbonText.flatMap { GiftItemComponent.Ribbon(text: $0, color: .blue) },
+                                        isHidden: !product.savedToProfile
                                     )
                                 ),
                                 effectAlignment: .center,
                                 action: { [weak self] in
-                                    if let self {
-                                        let controller = GiftViewScreen(
-                                            context: self.context,
-                                            subject: .profileGift(self.peerId, product)
-                                        )
-                                        self.parentController?.push(controller)
+                                    guard let self else {
+                                        return
                                     }
+                                    let controller = GiftViewScreen(
+                                        context: self.context,
+                                        subject: .profileGift(self.peerId, product),
+                                        updateSavedToProfile: { [weak self] added in
+                                            guard let self, let messageId = product.messageId else {
+                                                return
+                                            }
+                                            self.profileGifts.updateStarGiftAddedToProfile(messageId: messageId, added: added)
+                                        },
+                                        convertToStars: { [weak self] in
+                                            guard let self, let messageId = product.messageId else {
+                                                return
+                                            }
+                                            self.profileGifts.convertStarGift(messageId: messageId)
+                                        }
+                                    )
+                                    self.parentController?.push(controller)
+                                    
                                 },
                                 animateAlpha: false
                             )
@@ -198,46 +221,124 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 }
             }
             
-            let contentHeight = ceil(CGFloat(starsProducts.count) / 3.0) * starsOptionSize.height + 60.0 + params.bottomInset + 16.0
+            var contentHeight = ceil(CGFloat(starsProducts.count) / 3.0) * starsOptionSize.height + 60.0 + 16.0
             
-//            //TODO:localize
-//            let buttonSize = self.button.update(
-//                transition: .immediate,
-//                component: AnyComponent(ButtonComponent(
-//                    background: ButtonComponent.Background(
-//                        color: params.presentationData.theme.list.itemCheckColors.fillColor,
-//                        foreground: params.presentationData.theme.list.itemCheckColors.foregroundColor,
-//                        pressedColor: params.presentationData.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
-//                        cornerRadius: 10.0
-//                    ),
-//                    content: AnyComponentWithIdentity(
-//                        id: AnyHashable(0),
-//                        component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Send Gifts to Friends", font: Font.semibold(17.0), textColor: )params.presentationData.theme.list.itemCheckColors.foregroundColor)))
-//                    ),
-//                    isEnabled: true,
-//                    displaysProgress: false,
-//                    action: {
-//                        
-//                    }
-//                )),
-//                environment: {},
-//                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50)
-//            )
-//            if let buttonView = self.button.view {
-//                if buttonView.superview == nil {
-//                    self.addSubview(buttonView)
-//                }
-//                buttonView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - buttonSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - buttonSize.height), size: buttonSize)
-//            }
+            if self.peerId == self.context.account.peerId {
+                let transition = ComponentTransition.immediate
+                
+                let size = params.size
+                let sideInset = params.sideInset
+                let bottomInset = params.bottomInset
+                let presentationData = params.presentationData
+              
+                let themeUpdated = self.theme !== presentationData.theme
+                self.theme = presentationData.theme
+                
+                let unlockText: ComponentView<Empty>
+                let unlockBackground: UIImageView
+                let unlockButton: SolidRoundedButtonNode
+                if let current = self.unlockText {
+                    unlockText = current
+                } else {
+                    unlockText = ComponentView<Empty>()
+                    self.unlockText = unlockText
+                }
+                
+                if let current = self.unlockBackground {
+                    unlockBackground = current
+                } else {
+                    unlockBackground = UIImageView()
+                    unlockBackground.contentMode = .scaleToFill
+                    self.view.addSubview(unlockBackground)
+                    self.unlockBackground = unlockBackground
+                }
+                                        
+                if let current = self.unlockButton {
+                    unlockButton = current
+                } else {
+                    unlockButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: presentationData.theme), height: 50.0, cornerRadius: 10.0)
+                    self.view.addSubview(unlockButton.view)
+                    self.unlockButton = unlockButton
+                
+                    //TODO:localize
+                    unlockButton.title = "Send Gifts to Friends"
+                    
+                    unlockButton.pressed = { [weak self] in
+                        self?.buttonPressed()
+                    }
+                }
             
-//            contentHeight += 100.0
-            
+                if themeUpdated {
+                    let topColor = presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.0)
+                    let bottomColor = presentationData.theme.list.plainBackgroundColor
+                    unlockBackground.image = generateGradientImage(size: CGSize(width: 1.0, height: 170.0), colors: [topColor, bottomColor, bottomColor], locations: [0.0, 0.3, 1.0])
+                    unlockButton.updateTheme(SolidRoundedButtonTheme(theme: presentationData.theme))
+                }
+                
+                let textFont = Font.regular(13.0)
+                let boldTextFont = Font.semibold(13.0)
+                let textColor = presentationData.theme.list.itemSecondaryTextColor
+                let linkColor = presentationData.theme.list.itemAccentColor
+                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: boldTextFont, textColor: linkColor), linkAttribute: { _ in
+                    return nil
+                })
+                
+                let scrollOffset: CGFloat = min(0.0, self.scrollNode.view.contentOffset.y + bottomInset + 80.0)
+                 
+                transition.setFrame(view: unlockBackground, frame: CGRect(x: 0.0, y: size.height - bottomInset - 170.0 + scrollOffset, width: size.width, height: bottomInset + 170.0))
+                
+                let buttonSideInset = sideInset + 16.0
+                let buttonSize = CGSize(width: size.width - buttonSideInset * 2.0, height: 50.0)
+                transition.setFrame(view: unlockButton.view, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - buttonSize.height - 26.0), size: buttonSize))
+                let _ = unlockButton.updateLayout(width: buttonSize.width, transition: .immediate)
+                
+                let unlockSize = unlockText.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        BalancedTextComponent(
+                            text: .markdown(text: "These gifts were sent to you by other users. Tap on a gift to exchange it for Stars or change its privacy settings.", attributes: markdownAttributes),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.2
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: size.width - 32.0, height: 200.0)
+                )
+                if let view = unlockText.view {
+                    if view.superview == nil {
+                        view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.buttonPressed)))
+                        self.scrollNode.view.addSubview(view)
+                    }
+                    transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: floor((size.width - unlockSize.width) / 2.0), y: contentHeight), size: unlockSize))
+                }
+                contentHeight += unlockSize.height
+            }
+            contentHeight += params.bottomInset
             
             let contentSize = CGSize(width: params.size.width, height: contentHeight)
             if self.scrollNode.view.contentSize != contentSize {
                 self.scrollNode.view.contentSize = contentSize
             }
         }
+        
+        let bottomOffset = max(0.0, self.scrollNode.view.contentSize.height - self.scrollNode.view.contentOffset.y - self.scrollNode.view.frame.height)
+        if bottomOffset < 100.0 {
+            self.profileGifts.loadMore()
+        }
+    }
+        
+    @objc private func buttonPressed() {
+        let _ = (self.context.account.stateManager.contactBirthdays
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] birthdays in
+            guard let self else {
+                return
+            }
+            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .settings(birthdays), completion: nil)
+            controller.navigationPresentation = .modal
+            self.chatControllerInteraction.navigationController()?.pushViewController(controller)
+        })
     }
     
     public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {

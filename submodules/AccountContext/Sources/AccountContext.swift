@@ -1017,7 +1017,10 @@ public protocol SharedAccountContext: AnyObject {
     func makeStarsWithdrawalScreen(context: AccountContext, stats: StarsRevenueStats, completion: @escaping (Int64) -> Void) -> ViewController
     func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController
     func makeStarsGiveawayBoostScreen(context: AccountContext, peerId: EnginePeer.Id, boost: ChannelBoostersContext.State.Boost) -> ViewController
+    func makeStarsIntroScreen(context: AccountContext) -> ViewController
     func makeGiftViewScreen(context: AccountContext, message: EngineMessage) -> ViewController
+    
+    func makeContentReportScreen(context: AccountContext, subject: ReportContentSubject, forceDark: Bool, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void)
     
     func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError>
     func makeMiniAppListScreen(context: AccountContext, initialData: MiniAppListScreenInitialData) -> ViewController
@@ -1136,7 +1139,7 @@ public protocol AccountContext: AnyObject {
     func chatLocationUnreadCount(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<Int, NoError>
     func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: MessageIndex)
     
-    func scheduleGroupCall(peerId: PeerId)
+    func scheduleGroupCall(peerId: PeerId, parentController: ViewController)
     func joinGroupCall(peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, activeCall: EngineGroupCallDescription)
     func requestCall(peerId: PeerId, isVideo: Bool, completion: @escaping () -> Void)
 }

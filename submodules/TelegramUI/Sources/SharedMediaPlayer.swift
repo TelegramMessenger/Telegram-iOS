@@ -236,7 +236,7 @@ final class SharedMediaPlayer {
                                 if let mediaManager = strongSelf.mediaManager, let item = item as? MessageMediaPlaylistItem {
                                     switch playbackData.source {
                                         case let .telegramFile(fileReference, _, _):
-                                            let videoNode = OverlayInstantVideoNode(postbox: strongSelf.account.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.stableId, fileReference.media.fileId), userLocation: .peer(item.message.id.peerId), fileReference: fileReference, enableSound: false, baseRate: rateValue, isAudioVideoMessage: true, captureProtected: item.message.isCopyProtected(), storeAfterDownload: nil), close: { [weak mediaManager] in
+                                        let videoNode = OverlayInstantVideoNode(accountId: strongSelf.account.id, postbox: strongSelf.account.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.stableId, fileReference.media.fileId), userLocation: .peer(item.message.id.peerId), fileReference: fileReference, enableSound: false, baseRate: rateValue, isAudioVideoMessage: true, captureProtected: item.message.isCopyProtected(), storeAfterDownload: nil), close: { [weak mediaManager] in
                                                 mediaManager?.setPlaylist(nil, type: .voice, control: .playback(.pause))
                                             })
                                             strongSelf.playbackItem = .instantVideo(videoNode)

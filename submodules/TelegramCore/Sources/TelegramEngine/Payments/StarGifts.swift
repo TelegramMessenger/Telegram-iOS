@@ -238,6 +238,7 @@ private final class ProfileGiftsContextImpl {
     private let peerId: PeerId
     
     private let disposable = MetaDisposable()
+    private let actionDisposable = MetaDisposable()
     
     private var gifts: [ProfileGiftsContext.State.StarGift] = []
     private var count: Int32?
@@ -258,6 +259,7 @@ private final class ProfileGiftsContextImpl {
     
     deinit {
         self.disposable.dispose()
+        self.actionDisposable.dispose()
     }
     
     func loadMore() {
@@ -315,6 +317,27 @@ private final class ProfileGiftsContextImpl {
         }
     }
     
+    func updateStarGiftAddedToProfile(messageId: EngineMessage.Id, added: Bool) {
+        self.actionDisposable.set(
+            _internal_updateStarGiftAddedToProfile(account: self.account, messageId: messageId, added: added).startStrict()
+        )
+        if let index = self.gifts.firstIndex(where: { $0.messageId == messageId }) {
+            self.gifts[index] = self.gifts[index].withSavedToProfile(added)
+        }
+        self.pushState()
+    }
+    
+    func convertStarGift(messageId: EngineMessage.Id) {
+        self.actionDisposable.set(
+            _internal_convertStarGift(account: self.account, messageId: messageId).startStrict()
+        )
+        if let count = self.count {
+            self.count = max(0, count - 1)
+        }
+        self.gifts.removeAll(where: { $0.messageId == messageId })
+        self.pushState()
+    }
+    
     private func pushState() {
         self.stateValue.set(.single(ProfileGiftsContext.State(gifts: self.gifts, count: self.count, dataState: self.dataState)))
     }
@@ -332,6 +355,20 @@ public final class ProfileGiftsContext {
             public let nameHidden: Bool
             public let savedToProfile: Bool
             public let convertStars: Int64?
+            
+            public func withSavedToProfile(_ savedToProfile: Bool) -> StarGift {
+                return StarGift(
+                    gift: self.gift,
+                    fromPeer: self.fromPeer,
+                    date: self.date,
+                    text: self.text,
+                    entities: self.entities,
+                    messageId: self.messageId,
+                    nameHidden: self.nameHidden,
+                    savedToProfile: savedToProfile,
+                    convertStars: self.convertStars
+                )
+            }
         }
         
         public enum DataState: Equatable {
@@ -371,6 +408,18 @@ public final class ProfileGiftsContext {
     public func loadMore() {
         self.impl.with { impl in
             impl.loadMore()
+        }
+    }
+    
+    public func updateStarGiftAddedToProfile(messageId: EngineMessage.Id, added: Bool) {
+        self.impl.with { impl in
+            impl.updateStarGiftAddedToProfile(messageId: messageId, added: added)
+        }
+    }
+    
+    public func convertStarGift(messageId: EngineMessage.Id) {
+        self.impl.with { impl in
+            impl.convertStarGift(messageId: messageId)
         }
     }
 }

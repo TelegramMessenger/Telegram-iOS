@@ -184,6 +184,12 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
                     return representation.resource
                 }
             }
+            
+            for alternativeRepresentation in file.alternativeRepresentations {
+                if let result = findMediaResource(media: alternativeRepresentation, previousMedia: previousMedia, resource: resource) {
+                    return result
+                }
+            }
         }
     } else if let webPage = media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content {
         if let image = content.image, let result = findMediaResource(media: image, previousMedia: previousMedia, resource: resource) {
@@ -252,6 +258,12 @@ func findMediaResourceById(media: Media, resourceId: MediaResourceId) -> Telegra
         for representation in file.previewRepresentations {
             if representation.resource.id == resourceId {
                 return representation.resource
+            }
+        }
+        
+        for alternativeRepresentation in file.alternativeRepresentations {
+            if let result = findMediaResourceById(media: alternativeRepresentation, resourceId: resourceId) {
+                return result
             }
         }
     } else if let webPage = media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content {

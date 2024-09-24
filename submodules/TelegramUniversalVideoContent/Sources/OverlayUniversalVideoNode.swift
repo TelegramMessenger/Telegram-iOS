@@ -41,7 +41,7 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode, AVPictureInP
     private var statusDisposable: Disposable?
     private var status: MediaPlayerStatus?
     
-    public init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, content: UniversalVideoContent, shouldBeDismissed: Signal<Bool, NoError> = .single(false), expand: @escaping () -> Void, close: @escaping () -> Void) {
+    public init(accountId: AccountRecordId, postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, content: UniversalVideoContent, shouldBeDismissed: Signal<Bool, NoError> = .single(false), expand: @escaping () -> Void, close: @escaping () -> Void) {
         self.content = content
         self.defaultExpand = expand
         
@@ -62,7 +62,7 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode, AVPictureInP
         }, controlsAreShowingUpdated: { value in
             controlsAreShowingUpdatedImpl?(value)
         })
-        self.videoNode = UniversalVideoNode(postbox: postbox, audioSession: audioSession, manager: manager, decoration: decoration, content: content, priority: .overlay)
+        self.videoNode = UniversalVideoNode(accountId: accountId, postbox: postbox, audioSession: audioSession, manager: manager, decoration: decoration, content: content, priority: .overlay)
         self.decoration = decoration
         
         super.init()
