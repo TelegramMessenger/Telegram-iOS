@@ -481,6 +481,15 @@ final class VideoChatScreenComponent: Component {
             guard let component = self.component, let environment = self.environment else {
                 return
             }
+            guard let callState = self.callState else {
+                return
+            }
+            if case .connecting = callState.networkState {
+                return
+            }
+            if let muteState = callState.muteState, !muteState.canUnmute {
+                return
+            }
             
             HapticFeedback().impact(.light)
             if component.call.hasVideo {
