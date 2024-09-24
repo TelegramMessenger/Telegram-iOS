@@ -267,7 +267,11 @@ final class VideoChatActionButtonComponent: Component {
             } else {
                 tintTransition = .immediate
             }
-            tintTransition.setTintColor(layer: self.background.layer, color: backgroundColor)
+            let previousTintColor = self.background.tintColor
+            self.background.tintColor = backgroundColor
+            if let previousTintColor, previousTintColor != backgroundColor {
+                tintTransition.animateTintColor(layer: self.background.layer, from: previousTintColor, to: backgroundColor)
+            }
             
             let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) * 0.5), y: size.height + 8.0), size: titleSize)
             if let titleView = self.title.view {
