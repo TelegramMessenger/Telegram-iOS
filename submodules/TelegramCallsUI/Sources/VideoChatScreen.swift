@@ -76,6 +76,7 @@ final class VideoChatScreenComponent: Component {
         var navigationSidebarButton: ComponentView<Empty>?
         
         let videoButton = ComponentView<Empty>()
+        var switchVideoButton: ComponentView<Empty>?
         let leaveButton = ComponentView<Empty>()
         let microphoneButton = ComponentView<Empty>()
         
@@ -1316,10 +1317,17 @@ final class VideoChatScreenComponent: Component {
                 }
             }
             
+            let actionButtonPlacementArea: (x: CGFloat, width: CGFloat)
+            if isTwoColumnLayout {
+                actionButtonPlacementArea = (availableSize.width - sideInset - mainColumnWidth, mainColumnWidth)
+            } else {
+                actionButtonPlacementArea = (0.0, availableSize.width)
+            }
+            
             let buttonsSideInset: CGFloat = 26.0
             
             let buttonsWidth: CGFloat = actionButtonDiameter * 2.0 + microphoneButtonDiameter
-            let remainingButtonsSpace: CGFloat = availableSize.width - buttonsSideInset * 2.0 - buttonsWidth
+            let remainingButtonsSpace: CGFloat = actionButtonPlacementArea.width - buttonsSideInset * 2.0 - buttonsWidth
             
             let effectiveMaxActionMicrophoneButtonSpacing: CGFloat
             if areButtonsCollapsed {
@@ -1355,7 +1363,7 @@ final class VideoChatScreenComponent: Component {
                 }
             }
             
-            let microphoneButtonFrame: CGRect
+            var microphoneButtonFrame: CGRect
             if areButtonsCollapsed {
                 microphoneButtonFrame = expandedMicrophoneButtonFrame
             } else {
@@ -1376,8 +1384,41 @@ final class VideoChatScreenComponent: Component {
                 expandedParticipantsClippingY = expandedMicrophoneButtonFrame.minY - 24.0
             }
             
-            let leftActionButtonFrame = CGRect(origin: CGPoint(x: microphoneButtonFrame.minX - actionMicrophoneButtonSpacing - actionButtonDiameter, y: microphoneButtonFrame.minY + floor((microphoneButtonFrame.height - actionButtonDiameter) * 0.5)), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
-            let rightActionButtonFrame = CGRect(origin: CGPoint(x: microphoneButtonFrame.maxX + actionMicrophoneButtonSpacing, y: microphoneButtonFrame.minY + floor((microphoneButtonFrame.height - actionButtonDiameter) * 0.5)), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
+            var leftActionButtonFrame = CGRect(origin: CGPoint(x: microphoneButtonFrame.minX - actionMicrophoneButtonSpacing - actionButtonDiameter, y: microphoneButtonFrame.minY + floor((microphoneButtonFrame.height - actionButtonDiameter) * 0.5)), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
+            var rightActionButtonFrame = CGRect(origin: CGPoint(x: microphoneButtonFrame.maxX + actionMicrophoneButtonSpacing, y: microphoneButtonFrame.minY + floor((microphoneButtonFrame.height - actionButtonDiameter) * 0.5)), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
+            
+            var additionalLeftActionButtonFrame: CGRect?
+            if let callState = self.callState, callState.hasVideo {
+                let additionalButtonDiameter: CGFloat
+                if areButtonsCollapsed {
+                    additionalButtonDiameter = actionButtonDiameter
+                } else {
+                    additionalButtonDiameter = floor(actionButtonDiameter * 0.64)
+                }
+                
+                if areButtonsCollapsed {
+                    let buttonCount: CGFloat = 4.0
+                    
+                    let buttonsWidth: CGFloat = actionButtonDiameter * buttonCount
+                    let remainingButtonsSpace: CGFloat = actionButtonPlacementArea.width - buttonsSideInset * 2.0 - buttonsWidth
+                    let maxSpacing: CGFloat = 80.0
+                    let effectiveSpacing = min(maxSpacing, floor(remainingButtonsSpace / (buttonCount - 1.0)))
+                    
+                    let totalButtonsWidth: CGFloat = buttonsWidth + (buttonCount - 1.0) * effectiveSpacing
+                    let totalButtonsX: CGFloat = actionButtonPlacementArea.x + floor((actionButtonPlacementArea.width - totalButtonsWidth) * 0.5)
+                    additionalLeftActionButtonFrame = CGRect(origin: CGPoint(x: totalButtonsX + CGFloat(0.0) * (actionButtonDiameter + effectiveSpacing), y: leftActionButtonFrame.minY), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
+                    leftActionButtonFrame = CGRect(origin: CGPoint(x: totalButtonsX + CGFloat(1.0) * (actionButtonDiameter + effectiveSpacing), y: leftActionButtonFrame.minY), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
+                    microphoneButtonFrame = CGRect(origin: CGPoint(x: totalButtonsX + CGFloat(2.0) * (actionButtonDiameter + effectiveSpacing), y: leftActionButtonFrame.minY), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
+                    rightActionButtonFrame = CGRect(origin: CGPoint(x: totalButtonsX + CGFloat(3.0) * (actionButtonDiameter + effectiveSpacing), y: leftActionButtonFrame.minY), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
+                } else {
+                    let additionalButtonSpacing = 12.0
+                    let totalLeftButtonHeight: CGFloat = leftActionButtonFrame.height + additionalButtonSpacing + additionalButtonDiameter
+                    let totalLeftButtonOriginY: CGFloat = leftActionButtonFrame.minY + floor((leftActionButtonFrame.height - totalLeftButtonHeight) * 0.5)
+                    leftActionButtonFrame.origin.y = totalLeftButtonOriginY + additionalButtonDiameter + additionalButtonSpacing
+                    
+                    additionalLeftActionButtonFrame = CGRect(origin: CGPoint(x: leftActionButtonFrame.minX + floor((leftActionButtonFrame.width - additionalButtonDiameter) * 0.5), y: leftActionButtonFrame.minY - additionalButtonSpacing - additionalButtonDiameter), size: CGSize(width: additionalButtonDiameter, height: additionalButtonDiameter))
+                }
+            }
             
             let participantsSize = availableSize
             
@@ -1728,7 +1769,7 @@ final class VideoChatScreenComponent: Component {
                 videoButtonContent = .audio(audio: buttonAudio)
             } else {
                 //TODO:release
-                videoButtonContent = .video(isActive: false)
+                videoButtonContent = .video(isActive: self.callState?.hasVideo ?? false)
             }
             let _ = self.videoButton.update(
                 transition: transition,
@@ -1761,6 +1802,62 @@ final class VideoChatScreenComponent: Component {
                 }
                 transition.setPosition(view: videoButtonView, position: leftActionButtonFrame.center)
                 transition.setBounds(view: videoButtonView, bounds: CGRect(origin: CGPoint(), size: leftActionButtonFrame.size))
+            }
+            
+            if let additionalLeftActionButtonFrame {
+                let switchVideoButton: ComponentView<Empty>
+                var switchVideoButtonTransition = transition
+                if let current = self.switchVideoButton {
+                    switchVideoButton = current
+                } else {
+                    switchVideoButtonTransition = switchVideoButtonTransition.withAnimation(.none)
+                    switchVideoButton = ComponentView()
+                    self.switchVideoButton = switchVideoButton
+                }
+                
+                let switchVideoButtonContent: VideoChatActionButtonComponent.Content = .switchVideo
+                
+                let _ = switchVideoButton.update(
+                    transition: switchVideoButtonTransition,
+                    component: AnyComponent(PlainButtonComponent(
+                        content: AnyComponent(VideoChatActionButtonComponent(
+                            strings: environment.strings,
+                            content: switchVideoButtonContent,
+                            microphoneState: actionButtonMicrophoneState,
+                            isCollapsed: areButtonsCollapsed
+                        )),
+                        effectAlignment: .center,
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.call.switchVideoCamera()
+                        },
+                        animateAlpha: false
+                    )),
+                    environment: {},
+                    containerSize: additionalLeftActionButtonFrame.size
+                )
+                if let switchVideoButtonView = switchVideoButton.view {
+                    var animateIn = false
+                    if switchVideoButtonView.superview == nil {
+                        self.containerView.addSubview(switchVideoButtonView)
+                        animateIn = true
+                    }
+                    switchVideoButtonTransition.setFrame(view: switchVideoButtonView, frame: additionalLeftActionButtonFrame)
+                    if animateIn {
+                        alphaTransition.animateAlpha(view: switchVideoButtonView, from: 0.0, to: 1.0)
+                        transition.animateScale(view: switchVideoButtonView, from: 0.001, to: 1.0)
+                    }
+                }
+            } else if let switchVideoButton = self.switchVideoButton {
+                self.switchVideoButton = nil
+                if let switchVideoButtonView = switchVideoButton.view {
+                    alphaTransition.setAlpha(view: switchVideoButtonView, alpha: 0.0, completion: { [weak switchVideoButtonView] _ in
+                        switchVideoButtonView?.removeFromSuperview()
+                    })
+                    transition.setScale(view: switchVideoButtonView, scale: 0.001)
+                }
             }
             
             let _ = self.leaveButton.update(

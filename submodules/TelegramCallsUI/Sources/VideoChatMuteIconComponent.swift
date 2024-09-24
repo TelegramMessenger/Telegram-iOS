@@ -62,6 +62,7 @@ final class VideoChatMuteIconComponent: Component {
                 self.isUpdating = false
             }
             
+            let previousComponent = self.component
             self.component = component
             
             if case let .mute(isFilled, isMuted) = component.content {
@@ -77,7 +78,10 @@ final class VideoChatMuteIconComponent: Component {
                 let animationSize = availableSize
                 let animationFrame = animationSize.centered(in: CGRect(origin: CGPoint(), size: availableSize))
                 transition.setFrame(view: icon.view, frame: animationFrame)
-                icon.update(state: VoiceChatMicrophoneNode.State(muted: isMuted, filled: isFilled, color: component.color), animated: !transition.animation.isImmediate)
+                if let previousComponent, previousComponent.content == component.content, previousComponent.color == component.color {
+                } else {
+                    icon.update(state: VoiceChatMicrophoneNode.State(muted: isMuted, filled: isFilled, color: component.color), animated: !transition.animation.isImmediate)
+                }
             } else {
                 if let icon = self.icon {
                     self.icon = nil

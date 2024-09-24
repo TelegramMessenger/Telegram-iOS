@@ -136,6 +136,7 @@ final class VideoChatParticipantAvatarComponent: Component {
     let peer: EnginePeer
     let myPeerId: EnginePeer.Id
     let isSpeaking: Bool
+    let isMutedForMe: Bool
     let theme: PresentationTheme
 
     init(
@@ -143,12 +144,14 @@ final class VideoChatParticipantAvatarComponent: Component {
         peer: EnginePeer,
         myPeerId: EnginePeer.Id,
         isSpeaking: Bool,
+        isMutedForMe: Bool,
         theme: PresentationTheme
     ) {
         self.call = call
         self.peer = peer
         self.myPeerId = myPeerId
         self.isSpeaking = isSpeaking
+        self.isMutedForMe = isMutedForMe
         self.theme = theme
     }
 
@@ -159,10 +162,13 @@ final class VideoChatParticipantAvatarComponent: Component {
         if lhs.peer != rhs.peer {
             return false
         }
+        if lhs.myPeerId != rhs.myPeerId {
+            return false
+        }
         if lhs.isSpeaking != rhs.isSpeaking {
             return false
         }
-        if lhs.myPeerId != rhs.myPeerId {
+        if lhs.isMutedForMe != rhs.isMutedForMe {
             return false
         }
         if lhs.theme !== rhs.theme {
@@ -259,7 +265,15 @@ final class VideoChatParticipantAvatarComponent: Component {
                 } else {
                     tintTransition = .immediate
                 }
-                tintTransition.setTintColor(layer: blobView.blobsLayer, color: component.isSpeaking ? UIColor(rgb: 0x33C758) : component.theme.list.itemAccentColor)
+                let tintColor: UIColor
+                if component.isMutedForMe {
+                    tintColor = UIColor(rgb: 0xff3b30)
+                } else if component.isSpeaking {
+                    tintColor = UIColor(rgb: 0x33C758)
+                } else {
+                    tintColor = component.theme.list.itemAccentColor
+                }
+                tintTransition.setTintColor(layer: blobView.blobsLayer, color: tintColor)
             }
             
             if component.peer.smallProfileImage != nil {
@@ -362,7 +376,15 @@ final class VideoChatParticipantAvatarComponent: Component {
                                 avatarNode.layer.transform = CATransform3DMakeScale(1.0 + additionalScale, 1.0 + additionalScale, 1.0)
                             }
                             
-                            ComponentTransition.immediate.setTintColor(layer: blobView.blobsLayer, color: component.isSpeaking ? UIColor(rgb: 0x33C758) : component.theme.list.itemAccentColor)
+                            let tintColor: UIColor
+                            if component.isMutedForMe {
+                                tintColor = UIColor(rgb: 0xff3b30)
+                            } else if component.isSpeaking {
+                                tintColor = UIColor(rgb: 0x33C758)
+                            } else {
+                                tintColor = component.theme.list.itemAccentColor
+                            }
+                            ComponentTransition.immediate.setTintColor(layer: blobView.blobsLayer, color: tintColor)
                         }
                         
                         if blobView.alpha == 0.0 {

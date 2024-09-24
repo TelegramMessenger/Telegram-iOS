@@ -34,11 +34,13 @@ final class VideoChatActionButtonComponent: Component {
             case audio(audio: Audio)
             case video
             case leave
+            case switchVideo
         }
         
         case audio(audio: Audio)
         case video(isActive: Bool)
         case leave
+        case switchVideo
         
         fileprivate var iconType: IconType {
             switch self {
@@ -57,6 +59,8 @@ final class VideoChatActionButtonComponent: Component {
                 return .video
             case .leave:
                 return .leave
+            case .switchVideo:
+                return .switchVideo
             }
         }
     }
@@ -174,6 +178,19 @@ final class VideoChatActionButtonComponent: Component {
                     backgroundColor = UIColor(rgb: 0x3252EF)
                 }
                 iconDiameter = 60.0
+            case .switchVideo:
+                titleText = ""
+                switch component.microphoneState {
+                case .connecting:
+                    backgroundColor = UIColor(white: 0.1, alpha: 1.0)
+                case .muted:
+                    backgroundColor = UIColor(rgb: 0x027FFF)
+                case .unmuted:
+                    backgroundColor = UIColor(rgb: 0x34C659)
+                case .raiseHand, .scheduled:
+                    backgroundColor = UIColor(rgb: 0x3252EF)
+                }
+                iconDiameter = 54.0
             case .leave:
                 titleText = "leave"
                 backgroundColor = UIColor(rgb: 0x47191E)
@@ -204,6 +221,8 @@ final class VideoChatActionButtonComponent: Component {
                     self.contentImage = UIImage(bundleImageName: iconName)?.precomposed().withRenderingMode(.alwaysTemplate)
                 case .video:
                     self.contentImage = UIImage(bundleImageName: "Call/CallCameraButton")?.precomposed().withRenderingMode(.alwaysTemplate)
+                case .switchVideo:
+                    self.contentImage = UIImage(bundleImageName: "Call/CallSwitchCameraButton")?.precomposed().withRenderingMode(.alwaysTemplate)
                 case .leave:
                     self.contentImage = generateImage(CGSize(width: 28.0, height: 28.0), opaque: false, rotatedContext: { size, context in
                         let bounds = CGRect(origin: CGPoint(), size: size)
@@ -275,7 +294,9 @@ final class VideoChatActionButtonComponent: Component {
                 if iconView.superview == nil {
                     self.addSubview(iconView)
                 }
-                transition.setFrame(view: iconView, frame: iconFrame)
+                transition.setPosition(view: iconView, position: iconFrame.center)
+                transition.setBounds(view: iconView, bounds: CGRect(origin: CGPoint(), size: iconFrame.size))
+                transition.setScale(view: iconView, scale: availableSize.width / 56.0)
             }
             
             return size
