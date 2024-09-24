@@ -209,7 +209,10 @@ final class StarsTransactionsListPanelComponent: Component {
                     var itemPeer = item.peer
                     switch item.peer {
                     case let .peer(peer):
-                        if let _ = item.giveawayMessageId {
+                        if let _ = item.starGift {
+                            itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
+                            itemSubtitle = item.count > 0 ? environment.strings.Stars_Intro_Transaction_ConvertedGift : environment.strings.Stars_Intro_Transaction_Gift
+                        } else if let _ = item.giveawayMessageId {
                             itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                             itemSubtitle = environment.strings.Stars_Intro_Transaction_GiveawayPrize
                         } else if !item.media.isEmpty {

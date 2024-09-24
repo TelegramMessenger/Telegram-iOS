@@ -85,18 +85,24 @@ public final class NavigationStackComponent<ChildEnvironment: Equatable>: Compon
     }
     
     public let items: [AnyComponentWithIdentity<ChildEnvironment>]
+    public let clipContent: Bool
     public let requestPop: () -> Void
     
     public init(
         items: [AnyComponentWithIdentity<ChildEnvironment>],
+        clipContent: Bool = true,
         requestPop: @escaping () -> Void
     ) {
         self.items = items
+        self.clipContent = clipContent
         self.requestPop = requestPop
     }
     
     public static func ==(lhs: NavigationStackComponent, rhs: NavigationStackComponent) -> Bool {
         if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.clipContent != rhs.clipContent {
             return false
         }
         return true
@@ -198,7 +204,7 @@ public final class NavigationStackComponent<ChildEnvironment: Equatable>: Compon
                 } else {
                     itemTransition = itemTransition.withAnimation(.none)
                     itemView = ItemView()
-                    itemView.clipsToBounds = true
+                    itemView.clipsToBounds = component.clipContent
                     self.itemViews[itemId] = itemView
                     itemView.contents.parentState = state
                 }

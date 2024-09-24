@@ -12285,6 +12285,8 @@ Sorry for the inconvenience.";
 "Stars.Intro.Transaction.FragmentWithdrawal.Subtitle" = "via Fragment";
 "Stars.Intro.Transaction.TelegramAds.Title" = "Withdrawal";
 "Stars.Intro.Transaction.TelegramAds.Subtitle" = "via Telegram Ads";
+"Stars.Intro.Transaction.Gift" = "Gift";
+"Stars.Intro.Transaction.ConvertedGift" = "Converted Gift";
 "Stars.Intro.Transaction.Unsupported.Title" = "Unsupported";
 "Stars.Intro.Transaction.Refund" = "Refund";
 

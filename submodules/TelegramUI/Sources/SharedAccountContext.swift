@@ -73,6 +73,7 @@ import MiniAppListScreen
 import GiftOptionsScreen
 import GiftViewScreen
 import StarsIntroScreen
+import ContentReportScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2817,6 +2818,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeGiftViewScreen(context: AccountContext, message: EngineMessage) -> ViewController {
         return GiftViewScreen(context: context, subject: .message(message))
+    }
+    
+    public func makeContentReportScreen(context: AccountContext, subject: ReportContentSubject, forceDark: Bool, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
+        let _ = (context.engine.messages.reportContent(subject: subject, option: nil, message: nil)
+        |> deliverOnMainQueue).startStandalone(next: { result in
+            if case let .options(title, options) = result {
+                present(ContentReportScreen(context: context, subject: subject, title: title, options: options, forceDark: forceDark, completed: completion))
+            }
+        })
     }
     
     public func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError> {

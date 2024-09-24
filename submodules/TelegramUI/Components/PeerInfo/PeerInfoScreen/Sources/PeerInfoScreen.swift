@@ -999,7 +999,8 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 103, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.Settings_Business, icon: PresentationResourcesSettings.business, action: {
             interaction.openSettings(.businessSetup)
         }))
-        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 104, label: .text(""), text: presentationData.strings.Settings_PremiumGift, icon: PresentationResourcesSettings.premiumGift, action: {
+        //TODO:localize
+        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 104, label: .text(""), text: "Send a Gift", icon: PresentationResourcesSettings.premiumGift, action: {
             interaction.openSettings(.premiumGift)
         }))
     }
@@ -6098,8 +6099,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         })))
                     }
                     
-                    if strongSelf.peerId.namespace == Namespaces.Peer.CloudUser, !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport), let cachedData = data.cachedData as? CachedUserData, !cachedData.premiumGiftOptions.isEmpty {
-                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_GiftPremium, icon: { theme in
+                    if strongSelf.peerId.namespace == Namespaces.Peer.CloudUser, !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport) {
+                        //TODO:localize
+                        items.append(.action(ContextMenuActionItem(text: "Send a Gift", icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Gift"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.dismissWithoutContent)
@@ -11642,11 +11644,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         return
                     }
                     strongSelf.view.endEditing(true)
+                    
                     strongSelf.controller?.present(peerReportOptionsController(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), passthrough: false, present: { c, a in
                         self?.controller?.present(c, in: .window(.root), with: a)
                     }, push: { c in
                         self?.controller?.push(c)
                     }, completion: { _, _ in }), in: .window(.root))
+                    
+                    
                 }, displayCopyProtectionTip: { [weak self] node, save in
                     if let strongSelf = self, let peer = strongSelf.data?.peer, let messageIds = strongSelf.state.selectedMessageIds, !messageIds.isEmpty {
                         let _ = (strongSelf.context.engine.data.get(EngineDataMap(
