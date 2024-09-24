@@ -41,15 +41,22 @@ final class VideoChatScreenComponent: Component {
         return true
     }
     
-    private struct PanGestureState {
-        var offsetFraction: CGFloat
+    private final class PanState {
+        var fraction: CGFloat
+        weak var scrollView: UIScrollView?
+        var startContentOffsetY: CGFloat = 0.0
+        var accumulatedOffset: CGFloat = 0.0
+        var dismissedTooltips: Bool = false
+        var didLockScrolling: Bool = false
+        var contentOffset: CGFloat?
         
-        init(offsetFraction: CGFloat) {
-            self.offsetFraction = offsetFraction
+        init(fraction: CGFloat, scrollView: UIScrollView?) {
+            self.fraction = fraction
+            self.scrollView = scrollView
         }
     }
 
-    final class View: UIView {
+    final class View: UIView, UIGestureRecognizerDelegate {
         let containerView: UIView
         
         var component: VideoChatScreenComponent?
@@ -57,7 +64,7 @@ final class VideoChatScreenComponent: Component {
         weak var state: EmptyComponentState?
         var isUpdating: Bool = false
         
-        private var panGestureState: PanGestureState?
+        private var verticalPanState: PanState?
         var notifyDismissedInteractivelyOnPanGestureApply: Bool = false
         var completionOnPanGestureApply: (() -> Void)?
         
@@ -95,6 +102,9 @@ final class VideoChatScreenComponent: Component {
         var members: PresentationGroupCallMembers?
         var membersDisposable: Disposable?
         
+        var speakingParticipantPeers: [EnginePeer] = []
+        var visibleParticipants: Set<EnginePeer.Id> = Set()
+        
         let isPresentedValue = ValuePromise<Bool>(false, ignoreRepeated: true)
         var applicationStateDisposable: Disposable?
         
@@ -117,9 +127,11 @@ final class VideoChatScreenComponent: Component {
             
             self.addSubview(self.containerView)
             
-            self.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+            let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+            panGestureRecognizer.delegate = self
+            self.addGestureRecognizer(panGestureRecognizer)
             
-            self.panGestureState = PanGestureState(offsetFraction: 1.0)
+            self.verticalPanState = PanState(fraction: 1.0, scrollView: nil)
         }
         
         required init?(coder: NSCoder) {
@@ -139,37 +151,159 @@ final class VideoChatScreenComponent: Component {
         }
         
         func animateIn() {
-            self.panGestureState = PanGestureState(offsetFraction: 1.0)
+            self.verticalPanState = PanState(fraction: 1.0, scrollView: nil)
             self.state?.updated(transition: .immediate)
             
-            self.panGestureState = nil
+            self.verticalPanState = nil
             self.state?.updated(transition: .spring(duration: 0.5))
         }
         
         func animateOut(completion: @escaping () -> Void) {
-            self.panGestureState = PanGestureState(offsetFraction: 1.0)
+            self.verticalPanState = PanState(fraction: 1.0, scrollView: nil)
             self.completionOnPanGestureApply = completion
             self.state?.updated(transition: .spring(duration: 0.5))
         }
+        
+        @objc public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            if gestureRecognizer is UITapGestureRecognizer {
+                if otherGestureRecognizer is UIPanGestureRecognizer {
+                    return true
+                }
+                return false
+            } else {
+                return false
+            }
+        }
+        
+        public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            if gestureRecognizer is UIPanGestureRecognizer {
+                if let otherGestureRecognizer = otherGestureRecognizer as? UIPanGestureRecognizer {
+                    if otherGestureRecognizer.view is UIScrollView {
+                        return true
+                    }
+                    if let participantsView = self.participants.view as? VideoChatParticipantsComponent.View {
+                        if otherGestureRecognizer.view === participantsView {
+                            return true
+                        }
+                    }
+                }
+                return false
+            } else {
+                return false
+            }
+        }
+        
         
         @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
             switch recognizer.state {
             case .began, .changed:
                 if !self.bounds.height.isZero && !self.notifyDismissedInteractivelyOnPanGestureApply {
                     let translation = recognizer.translation(in: self)
-                    self.panGestureState = PanGestureState(offsetFraction: translation.y / self.bounds.height)
-                    self.state?.updated(transition: .immediate)
+                    let fraction = max(0.0, translation.y / self.bounds.height)
+                    if let verticalPanState = self.verticalPanState {
+                        verticalPanState.fraction = fraction
+                    } else {
+                        var targetScrollView: UIScrollView?
+                        if case .began = recognizer.state, let participantsView = self.participants.view as? VideoChatParticipantsComponent.View {
+                            if let hitResult = participantsView.hitTest(self.convert(recognizer.location(in: self), to: participantsView), with: nil) {
+                                func findTargetScrollView(target: UIView, minParent: UIView) -> UIScrollView? {
+                                    if target === participantsView {
+                                        return nil
+                                    }
+                                    if let target = target as? UIScrollView {
+                                        return target
+                                    }
+                                    if let parent = target.superview {
+                                        return findTargetScrollView(target: parent, minParent: minParent)
+                                    } else {
+                                        return nil
+                                    }
+                                }
+                                targetScrollView = findTargetScrollView(target: hitResult, minParent: participantsView)
+                            }
+                        }
+                        self.verticalPanState = PanState(fraction: fraction, scrollView: targetScrollView)
+                        if let targetScrollView {
+                            self.verticalPanState?.contentOffset = targetScrollView.contentOffset.y
+                            self.verticalPanState?.startContentOffsetY = recognizer.translation(in: self).y
+                        }
+                    }
+                    
+                    if let verticalPanState = self.verticalPanState {
+                        /*if abs(verticalPanState.fraction) >= 0.1 && !verticalPanState.dismissedTooltips {
+                            verticalPanState.dismissedTooltips = true
+                            self.dismissAllTooltips()
+                        }*/
+                        
+                        if let scrollView = verticalPanState.scrollView {
+                            let relativeTranslationY = recognizer.translation(in: self).y - verticalPanState.startContentOffsetY
+                            let overflowY = scrollView.contentOffset.y - relativeTranslationY
+                            
+                            if !verticalPanState.didLockScrolling {
+                                if scrollView.contentOffset.y == 0.0 {
+                                    verticalPanState.didLockScrolling = true
+                                }
+                                if let previousContentOffset = verticalPanState.contentOffset, (previousContentOffset < 0.0) != (scrollView.contentOffset.y < 0.0) {
+                                    verticalPanState.didLockScrolling = true
+                                }
+                            }
+                            
+                            var resetContentOffset = false
+                            if verticalPanState.didLockScrolling {
+                                verticalPanState.accumulatedOffset += -overflowY
+                                
+                                if verticalPanState.accumulatedOffset < 0.0 {
+                                    verticalPanState.accumulatedOffset = 0.0
+                                }
+                                if scrollView.contentOffset.y < 0.0 {
+                                    resetContentOffset = true
+                                }
+                            } else {
+                                verticalPanState.accumulatedOffset += -overflowY
+                                verticalPanState.accumulatedOffset = max(0.0, verticalPanState.accumulatedOffset)
+                            }
+                            
+                            if verticalPanState.accumulatedOffset > 0.0 || resetContentOffset {
+                                scrollView.contentOffset = CGPoint()
+                                
+                                if let participantsView = self.participants.view as? VideoChatParticipantsComponent.View {
+                                    let eventCycleState = VideoChatParticipantsComponent.EventCycleState()
+                                    eventCycleState.ignoreScrolling = true
+                                    participantsView.setEventCycleState(scrollView: scrollView, eventCycleState: eventCycleState)
+                                    
+                                    DispatchQueue.main.async { [weak scrollView, weak participantsView] in
+                                        guard let participantsView, let scrollView else {
+                                            return
+                                        }
+                                        participantsView.setEventCycleState(scrollView: scrollView, eventCycleState: nil)
+                                    }
+                                }
+                            }
+                            
+                            verticalPanState.contentOffset = scrollView.contentOffset.y
+                            verticalPanState.startContentOffsetY = recognizer.translation(in: self).y
+                        }
+                        
+                        self.state?.updated(transition: .immediate)
+                    }
                 }
             case .cancelled, .ended:
-                if !self.bounds.height.isZero {
+                if !self.bounds.height.isZero, let verticalPanState = self.verticalPanState {
                     let translation = recognizer.translation(in: self)
-                    let panGestureState = PanGestureState(offsetFraction: translation.y / self.bounds.height)
+                    verticalPanState.fraction = max(0.0, translation.y / self.bounds.height)
+                    
+                    let effectiveFraction: CGFloat
+                    if verticalPanState.scrollView != nil {
+                        effectiveFraction = verticalPanState.accumulatedOffset / self.bounds.height
+                    } else {
+                        effectiveFraction = verticalPanState.fraction
+                    }
                     
                     let velocity = recognizer.velocity(in: self)
                     
-                    self.panGestureState = nil
-                    if abs(panGestureState.offsetFraction) > 0.6 || abs(velocity.y) >= 100.0 {
-                        self.panGestureState = PanGestureState(offsetFraction: panGestureState.offsetFraction < 0.0 ? -1.0 : 1.0)
+                    self.verticalPanState = nil
+                    if effectiveFraction > 0.6 || (effectiveFraction > 0.0 && velocity.y >= 100.0) {
+                        self.verticalPanState = PanState(fraction: effectiveFraction < 0.0 ? -1.0 : 1.0, scrollView: nil)
                         self.notifyDismissedInteractivelyOnPanGestureApply = true
                         if let controller = self.environment?.controller() as? VideoChatScreenV2Impl {
                             controller.notifyDismissed()
@@ -345,6 +479,15 @@ final class VideoChatScreenComponent: Component {
         
         private func onCameraPressed() {
             guard let component = self.component, let environment = self.environment else {
+                return
+            }
+            guard let callState = self.callState else {
+                return
+            }
+            if case .connecting = callState.networkState {
+                return
+            }
+            if let muteState = callState.muteState, !muteState.canUnmute {
                 return
             }
             
@@ -556,6 +699,39 @@ final class VideoChatScreenComponent: Component {
             }
         }
         
+        private func onVisibleParticipantsUpdated(ids: Set<EnginePeer.Id>) {
+            if self.visibleParticipants == ids {
+                return
+            }
+            self.visibleParticipants = ids
+            self.updateTitleSpeakingStatus()
+        }
+        
+        private func updateTitleSpeakingStatus() {
+            guard let titleView = self.title.view as? VideoChatTitleComponent.View else {
+                return
+            }
+            
+            if self.speakingParticipantPeers.isEmpty {
+                titleView.updateActivityStatus(value: nil, transition: .easeInOut(duration: 0.2))
+            } else {
+                var titleSpeakingStatusValue = ""
+                for participant in self.speakingParticipantPeers {
+                    if !self.visibleParticipants.contains(participant.id) {
+                        if !titleSpeakingStatusValue.isEmpty {
+                            titleSpeakingStatusValue.append(", ")
+                        }
+                        titleSpeakingStatusValue.append(participant.compactDisplayTitle)
+                    }
+                }
+                if titleSpeakingStatusValue.isEmpty {
+                    titleView.updateActivityStatus(value: nil, transition: .easeInOut(duration: 0.2))
+                } else {
+                    titleView.updateActivityStatus(value: titleSpeakingStatusValue, transition: .easeInOut(duration: 0.2))
+                }
+            }
+        }
+        
         func update(component: VideoChatScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -585,7 +761,7 @@ final class VideoChatScreenComponent: Component {
                     if self.members != members {
                         var members = members
                         
-                        #if DEBUG && false
+                        #if DEBUG && true
                         if let membersValue = members {
                             var participants = membersValue.participants
                             for i in 1 ... 20 {
@@ -640,25 +816,7 @@ final class VideoChatScreenComponent: Component {
                         #endif
                         
                         if let membersValue = members {
-                            var participants = membersValue.participants
-                            participants = participants.sorted(by: { lhs, rhs in
-                                guard let lhsIndex = membersValue.participants.firstIndex(where: { $0.peer.id == lhs.peer.id }) else {
-                                    return false
-                                }
-                                guard let rhsIndex = membersValue.participants.firstIndex(where: { $0.peer.id == rhs.peer.id }) else {
-                                    return false
-                                }
-                                
-                                if let lhsActivityRank = lhs.activityRank, let rhsActivityRank = rhs.activityRank {
-                                    if lhsActivityRank != rhsActivityRank {
-                                        return lhsActivityRank < rhsActivityRank
-                                    }
-                                } else if (lhs.activityRank == nil) != (rhs.activityRank == nil) {
-                                    return lhs.activityRank != nil
-                                }
-                                
-                                return lhsIndex < rhsIndex
-                            })
+                            let participants = membersValue.participants
                             members = PresentationGroupCallMembers(
                                 participants: participants,
                                 speakingParticipants: membersValue.speakingParticipants,
@@ -745,6 +903,19 @@ final class VideoChatScreenComponent: Component {
                         
                         if !self.isUpdating {
                             self.state?.updated(transition: .spring(duration: 0.4))
+                        }
+                        
+                        var speakingParticipantPeers: [EnginePeer] = []
+                        if let members, !members.speakingParticipants.isEmpty {
+                            for participant in members.participants {
+                                if members.speakingParticipants.contains(participant.peer.id) {
+                                    speakingParticipantPeers.append(EnginePeer(participant.peer))
+                                }
+                            }
+                        }
+                        if self.speakingParticipantPeers != speakingParticipantPeers {
+                            self.speakingParticipantPeers = speakingParticipantPeers
+                            self.updateTitleSpeakingStatus()
                         }
                     }
                 })
@@ -898,8 +1069,12 @@ final class VideoChatScreenComponent: Component {
             }
             
             var containerOffset: CGFloat = 0.0
-            if let panGestureState = self.panGestureState {
-                containerOffset = panGestureState.offsetFraction * availableSize.height
+            if let verticalPanState = self.verticalPanState {
+                if verticalPanState.scrollView != nil {
+                    containerOffset = verticalPanState.accumulatedOffset
+                } else {
+                    containerOffset = verticalPanState.fraction * availableSize.height
+                }
                 self.containerView.layer.cornerRadius = environment.deviceMetrics.screenCornerRadius
             }
             
@@ -907,7 +1082,7 @@ final class VideoChatScreenComponent: Component {
                 guard let self, completed else {
                     return
                 }
-                if self.panGestureState == nil {
+                if self.verticalPanState == nil {
                     self.containerView.layer.cornerRadius = 0.0
                 }
                 if self.notifyDismissedInteractivelyOnPanGestureApply {
@@ -1141,11 +1316,19 @@ final class VideoChatScreenComponent: Component {
                 }
             }
             
-            let buttonsSideInset: CGFloat = 42.0
+            let buttonsSideInset: CGFloat = 26.0
             
             let buttonsWidth: CGFloat = actionButtonDiameter * 2.0 + microphoneButtonDiameter
             let remainingButtonsSpace: CGFloat = availableSize.width - buttonsSideInset * 2.0 - buttonsWidth
-            let actionMicrophoneButtonSpacing = min(maxActionMicrophoneButtonSpacing, floor(remainingButtonsSpace * 0.5))
+            
+            let effectiveMaxActionMicrophoneButtonSpacing: CGFloat
+            if areButtonsCollapsed {
+                effectiveMaxActionMicrophoneButtonSpacing = 80.0
+            } else {
+                effectiveMaxActionMicrophoneButtonSpacing = maxActionMicrophoneButtonSpacing
+            }
+            
+            let actionMicrophoneButtonSpacing = min(effectiveMaxActionMicrophoneButtonSpacing, floor(remainingButtonsSpace * 0.5))
             
             var collapsedMicrophoneButtonFrame: CGRect = CGRect(origin: CGPoint(x: floor((availableSize.width - collapsedMicrophoneButtonDiameter) * 0.5), y: availableSize.height - 48.0 - environment.safeInsets.bottom - collapsedMicrophoneButtonDiameter), size: CGSize(width: collapsedMicrophoneButtonDiameter, height: collapsedMicrophoneButtonDiameter))
             var expandedMicrophoneButtonFrame: CGRect = CGRect(origin: CGPoint(x: floor((availableSize.width - expandedMicrophoneButtonDiameter) * 0.5), y: availableSize.height - environment.safeInsets.bottom - expandedMicrophoneButtonDiameter - 12.0), size: CGSize(width: expandedMicrophoneButtonDiameter, height: expandedMicrophoneButtonDiameter))
@@ -1330,6 +1513,12 @@ final class VideoChatScreenComponent: Component {
                             return
                         }
                         self.openInviteMembers()
+                    },
+                    visibleParticipantsUpdated: { [weak self] visibleParticipants in
+                        guard let self else {
+                            return
+                        }
+                        self.onVisibleParticipantsUpdated(ids: visibleParticipants)
                     }
                 )),
                 environment: {},
@@ -1403,8 +1592,8 @@ final class VideoChatScreenComponent: Component {
                         micButtonContent = .connecting
                         actionButtonMicrophoneState = .connecting
                     case .connected:
-                        if let callState = callState.muteState {
-                            if callState.canUnmute {
+                        if let muteState = callState.muteState {
+                            if muteState.canUnmute {
                                 if self.isPushToTalkActive {
                                     micButtonContent = .unmuted(pushToTalk: self.isPushToTalkActive)
                                     actionButtonMicrophoneState = .unmuted
@@ -1413,7 +1602,7 @@ final class VideoChatScreenComponent: Component {
                                     actionButtonMicrophoneState = .muted
                                 }
                             } else {
-                                micButtonContent = .raiseHand
+                                micButtonContent = .raiseHand(isRaised: callState.raisedHand)
                                 actionButtonMicrophoneState = .raiseHand
                             }
                         } else {
@@ -1741,9 +1930,11 @@ final class VideoChatScreenV2Impl: ViewControllerComponentContainer, VoiceChatCo
                     }
                     self.isAnimatingDismiss = false
                     self.superDismiss()
+                    completion?()
                 })
             } else {
                 self.superDismiss()
+                completion?()
             }
         }
     }

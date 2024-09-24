@@ -184,7 +184,7 @@ final class VideoChatMicButtonComponent: Component {
         case connecting
         case muted
         case unmuted(pushToTalk: Bool)
-        case raiseHand
+        case raiseHand(isRaised: Bool)
         case scheduled(state: ScheduledState)
     }
     
@@ -226,6 +226,7 @@ final class VideoChatMicButtonComponent: Component {
         private var disappearingBackgrounds: [UIImageView] = []
         private var progressIndicator: RadialStatusNode?
         private let title = ComponentView<Empty>()
+        private var subtitle: ComponentView<Empty>?
         private let icon: VoiceChatActionButtonIconNode
         
         private var glowView: GlowView?
@@ -322,6 +323,7 @@ final class VideoChatMicButtonComponent: Component {
             let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.2)
             
             let titleText: String
+            var subtitleText: String?
             var isEnabled = true
             switch component.content {
             case .connecting:
@@ -331,8 +333,14 @@ final class VideoChatMicButtonComponent: Component {
                 titleText = "Unmute"
             case let .unmuted(isPushToTalk):
                 titleText = isPushToTalk ? "You are Live" : "Tap to Mute"
-            case .raiseHand:
-                titleText = "Raise Hand"
+            case let .raiseHand(isRaised):
+                if isRaised {
+                    titleText = "You asked to speak"
+                    subtitleText = "We let the speakers know"
+                } else {
+                    titleText = "Muted by Admin"
+                    subtitleText = "Tap if you want to speak"
+                }
             case let .scheduled(state):
                 switch state {
                 case .start:
@@ -353,7 +361,7 @@ final class VideoChatMicButtonComponent: Component {
                     text: .plain(NSAttributedString(string: titleText, font: Font.regular(15.0), textColor: .white))
                 )),
                 environment: {},
-                containerSize: CGSize(width: 120.0, height: 100.0)
+                containerSize: CGSize(width: 180.0, height: 100.0)
             )
             
             let size = CGSize(width: availableSize.width, height: availableSize.height)
@@ -470,7 +478,10 @@ final class VideoChatMicButtonComponent: Component {
                 transition.setScale(view: disappearingBackground, scale: size.width / 116.0)
             }
             
-            let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) * 0.5), y: size.height + 16.0), size: titleSize)
+            var titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) * 0.5), y: size.height + 16.0), size: titleSize)
+            if subtitleText != nil {
+                titleFrame.origin.y -= 5.0
+            }
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.isUserInteractionEnabled = false
@@ -479,6 +490,47 @@ final class VideoChatMicButtonComponent: Component {
                 transition.setPosition(view: titleView, position: titleFrame.center)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
                 alphaTransition.setAlpha(view: titleView, alpha: component.isCollapsed ? 0.0 : 1.0)
+            }
+            
+            if let subtitleText {
+                let subtitle: ComponentView<Empty>
+                var subtitleTransition = transition
+                if let current = self.subtitle {
+                    subtitle = current
+                } else {
+                    subtitleTransition = subtitleTransition.withAnimation(.none)
+                    subtitle = ComponentView()
+                    self.subtitle = subtitle
+                }
+                let subtitleSize = subtitle.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: subtitleText, font: Font.regular(13.0), textColor: .white))
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 180.0, height: 100.0)
+                )
+                let subtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) * 0.5), y: titleFrame.maxY + 1.0), size: subtitleSize)
+                if let subtitleView = subtitle.view {
+                    if subtitleView.superview == nil {
+                        subtitleView.isUserInteractionEnabled = false
+                        self.addSubview(subtitleView)
+                        
+                        subtitleView.alpha = 0.0
+                        transition.animateScale(view: subtitleView, from: 0.001, to: 1.0)
+                    }
+                    subtitleTransition.setPosition(view: subtitleView, position: subtitleFrame.center)
+                    subtitleView.bounds = CGRect(origin: CGPoint(), size: subtitleFrame.size)
+                    alphaTransition.setAlpha(view: subtitleView, alpha: component.isCollapsed ? 0.0 : 1.0)
+                }
+            } else if let subtitle = self.subtitle {
+                self.subtitle = nil
+                if let subtitleView = subtitle.view {
+                    transition.setScale(view: subtitleView, scale: 0.001)
+                    alphaTransition.setAlpha(view: subtitleView, alpha: 0.0, completion: { [weak subtitleView] _ in
+                        subtitleView?.removeFromSuperview()
+                    })
+                }
             }
             
             if self.icon.view.superview == nil {

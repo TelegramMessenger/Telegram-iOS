@@ -23,6 +23,7 @@ import TelegramStringFormatting
 import StarsAvatarComponent
 import EmojiTextAttachmentView
 import UndoUI
+import GiftAnimationComponent
 
 private final class GiftViewSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -695,14 +696,14 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         case message(EngineMessage)
         case profileGift(EnginePeer.Id, ProfileGiftsContext.State.StarGift)
         
-        var arguments: (peerId: EnginePeer.Id, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, convertStars: Int64, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool)? {
+        var arguments: (peerId: EnginePeer.Id, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, convertStars: Int64, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool)? {
             switch self {
             case let .message(message):
                 if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted) = action.action {
-                    return (message.id.peerId, message.id, message.flags.contains(.Incoming), gift, convertStars, text, entities, nameHidden, savedToProfile, converted)
+                    return (message.id.peerId, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, convertStars, text, entities, nameHidden, savedToProfile, converted)
                 }
             case let .profileGift(peerId, gift):
-                return (peerId, gift.messageId, false, gift.gift, gift.convertStars ?? 0, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false)
+                return (peerId, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.convertStars ?? 0, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false)
             }
             return nil
         }
@@ -789,9 +790,14 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                     if let lastController = navigationController.viewControllers.last as? ViewController {
                         let resultController = UndoOverlayController(
                             presentationData: presentationData,
-                            content: .sticker(context: context, file: arguments.gift.file, loop: false, title: added ? "Gift Saved to Profile" : "Gift Removed from Profile", text: added ? "The gift is now displayed in your profile." : "The gift is no longer displayed in your profile.", undoText: nil, customAction: nil),
+                            content: .sticker(context: context, file: arguments.gift.file, loop: false, title: added ? "Gift Saved to Profile" : "Gift Removed from Profile", text: added ? "The gift is now displayed in [your profile]()." : "The gift is no longer displayed in [your profile]().", undoText: nil, customAction: nil),
                             elevatedLayout: lastController is ChatController,
-                            action: { _ in return true}
+                            action: { action in
+                                if case .info = action {
+                                    
+                                }
+                                return true
+                            }
                         )
                         lastController.present(resultController, in: .window(.root))
                     }
@@ -800,13 +806,13 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         }
         
         convertToStarsImpl = { [weak self] in
-            guard let self, case let .message(message) = subject, let arguments = subject.arguments, let messageId = arguments.messageId, let navigationController = self.navigationController as? NavigationController else {
+            guard let self, let arguments = subject.arguments, let messageId = arguments.messageId, let fromPeerName = arguments.fromPeerName, let navigationController = self.navigationController as? NavigationController else {
                 return
             }
             let controller = textAlertController(
                 context: self.context,
                 title: "Convert Gift to Stars",
-                text: "Do you want to convert this gift from **\(message.author?.compactDisplayTitle ?? "")** to **\(arguments.convertStars) Stars**?\n\nThis action cannot be undone.",
+                text: "Do you want to convert this gift from **\(fromPeerName)** to **\(arguments.convertStars) Stars**?\n\nThis action cannot be undone.",
                 actions: [
                     TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}),
                     TextAlertAction(type: .defaultAction, title: "Convert", action: { [weak self, weak navigationController] in
@@ -1252,92 +1258,4 @@ private func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor:
         context.addLine(to: CGPoint(x: 10.0, y: 20.0))
         context.strokePath()
     })
-}
-
-private final class GiftAnimationComponent: Component {
-    let context: AccountContext
-    let theme: PresentationTheme
-    let file: TelegramMediaFile?
-    
-    public init(
-        context: AccountContext,
-        theme: PresentationTheme,
-        file: TelegramMediaFile?
-    ) {
-        self.context = context
-        self.theme = theme
-        self.file = file
-    }
-
-    public static func ==(lhs: GiftAnimationComponent, rhs: GiftAnimationComponent) -> Bool {
-        if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.theme !== rhs.theme {
-            return false
-        }
-        if lhs.file != rhs.file {
-            return false
-        }
-        return true
-    }
-
-    public final class View: UIView {
-        private var component: GiftAnimationComponent?
-        private weak var componentState: EmptyComponentState?
-        
-        private var animationLayer: InlineStickerItemLayer?
-                
-        override init(frame: CGRect) {
-            super.init(frame: frame)
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        func update(component: GiftAnimationComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-            self.component = component
-            self.componentState = state
-                        
-            let emoji = ChatTextInputTextCustomEmojiAttribute(
-                interactivelySelectedFromPackId: nil,
-                fileId: component.file?.fileId.id ?? 0,
-                file: component.file
-            )
-            
-            let iconSize = availableSize
-            if self.animationLayer == nil {
-                let animationLayer = InlineStickerItemLayer(
-                    context: .account(component.context),
-                    userLocation: .other,
-                    attemptSynchronousLoad: false,
-                    emoji: emoji,
-                    file: component.file,
-                    cache: component.context.animationCache,
-                    renderer: component.context.animationRenderer,
-                    unique: true,
-                    placeholderColor: component.theme.list.mediaPlaceholderColor,
-                    pointSize: CGSize(width: iconSize.width * 1.2, height: iconSize.height * 1.2),
-                    loopCount: 1
-                )
-                animationLayer.isVisibleForAnimations = true
-                self.animationLayer = animationLayer
-                self.layer.addSublayer(animationLayer)
-            }
-            if let animationLayer = self.animationLayer {
-                transition.setFrame(layer: animationLayer, frame: CGRect(origin: .zero, size: iconSize))
-            }
-            
-            return iconSize
-        }
-    }
-
-    public func makeView() -> View {
-        return View(frame: CGRect())
-    }
-
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
-    }
 }

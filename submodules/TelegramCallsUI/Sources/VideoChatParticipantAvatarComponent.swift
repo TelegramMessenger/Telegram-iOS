@@ -283,7 +283,7 @@ final class VideoChatParticipantAvatarComponent: Component {
             transition.setBounds(view: avatarNode.view, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
             avatarNode.updateSize(size: avatarSize)
             
-            let blobScale: CGFloat = 1.5
+            let blobScale: CGFloat = 2.0
             
             if self.audioLevelDisposable == nil {
                 struct Level {

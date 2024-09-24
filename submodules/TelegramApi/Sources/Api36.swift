@@ -7380,22 +7380,22 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func report(peer: Api.InputPeer, id: [Int32], reason: Api.ReportReason, message: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func report(peer: Api.InputPeer, id: [Int32], option: Buffer, message: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ReportResult>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1991005362)
+                    buffer.appendInt32(-59199589)
                     peer.serialize(buffer, true)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(id.count))
                     for item in id {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }
-                    reason.serialize(buffer, true)
+                    serializeBytes(option, buffer: buffer, boxed: false)
                     serializeString(message, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.report", parameters: [("peer", String(describing: peer)), ("id", String(describing: id)), ("reason", String(describing: reason)), ("message", String(describing: message))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "messages.report", parameters: [("peer", String(describing: peer)), ("id", String(describing: id)), ("option", String(describing: option)), ("message", String(describing: message))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.ReportResult? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Bool?
+                        var result: Api.ReportResult?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                            result = Api.parse(reader, signature: signature) as? Api.ReportResult
                         }
                         return result
                     })
@@ -10787,22 +10787,22 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
-                static func report(peer: Api.InputPeer, id: [Int32], reason: Api.ReportReason, message: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func report(peer: Api.InputPeer, id: [Int32], option: Buffer, message: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ReportResult>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(421788300)
+                    buffer.appendInt32(433646405)
                     peer.serialize(buffer, true)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(id.count))
                     for item in id {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }
-                    reason.serialize(buffer, true)
+                    serializeBytes(option, buffer: buffer, boxed: false)
                     serializeString(message, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "stories.report", parameters: [("peer", String(describing: peer)), ("id", String(describing: id)), ("reason", String(describing: reason)), ("message", String(describing: message))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "stories.report", parameters: [("peer", String(describing: peer)), ("id", String(describing: id)), ("option", String(describing: option)), ("message", String(describing: message))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.ReportResult? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Bool?
+                        var result: Api.ReportResult?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                            result = Api.parse(reader, signature: signature) as? Api.ReportResult
                         }
                         return result
                     })

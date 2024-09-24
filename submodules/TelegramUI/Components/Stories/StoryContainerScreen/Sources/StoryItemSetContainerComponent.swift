@@ -6961,48 +6961,69 @@ public final class StoryItemSetContainerComponent: Component {
                     if !component.slice.effectivePeer.isService {
                         items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_Report, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] c, a in
+                        }, action: { [weak self] _, f in
                             guard let self, let component = self.component, let controller = component.controller() else {
                                 return
                             }
                             
-                            let options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .illegalDrugs, .personalDetails, .other]
-                            presentPeerReportOptions(
+                            f(.default)
+                            
+                            self.isReporting = true
+                            self.updateIsProgressPaused()
+                            
+                            component.context.sharedContext.makeContentReportScreen(
                                 context: component.context,
-                                parent: controller,
-                                contextController: c,
-                                backAction: { _ in },
-                                subject: .story(component.slice.effectivePeer.id, component.slice.item.storyItem.id),
-                                options: options,
-                                passthrough: true,
-                                forceTheme: defaultDarkPresentationTheme,
-                                isDetailedReportingVisible: { [weak self] isReporting in
+                                subject: .stories(component.slice.effectivePeer.id, [component.slice.item.storyItem.id]),
+                                forceDark: true,
+                                present: { c in
+                                    controller.push(c)
+                                },
+                                completion: { [weak self] in
                                     guard let self else {
                                         return
                                     }
-                                    self.isReporting = isReporting
+                                    self.isReporting = false
                                     self.updateIsProgressPaused()
-                                },
-                                completion: { [weak self] reason, _ in
-                                    guard let self, let component = self.component, let controller = component.controller(), let reason else {
-                                        return
-                                    }
-                                    let _ = component.context.engine.peers.reportPeerStory(peerId: component.slice.effectivePeer.id, storyId: component.slice.item.storyItem.id, reason: reason, message: "").startStandalone()
-                                    controller.present(
-                                        UndoOverlayController(
-                                            presentationData: presentationData,
-                                            content: .emoji(
-                                                name: "PoliceCar",
-                                                text: presentationData.strings.Report_Succeed
-                                            ),
-                                            elevatedLayout: false,
-                                            blurred: true,
-                                            action: { _ in return false }
-                                        )
-                                        , in: .current
-                                    )
                                 }
                             )
+                            
+//                            let options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .illegalDrugs, .personalDetails, .other]
+//                            presentPeerReportOptions(
+//                                context: component.context,
+//                                parent: controller,
+//                                contextController: c,
+//                                backAction: { _ in },
+//                                subject: .story(component.slice.effectivePeer.id, component.slice.item.storyItem.id),
+//                                options: options,
+//                                passthrough: true,
+//                                forceTheme: defaultDarkPresentationTheme,
+//                                isDetailedReportingVisible: { [weak self] isReporting in
+//                                    guard let self else {
+//                                        return
+//                                    }
+//                                    self.isReporting = isReporting
+//                                    self.updateIsProgressPaused()
+//                                },
+//                                completion: { [weak self] reason, _ in
+//                                    guard let self, let component = self.component, let controller = component.controller(), let reason else {
+//                                        return
+//                                    }
+//                                    let _ = component.context.engine.peers.reportPeerStory(peerId: component.slice.effectivePeer.id, storyId: component.slice.item.storyItem.id, reason: reason, message: "").startStandalone()
+//                                    controller.present(
+//                                        UndoOverlayController(
+//                                            presentationData: presentationData,
+//                                            content: .emoji(
+//                                                name: "PoliceCar",
+//                                                text: presentationData.strings.Report_Succeed
+//                                            ),
+//                                            elevatedLayout: false,
+//                                            blurred: true,
+//                                            action: { _ in return false }
+//                                        )
+//                                        , in: .current
+//                                    )
+//                                }
+//                            )
                         })))
                     }
                 }

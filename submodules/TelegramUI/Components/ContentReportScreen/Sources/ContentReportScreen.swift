@@ -17,40 +17,50 @@ import NavigationStackComponent
 import ItemListUI
 import UndoUI
 import AccountContext
+import LottieComponent
+import TextFieldComponent
+import ListMultilineTextFieldItemComponent
+import ButtonComponent
 
 private enum ReportResult {
     case reported
-    case hidden
-    case premiumRequired
 }
 
 private final class SheetPageContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
-    struct Item: Equatable {
-        let title: String
-        let option: Data
+    enum Content: Equatable {
+        struct Item: Equatable {
+            let title: String
+            let option: Data
+        }
+        
+        case options(items: [Item])
+        case comment(isOptional: Bool, option: Data)
     }
     
     let context: AccountContext
+    let isFirst: Bool
     let title: String?
     let subtitle: String
-    let items: [Item]
-    let action: (Item) -> Void
+    let content: Content
+    let action: (Content.Item, String?) -> Void
     let pop: () -> Void
     
     init(
         context: AccountContext,
+        isFirst: Bool,
         title: String?,
         subtitle: String,
-        items: [Item],
-        action: @escaping (Item) -> Void,
+        content: Content,
+        action: @escaping (Content.Item, String?) -> Void,
         pop: @escaping () -> Void
     ) {
         self.context = context
+        self.isFirst = isFirst
         self.title = title
         self.subtitle = subtitle
-        self.items = items
+        self.content = content
         self.action = action
         self.pop = pop
     }
@@ -65,7 +75,7 @@ private final class SheetPageContent: CombinedComponent {
         if lhs.subtitle != rhs.subtitle {
             return false
         }
-        if lhs.items != rhs.items {
+        if lhs.content != rhs.content {
             return false
         }
         return true
@@ -73,6 +83,19 @@ private final class SheetPageContent: CombinedComponent {
     
     final class State: ComponentState {
         var backArrowImage: (UIImage, PresentationTheme)?
+
+        let playOnce =  ActionSlot<Void>()
+        private var didPlayAnimation = false
+
+        let textInputState = ListMultilineTextFieldItemComponent.ExternalState()
+        
+        func playAnimationIfNeeded() {
+            guard !self.didPlayAnimation else {
+                return
+            }
+            self.didPlayAnimation = true
+            self.playOnce.invoke(Void())
+        }
     }
     
     func makeState() -> State {
@@ -83,8 +106,9 @@ private final class SheetPageContent: CombinedComponent {
         let background = Child(RoundedRectangle.self)
         let back = Child(Button.self)
         let title = Child(Text.self)
-        let subtitle = Child(MultilineTextComponent.self)
+        let animation = Child(LottieComponent.self)
         let section = Child(ListSectionComponent.self)
+        let button = Child(ButtonComponent.self)
         
         return { context in
             let environment = context.environment[EnvironmentType.self]
@@ -92,8 +116,8 @@ private final class SheetPageContent: CombinedComponent {
             let state = context.state
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-            let theme = presentationData.theme
-            let strings = presentationData.strings
+            let theme = environment.theme
+            let strings = environment.strings
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
@@ -117,7 +141,7 @@ private final class SheetPageContent: CombinedComponent {
             }
             
             let backContents: AnyComponent<Empty>
-            if component.title == nil {
+            if component.isFirst {
                 backContents = AnyComponent(Text(text: strings.Common_Cancel, font: Font.regular(17.0), color: theme.list.itemAccentColor))
             } else {
                 backContents = AnyComponent(
@@ -143,55 +167,107 @@ private final class SheetPageContent: CombinedComponent {
             
             let constrainedTitleWidth = context.availableSize.width - (back.size.width + 16.0) * 2.0
             
+            let titleString: String
+            if let title = component.title {
+                titleString = title
+            } else {
+                titleString = ""
+            }
+            
             let title = title.update(
-                component: Text(text: strings.ReportAd_Title, font: Font.semibold(17.0), color: theme.list.itemPrimaryTextColor),
+                component: Text(text: titleString, font: Font.semibold(17.0), color: theme.list.itemPrimaryTextColor),
                 availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
                 transition: .immediate
             )
-            if let subtitleText = component.title {
-                let subtitle = subtitle.update(
-                    component: MultilineTextComponent(text: .plain(NSAttributedString(string: subtitleText, font: Font.regular(13.0), textColor: theme.list.itemSecondaryTextColor)), truncationType: .end, maximumNumberOfLines: 1),
-                    availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
+            context.add(title
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + title.size.height / 2.0))
+            )
+            contentSize.height += title.size.height
+            contentSize.height += 24.0
+                                    
+            var items: [AnyComponentWithIdentity<Empty>] = []
+            var footer: AnyComponent<Empty>?
+                                        
+            switch component.content {
+            case let .options(options):
+                for item in options  {
+                    items.append(AnyComponentWithIdentity(id: item.title, component: AnyComponent(ListActionItemComponent(
+                        theme: theme,
+                        title: AnyComponent(VStack([
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(
+                                    string: item.title,
+                                    font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                    textColor: theme.list.itemPrimaryTextColor
+                                )),
+                                maximumNumberOfLines: 1
+                            ))),
+                        ], alignment: .left, spacing: 2.0)),
+                        accessory: .arrow,
+                        action: { _ in
+                            component.action(item, nil)
+                        }
+                    ))))
+                }
+            case let .comment(isOptional, _):
+                contentSize.height -= 11.0
+                
+                let animationHeight: CGFloat = 120.0
+                let animation = animation.update(
+                    component: LottieComponent(
+                        content: LottieComponent.AppBundleContent(name: "Cop"),
+                        startingPosition: .begin,
+                        playOnce: state.playOnce
+                    ),
+                    environment: {},
+                    availableSize: CGSize(width: animationHeight, height: animationHeight),
                     transition: .immediate
                 )
-                context.add(title
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + title.size.height / 2.0 - 8.0))
+                context.add(animation
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + animation.size.height / 2.0))
                 )
-                contentSize.height += title.size.height
-                context.add(subtitle
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + subtitle.size.height / 2.0 - 9.0))
+                contentSize.height += animation.size.height
+                contentSize.height += 18.0
+                
+                items.append(
+                    AnyComponentWithIdentity(id: items.count, component: AnyComponent(ListMultilineTextFieldItemComponent(
+                        externalState: state.textInputState,
+                        context: component.context,
+                        theme: theme,
+                        strings: strings,
+                        initialText: "",
+                        resetText: nil,
+                        placeholder: isOptional ? "Add Comment (Optional)" : "Add Comment",
+                        autocapitalizationType: .none,
+                        autocorrectionType: .no,
+                        returnKeyType: .done,
+                        characterLimit: 140,
+                        displayCharacterLimit: true,
+                        emptyLineHandling: .notAllowed,
+                        updated: { [weak state] _ in
+                            state?.updated()
+                        },
+                        returnKeyAction: {
+//                            guard let self else {
+//                                return
+//                            }
+//                            if let titleView = self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View {
+//                                titleView.endEditing(true)
+//                            }
+                        },
+                        textUpdateTransition: .spring(duration: 0.4),
+                        tag: nil
+                    )))
                 )
-                contentSize.height += subtitle.size.height
-                contentSize.height += 8.0
-            } else {
-                context.add(title
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + title.size.height / 2.0))
-                )
-                contentSize.height += title.size.height
-                contentSize.height += 24.0
+                
+                footer = AnyComponent(MultilineTextComponent(
+                    text: .plain(
+                        NSAttributedString(string: "Please help us by telling what is wrong with the message you have selected.", font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.freeTextColor)
+                    ),
+                    maximumNumberOfLines: 0
+                ))
             }
-            
-            var items: [AnyComponentWithIdentity<Empty>] = []
-            for item in component.items  {
-                items.append(AnyComponentWithIdentity(id: item.title, component: AnyComponent(ListActionItemComponent(
-                    theme: theme,
-                    title: AnyComponent(VStack([
-                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(
-                                string: item.title,
-                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                textColor: theme.list.itemPrimaryTextColor
-                            )),
-                            maximumNumberOfLines: 1
-                        ))),
-                    ], alignment: .left, spacing: 2.0)),
-                    accessory: .arrow,
-                    action: { _ in
-                        component.action(item)
-                    }
-                ))))
-            }
-            
+
             let section = section.update(
                 component: ListSectionComponent(
                     theme: theme,
@@ -203,31 +279,7 @@ private final class SheetPageContent: CombinedComponent {
                         )),
                         maximumNumberOfLines: 0
                     )),
-                    footer: AnyComponent(MultilineTextComponent(
-                        text: .markdown(
-                            text: strings.ReportAd_Help,
-                            attributes: MarkdownAttributes(
-                                body: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.freeTextColor),
-                                bold: MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.freeTextColor),
-                                link: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.itemAccentColor),
-                                linkAttribute: { contents in
-                                    return (TelegramTextAttributes.URL, contents)
-                                }
-                            )
-                        ),
-                        maximumNumberOfLines: 0,
-                        highlightColor: theme.list.itemAccentColor.withAlphaComponent(0.2),
-                        highlightAction: { attributes in
-                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
-                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
-                            } else {
-                                return nil
-                            }
-                        },
-                        tapAction: { _, _ in
-                            component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.ReportAd_Help_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
-                        }
-                    )),
+                    footer: footer,
                     items: items
                 ),
                 environment: {},
@@ -240,6 +292,46 @@ private final class SheetPageContent: CombinedComponent {
             contentSize.height += section.size.height
             contentSize.height += 54.0
             
+            if case let .comment(isOptional, option) = component.content {
+                contentSize.height -= 16.0
+                
+                let action = component.action
+                let button = button.update(
+                    component: ButtonComponent(
+                        background: ButtonComponent.Background(
+                            color: theme.list.itemCheckColors.fillColor,
+                            foreground: theme.list.itemCheckColors.foregroundColor,
+                            pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
+                        ),
+                        content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: "Send Report", font: Font.semibold(17.0), color: theme.list.itemCheckColors.foregroundColor))),
+                        isEnabled: isOptional || state.textInputState.hasText,
+                        allowActionWhenDisabled: false,
+                        displaysProgress: false,
+                        action: {
+                            action(SheetPageContent.Content.Item(title: "", option: option), state.textInputState.text.string)
+                        }
+                    ),
+                    environment: {},
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                    transition: context.transition
+                )
+                context.add(button
+                    .clipsToBounds(true)
+                    .cornerRadius(10.0)
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + button.size.height / 2.0))
+                )
+                contentSize.height += button.size.height
+                contentSize.height += 16.0
+                
+                if environment.inputHeight.isZero && environment.safeInsets.bottom > 0.0 {
+                    contentSize.height += environment.safeInsets.bottom
+                }
+            }
+            
+            contentSize.height += environment.inputHeight
+            
+            state.playAnimationIfNeeded()
+            
             return contentSize
         }
     }
@@ -249,10 +341,9 @@ private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let peerId: EnginePeer.Id
-    let opaqueId: Data
+    let subject: ReportContentSubject
     let title: String
-    let options: [ReportAdMessageResult.Option]
+    let options: [ReportContentResult.Option]
     let pts: Int
     let openMore: () -> Void
     let complete: (ReportResult) -> Void
@@ -261,10 +352,9 @@ private final class SheetContent: CombinedComponent {
     
     init(
         context: AccountContext,
-        peerId: EnginePeer.Id,
-        opaqueId: Data,
+        subject: ReportContentSubject,
         title: String,
-        options: [ReportAdMessageResult.Option],
+        options: [ReportContentResult.Option],
         pts: Int,
         openMore: @escaping () -> Void,
         complete: @escaping (ReportResult) -> Void,
@@ -272,8 +362,7 @@ private final class SheetContent: CombinedComponent {
         update: @escaping (ComponentTransition) -> Void
     ) {
         self.context = context
-        self.peerId = peerId
-        self.opaqueId = opaqueId
+        self.subject = subject
         self.title = title
         self.options = options
         self.pts = pts
@@ -287,10 +376,7 @@ private final class SheetContent: CombinedComponent {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.peerId != rhs.peerId {
-            return false
-        }
-        if lhs.opaqueId != rhs.opaqueId {
+        if lhs.subject != rhs.subject {
             return false
         }
         if lhs.title != rhs.title {
@@ -306,7 +392,7 @@ private final class SheetContent: CombinedComponent {
     }
     
     final class State: ComponentState {
-        var pushedOptions: [(title: String, subtitle: String, options: [ReportAdMessageResult.Option])] = []
+        var pushedOptions: [(title: String, subtitle: String, content: SheetPageContent.Content)] = []
         let disposable = MetaDisposable()
         
         deinit {
@@ -328,44 +414,55 @@ private final class SheetContent: CombinedComponent {
             let update = component.update
             
             let accountContext = component.context
-            let peerId = component.peerId
-            let opaqueId = component.opaqueId
+            let subject = component.subject
             let complete = component.complete
-            let action: (SheetPageContent.Item) -> Void = { [weak state] item in
+            let action: (SheetPageContent.Content.Item, String?) -> Void = { [weak state] item, message in
                 guard let state else {
                     return
                 }
                 state.disposable.set(
-                    (accountContext.engine.messages.reportAdMessage(peerId: peerId, opaqueId: opaqueId, option: item.option)
+                    (accountContext.engine.messages.reportContent(subject: subject, option: item.option, message: message)
                     |> deliverOnMainQueue).start(next: { [weak state] result in
                         switch result {
                         case let .options(title, options):
-                            state?.pushedOptions.append((item.title, title, options))
+                            state?.pushedOptions.append((item.title, title, .options(items: options.map { SheetPageContent.Content.Item(title: $0.text, option: $0.option) })))
                             state?.updated(transition: .spring(duration: 0.45))
-                        case .adsHidden:
-                            complete(.hidden)
+                        case let .addComment(isOptional, option):
+                            state?.pushedOptions.append((item.title, "", .comment(isOptional: isOptional, option: option)))
+                            state?.updated(transition: .spring(duration: 0.45))
                         case .reported:
                             complete(.reported)
                         }
                     }, error: { error in
-                        if case .premiumRequired = error {
-                            complete(.premiumRequired)
-                        }
+//                        if case .premiumRequired = error {
+//                            complete(.premiumRequired)
+//                        }
                     })
                 )
+            }
+            
+            let mainTitle: String
+            switch component.subject {
+            case .peer:
+                mainTitle = "Report Peer"
+            case .messages:
+                mainTitle = "Report Message"
+            case .stories:
+                mainTitle = "Report Story"
             }
             
             var items: [AnyComponentWithIdentity<EnvironmentType>] = []
             items.append(AnyComponentWithIdentity(id: items.count, component: AnyComponent(
                 SheetPageContent(
                     context: component.context,
-                    title: nil,
+                    isFirst: true,
+                    title: mainTitle,
                     subtitle: component.title,
-                    items: component.options.map {
-                        SheetPageContent.Item(title: $0.text, option: $0.option)
-                    },
-                    action: { item in
-                        action(item)
+                    content: .options(items: component.options.map {
+                        SheetPageContent.Content.Item(title: $0.text, option: $0.option)
+                    }),
+                    action: { item, message in
+                        action(item, message)
                     },
                     pop: {
                         component.dismiss()
@@ -376,13 +473,12 @@ private final class SheetContent: CombinedComponent {
                 items.append(AnyComponentWithIdentity(id: items.count, component: AnyComponent(
                     SheetPageContent(
                         context: component.context,
+                        isFirst: false,
                         title: pushedOption.title,
                         subtitle: pushedOption.subtitle,
-                        items: pushedOption.options.map {
-                            SheetPageContent.Item(title: $0.text, option: $0.option)
-                        },
-                        action: { item in
-                            action(item)
+                        content: pushedOption.content,
+                        action: { item, message in
+                            action(item, message)
                         },
                         pop: { [weak state] in
                             state?.pushedOptions.removeLast()
@@ -422,25 +518,22 @@ private final class SheetContainerComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let peerId: EnginePeer.Id
-    let opaqueId: Data
+    let subject: ReportContentSubject
     let title: String
-    let options: [ReportAdMessageResult.Option]
+    let options: [ReportContentResult.Option]
     let openMore: () -> Void
     let complete: (ReportResult) -> Void
     
     init(
         context: AccountContext,
-        peerId: EnginePeer.Id,
-        opaqueId: Data,
+        subject: ReportContentSubject,
         title: String,
-        options: [ReportAdMessageResult.Option],
+        options: [ReportContentResult.Option],
         openMore: @escaping () -> Void,
         complete: @escaping (ReportResult) -> Void
     ) {
         self.context = context
-        self.peerId = peerId
-        self.opaqueId = opaqueId
+        self.subject = subject
         self.title = title
         self.options = options
         self.openMore = openMore
@@ -451,10 +544,7 @@ private final class SheetContainerComponent: CombinedComponent {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.peerId != rhs.peerId {
-            return false
-        }
-        if lhs.opaqueId != rhs.opaqueId {
+        if lhs.subject != rhs.subject {
             return false
         }
         if lhs.title != rhs.title {
@@ -489,8 +579,7 @@ private final class SheetContainerComponent: CombinedComponent {
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
-                        peerId: context.component.peerId,
-                        opaqueId: context.component.opaqueId,
+                        subject: context.component.subject,
                         title: context.component.title,
                         options: context.component.options,
                         pts: state.pts,
@@ -565,15 +654,14 @@ private final class SheetContainerComponent: CombinedComponent {
 }
 
 
-public final class AdsReportScreen: ViewControllerComponentContainer {
+public final class ContentReportScreen: ViewControllerComponentContainer {
     private let context: AccountContext
         
     public init(
         context: AccountContext,
-        peerId: EnginePeer.Id,
-        opaqueId: Data,
+        subject: ReportContentSubject,
         title: String,
-        options: [ReportAdMessageResult.Option],
+        options: [ReportContentResult.Option],
         forceDark: Bool = false,
         completed: @escaping () -> Void
     ) {
@@ -584,8 +672,7 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
             context: context,
             component: SheetContainerComponent(
                 context: context,
-                peerId: peerId,
-                opaqueId: opaqueId,
+                subject: subject,
                 title: title,
                 options: options,
                 openMore: {},
@@ -608,35 +695,14 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
             self.dismissAnimated()
             
             switch result {
-            case .reported, .hidden:
-                completed()
+            case .reported:
+                Queue.mainQueue().after(0.1) {
+                    completed()
+                }
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let text: String
-                if case .reported = result {
-                    text = presentationData.strings.ReportAd_Reported
-                } else {
-                    text = presentationData.strings.ReportAd_Hidden
-                }
                 Queue.mainQueue().after(0.4, {
-                    (navigationController?.viewControllers.last as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: text, cancel: nil, destructive: false), elevatedLayout: false, action: { action in
-                        if case .info = action, case .reported = result {
-                            context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.ReportAd_Help_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
-                        }
-                        return true
-                    }), in: .current)
-                })
-            case .premiumRequired:
-                var replaceImpl: ((ViewController) -> Void)?
-                let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: false, action: {
-                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
-                    replaceImpl?(controller)
-                }, dismissed: nil)
-                replaceImpl = { [weak controller] c in
-                    controller?.replace(with: c)
-                }
-                Queue.mainQueue().after(0.4, {
-                    navigationController?.pushViewController(controller, animated: true)
+                    (navigationController?.viewControllers.last as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .emoji(name: "PoliceCar", text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return true }), in: .current)
                 })
             }
         }
