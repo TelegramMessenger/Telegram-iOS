@@ -1113,12 +1113,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             } else {
                                 strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: message.id), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                             }
-                            /*for attribute in message.attributes {
-                                if let attribute = attribute as? ReplyMessageAttribute {
-                                    //strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId))
-                                    break
-                                }
-                            }*/
                             return true
                         case .setChatTheme:
                             strongSelf.presentThemeSelection()
@@ -1183,6 +1177,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let fromPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? strongSelf.context.account.peerId : message.id.peerId
                             let toPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? message.id.peerId : strongSelf.context.account.peerId
                             let controller = PremiumIntroScreen(context: strongSelf.context, source: .gift(from: fromPeerId, to: toPeerId, duration: duration, giftCode: nil))
+                            strongSelf.push(controller)
+                            return true
+                        case .starGift:
+                            let controller = strongSelf.context.sharedContext.makeGiftViewScreen(context: strongSelf.context, message: EngineMessage(message))
                             strongSelf.push(controller)
                             return true
                         case .giftStars:

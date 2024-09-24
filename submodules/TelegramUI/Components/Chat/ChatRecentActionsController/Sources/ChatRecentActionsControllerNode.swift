@@ -1209,8 +1209,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         if let invoice {
                             let inputData = Promise<BotCheckoutController.InputData?>()
                             inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, source: .slug(slug))
-                                          |> map(Optional.init)
-                                          |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
+                            |> map(Optional.init)
+                            |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
                                 return .single(nil)
                             })
                             strongSelf.controllerInteraction.presentController(BotCheckoutController(context: strongSelf.context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in

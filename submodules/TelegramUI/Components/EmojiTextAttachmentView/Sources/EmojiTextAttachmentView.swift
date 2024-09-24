@@ -144,6 +144,34 @@ public func animationCacheFetchFile(postbox: Postbox, userLocation: MediaResourc
     }
 }
 
+public func animationCacheLoadLocalFile(name: String, type: AnimationCacheAnimationType, keyframeOnly: Bool, customColor: UIColor?) -> (AnimationCacheFetchOptions) -> Disposable {
+    return { options in
+        let source = AnimatedStickerNodeLocalFileSource(name: name)
+        let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
+            guard let result = result else {
+                return
+            }
+            
+            switch type {
+            case .video:
+                cacheVideoAnimation(path: result, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer, firstFrameOnly: options.firstFrameOnly, customColor: customColor)
+            case .lottie:
+                guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
+                    options.writer.finish()
+                    return
+                }
+                cacheLottieAnimation(data: data, width: Int(options.size.width), height: Int(options.size.height), keyframeOnly: keyframeOnly, writer: options.writer, firstFrameOnly: options.firstFrameOnly, customColor: customColor)
+            case .still:
+                cacheStillSticker(path: result, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer, customColor: customColor)
+            }
+        })
+                
+        return ActionDisposable {
+            dataDisposable.dispose()
+        }
+    }
+}
+
 private func generatePeerNameColorImage(nameColor: PeerNameColors.Colors, isDark: Bool, bounds: CGSize = CGSize(width: 40.0, height: 40.0), size: CGSize = CGSize(width: 40.0, height: 40.0)) -> UIImage? {
     return generateImage(bounds, rotatedContext: { contextSize, context in
         let bounds = CGRect(origin: CGPoint(), size: contextSize)
@@ -310,6 +338,8 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     private var didProcessTintColor: Bool = false
     
     public private(set) var file: TelegramMediaFile?
+    private var localAnimationName: String?
+    
     private var infoDisposable: Disposable?
     private var disposable: Disposable?
     private var fetchDisposable: Disposable?
@@ -440,6 +470,8 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 }
             case .ton:
                 self.updateTon()
+            case let .animation(name):
+                self.updateLocalAnimation(name: name, attemptSynchronousLoad: attemptSynchronousLoad)
             }
         } else if let file = file {
             self.updateFile(file: file, attemptSynchronousLoad: attemptSynchronousLoad)
@@ -627,6 +659,42 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     
     private func updateTon() {
         self.contents = tonImage?.cgImage
+    }
+    
+    private func updateLocalAnimation(name: String, attemptSynchronousLoad: Bool) {
+        guard let arguments = self.arguments else {
+            return
+        }
+        
+        self.localAnimationName = name
+        
+        if attemptSynchronousLoad {
+            if !arguments.renderer.loadFirstFrameSynchronously(target: self, cache: arguments.cache, itemId: name, size: arguments.pixelSize) {
+                
+            }
+            
+            self.loadAnimation()
+        } else {
+            self.loadDisposable = arguments.renderer.loadFirstFrame(target: self, cache: arguments.cache, itemId: name, size: arguments.pixelSize, fetch: animationCacheLoadLocalFile(name: name, type: .lottie, keyframeOnly: true, customColor: nil), completion: { [weak self] result, isFinal in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.loadAnimation()
+            })
+        }
+    }
+    
+    private func loadLocalAnimation() {
+        guard let arguments = self.arguments else {
+            return
+        }
+        
+        guard let name = self.localAnimationName else {
+            return
+        }
+                
+        let keyframeOnly = arguments.pixelSize.width >= 120.0
+        self.disposable = arguments.renderer.add(target: self, cache: arguments.cache, itemId: name, unique: arguments.unique, size: arguments.pixelSize, fetch: animationCacheLoadLocalFile(name: name, type: .lottie, keyframeOnly: keyframeOnly, customColor: nil))
     }
     
     private func updateFile(file: TelegramMediaFile, attemptSynchronousLoad: Bool) {

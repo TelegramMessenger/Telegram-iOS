@@ -1017,6 +1017,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeStarsWithdrawalScreen(context: AccountContext, stats: StarsRevenueStats, completion: @escaping (Int64) -> Void) -> ViewController
     func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController
     func makeStarsGiveawayBoostScreen(context: AccountContext, peerId: EnginePeer.Id, boost: ChannelBoostersContext.State.Boost) -> ViewController
+    func makeStarsIntroScreen(context: AccountContext) -> ViewController
+    func makeGiftViewScreen(context: AccountContext, message: EngineMessage) -> ViewController
     
     func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError>
     func makeMiniAppListScreen(context: AccountContext, initialData: MiniAppListScreenInitialData) -> ViewController

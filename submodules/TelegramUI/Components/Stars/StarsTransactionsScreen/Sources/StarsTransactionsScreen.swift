@@ -239,7 +239,6 @@ final class StarsTransactionsScreenComponent: Component {
                 
                 if let starView = self.starView.view {
                     let starPosition = CGPoint(x: self.scrollView.frame.width / 2.0, y: topInset + starView.bounds.height / 2.0 - 30.0 - titleOffset * titleScale)
-                    
                     headerTransition.setPosition(view: starView, position: starPosition)
                     headerTransition.setScale(view: starView, scale: titleScale)
                 }

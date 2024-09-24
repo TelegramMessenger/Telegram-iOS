@@ -6,15 +6,23 @@ import HierarchyTrackingLayer
 import ComponentFlow
 import TextLoadingEffect
 
-final class ItemLoadingComponent: Component {
+public final class ItemShimmeringLoadingComponent: Component {
     private let color: UIColor
+    private let cornerRadius: CGFloat
     
-    public init(color: UIColor) {
+    public init(
+        color: UIColor,
+        cornerRadius: CGFloat = 10.0
+    ) {
         self.color = color
+        self.cornerRadius = cornerRadius
     }
 
-    public static func ==(lhs: ItemLoadingComponent, rhs: ItemLoadingComponent) -> Bool {
+    public static func ==(lhs: ItemShimmeringLoadingComponent, rhs: ItemShimmeringLoadingComponent) -> Bool {
         if !lhs.color.isEqual(rhs.color) {
+            return false
+        }
+        if lhs.cornerRadius != rhs.cornerRadius {
             return false
         }
         return true
@@ -28,16 +36,14 @@ final class ItemLoadingComponent: Component {
         private let borderMaskGradientView = UIImageView()
         private let borderMaskFillView = UIImageView()
         
-        private var component: ItemLoadingComponent?
+        private var component: ItemShimmeringLoadingComponent?
         
         override public init(frame: CGRect) {
             super.init(frame: frame)
             
             self.addSubview(self.loadingView)
             self.addSubview(self.borderView)
-            
-            self.borderView.image = generateFilledRoundedRectImage(size: CGSize(width: 24.0, height: 24.0), cornerRadius: 10.0, color: nil, strokeColor: .white, strokeWidth: 1.0 + UIScreenPixel, backgroundColor: nil)?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 10).withRenderingMode(.alwaysTemplate)
-            
+                        
             self.borderMaskView.backgroundColor = .clear
             self.borderMaskFillView.backgroundColor = .white
             
@@ -63,14 +69,23 @@ final class ItemLoadingComponent: Component {
             })
         }
         
-        func update(component: ItemLoadingComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        func update(component: ItemShimmeringLoadingComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let isFirstTime = self.component == nil
+            let previousCornerRadius = self.component?.cornerRadius
             
             self.component = component
+            
+            if previousCornerRadius != component.cornerRadius {
+                self.borderView.image = generateFilledRoundedRectImage(size: CGSize(width: 24.0, height: 24.0), cornerRadius: component.cornerRadius, color: nil, strokeColor: .white, strokeWidth: 1.0 + UIScreenPixel, backgroundColor: nil)?.stretchableImage(withLeftCapWidth: Int(component.cornerRadius), topCapHeight: Int(component.cornerRadius)).withRenderingMode(.alwaysTemplate)
+            }
             
             self.borderView.tintColor = component.color
             
             self.loadingView.update(color: component.color, rect: CGRect(origin: .zero, size: availableSize))
+            self.loadingView.frame = CGRect(origin: .zero, size: availableSize)
+            self.loadingView.layer.cornerRadius = component.cornerRadius
+            self.loadingView.clipsToBounds = true
+            
             transition.setFrame(view: self.borderView, frame: CGRect(origin: .zero, size: availableSize))
             self.borderMaskView.frame = self.borderView.bounds
             

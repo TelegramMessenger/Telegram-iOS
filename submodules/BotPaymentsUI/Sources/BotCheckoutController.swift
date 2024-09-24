@@ -29,30 +29,41 @@ public final class BotCheckoutController: ViewController {
 
         public static func fetch(context: AccountContext, source: BotPaymentInvoiceSource) -> Signal<InputData, FetchError> {
             let theme = context.sharedContext.currentPresentationData.with { $0 }.theme
-            let themeParams: [String: Any] = [
-                "bg_color": Int32(bitPattern: theme.list.plainBackgroundColor.rgb),
-                "secondary_bg_color": Int32(bitPattern: theme.list.blocksBackgroundColor.rgb),
-                "text_color": Int32(bitPattern: theme.list.itemPrimaryTextColor.rgb),
-                "hint_color": Int32(bitPattern: theme.list.itemSecondaryTextColor.rgb),
-                "link_color": Int32(bitPattern: theme.list.itemAccentColor.rgb),
-                "button_color": Int32(bitPattern: theme.list.itemCheckColors.fillColor.rgb),
-                "button_text_color": Int32(bitPattern: theme.list.itemCheckColors.foregroundColor.rgb),
-                "header_bg_color": Int32(bitPattern: theme.rootController.navigationBar.opaqueBackgroundColor.rgb),
-                "accent_text_color": Int32(bitPattern: theme.list.itemAccentColor.rgb),
-                "section_bg_color": Int32(bitPattern: theme.list.itemBlocksBackgroundColor.rgb),
-                "section_header_text_color": Int32(bitPattern: theme.list.freeTextColor.rgb),
-                "subtitle_text_color": Int32(bitPattern: theme.list.itemSecondaryTextColor.rgb),
-                "destructive_text_color": Int32(bitPattern: theme.list.itemDestructiveColor.rgb),
-                "section_separator_color": Int32(bitPattern: theme.list.itemBlocksSeparatorColor.rgb)
-            ]
+            let themeParams: [String: Any]?
+            if case .starGift = source {
+                themeParams = nil
+            } else {
+                themeParams = [
+                    "bg_color": Int32(bitPattern: theme.list.plainBackgroundColor.rgb),
+                    "secondary_bg_color": Int32(bitPattern: theme.list.blocksBackgroundColor.rgb),
+                    "text_color": Int32(bitPattern: theme.list.itemPrimaryTextColor.rgb),
+                    "hint_color": Int32(bitPattern: theme.list.itemSecondaryTextColor.rgb),
+                    "link_color": Int32(bitPattern: theme.list.itemAccentColor.rgb),
+                    "button_color": Int32(bitPattern: theme.list.itemCheckColors.fillColor.rgb),
+                    "button_text_color": Int32(bitPattern: theme.list.itemCheckColors.foregroundColor.rgb),
+                    "header_bg_color": Int32(bitPattern: theme.rootController.navigationBar.opaqueBackgroundColor.rgb),
+                    "accent_text_color": Int32(bitPattern: theme.list.itemAccentColor.rgb),
+                    "section_bg_color": Int32(bitPattern: theme.list.itemBlocksBackgroundColor.rgb),
+                    "section_header_text_color": Int32(bitPattern: theme.list.freeTextColor.rgb),
+                    "subtitle_text_color": Int32(bitPattern: theme.list.itemSecondaryTextColor.rgb),
+                    "destructive_text_color": Int32(bitPattern: theme.list.itemDestructiveColor.rgb),
+                    "section_separator_color": Int32(bitPattern: theme.list.itemBlocksSeparatorColor.rgb)
+                ]
+            }
 
             return context.engine.payments.fetchBotPaymentForm(source: source, themeParams: themeParams)
             |> mapError { _ -> FetchError in
                 return .generic
             }
             |> mapToSignal { paymentForm -> Signal<InputData, FetchError> in
-                return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: paymentForm.paymentBotId))
-                |> castError(FetchError.self)
+                let botPeer: Signal<EnginePeer?, FetchError>
+                if let paymentBotId = paymentForm.paymentBotId {
+                    botPeer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: paymentBotId))
+                    |> castError(FetchError.self)
+                } else {
+                    botPeer = .single(nil)
+                }
+                return botPeer
                 |> mapToSignal { botPeer -> Signal<InputData, FetchError> in
                     if let current = paymentForm.savedInfo {
                         return context.engine.payments.validateBotPaymentForm(saveInfo: true, source: source, formInfo: current)
