@@ -135,6 +135,88 @@ public extension Api {
     }
 }
 public extension Api {
+    enum ReportResult: TypeConstructorDescription {
+        case reportResultAddComment(flags: Int32, option: Buffer)
+        case reportResultChooseOption(title: String, options: [Api.MessageReportOption])
+        case reportResultReported
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .reportResultAddComment(let flags, let option):
+                    if boxed {
+                        buffer.appendInt32(1862904881)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeBytes(option, buffer: buffer, boxed: false)
+                    break
+                case .reportResultChooseOption(let title, let options):
+                    if boxed {
+                        buffer.appendInt32(-253435722)
+                    }
+                    serializeString(title, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(options.count))
+                    for item in options {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .reportResultReported:
+                    if boxed {
+                        buffer.appendInt32(-1917633461)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .reportResultAddComment(let flags, let option):
+                return ("reportResultAddComment", [("flags", flags as Any), ("option", option as Any)])
+                case .reportResultChooseOption(let title, let options):
+                return ("reportResultChooseOption", [("title", title as Any), ("options", options as Any)])
+                case .reportResultReported:
+                return ("reportResultReported", [])
+    }
+    }
+    
+        public static func parse_reportResultAddComment(_ reader: BufferReader) -> ReportResult? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ReportResult.reportResultAddComment(flags: _1!, option: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_reportResultChooseOption(_ reader: BufferReader) -> ReportResult? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: [Api.MessageReportOption]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageReportOption.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ReportResult.reportResultChooseOption(title: _1!, options: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_reportResultReported(_ reader: BufferReader) -> ReportResult? {
+            return Api.ReportResult.reportResultReported
+        }
+    
+    }
+}
+public extension Api {
     enum RequestPeerType: TypeConstructorDescription {
         case requestPeerTypeBroadcast(flags: Int32, hasUsername: Api.Bool?, userAdminRights: Api.ChatAdminRights?, botAdminRights: Api.ChatAdminRights?)
         case requestPeerTypeChat(flags: Int32, hasUsername: Api.Bool?, forum: Api.Bool?, userAdminRights: Api.ChatAdminRights?, botAdminRights: Api.ChatAdminRights?)

@@ -1957,22 +1957,30 @@ extension ChatControllerImpl {
                     ])
                     strongSelf.present(controller, in: .window(.root))
                 } else {
-                    strongSelf.present(peerReportOptionsController(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), passthrough: false, present: { c, a in
-                        self?.present(c, in: .window(.root), with: a)
-                    }, push: { c in
-                        self?.push(c)
-                    }, completion: { _, done in
-                        if done {
-                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                        }
-                    }), in: .window(.root))
+                    strongSelf.context.sharedContext.makeContentReportScreen(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), forceDark: false, present: { [weak self] controller in
+                        self?.push(controller)
+                    }, completion: { [weak self] in
+                        self?.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                    })
                 }
             }
         }, reportMessages: { [weak self] messages, contextController in
-            if let strongSelf = self, !messages.isEmpty {
-                let options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .illegalDrugs, .personalDetails, .other]
-                presentPeerReportOptions(context: strongSelf.context, parent: strongSelf, contextController: contextController, subject: .messages(messages.map({ $0.id }).sorted()), options: options, completion: { _, _ in })
+            guard let self, !messages.isEmpty else {
+                return
             }
+            contextController?.dismiss()
+            self.context.sharedContext.makeContentReportScreen(
+                context: self.context,
+                subject: .messages(messages.map({ $0.id }).sorted()),
+                forceDark: false,
+                present: { [weak self] controller in
+                    guard let self else {
+                        return
+                    }
+                    self.push(controller)
+                },
+                completion: {}
+            )
         }, blockMessageAuthor: { [weak self] message, contextController in
             contextController?.dismiss(completion: {
                 guard let strongSelf = self else {

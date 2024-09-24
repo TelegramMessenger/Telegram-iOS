@@ -1020,6 +1020,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeStarsIntroScreen(context: AccountContext) -> ViewController
     func makeGiftViewScreen(context: AccountContext, message: EngineMessage) -> ViewController
     
+    func makeContentReportScreen(context: AccountContext, subject: ReportContentSubject, forceDark: Bool, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void)
+    
     func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError>
     func makeMiniAppListScreen(context: AccountContext, initialData: MiniAppListScreenInitialData) -> ViewController
     
