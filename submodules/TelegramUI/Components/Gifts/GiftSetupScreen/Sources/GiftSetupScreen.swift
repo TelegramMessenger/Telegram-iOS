@@ -22,6 +22,11 @@ import LottieComponent
 import TextFieldComponent
 import ButtonComponent
 import BotPaymentsUI
+import ChatEntityKeyboardInputNode
+import EmojiSuggestionsComponent
+import ChatPresentationInterfaceState
+import AudioToolbox
+import TextFormat
 
 final class GiftSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -81,9 +86,23 @@ final class GiftSetupScreenComponent: Component {
         private let textInputTag = NSObject()
         private var resetText: String?
         
+        private var currentInputMode: ListMultilineTextFieldItemComponent.InputMode = .keyboard
+        
+        private var inputMediaNodeData: ChatEntityKeyboardInputNode.InputData?
+        private var inputMediaNodeDataDisposable: Disposable?
+        private var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
+        private var inputMediaInteraction: ChatEntityKeyboardInputNode.Interaction?
+        private var inputMediaNode: ChatEntityKeyboardInputNode?
+        private var inputMediaNodeBackground = SimpleLayer()
+        private var inputMediaNodeTargetTag: AnyObject?
+        private let inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData>()
+        
+        private var currentEmojiSuggestionView: ComponentHostView<Empty>?
+        
         private var hideName = false
         
         private var previousHadInputHeight: Bool = false
+        private var previousInputHeight: CGFloat?
         private var recenterOnTag: NSObject?
                 
         private var peerMap: [EnginePeer.Id: EnginePeer] = [:]
@@ -175,7 +194,8 @@ final class GiftSetupScreenComponent: Component {
                 guard let self else {
                     return
                 }
-                let source: BotPaymentInvoiceSource = .starGift(hideName: self.hideName, peerId: component.peerId, giftId: component.gift.id, text: self.textInputState.text.string, entities: [])
+                let entities = generateChatInputTextEntities(self.textInputState.text)
+                let source: BotPaymentInvoiceSource = .starGift(hideName: self.hideName, peerId: component.peerId, giftId: component.gift.id, text: self.textInputState.text.string, entities: entities)
                 let inputData = BotCheckoutController.InputData.fetch(context: component.context, source: source)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
@@ -264,6 +284,108 @@ final class GiftSetupScreenComponent: Component {
                     
                     self.state?.updated()
                 })
+                
+                self.inputMediaNodeDataPromise.set(
+                    ChatEntityKeyboardInputNode.inputData(
+                        context: component.context,
+                        chatPeerId: nil,
+                        areCustomEmojiEnabled: true,
+                        hasTrending: false,
+                        hasSearch: true,
+                        hasStickers: false,
+                        hasGifs: false,
+                        hideBackground: true,
+                        sendGif: nil
+                    )
+                )
+                self.inputMediaNodeDataDisposable = (self.inputMediaNodeDataPromise.get()
+                |> deliverOnMainQueue).start(next: { [weak self] value in
+                    guard let self else {
+                        return
+                    }
+                    self.inputMediaNodeData = value
+                })
+                
+                self.inputMediaInteraction = ChatEntityKeyboardInputNode.Interaction(
+                    sendSticker: { _, _, _, _, _, _, _, _, _ in
+                        return false
+                    },
+                    sendEmoji: { _, _, _ in
+                        let _ = self
+                    },
+                    sendGif: { _, _, _, _, _ in
+                        return false
+                    },
+                    sendBotContextResultAsGif: { _, _ , _, _, _, _ in
+                        return false
+                    },
+                    updateChoosingSticker: { _ in
+                    },
+                    switchToTextInput: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.currentInputMode = .keyboard
+                        self.state?.updated(transition: .spring(duration: 0.4))
+                    },
+                    dismissTextInput: {
+                    },
+                    insertText: { [weak self] text in
+                        guard let self else {
+                            return
+                        }
+                        if let textInputView = self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View {
+                            if self.textInputState.isEditing {
+                                textInputView.insertText(text: text)
+                            }
+                        }
+                    },
+                    backwardsDeleteText: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        if let textInputView = self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View {
+                            if self.textInputState.isEditing {
+                                textInputView.backwardsDeleteText()
+                            }
+                        }
+                    },
+                    openStickerEditor: {
+                    },
+                    presentController: { [weak self] c, a in
+                        guard let self else {
+                            return
+                        }
+                        self.environment?.controller()?.present(c, in: .window(.root), with: a)
+                    },
+                    presentGlobalOverlayController: { [weak self] c, a in
+                        guard let self else {
+                            return
+                        }
+                        self.environment?.controller()?.presentInGlobalOverlay(c, with: a)
+                    },
+                    getNavigationController: { [weak self] () -> NavigationController? in
+                        guard let self else {
+                            return nil
+                        }
+                        guard let controller = self.environment?.controller() as? GiftSetupScreen else {
+                            return nil
+                        }
+                        
+                        if let navigationController = controller.navigationController as? NavigationController {
+                            return navigationController
+                        }
+                        return nil
+                    },
+                    requestLayout: { [weak self] transition in
+                        guard let self else {
+                            return
+                        }
+                        if !self.isUpdating {
+                            self.state?.updated(transition: ComponentTransition(transition))
+                        }
+                    }
+                )
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -316,16 +438,7 @@ final class GiftSetupScreenComponent: Component {
             
             contentHeight += environment.navigationHeight
             contentHeight += 26.0
-            
-            self.recenterOnTag = nil
-            if let hint = transition.userData(TextFieldComponent.AnimationHint.self), let targetView = hint.view {
-                if let textView = self.introSection.findTaggedView(tag: self.textInputTag) {
-                    if targetView.isDescendant(of: textView) {
-                        self.recenterOnTag = self.textInputTag
-                    }
-                }
-            }
-            
+               
             var introSectionItems: [AnyComponentWithIdentity<Empty>] = []
             introSectionItems.append(AnyComponentWithIdentity(id: introSectionItems.count, component: AnyComponent(Rectangle(color: .clear, height: 346.0, tag: self.introPlaceholderTag))))
             introSectionItems.append(AnyComponentWithIdentity(id: introSectionItems.count, component: AnyComponent(ListMultilineTextFieldItemComponent(
@@ -337,13 +450,14 @@ final class GiftSetupScreenComponent: Component {
                 resetText: self.resetText.flatMap {
                     return ListMultilineTextFieldItemComponent.ResetText(value: $0)
                 },
-                placeholder: environment.strings.Business_Intro_IntroTextPlaceholder,
+                placeholder: "Enter Message",
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
                 returnKeyType: .done,
                 characterLimit: 255,
                 displayCharacterLimit: true,
                 emptyLineHandling: .notAllowed,
+                formatMenuAvailability: .available([.bold, .italic, .underline, .strikethrough, .spoiler]),
                 updated: { _ in
                 },
                 returnKeyAction: { [weak self] in
@@ -355,10 +469,173 @@ final class GiftSetupScreenComponent: Component {
                     }
                 },
                 textUpdateTransition: .spring(duration: 0.4),
+                inputMode: self.currentInputMode,
+                toggleInputMode: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    switch self.currentInputMode {
+                    case .keyboard:
+                        self.currentInputMode = .emoji
+                    case .emoji:
+                        self.currentInputMode = .keyboard
+                    }
+                    self.state?.updated(transition: .spring(duration: 0.4))
+                },
                 tag: self.textInputTag
             ))))
             self.resetText = nil
             
+            
+            var inputHeight: CGFloat = 0.0
+            inputHeight += self.updateInputMediaNode(
+                component: component,
+                availableSize: availableSize,
+                bottomInset: environment.safeInsets.bottom,
+                inputHeight: 0.0,
+                effectiveInputHeight: environment.deviceMetrics.standardInputHeight(inLandscape: false),
+                metrics: environment.metrics,
+                deviceMetrics: environment.deviceMetrics,
+                transition: transition
+            )
+            if self.inputMediaNode == nil {
+                if environment.inputHeight.isZero && self.textInputState.isEditing, let previousInputHeight = self.previousInputHeight {
+                    inputHeight = previousInputHeight
+                } else {
+                    inputHeight = environment.inputHeight
+                }
+            }
+                          
+            if self.textInputState.isEditing, let emojiSuggestion = self.textInputState.currentEmojiSuggestion, emojiSuggestion.disposable == nil {
+                emojiSuggestion.disposable = (EmojiSuggestionsComponent.suggestionData(context: component.context, isSavedMessages: false, query: emojiSuggestion.position.value)
+                |> deliverOnMainQueue).start(next: { [weak self, weak emojiSuggestion] result in
+                    guard let self, self.textInputState.currentEmojiSuggestion === emojiSuggestion else {
+                        return
+                    }
+                    
+                    emojiSuggestion?.value = result
+                    self.state?.updated()
+                })
+            }
+            
+            var hasTrackingView = self.textInputState.hasTrackingView
+            if let currentEmojiSuggestion = self.textInputState.currentEmojiSuggestion, let value = currentEmojiSuggestion.value as? [TelegramMediaFile], value.isEmpty {
+                hasTrackingView = false
+            }
+            if !self.textInputState.isEditing {
+                hasTrackingView = false
+            }
+            
+            if !hasTrackingView {
+                if let currentEmojiSuggestion = self.textInputState.currentEmojiSuggestion {
+                    self.textInputState.currentEmojiSuggestion = nil
+                    currentEmojiSuggestion.disposable?.dispose()
+                }
+                
+                if let currentEmojiSuggestionView = self.currentEmojiSuggestionView {
+                    self.currentEmojiSuggestionView = nil
+                    
+                    currentEmojiSuggestionView.alpha = 0.0
+                    currentEmojiSuggestionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak currentEmojiSuggestionView] _ in
+                        currentEmojiSuggestionView?.removeFromSuperview()
+                    })
+                }
+            }
+                        
+            if self.textInputState.isEditing, let emojiSuggestion = self.textInputState.currentEmojiSuggestion, let value = emojiSuggestion.value as? [TelegramMediaFile] {
+                let currentEmojiSuggestionView: ComponentHostView<Empty>
+                if let current = self.currentEmojiSuggestionView {
+                    currentEmojiSuggestionView = current
+                } else {
+                    currentEmojiSuggestionView = ComponentHostView<Empty>()
+                    self.currentEmojiSuggestionView = currentEmojiSuggestionView
+                    self.addSubview(currentEmojiSuggestionView)
+                    
+                    currentEmojiSuggestionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                }
+            
+                let globalPosition: CGPoint
+                if let textView = (self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View)?.textFieldView  {
+                    globalPosition = textView.convert(emojiSuggestion.localPosition, to: self)
+                } else {
+                    globalPosition = .zero
+                }
+                
+                let sideInset: CGFloat = 7.0
+                
+                let viewSize = currentEmojiSuggestionView.update(
+                    transition: .immediate,
+                    component: AnyComponent(EmojiSuggestionsComponent(
+                        context: component.context,
+                        userLocation: .other,
+                        theme: EmojiSuggestionsComponent.Theme(theme: environment.theme),
+                        animationCache: component.context.animationCache,
+                        animationRenderer: component.context.animationRenderer,
+                        files: value,
+                        action: { [weak self] file in
+                            guard let self, let textView = (self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View)?.textFieldView, let currentEmojiSuggestion = self.textInputState.currentEmojiSuggestion else {
+                                return
+                            }
+                            
+                            AudioServicesPlaySystemSound(0x450)
+                            
+                            let inputState = textView.getInputState()
+                            let inputText = NSMutableAttributedString(attributedString: inputState.inputText)
+                            
+                            var text: String?
+                            var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
+                            loop: for attribute in file.attributes {
+                                switch attribute {
+                                case let .CustomEmoji(_, _, displayText, _):
+                                    text = displayText
+                                    emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
+                                    break loop
+                                default:
+                                    break
+                                }
+                            }
+                            
+                            if let emojiAttribute = emojiAttribute, let text = text {
+                                let replacementText = NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute])
+                                
+                                let range = currentEmojiSuggestion.position.range
+                                let previousText = inputText.attributedSubstring(from: range)
+                                inputText.replaceCharacters(in: range, with: replacementText)
+                                
+                                var replacedUpperBound = range.lowerBound
+                                while true {
+                                    if inputText.attributedSubstring(from: NSRange(location: 0, length: replacedUpperBound)).string.hasSuffix(previousText.string) {
+                                        let replaceRange = NSRange(location: replacedUpperBound - previousText.length, length: previousText.length)
+                                        if replaceRange.location < 0 {
+                                            break
+                                        }
+                                        let adjacentString = inputText.attributedSubstring(from: replaceRange)
+                                        if adjacentString.string != previousText.string || adjacentString.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil) != nil {
+                                            break
+                                        }
+                                        inputText.replaceCharacters(in: replaceRange, with: NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: emojiAttribute.interactivelySelectedFromPackId, fileId: emojiAttribute.fileId, file: emojiAttribute.file)]))
+                                        replacedUpperBound = replaceRange.lowerBound
+                                    } else {
+                                        break
+                                    }
+                                }
+                                
+                                let selectionPosition = range.lowerBound + (replacementText.string as NSString).length
+                                textView.updateText(inputText, selectionRange: selectionPosition ..< selectionPosition)
+                            }
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                )
+                
+                let viewFrame = CGRect(origin: CGPoint(x: min(availableSize.width - sideInset - viewSize.width, max(sideInset, floor(globalPosition.x - viewSize.width / 2.0))), y: globalPosition.y - 4.0 - viewSize.height), size: viewSize)
+                currentEmojiSuggestionView.frame = viewFrame
+                if let componentView = currentEmojiSuggestionView.componentView as? EmojiSuggestionsComponent.View {
+                    componentView.adjustBackground(relativePositionX: floor(globalPosition.x + 10.0))
+                }
+            }
+
             let introSectionSize = self.introSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
@@ -387,64 +664,44 @@ final class GiftSetupScreenComponent: Component {
             }
             contentHeight += introSectionSize.height
             contentHeight += sectionSpacing
-            
-//            let titleText: String
-//            if self.titleInputState.text.string.isEmpty {
-//                titleText = environment.strings.Conversation_EmptyPlaceholder
-//            } else {
-//                let rawTitle = self.titleInputState.text.string
-//                titleText = rawTitle.count <= maxTitleLength ? rawTitle : String(rawTitle[rawTitle.startIndex ..< rawTitle.index(rawTitle.startIndex, offsetBy: maxTitleLength)])
-//            }
-            
-//            let textText: String
-//            if self.textInputState.text.string.isEmpty {
-//                textText = environment.strings.Conversation_GreetingText
-//            } else {
-//                let rawText = self.textInputState.text.string
-//                textText = rawText.count <= maxTextLength ? rawText : String(rawText[rawText.startIndex ..< rawText.index(rawText.startIndex, offsetBy: maxTextLength)])
-//            }
-            
+                        
             let listItemParams = ListViewItemLayoutParams(width: availableSize.width - sideInset * 2.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
-            let introContentSize = self.introContent.update(
-                transition: transition,
-                component: AnyComponent(
-                    ListItemComponentAdaptor(
-                        itemGenerator: ChatGiftPreviewItem(
-                            context: component.context,
-                            theme: environment.theme,
-                            componentTheme: environment.theme,
-                            strings: environment.strings,
-                            sectionId: 0,
-                            fontSize: presentationData.chatFontSize,
-                            chatBubbleCorners: presentationData.chatBubbleCorners,
-                            wallpaper: presentationData.chatWallpaper,
-                            dateTimeFormat: environment.dateTimeFormat,
-                            nameDisplayOrder: presentationData.nameDisplayOrder,
-                            accountPeer: self.peerMap[component.context.account.peerId],
-                            gift: component.gift,
-                            text: self.textInputState.text.string
-                        ),
-                        params: listItemParams
-                    )
-                ),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
-            )
-            if let introContentView = self.introContent.view {
-                if introContentView.superview == nil {
-                    if let placeholderView = self.introSection.findTaggedView(tag: self.introPlaceholderTag) {
-                        placeholderView.addSubview(introContentView)
+            if let accountPeer = self.peerMap[component.context.account.peerId] {
+                let introContentSize = self.introContent.update(
+                    transition: transition,
+                    component: AnyComponent(
+                        ListItemComponentAdaptor(
+                            itemGenerator: ChatGiftPreviewItem(
+                                context: component.context,
+                                theme: environment.theme,
+                                componentTheme: environment.theme,
+                                strings: environment.strings,
+                                sectionId: 0,
+                                fontSize: presentationData.chatFontSize,
+                                chatBubbleCorners: presentationData.chatBubbleCorners,
+                                wallpaper: presentationData.chatWallpaper,
+                                dateTimeFormat: environment.dateTimeFormat,
+                                nameDisplayOrder: presentationData.nameDisplayOrder,
+                                accountPeer: accountPeer,
+                                gift: component.gift,
+                                text: self.textInputState.text.string,
+                                entities: generateChatInputTextEntities(self.textInputState.text)
+                            ),
+                            params: listItemParams
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                )
+                if let introContentView = self.introContent.view {
+                    if introContentView.superview == nil {
+                        if let placeholderView = self.introSection.findTaggedView(tag: self.introPlaceholderTag) {
+                            placeholderView.addSubview(introContentView)
+                        }
                     }
-                }
-                transition.setFrame(view: introContentView, frame: CGRect(origin: CGPoint(), size: introContentSize))
-            }
-            
-            if self.recenterOnTag == nil && self.previousHadInputHeight != (environment.inputHeight > 0.0) {
-                if self.textInputState.isEditing {
-                    self.recenterOnTag = self.textInputTag
+                    transition.setFrame(view: introContentView, frame: CGRect(origin: CGPoint(), size: introContentSize))
                 }
             }
-            self.previousHadInputHeight = environment.inputHeight > 0.0
     
             let peerName = self.peerMap[component.peerId]?.compactDisplayTitle ?? ""
             let hideSectionSize = self.hideSection.update(
@@ -498,10 +755,8 @@ final class GiftSetupScreenComponent: Component {
             
             contentHeight += bottomContentInset
             
-            let inputHeight: CGFloat = environment.inputHeight
             let combinedBottomInset = max(inputHeight, environment.safeInsets.bottom)
             contentHeight += combinedBottomInset
-            
             
             if self.starImage == nil || self.starImage?.1 !== environment.theme {
                 self.starImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: environment.theme.list.itemCheckColors.foregroundColor)!, environment.theme)
@@ -544,6 +799,22 @@ final class GiftSetupScreenComponent: Component {
             }
             
             let previousBounds = self.scrollView.bounds
+            
+            self.recenterOnTag = nil
+            if let hint = transition.userData(TextFieldComponent.AnimationHint.self), let targetView = hint.view {
+                if let textView = self.introSection.findTaggedView(tag: self.textInputTag) {
+                    if targetView.isDescendant(of: textView) {
+                        self.recenterOnTag = self.textInputTag
+                    }
+                }
+            }
+            if self.recenterOnTag == nil && self.previousHadInputHeight != (environment.inputHeight > 0.0) {
+                if self.textInputState.isEditing {
+                    self.recenterOnTag = self.textInputTag
+                }
+            }
+            self.previousHadInputHeight = inputHeight > 0.0
+            self.previousInputHeight = inputHeight
             
             self.ignoreScrolling = true
             let contentSize = CGSize(width: availableSize.width, height: contentHeight)
@@ -591,6 +862,152 @@ final class GiftSetupScreenComponent: Component {
             self.updateScrolling(transition: transition)
             
             return availableSize
+        }
+        
+        private func updateInputMediaNode(
+            component: GiftSetupScreenComponent,
+            availableSize: CGSize,
+            bottomInset: CGFloat,
+            inputHeight: CGFloat,
+            effectiveInputHeight: CGFloat,
+            metrics: LayoutMetrics,
+            deviceMetrics: DeviceMetrics,
+            transition: ComponentTransition
+        ) -> CGFloat {
+            let bottomInset: CGFloat = bottomInset + 8.0
+            let bottomContainerInset: CGFloat = 0.0
+            let needsInputActivation: Bool = !"".isEmpty
+            
+            var height: CGFloat = 0.0
+            if case .emoji = self.currentInputMode, let inputData = self.inputMediaNodeData {
+                let inputMediaNode: ChatEntityKeyboardInputNode
+                var inputMediaNodeTransition = transition
+                var animateIn = false
+                if let current = self.inputMediaNode {
+                    inputMediaNode = current
+                } else {
+                    animateIn = true
+                    inputMediaNodeTransition = inputMediaNodeTransition.withAnimation(.none)
+                    inputMediaNode = ChatEntityKeyboardInputNode(
+                        context: component.context,
+                        currentInputData: inputData,
+                        updatedInputData: self.inputMediaNodeDataPromise.get(),
+                        defaultToEmojiTab: true,
+                        opaqueTopPanelBackground: false,
+                        useOpaqueTheme: true,
+                        interaction: self.inputMediaInteraction,
+                        chatPeerId: nil,
+                        stateContext: self.inputMediaNodeStateContext
+                    )
+                    inputMediaNode.clipsToBounds = true
+                    
+                    inputMediaNode.externalTopPanelContainerImpl = nil
+                    inputMediaNode.useExternalSearchContainer = true
+                    if inputMediaNode.view.superview == nil {
+                        self.inputMediaNodeBackground.removeAllAnimations()
+                        self.layer.addSublayer(self.inputMediaNodeBackground)
+                        self.addSubview(inputMediaNode.view)
+                    }
+                    self.inputMediaNode = inputMediaNode
+                }
+                
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                let presentationInterfaceState = ChatPresentationInterfaceState(
+                    chatWallpaper: .builtin(WallpaperSettings()),
+                    theme: presentationData.theme,
+                    strings: presentationData.strings,
+                    dateTimeFormat: presentationData.dateTimeFormat,
+                    nameDisplayOrder: presentationData.nameDisplayOrder,
+                    limitsConfiguration: component.context.currentLimitsConfiguration.with { $0 },
+                    fontSize: presentationData.chatFontSize,
+                    bubbleCorners: presentationData.chatBubbleCorners,
+                    accountPeerId: component.context.account.peerId,
+                    mode: .standard(.default),
+                    chatLocation: .peer(id: component.context.account.peerId),
+                    subject: nil,
+                    peerNearbyData: nil,
+                    greetingData: nil,
+                    pendingUnpinnedAllMessages: false,
+                    activeGroupCallInfo: nil,
+                    hasActiveGroupCall: false,
+                    importState: nil,
+                    threadData: nil,
+                    isGeneralThreadClosed: nil,
+                    replyMessage: nil,
+                    accountPeerColor: nil,
+                    businessIntro: nil
+                )
+                
+                self.inputMediaNodeBackground.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.cgColor
+                
+                let heightAndOverflow = inputMediaNode.updateLayout(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, bottomInset: bottomInset, standardInputHeight: deviceMetrics.standardInputHeight(inLandscape: false), inputHeight: inputHeight < 100.0 ? inputHeight - bottomContainerInset : inputHeight, maximumHeight: availableSize.height, inputPanelHeight: 0.0, transition: .immediate, interfaceState: presentationInterfaceState, layoutMetrics: metrics, deviceMetrics: deviceMetrics, isVisible: true, isExpanded: false)
+                let inputNodeHeight = heightAndOverflow.0
+                let inputNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputNodeHeight), size: CGSize(width: availableSize.width, height: inputNodeHeight))
+                
+                let inputNodeBackgroundFrame = CGRect(origin: CGPoint(x: inputNodeFrame.minX, y: inputNodeFrame.minY - 6.0), size: CGSize(width: inputNodeFrame.width, height: inputNodeFrame.height + 6.0))
+                
+                if needsInputActivation {
+                    let inputNodeFrame = inputNodeFrame.offsetBy(dx: 0.0, dy: inputNodeHeight)
+                    ComponentTransition.immediate.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+                    ComponentTransition.immediate.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeBackgroundFrame)
+                }
+                
+                if animateIn {
+                    var targetFrame = inputNodeFrame
+                    targetFrame.origin.y = availableSize.height
+                    inputMediaNodeTransition.setFrame(layer: inputMediaNode.layer, frame: targetFrame)
+                    
+                    let inputNodeBackgroundTargetFrame = CGRect(origin: CGPoint(x: targetFrame.minX, y: targetFrame.minY - 6.0), size: CGSize(width: targetFrame.width, height: targetFrame.height + 6.0))
+                    
+                    inputMediaNodeTransition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeBackgroundTargetFrame)
+                    
+                    transition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+                    transition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeBackgroundFrame)
+                } else {
+                    inputMediaNodeTransition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+                    inputMediaNodeTransition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeBackgroundFrame)
+                }
+                
+                height = heightAndOverflow.0
+            } else {
+                self.inputMediaNodeTargetTag = nil
+                
+                if let inputMediaNode = self.inputMediaNode {
+                    self.inputMediaNode = nil
+                    var targetFrame = inputMediaNode.frame
+                    targetFrame.origin.y = availableSize.height
+                    transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
+                        if let inputMediaNode {
+                            Queue.mainQueue().after(0.3) {
+                                inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
+                                    inputMediaNode?.view.removeFromSuperview()
+                                })
+                            }
+                        }
+                    })
+                    transition.setFrame(layer: self.inputMediaNodeBackground, frame: targetFrame, completion: { [weak self] _ in
+                        Queue.mainQueue().after(0.3) {
+                            guard let self else {
+                                return
+                            }
+                            if self.currentInputMode == .keyboard {
+                                self.inputMediaNodeBackground.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak self] finished in
+                                    guard let self else {
+                                        return
+                                    }
+                                    
+                                    if finished {
+                                        self.inputMediaNodeBackground.removeFromSuperlayer()
+                                    }
+                                    self.inputMediaNodeBackground.removeAllAnimations()
+                                })
+                            }
+                        }
+                    })
+                }
+            }
+                        
+            return height
         }
     }
     
