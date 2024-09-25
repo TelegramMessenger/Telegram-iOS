@@ -588,19 +588,17 @@ extension ChatControllerImpl {
                         strongSelf.controllerNavigationDisposable.set(nil)
                     }
                 case .gift:
-                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer, let starsContext = context.starsContext {
                         let premiumGiftOptions = strongSelf.presentationInterfaceState.premiumGiftOptions
                         if !premiumGiftOptions.isEmpty {
-                            let controller = PremiumGiftAttachmentScreen(context: context, peerIds: [peer.id], options: premiumGiftOptions, source: .attachMenu, pushController: { [weak self] c in
-                                if let strongSelf = self {
-                                    strongSelf.push(c)
+                            let controller = PremiumGiftAttachmentScreen(context: context, starsContext: starsContext, peerId: peer.id, premiumOptions: premiumGiftOptions, completion: { [weak self] in
+                                guard let self else {
+                                    return
                                 }
-                            }, completion: { [weak self] in
-                                if let strongSelf = self {
-                                    strongSelf.hintPlayNextOutgoingGift()
-                                    strongSelf.attachmentController?.dismiss(animated: true)
-                                }
+                                self.hintPlayNextOutgoingGift()
+                                self.attachmentController?.dismiss(animated: true)
                             })
+                                                        
                             completion(controller, controller.mediaPickerContext)
                             strongSelf.controllerNavigationDisposable.set(nil)
                             

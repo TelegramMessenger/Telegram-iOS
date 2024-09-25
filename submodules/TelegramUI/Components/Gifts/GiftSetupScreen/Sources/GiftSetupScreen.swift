@@ -341,7 +341,7 @@ final class GiftSetupScreenComponent: Component {
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
                 returnKeyType: .done,
-                characterLimit: 70,
+                characterLimit: 255,
                 displayCharacterLimit: true,
                 emptyLineHandling: .notAllowed,
                 updated: { _ in

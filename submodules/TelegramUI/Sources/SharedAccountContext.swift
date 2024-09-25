@@ -2277,17 +2277,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
         var presentBirthdayPickerImpl: (() -> Void)?
-        var starsMode: ContactSelectionControllerMode = .generic
+        var mode: ContactSelectionControllerMode = .generic
         var currentBirthdays: [EnginePeer.Id: TelegramBirthday]?
         
         if case let .chatList(birthdays) = source, let birthdays, !birthdays.isEmpty {
-            starsMode = .starsGifting(birthdays: birthdays, hasActions: true)
+            mode = .starsGifting(birthdays: birthdays, hasActions: true)
             currentBirthdays = birthdays
         } else if case let .settings(birthdays) = source, let birthdays, !birthdays.isEmpty {
-            starsMode = .starsGifting(birthdays: birthdays, hasActions: true)
+            mode = .starsGifting(birthdays: birthdays, hasActions: true)
             currentBirthdays = birthdays
         } else {
-            starsMode = .starsGifting(birthdays: nil, hasActions: true)
+            mode = .starsGifting(birthdays: nil, hasActions: true)
         }
         
         let contactOptions: Signal<[ContactListAdditionalOption], NoError>
@@ -2320,7 +2320,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         options.set(context.engine.payments.premiumGiftCodeOptions(peerId: nil))
         let controller = context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(
             context: context,
-            mode: starsMode,
+            mode: mode,
             autoDismiss: false,
             title: { strings in return "Gift Premium or Stars" },
             options: contactOptions,
@@ -2331,15 +2331,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 sendMessageImpl?(peer)
             }
         ))
-        let _ = combineLatest(queue: Queue.mainQueue(), contactsController.result, options.get())
+        let _ = combineLatest(queue: Queue.mainQueue(), controller.result, options.get())
         .startStandalone(next: { [weak controller] result, options in
             if let (peers, _, _, _, _, _) = result, let contactPeer = peers.first, case let .peer(peer, _, _) = contactPeer, let starsContext = context.starsContext {
                 let premiumOptions = options.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
                 let giftController = GiftOptionsScreen(context: context, starsContext: starsContext, peerId: peer.id, premiumOptions: premiumOptions)
                 giftController.navigationPresentation = .modal
                 controller?.push(giftController)
-                
-//                    completion?([peer.id])
                 
                 if case .chatList = source, let _ = currentBirthdays {
                     let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .todayBirthdays).startStandalone()
