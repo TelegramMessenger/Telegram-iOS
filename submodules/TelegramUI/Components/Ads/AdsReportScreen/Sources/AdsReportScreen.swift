@@ -228,7 +228,8 @@ private final class SheetPageContent: CombinedComponent {
                             component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.ReportAd_Help_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
                         }
                     )),
-                    items: items
+                    items: items,
+                    isModal: true
                 ),
                 environment: {},
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),

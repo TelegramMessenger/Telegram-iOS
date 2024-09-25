@@ -87,6 +87,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             guard let self else {
                 return
             }
+            let isFirstTime = starsProducts == nil
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             self.statusPromise.set(.single(PeerInfoStatusData(text: presentationData.strings.SharedMedia_GiftCount(state.count ?? 0), isActivity: true, key: .gifts)))
             self.starsProducts = state.gifts
@@ -96,7 +97,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 self.ready.set(.single(true))
             }
             
-            self.updateScrolling()
+            self.updateScrolling(transition: isFirstTime ? .immediate : .easeInOut(duration: 0.25))
         })
     }
     
@@ -119,10 +120,10 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        self.updateScrolling()
+        self.updateScrolling(transition: .immediate)
     }
     
-    func updateScrolling() {
+    func updateScrolling(transition: ComponentTransition) {
         if let starsProducts = self.starsProducts, let params = self.currentParams {
             let optionSpacing: CGFloat = 10.0
             let sideInset = params.sideInset + 16.0
@@ -140,13 +141,14 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 let itemId = AnyHashable(product.date)
                 validIds.append(itemId)
                 
-                let itemTransition = ComponentTransition.immediate
+                var itemTransition = transition
                 let visibleItem: ComponentView<Empty>
                 if let current = self.starsItems[itemId] {
                     visibleItem = current
                 } else {
                     visibleItem = ComponentView()
                     self.starsItems[itemId] = visibleItem
+                    itemTransition = .immediate
                 }
                 
                 var isVisible = false
@@ -219,6 +221,26 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     itemFrame.origin.x = sideInset
                     itemFrame.origin.y += starsOptionSize.height + optionSpacing
                 }
+            }
+            
+            var removeIds: [AnyHashable] = []
+            for (id, item) in self.starsItems {
+                if !validIds.contains(id) {
+                    removeIds.append(id)
+                    if let itemView = item.view {
+                        if !transition.animation.isImmediate {
+                            itemView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.25, removeOnCompletion: false)
+                            itemView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                                itemView.removeFromSuperview()
+                            })
+                        } else {
+                            itemView.removeFromSuperview()
+                        }
+                    }
+                }
+            }
+            for id in removeIds {
+                self.starsItems.removeValue(forKey: id)
             }
             
             var contentHeight = ceil(CGFloat(starsProducts.count) / 3.0) * starsOptionSize.height + 60.0 + 16.0
@@ -354,7 +376,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         }
         self.scrollNode.view.isScrollEnabled = !isScrollingLockedAtTop
         
-        self.updateScrolling()
+        self.updateScrolling(transition: ComponentTransition(transition))
     }
     
     public func findLoadedMessage(id: MessageId) -> Message? {

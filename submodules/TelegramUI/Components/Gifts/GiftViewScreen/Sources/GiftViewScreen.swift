@@ -82,7 +82,10 @@ private final class GiftViewSheetContent: CombinedComponent {
             super.init()
             
             if let arguments = subject.arguments {
-                let peerIds: [EnginePeer.Id] = [arguments.peerId, context.account.peerId]
+                var peerIds: [EnginePeer.Id] = [arguments.peerId, context.account.peerId]
+                if let fromPeerId = arguments.fromPeerId {
+                    peerIds.append(fromPeerId)
+                }
                 self.disposable = (context.engine.data.get(
                     EngineDataMap(
                         peerIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.Peer in
@@ -204,7 +207,11 @@ private final class GiftViewSheetContent: CombinedComponent {
                     descriptionText = "You converted this gift to \(convertStars) Stars. [More About Stars >]()"
                 }
             } else if let peerId = component.subject.arguments?.peerId, let peer = state.peerMap[peerId] {
-                descriptionText = "\(peer.compactDisplayTitle) can keep this gift in their Profile or convert it to \(convertStars) Stars. [More About Stars >]()"
+                if case .message = component.subject {
+                    descriptionText = "\(peer.compactDisplayTitle) can keep this gift in their Profile or convert it to \(convertStars) Stars. [More About Stars >]()"
+                } else {
+                    descriptionText = ""
+                }
             } else {
                 descriptionText = ""
             }
@@ -273,10 +280,10 @@ private final class GiftViewSheetContent: CombinedComponent {
             let tableLinkColor = theme.list.itemAccentColor
             var tableItems: [TableComponent.Item] = []
                         
-            if let peerId = component.subject.arguments?.peerId, let peer = state.peerMap[peerId] {
+            if let peerId = component.subject.arguments?.fromPeerId, let peer = state.peerMap[peerId] {
                 tableItems.append(.init(
-                    id: "to",
-                    title: incoming ? strings.Stars_Transaction_From : strings.Stars_Transaction_To,
+                    id: "from",
+                    title: strings.Stars_Transaction_From,
                     component: AnyComponent(
                         Button(
                             content: AnyComponent(
@@ -287,24 +294,24 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 )
                             ),
                             action: {
-                                if "".isEmpty {
-                                    component.openPeer(peer)
-                                    Queue.mainQueue().after(1.0, {
-                                        component.cancel(false)
-                                    })
-                                } else {
+//                                if "".isEmpty {
+//                                    component.openPeer(peer)
+//                                    Queue.mainQueue().after(1.0, {
+//                                        component.cancel(false)
+//                                    })
+//                                } else {
                                     if let controller = controller() as? GiftViewScreen, let navigationController = controller.navigationController, let chatController = navigationController.viewControllers.first(where: { $0 is ChatController }) as? ChatController {
                                         chatController.playShakeAnimation()
                                     }
                                     component.cancel(true)
-                                }
+//                                }
                             }
                         )
                     )
                 ))
             } else {
                 tableItems.append(.init(
-                    id: "from",
+                    id: "from_anon",
                     title: strings.Stars_Transaction_From,
                     component: AnyComponent(
                         PeerCellComponent(
@@ -430,6 +437,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: descriptionOrigin + description.size.height / 2.0))
                 )
                 originY += description.size.height + 10.0
+            } else {
+                originY += 11.0
             }
             
             let amountSpacing: CGFloat = 1.0
@@ -439,7 +448,11 @@ private final class GiftViewSheetContent: CombinedComponent {
             var amountOrigin = originY
             if "".isEmpty {
                 amountOrigin -= descriptionSize.height + 10.0
-                originY += amount.size.height + 26.0
+                if descriptionSize.height > 0 {
+                    originY += amount.size.height + 26.0
+                } else {
+                    originY += amount.size.height + 2.0
+                }
             } else {
                 originY += amount.size.height + 20.0
             }
@@ -696,14 +709,14 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         case message(EngineMessage)
         case profileGift(EnginePeer.Id, ProfileGiftsContext.State.StarGift)
         
-        var arguments: (peerId: EnginePeer.Id, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, convertStars: Int64, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool)? {
+        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, convertStars: Int64, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool)? {
             switch self {
             case let .message(message):
                 if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted) = action.action {
-                    return (message.id.peerId, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, convertStars, text, entities, nameHidden, savedToProfile, converted)
+                    return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, convertStars, text, entities, nameHidden, savedToProfile, converted)
                 }
             case let .profileGift(peerId, gift):
-                return (peerId, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.convertStars ?? 0, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false)
+                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.convertStars ?? 0, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false)
             }
             return nil
         }
@@ -792,9 +805,25 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                             presentationData: presentationData,
                             content: .sticker(context: context, file: arguments.gift.file, loop: false, title: added ? "Gift Saved to Profile" : "Gift Removed from Profile", text: added ? "The gift is now displayed in [your profile]()." : "The gift is no longer displayed in [your profile]().", undoText: nil, customAction: nil),
                             elevatedLayout: lastController is ChatController,
-                            action: { action in
-                                if case .info = action {
-                                    
+                            action: { [weak navigationController] action in
+                                if case .info = action, let navigationController {
+                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                                    |> deliverOnMainQueue).start(next: { [weak navigationController] peer in
+                                        guard let peer, let navigationController else {
+                                            return
+                                        }
+                                        if let controller = context.sharedContext.makePeerInfoController(
+                                            context: context,
+                                            updatedPresentationData: nil,
+                                            peer: peer._asPeer(),
+                                            mode: .myProfileGifts,
+                                            avatarInitiallyExpanded: false,
+                                            fromChat: false,
+                                            requestsContext: nil
+                                        ) {
+                                            navigationController.pushViewController(controller, animated: true)
+                                        }
+                                    })
                                 }
                                 return true
                             }
@@ -823,8 +852,12 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                             |> deliverOnMainQueue).startStandalone()
                         }
                         self?.dismissAnimated()
-                        
+                                                
                         if let navigationController {
+                            if let starsContext = context.starsContext {
+                                navigationController.pushViewController(context.sharedContext.makeStarsTransactionsScreen(context: context, starsContext: starsContext), animated: true)
+                            }
+                            
                             Queue.mainQueue().after(0.5) {
                                 if let lastController = navigationController.viewControllers.last as? ViewController {
                                     let resultController = UndoOverlayController(

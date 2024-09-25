@@ -191,7 +191,7 @@ func _internal_keepCachedStarGiftsUpdated(postbox: Postbox, network: Network) ->
 
 func managedStarGiftsUpdates(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
     let poll = _internal_keepCachedStarGiftsUpdated(postbox: postbox, network: network)
-    return (poll |> then(.complete() |> suspendAwareDelay(2.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+    return (poll |> then(.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
 
 func _internal_convertStarGift(account: Account, messageId: EngineMessage.Id) -> Signal<Never, NoError> {

@@ -332,6 +332,9 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                         case let .starGift(gift, convertStars, giftText, entities, nameHidden, savedToProfile, converted):
                             let _ = nameHidden
                             //TODO:localize
+                            if !incoming {
+                                buttonTitle = ""
+                            }
                             let authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
                             title = "Gift from \(authorName)"
                             if let giftText, !giftText.isEmpty {
@@ -397,8 +400,11 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: buttonTitle, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
                 let (ribbonTextLayout, ribbonTextApply) = makeRibbonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: ribbonTitle, font: Font.semibold(11.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
-            
-                giftSize.height = titleLayout.size.height + textSpacing + subtitleLayout.size.height + 212.0
+
+                giftSize.height = titleLayout.size.height + textSpacing + subtitleLayout.size.height + 164.0
+                if !buttonTitle.isEmpty {
+                    giftSize.height += 48.0
+                }
                 
                 var labelRects = labelLayout.linesRects()
                 if labelRects.count > 1 {
@@ -458,6 +464,9 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             let animationFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - iconSize.width) / 2.0), y: mediaBackgroundFrame.minY - 16.0 + iconOffset), size: iconSize)
                             strongSelf.animationNode.frame = animationFrame
                             
+                            strongSelf.buttonNode.isHidden = buttonTitle.isEmpty
+                            strongSelf.buttonTitleNode.isHidden = buttonTitle.isEmpty
+                        
                             if strongSelf.item == nil {
                                 strongSelf.animationNode.started = { [weak self] in
                                     if let strongSelf = self {

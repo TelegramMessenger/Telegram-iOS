@@ -162,7 +162,7 @@ private final class SheetPageContent: CombinedComponent {
                 transition: .immediate
             )
             context.add(back
-                .position(CGPoint(x: sideInset + back.size.width / 2.0 - (component.title != nil ? 8.0 : 0.0), y: contentSize.height + back.size.height / 2.0))
+                .position(CGPoint(x: sideInset + back.size.width / 2.0 - (!component.isFirst ? 8.0 : 0.0), y: contentSize.height + back.size.height / 2.0))
             )
             
             let constrainedTitleWidth = context.availableSize.width - (back.size.width + 16.0) * 2.0
@@ -280,7 +280,8 @@ private final class SheetPageContent: CombinedComponent {
                         maximumNumberOfLines: 0
                     )),
                     footer: footer,
-                    items: items
+                    items: items,
+                    isModal: true
                 ),
                 environment: {},
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
@@ -696,12 +697,10 @@ public final class ContentReportScreen: ViewControllerComponentContainer {
             
             switch result {
             case .reported:
-                Queue.mainQueue().after(0.1) {
-                    completed()
-                }
-                
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 Queue.mainQueue().after(0.4, {
+                    completed()
+                    
                     (navigationController?.viewControllers.last as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .emoji(name: "PoliceCar", text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return true }), in: .current)
                 })
             }
