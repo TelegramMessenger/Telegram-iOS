@@ -28,6 +28,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
     let accountPeer: EnginePeer?
     let gift: StarGift
     let text: String
+    let entities: [MessageTextEntity]
     
     init(
         context: AccountContext,
@@ -42,7 +43,8 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         nameDisplayOrder: PresentationPersonNameOrder,
         accountPeer: EnginePeer?,
         gift: StarGift,
-        text: String
+        text: String,
+        entities: [MessageTextEntity]
     ) {
         self.context = context
         self.theme = theme
@@ -57,6 +59,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         self.accountPeer = accountPeer
         self.gift = gift
         self.text = text
+        self.entities = entities
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -130,6 +133,9 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         if lhs.text != rhs.text {
             return false
         }
+        if lhs.entities != rhs.entities {
+            return false
+        }
         return true
     }
 }
@@ -201,7 +207,7 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                 peers[authorPeerId] = item.accountPeer?._asPeer()
                 
                 let media: [Media] = [
-                    TelegramMediaAction(action: .starGift(gift: item.gift, convertStars: item.gift.convertStars, text: item.text, entities: [], nameHidden: false, savedToProfile: false, converted: false))
+                    TelegramMediaAction(action: .starGift(gift: item.gift, convertStars: item.gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false))
                 ]
                 let message = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[authorPeerId], text: "", attributes: [], media: media, peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                 items.append(item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [message], theme: item.componentTheme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false))
@@ -221,21 +227,21 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                         itemNode.insets = layout.insets
                         itemNode.frame = nodeFrame
                         itemNode.isUserInteractionEnabled = false
+                        itemNode.visibility = .visible(1.0, .infinite)
                         
-                        Queue.mainQueue().after(0.01) {
-                            apply(ListViewItemApply(isOnScreen: true))
-                        }
+                        apply(ListViewItemApply(isOnScreen: true))
                     })
                 }
             } else {
                 var messageNodes: [ListViewItemNode] = []
                 for i in 0 ..< items.count {
                     var itemNode: ListViewItemNode?
-                    items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                    items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: true, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], completion: { node, apply in
                         itemNode = node
                         apply().1(ListViewItemApply(isOnScreen: true))
                     })
                     itemNode!.isUserInteractionEnabled = false
+                    itemNode?.visibility = .visible(1.0, .infinite)
                     messageNodes.append(itemNode!)
                     
                     self.initialBubbleHeight = itemNode?.frame.height

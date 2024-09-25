@@ -524,7 +524,7 @@ private func sendUploadedMessageContent(
     |> switchToLatest
 }
 
-public func standaloneSendMessage(account: Account, peerId: PeerId, text: String, attributes: [MessageAttribute], media: StandaloneMedia?, replyToMessageId: MessageId?) -> Signal<Float, StandaloneSendMessageError> {
+public func standaloneSendMessage(account: Account, peerId: PeerId, text: String, attributes: [MessageAttribute], media: StandaloneMedia?, replyToMessageId: MessageId?, threadId: Int32? = nil) -> Signal<Float, StandaloneSendMessageError> {
     let content: Signal<StandaloneSendMessageEvent, StandaloneSendMessageError>
     if let media = media {
         switch media {
@@ -561,14 +561,14 @@ public func standaloneSendMessage(account: Account, peerId: PeerId, text: String
                 case let .progress(progress):
                     return .single(progress)
                 case let .result(result):
-                    let sendContent = sendMessageContent(account: account, peerId: peerId, attributes: attributes, content: result) |> map({ _ -> Float in return 1.0 })
+                let sendContent = sendMessageContent(account: account, peerId: peerId, attributes: attributes, content: result, threadId: threadId) |> map({ _ -> Float in return 1.0 })
                     return .single(1.0) |> then(sendContent |> mapError { _ -> StandaloneSendMessageError in })
                 
             }
         }
 }
 
-private func sendMessageContent(account: Account, peerId: PeerId, attributes: [MessageAttribute], content: StandaloneMessageContent) -> Signal<Void, NoError> {
+private func sendMessageContent(account: Account, peerId: PeerId, attributes: [MessageAttribute], content: StandaloneMessageContent, threadId: Int32?) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if peerId.namespace == Namespaces.Peer.SecretChat {
             return .complete()
@@ -631,9 +631,12 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                             flags |= 1 << 0
                             replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
                         }
+                    } else if let threadId {
+                        flags |= 1 << 0
+                        replyTo = .inputReplyToMessage(flags: flags, replyToMsgId: threadId, topMsgId: threadId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
                     }
                 
-                    sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil))
+                sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil))
                     |> `catch` { _ -> Signal<Api.Updates, NoError> in
                         return .complete()
                     }
@@ -649,6 +652,9 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                             flags |= 1 << 0
                             replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
                         }
+                    } else if let threadId {
+                        flags |= 1 << 0
+                        replyTo = .inputReplyToMessage(flags: flags, replyToMsgId: threadId, topMsgId: threadId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
                     }
                 
                 sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil))

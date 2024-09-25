@@ -1011,14 +1011,15 @@ final class GiftOptionsScreenComponent: Component {
     }
 }
 
-public final class GiftOptionsScreen: ViewControllerComponentContainer, GiftOptionsScreenProtocol {
+open class GiftOptionsScreen: ViewControllerComponentContainer, GiftOptionsScreenProtocol {
     private let context: AccountContext
     
     public init(
         context: AccountContext,
         starsContext: StarsContext,
         peerId: EnginePeer.Id,
-        premiumOptions: [CachedPremiumGiftOption]
+        premiumOptions: [CachedPremiumGiftOption],
+        completion: @escaping () -> Void = {}
     ) {
         self.context = context
         

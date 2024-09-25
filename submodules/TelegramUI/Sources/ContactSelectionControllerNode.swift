@@ -41,6 +41,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     var requestMultipleAction: ((_ silent: Bool, _ scheduleTime: Int32?, _ parameters: ChatSendMessageActionSheetController.SendParameters?) -> Void)?
     var dismiss: (() -> Void)?
     var cancelSearch: (() -> Void)?
+    var openPeerMore: ((ContactListPeer, ASDisplayNode?, ContextGesture?) -> Void)?
     
     var presentationData: PresentationData {
         didSet {

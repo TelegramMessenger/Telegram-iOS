@@ -41,17 +41,20 @@ public final class ListSectionContentView: UIView {
     
     public final class Configuration {
         public let theme: PresentationTheme
+        public let isModal: Bool
         public let displaySeparators: Bool
         public let extendsItemHighlightToSection: Bool
         public let background: ListSectionComponent.Background
         
         public init(
             theme: PresentationTheme,
+            isModal: Bool = false,
             displaySeparators: Bool,
             extendsItemHighlightToSection: Bool,
             background: ListSectionComponent.Background
         ) {
             self.theme = theme
+            self.isModal = isModal
             self.displaySeparators = displaySeparators
             self.extendsItemHighlightToSection = extendsItemHighlightToSection
             self.background = background
@@ -116,7 +119,7 @@ public final class ListSectionContentView: UIView {
                 backgroundColor = configuration.theme.list.itemHighlightedBackgroundColor
             } else {
                 transition = .easeInOut(duration: 0.2)
-                backgroundColor = configuration.theme.list.itemBlocksBackgroundColor
+                backgroundColor = configuration.isModal ? configuration.theme.list.itemModalBlocksBackgroundColor : configuration.theme.list.itemBlocksBackgroundColor
             }
             
             self.externalContentBackgroundView.updateColor(color: backgroundColor, transition: transition)
@@ -144,7 +147,7 @@ public final class ListSectionContentView: UIView {
         if self.highlightedItemId != nil && configuration.extendsItemHighlightToSection {
             backgroundColor = configuration.theme.list.itemHighlightedBackgroundColor
         } else {
-            backgroundColor = configuration.theme.list.itemBlocksBackgroundColor
+            backgroundColor = configuration.isModal ? configuration.theme.list.itemModalBlocksBackgroundColor : configuration.theme.list.itemBlocksBackgroundColor
         }
         self.externalContentBackgroundView.updateColor(color: backgroundColor, transition: transition)
         
@@ -305,6 +308,7 @@ public final class ListSectionComponent: Component {
     public let header: AnyComponent<Empty>?
     public let footer: AnyComponent<Empty>?
     public let items: [AnyComponentWithIdentity<Empty>]
+    public let isModal: Bool
     public let displaySeparators: Bool
     public let extendsItemHighlightToSection: Bool
     
@@ -314,6 +318,7 @@ public final class ListSectionComponent: Component {
         header: AnyComponent<Empty>?,
         footer: AnyComponent<Empty>?,
         items: [AnyComponentWithIdentity<Empty>],
+        isModal: Bool = false,
         displaySeparators: Bool = true,
         extendsItemHighlightToSection: Bool = false
     ) {
@@ -322,6 +327,7 @@ public final class ListSectionComponent: Component {
         self.header = header
         self.footer = footer
         self.items = items
+        self.isModal = isModal
         self.displaySeparators = displaySeparators
         self.extendsItemHighlightToSection = extendsItemHighlightToSection
     }
@@ -340,6 +346,9 @@ public final class ListSectionComponent: Component {
             return false
         }
         if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.isModal != rhs.isModal {
             return false
         }
         if lhs.displaySeparators != rhs.displaySeparators {
@@ -448,6 +457,7 @@ public final class ListSectionComponent: Component {
             let contentResult = self.contentView.update(
                 configuration: ListSectionContentView.Configuration(
                     theme: component.theme,
+                    isModal: component.isModal,
                     displaySeparators: component.displaySeparators,
                     extendsItemHighlightToSection: component.extendsItemHighlightToSection,
                     background: component.background
@@ -522,17 +532,20 @@ public final class ListSubSectionComponent: Component {
     public let theme: PresentationTheme
     public let leftInset: CGFloat
     public let items: [AnyComponentWithIdentity<Empty>]
+    public let isModal: Bool
     public let displaySeparators: Bool
     
     public init(
         theme: PresentationTheme,
         leftInset: CGFloat,
         items: [AnyComponentWithIdentity<Empty>],
+        isModal: Bool = false,
         displaySeparators: Bool = true
     ) {
         self.theme = theme
         self.leftInset = leftInset
         self.items = items
+        self.isModal = isModal
         self.displaySeparators = displaySeparators
     }
     
@@ -544,6 +557,9 @@ public final class ListSubSectionComponent: Component {
             return false
         }
         if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.isModal != rhs.isModal {
             return false
         }
         if lhs.displaySeparators != rhs.displaySeparators {
@@ -615,6 +631,7 @@ public final class ListSubSectionComponent: Component {
             let contentResult = self.contentView.update(
                 configuration: ListSectionContentView.Configuration(
                     theme: component.theme,
+                    isModal: component.isModal,
                     displaySeparators: component.displaySeparators,
                     extendsItemHighlightToSection: false,
                     background: .none(clipped: false)
