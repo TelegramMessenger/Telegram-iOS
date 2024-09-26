@@ -6984,7 +6984,8 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
                                     self.isReporting = false
                                     self.updateIsProgressPaused()
-                                }
+                                },
+                                requestSelectMessages: nil
                             )
                             
 //                            let options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .illegalDrugs, .personalDetails, .other]

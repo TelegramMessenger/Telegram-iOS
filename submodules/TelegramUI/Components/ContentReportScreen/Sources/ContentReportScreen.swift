@@ -24,6 +24,7 @@ import ButtonComponent
 
 private enum ReportResult {
     case reported
+    case requestedMessageSelection
 }
 
 private final class SheetPageContent: CombinedComponent {
@@ -350,6 +351,7 @@ private final class SheetContent: CombinedComponent {
     let complete: (ReportResult) -> Void
     let dismiss: () -> Void
     let update: (ComponentTransition) -> Void
+    let requestSelectMessages: ((String, Data, String?) -> Void)?
     
     init(
         context: AccountContext,
@@ -360,7 +362,8 @@ private final class SheetContent: CombinedComponent {
         openMore: @escaping () -> Void,
         complete: @escaping (ReportResult) -> Void,
         dismiss: @escaping () -> Void,
-        update: @escaping (ComponentTransition) -> Void
+        update: @escaping (ComponentTransition) -> Void,
+        requestSelectMessages: ((String, Data, String?) -> Void)?
     ) {
         self.context = context
         self.subject = subject
@@ -371,6 +374,7 @@ private final class SheetContent: CombinedComponent {
         self.complete = complete
         self.dismiss = dismiss
         self.update = update
+        self.requestSelectMessages = requestSelectMessages
     }
     
     static func ==(lhs: SheetContent, rhs: SheetContent) -> Bool {
@@ -417,6 +421,7 @@ private final class SheetContent: CombinedComponent {
             let accountContext = component.context
             let subject = component.subject
             let complete = component.complete
+            let requestSelectMessages = component.requestSelectMessages
             let action: (SheetPageContent.Content.Item, String?) -> Void = { [weak state] item, message in
                 guard let state else {
                     return
@@ -435,9 +440,10 @@ private final class SheetContent: CombinedComponent {
                             complete(.reported)
                         }
                     }, error: { error in
-//                        if case .premiumRequired = error {
-//                            complete(.premiumRequired)
-//                        }
+                        if case .messageIdRequired = error {
+                            requestSelectMessages?(item.title, item.option, message)
+                            complete(.requestedMessageSelection)
+                        }
                     })
                 )
             }
@@ -524,6 +530,7 @@ private final class SheetContainerComponent: CombinedComponent {
     let options: [ReportContentResult.Option]
     let openMore: () -> Void
     let complete: (ReportResult) -> Void
+    let requestSelectMessages: ((String, Data, String?) -> Void)?
     
     init(
         context: AccountContext,
@@ -531,7 +538,8 @@ private final class SheetContainerComponent: CombinedComponent {
         title: String,
         options: [ReportContentResult.Option],
         openMore: @escaping () -> Void,
-        complete: @escaping (ReportResult) -> Void
+        complete: @escaping (ReportResult) -> Void,
+        requestSelectMessages: ((String, Data, String?) -> Void)?
     ) {
         self.context = context
         self.subject = subject
@@ -539,6 +547,7 @@ private final class SheetContainerComponent: CombinedComponent {
         self.options = options
         self.openMore = openMore
         self.complete = complete
+        self.requestSelectMessages = requestSelectMessages
     }
     
     static func ==(lhs: SheetContainerComponent, rhs: SheetContainerComponent) -> Bool {
@@ -596,7 +605,8 @@ private final class SheetContainerComponent: CombinedComponent {
                         update: { [weak state] transition in
                             state?.pts += 1
                             state?.updated(transition: transition)
-                        }
+                        },
+                        requestSelectMessages: context.component.requestSelectMessages
                     )),
                     backgroundColor: .color(environment.theme.list.modalBlocksBackgroundColor),
                     followContentSizeChanges: true,
@@ -664,7 +674,8 @@ public final class ContentReportScreen: ViewControllerComponentContainer {
         title: String,
         options: [ReportContentResult.Option],
         forceDark: Bool = false,
-        completed: @escaping () -> Void
+        completed: @escaping () -> Void,
+        requestSelectMessages: ((String, Data, String?) -> Void)?
     ) {
         self.context = context
                 
@@ -679,7 +690,8 @@ public final class ContentReportScreen: ViewControllerComponentContainer {
                 openMore: {},
                 complete: { hidden in
                     completeImpl?(hidden)
-                }
+                },
+                requestSelectMessages: requestSelectMessages
             ),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,
@@ -703,6 +715,8 @@ public final class ContentReportScreen: ViewControllerComponentContainer {
                     
                     (navigationController?.viewControllers.last as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .emoji(name: "PoliceCar", text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return true }), in: .current)
                 })
+            case .requestedMessageSelection:
+                break
             }
         }
     }

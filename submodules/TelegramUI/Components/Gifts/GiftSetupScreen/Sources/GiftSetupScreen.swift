@@ -308,6 +308,7 @@ final class GiftSetupScreenComponent: Component {
                         hasStickers: false,
                         hasGifs: false,
                         hideBackground: true,
+                        forceHasPremium: true,
                         sendGif: nil
                     )
                 )

@@ -170,6 +170,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         hasStickers: Bool = true,
         hasGifs: Bool = true,
         hideBackground: Bool = false,
+        forceHasPremium: Bool = false,
         sendGif: ((FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool)?
     ) -> Signal<InputData, NoError> {
         let animationCache = context.animationCache
@@ -187,6 +188,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             areCustomEmojiEnabled: areCustomEmojiEnabled,
             chatPeerId: chatPeerId,
             hasSearch: hasSearch,
+            forceHasPremium: forceHasPremium,
             hideBackground: hideBackground
         )
         

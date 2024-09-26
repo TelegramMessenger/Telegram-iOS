@@ -5389,30 +5389,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if selectionState.selectedIds.count > 0 {
                                 strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_SelectedMessages(Int32(selectionState.selectedIds.count)), nil, false)
                             } else {
-                                if let reportReason = presentationInterfaceState.reportReason {
-                                    let title: String
-                                    switch reportReason {
-                                        case .spam:
-                                            title = presentationInterfaceState.strings.ReportPeer_ReasonSpam
-                                        case .fake:
-                                            title = presentationInterfaceState.strings.ReportPeer_ReasonFake
-                                        case .violence:
-                                            title = presentationInterfaceState.strings.ReportPeer_ReasonViolence
-                                        case .porno:
-                                            title = presentationInterfaceState.strings.ReportPeer_ReasonPornography
-                                        case .childAbuse:
-                                            title = presentationInterfaceState.strings.ReportPeer_ReasonChildAbuse
-                                        case .copyright:
-                                            title = presentationInterfaceState.strings.ReportPeer_ReasonCopyright
-                                        case .illegalDrugs:
-                                            title = presentationInterfaceState.strings.ReportPeer_ReasonIllegalDrugs
-                                        case .personalDetails:
-                                            title = presentationInterfaceState.strings.ReportPeer_ReasonPersonalDetails
-                                        case .custom:
-                                            title = presentationInterfaceState.strings.ReportPeer_ReasonOther
-                                        case .irrelevantLocation:
-                                            title = ""
-                                    }
+                                if let (title, _, _) = presentationInterfaceState.reportReason {
                                     strongSelf.chatTitleView?.titleContent = .custom(title, presentationInterfaceState.strings.Conversation_SelectMessages, false)
                                 } else {
                                     strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_SelectMessages, nil, false)
@@ -9878,8 +9855,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.interfaceInteraction?.beginMessageSearch(.everything, query)
     }
     
-    public func beginReportSelection(reason: ReportReason) {
-        self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedReportReason(reason).updatedInterfaceState { $0.withUpdatedSelectedMessages([]) } })
+    public func beginReportSelection(reason: NavigateToChatControllerParams.ReportReason) {
+        self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedReportReason((reason.title, reason.option, reason.message)).updatedInterfaceState { $0.withUpdatedSelectedMessages([]) } })
     }
     
     func displayMediaRecordingTooltip() {
