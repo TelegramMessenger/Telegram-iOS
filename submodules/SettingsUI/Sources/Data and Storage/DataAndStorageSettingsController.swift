@@ -656,7 +656,7 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.raiseToListen(presentationData.theme, presentationData.strings.Settings_RaiseToListen, data.mediaInputSettings.enableRaiseToSpeak))
     entries.append(.raiseToListenInfo(presentationData.theme, presentationData.strings.Settings_RaiseToListenInfo))
 
-    if let contentSettingsConfiguration = contentSettingsConfiguration, contentSettingsConfiguration.canAdjustSensitiveContent {
+    if !"".isEmpty, let contentSettingsConfiguration = contentSettingsConfiguration, contentSettingsConfiguration.canAdjustSensitiveContent {
         entries.append(.sensitiveContent(presentationData.strings.Settings_SensitiveContent, contentSettingsConfiguration.sensitiveContentEnabled))
         entries.append(.sensitiveContentInfo(presentationData.strings.Settings_SensitiveContentInfo))
     }

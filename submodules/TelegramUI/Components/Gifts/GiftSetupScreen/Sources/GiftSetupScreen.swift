@@ -34,15 +34,18 @@ final class GiftSetupScreenComponent: Component {
     let context: AccountContext
     let peerId: EnginePeer.Id
     let gift: StarGift
-
+    let completion: (() -> Void)?
+    
     init(
         context: AccountContext,
         peerId: EnginePeer.Id,
-        gift: StarGift
+        gift: StarGift,
+        completion: (() -> Void)? = nil
     ) {
         self.context = context
         self.peerId = peerId
         self.gift = gift
+        self.completion = completion
     }
 
     static func ==(lhs: GiftSetupScreenComponent, rhs: GiftSetupScreenComponent) -> Bool {
@@ -202,6 +205,8 @@ final class GiftSetupScreenComponent: Component {
                     return .single(nil)
                 }
                 
+                let completion = component.completion
+                
                 let _ = (inputData
                 |> deliverOnMainQueue).startStandalone(next: { [weak self] inputData in
                     guard let inputData else {
@@ -209,26 +214,34 @@ final class GiftSetupScreenComponent: Component {
                     }
                     let _ = (component.context.engine.payments.sendStarsPaymentForm(formId: inputData.form.id, source: source)
                     |> deliverOnMainQueue).start(next: { [weak self] result in
-                        guard let self, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController else {
-                            return
-                        }
-                        
-                        var controllers = navigationController.viewControllers
-                        controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
-                        var foundController = false
-                        for controller in controllers.reversed() {
-                            if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
-                                chatController.hintPlayNextOutgoingGift()
-                                foundController = true
-                                break
+                        if let completion {
+                            completion()
+                            
+                            if let self, let controller = self.environment?.controller() {
+                                controller.dismiss()
                             }
+                        } else {
+                            guard let self, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController else {
+                                return
+                            }
+                            
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
+                            var foundController = false
+                            for controller in controllers.reversed() {
+                                if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
+                                    chatController.hintPlayNextOutgoingGift()
+                                    foundController = true
+                                    break
+                                }
+                            }
+                            if !foundController {
+                                let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                                chatController.hintPlayNextOutgoingGift()
+                                controllers.append(chatController)
+                            }
+                            navigationController.setViewControllers(controllers, animated: true)
                         }
-                        if !foundController {
-                            let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                            chatController.hintPlayNextOutgoingGift()
-                            controllers.append(chatController)
-                        }
-                        navigationController.setViewControllers(controllers, animated: true)
                     })
                 })
             }
@@ -1028,18 +1041,19 @@ public final class GiftSetupScreen: ViewControllerComponentContainer {
     public init(
         context: AccountContext,
         peerId: EnginePeer.Id,
-        gift: StarGift
+        gift: StarGift,
+        completion: (() -> Void)? = nil
     ) {
         self.context = context
         
         super.init(context: context, component: GiftSetupScreenComponent(
             context: context,
             peerId: peerId,
-            gift: gift
+            gift: gift,
+            completion: completion
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
         
         self.title = ""
-        //self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
             guard let self, let componentView = self.node.hostView.componentView as? GiftSetupScreenComponent.View else {
