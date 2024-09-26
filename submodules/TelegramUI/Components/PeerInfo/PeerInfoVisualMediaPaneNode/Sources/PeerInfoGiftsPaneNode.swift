@@ -160,8 +160,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 if isVisible {
                     let ribbonText: String?
                     if let availability = product.gift.availability {
-                        //TODO:localize
-                        ribbonText = "1 of \(compactNumericCountString(Int(availability.total)))"
+                        ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(availability.total))).string
                     } else {
                         ribbonText = nil
                     }
@@ -291,8 +290,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     self.view.addSubview(unlockButton.view)
                     self.unlockButton = unlockButton
                 
-                    //TODO:localize
-                    unlockButton.title = "Send Gifts to Friends"
+                    unlockButton.title = params.presentationData.strings.PeerInfo_Gifts_Send
                     
                     unlockButton.pressed = { [weak self] in
                         self?.buttonPressed()
@@ -327,7 +325,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     transition: .immediate,
                     component: AnyComponent(
                         BalancedTextComponent(
-                            text: .markdown(text: "These gifts were sent to you by other users. Tap on a gift to exchange it for Stars or change its privacy settings.", attributes: markdownAttributes),
+                            text: .markdown(text: params.presentationData.strings.PeerInfo_Gifts_Info, attributes: markdownAttributes),
                             horizontalAlignment: .center,
                             maximumNumberOfLines: 0,
                             lineSpacing: 0.2

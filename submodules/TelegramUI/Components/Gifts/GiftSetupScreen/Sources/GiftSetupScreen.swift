@@ -428,7 +428,7 @@ final class GiftSetupScreenComponent: Component {
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Send a Gift", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.Gift_Send_Title, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -466,7 +466,7 @@ final class GiftSetupScreenComponent: Component {
                 resetText: self.resetText.flatMap {
                     return ListMultilineTextFieldItemComponent.ResetText(value: $0)
                 },
-                placeholder: "Enter Message",
+                placeholder: environment.strings.Gift_Send_Customize_MessagePlaceholder,
                 autocapitalizationType: .sentences,
                 autocorrectionType: .yes,
                 returnKeyType: .done,
@@ -658,7 +658,7 @@ final class GiftSetupScreenComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "CUSTOMIZE YOUR GIFT",
+                            string: environment.strings.Gift_Send_Customize_Title,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -727,7 +727,7 @@ final class GiftSetupScreenComponent: Component {
                     header: nil,
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Hide my name and message from visitors to \(peerName)'s profile. \(peerName) will still see your name and message.",
+                            string: environment.strings.Gift_Send_HideMyName_Info(peerName, peerName).string,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -739,7 +739,7 @@ final class GiftSetupScreenComponent: Component {
                             title: AnyComponent(VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
-                                        string: "Hide My Name",
+                                        string: environment.strings.Gift_Send_HideMyName,
                                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                         textColor: environment.theme.list.itemPrimaryTextColor
                                     )),
@@ -778,7 +778,7 @@ final class GiftSetupScreenComponent: Component {
                 self.starImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: environment.theme.list.itemCheckColors.foregroundColor)!, environment.theme)
             }
             let amountString = presentationStringsFormattedNumber(Int32(component.gift.price), presentationData.dateTimeFormat.groupingSeparator)
-            let buttonAttributedString = NSMutableAttributedString(string: "Send a Gift for   #  \(amountString)", font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
+            let buttonAttributedString = NSMutableAttributedString(string: "\(environment.strings.Gift_Send_Send)  #  \(amountString)", font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             if let range = buttonAttributedString.string.range(of: "#"), let starImage = self.starImage?.0 {
                 buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
                 buttonAttributedString.addAttribute(.foregroundColor, value: environment.theme.list.itemCheckColors.foregroundColor, range: NSRange(range, in: buttonAttributedString.string))

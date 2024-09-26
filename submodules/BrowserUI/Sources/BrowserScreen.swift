@@ -1169,8 +1169,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                     
                 } else {
                     items.append(.custom(fontItem, false))
-                    //TODO:localize
-                    
+
                     if case .webPage = contentState.contentType {
                         let isAvailable = contentState.hasInstantView
                         items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebBrowser_ShowInstantView, textColor: isAvailable ? .primary : .disabled, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: isAvailable ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withAlphaComponent(0.3)) }, action: isAvailable ? { (controller, action) in

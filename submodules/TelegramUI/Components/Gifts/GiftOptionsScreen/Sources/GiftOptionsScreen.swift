@@ -287,7 +287,7 @@ final class GiftOptionsScreenComponent: Component {
                                             price: "⭐️ \(gift.price)",
                                             ribbon: gift.availability != nil ?
                                             GiftItemComponent.Ribbon(
-                                                text: "Limited",
+                                                text: environment.strings.Gift_Options_Gift_Limited,
                                                 color: .blue
                                             )
                                             : nil
@@ -627,7 +627,7 @@ final class GiftOptionsScreenComponent: Component {
             let premiumTitleSize = self.premiumTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Gift Premium", font: Font.bold(28.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: strings.Gift_Options_Premium_Title, font: Font.bold(28.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -648,7 +648,7 @@ final class GiftOptionsScreenComponent: Component {
             })
             let peerName = state.peer?.compactDisplayTitle ?? ""
             
-            let premiumDescriptionString = parseMarkdownIntoAttributedString("Give **\(peerName)** access to exclusive features with Telegram Premium. [See Features >]()", attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
+            let premiumDescriptionString = parseMarkdownIntoAttributedString(strings.Gift_Options_Premium_Text(peerName).string, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
             if let range = premiumDescriptionString.string.range(of: ">"), let chevronImage = self.chevronImage?.0 {
                 premiumDescriptionString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: premiumDescriptionString.string))
             }
@@ -725,11 +725,11 @@ final class GiftOptionsScreenComponent: Component {
                     let title: String
                     switch product.months {
                     case 6:
-                        title = "6 months"
+                        title = strings.Gift_Options_Premium_Months(6)
                     case 12:
-                        title = "1 year"
+                        title = strings.Gift_Options_Premium_Years(1)
                     default:
-                        title = "3 months"
+                        title = strings.Gift_Options_Premium_Months(3)
                     }
 
                     let _ = visibleItem.update(
@@ -743,7 +743,7 @@ final class GiftOptionsScreenComponent: Component {
                                         peer: nil,
                                         subject: .premium(product.months),
                                         title: title,
-                                        subtitle: "Premium",
+                                        subtitle: strings.Gift_Options_Premium_Premium,
                                         price: product.price,
                                         ribbon: product.discount.flatMap {
                                             GiftItemComponent.Ribbon(
@@ -807,7 +807,7 @@ final class GiftOptionsScreenComponent: Component {
             let starsTitleSize = self.starsTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Send a Gift", font: Font.bold(28.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: strings.Gift_Options_Gift_Title, font: Font.bold(28.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -820,7 +820,7 @@ final class GiftOptionsScreenComponent: Component {
                 transition.setBounds(view: starsTitleView, bounds: CGRect(origin: .zero, size: starsTitleSize))
             }
             
-            let starsDescriptionString = parseMarkdownIntoAttributedString("Give **\(peerName)** gifts that can be kept on the profile or converted to Stars. [What are Stars >]()", attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
+            let starsDescriptionString = parseMarkdownIntoAttributedString(strings.Gift_Options_Gift_Text(peerName).string, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
             if let range = starsDescriptionString.string.range(of: ">"), let chevronImage = self.chevronImage?.0 {
                 starsDescriptionString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: starsDescriptionString.string))
             }
@@ -873,7 +873,7 @@ final class GiftOptionsScreenComponent: Component {
             var tabSelectorItems: [TabSelectorComponent.Item] = []
             tabSelectorItems.append(TabSelectorComponent.Item(
                 id: AnyHashable(StarsFilter.all.rawValue),
-                title: "All Gifts"
+                title: strings.Gift_Options_Gift_Filter_AllGifts
             ))
             
             var hasLimited = false
@@ -890,7 +890,7 @@ final class GiftOptionsScreenComponent: Component {
             if hasLimited {
                 tabSelectorItems.append(TabSelectorComponent.Item(
                     id: AnyHashable(StarsFilter.limited.rawValue),
-                    title: "Limited"
+                    title: strings.Gift_Options_Gift_Filter_Limited
                 ))
             }
 

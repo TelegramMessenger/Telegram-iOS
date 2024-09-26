@@ -12948,3 +12948,106 @@ Sorry for the inconvenience.";
 
 "SharedMedia.GiftCount_1" = "%@ gift";
 "SharedMedia.GiftCount_any" = "%@ gifts";
+
+"Stars.Info.Title" = "What are Stars?";
+"Stars.Info.Description" = "Buy packages of Stars on Telegram that let you do following:";
+"Stars.Info.Gift.Title" = "Send Gifts to Friends";
+"Stars.Info.Gift.Text" = "Give your friends gifts that can be kept on their profiles or converted to Stars.";
+"Stars.Info.Miniapp.Title" = "Use Stars in Miniapps";
+"Stars.Info.Miniapp.Text" = "Buy additional content and services in Telegram miniapps. [See Examples >]()";
+"Stars.Info.Media.Title" = "Unlock Content in Channels";
+"Stars.Info.Media.Text" = "Get access to paid content and services in Telegram channels.";
+"Stars.Info.Reaction.Title" = "Send Star Reactions";
+"Stars.Info.Reaction.Text" = "Support your favorite channels by sending Star reactions to their posts.";
+"Stars.Info.Done" = "Got It";
+
+"Gift.View.Title" = "Gift";
+"Gift.View.ReceivedTitle" = "Received Gift";
+"Gift.View.KeepOrConvertDescription" = "You can keep this gift in your Profile or convert it to %@. [More About Stars >]()";
+"Gift.View.KeepOrConvertDescription.Stars_1" = "%@ Star";
+"Gift.View.KeepOrConvertDescription.Stars_any" = "%@ Stars";
+"Gift.View.ConvertedDescription" = "You converted this gift to %@. [More About Stars >]()";
+"Gift.View.ConvertedDescription.Stars_1" = "%@ Star";
+"Gift.View.ConvertedDescription.Stars_any" = "%@ Stars";
+"Gift.View.OtherDescription" = "%1$@ can keep this gift in their Profile or convert it to %2$@. [More About Stars >]()";
+"Gift.View.OtherDescription.Stars_1" = "%@ Star";
+"Gift.View.OtherDescription.Stars_any" = "%@ Stars";
+"Gift.View.From" = "From";
+"Gift.View.HiddenName" = "Hidden Name";
+"Gift.View.Date" = "Date";
+"Gift.View.Availability" = "Availability";
+"Gift.View.Hide" = "Hide from My Page";
+"Gift.View.Display" = "Display on My Page";
+"Gift.View.Convert" = "Convert to %@";
+"Gift.View.Convert.Stars_1" = "%@ Star";
+"Gift.View.Convert.Stars_any" = "%@ Stars";
+"Gift.Displayed.Title" = "Gift Saved to Profile";
+"Gift.Displayed.Text" = "The gift is now displayed in [your profile]().";
+"Gift.Hidden.Title" = "Gift Removed from Profile";
+"Gift.Hidden.Text" = "The gift is no longer displayed in [your profile]().";
+"Gift.Convert.Title" = "Convert Gift to Stars";
+"Gift.Convert.Text" = "Do you want to convert this gift from **%1$@** to **%2$@**?\n\nThis action cannot be undone.";
+"Gift.Convert.Stars_1" = "%@ Star";
+"Gift.Convert.Stars_any" = "%@ Stars";
+"Gift.Convert.Convert" = "Convert";
+"Gift.Convert.Success.Title" = "Gift Converted";
+"Gift.Convert.Success.Text" = "You received **%1$@** instead.";
+"Gift.Convert.Success.Text.Stars_1" = "%@ Star";
+"Gift.Convert.Success.Text.Stars_any" = "%@ Stars";
+
+"Gift.Options.Premium.Title" = "Gift Premium";
+"Gift.Options.Premium.Text" = "Give **%@** access to exclusive features with Telegram Premium. [See Features >]()";
+"Gift.Options.Premium.Months_1" = "%@ month";
+"Gift.Options.Premium.Months_any" = "%@ months";
+"Gift.Options.Premium.Years_1" = "%@ year";
+"Gift.Options.Premium.Years_any" = "%@ years";
+"Gift.Options.Premium.Premium" = "Premium";
+"Gift.Options.Gift.Title" = "Send a Gift";
+"Gift.Options.Gift.Text" = "Give **%@** gifts that can be kept on the profile or converted to Stars. [What are Stars >]()";
+"Gift.Options.Gift.Filter.AllGifts" = "All Gifts";
+"Gift.Options.Gift.Filter.Limited" = "Limited";
+"Gift.Options.Gift.Limited" = "Limited";
+
+"PeerInfo.PaneGifts" = "Gifts";
+
+"PeerInfo.Gifts.Info" = "These gifts were sent to you by other users. Tap on a gift to exchange it for Stars or change its privacy settings.";
+"PeerInfo.Gifts.Send" = "Send Gifts to Friends";
+"PeerInfo.Gifts.OneOf" = "1 of %@";
+
+"Notification.StarGift.Title" = "Gift from %@";
+"Notification.StarGift.Subtitle" = "Display this gift on your page or convert it to %@.";
+"Notification.StarGift.Subtitle.Stars_1" = "%@ Star";
+"Notification.StarGift.Subtitle.Stars_any" = "%@ Stars";
+"Notification.StarGift.Subtitle.Other" = "%1$@ can keep this gift on their page or convert it to %2$@.";
+"Notification.StarGift.Subtitle.Other.Stars_1" = "%@ Star";
+"Notification.StarGift.Subtitle.Other.Stars_any" = "%@ Stars";
+"Notification.StarGift.Subtitle.Converted" = "You converted this gift to %@.";
+"Notification.StarGift.Subtitle.Converted.Stars_1" = "%@ Star";
+"Notification.StarGift.Subtitle.Converted.Stars_any" = "%@ Stars";
+"Notification.StarGift.Subtitle.Displaying" = "You are displaying this gift on your page. You can also convert it to %@.";
+"Notification.StarGift.Subtitle.Displaying.Stars_1" = "%@ Star";
+"Notification.StarGift.Subtitle.Displaying.Stars_any" = "%@ Stars";
+"Notification.StarGift.OneOf" = "1 of %@";
+"Notification.StarGift.View" = "View";
+
+"Gift.Send.Title" = "Send a Gift";
+"Gift.Send.Customize.Title" = "CUSTOMIZE YOUR GIFT";
+"Gift.Send.Customize.MessagePlaceholder" = "Enter Message";
+"Gift.Send.HideMyName" = "Hide My Name";
+"Gift.Send.HideMyName.Info" = "Hide my name and message from visitors to %1$@'s profile. %2$@ will still see your name and message.";
+"Gift.Send.Send" = "Send a Gift for";
+
+"Profile.SendGift" = "Send a Gift";
+"Settings.SendGift" = "Send a Gift";
+
+"Gift.PremiumOrStars.Title" = "Gift Premium or Stars";
+
+"Report.Title.Message" = "Report Message";
+"Report.Title.Story" = "Report Story";
+"Report.Title.User" = "Report User";
+"Report.Title.Group" = "Report Group";
+"Report.Title.Channel" = "Report Channel";
+"Report.Comment.Placeholder" = "Add Comment";
+"Report.Comment.Placeholder.Optional" = "Add Comment (Optional)";
+"Report.Comment.Info" = "Please help us by telling what is wrong with the message you have selected.";
+"Report.Send" = "Send Report";

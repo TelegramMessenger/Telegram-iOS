@@ -2315,14 +2315,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         var openProfileImpl: ((EnginePeer) -> Void)?
         var sendMessageImpl: ((EnginePeer) -> Void)?
         
-        //TODO:localize
         let options = Promise<[PremiumGiftCodeOption]>()
         options.set(context.engine.payments.premiumGiftCodeOptions(peerId: nil))
         let controller = context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(
             context: context,
             mode: mode,
             autoDismiss: false,
-            title: { strings in return "Gift Premium or Stars" },
+            title: { strings in return presentationData.strings.Gift_PremiumOrStars_Title },
             options: contactOptions,
             openProfile: { peer in
                 openProfileImpl?(peer)

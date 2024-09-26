@@ -25,7 +25,7 @@ public enum ReportContentSubject: Equatable {
     case messages([EngineMessage.Id])
     case stories(EnginePeer.Id, [Int32])
     
-    var peerId: EnginePeer.Id {
+    public var peerId: EnginePeer.Id {
         switch self {
         case let .peer(peerId):
             return peerId

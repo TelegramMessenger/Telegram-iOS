@@ -343,23 +343,19 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 hasServiceMessage = false
                             }
                         case let .starGift(gift, convertStars, giftText, giftEntities, _, savedToProfile, converted):
-                            //TODO:localize
-                            if !incoming {
-                                buttonTitle = ""
-                            }
                             let authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
-                            title = "Gift from \(authorName)"
+                            title = item.presentationData.strings.Notification_StarGift_Title(authorName).string
                             if let giftText, !giftText.isEmpty {
                                 text = giftText
                                 entities = giftEntities ?? []
                             } else {
                                 if incoming {
                                     if converted {
-                                        text = "You converted this gift to \(convertStars) Stars."
+                                        text = item.presentationData.strings.Notification_StarGift_Subtitle_Converted(item.presentationData.strings.Notification_StarGift_Subtitle_Converted_Stars(Int32(convertStars))).string
                                     } else if savedToProfile {
-                                        text = "You are displaying this gift on your page. You can also convert it to \(convertStars) Stars."
+                                        text =  item.presentationData.strings.Notification_StarGift_Subtitle_Displaying(item.presentationData.strings.Notification_StarGift_Subtitle_Displaying_Stars(Int32(convertStars))).string
                                     } else {
-                                        text = "Display this gift on your page or convert it to \(convertStars) Stars."
+                                        text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
                                     }
                                 } else {
                                     var peerName = ""
@@ -367,15 +363,26 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                         peerName = EnginePeer(peer).compactDisplayTitle
                                     }
                                     if peerName.isEmpty {
-                                        text = "Display this gift on your page or convert it to \(convertStars) Stars."
+                                        text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
                                     } else {
-                                        text = "\(peerName) can keep this gift on their page or convert it to \(convertStars) Stars."
+                                        text = item.presentationData.strings.Notification_StarGift_Subtitle_Other(peerName, item.presentationData.strings.Notification_StarGift_Subtitle_Other_Stars(Int32(convertStars))).string
                                     }
                                 }
                             }
                             animationFile = gift.file
                             if let availability = gift.availability {
-                                ribbonTitle = "1 of \(availability.total)"
+                                let availabilityString: String
+                                if availability.total > 9999 {
+                                    availabilityString = compactNumericCountString(Int(availability.total))
+                                } else {
+                                    availabilityString = "\(availability.total)"
+                                }
+                                ribbonTitle = item.presentationData.strings.Notification_StarGift_OneOf(availabilityString).string
+                            }
+                            if incoming {
+                                buttonTitle = item.presentationData.strings.Notification_StarGift_View
+                            } else {
+                                buttonTitle = ""
                             }
                         default:
                             break

@@ -111,6 +111,8 @@ private final class SheetPageContent: CombinedComponent {
         let section = Child(ListSectionComponent.self)
         let button = Child(ButtonComponent.self)
         
+        let textInputTag = NSObject()
+        
         return { context in
             let environment = context.environment[EnvironmentType.self]
             let component = context.component
@@ -238,7 +240,7 @@ private final class SheetPageContent: CombinedComponent {
                         strings: strings,
                         initialText: "",
                         resetText: nil,
-                        placeholder: isOptional ? "Add Comment (Optional)" : "Add Comment",
+                        placeholder: isOptional ? strings.Report_Comment_Placeholder_Optional : strings.Report_Comment_Placeholder,
                         autocapitalizationType: .none,
                         autocorrectionType: .no,
                         returnKeyType: .done,
@@ -257,13 +259,13 @@ private final class SheetPageContent: CombinedComponent {
 //                            }
                         },
                         textUpdateTransition: .spring(duration: 0.4),
-                        tag: nil
+                        tag: textInputTag
                     )))
                 )
                 
                 footer = AnyComponent(MultilineTextComponent(
                     text: .plain(
-                        NSAttributedString(string: "Please help us by telling what is wrong with the message you have selected.", font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.freeTextColor)
+                        NSAttributedString(string: strings.Report_Comment_Info, font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.freeTextColor)
                     ),
                     maximumNumberOfLines: 0
                 ))
@@ -305,7 +307,7 @@ private final class SheetPageContent: CombinedComponent {
                             foreground: theme.list.itemCheckColors.foregroundColor,
                             pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
                         ),
-                        content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: "Send Report", font: Font.semibold(17.0), color: theme.list.itemCheckColors.foregroundColor))),
+                        content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: strings.Report_Send, font: Font.semibold(17.0), color: theme.list.itemCheckColors.foregroundColor))),
                         isEnabled: isOptional || state.textInputState.hasText,
                         allowActionWhenDisabled: false,
                         displaysProgress: false,
@@ -400,13 +402,27 @@ private final class SheetContent: CombinedComponent {
         var pushedOptions: [(title: String, subtitle: String, content: SheetPageContent.Content)] = []
         let disposable = MetaDisposable()
         
+        var peer: EnginePeer?
+        private var peerDisposable: Disposable?
+        
+        init(context: AccountContext, subject: ReportContentSubject) {
+            super.init()
+            
+            self.peerDisposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: subject.peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                self?.peer = peer
+                self?.updated()
+            })
+        }
+        
         deinit {
             self.disposable.dispose()
+            self.peerDisposable?.dispose()
         }
     }
     
     func makeState() -> State {
-        return State()
+        return State(context: self.context, subject: self.subject)
     }
         
     static var body: Body {
@@ -451,11 +467,21 @@ private final class SheetContent: CombinedComponent {
             let mainTitle: String
             switch component.subject {
             case .peer:
-                mainTitle = "Report Peer"
+                if let peer = state.peer {
+                    if case .user = peer {
+                        mainTitle = environment.strings.Report_Title_User
+                    } else if case let .channel(channel) = peer, case .broadcast = channel.info {
+                        mainTitle = environment.strings.Report_Title_Channel
+                    } else {
+                        mainTitle = environment.strings.Report_Title_Group
+                    }
+                } else {
+                    mainTitle = ""
+                }
             case .messages:
-                mainTitle = "Report Message"
+                mainTitle = environment.strings.Report_Title_Message
             case .stories:
-                mainTitle = "Report Story"
+                mainTitle = environment.strings.Report_Title_Story
             }
             
             var items: [AnyComponentWithIdentity<EnvironmentType>] = []
