@@ -522,136 +522,6 @@ final class GiftSetupScreenComponent: Component {
                 }
             }
                           
-            if self.textInputState.isEditing, let emojiSuggestion = self.textInputState.currentEmojiSuggestion, emojiSuggestion.disposable == nil {
-                emojiSuggestion.disposable = (EmojiSuggestionsComponent.suggestionData(context: component.context, isSavedMessages: false, query: emojiSuggestion.position.value)
-                |> deliverOnMainQueue).start(next: { [weak self, weak emojiSuggestion] result in
-                    guard let self, self.textInputState.currentEmojiSuggestion === emojiSuggestion else {
-                        return
-                    }
-                    
-                    emojiSuggestion?.value = result
-                    self.state?.updated()
-                })
-            }
-            
-            var hasTrackingView = self.textInputState.hasTrackingView
-            if let currentEmojiSuggestion = self.textInputState.currentEmojiSuggestion, let value = currentEmojiSuggestion.value as? [TelegramMediaFile], value.isEmpty {
-                hasTrackingView = false
-            }
-            if !self.textInputState.isEditing {
-                hasTrackingView = false
-            }
-            
-            if !hasTrackingView {
-                if let currentEmojiSuggestion = self.textInputState.currentEmojiSuggestion {
-                    self.textInputState.currentEmojiSuggestion = nil
-                    currentEmojiSuggestion.disposable?.dispose()
-                }
-                
-                if let currentEmojiSuggestionView = self.currentEmojiSuggestionView {
-                    self.currentEmojiSuggestionView = nil
-                    
-                    currentEmojiSuggestionView.alpha = 0.0
-                    currentEmojiSuggestionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak currentEmojiSuggestionView] _ in
-                        currentEmojiSuggestionView?.removeFromSuperview()
-                    })
-                }
-            }
-                        
-            if self.textInputState.isEditing, let emojiSuggestion = self.textInputState.currentEmojiSuggestion, let value = emojiSuggestion.value as? [TelegramMediaFile] {
-                let currentEmojiSuggestionView: ComponentHostView<Empty>
-                if let current = self.currentEmojiSuggestionView {
-                    currentEmojiSuggestionView = current
-                } else {
-                    currentEmojiSuggestionView = ComponentHostView<Empty>()
-                    self.currentEmojiSuggestionView = currentEmojiSuggestionView
-                    self.addSubview(currentEmojiSuggestionView)
-                    
-                    currentEmojiSuggestionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-                }
-            
-                let globalPosition: CGPoint
-                if let textView = (self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View)?.textFieldView  {
-                    globalPosition = textView.convert(emojiSuggestion.localPosition, to: self)
-                } else {
-                    globalPosition = .zero
-                }
-                
-                let sideInset: CGFloat = 7.0
-                
-                let viewSize = currentEmojiSuggestionView.update(
-                    transition: .immediate,
-                    component: AnyComponent(EmojiSuggestionsComponent(
-                        context: component.context,
-                        userLocation: .other,
-                        theme: EmojiSuggestionsComponent.Theme(theme: environment.theme),
-                        animationCache: component.context.animationCache,
-                        animationRenderer: component.context.animationRenderer,
-                        files: value,
-                        action: { [weak self] file in
-                            guard let self, let textView = (self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View)?.textFieldView, let currentEmojiSuggestion = self.textInputState.currentEmojiSuggestion else {
-                                return
-                            }
-                            
-                            AudioServicesPlaySystemSound(0x450)
-                            
-                            let inputState = textView.getInputState()
-                            let inputText = NSMutableAttributedString(attributedString: inputState.inputText)
-                            
-                            var text: String?
-                            var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
-                            loop: for attribute in file.attributes {
-                                switch attribute {
-                                case let .CustomEmoji(_, _, displayText, _):
-                                    text = displayText
-                                    emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
-                                    break loop
-                                default:
-                                    break
-                                }
-                            }
-                            
-                            if let emojiAttribute = emojiAttribute, let text = text {
-                                let replacementText = NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute])
-                                
-                                let range = currentEmojiSuggestion.position.range
-                                let previousText = inputText.attributedSubstring(from: range)
-                                inputText.replaceCharacters(in: range, with: replacementText)
-                                
-                                var replacedUpperBound = range.lowerBound
-                                while true {
-                                    if inputText.attributedSubstring(from: NSRange(location: 0, length: replacedUpperBound)).string.hasSuffix(previousText.string) {
-                                        let replaceRange = NSRange(location: replacedUpperBound - previousText.length, length: previousText.length)
-                                        if replaceRange.location < 0 {
-                                            break
-                                        }
-                                        let adjacentString = inputText.attributedSubstring(from: replaceRange)
-                                        if adjacentString.string != previousText.string || adjacentString.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil) != nil {
-                                            break
-                                        }
-                                        inputText.replaceCharacters(in: replaceRange, with: NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: emojiAttribute.interactivelySelectedFromPackId, fileId: emojiAttribute.fileId, file: emojiAttribute.file)]))
-                                        replacedUpperBound = replaceRange.lowerBound
-                                    } else {
-                                        break
-                                    }
-                                }
-                                
-                                let selectionPosition = range.lowerBound + (replacementText.string as NSString).length
-                                textView.updateText(inputText, selectionRange: selectionPosition ..< selectionPosition)
-                            }
-                        }
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
-                )
-                
-                let viewFrame = CGRect(origin: CGPoint(x: min(availableSize.width - sideInset - viewSize.width, max(sideInset, floor(globalPosition.x - viewSize.width / 2.0))), y: globalPosition.y - 4.0 - viewSize.height), size: viewSize)
-                currentEmojiSuggestionView.frame = viewFrame
-                if let componentView = currentEmojiSuggestionView.componentView as? EmojiSuggestionsComponent.View {
-                    componentView.adjustBackground(relativePositionX: floor(globalPosition.x + 10.0))
-                }
-            }
-
             let introSectionSize = self.introSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
@@ -813,6 +683,137 @@ final class GiftSetupScreenComponent: Component {
                 }
                 buttonView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - buttonSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - buttonSize.height), size: buttonSize)
             }
+            
+            if self.textInputState.isEditing, let emojiSuggestion = self.textInputState.currentEmojiSuggestion, emojiSuggestion.disposable == nil {
+                emojiSuggestion.disposable = (EmojiSuggestionsComponent.suggestionData(context: component.context, isSavedMessages: false, query: emojiSuggestion.position.value)
+                |> deliverOnMainQueue).start(next: { [weak self, weak emojiSuggestion] result in
+                    guard let self, self.textInputState.currentEmojiSuggestion === emojiSuggestion else {
+                        return
+                    }
+                    
+                    emojiSuggestion?.value = result
+                    self.state?.updated()
+                })
+            }
+            
+            var hasTrackingView = self.textInputState.hasTrackingView
+            if let currentEmojiSuggestion = self.textInputState.currentEmojiSuggestion, let value = currentEmojiSuggestion.value as? [TelegramMediaFile], value.isEmpty {
+                hasTrackingView = false
+            }
+            if !self.textInputState.isEditing {
+                hasTrackingView = false
+            }
+            
+            if !hasTrackingView {
+                if let currentEmojiSuggestion = self.textInputState.currentEmojiSuggestion {
+                    self.textInputState.currentEmojiSuggestion = nil
+                    currentEmojiSuggestion.disposable?.dispose()
+                }
+                
+                if let currentEmojiSuggestionView = self.currentEmojiSuggestionView {
+                    self.currentEmojiSuggestionView = nil
+                    
+                    currentEmojiSuggestionView.alpha = 0.0
+                    currentEmojiSuggestionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak currentEmojiSuggestionView] _ in
+                        currentEmojiSuggestionView?.removeFromSuperview()
+                    })
+                }
+            }
+                        
+            if self.textInputState.isEditing, let emojiSuggestion = self.textInputState.currentEmojiSuggestion, let value = emojiSuggestion.value as? [TelegramMediaFile] {
+                let currentEmojiSuggestionView: ComponentHostView<Empty>
+                if let current = self.currentEmojiSuggestionView {
+                    currentEmojiSuggestionView = current
+                } else {
+                    currentEmojiSuggestionView = ComponentHostView<Empty>()
+                    self.currentEmojiSuggestionView = currentEmojiSuggestionView
+                    self.addSubview(currentEmojiSuggestionView)
+                    
+                    currentEmojiSuggestionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                }
+            
+                let globalPosition: CGPoint
+                if let textView = (self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View)?.textFieldView  {
+                    globalPosition = textView.convert(emojiSuggestion.localPosition, to: self)
+                } else {
+                    globalPosition = .zero
+                }
+                
+                let sideInset: CGFloat = 7.0
+                
+                let viewSize = currentEmojiSuggestionView.update(
+                    transition: .immediate,
+                    component: AnyComponent(EmojiSuggestionsComponent(
+                        context: component.context,
+                        userLocation: .other,
+                        theme: EmojiSuggestionsComponent.Theme(theme: environment.theme),
+                        animationCache: component.context.animationCache,
+                        animationRenderer: component.context.animationRenderer,
+                        files: value,
+                        action: { [weak self] file in
+                            guard let self, let textView = (self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View)?.textFieldView, let currentEmojiSuggestion = self.textInputState.currentEmojiSuggestion else {
+                                return
+                            }
+                            
+                            AudioServicesPlaySystemSound(0x450)
+                            
+                            let inputState = textView.getInputState()
+                            let inputText = NSMutableAttributedString(attributedString: inputState.inputText)
+                            
+                            var text: String?
+                            var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
+                            loop: for attribute in file.attributes {
+                                switch attribute {
+                                case let .CustomEmoji(_, _, displayText, _):
+                                    text = displayText
+                                    emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
+                                    break loop
+                                default:
+                                    break
+                                }
+                            }
+                            
+                            if let emojiAttribute = emojiAttribute, let text = text {
+                                let replacementText = NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute])
+                                
+                                let range = currentEmojiSuggestion.position.range
+                                let previousText = inputText.attributedSubstring(from: range)
+                                inputText.replaceCharacters(in: range, with: replacementText)
+                                
+                                var replacedUpperBound = range.lowerBound
+                                while true {
+                                    if inputText.attributedSubstring(from: NSRange(location: 0, length: replacedUpperBound)).string.hasSuffix(previousText.string) {
+                                        let replaceRange = NSRange(location: replacedUpperBound - previousText.length, length: previousText.length)
+                                        if replaceRange.location < 0 {
+                                            break
+                                        }
+                                        let adjacentString = inputText.attributedSubstring(from: replaceRange)
+                                        if adjacentString.string != previousText.string || adjacentString.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil) != nil {
+                                            break
+                                        }
+                                        inputText.replaceCharacters(in: replaceRange, with: NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: emojiAttribute.interactivelySelectedFromPackId, fileId: emojiAttribute.fileId, file: emojiAttribute.file)]))
+                                        replacedUpperBound = replaceRange.lowerBound
+                                    } else {
+                                        break
+                                    }
+                                }
+                                
+                                let selectionPosition = range.lowerBound + (replacementText.string as NSString).length
+                                textView.updateText(inputText, selectionRange: selectionPosition ..< selectionPosition)
+                            }
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                )
+                
+                let viewFrame = CGRect(origin: CGPoint(x: min(availableSize.width - sideInset - viewSize.width, max(sideInset, floor(globalPosition.x - viewSize.width / 2.0))), y: globalPosition.y - 4.0 - viewSize.height), size: viewSize)
+                currentEmojiSuggestionView.frame = viewFrame
+                if let componentView = currentEmojiSuggestionView.componentView as? EmojiSuggestionsComponent.View {
+                    componentView.adjustBackground(relativePositionX: floor(globalPosition.x + 10.0))
+                }
+            }
+
             
             let previousBounds = self.scrollView.bounds
             
