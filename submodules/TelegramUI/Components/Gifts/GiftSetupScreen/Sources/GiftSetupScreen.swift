@@ -214,7 +214,7 @@ final class GiftSetupScreenComponent: Component {
                         }
                         
                         var controllers = navigationController.viewControllers
-                        controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) }
+                        controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
                         var foundController = false
                         for controller in controllers.reversed() {
                             if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
