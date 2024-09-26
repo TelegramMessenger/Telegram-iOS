@@ -33,17 +33,20 @@ final class GiftOptionsScreenComponent: Component {
     let starsContext: StarsContext
     let peerId: EnginePeer.Id
     let premiumOptions: [CachedPremiumGiftOption]
-
+    let completion: (() -> Void)?
+    
     init(
         context: AccountContext,
         starsContext: StarsContext,
         peerId: EnginePeer.Id,
-        premiumOptions: [CachedPremiumGiftOption]
+        premiumOptions: [CachedPremiumGiftOption],
+        completion: (() -> Void)?
     ) {
         self.context = context
         self.starsContext = starsContext
         self.peerId = peerId
         self.premiumOptions = premiumOptions
+        self.completion = completion
     }
 
     static func ==(lhs: GiftOptionsScreenComponent, rhs: GiftOptionsScreenComponent) -> Bool {
@@ -284,7 +287,7 @@ final class GiftOptionsScreenComponent: Component {
                                             price: "⭐️ \(gift.price)",
                                             ribbon: gift.availability != nil ?
                                             GiftItemComponent.Ribbon(
-                                                text: "Limited",
+                                                text: environment.strings.Gift_Options_Gift_Limited,
                                                 color: .blue
                                             )
                                             : nil
@@ -293,7 +296,21 @@ final class GiftOptionsScreenComponent: Component {
                                     effectAlignment: .center,
                                     action: { [weak self] in
                                         if let self, let component = self.component {
-                                            controller()?.push(GiftSetupScreen(context: component.context, peerId: component.peerId, gift: gift))
+                                            if let controller = controller() as? GiftOptionsScreen {
+                                                let mainController: ViewController
+                                                if let parentController = controller.parentController() {
+                                                    mainController = parentController
+                                                } else {
+                                                    mainController = controller
+                                                }
+                                                let giftController = GiftSetupScreen(
+                                                    context: component.context,
+                                                    peerId: component.peerId,
+                                                    gift: gift,
+                                                    completion: component.completion
+                                                )
+                                                mainController.push(giftController)
+                                            }
                                         }
                                     },
                                     animateAlpha: false
@@ -357,6 +374,8 @@ final class GiftOptionsScreenComponent: Component {
             let purpose: AppStoreTransactionPurpose = .giftCode(peerIds: [component.peerId], boostPeer: nil, currency: currency, amount: amount)
             let quantity: Int32 = 1
                         
+            let completion = component.completion
+            
             let _ = (component.context.engine.payments.canPurchasePremium(purpose: purpose)
             |> deliverOnMainQueue).start(next: { [weak self] available in
                 if let strongSelf = self {
@@ -364,26 +383,30 @@ final class GiftOptionsScreenComponent: Component {
                     if available {
                         strongSelf.purchaseDisposable.set((inAppPurchaseManager.buyProduct(product.storeProduct, quantity: quantity, purpose: purpose)
                         |> deliverOnMainQueue).start(next: { [weak self] status in
-                            guard let self, case .purchased = status, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController else {
-                                return
-                            }
-                            
-                            var controllers = navigationController.viewControllers
-                            controllers = controllers.filter { !($0 is GiftOptionsScreen) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
-                            var foundController = false
-                            for controller in controllers.reversed() {
-                                if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
-                                    chatController.hintPlayNextOutgoingGift()
-                                    foundController = true
-                                    break
+                            if let completion {
+                                completion()
+                            } else {
+                                guard let self, case .purchased = status, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController else {
+                                    return
                                 }
+                                
+                                var controllers = navigationController.viewControllers
+                                controllers = controllers.filter { !($0 is GiftOptionsScreen) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
+                                var foundController = false
+                                for controller in controllers.reversed() {
+                                    if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
+                                        chatController.hintPlayNextOutgoingGift()
+                                        foundController = true
+                                        break
+                                    }
+                                }
+                                if !foundController {
+                                    let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                                    chatController.hintPlayNextOutgoingGift()
+                                    controllers.append(chatController)
+                                }
+                                navigationController.setViewControllers(controllers, animated: true)
                             }
-                            if !foundController {
-                                let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                                chatController.hintPlayNextOutgoingGift()
-                                controllers.append(chatController)
-                            }
-                            navigationController.setViewControllers(controllers, animated: true)
                         }, error: { [weak self] error in
                             guard let self, let controller = self.environment?.controller() else {
                                 return
@@ -454,7 +477,6 @@ final class GiftOptionsScreenComponent: Component {
                 self.backgroundColor = environment.theme.list.blocksBackgroundColor
             }
             
-//            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let theme = environment.theme
             let strings = environment.strings
             
@@ -605,7 +627,7 @@ final class GiftOptionsScreenComponent: Component {
             let premiumTitleSize = self.premiumTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Gift Premium", font: Font.bold(28.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: strings.Gift_Options_Premium_Title, font: Font.bold(28.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -626,7 +648,7 @@ final class GiftOptionsScreenComponent: Component {
             })
             let peerName = state.peer?.compactDisplayTitle ?? ""
             
-            let premiumDescriptionString = parseMarkdownIntoAttributedString("Give **\(peerName)** access to exclusive features with Telegram Premium. [See Features >]()", attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
+            let premiumDescriptionString = parseMarkdownIntoAttributedString(strings.Gift_Options_Premium_Text(peerName).string, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
             if let range = premiumDescriptionString.string.range(of: ">"), let chevronImage = self.chevronImage?.0 {
                 premiumDescriptionString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: premiumDescriptionString.string))
             }
@@ -651,7 +673,16 @@ final class GiftOptionsScreenComponent: Component {
                         }
                         let introController = component.context.sharedContext.makePremiumIntroController(context: component.context, source: .settings, forceDark: false, dismissed: nil)
                         introController.navigationPresentation = .modal
-                        environment.controller()?.push(introController)
+                        
+                        if let controller = environment.controller() as? GiftOptionsScreen {
+                            let mainController: ViewController
+                            if let parentController = controller.parentController() {
+                                mainController = parentController
+                            } else {
+                                mainController = controller
+                            }
+                            mainController.push(introController)
+                        }
                     }
                 )),
                 environment: {},
@@ -694,11 +725,11 @@ final class GiftOptionsScreenComponent: Component {
                     let title: String
                     switch product.months {
                     case 6:
-                        title = "6 months"
+                        title = strings.Gift_Options_Premium_Months(6)
                     case 12:
-                        title = "1 year"
+                        title = strings.Gift_Options_Premium_Years(1)
                     default:
-                        title = "3 months"
+                        title = strings.Gift_Options_Premium_Months(3)
                     }
 
                     let _ = visibleItem.update(
@@ -712,7 +743,7 @@ final class GiftOptionsScreenComponent: Component {
                                         peer: nil,
                                         subject: .premium(product.months),
                                         title: title,
-                                        subtitle: "Premium",
+                                        subtitle: strings.Gift_Options_Premium_Premium,
                                         price: product.price,
                                         ribbon: product.discount.flatMap {
                                             GiftItemComponent.Ribbon(
@@ -776,7 +807,7 @@ final class GiftOptionsScreenComponent: Component {
             let starsTitleSize = self.starsTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Send a Gift", font: Font.bold(28.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: strings.Gift_Options_Gift_Title, font: Font.bold(28.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -789,7 +820,7 @@ final class GiftOptionsScreenComponent: Component {
                 transition.setBounds(view: starsTitleView, bounds: CGRect(origin: .zero, size: starsTitleSize))
             }
             
-            let starsDescriptionString = parseMarkdownIntoAttributedString("Give **\(peerName)** gifts that can be kept on the profile or converted to Stars. [What are Stars >]()", attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
+            let starsDescriptionString = parseMarkdownIntoAttributedString(strings.Gift_Options_Gift_Text(peerName).string, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
             if let range = starsDescriptionString.string.range(of: ">"), let chevronImage = self.chevronImage?.0 {
                 starsDescriptionString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: starsDescriptionString.string))
             }
@@ -814,7 +845,16 @@ final class GiftOptionsScreenComponent: Component {
                         }
                         let introController = component.context.sharedContext.makeStarsIntroScreen(context: component.context)
                         introController.navigationPresentation = .modal
-                        environment.controller()?.push(introController)
+                        
+                        if let controller = environment.controller() as? GiftOptionsScreen {
+                            let mainController: ViewController
+                            if let parentController = controller.parentController() {
+                                mainController = parentController
+                            } else {
+                                mainController = controller
+                            }
+                            mainController.push(introController)
+                        }
                     }
                 )),
                 environment: {},
@@ -833,19 +873,27 @@ final class GiftOptionsScreenComponent: Component {
             var tabSelectorItems: [TabSelectorComponent.Item] = []
             tabSelectorItems.append(TabSelectorComponent.Item(
                 id: AnyHashable(StarsFilter.all.rawValue),
-                title: "All Gifts"
-            ))
-            tabSelectorItems.append(TabSelectorComponent.Item(
-                id: AnyHashable(StarsFilter.limited.rawValue),
-                title: "Limited"
+                title: strings.Gift_Options_Gift_Filter_AllGifts
             ))
             
+            var hasLimited = false
             var starsAmountsSet = Set<Int64>()
             if let starGifts = self.state?.starGifts {
                 for product in starGifts {
                     starsAmountsSet.insert(product.price)
+                    if product.availability != nil {
+                        hasLimited = true
+                    }
                 }
             }
+            
+            if hasLimited {
+                tabSelectorItems.append(TabSelectorComponent.Item(
+                    id: AnyHashable(StarsFilter.limited.rawValue),
+                    title: strings.Gift_Options_Gift_Filter_Limited
+                ))
+            }
+
             let starsAmounts = Array(starsAmountsSet).sorted()
             for amount in starsAmounts {
                 tabSelectorItems.append(TabSelectorComponent.Item(
@@ -1014,12 +1062,16 @@ final class GiftOptionsScreenComponent: Component {
 open class GiftOptionsScreen: ViewControllerComponentContainer, GiftOptionsScreenProtocol {
     private let context: AccountContext
     
+    public var parentController: () -> ViewController? = {
+        return nil
+    }
+    
     public init(
         context: AccountContext,
         starsContext: StarsContext,
         peerId: EnginePeer.Id,
         premiumOptions: [CachedPremiumGiftOption],
-        completion: @escaping () -> Void = {}
+        completion: (() -> Void)? = nil
     ) {
         self.context = context
         
@@ -1027,7 +1079,8 @@ open class GiftOptionsScreen: ViewControllerComponentContainer, GiftOptionsScree
             context: context,
             starsContext: starsContext,
             peerId: peerId,
-            premiumOptions: premiumOptions
+            premiumOptions: premiumOptions,
+            completion: completion
         ), navigationBarAppearance: .none, theme: .default, updatedPresentationData: nil)
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.context.sharedContext.currentPresentationData.with { $0 }.strings.Common_Back, style: .plain, target: nil, action: nil)

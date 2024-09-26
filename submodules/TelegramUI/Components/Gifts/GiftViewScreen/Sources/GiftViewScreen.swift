@@ -208,13 +208,13 @@ private final class GiftViewSheetContent: CombinedComponent {
             var descriptionText: String
             if incoming {
                 if !converted {
-                    descriptionText = "You can keep this gift in your Profile or convert it to \(convertStars) Stars. [More About Stars >]()"
+                    descriptionText = strings.Gift_View_KeepOrConvertDescription(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string
                 } else {
-                    descriptionText = "You converted this gift to \(convertStars) Stars. [More About Stars >]()"
+                    descriptionText = strings.Gift_View_ConvertedDescription(strings.Gift_View_ConvertedDescription_Stars(Int32(convertStars))).string
                 }
             } else if let peerId = component.subject.arguments?.peerId, let peer = state.peerMap[peerId] {
                 if case .message = component.subject {
-                    descriptionText = "\(peer.compactDisplayTitle) can keep this gift in their Profile or convert it to \(convertStars) Stars. [More About Stars >]()"
+                    descriptionText = strings.Gift_View_OtherDescription(peer.compactDisplayTitle, strings.Gift_View_OtherDescription_Stars(Int32(convertStars))).string
                 } else {
                     descriptionText = ""
                 }
@@ -240,10 +240,11 @@ private final class GiftViewSheetContent: CombinedComponent {
             let amountText = formattedAmount
             let countColor = theme.list.itemDisclosureActions.constructive.fillColor
             
+            
             let title = title.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: incoming ? "Received Gift" : "Gift",
+                        string: incoming ? strings.Gift_View_ReceivedTitle : strings.Gift_View_Title,
                         font: Font.bold(25.0),
                         textColor: theme.actionSheet.primaryTextColor,
                         paragraphAlignment: .center
@@ -289,13 +290,14 @@ private final class GiftViewSheetContent: CombinedComponent {
             if let peerId = component.subject.arguments?.fromPeerId, let peer = state.peerMap[peerId] {
                 tableItems.append(.init(
                     id: "from",
-                    title: strings.Stars_Transaction_From,
+                    title: strings.Gift_View_From,
                     component: AnyComponent(
                         Button(
                             content: AnyComponent(
                                 PeerCellComponent(
                                     context: component.context,
                                     theme: theme,
+                                    strings: strings,
                                     peer: peer
                                 )
                             ),
@@ -313,11 +315,12 @@ private final class GiftViewSheetContent: CombinedComponent {
             } else {
                 tableItems.append(.init(
                     id: "from_anon",
-                    title: strings.Stars_Transaction_From,
+                    title: strings.Gift_View_From,
                     component: AnyComponent(
                         PeerCellComponent(
                             context: component.context,
                             theme: theme,
+                            strings: strings,
                             peer: nil
                         )
                     )
@@ -326,7 +329,7 @@ private final class GiftViewSheetContent: CombinedComponent {
          
             tableItems.append(.init(
                 id: "date",
-                title: strings.Stars_Transaction_Date,
+                title: strings.Gift_View_Date,
                 component: AnyComponent(
                     MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: Int32(Date().timeIntervalSince1970), strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
                 )
@@ -339,7 +342,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 }
                 tableItems.append(.init(
                     id: "availability",
-                    title: "Availability",
+                    title: strings.Gift_View_Availability,
                     component: AnyComponent(
                         MultilineTextComponent(text: .plain(NSAttributedString(string: "\(remains) of \(limitTotal)", font: tableFont, textColor: tableTextColor)))
                     )
@@ -487,7 +490,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             if incoming && !converted {
                 let button = button.update(
                     component: SolidRoundedButtonComponent(
-                        title: savedToProfile ? "Hide from My Page" : "Display on My Page",
+                        title: savedToProfile ? strings.Gift_View_Hide : strings.Gift_View_Display,
                         theme: SolidRoundedButtonComponent.Theme(theme: theme),
                         font: .bold,
                         fontSize: 17.0,
@@ -514,7 +517,7 @@ private final class GiftViewSheetContent: CombinedComponent {
 
                 let secondaryButton = secondaryButton.update(
                     component: SolidRoundedButtonComponent(
-                        title: "Convert to \(convertStars) Stars",
+                        title: strings.Gift_View_Convert(strings.Gift_View_Convert_Stars(Int32(convertStars))).string,
                         theme: SolidRoundedButtonComponent.Theme(backgroundColor: .clear, foregroundColor: linkColor),
                         font: .regular,
                         fontSize: 17.0,
@@ -803,8 +806,8 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             
             self.dismissAnimated()
             
-            let title: String = added ? "Gift Saved to Profile" : "Gift Removed from Profile"
-            var text = added ? "The gift is now displayed in [your profile]()." : "The gift is no longer displayed in [your profile]()."
+            let title: String = added ? presentationData.strings.Gift_Displayed_Title : presentationData.strings.Gift_Hidden_Title
+            var text = added ? presentationData.strings.Gift_Displayed_Text : presentationData.strings.Gift_Hidden_Text
             if let _ = updateSavedToProfile {
                 text = text.replacingOccurrences(of: "]()", with: "").replacingOccurrences(of: "[", with: "")
             }
@@ -848,13 +851,14 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             guard let self, let arguments = subject.arguments, let messageId = arguments.messageId, let fromPeerName = arguments.fromPeerName, let navigationController = self.navigationController as? NavigationController else {
                 return
             }
+            
             let controller = textAlertController(
                 context: self.context,
-                title: "Convert Gift to Stars",
-                text: "Do you want to convert this gift from **\(fromPeerName)** to **\(arguments.convertStars) Stars**?\n\nThis action cannot be undone.",
+                title: presentationData.strings.Gift_Convert_Title,
+                text: presentationData.strings.Gift_Convert_Text(fromPeerName, presentationData.strings.Gift_Convert_Stars(Int32(arguments.convertStars))).string,
                 actions: [
                     TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}),
-                    TextAlertAction(type: .defaultAction, title: "Convert", action: { [weak self, weak navigationController] in
+                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Gift_Convert_Convert, action: { [weak self, weak navigationController] in
                         if let convertToStars {
                             convertToStars()
                         } else {
@@ -876,8 +880,8 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                                             animation: "StarsBuy",
                                             scale: 0.066,
                                             colors: [:],
-                                            title: "Gift Converted",
-                                            text: "You received **\(arguments.convertStars) Stars** instead.",
+                                            title: presentationData.strings.Gift_Convert_Success_Title,
+                                            text: presentationData.strings.Gift_Convert_Success_Text(presentationData.strings.Gift_Convert_Success_Text_Stars(Int32(arguments.convertStars))).string,
                                             customUndoText: nil,
                                             timeout: nil
                                         ),
@@ -1183,11 +1187,13 @@ private final class TableComponent: CombinedComponent {
 private final class PeerCellComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let peer: EnginePeer?
 
-    init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer?) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EnginePeer?) {
         self.context = context
         self.theme = theme
+        self.strings = strings
         self.peer = peer
     }
 
@@ -1196,6 +1202,9 @@ private final class PeerCellComponent: Component {
             return false
         }
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.peer != rhs.peer {
@@ -1236,8 +1245,7 @@ private final class PeerCellComponent: Component {
                 peerName = peerValue.compactDisplayTitle
                 avatarOverride = nil
             } else {
-                //TODO:localize
-                peerName = "Hidden Name"
+                peerName = component.strings.Gift_View_HiddenName
                 avatarOverride = .anonymousSavedMessagesIcon(isColored: true)
             }
             

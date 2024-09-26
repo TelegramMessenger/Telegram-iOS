@@ -54,7 +54,7 @@ private final class ScrollContent: CombinedComponent {
             let component = context.component
             
             let theme = environment.theme
-            //let strings = environment.strings
+            let strings = environment.strings
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let textSideInset: CGFloat = 30.0 + environment.safeInsets.left
@@ -93,7 +93,7 @@ private final class ScrollContent: CombinedComponent {
             
             let title = title.update(
                 component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "What are Stars?", font: titleFont, textColor: textColor)),
+                    text: .plain(NSAttributedString(string: strings.Stars_Info_Title, font: titleFont, textColor: textColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.1
@@ -109,7 +109,7 @@ private final class ScrollContent: CombinedComponent {
             
             let text = text.update(
                 component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Buy packages of Stars on Telegram that let you do following:", font: textFont, textColor: secondaryTextColor)),
+                    text: .plain(NSAttributedString(string: strings.Stars_Info_Description, font: textFont, textColor: secondaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2
@@ -128,9 +128,9 @@ private final class ScrollContent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "gift",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Send Gifts to Friends",
+                        title: strings.Stars_Info_Gift_Title,
                         titleColor: textColor,
-                        text: "Give your friends gifts that can be kept on their profiles or converted to Stars.",
+                        text: strings.Stars_Info_Gift_Text,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Premium/StarsPerk/Gift",
@@ -142,9 +142,9 @@ private final class ScrollContent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "miniapp",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Use Stars in Miniapps",
+                        title: strings.Stars_Info_Miniapp_Title,
                         titleColor: textColor,
-                        text: "Buy additional content and services in Telegram miniapps. [See Examples >]()",
+                        text: strings.Stars_Info_Miniapp_Text,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Premium/StarsPerk/Miniapp",
@@ -159,9 +159,9 @@ private final class ScrollContent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "media",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Unlock Content in Channels",
+                        title: strings.Stars_Info_Media_Title,
                         titleColor: textColor,
-                        text: "Get access to paid content and services in Telegram channels.",
+                        text: strings.Stars_Info_Media_Text,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Premium/StarsPerk/Media",
@@ -173,9 +173,9 @@ private final class ScrollContent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "reaction",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Send Star Reactions",
+                        title: strings.Stars_Info_Reaction_Title,
                         titleColor: textColor,
-                        text: "Support your favorite channels by sending Star reactions to their posts.",
+                        text: strings.Stars_Info_Reaction_Text,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Premium/StarsPerk/Reaction",
@@ -248,7 +248,7 @@ private final class ContainerComponent: CombinedComponent {
         return { context in
             let environment = context.environment[EnvironmentType.self]
             let theme = environment.theme
-            //let strings = environment.strings
+            let strings = environment.strings
             let state = context.state
             
             let controller = environment.controller
@@ -336,7 +336,7 @@ private final class ContainerComponent: CombinedComponent {
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let actionButton = actionButton.update(
                 component: SolidRoundedButtonComponent(
-                    title: "Got It",
+                    title: strings.Stars_Info_Done,
                     theme: SolidRoundedButtonComponent.Theme(
                         backgroundColor: theme.list.itemCheckColors.fillColor,
                         backgroundColors: [],

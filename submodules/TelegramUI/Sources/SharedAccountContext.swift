@@ -2315,14 +2315,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         var openProfileImpl: ((EnginePeer) -> Void)?
         var sendMessageImpl: ((EnginePeer) -> Void)?
         
-        //TODO:localize
         let options = Promise<[PremiumGiftCodeOption]>()
         options.set(context.engine.payments.premiumGiftCodeOptions(peerId: nil))
         let controller = context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(
             context: context,
             mode: mode,
             autoDismiss: false,
-            title: { strings in return "Gift Premium or Stars" },
+            title: { strings in return presentationData.strings.Gift_PremiumOrStars_Title },
             options: contactOptions,
             openProfile: { peer in
                 openProfileImpl?(peer)
@@ -2811,11 +2810,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return GiftViewScreen(context: context, subject: .message(message))
     }
     
-    public func makeContentReportScreen(context: AccountContext, subject: ReportContentSubject, forceDark: Bool, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
+    public func makeContentReportScreen(context: AccountContext, subject: ReportContentSubject, forceDark: Bool, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void, requestSelectMessages: ((String, Data, String?) -> Void)?) {
         let _ = (context.engine.messages.reportContent(subject: subject, option: nil, message: nil)
         |> deliverOnMainQueue).startStandalone(next: { result in
             if case let .options(title, options) = result {
-                present(ContentReportScreen(context: context, subject: subject, title: title, options: options, forceDark: forceDark, completed: completion))
+                present(ContentReportScreen(context: context, subject: subject, title: title, options: options, forceDark: forceDark, completed: completion, requestSelectMessages: requestSelectMessages))
             }
         })
     }

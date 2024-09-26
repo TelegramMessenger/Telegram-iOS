@@ -999,8 +999,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 103, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.Settings_Business, icon: PresentationResourcesSettings.business, action: {
             interaction.openSettings(.businessSetup)
         }))
-        //TODO:localize
-        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 104, label: .text(""), text: "Send a Gift", icon: PresentationResourcesSettings.premiumGift, action: {
+        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 104, label: .text(""), text: presentationData.strings.Settings_SendGift, icon: PresentationResourcesSettings.premiumGift, action: {
             interaction.openSettings(.premiumGift)
         }))
     }
@@ -6100,8 +6099,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                     
                     if strongSelf.peerId.namespace == Namespaces.Peer.CloudUser, !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport) {
-                        //TODO:localize
-                        items.append(.action(ContextMenuActionItem(text: "Send a Gift", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Profile_SendGift, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Gift"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.dismissWithoutContent)
@@ -6674,15 +6672,23 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
-    private func openChatForReporting(_ reason: ReportReason) {
+    private func openChatForReporting(title: String, option: Data, message: String?) {
         if let peer = self.data?.peer, let navigationController = (self.controller?.navigationController as? NavigationController) {
             if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
-                let _ = self.context.engine.peers.reportPeer(peerId: peer.id, reason: reason, message: "").startStandalone()
-                
-                self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .emoji(name: "PoliceCar", text: self.presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
+                //let _ = self.context.engine.peers.reportPeer(peerId: peer.id, reason: reason, message: "").startStandalone()
+                //self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .emoji(name: "PoliceCar", text: self.presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
             } else {
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(EnginePeer(peer)), keepStack: .default, reportReason: reason, completion: { _ in
-                }))
+                self.context.sharedContext.navigateToChatController(
+                    NavigateToChatControllerParams(
+                        navigationController: navigationController,
+                        context: self.context,
+                        chatLocation: .peer(EnginePeer(peer)),
+                        keepStack: .default,
+                        reportReason: NavigateToChatControllerParams.ReportReason(title: title, option: option, message: message),
+                        completion: { _ in
+                        }
+                    )
+                )
             }
         }
     }
@@ -8293,23 +8299,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.context.sharedContext.makeContentReportScreen(context: self.context, subject: .peer(self.peerId), forceDark: false, present: { [weak self] controller in
                 self?.controller?.push(controller)
             }, completion: {
-                
+            }, requestSelectMessages: { [weak self] title, option, message in
+                self?.openChatForReporting(title: title, option: option, message: message)
             })
-            
-//            let options: [PeerReportOption]
-//            if case .user = type {
-//                options = [.spam, .fake, .violence, .pornography, .childAbuse]
-//            } else {
-//                options = [.spam, .fake, .violence, .pornography, .childAbuse, .copyright, .other]
-//            }
-//            
-//            presentPeerReportOptions(context: self.context, parent: controller, contextController: contextController, backAction: backAction, subject: .peer(self.peerId), options: options, passthrough: true, completion: { [weak self] reason, _ in
-//                if let reason = reason {
-//                    DispatchQueue.main.async {
-//                        self?.openChatForReporting(reason)
-//                    }
-//                }
-//            })
         }
     }
     
@@ -11633,7 +11625,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     
                     strongSelf.context.sharedContext.makeContentReportScreen(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), forceDark: false, present: { [weak self] controller in
                         self?.controller?.push(controller)
-                    }, completion: {})
+                    }, completion: {}, requestSelectMessages: nil)
                 }, displayCopyProtectionTip: { [weak self] node, save in
                     if let strongSelf = self, let peer = strongSelf.data?.peer, let messageIds = strongSelf.state.selectedMessageIds, !messageIds.isEmpty {
                         let _ = (strongSelf.context.engine.data.get(EngineDataMap(

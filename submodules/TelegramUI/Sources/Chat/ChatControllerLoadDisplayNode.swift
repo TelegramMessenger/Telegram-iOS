@@ -1928,40 +1928,27 @@ extension ChatControllerImpl {
             }
         }, reportSelectedMessages: { [weak self] in
             if let strongSelf = self, let messageIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
-                if let reportReason = strongSelf.presentationInterfaceState.reportReason {
+                if let (_, option, message) = strongSelf.presentationInterfaceState.reportReason {
                     let presentationData = strongSelf.presentationData
-                    let controller = ActionSheetController(presentationData: presentationData, allowInputInset: true)
-                    let dismissAction: () -> Void = { [weak self, weak controller] in
-                        self?.view.window?.endEditing(true)
-                        controller?.dismissAnimated()
-                    }
-                    var message = ""
-                    var items: [ActionSheetItem] = []
-                    items.append(ReportPeerHeaderActionSheetItem(context: strongSelf.context, text: presentationData.strings.Report_AdditionalDetailsText))
-                    items.append(ReportPeerDetailsActionSheetItem(context: strongSelf.context, theme: presentationData.theme, placeholderText: presentationData.strings.Report_AdditionalDetailsPlaceholder, textUpdated: { text in
-                        message = text
-                    }))
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.Report_Report, color: .accent, font: .bold, enabled: true, action: {
-                        dismissAction()
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } }, completion: { _ in
-                            let _ = (strongSelf.context.engine.peers.reportPeerMessages(messageIds: Array(messageIds), reason: reportReason, message: message)
-                            |> deliverOnMainQueue).startStandalone(completed: {
-                                strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .emoji(name: "PoliceCar", text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
-                            })
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } }, completion: { _ in
+                        let _ = (strongSelf.context.engine.messages.reportContent(subject: .messages(Array(messageIds)), option: option, message: message)
+                        |> deliverOnMainQueue).startStandalone(completed: {
+                            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .emoji(name: "PoliceCar", text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
                         })
-                    }))
-                    
-                    controller.setItemGroups([
-                        ActionSheetItemGroup(items: items),
-                        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-                    ])
-                    strongSelf.present(controller, in: .window(.root))
-                } else {
-                    strongSelf.context.sharedContext.makeContentReportScreen(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), forceDark: false, present: { [weak self] controller in
-                        self?.push(controller)
-                    }, completion: { [weak self] in
-                        self?.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
                     })
+                } else {
+                    strongSelf.context.sharedContext.makeContentReportScreen(
+                        context: strongSelf.context,
+                        subject: .messages(Array(messageIds).sorted()),
+                        forceDark: false,
+                        present: { [weak self] controller in
+                            self?.push(controller)
+                        },
+                        completion: { [weak self] in
+                            self?.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                        },
+                        requestSelectMessages: nil
+                    )
                 }
             }
         }, reportMessages: { [weak self] messages, contextController in
@@ -1979,7 +1966,8 @@ extension ChatControllerImpl {
                     }
                     self.push(controller)
                 },
-                completion: {}
+                completion: {},
+                requestSelectMessages: nil
             )
         }, blockMessageAuthor: { [weak self] message, contextController in
             contextController?.dismiss(completion: {
