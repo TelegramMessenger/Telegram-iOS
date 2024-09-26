@@ -207,6 +207,22 @@ func _internal_convertStarGift(account: Account, messageId: EngineMessage.Id) ->
         |> `catch` { _ -> Signal<Api.Bool?, NoError> in
             return .single(nil)
         }
+        |> mapToSignal { result in
+            if let result, case .boolTrue = result {
+                return account.postbox.transaction { transaction -> Void in
+                    transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, cachedData -> CachedPeerData? in
+                        if let cachedData = cachedData as? CachedUserData, let starGiftsCount = cachedData.starGiftsCount {
+                            var updatedData = cachedData
+                            updatedData = updatedData.withUpdatedStarGiftsCount(max(0, starGiftsCount - 1))
+                            return updatedData
+                        } else {
+                            return cachedData
+                        }
+                    })
+                }
+            }
+            return .complete()
+        }
         |> ignoreValues
     }
 }

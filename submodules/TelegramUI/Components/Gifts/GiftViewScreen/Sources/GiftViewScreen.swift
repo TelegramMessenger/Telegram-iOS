@@ -70,6 +70,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         var initialized = false
         
         var peerMap: [EnginePeer.Id: EnginePeer] = [:]
+        var starGiftsMap: [Int64: StarGift] = [:]
         
         var cachedCloseImage: (UIImage, PresentationTheme)?
         var cachedChevronImage: (UIImage, PresentationTheme)?
@@ -86,14 +87,15 @@ private final class GiftViewSheetContent: CombinedComponent {
                 if let fromPeerId = arguments.fromPeerId {
                     peerIds.append(fromPeerId)
                 }
-                self.disposable = (context.engine.data.get(
-                    EngineDataMap(
+                
+                self.disposable = combineLatest(queue: Queue.mainQueue(),
+                    context.engine.data.get(EngineDataMap(
                         peerIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.Peer in
                             return TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
                         }
-                    )
-                )
-                |> deliverOnMainQueue).startStrict(next: { [weak self] peers in
+                    )),
+                    context.engine.payments.cachedStarGifts()
+                ).startStrict(next: { [weak self] peers, starGifts in
                     if let strongSelf = self {
                         var peersMap: [EnginePeer.Id: EnginePeer] = [:]
                         for peerId in peerIds {
@@ -103,6 +105,14 @@ private final class GiftViewSheetContent: CombinedComponent {
                         }
                         strongSelf.peerMap = peersMap
 
+                        var starGiftsMap: [Int64: StarGift] = [:]
+                        if let starGifts {
+                            for gift in starGifts {
+                                starGiftsMap[gift.id] = gift
+                            }
+                        }
+                        strongSelf.starGiftsMap = starGiftsMap
+                        
                         strongSelf.initialized = true
                         
                         strongSelf.updated(transition: .immediate)
@@ -170,33 +180,30 @@ private final class GiftViewSheetContent: CombinedComponent {
             let convertStars: Int64
             let text: String?
             let entities: [MessageTextEntity]?
-            let limitNumber: Int32?
             let limitTotal: Int32?
             var incoming = false
             var savedToProfile = false
             var converted = false
+            var giftId: Int64 = 0
             if let arguments = component.subject.arguments {
                 animationFile = arguments.gift.file
                 stars = arguments.gift.price
                 text = arguments.text
                 entities = arguments.entities
-                limitNumber = arguments.gift.availability?.remains
                 limitTotal = arguments.gift.availability?.total
                 convertStars = arguments.convertStars
                 incoming = arguments.incoming || arguments.peerId == component.context.account.peerId
                 savedToProfile = arguments.savedToProfile
                 converted = arguments.converted
+                giftId = arguments.gift.id
             } else {
                 animationFile = nil
                 stars = 0
                 text = nil
                 entities = nil
-                limitNumber = nil
                 limitTotal = nil
                 convertStars = 0
             }
-            let _ = entities
-            let _ = limitNumber
             
             var descriptionText: String
             if incoming {
@@ -326,11 +333,15 @@ private final class GiftViewSheetContent: CombinedComponent {
             ))
             
             if let limitTotal {
+                var remains: Int32 = 0
+                if let gift = state.starGiftsMap[giftId], let availability = gift.availability {
+                    remains = availability.remains
+                }
                 tableItems.append(.init(
                     id: "availability",
                     title: "Availability",
                     component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: "1 of \(limitTotal)", font: tableFont, textColor: tableTextColor)))
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: "\(remains) of \(limitTotal)", font: tableFont, textColor: tableTextColor)))
                     )
                 ))
             }
