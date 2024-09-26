@@ -384,6 +384,7 @@ final class PeerInfoScreenData {
     let starsRevenueStatsContext: StarsRevenueStatsContext?
     let revenueStatsState: RevenueStats?
     let profileGiftsContext: ProfileGiftsContext?
+    let premiumGiftOptions: [PremiumGiftCodeOption]
     
     let _isContact: Bool
     var forceIsContact: Bool = false
@@ -430,7 +431,8 @@ final class PeerInfoScreenData {
         starsRevenueStatsState: StarsRevenueStats?,
         starsRevenueStatsContext: StarsRevenueStatsContext?,
         revenueStatsState: RevenueStats?,
-        profileGiftsContext: ProfileGiftsContext?
+        profileGiftsContext: ProfileGiftsContext?,
+        premiumGiftOptions: [PremiumGiftCodeOption]
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -466,6 +468,7 @@ final class PeerInfoScreenData {
         self.starsRevenueStatsContext = starsRevenueStatsContext
         self.revenueStatsState = revenueStatsState
         self.profileGiftsContext = profileGiftsContext
+        self.premiumGiftOptions = premiumGiftOptions
     }
 }
 
@@ -959,7 +962,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             starsRevenueStatsState: nil,
             starsRevenueStatsContext: nil,
             revenueStatsState: nil,
-            profileGiftsContext: nil
+            profileGiftsContext: nil,
+            premiumGiftOptions: []
         )
     }
 }
@@ -1005,7 +1009,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 starsRevenueStatsState: nil,
                 starsRevenueStatsContext: nil,
                 revenueStatsState: nil,
-                profileGiftsContext: nil
+                profileGiftsContext: nil,
+                premiumGiftOptions: []
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -1017,11 +1022,17 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 groupsInCommon = nil
             }
             
+            let premiumGiftOptions: Signal<[PremiumGiftCodeOption], NoError>
             let profileGiftsContext: ProfileGiftsContext?
             if case .user = kind {
                 profileGiftsContext = ProfileGiftsContext(account: context.account, peerId: userPeerId)
+                premiumGiftOptions = .single([])
+                |> then(
+                    context.engine.payments.premiumGiftCodeOptions(peerId: nil, onlyCached: true)
+                )
             } else {
                 profileGiftsContext = nil
+                premiumGiftOptions = .single([])
             }
             
             enum StatusInputData: Equatable {
@@ -1275,9 +1286,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 hasBotPreviewItems,
                 peerInfoPersonalChannel(context: context, peerId: peerId, isSettings: false),
                 privacySettings,
-                starsRevenueContextAndState
+                starsRevenueContextAndState,
+                premiumGiftOptions
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, hasBotPreviewItems, personalChannel, privacySettings, starsRevenueContextAndState -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, hasBotPreviewItems, personalChannel, privacySettings, starsRevenueContextAndState, premiumGiftOptions -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 if isMyProfile {
                     availablePanes?.insert(.stories, at: 0)
@@ -1394,7 +1406,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     starsRevenueStatsState: starsRevenueContextAndState.1,
                     starsRevenueStatsContext: starsRevenueContextAndState.0,
                     revenueStatsState: nil,
-                    profileGiftsContext: profileGiftsContext
+                    profileGiftsContext: profileGiftsContext,
+                    premiumGiftOptions: premiumGiftOptions
                 )
             }
         case .channel:
@@ -1604,7 +1617,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     starsRevenueStatsState: starsRevenueContextAndState.1,
                     starsRevenueStatsContext: starsRevenueContextAndState.0,
                     revenueStatsState: revenueContextAndState.1,
-                    profileGiftsContext: nil
+                    profileGiftsContext: nil,
+                    premiumGiftOptions: []
                 )
             }
         case let .group(groupId):
@@ -1905,7 +1919,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     starsRevenueStatsState: nil,
                     starsRevenueStatsContext: nil,
                     revenueStatsState: nil,
-                    profileGiftsContext: nil
+                    profileGiftsContext: nil,
+                    premiumGiftOptions: []
                 ))
             }
         }

@@ -9816,35 +9816,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func openPremiumGift() {
-        guard let cachedData = self.data?.cachedData as? CachedUserData else {
+        guard let premiumGiftOptions = self.data?.premiumGiftOptions else {
             return
         }
-        var pushControllerImpl: ((ViewController) -> Void)?
-        let controller = PremiumGiftScreen(context: self.context, peerIds: [self.peerId], options: cachedData.premiumGiftOptions, source: .profile, pushController: { c in
-            pushControllerImpl?(c)
-        }, completion: { [weak self] in
-            if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                var controllers = navigationController.viewControllers
-                controllers = controllers.filter { !($0 is PeerInfoScreen) && !($0 is PremiumGiftScreen) }
-                var foundController = false
-                for controller in controllers.reversed() {
-                    if let chatController = controller as? ChatController, case .peer(id: strongSelf.peerId) = chatController.chatLocation {
-                        chatController.hintPlayNextOutgoingGift()
-                        foundController = true
-                        break
-                    }
-                }
-                if !foundController {
-                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: strongSelf.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                    chatController.hintPlayNextOutgoingGift()
-                    controllers.append(chatController)
-                }
-                navigationController.setViewControllers(controllers, animated: true)
-            }
-        })
-        pushControllerImpl = { [weak controller] c in
-            controller?.push(c)
-        }
+        let premiumOptions = premiumGiftOptions.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
+        
+        let controller = self.context.sharedContext.makeGiftOptionsController(
+            context: self.context,
+            peerId: self.peerId,
+            premiumOptions: premiumOptions
+        )
         self.controller?.push(controller)
     }
     

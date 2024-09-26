@@ -413,7 +413,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: 100.0, height: 100.0)
                 )
-                let textLimitLabelFrame = CGRect(origin: CGPoint(x: availableSize.width - textLimitLabelSize.width - rightInset, y: verticalInset + 2.0), size: textLimitLabelSize)
+                let textLimitLabelFrame = CGRect(origin: CGPoint(x: availableSize.width - textLimitLabelSize.width - leftInset + 5.0, y: verticalInset + 2.0), size: textLimitLabelSize)
                 if let textLimitLabelView = textLimitLabel.view {
                     if textLimitLabelView.superview == nil {
                         textLimitLabelView.isUserInteractionEnabled = false
