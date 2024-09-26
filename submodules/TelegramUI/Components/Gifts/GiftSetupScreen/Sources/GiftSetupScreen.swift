@@ -438,6 +438,8 @@ final class GiftSetupScreenComponent: Component {
             
             contentHeight += environment.navigationHeight
             contentHeight += 26.0
+            
+            let giftConfiguration = GiftConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
                
             var introSectionItems: [AnyComponentWithIdentity<Empty>] = []
             introSectionItems.append(AnyComponentWithIdentity(id: introSectionItems.count, component: AnyComponent(Rectangle(color: .clear, height: 346.0, tag: self.introPlaceholderTag))))
@@ -451,10 +453,10 @@ final class GiftSetupScreenComponent: Component {
                     return ListMultilineTextFieldItemComponent.ResetText(value: $0)
                 },
                 placeholder: "Enter Message",
-                autocapitalizationType: .none,
-                autocorrectionType: .no,
+                autocapitalizationType: .sentences,
+                autocorrectionType: .yes,
                 returnKeyType: .done,
-                characterLimit: 255,
+                characterLimit: Int(giftConfiguration.maxCaptionLength),
                 displayCharacterLimit: true,
                 emptyLineHandling: .notAllowed,
                 formatMenuAvailability: .available([.bold, .italic, .underline, .strikethrough, .spoiler]),
@@ -1060,5 +1062,29 @@ public final class GiftSetupScreen: ViewControllerComponentContainer {
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+    }
+}
+
+private struct GiftConfiguration {
+    static var defaultValue: GiftConfiguration {
+        return GiftConfiguration(maxCaptionLength: 255)
+    }
+    
+    let maxCaptionLength: Int32
+    
+    fileprivate init(maxCaptionLength: Int32) {
+        self.maxCaptionLength = maxCaptionLength
+    }
+    
+    static func with(appConfiguration: AppConfiguration) -> GiftConfiguration {
+        if let data = appConfiguration.data {
+            var maxCaptionLength: Int32?
+            if let value = data["stargifts_message_length_max"] as? Double {
+                maxCaptionLength = Int32(value)
+            }
+            return GiftConfiguration(maxCaptionLength: maxCaptionLength ?? GiftConfiguration.defaultValue.maxCaptionLength)
+        } else {
+            return .defaultValue
+        }
     }
 }

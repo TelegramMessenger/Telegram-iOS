@@ -135,7 +135,6 @@ private final class GiftViewSheetContent: CombinedComponent {
         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
-            let controller = environment.controller
             
             let component = context.component
             let theme = environment.theme
@@ -294,17 +293,12 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 )
                             ),
                             action: {
-//                                if "".isEmpty {
-//                                    component.openPeer(peer)
-//                                    Queue.mainQueue().after(1.0, {
-//                                        component.cancel(false)
-//                                    })
-//                                } else {
-                                    if let controller = controller() as? GiftViewScreen, let navigationController = controller.navigationController, let chatController = navigationController.viewControllers.first(where: { $0 is ChatController }) as? ChatController {
-                                        chatController.playShakeAnimation()
-                                    }
-                                    component.cancel(true)
-//                                }
+                                if "".isEmpty {
+                                    component.openPeer(peer)
+                                    Queue.mainQueue().after(1.0, {
+                                        component.cancel(false)
+                                    })
+                                }
                             }
                         )
                     )
@@ -798,12 +792,17 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             
             self.dismissAnimated()
             
+            let title: String = added ? "Gift Saved to Profile" : "Gift Removed from Profile"
+            var text = added ? "The gift is now displayed in [your profile]()." : "The gift is no longer displayed in [your profile]()."
+            if let _ = updateSavedToProfile {
+                text = text.replacingOccurrences(of: "]()", with: "").replacingOccurrences(of: "[", with: "")
+            }
             if let navigationController {
                 Queue.mainQueue().after(0.5) {
                     if let lastController = navigationController.viewControllers.last as? ViewController {
                         let resultController = UndoOverlayController(
                             presentationData: presentationData,
-                            content: .sticker(context: context, file: arguments.gift.file, loop: false, title: added ? "Gift Saved to Profile" : "Gift Removed from Profile", text: added ? "The gift is now displayed in [your profile]()." : "The gift is no longer displayed in [your profile]().", undoText: nil, customAction: nil),
+                            content: .sticker(context: context, file: arguments.gift.file, loop: false, title: title, text: text, undoText: nil, customAction: nil),
                             elevatedLayout: lastController is ChatController,
                             action: { [weak navigationController] action in
                                 if case .info = action, let navigationController {
@@ -854,11 +853,11 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                         self?.dismissAnimated()
                                                 
                         if let navigationController {
-                            if let starsContext = context.starsContext {
-                                navigationController.pushViewController(context.sharedContext.makeStarsTransactionsScreen(context: context, starsContext: starsContext), animated: true)
-                            }
-                            
                             Queue.mainQueue().after(0.5) {
+                                if let starsContext = context.starsContext {
+                                    navigationController.pushViewController(context.sharedContext.makeStarsTransactionsScreen(context: context, starsContext: starsContext), animated: true)
+                                }
+                                
                                 if let lastController = navigationController.viewControllers.last as? ViewController {
                                     let resultController = UndoOverlayController(
                                         presentationData: presentationData,

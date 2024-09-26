@@ -5683,7 +5683,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     @objc private func nameButtonPressed() {
         if let item = self.item, let peer = item.message.author {
             let messageReference = MessageReference(item.message)
-            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+            if peer.id.isVerificationCodes, let forwardAuthor = item.content.firstMessage.forwardInfo?.author {
+                if let channel = forwardAuthor as? TelegramChannel, case .broadcast = channel.info {
+                    item.controllerInteraction.openPeer(EnginePeer(channel), .chat(textInputState: nil, subject: nil, peekData: nil), messageReference, .default)
+                } else {
+                    item.controllerInteraction.openPeer(EnginePeer(forwardAuthor), .info(nil), messageReference, .default)
+                }
+            } else if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                 item.controllerInteraction.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), messageReference, .default)
             } else {
                 item.controllerInteraction.openPeer(EnginePeer(peer), .info(nil), messageReference, .groupParticipant(storyStats: nil, avatarHeaderNode: nil))

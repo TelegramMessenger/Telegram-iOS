@@ -148,6 +148,79 @@ func _internal_getPremiumGiveawayInfo(account: Account, peerId: EnginePeer.Id, m
     }
 }
 
+public final class CachedPremiumGiftCodeOptions: Codable {
+    public let options: [PremiumGiftCodeOption]
+    
+    public init(options: [PremiumGiftCodeOption]) {
+        self.options = options
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.options = try container.decode([PremiumGiftCodeOption].self, forKey: "t")
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.options, forKey: "t")
+    }
+}
+
+func _internal_premiumGiftCodeOptions(account: Account, peerId: EnginePeer.Id?, onlyCached: Bool = false) -> Signal<[PremiumGiftCodeOption], NoError> {
+    let cached = account.postbox.transaction { transaction -> Signal<[PremiumGiftCodeOption], NoError> in
+        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPremiumGiftCodeOptions, key: ValueBoxKey(length: 0)))?.get(CachedPremiumGiftCodeOptions.self) {
+            return .single(entry.options)
+        }
+        return .single([])
+    } |> switchToLatest
+    
+    var flags: Int32 = 0
+    if let _ = peerId {
+        flags |= 1 << 0
+    }
+    let remote = account.postbox.transaction { transaction -> Peer? in
+        if let peerId = peerId {
+            return transaction.getPeer(peerId)
+        }
+        return nil
+    }
+    |> mapToSignal { peer in
+        let inputPeer = peer.flatMap(apiInputPeer)
+        return account.network.request(Api.functions.payments.getPremiumGiftCodeOptions(flags: flags, boostPeer: inputPeer))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<[Api.PremiumGiftCodeOption]?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { results -> Signal<[PremiumGiftCodeOption], NoError> in
+            let options = results?.map { PremiumGiftCodeOption(apiGiftCodeOption: $0) } ?? []
+            return account.postbox.transaction { transaction -> [PremiumGiftCodeOption] in
+                if peerId == nil {
+                    if let entry = CodableEntry(CachedPremiumGiftCodeOptions(options: options)) {
+                        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPremiumGiftCodeOptions, key: ValueBoxKey(length: 0)), entry: entry)
+                    }
+                }
+                return options
+            }
+        }
+    }
+    if peerId == nil {
+        return cached
+        |> mapToSignal { cached in
+            if onlyCached && !cached.isEmpty {
+                return .single(cached)
+            } else {
+                return .single(cached)
+                |> then(remote)
+            }
+        }
+    } else {
+        return remote
+    }
+}
+
+
 func _internal_premiumGiftCodeOptions(account: Account, peerId: EnginePeer.Id?) -> Signal<[PremiumGiftCodeOption], NoError> {
     var flags: Int32 = 0
     if let _ = peerId {
