@@ -170,7 +170,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
     private var dimensions: CGSize?
     private let dimensionsPromise = ValuePromise<CGSize>(CGSize())
     
-    private var validLayout: CGSize?
+    private var validLayout: (size: CGSize, actualSize: CGSize)?
     
     init(postbox: Postbox, audioSessionManager: ManagedAudioSession, userLocation: MediaResourceUserLocation, content: PlatformVideoContent.Content, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool) {
         self.postbox = postbox
@@ -203,8 +203,8 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
                         if let dimensions = getSize() {
                             strongSelf.dimensions = dimensions
                             strongSelf.dimensionsPromise.set(dimensions)
-                            if let size = strongSelf.validLayout {
-                                strongSelf.updateLayout(size: size, transition: .immediate)
+                            if let validLayout = strongSelf.validLayout {
+                                strongSelf.updateLayout(size: validLayout.size, actualSize: validLayout.actualSize, transition: .immediate)
                             }
                         }
                     }
@@ -371,7 +371,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
         }
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, actualSize: CGSize, transition: ContainedViewLayoutTransition) {
         transition.updatePosition(node: self.playerNode, position: CGPoint(x: size.width / 2.0, y: size.height / 2.0))
         transition.updateTransformScale(node: self.playerNode, scale: size.width / self.intrinsicDimensions.width)
         

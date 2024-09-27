@@ -116,7 +116,7 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
         self.readyDisposable.dispose()
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, actualSize: CGSize, transition: ContainedViewLayoutTransition) {
         transition.updatePosition(node: self.playerNode, position: CGPoint(x: size.width / 2.0, y: size.height / 2.0))
         transition.updateTransformScale(node: self.playerNode, scale: size.width / self.intrinsicDimensions.width)
 
