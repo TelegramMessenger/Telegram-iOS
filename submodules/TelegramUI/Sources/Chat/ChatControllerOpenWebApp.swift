@@ -135,22 +135,16 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
                 }
             }, didDismiss: { [weak parentController] in
                 if let parentController = parentController as? ChatControllerImpl {
-//                    let isFocused = parentController.chatDisplayNode.textInputPanelNode?.isFocused ?? false
-//                    parentController.chatDisplayNode.insertSubnode(parentController.chatDisplayNode.inputPanelContainerNode, aboveSubnode: parentController.chatDisplayNode.inputContextPanelContainer)
-//                    if isFocused {
-//                        parentController.chatDisplayNode.textInputPanelNode?.ensureFocused()
-//                    }
-                    
                     parentController.updateChatPresentationInterfaceState(interactive: false) { state in
                         return state.updatedForceInputCommandsHidden(false)
                     }
                 }
             }, getNavigationController: { [weak parentController] in
+                var navigationController: NavigationController?
                 if let parentController = parentController as? ChatControllerImpl {
-                    return parentController.effectiveNavigationController ?? context.sharedContext.mainWindow?.viewController as? NavigationController
-                } else {
-                    return parentController?.navigationController as? NavigationController
+                    navigationController = parentController.effectiveNavigationController
                 }
+                return navigationController ?? (context.sharedContext.mainWindow?.viewController as? NavigationController)
             })
             controller.navigationPresentation = .flatModal
             parentController.push(controller)
@@ -209,11 +203,11 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
                 }, requestSwitchInline: { [weak parentController] query, chatTypes, completion in
                     ChatControllerImpl.botRequestSwitchInline(context: context, controller: parentController as? ChatControllerImpl, peerId: peer.id, botAddress: botAddress, query: query, chatTypes: chatTypes, completion: completion)
                 }, getNavigationController: { [weak parentController] in
+                    var navigationController: NavigationController?
                     if let parentController = parentController as? ChatControllerImpl {
-                        return parentController.effectiveNavigationController ?? context.sharedContext.mainWindow?.viewController as? NavigationController
-                    } else {
-                        return parentController?.navigationController as? NavigationController
+                        navigationController = parentController.effectiveNavigationController
                     }
+                    return navigationController ?? (context.sharedContext.mainWindow?.viewController as? NavigationController)
                 })
                 controller.navigationPresentation = .flatModal
                 if let parentController = parentController as? ChatControllerImpl {
@@ -257,11 +251,11 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
                         parentController.chatDisplayNode.historyNode.scrollToEndOfHistory()
                     }
                 }, getNavigationController: { [weak parentController] in
+                    var navigationController: NavigationController?
                     if let parentController = parentController as? ChatControllerImpl {
-                        return parentController.effectiveNavigationController ?? context.sharedContext.mainWindow?.viewController as? NavigationController
-                    } else {
-                        return parentController?.navigationController as? NavigationController
+                        navigationController = parentController.effectiveNavigationController
                     }
+                    return navigationController ?? (context.sharedContext.mainWindow?.viewController as? NavigationController)
                 })
                 controller.navigationPresentation = .flatModal
                 if let parentController = parentController as? ChatControllerImpl {
