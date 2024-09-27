@@ -914,7 +914,8 @@ final class GiftSetupScreenComponent: Component {
                         useOpaqueTheme: true,
                         interaction: self.inputMediaInteraction,
                         chatPeerId: nil,
-                        stateContext: self.inputMediaNodeStateContext
+                        stateContext: self.inputMediaNodeStateContext,
+                        forceHasPremium: true
                     )
                     inputMediaNode.clipsToBounds = true
                     
