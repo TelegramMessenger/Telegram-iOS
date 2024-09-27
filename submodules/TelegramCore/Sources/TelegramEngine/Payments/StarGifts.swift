@@ -191,7 +191,7 @@ func _internal_keepCachedStarGiftsUpdated(postbox: Postbox, network: Network) ->
 
 func managedStarGiftsUpdates(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
     let poll = _internal_keepCachedStarGiftsUpdated(postbox: postbox, network: network)
-    return (poll |> then(.complete() |> suspendAwareDelay(2.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+    return (poll |> then(.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
 
 func _internal_convertStarGift(account: Account, messageId: EngineMessage.Id) -> Signal<Never, NoError> {
@@ -206,6 +206,22 @@ func _internal_convertStarGift(account: Account, messageId: EngineMessage.Id) ->
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Bool?, NoError> in
             return .single(nil)
+        }
+        |> mapToSignal { result in
+            if let result, case .boolTrue = result {
+                return account.postbox.transaction { transaction -> Void in
+                    transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, cachedData -> CachedPeerData? in
+                        if let cachedData = cachedData as? CachedUserData, let starGiftsCount = cachedData.starGiftsCount {
+                            var updatedData = cachedData
+                            updatedData = updatedData.withUpdatedStarGiftsCount(max(0, starGiftsCount - 1))
+                            return updatedData
+                        } else {
+                            return cachedData
+                        }
+                    })
+                }
+            }
+            return .complete()
         }
         |> ignoreValues
     }

@@ -38,11 +38,12 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private let backgroundNode: ASDisplayNode
     private let scrollNode: ASScrollNode
     
-    private var unlockBackground: UIImageView?
+    private var unlockBackground: ASDisplayNode?
+    private var unlockSeparator: ASDisplayNode?
     private var unlockText: ComponentView<Empty>?
     private var unlockButton: SolidRoundedButtonNode?
     
-    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData)?
+    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData)?
     
     private var theme: PresentationTheme?
     private let presentationDataPromise = Promise<PresentationData>()
@@ -87,6 +88,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             guard let self else {
                 return
             }
+            let isFirstTime = starsProducts == nil
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             self.statusPromise.set(.single(PeerInfoStatusData(text: presentationData.strings.SharedMedia_GiftCount(state.count ?? 0), isActivity: true, key: .gifts)))
             self.starsProducts = state.gifts
@@ -96,7 +98,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 self.ready.set(.single(true))
             }
             
-            self.updateScrolling()
+            self.updateScrolling(transition: isFirstTime ? .immediate : .easeInOut(duration: 0.25))
         })
     }
     
@@ -119,10 +121,10 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        self.updateScrolling()
+        self.updateScrolling(transition: .immediate)
     }
     
-    func updateScrolling() {
+    func updateScrolling(transition: ComponentTransition) {
         if let starsProducts = self.starsProducts, let params = self.currentParams {
             let optionSpacing: CGFloat = 10.0
             let sideInset = params.sideInset + 16.0
@@ -140,13 +142,14 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 let itemId = AnyHashable(product.date)
                 validIds.append(itemId)
                 
-                let itemTransition = ComponentTransition.immediate
+                var itemTransition = transition
                 let visibleItem: ComponentView<Empty>
                 if let current = self.starsItems[itemId] {
                     visibleItem = current
                 } else {
                     visibleItem = ComponentView()
                     self.starsItems[itemId] = visibleItem
+                    itemTransition = .immediate
                 }
                 
                 var isVisible = false
@@ -157,8 +160,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 if isVisible {
                     let ribbonText: String?
                     if let availability = product.gift.availability {
-                        //TODO:localize
-                        ribbonText = "1 of \(compactNumericCountString(Int(availability.total)))"
+                        ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(availability.total))).string
                     } else {
                         ribbonText = nil
                     }
@@ -221,6 +223,26 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 }
             }
             
+            var removeIds: [AnyHashable] = []
+            for (id, item) in self.starsItems {
+                if !validIds.contains(id) {
+                    removeIds.append(id)
+                    if let itemView = item.view {
+                        if !transition.animation.isImmediate {
+                            itemView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.25, removeOnCompletion: false)
+                            itemView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                                itemView.removeFromSuperview()
+                            })
+                        } else {
+                            itemView.removeFromSuperview()
+                        }
+                    }
+                }
+            }
+            for id in removeIds {
+                self.starsItems.removeValue(forKey: id)
+            }
+            
             var contentHeight = ceil(CGFloat(starsProducts.count) / 3.0) * starsOptionSize.height + 60.0 + 16.0
             
             if self.peerId == self.context.account.peerId {
@@ -235,7 +257,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 self.theme = presentationData.theme
                 
                 let unlockText: ComponentView<Empty>
-                let unlockBackground: UIImageView
+                let unlockBackground: ASDisplayNode
+                let unlockSeparator: ASDisplayNode
                 let unlockButton: SolidRoundedButtonNode
                 if let current = self.unlockText {
                     unlockText = current
@@ -247,10 +270,17 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 if let current = self.unlockBackground {
                     unlockBackground = current
                 } else {
-                    unlockBackground = UIImageView()
-                    unlockBackground.contentMode = .scaleToFill
-                    self.view.addSubview(unlockBackground)
+                    unlockBackground = ASDisplayNode()
+                    self.addSubnode(unlockBackground)
                     self.unlockBackground = unlockBackground
+                }
+                
+                if let current = self.unlockSeparator {
+                    unlockSeparator = current
+                } else {
+                    unlockSeparator = ASDisplayNode()
+                    self.addSubnode(unlockSeparator)
+                    self.unlockSeparator = unlockSeparator
                 }
                                         
                 if let current = self.unlockButton {
@@ -260,8 +290,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     self.view.addSubview(unlockButton.view)
                     self.unlockButton = unlockButton
                 
-                    //TODO:localize
-                    unlockButton.title = "Send Gifts to Friends"
+                    unlockButton.title = params.presentationData.strings.PeerInfo_Gifts_Send
                     
                     unlockButton.pressed = { [weak self] in
                         self?.buttonPressed()
@@ -269,9 +298,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 }
             
                 if themeUpdated {
-                    let topColor = presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.0)
-                    let bottomColor = presentationData.theme.list.plainBackgroundColor
-                    unlockBackground.image = generateGradientImage(size: CGSize(width: 1.0, height: 170.0), colors: [topColor, bottomColor, bottomColor], locations: [0.0, 0.3, 1.0])
+                    unlockBackground.backgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
+                    unlockSeparator.backgroundColor = presentationData.theme.rootController.tabBar.separatorColor
                     unlockButton.updateTheme(SolidRoundedButtonTheme(theme: presentationData.theme))
                 }
                 
@@ -283,20 +311,21 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     return nil
                 })
                 
-                let scrollOffset: CGFloat = min(0.0, self.scrollNode.view.contentOffset.y + bottomInset + 80.0)
-                 
-                transition.setFrame(view: unlockBackground, frame: CGRect(x: 0.0, y: size.height - bottomInset - 170.0 + scrollOffset, width: size.width, height: bottomInset + 170.0))
-                
+                let scrollOffset: CGFloat = max(0.0, size.height - params.visibleHeight)
+                                 
                 let buttonSideInset = sideInset + 16.0
                 let buttonSize = CGSize(width: size.width - buttonSideInset * 2.0, height: 50.0)
-                transition.setFrame(view: unlockButton.view, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - buttonSize.height - 26.0), size: buttonSize))
+                transition.setFrame(view: unlockButton.view, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - buttonSize.height - scrollOffset), size: buttonSize))
                 let _ = unlockButton.updateLayout(width: buttonSize.width, transition: .immediate)
+                
+                transition.setFrame(view: unlockBackground.view, frame: CGRect(x: 0.0, y: size.height - bottomInset - buttonSize.height - 8.0 - scrollOffset, width: size.width, height: bottomInset + buttonSize.height + 8.0))
+                transition.setFrame(view: unlockSeparator.view, frame: CGRect(x: 0.0, y: size.height - bottomInset - buttonSize.height - 8.0 - scrollOffset, width: size.width, height: UIScreenPixel))
                 
                 let unlockSize = unlockText.update(
                     transition: .immediate,
                     component: AnyComponent(
                         BalancedTextComponent(
-                            text: .markdown(text: "These gifts were sent to you by other users. Tap on a gift to exchange it for Stars or change its privacy settings.", attributes: markdownAttributes),
+                            text: .markdown(text: params.presentationData.strings.PeerInfo_Gifts_Info, attributes: markdownAttributes),
                             horizontalAlignment: .center,
                             maximumNumberOfLines: 0,
                             lineSpacing: 0.2
@@ -342,7 +371,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
     
     public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
-        self.currentParams = (size, sideInset, bottomInset, isScrollingLockedAtTop, presentationData)
+        self.currentParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, presentationData)
         self.presentationDataPromise.set(.single(presentationData))
         
         self.backgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
@@ -354,7 +383,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         }
         self.scrollNode.view.isScrollEnabled = !isScrollingLockedAtTop
         
-        self.updateScrolling()
+        self.updateScrolling(transition: ComponentTransition(transition))
     }
     
     public func findLoadedMessage(id: MessageId) -> Message? {

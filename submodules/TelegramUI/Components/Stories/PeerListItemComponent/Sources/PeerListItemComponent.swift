@@ -169,7 +169,6 @@ public final class PeerListItemComponent: Component {
             case neutral
             case accent
             case constructive
-            case destructive
         }
         
         public var text: String
@@ -938,9 +937,8 @@ public final class PeerListItemComponent: Component {
             case .accent:
                 labelColor = component.theme.list.itemAccentColor
             case .constructive:
+                //TODO:release
                 labelColor = UIColor(rgb: 0x33C758)
-            case .destructive:
-                labelColor = UIColor(rgb: 0xff3b30)
             }
             
             var animateLabelDirection: Bool?

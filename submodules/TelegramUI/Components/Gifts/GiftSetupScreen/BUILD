@@ -34,10 +34,13 @@ swift_library(
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/AppBundle",
         "//submodules/WallpaperBackgroundNode",
+        "//submodules/TextFormat",
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/TelegramUI/Components/TextFieldComponent",
         "//submodules/TelegramUI/Components/ListItemComponentAdaptor",
         "//submodules/BotPaymentsUI",
+        "//submodules/TelegramUI/Components/EmojiSuggestionsComponent",
+        "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
     ],
     visibility = [
         "//visibility:public",

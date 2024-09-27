@@ -1152,8 +1152,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
             case .savedMessages:
                 title = presentationData.strings.PeerInfo_SavedMessagesTabTitle
             case .gifts:
-                //TODO:localize
-                title = "Gifts"
+                title = presentationData.strings.PeerInfo_PaneGifts
             }
             return PeerInfoPaneSpecifier(key: key, title: title)
         }, selectedPane: self.currentPaneKey, disableSwitching: disableTabSwitching, transitionFraction: self.transitionFraction, transition: transition)

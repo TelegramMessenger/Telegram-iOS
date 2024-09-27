@@ -48,7 +48,7 @@ CONFIGURE_FLAGS="--enable-cross-compile --disable-programs \
 				 --enable-libvpx \
                  --enable-audiotoolbox \
                  --enable-bsf=aac_adtstoasc,vp9_superframe,h264_mp4toannexb \
-                 --enable-decoder=h264,libvpx_vp9,hevc,libopus,mp3,aac,flac,alac_at,pcm_s16le,pcm_s24le,gsm_ms_at \
+                 --enable-decoder=h264,libvpx_vp9,hevc,libopus,mp3,aac,flac,alac_at,pcm_s16le,pcm_s24le,pcm_f32le,gsm_ms_at \
                  --enable-encoder=libvpx_vp9,aac_at \
                  --enable-demuxer=aac,mov,m4v,mp3,ogg,libopus,flac,wav,aiff,matroska,mpegts \
                  --enable-parser=aac,h264,mp3,libopus \

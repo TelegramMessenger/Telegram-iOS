@@ -6,40 +6,12 @@ import MultilineTextComponent
 import TelegramPresentationData
 import TelegramStringFormatting
 import HierarchyTrackingLayer
-import AnimatedTextComponent
 
 private let purple = UIColor(rgb: 0x3252ef)
 private let pink = UIColor(rgb: 0xef436c)
 
 private let latePurple = UIColor(rgb: 0x974aa9)
 private let latePink = UIColor(rgb: 0xf0436c)
-
-private func textItemsForTimeout(value: Int32) -> [AnimatedTextComponent.Item] {
-    if value < 3600 {
-        let minutes = value / 60
-        let seconds = value % 60
-        
-        var items: [AnimatedTextComponent.Item] = []
-        items.append(AnimatedTextComponent.Item(id: AnyHashable(11), content: .number(Int(minutes), minDigits: 1)))
-        items.append(AnimatedTextComponent.Item(id: AnyHashable(12), content: .text(":")))
-        items.append(AnimatedTextComponent.Item(id: AnyHashable(13), content: .number(Int(seconds), minDigits: 2)))
-        
-        return items
-    } else {
-        let hours = value / 3600
-        let minutes = (value % 3600) / 60
-        let seconds = value % 60
-        
-        var items: [AnimatedTextComponent.Item] = []
-        items.append(AnimatedTextComponent.Item(id: AnyHashable(9), content: .number(Int(hours), minDigits: 1)))
-        items.append(AnimatedTextComponent.Item(id: AnyHashable(10), content: .text(":")))
-        items.append(AnimatedTextComponent.Item(id: AnyHashable(11), content: .number(Int(minutes), minDigits: 2)))
-        items.append(AnimatedTextComponent.Item(id: AnyHashable(12), content: .text(":")))
-        items.append(AnimatedTextComponent.Item(id: AnyHashable(13), content: .number(Int(seconds), minDigits: 2)))
-        
-        return items
-    }
-}
 
 final class VideoChatScheduledInfoComponent: Component {
     let timestamp: Int32
@@ -74,10 +46,7 @@ final class VideoChatScheduledInfoComponent: Component {
         private let hierarchyTrackingLayer: HierarchyTrackingLayer
 
         private var component: VideoChatScheduledInfoComponent?
-        private weak var state: EmptyComponentState?
         private var isUpdating: Bool = false
-        
-        private var countdownTimer: Foundation.Timer?
         
         override init(frame: CGRect) {
             self.countdownContainerView = UIView()
@@ -107,19 +76,12 @@ final class VideoChatScheduledInfoComponent: Component {
                 }
                 if value {
                     self.updateAnimations()
-                } else {
-                    self.countdownTimer?.invalidate()
-                    self.countdownTimer = nil
                 }
             }
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
-        }
-        
-        deinit {
-            self.countdownTimer?.invalidate()
         }
         
         private func updateAnimations() {
@@ -148,15 +110,6 @@ final class VideoChatScheduledInfoComponent: Component {
                 self.countdownGradientLayer.add(animation, forKey: "movement")
                 CATransaction.commit()
             }
-            
-            if self.countdownTimer == nil {
-                self.countdownTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { [weak self] _ in
-                    guard let self else {
-                        return
-                    }
-                    self.state?.updated(transition: .easeInOut(duration: 0.2))
-                })
-            }
         }
         
         func update(component: VideoChatScheduledInfoComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
@@ -166,7 +119,6 @@ final class VideoChatScheduledInfoComponent: Component {
             }
             
             self.component = component
-            self.state = state
             
             let titleSize = self.title.update(
                 transition: .immediate,
@@ -178,20 +130,21 @@ final class VideoChatScheduledInfoComponent: Component {
             )
             
             let remainingSeconds: Int32 = max(0, component.timestamp - Int32(Date().timeIntervalSince1970))
-            var items: [AnimatedTextComponent.Item] = []
+            let countdownText: String
             if remainingSeconds >= 86400 {
-                let countdownText = scheduledTimeIntervalString(strings: component.strings, value: remainingSeconds)
-                items.append(AnimatedTextComponent.Item(id: AnyHashable(0), content: .text(countdownText)))
+                countdownText = scheduledTimeIntervalString(strings: component.strings, value: remainingSeconds)
             } else {
-                items = textItemsForTimeout(value: remainingSeconds)
+                countdownText = textForTimeout(value: abs(remainingSeconds))
+                /*if remainingSeconds < 0 && !self.isLate {
+                    self.isLate = true
+                    self.foregroundGradientLayer.colors = [latePink.cgColor, latePurple.cgColor, latePurple.cgColor]
+                }*/
             }
             
             let countdownTextSize = self.countdownText.update(
-                transition: transition,
-                component: AnyComponent(AnimatedTextComponent(
-                    font: Font.with(size: 68.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]),
-                    color: .white,
-                    items: items
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: countdownText, font: Font.with(size: 68.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: .white))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - 16.0 * 2.0, height: 400.0)

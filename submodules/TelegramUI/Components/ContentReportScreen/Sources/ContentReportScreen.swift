@@ -24,6 +24,7 @@ import ButtonComponent
 
 private enum ReportResult {
     case reported
+    case requestedMessageSelection
 }
 
 private final class SheetPageContent: CombinedComponent {
@@ -110,6 +111,8 @@ private final class SheetPageContent: CombinedComponent {
         let section = Child(ListSectionComponent.self)
         let button = Child(ButtonComponent.self)
         
+        let textInputTag = NSObject()
+        
         return { context in
             let environment = context.environment[EnvironmentType.self]
             let component = context.component
@@ -162,7 +165,7 @@ private final class SheetPageContent: CombinedComponent {
                 transition: .immediate
             )
             context.add(back
-                .position(CGPoint(x: sideInset + back.size.width / 2.0 - (component.title != nil ? 8.0 : 0.0), y: contentSize.height + back.size.height / 2.0))
+                .position(CGPoint(x: sideInset + back.size.width / 2.0 - (!component.isFirst ? 8.0 : 0.0), y: contentSize.height + back.size.height / 2.0))
             )
             
             let constrainedTitleWidth = context.availableSize.width - (back.size.width + 16.0) * 2.0
@@ -237,7 +240,7 @@ private final class SheetPageContent: CombinedComponent {
                         strings: strings,
                         initialText: "",
                         resetText: nil,
-                        placeholder: isOptional ? "Add Comment (Optional)" : "Add Comment",
+                        placeholder: isOptional ? strings.Report_Comment_Placeholder_Optional : strings.Report_Comment_Placeholder,
                         autocapitalizationType: .none,
                         autocorrectionType: .no,
                         returnKeyType: .done,
@@ -256,13 +259,13 @@ private final class SheetPageContent: CombinedComponent {
 //                            }
                         },
                         textUpdateTransition: .spring(duration: 0.4),
-                        tag: nil
+                        tag: textInputTag
                     )))
                 )
                 
                 footer = AnyComponent(MultilineTextComponent(
                     text: .plain(
-                        NSAttributedString(string: "Please help us by telling what is wrong with the message you have selected.", font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.freeTextColor)
+                        NSAttributedString(string: strings.Report_Comment_Info, font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.freeTextColor)
                     ),
                     maximumNumberOfLines: 0
                 ))
@@ -280,7 +283,8 @@ private final class SheetPageContent: CombinedComponent {
                         maximumNumberOfLines: 0
                     )),
                     footer: footer,
-                    items: items
+                    items: items,
+                    isModal: true
                 ),
                 environment: {},
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
@@ -303,7 +307,7 @@ private final class SheetPageContent: CombinedComponent {
                             foreground: theme.list.itemCheckColors.foregroundColor,
                             pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
                         ),
-                        content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: "Send Report", font: Font.semibold(17.0), color: theme.list.itemCheckColors.foregroundColor))),
+                        content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: strings.Report_Send, font: Font.semibold(17.0), color: theme.list.itemCheckColors.foregroundColor))),
                         isEnabled: isOptional || state.textInputState.hasText,
                         allowActionWhenDisabled: false,
                         displaysProgress: false,
@@ -349,6 +353,7 @@ private final class SheetContent: CombinedComponent {
     let complete: (ReportResult) -> Void
     let dismiss: () -> Void
     let update: (ComponentTransition) -> Void
+    let requestSelectMessages: ((String, Data, String?) -> Void)?
     
     init(
         context: AccountContext,
@@ -359,7 +364,8 @@ private final class SheetContent: CombinedComponent {
         openMore: @escaping () -> Void,
         complete: @escaping (ReportResult) -> Void,
         dismiss: @escaping () -> Void,
-        update: @escaping (ComponentTransition) -> Void
+        update: @escaping (ComponentTransition) -> Void,
+        requestSelectMessages: ((String, Data, String?) -> Void)?
     ) {
         self.context = context
         self.subject = subject
@@ -370,6 +376,7 @@ private final class SheetContent: CombinedComponent {
         self.complete = complete
         self.dismiss = dismiss
         self.update = update
+        self.requestSelectMessages = requestSelectMessages
     }
     
     static func ==(lhs: SheetContent, rhs: SheetContent) -> Bool {
@@ -395,13 +402,27 @@ private final class SheetContent: CombinedComponent {
         var pushedOptions: [(title: String, subtitle: String, content: SheetPageContent.Content)] = []
         let disposable = MetaDisposable()
         
+        var peer: EnginePeer?
+        private var peerDisposable: Disposable?
+        
+        init(context: AccountContext, subject: ReportContentSubject) {
+            super.init()
+            
+            self.peerDisposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: subject.peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                self?.peer = peer
+                self?.updated()
+            })
+        }
+        
         deinit {
             self.disposable.dispose()
+            self.peerDisposable?.dispose()
         }
     }
     
     func makeState() -> State {
-        return State()
+        return State(context: self.context, subject: self.subject)
     }
         
     static var body: Body {
@@ -416,6 +437,7 @@ private final class SheetContent: CombinedComponent {
             let accountContext = component.context
             let subject = component.subject
             let complete = component.complete
+            let requestSelectMessages = component.requestSelectMessages
             let action: (SheetPageContent.Content.Item, String?) -> Void = { [weak state] item, message in
                 guard let state else {
                     return
@@ -434,9 +456,10 @@ private final class SheetContent: CombinedComponent {
                             complete(.reported)
                         }
                     }, error: { error in
-//                        if case .premiumRequired = error {
-//                            complete(.premiumRequired)
-//                        }
+                        if case .messageIdRequired = error {
+                            requestSelectMessages?(item.title, item.option, message)
+                            complete(.requestedMessageSelection)
+                        }
                     })
                 )
             }
@@ -444,11 +467,21 @@ private final class SheetContent: CombinedComponent {
             let mainTitle: String
             switch component.subject {
             case .peer:
-                mainTitle = "Report Peer"
+                if let peer = state.peer {
+                    if case .user = peer {
+                        mainTitle = environment.strings.Report_Title_User
+                    } else if case let .channel(channel) = peer, case .broadcast = channel.info {
+                        mainTitle = environment.strings.Report_Title_Channel
+                    } else {
+                        mainTitle = environment.strings.Report_Title_Group
+                    }
+                } else {
+                    mainTitle = ""
+                }
             case .messages:
-                mainTitle = "Report Message"
+                mainTitle = environment.strings.Report_Title_Message
             case .stories:
-                mainTitle = "Report Story"
+                mainTitle = environment.strings.Report_Title_Story
             }
             
             var items: [AnyComponentWithIdentity<EnvironmentType>] = []
@@ -523,6 +556,7 @@ private final class SheetContainerComponent: CombinedComponent {
     let options: [ReportContentResult.Option]
     let openMore: () -> Void
     let complete: (ReportResult) -> Void
+    let requestSelectMessages: ((String, Data, String?) -> Void)?
     
     init(
         context: AccountContext,
@@ -530,7 +564,8 @@ private final class SheetContainerComponent: CombinedComponent {
         title: String,
         options: [ReportContentResult.Option],
         openMore: @escaping () -> Void,
-        complete: @escaping (ReportResult) -> Void
+        complete: @escaping (ReportResult) -> Void,
+        requestSelectMessages: ((String, Data, String?) -> Void)?
     ) {
         self.context = context
         self.subject = subject
@@ -538,6 +573,7 @@ private final class SheetContainerComponent: CombinedComponent {
         self.options = options
         self.openMore = openMore
         self.complete = complete
+        self.requestSelectMessages = requestSelectMessages
     }
     
     static func ==(lhs: SheetContainerComponent, rhs: SheetContainerComponent) -> Bool {
@@ -595,7 +631,8 @@ private final class SheetContainerComponent: CombinedComponent {
                         update: { [weak state] transition in
                             state?.pts += 1
                             state?.updated(transition: transition)
-                        }
+                        },
+                        requestSelectMessages: context.component.requestSelectMessages
                     )),
                     backgroundColor: .color(environment.theme.list.modalBlocksBackgroundColor),
                     followContentSizeChanges: true,
@@ -663,7 +700,8 @@ public final class ContentReportScreen: ViewControllerComponentContainer {
         title: String,
         options: [ReportContentResult.Option],
         forceDark: Bool = false,
-        completed: @escaping () -> Void
+        completed: @escaping () -> Void,
+        requestSelectMessages: ((String, Data, String?) -> Void)?
     ) {
         self.context = context
                 
@@ -678,7 +716,8 @@ public final class ContentReportScreen: ViewControllerComponentContainer {
                 openMore: {},
                 complete: { hidden in
                     completeImpl?(hidden)
-                }
+                },
+                requestSelectMessages: requestSelectMessages
             ),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,
@@ -696,14 +735,14 @@ public final class ContentReportScreen: ViewControllerComponentContainer {
             
             switch result {
             case .reported:
-                Queue.mainQueue().after(0.1) {
-                    completed()
-                }
-                
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 Queue.mainQueue().after(0.4, {
+                    completed()
+                    
                     (navigationController?.viewControllers.last as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .emoji(name: "PoliceCar", text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return true }), in: .current)
                 })
+            case .requestedMessageSelection:
+                break
             }
         }
     }

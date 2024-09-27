@@ -1154,16 +1154,9 @@ final class VideoChatParticipantsComponent: Component {
                     
                     let itemFrame = itemLayout.listItemFrame(at: i)
                     
-                    var isMutedForMe = false
-                    if let muteState = participant.muteState, muteState.mutedByYou {
-                        isMutedForMe = true
-                    }
-                    
                     let subtitle: PeerListItemComponent.Subtitle
                     if participant.peer.id == component.call.accountContext.account.peerId {
                         subtitle = PeerListItemComponent.Subtitle(text: "this is you", color: .accent)
-                    } else if let muteState = participant.muteState, muteState.mutedByYou {
-                        subtitle = PeerListItemComponent.Subtitle(text: "muted for you", color: .destructive)
                     } else if component.speakingParticipants.contains(participant.peer.id) {
                         if let volume = participant.volume, volume != 10000 {
                             subtitle = PeerListItemComponent.Subtitle(text: "\(volume / 100)% speaking", color: .constructive)
@@ -1197,7 +1190,6 @@ final class VideoChatParticipantsComponent: Component {
                                 peer: EnginePeer(participant.peer),
                                 myPeerId: component.participants?.myPeerId ?? component.call.accountContext.account.peerId,
                                 isSpeaking: component.speakingParticipants.contains(participant.peer.id),
-                                isMutedForMe: isMutedForMe,
                                 theme: component.theme
                             )),
                             peer: EnginePeer(participant.peer),

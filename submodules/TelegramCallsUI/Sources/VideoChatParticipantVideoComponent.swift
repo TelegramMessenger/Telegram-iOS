@@ -352,10 +352,7 @@ final class VideoChatParticipantVideoComponent: Component {
                 alphaTransition.setAlpha(view: titleView, alpha: controlsAlpha)
             }
             
-            var videoDescription = component.isPresentation ? component.participant.presentationDescription : component.participant.videoDescription
-            if component.isPresentation && component.isMyPeer {
-                videoDescription = nil
-            }
+            let videoDescription = component.isPresentation ? component.participant.presentationDescription : component.participant.videoDescription
             
             var isEffectivelyPaused = false
             if let videoDescription, videoDescription.isPaused {

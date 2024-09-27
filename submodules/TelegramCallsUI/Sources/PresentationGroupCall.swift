@@ -268,8 +268,7 @@ private extension PresentationGroupCallState {
             scheduleTimestamp: scheduleTimestamp,
             subscribedToScheduled: subscribedToScheduled,
             isVideoEnabled: false,
-            isVideoWatchersLimitReached: false,
-            hasVideo: false
+            isVideoWatchersLimitReached: false
         )
     }
 }
@@ -2972,12 +2971,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
             self.updateLocalVideoState()
         }
-        self.stateValue.hasVideo = self.hasVideo
     }
     
     public func disableVideo() {
         self.hasVideo = false
-        self.useFrontCamera = true
+        self.useFrontCamera = true;
         if let _ = self.videoCapturer {
             self.videoCapturer = nil
             self.isVideoMutedDisposable.set(nil)
@@ -2986,7 +2984,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
             self.updateLocalVideoState()
         }
-        self.stateValue.hasVideo = self.hasVideo
     }
 
     private func updateLocalVideoState() {

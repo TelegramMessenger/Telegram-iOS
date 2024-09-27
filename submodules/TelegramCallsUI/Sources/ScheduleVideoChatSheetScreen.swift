@@ -13,10 +13,6 @@ import BalancedTextComponent
 import TelegramPresentationData
 import TelegramStringFormatting
 import Markdown
-import HierarchyTrackingLayer
-
-private let purple = UIColor(rgb: 0x3252ef)
-private let pink = UIColor(rgb: 0xef436c)
 
 private final class ScheduleVideoChatSheetContentComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -37,11 +33,7 @@ private final class ScheduleVideoChatSheetContentComponent: Component {
     }
     
     final class View: UIView {
-        private let hierarchyTrackingLayer: HierarchyTrackingLayer
-        
         private let button = ComponentView<Empty>()
-        private let buttonBackgroundLayer: SimpleGradientLayer
-        
         private let cancelButton = ComponentView<Empty>()
         
         private let title = ComponentView<Empty>()
@@ -60,29 +52,7 @@ private final class ScheduleVideoChatSheetContentComponent: Component {
             self.dateFormatter.dateStyle = .short
             self.dateFormatter.timeZone = TimeZone.current
             
-            self.hierarchyTrackingLayer = HierarchyTrackingLayer()
-            
-            self.buttonBackgroundLayer = SimpleGradientLayer()
-            self.buttonBackgroundLayer.type = .radial
-            self.buttonBackgroundLayer.colors = [pink.cgColor, purple.cgColor, purple.cgColor]
-            self.buttonBackgroundLayer.locations = [0.0, 0.85, 1.0]
-            self.buttonBackgroundLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
-            let radius = CGSize(width: 1.0, height: 2.0)
-            let endEndPoint = CGPoint(x: (self.buttonBackgroundLayer.startPoint.x + radius.width) * 1.0, y: (self.buttonBackgroundLayer.startPoint.y + radius.height) * 1.0)
-            self.buttonBackgroundLayer.endPoint = endEndPoint
-            self.buttonBackgroundLayer.cornerRadius = 10.0
-            
             super.init(frame: frame)
-            
-            self.layer.addSublayer(self.hierarchyTrackingLayer)
-            self.hierarchyTrackingLayer.isInHierarchyUpdated = { [weak self] value in
-                guard let self else {
-                    return
-                }
-                if value {
-                    self.updateAnimations()
-                }
-            }
         }
         
         required init?(coder: NSCoder) {
@@ -123,46 +93,6 @@ private final class ScheduleVideoChatSheetContentComponent: Component {
                 self.pickerView?.minimumDate = next1MinDate
                 self.pickerView?.maximumDate = maxDate
                 self.pickerView?.date = nextTwoHourDate
-            }
-        }
-        
-        private func updateAnimations() {
-            if let _ = self.buttonBackgroundLayer.animation(forKey: "movement") {
-            } else {
-                let previousValue = self.buttonBackgroundLayer.startPoint
-                let previousEndValue = self.buttonBackgroundLayer.endPoint
-                let newValue = CGPoint(x: CGFloat.random(in: 0.65 ..< 0.85), y: CGFloat.random(in: 0.1 ..< 0.45))
-                self.buttonBackgroundLayer.startPoint = newValue
-                
-                let radius = CGSize(width: 1.0, height: 2.0)
-                let newEndValue = CGPoint(x: (self.buttonBackgroundLayer.startPoint.x + radius.width) * 1.0, y: (self.buttonBackgroundLayer.startPoint.y + radius.height) * 1.0)
-                
-                CATransaction.begin()
-                
-                let animation = CABasicAnimation(keyPath: "startPoint")
-                animation.duration = Double.random(in: 0.8 ..< 1.4)
-                animation.fromValue = previousValue
-                animation.toValue = newValue
-                
-                CATransaction.setCompletionBlock { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    if self.hierarchyTrackingLayer.isInHierarchy {
-                        self.updateAnimations()
-                    }
-                }
-                
-                self.buttonBackgroundLayer.add(animation, forKey: "movement")
-                
-                let endAnimation = CABasicAnimation(keyPath: "endPoint")
-                endAnimation.duration = animation.duration
-                endAnimation.fromValue = previousEndValue
-                endAnimation.toValue = newEndValue
-                
-                self.buttonBackgroundLayer.add(animation, forKey: "movementEnd")
-                
-                CATransaction.commit()
             }
         }
         
@@ -303,9 +233,9 @@ private final class ScheduleVideoChatSheetContentComponent: Component {
                 transition: buttonTransition,
                 component: AnyComponent(ButtonComponent(
                     background: ButtonComponent.Background(
-                        color: .clear,
+                        color: UIColor(rgb: 0x3252EF),
                         foreground: .white,
-                        pressedColor: UIColor(white: 1.0, alpha: 0.1)
+                        pressedColor: UIColor(rgb: 0x3252EF).withMultipliedAlpha(0.8)
                     ),
                     content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
                         HStack(buttonContents, spacing: 5.0)
@@ -326,10 +256,8 @@ private final class ScheduleVideoChatSheetContentComponent: Component {
             let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: buttonSize)
             if let buttonView = self.button.view {
                 if buttonView.superview == nil {
-                    self.layer.addSublayer(self.buttonBackgroundLayer)
                     self.addSubview(buttonView)
                 }
-                transition.setFrame(layer: self.buttonBackgroundLayer, frame: buttonFrame)
                 transition.setFrame(view: buttonView, frame: buttonFrame)
             }
             contentHeight += buttonSize.height
@@ -373,8 +301,6 @@ private final class ScheduleVideoChatSheetContentComponent: Component {
             } else {
                 contentHeight += environment.safeInsets.bottom + 14.0
             }
-            
-            self.updateAnimations()
             
             return CGSize(width: availableSize.width, height: contentHeight)
         }

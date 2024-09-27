@@ -1037,7 +1037,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                 guard let self else {
                     return
                 }
-                let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .stars(birthdays), completion: { [weak self] peerIds in
+                let controller = self.context.sharedContext.makeStarsGiftController(context: self.context, birthdays: birthdays, completion: { [weak self] peerIds in
                     guard let self, let peerId = peerIds.first else {
                         return
                     }

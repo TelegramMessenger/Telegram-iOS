@@ -121,9 +121,7 @@ final class VideoChatParticipantStatusComponent: Component {
                     }
                     if let iconView = muteStatusView.iconView {
                         let iconTintColor: UIColor
-                        if let muteState = component.muteState, muteState.mutedByYou {
-                            iconTintColor = UIColor(rgb: 0xff3b30)
-                        } else if component.isSpeaking {
+                        if component.isSpeaking {
                             iconTintColor = UIColor(rgb: 0x33C758)
                         } else {
                             if let muteState = component.muteState {

@@ -5,15 +5,14 @@ import AsyncDisplayKit
 import ComponentFlow
 import SwiftSignalKit
 import AccountContext
-import PremiumUI
 import AttachmentUI
+import GiftOptionsScreen
 
-public class PremiumGiftAttachmentScreen: PremiumGiftScreen, AttachmentContainable {
+public class PremiumGiftAttachmentScreen: GiftOptionsScreen, AttachmentContainable {
     public var requestAttachmentMenuExpansion: () -> Void = {}
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
-    public var parentController: () -> ViewController? = {
-        return nil
-    }
+    public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    public var updateTabBarVisibility: (Bool, ContainedViewLayoutTransition) -> Void = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
@@ -25,17 +24,16 @@ public class PremiumGiftAttachmentScreen: PremiumGiftScreen, AttachmentContainab
 }
 
 private final class PremiumGiftContext: AttachmentMediaPickerContext {
-    private weak var controller: PremiumGiftScreen?
+    private weak var controller: GiftOptionsScreen?
         
     public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
-        return self.controller?.mainButtonStatePromise.get() ?? .single(nil)
+        return .single(nil)
     }
     
-    init(controller: PremiumGiftScreen) {
+    init(controller: GiftOptionsScreen) {
         self.controller = controller
     }
     
     func mainButtonAction() {
-        self.controller?.mainButtonPressed()
     }
 }

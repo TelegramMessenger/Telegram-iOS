@@ -1189,27 +1189,6 @@ public struct ComponentTransition {
         }
     }
     
-    public func animateTintColor(layer: CALayer, from: UIColor, to: UIColor, completion: ((Bool) -> Void)? = nil) {
-        switch self.animation {
-        case .none:
-            completion?(true)
-        case let .curve(duration, curve):
-            let previousColor: CGColor = from.cgColor
-            
-            layer.animate(
-                from: previousColor,
-                to: to.cgColor,
-                keyPath: "contentsMultiplyColor",
-                duration: duration,
-                delay: 0.0,
-                curve: curve,
-                removeOnCompletion: true,
-                additive: false,
-                completion: completion
-            )
-        }
-    }
-    
     public func setGradientColors(layer: CAGradientLayer, colors: [UIColor], completion: ((Bool) -> Void)? = nil) {
         if let current = layer.colors {
             if current.count == colors.count {
