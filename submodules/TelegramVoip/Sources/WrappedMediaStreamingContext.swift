@@ -336,6 +336,10 @@ public final class ExternalMediaStreamingContext: SharedHLSServerSource {
             impl.fileData(id: id, range: range).start(next: subscriber.putNext)
         }
     }
+    
+    public func arbitraryFileData(path: String) -> Signal<(data: Data, contentType: String)?, NoError> {
+        return .single(nil)
+    }
 }
 
 public protocol SharedHLSServerSource: AnyObject {
@@ -345,6 +349,7 @@ public protocol SharedHLSServerSource: AnyObject {
     func playlistData(quality: Int) -> Signal<String, NoError>
     func partData(index: Int, quality: Int) -> Signal<Data?, NoError>
     func fileData(id: Int64, range: Range<Int>) -> Signal<(TempBoxFile, Range<Int>, Int)?, NoError>
+    func arbitraryFileData(path: String) -> Signal<(data: Data, contentType: String)?, NoError>
 }
 
 @available(iOS 12.0, macOS 14.0, *)
@@ -651,7 +656,19 @@ public final class SharedHLSServer {
                     }
                 })
             } else {
-                self.sendErrorAndClose(connection: connection, error: .notFound)
+                let _ = (source.arbitraryFileData(path: filePath)
+                |> deliverOn(self.queue)
+                |> take(1)).start(next: { [weak self] result in
+                    guard let self else {
+                        return
+                    }
+                    
+                    if let result {
+                        self.sendResponseAndClose(connection: connection, data: result.data, contentType: result.contentType)
+                    } else {
+                        self.sendErrorAndClose(connection: connection, error: .notFound)
+                    }
+                })
             }
         }
         
@@ -665,13 +682,14 @@ public final class SharedHLSServer {
             })
         }
         
-        private func sendResponseAndClose(connection: NWConnection, data: Data, range: Range<Int>? = nil, totalSize: Int? = nil) {
+        private func sendResponseAndClose(connection: NWConnection, data: Data, contentType: String = "application/octet-stream", range: Range<Int>? = nil, totalSize: Int? = nil) {
             var responseHeaders = "HTTP/1.1 200 OK\r\n"
             responseHeaders.append("Content-Length: \(data.count)\r\n")
             if let range, let totalSize {
                 responseHeaders.append("Content-Range: bytes \(range.lowerBound)-\(range.upperBound)/\(totalSize)\r\n")
             }
-            responseHeaders.append("Content-Type: application/octet-stream\r\n")
+            
+            responseHeaders.append("Content-Type: \(contentType)\r\n")
             responseHeaders.append("Connection: close\r\n")
             responseHeaders.append("Access-Control-Allow-Origin: *\r\n")
             responseHeaders.append("\r\n")

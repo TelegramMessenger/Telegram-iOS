@@ -1186,7 +1186,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 videoScale = 2.0
             }
             let videoSize = CGSize(width: item.content.dimensions.width * videoScale, height: item.content.dimensions.height * videoScale)
-            videoNode.updateLayout(size: videoSize, transition: .immediate)
+            let actualVideoSize = CGSize(width: item.content.dimensions.width, height: item.content.dimensions.height)
+            videoNode.updateLayout(size: videoSize, actualSize: actualVideoSize, transition: .immediate)
             videoNode.ownsContentNodeUpdated = { [weak self] value in
                 if let strongSelf = self {
                     strongSelf.updateDisplayPlaceholder(!value)

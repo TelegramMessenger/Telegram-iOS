@@ -325,7 +325,7 @@ private final class VideoDecoration: UniversalVideoDecoration {
     
     private var contentNode: (ASDisplayNode & UniversalVideoContentNode)?
     
-    private var validLayoutSize: CGSize?
+    private var validLayout: (size: CGSize, actualSize: CGSize)?
     
     public init() {
         self.contentContainerNode = ASDisplayNode()
@@ -345,9 +345,9 @@ private final class VideoDecoration: UniversalVideoDecoration {
             if let contentNode = contentNode {
                 if contentNode.supernode !== self.contentContainerNode {
                     self.contentContainerNode.addSubnode(contentNode)
-                    if let validLayoutSize = self.validLayoutSize {
-                        contentNode.frame = CGRect(origin: CGPoint(), size: validLayoutSize)
-                        contentNode.updateLayout(size: validLayoutSize, transition: .immediate)
+                    if let validLayout = self.validLayout {
+                        contentNode.frame = CGRect(origin: CGPoint(), size: validLayout.size)
+                        contentNode.updateLayout(size: validLayout.size, actualSize: validLayout.actualSize, transition: .immediate)
                     }
                 }
             }
@@ -405,8 +405,8 @@ private final class VideoDecoration: UniversalVideoDecoration {
     public func updateContentNodeSnapshot(_ snapshot: UIView?) {
     }
     
-    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayoutSize = size
+    public func updateLayout(size: CGSize, actualSize: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, actualSize)
         
         let bounds = CGRect(origin: CGPoint(), size: size)
         if let backgroundNode = self.backgroundNode {
@@ -421,7 +421,7 @@ private final class VideoDecoration: UniversalVideoDecoration {
         }
         if let contentNode = self.contentNode {
             transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(), size: size))
-            contentNode.updateLayout(size: size, transition: transition)
+            contentNode.updateLayout(size: size, actualSize: actualSize, transition: transition)
         }
     }
     

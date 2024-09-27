@@ -20,7 +20,7 @@ public protocol UniversalVideoContentNode: AnyObject {
     var status: Signal<MediaPlayerStatus, NoError> { get }
     var bufferingStatus: Signal<(RangeSet<Int64>, Int64)?, NoError> { get }
         
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
+    func updateLayout(size: CGSize, actualSize: CGSize, transition: ContainedViewLayoutTransition)
     
     func play()
     func pause()
@@ -68,7 +68,7 @@ public protocol UniversalVideoDecoration: AnyObject {
     
     func updateContentNode(_ contentNode: (UniversalVideoContentNode & ASDisplayNode)?)
     func updateContentNodeSnapshot(_ snapshot: UIView?)
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
+    func updateLayout(size: CGSize, actualSize: CGSize, transition: ContainedViewLayoutTransition)
     func tap()
 }
 
@@ -247,8 +247,8 @@ public final class UniversalVideoNode: ASDisplayNode {
         }
     }
     
-    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.decoration.updateLayout(size: size, transition: transition)
+    public func updateLayout(size: CGSize, actualSize: CGSize? = nil, transition: ContainedViewLayoutTransition) {
+        self.decoration.updateLayout(size: size, actualSize: actualSize ?? size, transition: transition)
     }
     
     public func play() {
