@@ -92,6 +92,20 @@ final class MediaBoxPartialFile {
         return fd.readData(count: Int(clippedRange.upperBound - clippedRange.lowerBound))
     }
     
+    static func internal_extractPartialData(manager: MediaBoxFileManager, path: String, metaPath: String, range: Range<Int64>) -> (file: ManagedFile, length: Int)? {
+        guard let fd = ManagedFile(queue: nil, path: path, mode: .read) else {
+            return nil
+        }
+        guard let fileMap = try? MediaBoxFileMap.read(manager: manager, path: metaPath) else {
+            return nil
+        }
+        guard let clippedRange = fileMap.contains(range) else {
+            return nil
+        }
+        let _ = fd.seek(position: Int64(clippedRange.lowerBound))
+        return (fd, Int(clippedRange.upperBound - clippedRange.lowerBound))
+    }
+    
     var storedSize: Int64 {
         assert(self.queue.isCurrent())
         return self.fileMap.sum

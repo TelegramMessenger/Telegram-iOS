@@ -248,7 +248,41 @@ private final class HLSServerSource: SharedHLSServer.Source {
         let mappedRange: Range<Int64> = Int64(range.lowerBound) ..< Int64(range.upperBound)
         
         let queue = postbox.mediaBox.dataQueue
-        return Signal<(TempBoxFile, Range<Int>, Int)?, NoError> { subscriber in
+        let fetchFromRemote: Signal<(TempBoxFile, Range<Int>, Int)?, NoError> = Signal { subscriber in
+            let partialFile = TempBox.shared.tempFile(fileName: "data")
+            
+            if let cachedData = postbox.mediaBox.internal_resourceData(id: file.media.resource.id, size: size, in: Int64(range.lowerBound) ..< Int64(range.upperBound)) {
+                #if DEBUG
+                print("Fetched \(quality)p part from cache")
+                #endif
+                
+                let outputFile = ManagedFile(queue: nil, path: partialFile.path, mode: .readwrite)
+                if let outputFile {
+                    let blockSize = 128 * 1024
+                    var tempBuffer = Data(count: blockSize)
+                    var blockOffset = 0
+                    while blockOffset < cachedData.length {
+                        let currentBlockSize = min(cachedData.length - blockOffset, blockSize)
+                        
+                        tempBuffer.withUnsafeMutableBytes { bytes -> Void in
+                            let _ = cachedData.file.read(bytes.baseAddress!, currentBlockSize)
+                            let _ = outputFile.write(bytes.baseAddress!, count: currentBlockSize)
+                        }
+                        
+                        blockOffset += blockSize
+                    }
+                    outputFile._unsafeClose()
+                    subscriber.putNext((partialFile, 0 ..< cachedData.length, Int(size)))
+                    subscriber.putCompletion()
+                } else {
+                    #if DEBUG
+                    print("Error writing cached file to disk")
+                    #endif
+                }
+                
+                return EmptyDisposable
+            }
+            
             guard let fetchResource = postbox.mediaBox.fetchResource else {
                 return EmptyDisposable
             }
@@ -263,7 +297,6 @@ private final class HLSServerSource: SharedHLSServer.Source {
             )
             
             let completeFile = TempBox.shared.tempFile(fileName: "data")
-            let partialFile = TempBox.shared.tempFile(fileName: "data")
             let metaFile = TempBox.shared.tempFile(fileName: "data")
             
             guard let fileContext = MediaBoxFileContextV2Impl(
@@ -321,6 +354,8 @@ private final class HLSServerSource: SharedHLSServer.Source {
             }
         }
         |> runOn(queue)
+        
+        return fetchFromRemote
     }
 }
 
@@ -1102,6 +1137,12 @@ private final class HLSVideoJSContentNode: ASDisplayNode, UniversalVideoContentN
         self.userLocation = userLocation
         self.requestedBaseRate = baseRate
         
+        #if DEBUG
+        if let minimizedQualityFile = HLSVideoContent.minimizedHLSQualityFile(file: self.fileReference) {
+            let _ = fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: userLocation, userContentType: .video, reference: minimizedQualityFile.resourceReference(minimizedQualityFile.media.resource), range: (0 ..< 5 * 1024 * 1024, .default)).startStandalone()
+        }
+        #endif
+        
         if var dimensions = fileReference.media.dimensions {
             if let thumbnail = fileReference.media.previewRepresentations.first {
                 let dimensionsVertical = dimensions.width < dimensions.height
@@ -1406,7 +1447,7 @@ private final class HLSVideoJSContentNode: ASDisplayNode, UniversalVideoContentN
         if !self.initializedStatus {
             self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: self.requestedBaseRate, seekId: self.seekId, status: .buffering(initial: true, whilePlaying: true, progress: 0.0, display: true), soundEnabled: true))
         }
-        if !self.hasAudioSession {
+        /*if !self.hasAudioSession {
             self.audioSessionDisposable.set(self.audioSessionManager.push(audioSessionType: .play(mixWithOthers: false), activate: { [weak self] _ in
                 Queue.mainQueue().async {
                     guard let self else {
@@ -1428,7 +1469,7 @@ private final class HLSVideoJSContentNode: ASDisplayNode, UniversalVideoContentN
                 }
                 |> runOn(.mainQueue())
             }))
-        } else {
+        } else*/ do {
             self.requestPlay()
         }
     }

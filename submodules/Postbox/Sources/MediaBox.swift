@@ -674,6 +674,28 @@ public final class MediaBox {
         return self.resourceData(id: resource.id, size: size, in: range, mode: mode, notifyAboutIncomplete: notifyAboutIncomplete, attemptSynchronously: attemptSynchronously)
     }
     
+    public func internal_resourceData(id: MediaResourceId, size: Int64, in range: Range<Int64>) -> (file: ManagedFile, length: Int)? {
+        let paths = self.storePathsForId(id)
+        
+        self.timeBasedCleanup.touch(paths: [
+            paths.complete
+        ])
+        
+        if let file = ManagedFile(queue: nil, path: paths.complete, mode: .read), let completeSize = file.getSize() {
+            let clippedLowerBound = min(completeSize, max(0, range.lowerBound))
+            let clippedUpperBound = min(completeSize, max(0, range.upperBound))
+            if clippedLowerBound < clippedUpperBound && (clippedUpperBound - clippedLowerBound) <= 64 * 1024 * 1024 {
+                let _ = file.seek(position: clippedLowerBound)
+                return (file, Int(clippedUpperBound - clippedLowerBound))
+            } else {
+                return nil
+            }
+        } else {
+            let tempManager = MediaBoxFileManager(queue: nil)
+            return MediaBoxPartialFile.internal_extractPartialData(manager: tempManager, path: paths.partial, metaPath: paths.partial + ".meta", range: range)
+        }
+    }
+    
     public func resourceData(id: MediaResourceId, size: Int64, in range: Range<Int64>, mode: ResourceDataRangeMode = .complete, notifyAboutIncomplete: Bool = false, attemptSynchronously: Bool = false) -> Signal<(Data, Bool), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
