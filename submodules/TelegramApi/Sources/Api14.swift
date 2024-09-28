@@ -1,4 +1,208 @@
 public extension Api {
+    enum KeyboardButtonRow: TypeConstructorDescription {
+        case keyboardButtonRow(buttons: [Api.KeyboardButton])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .keyboardButtonRow(let buttons):
+                    if boxed {
+                        buffer.appendInt32(2002815875)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(buttons.count))
+                    for item in buttons {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .keyboardButtonRow(let buttons):
+                return ("keyboardButtonRow", [("buttons", buttons as Any)])
+    }
+    }
+    
+        public static func parse_keyboardButtonRow(_ reader: BufferReader) -> KeyboardButtonRow? {
+            var _1: [Api.KeyboardButton]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.KeyboardButton.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.KeyboardButtonRow.keyboardButtonRow(buttons: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum LabeledPrice: TypeConstructorDescription {
+        case labeledPrice(label: String, amount: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .labeledPrice(let label, let amount):
+                    if boxed {
+                        buffer.appendInt32(-886477832)
+                    }
+                    serializeString(label, buffer: buffer, boxed: false)
+                    serializeInt64(amount, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .labeledPrice(let label, let amount):
+                return ("labeledPrice", [("label", label as Any), ("amount", amount as Any)])
+    }
+    }
+    
+        public static func parse_labeledPrice(_ reader: BufferReader) -> LabeledPrice? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.LabeledPrice.labeledPrice(label: _1!, amount: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum LangPackDifference: TypeConstructorDescription {
+        case langPackDifference(langCode: String, fromVersion: Int32, version: Int32, strings: [Api.LangPackString])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .langPackDifference(let langCode, let fromVersion, let version, let strings):
+                    if boxed {
+                        buffer.appendInt32(-209337866)
+                    }
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    serializeInt32(fromVersion, buffer: buffer, boxed: false)
+                    serializeInt32(version, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(strings.count))
+                    for item in strings {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .langPackDifference(let langCode, let fromVersion, let version, let strings):
+                return ("langPackDifference", [("langCode", langCode as Any), ("fromVersion", fromVersion as Any), ("version", version as Any), ("strings", strings as Any)])
+    }
+    }
+    
+        public static func parse_langPackDifference(_ reader: BufferReader) -> LangPackDifference? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: [Api.LangPackString]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.LangPackString.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.LangPackDifference.langPackDifference(langCode: _1!, fromVersion: _2!, version: _3!, strings: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum LangPackLanguage: TypeConstructorDescription {
+        case langPackLanguage(flags: Int32, name: String, nativeName: String, langCode: String, baseLangCode: String?, pluralCode: String, stringsCount: Int32, translatedCount: Int32, translationsUrl: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .langPackLanguage(let flags, let name, let nativeName, let langCode, let baseLangCode, let pluralCode, let stringsCount, let translatedCount, let translationsUrl):
+                    if boxed {
+                        buffer.appendInt32(-288727837)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(name, buffer: buffer, boxed: false)
+                    serializeString(nativeName, buffer: buffer, boxed: false)
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(baseLangCode!, buffer: buffer, boxed: false)}
+                    serializeString(pluralCode, buffer: buffer, boxed: false)
+                    serializeInt32(stringsCount, buffer: buffer, boxed: false)
+                    serializeInt32(translatedCount, buffer: buffer, boxed: false)
+                    serializeString(translationsUrl, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .langPackLanguage(let flags, let name, let nativeName, let langCode, let baseLangCode, let pluralCode, let stringsCount, let translatedCount, let translationsUrl):
+                return ("langPackLanguage", [("flags", flags as Any), ("name", name as Any), ("nativeName", nativeName as Any), ("langCode", langCode as Any), ("baseLangCode", baseLangCode as Any), ("pluralCode", pluralCode as Any), ("stringsCount", stringsCount as Any), ("translatedCount", translatedCount as Any), ("translationsUrl", translationsUrl as Any)])
+    }
+    }
+    
+        public static func parse_langPackLanguage(_ reader: BufferReader) -> LangPackLanguage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
+            var _6: String?
+            _6 = parseString(reader)
+            var _7: Int32?
+            _7 = reader.readInt32()
+            var _8: Int32?
+            _8 = reader.readInt32()
+            var _9: String?
+            _9 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.LangPackLanguage.langPackLanguage(flags: _1!, name: _2!, nativeName: _3!, langCode: _4!, baseLangCode: _5, pluralCode: _6!, stringsCount: _7!, translatedCount: _8!, translationsUrl: _9!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum LangPackString: TypeConstructorDescription {
         case langPackString(key: String, value: String)
         case langPackStringDeleted(key: String)
@@ -163,6 +367,7 @@ public extension Api {
         case mediaAreaSuggestedReaction(flags: Int32, coordinates: Api.MediaAreaCoordinates, reaction: Api.Reaction)
         case mediaAreaUrl(coordinates: Api.MediaAreaCoordinates, url: String)
         case mediaAreaVenue(coordinates: Api.MediaAreaCoordinates, geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String)
+        case mediaAreaWeather(coordinates: Api.MediaAreaCoordinates, emoji: String, temperatureC: Double, color: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -226,6 +431,15 @@ public extension Api {
                     serializeString(venueId, buffer: buffer, boxed: false)
                     serializeString(venueType, buffer: buffer, boxed: false)
                     break
+                case .mediaAreaWeather(let coordinates, let emoji, let temperatureC, let color):
+                    if boxed {
+                        buffer.appendInt32(1235637404)
+                    }
+                    coordinates.serialize(buffer, true)
+                    serializeString(emoji, buffer: buffer, boxed: false)
+                    serializeDouble(temperatureC, buffer: buffer, boxed: false)
+                    serializeInt32(color, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -245,6 +459,8 @@ public extension Api {
                 return ("mediaAreaUrl", [("coordinates", coordinates as Any), ("url", url as Any)])
                 case .mediaAreaVenue(let coordinates, let geo, let title, let address, let provider, let venueId, let venueType):
                 return ("mediaAreaVenue", [("coordinates", coordinates as Any), ("geo", geo as Any), ("title", title as Any), ("address", address as Any), ("provider", provider as Any), ("venueId", venueId as Any), ("venueType", venueType as Any)])
+                case .mediaAreaWeather(let coordinates, let emoji, let temperatureC, let color):
+                return ("mediaAreaWeather", [("coordinates", coordinates as Any), ("emoji", emoji as Any), ("temperatureC", temperatureC as Any), ("color", color as Any)])
     }
     }
     
@@ -398,6 +614,28 @@ public extension Api {
             let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
                 return Api.MediaArea.mediaAreaVenue(coordinates: _1!, geo: _2!, title: _3!, address: _4!, provider: _5!, venueId: _6!, venueType: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_mediaAreaWeather(_ reader: BufferReader) -> MediaArea? {
+            var _1: Api.MediaAreaCoordinates?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.MediaAreaCoordinates
+            }
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Double?
+            _3 = reader.readDouble()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MediaArea.mediaAreaWeather(coordinates: _1!, emoji: _2!, temperatureC: _3!, color: _4!)
             }
             else {
                 return nil
@@ -750,16 +988,19 @@ public extension Api {
         case messageActionGeoProximityReached(fromId: Api.Peer, toId: Api.Peer, distance: Int32)
         case messageActionGiftCode(flags: Int32, boostPeer: Api.Peer?, months: Int32, slug: String, currency: String?, amount: Int64?, cryptoCurrency: String?, cryptoAmount: Int64?)
         case messageActionGiftPremium(flags: Int32, currency: String, amount: Int64, months: Int32, cryptoCurrency: String?, cryptoAmount: Int64?)
-        case messageActionGiveawayLaunch
-        case messageActionGiveawayResults(winnersCount: Int32, unclaimedCount: Int32)
+        case messageActionGiftStars(flags: Int32, currency: String, amount: Int64, stars: Int64, cryptoCurrency: String?, cryptoAmount: Int64?, transactionId: String?)
+        case messageActionGiveawayLaunch(flags: Int32, stars: Int64?)
+        case messageActionGiveawayResults(flags: Int32, winnersCount: Int32, unclaimedCount: Int32)
         case messageActionGroupCall(flags: Int32, call: Api.InputGroupCall, duration: Int32?)
         case messageActionGroupCallScheduled(call: Api.InputGroupCall, scheduleDate: Int32)
         case messageActionHistoryClear
         case messageActionInviteToGroupCall(call: Api.InputGroupCall, users: [Int64])
+        case messageActionPaymentRefunded(flags: Int32, peer: Api.Peer, currency: String, totalAmount: Int64, payload: Buffer?, charge: Api.PaymentCharge)
         case messageActionPaymentSent(flags: Int32, currency: String, totalAmount: Int64, invoiceSlug: String?)
         case messageActionPaymentSentMe(flags: Int32, currency: String, totalAmount: Int64, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, charge: Api.PaymentCharge)
         case messageActionPhoneCall(flags: Int32, callId: Int64, reason: Api.PhoneCallDiscardReason?, duration: Int32?)
         case messageActionPinMessage
+        case messageActionPrizeStars(flags: Int32, stars: Int64, transactionId: String, boostPeer: Api.Peer, giveawayMsgId: Int32)
         case messageActionRequestedPeer(buttonId: Int32, peers: [Api.Peer])
         case messageActionRequestedPeerSentMe(buttonId: Int32, peers: [Api.RequestedPeer])
         case messageActionScreenshotTaken
@@ -923,16 +1164,30 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(cryptoCurrency!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt64(cryptoAmount!, buffer: buffer, boxed: false)}
                     break
-                case .messageActionGiveawayLaunch:
+                case .messageActionGiftStars(let flags, let currency, let amount, let stars, let cryptoCurrency, let cryptoAmount, let transactionId):
                     if boxed {
-                        buffer.appendInt32(858499565)
+                        buffer.appendInt32(1171632161)
                     }
-                    
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(amount, buffer: buffer, boxed: false)
+                    serializeInt64(stars, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(cryptoCurrency!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(cryptoAmount!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(transactionId!, buffer: buffer, boxed: false)}
                     break
-                case .messageActionGiveawayResults(let winnersCount, let unclaimedCount):
+                case .messageActionGiveawayLaunch(let flags, let stars):
                     if boxed {
-                        buffer.appendInt32(715107781)
+                        buffer.appendInt32(-1475391004)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(stars!, buffer: buffer, boxed: false)}
+                    break
+                case .messageActionGiveawayResults(let flags, let winnersCount, let unclaimedCount):
+                    if boxed {
+                        buffer.appendInt32(-2015170219)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(winnersCount, buffer: buffer, boxed: false)
                     serializeInt32(unclaimedCount, buffer: buffer, boxed: false)
                     break
@@ -967,6 +1222,17 @@ public extension Api {
                     for item in users {
                         serializeInt64(item, buffer: buffer, boxed: false)
                     }
+                    break
+                case .messageActionPaymentRefunded(let flags, let peer, let currency, let totalAmount, let payload, let charge):
+                    if boxed {
+                        buffer.appendInt32(1102307842)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(totalAmount, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeBytes(payload!, buffer: buffer, boxed: false)}
+                    charge.serialize(buffer, true)
                     break
                 case .messageActionPaymentSent(let flags, let currency, let totalAmount, let invoiceSlug):
                     if boxed {
@@ -1003,6 +1269,16 @@ public extension Api {
                         buffer.appendInt32(-1799538451)
                     }
                     
+                    break
+                case .messageActionPrizeStars(let flags, let stars, let transactionId, let boostPeer, let giveawayMsgId):
+                    if boxed {
+                        buffer.appendInt32(-1341372510)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(stars, buffer: buffer, boxed: false)
+                    serializeString(transactionId, buffer: buffer, boxed: false)
+                    boostPeer.serialize(buffer, true)
+                    serializeInt32(giveawayMsgId, buffer: buffer, boxed: false)
                     break
                 case .messageActionRequestedPeer(let buttonId, let peers):
                     if boxed {
@@ -1157,10 +1433,12 @@ public extension Api {
                 return ("messageActionGiftCode", [("flags", flags as Any), ("boostPeer", boostPeer as Any), ("months", months as Any), ("slug", slug as Any), ("currency", currency as Any), ("amount", amount as Any), ("cryptoCurrency", cryptoCurrency as Any), ("cryptoAmount", cryptoAmount as Any)])
                 case .messageActionGiftPremium(let flags, let currency, let amount, let months, let cryptoCurrency, let cryptoAmount):
                 return ("messageActionGiftPremium", [("flags", flags as Any), ("currency", currency as Any), ("amount", amount as Any), ("months", months as Any), ("cryptoCurrency", cryptoCurrency as Any), ("cryptoAmount", cryptoAmount as Any)])
-                case .messageActionGiveawayLaunch:
-                return ("messageActionGiveawayLaunch", [])
-                case .messageActionGiveawayResults(let winnersCount, let unclaimedCount):
-                return ("messageActionGiveawayResults", [("winnersCount", winnersCount as Any), ("unclaimedCount", unclaimedCount as Any)])
+                case .messageActionGiftStars(let flags, let currency, let amount, let stars, let cryptoCurrency, let cryptoAmount, let transactionId):
+                return ("messageActionGiftStars", [("flags", flags as Any), ("currency", currency as Any), ("amount", amount as Any), ("stars", stars as Any), ("cryptoCurrency", cryptoCurrency as Any), ("cryptoAmount", cryptoAmount as Any), ("transactionId", transactionId as Any)])
+                case .messageActionGiveawayLaunch(let flags, let stars):
+                return ("messageActionGiveawayLaunch", [("flags", flags as Any), ("stars", stars as Any)])
+                case .messageActionGiveawayResults(let flags, let winnersCount, let unclaimedCount):
+                return ("messageActionGiveawayResults", [("flags", flags as Any), ("winnersCount", winnersCount as Any), ("unclaimedCount", unclaimedCount as Any)])
                 case .messageActionGroupCall(let flags, let call, let duration):
                 return ("messageActionGroupCall", [("flags", flags as Any), ("call", call as Any), ("duration", duration as Any)])
                 case .messageActionGroupCallScheduled(let call, let scheduleDate):
@@ -1169,6 +1447,8 @@ public extension Api {
                 return ("messageActionHistoryClear", [])
                 case .messageActionInviteToGroupCall(let call, let users):
                 return ("messageActionInviteToGroupCall", [("call", call as Any), ("users", users as Any)])
+                case .messageActionPaymentRefunded(let flags, let peer, let currency, let totalAmount, let payload, let charge):
+                return ("messageActionPaymentRefunded", [("flags", flags as Any), ("peer", peer as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("payload", payload as Any), ("charge", charge as Any)])
                 case .messageActionPaymentSent(let flags, let currency, let totalAmount, let invoiceSlug):
                 return ("messageActionPaymentSent", [("flags", flags as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("invoiceSlug", invoiceSlug as Any)])
                 case .messageActionPaymentSentMe(let flags, let currency, let totalAmount, let payload, let info, let shippingOptionId, let charge):
@@ -1177,6 +1457,8 @@ public extension Api {
                 return ("messageActionPhoneCall", [("flags", flags as Any), ("callId", callId as Any), ("reason", reason as Any), ("duration", duration as Any)])
                 case .messageActionPinMessage:
                 return ("messageActionPinMessage", [])
+                case .messageActionPrizeStars(let flags, let stars, let transactionId, let boostPeer, let giveawayMsgId):
+                return ("messageActionPrizeStars", [("flags", flags as Any), ("stars", stars as Any), ("transactionId", transactionId as Any), ("boostPeer", boostPeer as Any), ("giveawayMsgId", giveawayMsgId as Any)])
                 case .messageActionRequestedPeer(let buttonId, let peers):
                 return ("messageActionRequestedPeer", [("buttonId", buttonId as Any), ("peers", peers as Any)])
                 case .messageActionRequestedPeerSentMe(let buttonId, let peers):
@@ -1465,18 +1747,61 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_messageActionGiftStars(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int64?
+            _4 = reader.readInt64()
+            var _5: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
+            var _6: Int64?
+            if Int(_1!) & Int(1 << 0) != 0 {_6 = reader.readInt64() }
+            var _7: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_7 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.MessageAction.messageActionGiftStars(flags: _1!, currency: _2!, amount: _3!, stars: _4!, cryptoCurrency: _5, cryptoAmount: _6, transactionId: _7)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_messageActionGiveawayLaunch(_ reader: BufferReader) -> MessageAction? {
-            return Api.MessageAction.messageActionGiveawayLaunch
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt64() }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageAction.messageActionGiveawayLaunch(flags: _1!, stars: _2)
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_messageActionGiveawayResults(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionGiveawayResults(winnersCount: _1!, unclaimedCount: _2!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessageAction.messageActionGiveawayResults(flags: _1!, winnersCount: _2!, unclaimedCount: _3!)
             }
             else {
                 return nil
@@ -1533,6 +1858,36 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.MessageAction.messageActionInviteToGroupCall(call: _1!, users: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionPaymentRefunded(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Int64?
+            _4 = reader.readInt64()
+            var _5: Buffer?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseBytes(reader) }
+            var _6: Api.PaymentCharge?
+            if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.PaymentCharge
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.MessageAction.messageActionPaymentRefunded(flags: _1!, peer: _2!, currency: _3!, totalAmount: _4!, payload: _5, charge: _6!)
             }
             else {
                 return nil
@@ -1615,6 +1970,31 @@ public extension Api {
         }
         public static func parse_messageActionPinMessage(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionPinMessage
+        }
+        public static func parse_messageActionPrizeStars(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Api.Peer?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _5: Int32?
+            _5 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.MessageAction.messageActionPrizeStars(flags: _1!, stars: _2!, transactionId: _3!, boostPeer: _4!, giveawayMsgId: _5!)
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_messageActionRequestedPeer(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?

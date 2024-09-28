@@ -140,6 +140,10 @@ private var sharedIsReduceTransparencyEnabled = UIAccessibility.isReduceTranspar
 public final class NavigationBackgroundNode: ASDisplayNode {
     private var _color: UIColor
 
+    public var color: UIColor {
+        return self._color
+    }
+    
     private var enableBlur: Bool
     private var enableSaturation: Bool
 

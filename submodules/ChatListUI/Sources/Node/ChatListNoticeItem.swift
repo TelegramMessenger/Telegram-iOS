@@ -11,6 +11,8 @@ import ItemListUI
 import Markdown
 import AccountContext
 import MergedAvatarsNode
+import TextNodeWithEntities
+import TextFormat
 
 class ChatListNoticeItem: ListViewItem {
     enum Action {
@@ -83,10 +85,11 @@ private let separatorHeight = 1.0 / UIScreen.main.scale
 
 private let titleFont = Font.semibold(15.0)
 private let textFont = Font.regular(15.0)
+private let smallTextFont = Font.regular(14.0)
 
 final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
     private let contentContainer: ASDisplayNode
-    private let titleNode: TextNode
+    private let titleNode: TextNodeWithEntities
     private let textNode: TextNode
     private let arrowNode: ASImageNode
     private let separatorNode: ASDisplayNode
@@ -112,7 +115,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
     required init() {
         self.contentContainer = ASDisplayNode()
         
-        self.titleNode = TextNode()
+        self.titleNode = TextNodeWithEntities()
         self.textNode = TextNode()
         self.arrowNode = ASImageNode()
         self.separatorNode = ASDisplayNode()
@@ -122,7 +125,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
         self.contentContainer.clipsToBounds = true
         self.clipsToBounds = true
         
-        self.contentContainer.addSubnode(self.titleNode)
+        self.contentContainer.addSubnode(self.titleNode.textNode)
         self.contentContainer.addSubnode(self.textNode)
         self.contentContainer.addSubnode(self.arrowNode)
         
@@ -152,7 +155,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
     func asyncLayout() -> (_ item: ChatListNoticeItem, _ params: ListViewItemLayoutParams, _ isLast: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let previousItem = self.item
         
-        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeTitleLayout = TextNodeWithEntities.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
         let makeOkButtonTextLayout = TextNode.asyncLayout(self.okButtonText)
@@ -262,6 +265,24 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                 
                 okButtonLayout = makeOkButtonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.ChatList_SessionReview_PanelConfirm, font: titleFont, textColor: item.theme.list.itemAccentColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
                 cancelButtonLayout = makeCancelButtonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.ChatList_SessionReview_PanelReject, font: titleFont, textColor: item.theme.list.itemDestructiveColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
+            case let .starsSubscriptionLowBalance(amount, peers):
+                let title: String
+                let text: String
+                let starsValue = item.strings.ChatList_SubscriptionsLowBalance_Stars(Int32(amount))
+                if let peer = peers.first, peers.count == 1 {
+                    title = item.strings.ChatList_SubscriptionsLowBalance_Single_Title(starsValue, peer.compactDisplayTitle).string
+                    text = item.strings.ChatList_SubscriptionsLowBalance_Single_Text
+                } else {
+                    title = item.strings.ChatList_SubscriptionsLowBalance_Multiple_Title(starsValue).string
+                    text = item.strings.ChatList_SubscriptionsLowBalance_Multiple_Text
+                }
+                let attributedTitle = NSMutableAttributedString(string: "⭐️\(title)", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
+                if let range = attributedTitle.string.range(of: "⭐️") {
+                    attributedTitle.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedTitle.string))
+                    attributedTitle.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: attributedTitle.string))
+                }
+                titleString = attributedTitle
+                textString = NSAttributedString(string: text, font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             }
             
             var leftInset: CGFloat = sideInset
@@ -291,19 +312,19 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.arrowNode.image = PresentationResourcesItemList.disclosureArrowImage(item.theme)
                     }
                     
-                    let _ = titleLayout.1()
+                    let _ = titleLayout.1(TextNodeWithEntities.Arguments(context: item.context, cache: item.context.animationCache, renderer: item.context.animationRenderer, placeholderColor: .white, attemptSynchronous: true))
                     if case .center = alignment {
-                        strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((params.width - titleLayout.0.size.width) * 0.5), y: verticalInset), size: titleLayout.0.size)
+                        strongSelf.titleNode.textNode.frame = CGRect(origin: CGPoint(x: floor((params.width - titleLayout.0.size.width) * 0.5), y: verticalInset), size: titleLayout.0.size)
                     } else {
-                        strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.0.size)
+                        strongSelf.titleNode.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.0.size)
                     }
                     
                     let _ = textLayout.1()
                     
                     if case .center = alignment {
-                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floor((params.width - textLayout.0.size.width) * 0.5), y: strongSelf.titleNode.frame.maxY + spacing), size: textLayout.0.size)
+                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floor((params.width - textLayout.0.size.width) * 0.5), y: strongSelf.titleNode.textNode.frame.maxY + spacing), size: textLayout.0.size)
                     } else {
-                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + spacing), size: textLayout.0.size)
+                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.textNode.frame.maxY + spacing), size: textLayout.0.size)
                     }
                     
                     if !avatarPeers.isEmpty {
@@ -312,6 +333,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                             avatarsNode = current
                         } else {
                             avatarsNode = MergedAvatarsNode()
+                            avatarsNode.isUserInteractionEnabled = false
                             strongSelf.addSubnode(avatarsNode)
                             strongSelf.avatarsNode = avatarsNode
                         }
@@ -337,6 +359,8 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                     } else if case .birthdayPremiumGift = item.notice {
                         hasCloseButton = true
                     } else if case .premiumGrace = item.notice {
+                        hasCloseButton = true
+                    } else if case .starsSubscriptionLowBalance = item.notice {
                         hasCloseButton = true
                     }
                                         

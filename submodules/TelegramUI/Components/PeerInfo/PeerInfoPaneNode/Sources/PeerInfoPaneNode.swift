@@ -6,6 +6,7 @@ import Display
 import TelegramPresentationData
 
 public enum PeerInfoPaneKey: Int32 {
+    case botPreview
     case members
     case stories
     case storyArchive

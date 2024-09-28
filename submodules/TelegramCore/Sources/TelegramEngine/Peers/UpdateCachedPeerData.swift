@@ -197,6 +197,17 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                     editableBotInfo = .single(nil)
                 }
                 
+                let botPreview: Signal<CachedUserData.BotPreview?, NoError>
+                if let user = maybePeer as? TelegramUser, let botInfo = user.botInfo {
+                    if botInfo.flags.contains(.canEdit) {
+                        botPreview = _internal_requestBotAdminPreview(network: network, peerId: user.id, inputUser: inputUser, language: nil)
+                    } else {
+                        botPreview = _internal_requestBotUserPreview(network: network, peerId: user.id, inputUser: inputUser)
+                    }
+                } else {
+                    botPreview = .single(nil)
+                }
+                
                 var additionalConnectedBots: Signal<Api.account.ConnectedBots?, NoError> = .single(nil)
                 if rawPeerId == accountPeerId {
                     additionalConnectedBots = network.request(Api.functions.account.getConnectedBots())
@@ -210,9 +221,10 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                     network.request(Api.functions.users.getFullUser(id: inputUser))
                     |> retryRequest,
                     editableBotInfo,
+                    botPreview,
                     additionalConnectedBots
                 )
-                |> mapToSignal { result, editableBotInfo, additionalConnectedBots -> Signal<Bool, NoError> in
+                |> mapToSignal { result, editableBotInfo, botPreview, additionalConnectedBots -> Signal<Bool, NoError> in
                     return postbox.transaction { transaction -> Bool in
                         switch result {
                         case let .userFull(fullUser, chats, users):
@@ -359,7 +371,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             var subscriberCount: Int32?
                                             for chat in chats {
                                                 if chat.peerId == channelPeerId {
-                                                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _) = chat {
+                                                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _) = chat {
                                                         subscriberCount = participantsCount
                                                     }
                                                 }
@@ -401,6 +413,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             .withUpdatedBusinessIntro(mappedBusinessIntro)
                                             .withUpdatedBirthday(mappedBirthday)
                                             .withUpdatedPersonalChannel(personalChannel)
+                                            .withUpdatedBotPreview(botPreview)
                                 }
                             })
                         }
@@ -426,7 +439,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                 var botInfos: [CachedPeerBotInfo] = []
                                 for botInfo in chatFullBotInfo ?? [] {
                                     switch botInfo {
-                                    case let .botInfo(_, userId, _, _, _, _, _):
+                                    case let .botInfo(_, userId, _, _, _, _, _, _):
                                         if let userId = userId {
                                             let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                             let parsedBotInfo = BotInfo(apiBotInfo: botInfo)
@@ -437,7 +450,6 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                 let participants = CachedGroupParticipants(apiParticipants: chatFullParticipants)
                                 
                                 let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(CachedPeerAutoremoveTimeout.Value(chatTtlPeriod))
-
                                 
                                 var invitedBy: PeerId?
                                 if let participants = participants {
@@ -500,7 +512,8 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                     } else {
                                         mappedAllowedReactions = .empty
                                     }
-                                    let mappedReactionSettings = PeerReactionSettings(allowedReactions: mappedAllowedReactions, maxReactionCount: reactionsLimit)
+                                    
+                                    let mappedReactionSettings = PeerReactionSettings(allowedReactions: mappedAllowedReactions, maxReactionCount: reactionsLimit, starsAllowed: nil)
                                     
                                     return previous.withUpdatedParticipants(participants)
                                         .withUpdatedExportedInvitation(exportedInvitation)
@@ -547,10 +560,10 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                             switch result {
                                 case let .chatFull(fullChat, chats, users):
                                     switch fullChat {
-                                        case let .channelFull(_, _, _, _, _, _, _, _, _, _, _, _, _, notifySettings, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
-                                            transaction.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
-                                        case .chatFull:
-                                            break
+                                    case let .channelFull(_, _, _, _, _, _, _, _, _, _, _, _, _, notifySettings, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                                        transaction.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
+                                    case .chatFull:
+                                        break
                                     }
                                     
                                     switch fullChat {
@@ -592,7 +605,9 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             if (flags2 & Int32(1 << 14)) != 0 {
                                                 channelFlags.insert(.paidMediaAllowed)
                                             }
-                                        
+                                            if (flags2 & Int32(1 << 15)) != 0 {
+                                                channelFlags.insert(.canViewStarsRevenue)
+                                            }
                                             let sendAsPeerId = defaultSendAs?.peerId
                                             
                                             let linkedDiscussionPeerId: PeerId?
@@ -614,7 +629,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             var botInfos: [CachedPeerBotInfo] = []
                                             for botInfo in apiBotInfos {
                                                 switch botInfo {
-                                                case let .botInfo(_, userId, _, _, _, _, _):
+                                                case let .botInfo(_, userId, _, _, _, _, _, _):
                                                     if let userId = userId {
                                                         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                                         let parsedBotInfo = BotInfo(apiBotInfo: botInfo)
@@ -680,7 +695,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                 switch participantResult {
                                                 case let .channelParticipant(participant, _, _):
                                                     switch participant {
-                                                    case let .channelParticipantSelf(flags, _, inviterId, invitedDate):
+                                                    case let .channelParticipantSelf(flags, _, inviterId, invitedDate, _):
                                                         invitedBy = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(inviterId))
                                                         if (flags & (1 << 0)) != 0 {
                                                             invitedOn = invitedDate
@@ -743,7 +758,8 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                 } else {
                                                     mappedAllowedReactions = .empty
                                                 }
-                                                let mappedReactionSettings = PeerReactionSettings(allowedReactions: mappedAllowedReactions, maxReactionCount: reactionsLimit)
+                                                let starsAllowed: Bool = (flags2 & (1 << 16)) != 0
+                                                let mappedReactionSettings = PeerReactionSettings(allowedReactions: mappedAllowedReactions, maxReactionCount: reactionsLimit, starsAllowed: starsAllowed)
                                                 
                                                 let membersHidden = (flags2 & (1 << 2)) != 0
                                                 let forumViewAsMessages = (flags2 & (1 << 6)) != 0
@@ -821,5 +837,62 @@ extension CachedPeerAutoremoveTimeout.Value {
         } else {
             return nil
         }
+    }
+}
+
+func _internal_requestBotAdminPreview(network: Network, peerId: PeerId, inputUser: Api.InputUser, language: String?) -> Signal<CachedUserData.BotPreview?, NoError> {
+    return network.request(Api.functions.bots.getPreviewInfo(bot: inputUser, langCode: language ?? ""))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.bots.PreviewInfo?, NoError> in
+        return .single(nil)
+    }
+    |> map { result -> CachedUserData.BotPreview? in
+        guard let result else {
+            return nil
+        }
+        switch result {
+        case let .previewInfo(media, langCodes):
+            return CachedUserData.BotPreview(
+                items: media.compactMap { item -> CachedUserData.BotPreview.Item? in
+                    switch item {
+                    case let .botPreviewMedia(date, media):
+                        let value = textMediaAndExpirationTimerFromApiMedia(media, peerId)
+                        if let media = value.media {
+                            return CachedUserData.BotPreview.Item(media: media, timestamp: date)
+                        } else {
+                            return nil
+                        }
+                    }
+                },
+                alternativeLanguageCodes: langCodes
+            )
+        }
+    }
+}
+
+func _internal_requestBotUserPreview(network: Network, peerId: PeerId, inputUser: Api.InputUser) -> Signal<CachedUserData.BotPreview?, NoError> {
+    return network.request(Api.functions.bots.getPreviewMedias(bot: inputUser))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<[Api.BotPreviewMedia]?, NoError> in
+        return .single(nil)
+    }
+    |> map { result -> CachedUserData.BotPreview? in
+        guard let result else {
+            return nil
+        }
+        return CachedUserData.BotPreview(
+            items: result.compactMap { item -> CachedUserData.BotPreview.Item? in
+                switch item {
+                case let .botPreviewMedia(date, media):
+                    let value = textMediaAndExpirationTimerFromApiMedia(media, peerId)
+                    if let media = value.media {
+                        return CachedUserData.BotPreview.Item(media: media, timestamp: date)
+                    } else {
+                        return nil
+                    }
+                }
+            },
+            alternativeLanguageCodes: []
+        )
     }
 }

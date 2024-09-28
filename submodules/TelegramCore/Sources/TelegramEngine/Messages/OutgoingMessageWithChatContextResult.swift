@@ -118,7 +118,7 @@ func _internal_outgoingMessageWithChatContextResult(to peerId: PeerId, threadId:
                 if let dimensions = externalReference.content?.dimensions {
                     fileAttributes.append(.ImageSize(size: dimensions))
                     if externalReference.type == "gif" {
-                        fileAttributes.append(.Video(duration: externalReference.content?.duration ?? 0.0, size: dimensions, flags: [], preloadSize: nil))
+                        fileAttributes.append(.Video(duration: externalReference.content?.duration ?? 0.0, size: dimensions, flags: [], preloadSize: nil, coverTime: nil))
                     }
                 }
                 

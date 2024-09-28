@@ -336,7 +336,8 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
     
     func update(
         content: EmojiPagerContentComponent.ItemContent,
-        theme: PresentationTheme
+        theme: PresentationTheme,
+        strings: PresentationStrings
     ) {
         var themeUpdated = false
         if self.theme !== theme {
@@ -376,13 +377,37 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
                         UIGraphicsPushContext(context)
                         
                         context.setFillColor(color.withMultipliedAlpha(0.2).cgColor)
-                        context.fillEllipse(in: CGRect(origin: .zero, size: size).insetBy(dx: 8.0, dy: 8.0))
+                        
+                        context.addPath(UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 21.0).cgPath)
+                        context.fillPath()
                         context.setFillColor(color.cgColor)
                         
-                        let plusSize = CGSize(width: 4.5, height: 31.5)
-                        context.addPath(UIBezierPath(roundedRect: CGRect(x: floorToScreenPixels((size.width - plusSize.width) / 2.0), y: floorToScreenPixels((size.height - plusSize.height) / 2.0), width: plusSize.width, height: plusSize.height), cornerRadius: plusSize.width / 2.0).cgPath)
-                        context.addPath(UIBezierPath(roundedRect: CGRect(x: floorToScreenPixels((size.width - plusSize.height) / 2.0), y: floorToScreenPixels((size.height - plusSize.width) / 2.0), width: plusSize.height, height: plusSize.width), cornerRadius: plusSize.width / 2.0).cgPath)
+                        let plusSize = CGSize(width: 3.5, height: 28.0)
+                        context.addPath(UIBezierPath(roundedRect: CGRect(x: floorToScreenPixels((size.width - plusSize.width) / 2.0), y: floorToScreenPixels((size.height - plusSize.height) / 2.0), width: plusSize.width, height: plusSize.height).offsetBy(dx: 0.0, dy: -17.0), cornerRadius: plusSize.width / 2.0).cgPath)
+                        context.addPath(UIBezierPath(roundedRect: CGRect(x: floorToScreenPixels((size.width - plusSize.height) / 2.0), y: floorToScreenPixels((size.height - plusSize.width) / 2.0), width: plusSize.height, height: plusSize.width).offsetBy(dx: 0.0, dy: -17.0), cornerRadius: plusSize.width / 2.0).cgPath)
                         context.fillPath()
+                        
+                        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                        context.scaleBy(x: 1.0, y: -1.0)
+                        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                        
+                        let string = strings.Stickers_CreateSticker
+                        var lineOriginY = size.height / 2.0 - 18.0
+                        let components = string.components(separatedBy: "\n")
+                        for component in components {
+                            context.saveGState()
+                            let attributedString = NSAttributedString(string: component, attributes: [NSAttributedString.Key.font: Font.medium(17.0), NSAttributedString.Key.foregroundColor: color])
+                            
+                            let line = CTLineCreateWithAttributedString(attributedString)
+                            let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+                            
+                            let lineOrigin = CGPoint(x: floorToScreenPixels((size.width - lineBounds.size.width) / 2.0), y: lineOriginY)
+                            context.textPosition = lineOrigin
+                            CTLineDraw(line, context)
+                                                        
+                            lineOriginY -= lineBounds.height + 6.0
+                            context.restoreGState()
+                        }
                         
                         UIGraphicsPopContext()
                     })

@@ -12,6 +12,7 @@ import TextFormat
 import ComponentFlow
 import ButtonComponent
 import BundleIconComponent
+import TelegramStringFormatting
 
 final class MonetizationBalanceItem: ListViewItem, ItemListItem {
     let context: AccountContext
@@ -175,12 +176,12 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
             
             var isStars = false
             if let stats = item.stats as? RevenueStats {
-                let cryptoValue = formatBalanceText(stats.balances.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
-                amountString = amountAttributedString(cryptoValue, integralFont: integralFont, fractionalFont: fractionalFont, color: item.presentationData.theme.list.itemPrimaryTextColor)
-                value = stats.balances.availableBalance == 0 ? "" : "≈\(formatUsdValue(stats.balances.availableBalance, rate: stats.usdRate))"
+                let cryptoValue = formatTonAmountText(stats.balances.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
+                amountString = tonAmountAttributedString(cryptoValue, integralFont: integralFont, fractionalFont: fractionalFont, color: item.presentationData.theme.list.itemPrimaryTextColor)
+                value = stats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.availableBalance, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))"
             } else if let stats = item.stats as? StarsRevenueStats {
                 amountString = NSAttributedString(string: presentationStringsFormattedNumber(Int32(stats.balances.availableBalance), item.presentationData.dateTimeFormat.groupingSeparator), font: integralFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
-                value = stats.balances.availableBalance == 0 ? "" : "≈\(formatUsdValue(stats.balances.availableBalance, divide: false, rate: stats.usdRate))"
+                value = stats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.availableBalance, divide: false, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))"
                 isStars = true
             } else {
                 fatalError()

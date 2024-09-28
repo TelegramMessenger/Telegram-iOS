@@ -204,9 +204,9 @@ private final class VideoRecorderImpl {
 
                 if let videoInput = self.videoInput {
                     let time = CACurrentMediaTime()
-                    if let previousPresentationTime = self.previousPresentationTime, let previousAppendTime = self.previousAppendTime {
-                        print("appending \(presentationTime.seconds) (\(presentationTime.seconds - previousPresentationTime) ) on \(time) (\(time - previousAppendTime)")
-                    }
+//                    if let previousPresentationTime = self.previousPresentationTime, let previousAppendTime = self.previousAppendTime {
+//                        print("appending \(presentationTime.seconds) (\(presentationTime.seconds - previousPresentationTime) ) on \(time) (\(time - previousAppendTime)")
+//                    }
                     self.previousPresentationTime = presentationTime.seconds
                     self.previousAppendTime = time
                     

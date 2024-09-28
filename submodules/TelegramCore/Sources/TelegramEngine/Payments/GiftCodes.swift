@@ -79,17 +79,23 @@ public enum PremiumGiveawayInfo: Equatable {
     
     public enum ResultStatus: Equatable {
         case notWon
-        case won(slug: String)
+        case wonPremium(slug: String)
+        case wonStars(stars: Int64)
         case refunded
     }
     
     case ongoing(startDate: Int32, status: OngoingStatus)
-    case finished(status: ResultStatus, startDate: Int32, finishDate: Int32, winnersCount: Int32, activatedCount: Int32)
+    case finished(status: ResultStatus, startDate: Int32, finishDate: Int32, winnersCount: Int32, activatedCount: Int32?)
 }
 
 public struct PrepaidGiveaway: Equatable {
+    public enum Prize: Equatable {
+        case premium(months: Int32)
+        case stars(stars: Int64, boosts: Int32)
+    }
+    
     public let id: Int64
-    public let months: Int32
+    public let prize: Prize
     public let quantity: Int32
     public let date: Int32
 }
@@ -122,12 +128,14 @@ func _internal_getPremiumGiveawayInfo(account: Account, peerId: EnginePeer.Id, m
                     } else {
                         return .ongoing(startDate: startDate, status: .notQualified)
                     }
-                case let .giveawayInfoResults(flags, startDate, giftCodeSlug, finishDate, winnersCount, activatedCount):
+                case let .giveawayInfoResults(flags, startDate, giftCodeSlug, stars, finishDate, winnersCount, activatedCount):
                     let status: PremiumGiveawayInfo.ResultStatus
                     if (flags & (1 << 1)) != 0 {
                         status = .refunded
+                    } else if let stars {
+                        status = .wonStars(stars: stars)
                     } else if let giftCodeSlug = giftCodeSlug {
-                        status = .won(slug: giftCodeSlug)
+                        status = .wonPremium(slug: giftCodeSlug)
                     } else {
                         status = .notWon
                     }
@@ -216,8 +224,12 @@ func _internal_applyPremiumGiftCode(account: Account, slug: String) -> Signal<Ne
 public enum LaunchPrepaidGiveawayError {
     case generic
 }
+public enum LaunchGiveawayPurpose {
+    case premium
+    case stars(stars: Int64, users: Int32)
+}
 
-func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id: Int64, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32) -> Signal<Never, LaunchPrepaidGiveawayError> {
+func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, purpose: LaunchGiveawayPurpose, id: Int64, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32) -> Signal<Never, LaunchPrepaidGiveawayError> {
     return account.postbox.transaction { transaction -> Signal<Never, LaunchPrepaidGiveawayError> in
         var flags: Int32 = 0
         if onlyNewSubscribers {
@@ -248,7 +260,16 @@ func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id
         guard let inputPeer = inputPeer else {
             return .complete()
         }
-        return account.network.request(Api.functions.payments.launchPrepaidGiveaway(peer: inputPeer, giveawayId: id, purpose: .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: inputPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: "", amount: 0)))
+        
+        let inputPurpose: Api.InputStorePaymentPurpose
+        switch purpose {
+        case let .stars(stars, users):
+            inputPurpose = .inputStorePaymentStarsGiveaway(flags: flags, stars: stars, boostPeer: inputPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: "", amount: 0, users: users)
+        case .premium:
+            inputPurpose = .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: inputPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: "", amount: 0)
+        }
+        
+        return account.network.request(Api.functions.payments.launchPrepaidGiveaway(peer: inputPeer, giveawayId: id, purpose: inputPurpose))
         |> mapError { _ -> LaunchPrepaidGiveawayError in
             return .generic
         }
@@ -301,7 +322,12 @@ extension PrepaidGiveaway {
         switch apiPrepaidGiveaway {
         case let .prepaidGiveaway(id, months, quantity, date):
             self.id = id
-            self.months = months
+            self.prize = .premium(months: months)
+            self.quantity = quantity
+            self.date = date
+        case let .prepaidStarsGiveaway(id, stars, quantity, boosts, date):
+            self.id = id
+            self.prize = .stars(stars: stars, boosts: boosts)
             self.quantity = quantity
             self.date = date
         }

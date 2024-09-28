@@ -26,7 +26,7 @@ private func shareLink(for server: ProxyServerSettings) -> String {
     return link
 }
 
-private final class proxyServerSettingsControllerArguments {
+private final class ProxyServerSettingsControllerArguments {
     let updateState: ((ProxyServerSettingsControllerState) -> ProxyServerSettingsControllerState) -> Void
     let share: () -> Void
     let usePasteboardSettings: () -> Void
@@ -113,7 +113,7 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
     }
     
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
-        let arguments = arguments as! proxyServerSettingsControllerArguments
+        let arguments = arguments as! ProxyServerSettingsControllerArguments
         switch self {
             case let .usePasteboardSettings(_, title):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -158,7 +158,7 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
             case let .credentialsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .credentialsUsername(_, _, placeholder, text):
-                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: text, placeholder: placeholder, sectionId: self.section, textUpdated: { value in
+                return ItemListSingleLineInputItem(context: nil, presentationData: presentationData, title: NSAttributedString(), text: text, placeholder: placeholder, sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
                         state.username = value
@@ -306,7 +306,7 @@ func proxyServerSettingsController(sharedContext: SharedAccountContext, context:
     
     var shareImpl: (() -> Void)?
     
-    let arguments = proxyServerSettingsControllerArguments(updateState: { f in
+    let arguments = ProxyServerSettingsControllerArguments(updateState: { f in
         updateState(f)
     }, share: {
         shareImpl?()

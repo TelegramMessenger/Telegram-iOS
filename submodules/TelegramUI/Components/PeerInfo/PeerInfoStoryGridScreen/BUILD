@@ -30,6 +30,7 @@ swift_library(
         "//submodules/SaveToCameraRoll",
         "//submodules/ShareController",
         "//submodules/OpenInExternalAppUI",
+        "//submodules/TelegramUI/Components/SaveProgressScreen",
     ],
     visibility = [
         "//visibility:public",

@@ -48,6 +48,7 @@ public final class StoryContentContextImpl: StoryContentContext {
             self.peerId = peerId
             
             self.currentFocusedId = initialFocusedId
+            self.storedFocusedId = self.currentFocusedId
             self.currentFocusedIdUpdatedPromise.set(.single(Void()))
             
             context.engine.account.viewTracker.refreshCanSendMessagesForPeerIds(peerIds: [peerId])
@@ -600,13 +601,14 @@ public final class StoryContentContextImpl: StoryContentContext {
         context: AccountContext,
         isHidden: Bool,
         focusedPeerId: EnginePeer.Id?,
+        focusedStoryId: Int32? = nil,
         singlePeer: Bool,
         fixedOrder: [EnginePeer.Id] = []
     ) {
         self.context = context
         self.isHidden = isHidden
         if let focusedPeerId {
-            self.focusedItem = (focusedPeerId, nil)
+            self.focusedItem = (focusedPeerId, focusedStoryId)
         }
         self.fixedSubscriptionOrder = fixedOrder
         
@@ -858,9 +860,11 @@ public final class StoryContentContextImpl: StoryContentContext {
                 }
                 
                 var centralIndex: Int?
-                if let (focusedPeerId, _) = self.focusedItem {
+                var centralStoryId: Int32?
+                if let (focusedPeerId, focusedStoryId) = self.focusedItem {
                     if let index = subscriptionItems.firstIndex(where: { $0.peer.id == focusedPeerId }) {
                         centralIndex = index
+                        centralStoryId = focusedStoryId
                     }
                 }
                 if centralIndex == nil {
@@ -874,7 +878,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                     if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: subscriptionItems[centralIndex].peer.id) {
                         centralPeerContext = existingContext
                     } else {
-                        centralPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex].peer.id, focusedId: nil, loadIds: loadIds)
+                        centralPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex].peer.id, focusedId: centralStoryId, loadIds: loadIds)
                     }
                     
                     var previousPeerContext: PeerContext?
@@ -1468,7 +1472,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
     
     private var currentPeerData: (EnginePeer.Id, Promise<PeerData>)?
     
-    public init(context: AccountContext, listContext: StoryListContext, initialId: Int32?, splitIndexIntoDays: Bool) {
+    public init(context: AccountContext, listContext: StoryListContext, initialId: StoryId?, splitIndexIntoDays: Bool) {
         self.context = context
         
         let preferHighQualityStories: Signal<Bool, NoError> = combineLatest(
@@ -1507,9 +1511,9 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                     focusedIndex = nil
                 }
             } else if let initialId = initialId {
-                if let index = state.items.firstIndex(where: { $0.storyItem.id == initialId }) {
+                if let index = state.items.firstIndex(where: { $0.id == initialId }) {
                     focusedIndex = index
-                } else if let index = state.items.firstIndex(where: { $0.storyItem.id <= initialId }) {
+                } else if let index = state.items.firstIndex(where: { $0.storyItem.id <= initialId.id }) {
                     focusedIndex = index
                 } else {
                     focusedIndex = nil
@@ -1816,7 +1820,7 @@ public func preloadStoryMedia(context: AccountContext, info: StoryPreloadInfo) -
     case let .file(file):
         var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
         for attribute in file.attributes {
-            if case let .Video(_, _, _, preloadSize) = attribute {
+            if case let .Video(_, _, _, preloadSize, _) = attribute {
                 if let preloadSize {
                     fetchRange = (0 ..< Int64(preloadSize), .default)
                 }
@@ -1855,6 +1859,8 @@ public func preloadStoryMedia(context: AccountContext, info: StoryPreloadInfo) -
             if !customReactions.contains(fileId) {
                 customReactions.append(fileId)
             }
+        case .stars:
+            break
         }
     }
     if !builtinReactions.isEmpty {
@@ -2041,7 +2047,7 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
         case let .file(file):
             var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
             for attribute in file.attributes {
-                if case let .Video(_, _, _, preloadSize) = attribute {
+                if case let .Video(_, _, _, preloadSize, _) = attribute {
                     if let preloadSize {
                         fetchRange = (0 ..< Int64(preloadSize), .default)
                     }
@@ -2086,6 +2092,8 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
                     if !customReactions.contains(fileId) {
                         customReactions.append(fileId)
                     }
+                case .stars:
+                    break
                 }
             }
         }

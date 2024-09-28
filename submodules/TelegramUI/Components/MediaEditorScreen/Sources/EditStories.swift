@@ -16,6 +16,7 @@ public extension MediaEditorScreen {
         peer: EnginePeer,
         storyItem: EngineStoryItem,
         videoPlaybackPosition: Double?,
+        cover: Bool,
         repost: Bool,
         transitionIn: MediaEditorScreen.TransitionIn,
         transitionOut: MediaEditorScreen.TransitionOut?,
@@ -82,12 +83,24 @@ public extension MediaEditorScreen {
             transitionOut: nil
         )
         
+        var videoPlaybackPosition = videoPlaybackPosition
+        if cover, case let .file(file) = storyItem.media {
+            videoPlaybackPosition = 0.0
+            for attribute in file.attributes {
+                if case let .Video(_, _, _, _, coverTime) = attribute {
+                    videoPlaybackPosition = coverTime
+                    break
+                }
+            }
+        }
+        
         var updateProgressImpl: ((Float) -> Void)?
         let controller = MediaEditorScreen(
             context: context,
             mode: .storyEditor,
             subject: subject,
             isEditing: !repost,
+            isEditingCover: cover,
             forwardSource: repost ? (peer, storyItem) : nil,
             initialCaption: initialCaption,
             initialPrivacy: initialPrivacy,
@@ -152,10 +165,14 @@ public extension MediaEditorScreen {
                     })
                 } else {
                     var updatedText: String?
+                    var updatedCoverTimestamp: Double?
                     var updatedEntities: [MessageTextEntity]?
                     if result.caption.string != storyItem.text || entities != storyItem.entities {
                         updatedText = result.caption.string
                         updatedEntities = entities
+                    }
+                    if let coverTimestamp = result.coverTimestamp {
+                        updatedCoverTimestamp = coverTimestamp
                     }
                     
                     if let mediaResult = result.media {
@@ -216,7 +233,7 @@ public extension MediaEditorScreen {
                                     }
                                 }
                                 
-                                update((context.engine.messages.editStory(peerId: peer.id, id: storyItem.id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: result.stickers), mediaAreas: result.mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
+                                update((context.engine.messages.editStory(peerId: peer.id, id: storyItem.id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: result.stickers, coverTime: nil), mediaAreas: result.mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
                                 |> deliverOnMainQueue).startStrict(next: { result in
                                     switch result {
                                     case let .progress(progress):
@@ -235,8 +252,22 @@ public extension MediaEditorScreen {
                         default:
                             break
                         }
-                    } else if updatedText != nil {
-                        let _ = (context.engine.messages.editStory(peerId: peer.id, id: storyItem.id, media: nil, mediaAreas: nil, text: updatedText, entities: updatedEntities, privacy: nil)
+                    } else if updatedText != nil || updatedCoverTimestamp != nil {
+                        var media: EngineStoryInputMedia?
+                        if let updatedCoverTimestamp {
+                            if case let .file(file) = storyItem.media {
+                                var updatedAttributes: [TelegramMediaFileAttribute] = []
+                                for attribute in file.attributes {
+                                    if case let .Video(duration, size, flags, preloadSize, _) = attribute {
+                                        updatedAttributes.append(.Video(duration: duration, size: size, flags: flags, preloadSize: preloadSize, coverTime: min(duration, updatedCoverTimestamp)))
+                                    } else {
+                                        updatedAttributes.append(attribute)
+                                    }
+                                }
+                                media = .existing(media: file.withUpdatedAttributes(updatedAttributes))
+                            }
+                        }
+                        let _ = (context.engine.messages.editStory(peerId: peer.id, id: storyItem.id, media: media, mediaAreas: nil, text: updatedText, entities: updatedEntities, privacy: nil)
                         |> deliverOnMainQueue).startStandalone(next: { result in
                             switch result {
                             case .completed:

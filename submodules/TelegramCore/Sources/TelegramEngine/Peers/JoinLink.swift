@@ -39,6 +39,7 @@ public enum ExternalJoiningChatState {
             public let isVerified: Bool
             public let isScam: Bool
             public let isFake: Bool
+            public let canRefulfillSubscription: Bool
         }
         
         public let flags: Flags
@@ -48,6 +49,8 @@ public enum ExternalJoiningChatState {
         public let participantsCount: Int32
         public let participants: [EnginePeer]?
         public let nameColor: PeerNameColor?
+        public let subscriptionPricing: StarsSubscriptionPricing?
+        public let subscriptionFormId: Int64?
     }
     
     case invite(Invite)
@@ -106,10 +109,10 @@ func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<E
     |> mapToSignal { result -> Signal<ExternalJoiningChatState, JoinLinkInfoError> in
         if let result = result {
             switch result {
-                case let .chatInvite(flags, title, about, invitePhoto, participantsCount, participants, nameColor):
+                case let .chatInvite(flags, title, about, invitePhoto, participantsCount, participants, nameColor, subscriptionPricing, subscriptionFormId):
                     let photo = telegramMediaImageFromApiPhoto(invitePhoto).flatMap({ smallestImageRepresentation($0.representations) })
-                    let flags: ExternalJoiningChatState.Invite.Flags = .init(isChannel: (flags & (1 << 0)) != 0, isBroadcast: (flags & (1 << 1)) != 0, isPublic: (flags & (1 << 2)) != 0, isMegagroup: (flags & (1 << 3)) != 0, requestNeeded: (flags & (1 << 6)) != 0, isVerified: (flags & (1 << 7)) != 0, isScam: (flags & (1 << 8)) != 0, isFake: (flags & (1 << 9)) != 0)
-                    return .single(.invite(ExternalJoiningChatState.Invite(flags: flags, title: title, about: about, photoRepresentation: photo, participantsCount: participantsCount, participants: participants?.map({ EnginePeer(TelegramUser(user: $0)) }), nameColor: PeerNameColor(rawValue: nameColor))))
+                    let flags: ExternalJoiningChatState.Invite.Flags = .init(isChannel: (flags & (1 << 0)) != 0, isBroadcast: (flags & (1 << 1)) != 0, isPublic: (flags & (1 << 2)) != 0, isMegagroup: (flags & (1 << 3)) != 0, requestNeeded: (flags & (1 << 6)) != 0, isVerified: (flags & (1 << 7)) != 0, isScam: (flags & (1 << 8)) != 0, isFake: (flags & (1 << 9)) != 0, canRefulfillSubscription: (flags & (1 << 11)) != 0)
+                    return .single(.invite(ExternalJoiningChatState.Invite(flags: flags, title: title, about: about, photoRepresentation: photo, participantsCount: participantsCount, participants: participants?.map({ EnginePeer(TelegramUser(user: $0)) }), nameColor: PeerNameColor(rawValue: nameColor), subscriptionPricing: subscriptionPricing.flatMap { StarsSubscriptionPricing(apiStarsSubscriptionPricing: $0) }, subscriptionFormId: subscriptionFormId)))
                 case let .chatInviteAlready(chat):
                     if let peer = parseTelegramGroupOrChannel(chat: chat) {
                         return account.postbox.transaction({ (transaction) -> ExternalJoiningChatState in

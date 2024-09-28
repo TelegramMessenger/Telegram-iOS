@@ -6,7 +6,7 @@ import TelegramApi
 func dimensionsForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> PixelDimensions? {
     for attribute in attributes {
         switch attribute {
-            case let .Video(_, size, _, _):
+            case let .Video(_, size, _, _, _):
                 return size
             case let .ImageSize(size):
                 return size
@@ -20,7 +20,7 @@ func dimensionsForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> 
 func durationForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> Double? {
     for attribute in attributes {
         switch attribute {
-            case let .Video(duration, _, _, _):
+            case let .Video(duration, _, _, _, _):
                 return duration
             case let .Audio(_, duration, _, _, _):
                 return Double(duration)
@@ -99,7 +99,7 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 result.append(.ImageSize(size: PixelDimensions(width: w, height: h)))
             case .documentAttributeAnimated:
                 result.append(.Animated)
-            case let .documentAttributeVideo(flags, duration, w, h, preloadSize):
+            case let .documentAttributeVideo(flags, duration, w, h, preloadSize, videoStart):
                 var videoFlags = TelegramMediaVideoFlags()
                 if (flags & (1 << 0)) != 0 {
                     videoFlags.insert(.instantRoundVideo)
@@ -110,7 +110,7 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 if (flags & (1 << 3)) != 0 {
                     videoFlags.insert(.isSilent)
                 }
-                result.append(.Video(duration: Double(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags, preloadSize: preloadSize))
+                result.append(.Video(duration: Double(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags, preloadSize: preloadSize, coverTime: videoStart))
             case let .documentAttributeAudio(flags, duration, title, performer, waveform):
                 let isVoice = (flags & (1 << 10)) != 0
                 let waveformBuffer: Data? = waveform?.makeData()

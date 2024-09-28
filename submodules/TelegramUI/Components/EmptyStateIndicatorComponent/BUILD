@@ -14,6 +14,7 @@ swift_library(
         "//submodules/ComponentFlow",
         "//submodules/Components/AnimatedStickerComponent",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/Components/BalancedTextComponent",
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/TelegramPresentationData",
         "//submodules/AccountContext",

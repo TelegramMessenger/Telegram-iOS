@@ -43,10 +43,21 @@ public func presentGiveawayInfoController(
         }
         
         var months: Int32 = 0
+        var stars: Int64 = 0
         if let giveaway {
-            months = giveaway.months
+            switch giveaway.prize {
+            case let .premium(monthsValue):
+                months = monthsValue
+            case let .stars(amount):
+                stars = amount
+            }
         } else if let giveawayResults {
-            months = giveawayResults.months
+            switch giveawayResults.prize {
+            case let .premium(monthsValue):
+                months = monthsValue
+            case let .stars(amount):
+                stars = amount
+            }
         }
         
         var prizeDescription: String?
@@ -70,10 +81,20 @@ public func presentGiveawayInfoController(
             onlyNewSubscribers = true
         }
         
-        let author = message.forwardInfo?.author ?? message.author?._asPeer()
+        var author = message.forwardInfo?.author ?? message.author?._asPeer()
+        if author is TelegramChannel {
+        } else {
+            if let peer = message.forwardInfo?.source ?? message.peers[message.id.peerId] {
+                author = peer
+            }
+        }
         var isGroup = false
         if let channel = author as? TelegramChannel, case .group = channel.info {
             isGroup = true
+        }
+        var peerName = ""
+        if let author {
+            peerName = EnginePeer(author).compactDisplayTitle
         }
         
         var groupsAndChannels = false
@@ -102,10 +123,7 @@ public func presentGiveawayInfoController(
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
-        var peerName = ""
-        if let channel = author as? TelegramChannel {
-            peerName = EnginePeer(channel).compactDisplayTitle
-        }
+
         
         let timeZone = TimeZone.current
         let untilDate = stringForDate(timestamp: untilDateValue, timeZone: timeZone, strings: presentationData.strings)
@@ -135,17 +153,36 @@ public func presentGiveawayInfoController(
             title = presentationData.strings.Chat_Giveaway_Info_Title
             
             let intro: String
-            if case .almostOver = status {
-                if isGroup {
-                    intro = presentationData.strings.Chat_Giveaway_Info_Group_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(quantity), presentationData.strings.Chat_Giveaway_Info_Months(months)).string
+            if stars > 0 {
+                let starsString = presentationData.strings.Chat_Giveaway_Info_Stars_Stars(Int32(stars))
+                if case .almostOver = status {
+                    if isGroup {
+                        intro = presentationData.strings.Chat_Giveaway_Info_Stars_Group_EndedIntro(peerName, starsString).string
+                    } else {
+                        intro = presentationData.strings.Chat_Giveaway_Info_Stars_EndedIntro(peerName, starsString).string
+                    }
                 } else {
-                    intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(quantity), presentationData.strings.Chat_Giveaway_Info_Months(months)).string
+                    if isGroup {
+                        intro = presentationData.strings.Chat_Giveaway_Info_Stars_Group_OngoingIntro(peerName, starsString).string
+                    } else {
+                        intro = presentationData.strings.Chat_Giveaway_Info_Stars_OngoingIntro(peerName, starsString).string
+                    }
                 }
             } else {
-                if isGroup {
-                    intro = presentationData.strings.Chat_Giveaway_Info_Group_OngoingIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(quantity), presentationData.strings.Chat_Giveaway_Info_Months(months)).string
+                let subscriptionsString = presentationData.strings.Chat_Giveaway_Info_Subscriptions(quantity)
+                let monthsString = presentationData.strings.Chat_Giveaway_Info_Months(months)
+                if case .almostOver = status {
+                    if isGroup {
+                        intro = presentationData.strings.Chat_Giveaway_Info_Group_EndedIntro(peerName, subscriptionsString, monthsString).string
+                    } else {
+                        intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, subscriptionsString, monthsString).string
+                    }
                 } else {
-                    intro = presentationData.strings.Chat_Giveaway_Info_OngoingIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(quantity), presentationData.strings.Chat_Giveaway_Info_Months(months)).string
+                    if isGroup {
+                        intro = presentationData.strings.Chat_Giveaway_Info_Group_OngoingIntro(peerName, subscriptionsString, monthsString).string
+                    } else {
+                        intro = presentationData.strings.Chat_Giveaway_Info_OngoingIntro(peerName, subscriptionsString, monthsString).string
+                    }
                 }
             }
             
@@ -242,10 +279,21 @@ public func presentGiveawayInfoController(
             title = presentationData.strings.Chat_Giveaway_Info_EndedTitle
             
             let intro: String
-            if isGroup {
-                intro = presentationData.strings.Chat_Giveaway_Info_Group_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(quantity), presentationData.strings.Chat_Giveaway_Info_Months(months)).string
+            if stars > 0 {
+                let starsString = presentationData.strings.Chat_Giveaway_Info_Stars_Stars(Int32(stars))
+                if isGroup {
+                    intro = presentationData.strings.Chat_Giveaway_Info_Stars_Group_EndedIntro(peerName, starsString).string
+                } else {
+                    intro = presentationData.strings.Chat_Giveaway_Info_Stars_EndedIntro(peerName, starsString).string
+                }
             } else {
-                intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(quantity), presentationData.strings.Chat_Giveaway_Info_Months(months)).string
+                let subscriptionsString = presentationData.strings.Chat_Giveaway_Info_Subscriptions(quantity)
+                let monthsString = presentationData.strings.Chat_Giveaway_Info_Months(months)
+                if isGroup {
+                    intro = presentationData.strings.Chat_Giveaway_Info_Group_EndedIntro(peerName, subscriptionsString, monthsString).string
+                } else {
+                    intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, subscriptionsString, monthsString).string
+                }
             }
             
             var ending: String
@@ -265,7 +313,7 @@ public func presentGiveawayInfoController(
                 }
             }
             
-            if activatedCount > 0 {
+            if let activatedCount, activatedCount > 0 {
                 ending += " " + presentationData.strings.Chat_Giveaway_Info_ActivatedLinks(activatedCount)
             }
                         
@@ -279,11 +327,20 @@ public func presentGiveawayInfoController(
                 })]
             case .notWon:
                 result = "**\(presentationData.strings.Chat_Giveaway_Info_DidntWin)**\n\n"
-            case let .won(slug):
+            case let .wonPremium(slug):
                 result = "**\(presentationData.strings.Chat_Giveaway_Info_Won("").string)**\n\n"
                 actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Chat_Giveaway_Info_ViewPrize, action: {
                     dismissImpl?()
                     openLink(slug)
+                }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                    dismissImpl?()
+                })]
+            case let .wonStars(stars):
+                let _ = stars
+                result = "**\(presentationData.strings.Chat_Giveaway_Info_Won("").string)**\n\n"
+                actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Chat_Giveaway_Info_ViewPrize, action: {
+                    dismissImpl?()
+                    openLink("")
                 }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
                     dismissImpl?()
                 })]

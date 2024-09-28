@@ -245,11 +245,13 @@ public protocol VoiceChatController: ViewController {
     var call: PresentationGroupCall { get }
     var currentOverlayController: VoiceChatOverlayController? { get }
     var parentNavigationController: NavigationController? { get set }
+    var onViewDidAppear: (() -> Void)? { get set }
+    var onViewDidDisappear: (() -> Void)? { get set }
     
     func dismiss(closing: Bool, manual: Bool)
 }
 
-public final class VoiceChatControllerImpl: ViewController, VoiceChatController {
+final class VoiceChatControllerImpl: ViewController, VoiceChatController {
     enum DisplayMode {
         case modal(isExpanded: Bool, isFilled: Bool)
         case fullscreen(controlsHidden: Bool)
@@ -1254,7 +1256,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                 } else {
                                     text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                 }
-                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(participant.peer), text: text, action: nil, duration: 3), action: { _ in return false })
+                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(participant.peer), title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
                             }
                         } else {
                             if case let .channel(groupPeer) = groupPeer, let listenerLink = inviteLinks?.listenerLink, !groupPeer.hasPermission(.inviteMembers) {
@@ -1362,7 +1364,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                                 } else {
                                                     text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                                 }
-                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text, action: nil, duration: 3), action: { _ in return false })
+                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
                                             }
                                         }))
                                     } else if case let .legacyGroup(groupPeer) = groupPeer {
@@ -1430,7 +1432,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                                 } else {
                                                     text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                                 }
-                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text, action: nil, duration: 3), action: { _ in return false })
+                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
                                             }
                                         }))
                                     }
@@ -2262,7 +2264,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                         return
                     }
                     let text = strongSelf.presentationData.strings.VoiceChat_PeerJoinedText(event.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
-                    strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: event.peer, text: text, action: nil, duration: 3), action: { _ in return false })
+                    strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: event.peer, title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
                 }
             }))
             
@@ -2277,7 +2279,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 } else {
                     text = strongSelf.presentationData.strings.VoiceChat_DisplayAsSuccess(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                 }
-                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text, action: nil, duration: 3), action: { _ in return false })
+                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
             }))
 
             self.stateVersionDisposable.set((self.call.stateVersion
@@ -2416,7 +2418,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                         }
                     } else {
                         if let input = (strongSelf.call as! PresentationGroupCallImpl).video(endpointId: endpointId) {
-                            if let videoView = strongSelf.videoRenderingContext.makeView(input: input) {
+                            if let videoView = strongSelf.videoRenderingContext.makeView(input: input, blur: false) {
                                 completion(GroupVideoNode(videoView: videoView, backdropVideoView: strongSelf.videoRenderingContext.makeBlurView(input: input, mainView: videoView)))
                             }
                         }
@@ -2498,7 +2500,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
         private func openSettingsMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
             let items: Signal<[ContextMenuItem], NoError> = self.contextMenuMainItems()
             if let controller = self.controller {
-                let contextController = ContextController(presentationData: self.presentationData.withUpdated(theme: self.darkTheme), source: .reference(VoiceChatContextReferenceContentSource(controller: controller, sourceNode: self.optionsButton.referenceNode)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+                let contextController = ContextController(presentationData: self.presentationData.withUpdated(theme: self.darkTheme), source: .reference(VoiceChatContextReferenceContentSource(controller: controller, sourceView: self.optionsButton.referenceNode.view)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 controller.presentInGlobalOverlay(contextController)
             }
         }
@@ -2627,8 +2629,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 
                 if !isScheduled && canSpeak {
                     if #available(iOS 15.0, *) {
-                        //TODO:localize
-                        items.append(.action(ContextMenuActionItem(text: "Microphone Modes", textColor: .primary, icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MicrophoneModes, textColor: .primary, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Noise"), color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
                             f(.dismissWithoutContent)
@@ -3737,7 +3738,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     var isFrontCamera = true
                     let videoCapturer = OngoingCallVideoCapturer()
                     let input = videoCapturer.video()
-                    if let videoView = strongSelf.videoRenderingContext.makeView(input: input) {
+                    if let videoView = strongSelf.videoRenderingContext.makeView(input: input, blur: false) {
                         videoView.updateIsEnabled(true)
                         
                         let cameraNode = GroupVideoNode(videoView: videoView, backdropVideoView: nil)
@@ -3928,7 +3929,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
             transition.updateAlpha(node: self.bottomGradientNode, alpha: self.isLandscape ? 0.0 : 1.0)
             
             var isTablet = false
-            let videoFrame: CGRect
+            var videoFrame: CGRect
             let videoContainerFrame: CGRect
             if case .regular = layout.metrics.widthClass {
                 isTablet = true
@@ -3942,6 +3943,11 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 videoFrame = CGRect(x: 0.0, y: videoTopEdgeY, width: isLandscape ? max(0.0, layout.size.width - layout.safeInsets.right - 92.0) : layout.size.width, height: videoBottomEdgeY - videoTopEdgeY)
                 videoContainerFrame = CGRect(origin: CGPoint(), size: layout.size)
             }
+            
+            if videoFrame.width < 0.0 || videoFrame.height < 0.0 || !videoFrame.width.isNormal || !videoFrame.height.isNormal {
+                videoFrame = CGRect()
+            }
+            
             transition.updateFrame(node: self.mainStageContainerNode, frame: videoContainerFrame)
             transition.updateFrame(node: self.mainStageBackgroundNode, frame: videoFrame)
             if !self.mainStageNode.animating {
@@ -5508,7 +5514,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     self.requestedVideoSources.insert(channel.endpointId)
 
                     let input = (self.call as! PresentationGroupCallImpl).video(endpointId: channel.endpointId)
-                    if let input = input, let videoView = self.videoRenderingContext.makeView(input: input) {
+                    if let input = input, let videoView = self.videoRenderingContext.makeView(input: input, blur: false) {
                         let videoNode = GroupVideoNode(videoView: videoView, backdropVideoView: self.videoRenderingContext.makeBlurView(input: input, mainView: videoView))
 
                         self.readyVideoDisposables.set((combineLatest(videoNode.ready, .single(false) |> then(.single(true) |> delay(10.0, queue: Queue.mainQueue())))
@@ -7077,16 +7083,48 @@ private final class VoiceChatContextExtractedContentSource: ContextExtractedCont
     }
 }
 
-private final class VoiceChatContextReferenceContentSource: ContextReferenceContentSource {
+final class VoiceChatContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
-    private let sourceNode: ContextReferenceContentNode
+    private let sourceView: UIView
     
-    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+    init(controller: ViewController, sourceView: UIView) {
         self.controller = controller
-        self.sourceNode = sourceNode
+        self.sourceView = sourceView
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private func calculateUseV2(context: AccountContext) -> Bool {
+    /*var useV2 = true
+    if context.sharedContext.immediateExperimentalUISettings.disableCallV2 {
+        useV2 = false
+    }
+    if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_videochatui_v2"] {
+        useV2 = false
+    }
+    return useV2*/
+    return false
+}
+
+public func makeVoiceChatControllerInitialData(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall) -> Signal<Any, NoError> {
+    let useV2 = calculateUseV2(context: accountContext)
+    
+    if useV2 {
+        return VideoChatScreenV2Impl.initialData(call: call) |> map { $0 as Any }
+    } else {
+        return .single(Void())
+    }
+}
+
+public func makeVoiceChatController(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall, initialData: Any) -> VoiceChatController {
+    let useV2 = calculateUseV2(context: accountContext)
+    
+    if useV2 {
+        return VideoChatScreenV2Impl(initialData: initialData as! VideoChatScreenV2Impl.InitialData, call: call)
+    } else {
+        return VoiceChatControllerImpl(sharedContext: sharedContext, accountContext: accountContext, call: call)
     }
 }

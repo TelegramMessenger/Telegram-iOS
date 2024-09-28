@@ -7,6 +7,7 @@ import AccountContext
 import MultilineTextComponent
 import TelegramPresentationData
 import PresentationDataUtils
+import TelegramStringFormatting
 
 final class StarsOverviewItemComponent: Component {
     let theme: PresentationTheme
@@ -80,7 +81,7 @@ final class StarsOverviewItemComponent: Component {
             }
             
             let valueString = presentationStringsFormattedNumber(Int32(component.value), component.dateTimeFormat.groupingSeparator)
-            let usdValueString = formatUsdValue(component.value, rate: component.rate)
+            let usdValueString = formatTonUsdValue(component.value, divide: false, rate: component.rate, dateTimeFormat: component.dateTimeFormat)
             
             let valueSize = self.value.update(
                 transition: .immediate,

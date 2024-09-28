@@ -80,7 +80,7 @@ func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResour
                             var attributes: [Api.DocumentAttribute] = []
                             attributes.append(.documentAttributeSticker(flags: 0, alt: alt, stickerset: .inputStickerSetEmpty, maskCoords: nil))
                             if let duration {
-                                attributes.append(.documentAttributeVideo(flags: 0, duration: duration, w: dimensions.width, h: dimensions.height, preloadPrefixSize: nil))
+                                attributes.append(.documentAttributeVideo(flags: 0, duration: duration, w: dimensions.width, h: dimensions.height, preloadPrefixSize: nil, videoStartTs: nil))
                             }
                             attributes.append(.documentAttributeImageSize(w: dimensions.width, h: dimensions.height))
                             return account.network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: file, thumb: thumbnailFile, mimeType: mimeType, attributes: attributes, stickers: nil, ttlSeconds: nil)))
@@ -144,7 +144,7 @@ public extension ImportSticker {
             fileAttributes.append(.FileName(fileName: "sticker.webm"))
             fileAttributes.append(.Animated)
             fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
-            fileAttributes.append(.Video(duration: self.duration ?? 3.0, size: self.dimensions, flags: [], preloadSize: nil))
+            fileAttributes.append(.Video(duration: self.duration ?? 3.0, size: self.dimensions, flags: [], preloadSize: nil, coverTime: nil))
         } else if self.mimeType == "application/x-tgsticker" {
             fileAttributes.append(.FileName(fileName: "sticker.tgs"))
             fileAttributes.append(.Animated)

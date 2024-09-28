@@ -234,7 +234,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 if let peer = forwardInfo.author {
                     author = peer
                 } else if let authorSignature = forwardInfo.authorSignature {
-                    author = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+                    author = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil)
                 }
             }
             
@@ -316,6 +316,12 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 if mediaAndFlagsValue.0.first is TelegramMediaStory || mediaAndFlagsValue.0.first is WallpaperPreviewMedia {
                     var flags = mediaAndFlagsValue.1
                     flags.remove(.preferMediaInline)
+                    mediaAndFlags = (mediaAndFlagsValue.0, flags)
+                }
+                if let adAttribute = message.adAttribute, adAttribute.hasContentMedia {
+                    var flags = mediaAndFlagsValue.1
+                    flags.remove(.preferMediaInline)
+                    flags.insert(.preferMediaBeforeText)
                     mediaAndFlags = (mediaAndFlagsValue.0, flags)
                 }
             }

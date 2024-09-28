@@ -5,12 +5,12 @@ import TelegramApi
 
 public enum EngineStoryInputMedia {
     case image(dimensions: PixelDimensions, data: Data, stickers: [TelegramMediaFile])
-    case video(dimensions: PixelDimensions, duration: Double, resource: TelegramMediaResource, firstFrameFile: TempBoxFile?, stickers: [TelegramMediaFile])
+    case video(dimensions: PixelDimensions, duration: Double, resource: TelegramMediaResource, firstFrameFile: TempBoxFile?, stickers: [TelegramMediaFile], coverTime: Double?)
     case existing(media: Media)
     
     var embeddedStickers: [TelegramMediaFile] {
         switch self {
-        case let .image(_, _, stickers), let .video(_, _, _, _, stickers):
+        case let .image(_, _, stickers), let .video(_, _, _, _, stickers, _):
             return stickers
         case .existing:
             return []
@@ -849,7 +849,7 @@ private func prepareUploadStoryContent(account: Account, media: EngineStoryInput
             flags: []
         )
         return imageMedia
-    case let .video(dimensions, duration, resource, firstFrameFile, _):
+    case let .video(dimensions, duration, resource, firstFrameFile, _, coverTime):
         var previewRepresentations: [TelegramMediaImageRepresentation] = []
         if let firstFrameFile = firstFrameFile {
             account.postbox.mediaBox.storeCachedResourceRepresentation(resource.id.stringRepresentation, representationId: "first-frame", keepDuration: .general, tempFile: firstFrameFile)
@@ -871,7 +871,7 @@ private func prepareUploadStoryContent(account: Account, media: EngineStoryInput
             mimeType: "video/mp4",
             size: nil,
             attributes: [
-                TelegramMediaFileAttribute.Video(duration: duration, size: dimensions, flags: .supportsStreaming, preloadSize: nil)
+                TelegramMediaFileAttribute.Video(duration: duration, size: dimensions, flags: .supportsStreaming, preloadSize: nil, coverTime: coverTime)
             ]
         )
         
@@ -1028,6 +1028,7 @@ private struct PendingStoryIdMappingKey: Hashable {
 }
 
 private let pendingStoryIdMapping = Atomic<[PendingStoryIdMappingKey: Int32]>(value: [:])
+private let pendingBotPreviewIdMapping = Atomic<[PendingStoryIdMappingKey: MediaId]>(value: [:])
 
 func _internal_lookUpPendingStoryIdMapping(peerId: PeerId, stableId: Int32) -> Int32? {
     return pendingStoryIdMapping.with { dict in
@@ -1037,6 +1038,22 @@ func _internal_lookUpPendingStoryIdMapping(peerId: PeerId, stableId: Int32) -> I
 
 private func _internal_putPendingStoryIdMapping(peerId: PeerId, stableId: Int32, id: Int32) {
     let _ = pendingStoryIdMapping.modify { dict in
+        var dict = dict
+        
+        dict[PendingStoryIdMappingKey(peerId: peerId, stableId: stableId)] = id
+        
+        return dict
+    }
+}
+
+func _internal_lookUpPendingBotPreviewIdMapping(peerId: PeerId, stableId: Int32) -> MediaId? {
+    return pendingBotPreviewIdMapping.with { dict in
+        return dict[PendingStoryIdMappingKey(peerId: peerId, stableId: stableId)]
+    }
+}
+
+private func _internal_putPendingBotPreviewIdMapping(peerId: PeerId, stableId: Int32, id: MediaId) {
+    let _ = pendingBotPreviewIdMapping.modify { dict in
         var dict = dict
         
         dict[PendingStoryIdMappingKey(peerId: peerId, stableId: stableId)] = id
@@ -1261,6 +1278,227 @@ func _internal_uploadStoryImpl(
     }
 }
 
+func _internal_uploadBotPreviewImpl(
+    postbox: Postbox,
+    network: Network,
+    accountPeerId: PeerId,
+    stateManager: AccountStateManager,
+    messageMediaPreuploadManager: MessageMediaPreuploadManager,
+    revalidationContext: MediaReferenceRevalidationContext,
+    auxiliaryMethods: AccountAuxiliaryMethods,
+    toPeerId: PeerId,
+    language: String?,
+    stableId: Int32,
+    media: Media,
+    mediaAreas: [MediaArea],
+    text: String,
+    entities: [MessageTextEntity],
+    embeddedStickers: [TelegramMediaFile],
+    randomId: Int64
+) -> Signal<StoryUploadResult, NoError> {
+    return postbox.transaction { transaction -> Api.InputUser? in
+        if let peer = transaction.getPeer(toPeerId) {
+            return apiInputUser(peer)
+        }
+        return nil
+    }
+    |> mapToSignal { inputUser -> Signal<StoryUploadResult, NoError> in
+        guard let inputUser else {
+            return .single(.completed(nil))
+        }
+        
+        let passFetchProgress = media is TelegramMediaFile
+        let (contentSignal, originalMedia) = uploadedStoryContent(postbox: postbox, network: network, media: media, mediaReference: nil, embeddedStickers: embeddedStickers, accountPeerId: accountPeerId, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: revalidationContext, auxiliaryMethods: auxiliaryMethods, passFetchProgress: passFetchProgress)
+        return contentSignal
+        |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
+            switch result {
+            case let .progress(progress):
+                return .single(.progress(progress.progress))
+            case let .content(content):
+                return postbox.transaction { transaction -> Signal<StoryUploadResult, NoError> in
+                    switch content.content {
+                    case let .media(inputMedia, _):
+                        return network.request(Api.functions.bots.addPreviewMedia(bot: inputUser, langCode: language ?? "", media: inputMedia))
+                        |> map(Optional.init)
+                        |> `catch` { _ -> Signal<Api.BotPreviewMedia?, NoError> in
+                            return .single(nil)
+                        }
+                        |> mapToSignal { resultPreviewMedia -> Signal<StoryUploadResult, NoError> in
+                            guard let resultPreviewMedia else {
+                                return .single(.completed(nil))
+                            }
+                            switch resultPreviewMedia {
+                            case let .botPreviewMedia(date, resultMedia):
+                                return postbox.transaction { transaction -> StoryUploadResult in
+                                    var currentState: Stories.LocalState
+                                    if let value = transaction.getLocalStoryState()?.get(Stories.LocalState.self) {
+                                        currentState = value
+                                    } else {
+                                        currentState = Stories.LocalState(items: [])
+                                    }
+                                    if let index = currentState.items.firstIndex(where: { $0.stableId == stableId }) {
+                                        currentState.items.remove(at: index)
+                                        transaction.setLocalStoryState(state: CodableEntry(currentState))
+                                    }
+                                    
+                                    if let resultMediaValue = textMediaAndExpirationTimerFromApiMedia(resultMedia, toPeerId).media {
+                                        applyMediaResourceChanges(from: originalMedia, to: resultMediaValue, postbox: postbox, force: originalMedia is TelegramMediaFile && resultMediaValue is TelegramMediaFile)
+                                        
+                                        let addedItem = CachedUserData.BotPreview.Item(media: resultMediaValue, timestamp: date)
+                                        
+                                        if let mediaId = resultMediaValue.id {
+                                            _internal_putPendingBotPreviewIdMapping(peerId: toPeerId, stableId: stableId, id: mediaId)
+                                        }
+                                        
+                                        if language == nil {
+                                            transaction.updatePeerCachedData(peerIds: Set([toPeerId]), update: { _, current in
+                                                guard var current = current as? CachedUserData else {
+                                                    return current
+                                                }
+                                                guard let currentBotPreview = current.botPreview else {
+                                                    return current
+                                                }
+                                                var items = currentBotPreview.items
+                                                if let index = items.firstIndex(where: { $0.media.id == resultMediaValue.id }) {
+                                                    items.remove(at: index)
+                                                }
+                                                items.insert(addedItem, at: 0)
+                                                let botPreview = CachedUserData.BotPreview(items: items, alternativeLanguageCodes: currentBotPreview.alternativeLanguageCodes)
+                                                current = current.withUpdatedBotPreview(botPreview)
+                                                return current
+                                            })
+                                        }
+                                        stateManager.injectBotPreviewUpdates(updates: [
+                                            .added(peerId: toPeerId, language: language, item: addedItem)
+                                        ])
+                                    }
+                                    
+                                    return .completed(nil)
+                                }
+                            }
+                        }
+                    default:
+                        return .complete()
+                    }
+                }
+                |> switchToLatest
+            default:
+                return .complete()
+            }
+        }
+    }
+}
+
+func _internal_deleteBotPreviews(account: Account, peerId: PeerId, language: String?, media: [Media]) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> (Api.InputUser?, [Api.InputMedia]) in
+        guard let inputPeer = transaction.getPeer(peerId).flatMap(apiInputUser) else {
+            return (nil, [])
+        }
+        
+        var inputMedia: [Api.InputMedia] = []
+        for item in media {
+            if let image = item as? TelegramMediaImage, let resource = image.representations.last?.resource as? CloudPhotoSizeMediaResource {
+                inputMedia.append(.inputMediaPhoto(flags: 0, id: .inputPhoto(id: resource.photoId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), ttlSeconds: nil))
+                inputMedia.append(Api.InputMedia.inputMediaPhoto(flags: 0, id: Api.InputPhoto.inputPhoto(id: resource.photoId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), ttlSeconds: nil))
+            } else if let file = item as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource {
+                inputMedia.append(.inputMediaDocument(flags: 0, id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), ttlSeconds: nil, query: nil))
+            }
+        }
+        if language == nil {
+            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current -> CachedPeerData? in
+                guard var current = current as? CachedUserData else {
+                    return current
+                }
+                guard let currentBotPreview = current.botPreview else {
+                    return current
+                }
+                var items = currentBotPreview.items
+                
+                items = items.filter({ item in
+                    guard let id = item.media.id else {
+                        return false
+                    }
+                    return !media.contains(where: { $0.id == id })
+                })
+                let botPreview = CachedUserData.BotPreview(items: items, alternativeLanguageCodes: currentBotPreview.alternativeLanguageCodes)
+                current = current.withUpdatedBotPreview(botPreview)
+                return current
+            })
+        }
+        
+        return (inputPeer, inputMedia)
+    }
+    |> mapToSignal { inputPeer, inputMedia -> Signal<Never, NoError> in
+        guard let inputPeer else {
+            return .complete()
+        }
+        
+        account.stateManager.injectBotPreviewUpdates(updates: [
+            .deleted(peerId: peerId, language: language, ids: media.compactMap(\.id))
+        ])
+        
+        return account.network.request(Api.functions.bots.deletePreviewMedia(bot: inputPeer, langCode: language ?? "", media: inputMedia))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> mapToSignal { _ -> Signal<Never, NoError> in
+            return .complete()
+        }
+    }
+}
+
+func _internal_deleteBotPreviewsLanguage(account: Account, peerId: PeerId, language: String, media: [Media]) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> (Api.InputUser?, [Api.InputMedia]) in
+        guard let inputPeer = transaction.getPeer(peerId).flatMap(apiInputUser) else {
+            return (nil, [])
+        }
+        
+        var inputMedia: [Api.InputMedia] = []
+        for item in media {
+            if let image = item as? TelegramMediaImage, let resource = image.representations.last?.resource as? CloudPhotoSizeMediaResource {
+                inputMedia.append(.inputMediaPhoto(flags: 0, id: .inputPhoto(id: resource.photoId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), ttlSeconds: nil))
+                inputMedia.append(Api.InputMedia.inputMediaPhoto(flags: 0, id: Api.InputPhoto.inputPhoto(id: resource.photoId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), ttlSeconds: nil))
+            } else if let file = item as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource {
+                inputMedia.append(.inputMediaDocument(flags: 0, id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), ttlSeconds: nil, query: nil))
+            }
+        }
+        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current -> CachedPeerData? in
+            guard var current = current as? CachedUserData else {
+                return current
+            }
+            guard let currentBotPreview = current.botPreview else {
+                return current
+            }
+            var alternativeLanguageCodes = currentBotPreview.alternativeLanguageCodes
+            alternativeLanguageCodes = alternativeLanguageCodes.filter { item in
+                return item != language
+            }
+            let botPreview = CachedUserData.BotPreview(items: currentBotPreview.items, alternativeLanguageCodes: alternativeLanguageCodes)
+            current = current.withUpdatedBotPreview(botPreview)
+            return current
+        })
+        
+        return (inputPeer, inputMedia)
+    }
+    |> mapToSignal { inputPeer, inputMedia -> Signal<Never, NoError> in
+        guard let inputPeer else {
+            return .complete()
+        }
+        
+        account.stateManager.injectBotPreviewUpdates(updates: [
+            .deleted(peerId: peerId, language: language, ids: media.compactMap(\.id))
+        ])
+        
+        return account.network.request(Api.functions.bots.deletePreviewMedia(bot: inputPeer, langCode: language, media: inputMedia))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> mapToSignal { _ -> Signal<Never, NoError> in
+            return .complete()
+        }
+    }
+}
+
 func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: EngineStoryInputMedia?, mediaAreas: [MediaArea]?, text: String?, entities: [MessageTextEntity]?, privacy: EngineStoryPrivacy?) -> Signal<StoryUploadResult, NoError> {
     let contentSignal: Signal<PendingMessageUploadedContentResult?, NoError>
     let originalMedia: Media?
@@ -1281,9 +1519,13 @@ func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: Eng
             return .single(.progress(progress.progress))
         }
         
+        var updatingCoverTime = false
         let inputMedia: Api.InputMedia?
         if let result = result, case let .content(uploadedContent) = result, case let .media(media, _) = uploadedContent.content {
             inputMedia = media
+        } else if case let .existing(media) = media, let file = media as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource {
+            inputMedia = .inputMediaUploadedDocument(flags: 0, file: .inputFileStoryDocument(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))), thumb: nil, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), stickers: nil, ttlSeconds: nil)
+            updatingCoverTime = true
         } else {
             inputMedia = nil
         }
@@ -1349,7 +1591,7 @@ func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: Eng
                             case let .storyItem(_, _, _, _, _, _, _, _, media, _, _, _, _):
                                 let (parsedMedia, _, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
                                 if let parsedMedia = parsedMedia, let originalMedia = originalMedia {
-                                    applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false)
+                                    applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false, skipPreviews: updatingCoverTime)
                                 }
                             default:
                                 break
@@ -1472,6 +1714,8 @@ func _internal_checkStoriesUploadAvailability(account: Account, target: Stories.
             return .inputPeerSelf
         case let .peer(peerId):
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
+        case .botPreview:
+            return nil
         }
     }
     |> mapToSignal { inputPeer -> Signal<StoriesUploadAvailability, NoError> in

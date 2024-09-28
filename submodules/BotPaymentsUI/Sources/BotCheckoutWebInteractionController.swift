@@ -58,7 +58,7 @@ final class BotCheckoutWebInteractionController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = BotCheckoutWebInteractionControllerNode(presentationData: self.presentationData, url: self.url, intent: self.intent)
+        self.displayNode = BotCheckoutWebInteractionControllerNode(context: self.context, presentationData: self.presentationData, url: self.url, intent: self.intent)
     }
     
     override func viewDidAppear(_ animated: Bool) {

@@ -664,6 +664,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         },
                         openStories: { _, _ in
                         },
+                        openStarsTopup: { _ in
+                        },
                         dismissNotice: { _ in
                         },
                         editPeer: { _ in
@@ -753,14 +755,14 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         if let forwardInfo = message.forwardInfo {
                             effectiveAuthor = forwardInfo.author.flatMap(EnginePeer.init)
                             if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {
-                                effectiveAuthor = EnginePeer(TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil))
+                                effectiveAuthor = EnginePeer(TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil))
                             }
                         }
                         if let sourceAuthorInfo = message._asMessage().sourceAuthorInfo {
                             if let originalAuthor = sourceAuthorInfo.originalAuthor, let peer = message.peers[originalAuthor] {
                                 effectiveAuthor = EnginePeer(peer)
                             } else if let authorSignature = sourceAuthorInfo.originalAuthorName {
-                                effectiveAuthor = EnginePeer(TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil))
+                                effectiveAuthor = EnginePeer(TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil))
                             }
                         }
                         if effectiveAuthor == nil {

@@ -8,10 +8,12 @@ public extension Stories {
         private enum CodingKeys: String, CodingKey {
             case discriminator = "tt"
             case peerId = "peerId"
+            case language = "language"
         }
         
         case myStories
         case peer(PeerId)
+        case botPreview(id: PeerId, language: String?)
         
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -21,6 +23,8 @@ public extension Stories {
                 self = .myStories
             case 1:
                 self = .peer(try container.decode(PeerId.self, forKey: .peerId))
+            case 2:
+                self = .botPreview(id: try container.decode(PeerId.self, forKey: .peerId), language: try container.decodeIfPresent(String.self, forKey: .language))
             default:
                 self = .myStories
             }
@@ -35,6 +39,10 @@ public extension Stories {
             case let .peer(peerId):
                 try container.encode(1 as Int32, forKey: .discriminator)
                 try container.encode(peerId, forKey: .peerId)
+            case let .botPreview(peerId, language):
+                try container.encode(2 as Int32, forKey: .discriminator)
+                try container.encode(peerId, forKey: .peerId)
+                try container.encodeIfPresent(language, forKey: .language)
             }
         }
     }
@@ -369,12 +377,14 @@ final class PendingStoryManager {
                     print(currentPendingItemContext)
                 })
             }
-            self.queuedPendingItems = Set(localState.items.map { item -> PeerId in
+            self.queuedPendingItems = Set(localState.items.compactMap { item -> PeerId? in
                 switch item.target {
                 case .myStories:
                     return self.accountPeerId
                 case let .peer(id):
                     return id
+                case .botPreview:
+                    return nil
                 }
             })
             
@@ -397,33 +407,78 @@ final class PendingStoryManager {
                 self.currentPendingItemContext = pendingItemContext
                 
                 let toPeerId: PeerId
+                var isBotPreview = false
+                var botPreviewLanguage: String?
                 switch firstItem.target {
                 case .myStories:
                     toPeerId = self.accountPeerId
                 case let .peer(peerId):
                     toPeerId = peerId
+                case let .botPreview(peerId, language):
+                    toPeerId = peerId
+                    botPreviewLanguage = language
+                    isBotPreview = true
                 }
                                 
                 let stableId = firstItem.stableId
-                pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, toPeerId: toPeerId, stableId: stableId, media: firstItem.media, mediaAreas: firstItem.mediaAreas, text: firstItem.text, entities: firstItem.entities, embeddedStickers: firstItem.embeddedStickers, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), randomId: firstItem.randomId, forwardInfo: firstItem.forwardInfo)
-                |> deliverOn(self.queue)).start(next: { [weak self] event in
-                    guard let `self` = self else {
-                        return
-                    }
-                    switch event {
-                    case let .progress(progress):
-                        if let currentPendingItemContext = self.currentPendingItemContext, currentPendingItemContext.item.stableId == stableId {
-                            currentPendingItemContext.progress = progress
-                            currentPendingItemContext.updated()
+                if isBotPreview {
+                    pendingItemContext.disposable = (_internal_uploadBotPreviewImpl(
+                        postbox: self.postbox,
+                        network: self.network,
+                        accountPeerId: self.accountPeerId,
+                        stateManager: self.stateManager,
+                        messageMediaPreuploadManager: self.messageMediaPreuploadManager,
+                        revalidationContext: self.revalidationContext,
+                        auxiliaryMethods: self.auxiliaryMethods,
+                        toPeerId: toPeerId,
+                        language: botPreviewLanguage,
+                        stableId: stableId,
+                        media: firstItem.media,
+                        mediaAreas: firstItem.mediaAreas,
+                        text: firstItem.text,
+                        entities: firstItem.entities,
+                        embeddedStickers: firstItem.embeddedStickers,
+                        randomId: firstItem.randomId
+                    )
+                    |> deliverOn(self.queue)).start(next: { [weak self] event in
+                        guard let self else {
+                            return
                         }
-                    case let .completed(id):
-                        if let id = id {
-                            self.allStoriesEventsPipe.putNext((stableId, id))
+                        switch event {
+                        case let .progress(progress):
+                            if let currentPendingItemContext = self.currentPendingItemContext, currentPendingItemContext.item.stableId == stableId {
+                                currentPendingItemContext.progress = progress
+                                currentPendingItemContext.updated()
+                            }
+                        case let .completed(id):
+                            if let id = id {
+                                self.allStoriesEventsPipe.putNext((stableId, id))
+                            }
+                            // wait for the local state to change via Postbox
+                            break
                         }
-                        // wait for the local state to change via Postbox
-                        break
-                    }
-                })
+                    })
+                } else {
+                    pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, toPeerId: toPeerId, stableId: stableId, media: firstItem.media, mediaAreas: firstItem.mediaAreas, text: firstItem.text, entities: firstItem.entities, embeddedStickers: firstItem.embeddedStickers, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), randomId: firstItem.randomId, forwardInfo: firstItem.forwardInfo)
+                    |> deliverOn(self.queue)).start(next: { [weak self] event in
+                        guard let `self` = self else {
+                            return
+                        }
+                        switch event {
+                        case let .progress(progress):
+                            if let currentPendingItemContext = self.currentPendingItemContext, currentPendingItemContext.item.stableId == stableId {
+                                currentPendingItemContext.progress = progress
+                                currentPendingItemContext.updated()
+                            }
+                        case let .completed(id):
+                            if let id = id {
+                                self.allStoriesEventsPipe.putNext((stableId, id))
+                            }
+                            // wait for the local state to change via Postbox
+                            break
+                        }
+                    })
+                }
             }
             
             self.processContextsUpdated()
@@ -440,6 +495,8 @@ final class PendingStoryManager {
                     currentProgress[self.accountPeerId] = currentPendingItemContext.progress
                 case let .peer(id):
                     currentProgress[id] = currentPendingItemContext.progress
+                case .botPreview:
+                    break
                 }
             }
             

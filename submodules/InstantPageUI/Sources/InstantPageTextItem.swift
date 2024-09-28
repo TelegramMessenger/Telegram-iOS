@@ -38,10 +38,10 @@ struct InstantPageTextImageItem {
     let id: EngineMedia.Id
 }
 
-struct InstantPageTextAnchorItem {
-    let name: String
-    let anchorText: NSAttributedString?
-    let empty: Bool
+public struct InstantPageTextAnchorItem {
+    public let name: String
+    public let anchorText: NSAttributedString?
+    public let empty: Bool
 }
 
 public struct InstantPageTextRangeRectEdge: Equatable {
@@ -63,7 +63,7 @@ public final class InstantPageTextLine {
     let strikethroughItems: [InstantPageTextStrikethroughItem]
     let markedItems: [InstantPageTextMarkedItem]
     let imageItems: [InstantPageTextImageItem]
-    let anchorItems: [InstantPageTextAnchorItem]
+    public let anchorItems: [InstantPageTextAnchorItem]
     let isRTL: Bool
     
     init(line: CTLine, range: NSRange, frame: CGRect, strikethroughItems: [InstantPageTextStrikethroughItem], markedItems: [InstantPageTextMarkedItem], imageItems: [InstantPageTextImageItem], anchorItems: [InstantPageTextAnchorItem], isRTL: Bool) {
@@ -96,7 +96,7 @@ public final class InstantPageTextItem: InstantPageItem {
     let alignment: NSTextAlignment
     let opaqueBackground: Bool
     public let medias: [InstantPageMedia] = []
-    let anchors: [String: (Int, Bool)]
+    public let anchors: [String: (Int, Bool)]
     public let wantsNode: Bool = false
     public let separatesTiles: Bool = false
     public var selectable: Bool = true
@@ -435,7 +435,7 @@ public final class InstantPageTextItem: InstantPageItem {
         return false
     }
     
-    public func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
+    public func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?, getPreloadedResource: @escaping (String) -> Data?) -> InstantPageNode? {
         return nil
     }
     
@@ -484,11 +484,11 @@ final class InstantPageScrollableTextItem: InstantPageScrollableItem {
         context.restoreGState()
     }
     
-    func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
+    func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?, getPreloadedResource: @escaping (String) -> Data?) -> InstantPageNode? {
         var additionalNodes: [InstantPageNode] = []
         for item in additionalItems {
             if item.wantsNode {
-                if let node = item.node(context: context, strings: strings, nameDisplayOrder: nameDisplayOrder, theme: theme, sourceLocation: sourceLocation, openMedia: { _ in }, longPressMedia: { _ in }, activatePinchPreview: nil, pinchPreviewFinished: nil, openPeer: { _ in }, openUrl: { _ in}, updateWebEmbedHeight: { _ in }, updateDetailsExpanded: { _ in }, currentExpandedDetails: nil) {
+                if let node = item.node(context: context, strings: strings, nameDisplayOrder: nameDisplayOrder, theme: theme, sourceLocation: sourceLocation, openMedia: { _ in }, longPressMedia: { _ in }, activatePinchPreview: nil, pinchPreviewFinished: nil, openPeer: { _ in }, openUrl: { _ in}, updateWebEmbedHeight: { _ in }, updateDetailsExpanded: { _ in }, currentExpandedDetails: nil, getPreloadedResource: getPreloadedResource) {
                     node.frame = item.frame
                     additionalNodes.append(node)
                 }
@@ -753,7 +753,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                     let runRange = NSMakeRange(cfRunRange.location == kCFNotFound ? NSNotFound : cfRunRange.location, cfRunRange.length)
                     string.enumerateAttributes(in: runRange, options: []) { attributes, range, _ in
                         if let id = attributes[NSAttributedString.Key.init(rawValue: InstantPageMediaIdAttribute)] as? Int64, let dimensions = attributes[NSAttributedString.Key.init(rawValue: InstantPageMediaDimensionsAttribute)] as? PixelDimensions {
-                            var imageFrame = CGRect(origin: CGPoint(), size: dimensions.cgSize)
+                            var imageFrame = CGRect(origin: CGPoint(), size: dimensions.cgSize.fitted(CGSize(width: boundingWidth, height: boundingWidth)))
                             
                             let xOffset = CTLineGetOffsetForStringIndex(line, CTRunGetStringRange(run).location, nil)
                             let yOffset = fontLineHeight.isZero ? 0.0 : floorToScreenPixels((fontLineHeight - imageFrame.size.height) / 2.0)
@@ -895,8 +895,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
         for var item in additionalItems {
             item.frame = item.frame.offsetBy(dx: 0.0, dy: abs(topInset))
         }
-        
-        let scrollableItem = InstantPageScrollableTextItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth + horizontalInset * 2.0, height: height + abs(topInset) + bottomInset), item: textItem, additionalItems: additionalItems, totalWidth: textWidth, horizontalInset: horizontalInset, rtl: textItem.containsRTL)
+        let scrollableItem = InstantPageScrollableTextItem(frame: CGRect(origin: offset, size: CGSize(width: boundingWidth + horizontalInset * 2.0, height: height + abs(topInset) + bottomInset)), item: textItem, additionalItems: additionalItems, totalWidth: textWidth, horizontalInset: horizontalInset, rtl: textItem.containsRTL)
         items.append(scrollableItem)
     } else {
         items.append(contentsOf: additionalItems)

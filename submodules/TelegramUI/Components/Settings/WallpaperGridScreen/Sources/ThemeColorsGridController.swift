@@ -194,7 +194,7 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
             self?.push(controller)
         }
         
-        self.mainButtonState = AttachmentMainButtonState(text: self.presentationData.strings.Conversation_Theme_SetPhotoWallpaper, font: .regular, background: .color(.clear), textColor: self.presentationData.theme.actionSheet.controlAccentColor, isVisible: true, progress: .none, isEnabled: true)
+        self.mainButtonState = AttachmentMainButtonState(text: self.presentationData.strings.Conversation_Theme_SetPhotoWallpaper, font: .regular, background: .color(.clear), textColor: self.presentationData.theme.actionSheet.controlAccentColor, isVisible: true, progress: .none, isEnabled: true, hasShimmer: false)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -345,6 +345,7 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
+    public var isMinimized: Bool = false
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {
         return ThemeColorsGridContext(controller: self)
@@ -354,29 +355,6 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
 private final class ThemeColorsGridContext: AttachmentMediaPickerContext {
     private weak var controller: ThemeColorsGridController?
     
-    var selectionCount: Signal<Int, NoError> {
-        return .single(0)
-    }
-    
-    var caption: Signal<NSAttributedString?, NoError> {
-        return .single(nil)
-    }
-    
-    var hasCaption: Bool {
-        return false
-    }
-    
-    var captionIsAboveMedia: Signal<Bool, NoError> {
-        return .single(false)
-    }
-    
-    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
-    }
-    
-    public var loadingProgress: Signal<CGFloat?, NoError> {
-        return .single(nil)
-    }
-    
     public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
         return .single(self.controller?.mainButtonState)
     }
@@ -385,15 +363,6 @@ private final class ThemeColorsGridContext: AttachmentMediaPickerContext {
         self.controller = controller
     }
             
-    func setCaption(_ caption: NSAttributedString) {
-    }
-    
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?) {
-    }
-    
-    func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?) {
-    }
-    
     func mainButtonAction() {
         self.controller?.mainButtonPressed()
     }

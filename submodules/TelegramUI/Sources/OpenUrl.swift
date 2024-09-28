@@ -251,15 +251,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             |> deliverOnMainQueue).startStandalone(next: handleResolvedUrl)
         }
         
-        if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
-            if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == context.sharedContext.applicationBindings.appSpecificScheme) {
-                if parsedUrl.host == "ipfs" {
-                    if let value = URL(string: "ipfs:/" + parsedUrl.path) {
-                        parsedUrl = value
-                    }
-                }
-            } else if let scheme = parsedUrl.scheme, scheme == "https", parsedUrl.host == "t.me", parsedUrl.path.hasPrefix("/ipfs/") {
-                if let value = URL(string: "ipfs://" + String(parsedUrl.path[parsedUrl.path.index(parsedUrl.path.startIndex, offsetBy: "/ipfs/".count)...])) {
+        if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == context.sharedContext.applicationBindings.appSpecificScheme) {
+            if parsedUrl.host == "tonsite" {
+                if let value = URL(string: "tonsite:/" + parsedUrl.path) {
                     parsedUrl = value
                 }
             }
@@ -743,6 +737,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var appName: String?
                         var startApp: String?
                         var text: String?
+                        var profile: Bool = false
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -785,6 +780,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                     startGroup = ""
                                 } else if queryItem.name == "startchannel" {
                                     startChannel = ""
+                                } else if queryItem.name == "profile" {
+                                    profile = true
                                 }
                             }
                         }
@@ -864,6 +861,13 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             }
                             convertedUrl = result
                         }
+                        if profile, let current = convertedUrl {
+                            if current.contains("?") {
+                                convertedUrl = current + "&profile"
+                            } else {
+                                convertedUrl = current + "?profile"
+                            }
+                        }
                     }
                 } else if parsedUrl.host == "hostOverride" {
                     if let components = URLComponents(string: "/?" + query) {
@@ -914,6 +918,25 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         }
                     }
                     handleResolvedUrl(.premiumMultiGift(reference: reference))
+                } else if parsedUrl.host == "stars_topup" {
+                    var amount: Int64?
+                    var purpose: String?
+                    if let components = URLComponents(string: "/?" + query) {
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "balance", let amountValue = Int64(value), amountValue > 0 && amountValue < Int32.max {
+                                        amount = amountValue
+                                    } else if queryItem.name == "purpose" {
+                                        purpose = value
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if let amount {
+                        handleResolvedUrl(.starsTopup(amount: amount, purpose: purpose))
+                    }
                 } else if parsedUrl.host == "addlist" {
                     if let components = URLComponents(string: "/?" + query) {
                         var slug: String?
@@ -1004,14 +1027,13 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             return
         }
         
+        let urlScheme = (parsedUrl.scheme ?? "").lowercased()
         var isInternetUrl = false
-        if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
+        if  ["http", "https"].contains(urlScheme) {
             isInternetUrl = true
         }
-        if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
-            if parsedUrl.scheme == "ipfs" || parsedUrl.scheme == "ipns" {
-                isInternetUrl = true
-            }
+        if urlScheme == "tonsite" {
+            isInternetUrl = true
         }
         
         if isInternetUrl {
@@ -1030,26 +1052,53 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         settings = .defaultSettings
                     }
                     if accessChallengeData.data.isLockable {
-                        if passcodeSettings.autolockTimeout != nil && settings.defaultWebBrowser == nil {
-                            settings = WebBrowserSettings(defaultWebBrowser: "safari")
+                        if passcodeSettings.autolockTimeout != nil && settings.defaultWebBrowser == "inApp" {
+                            settings = WebBrowserSettings(defaultWebBrowser: "safari", exceptions: [])
                         }
                     }
                     return settings
                 }
 
-                var isCompact = false
-                if let metrics = navigationController?.validLayout?.metrics, case .compact = metrics.widthClass {
-                    isCompact = true
-                }
+//                var isCompact = false
+//                if let metrics = navigationController?.validLayout?.metrics, case .compact = metrics.widthClass {
+//                    isCompact = true
+//                }
                 
                 let _ = (settings
                 |> deliverOnMainQueue).startStandalone(next: { settings in
-                    if settings.defaultWebBrowser == nil {
-                        if isCompact && context.sharedContext.immediateExperimentalUISettings.browserExperiment {
+                    var isTonSite = false
+                    if let host = parsedUrl.host, host.lowercased().hasSuffix(".ton") {
+                        isTonSite = true
+                    } else if let scheme = parsedUrl.scheme, scheme.lowercased().hasPrefix("tonsite") {
+                        isTonSite = true
+                    }
+                    
+                    if let defaultWebBrowser = settings.defaultWebBrowser, defaultWebBrowser != "inApp" && !isTonSite {
+                        let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))
+                        if let option = openInOptions.first(where: { $0.identifier == settings.defaultWebBrowser }) {
+                            if case let .openUrl(openInUrl) = option.action() {
+                                context.sharedContext.applicationBindings.openUrl(openInUrl)
+                            } else {
+                                context.sharedContext.applicationBindings.openUrl(url)
+                            }
+                        } else {
+                            context.sharedContext.applicationBindings.openUrl(url)
+                        }
+                    } else {
+                        var isExceptedDomain = false
+                        let host = ".\((parsedUrl.host ?? "").lowercased())"
+                        for exception in settings.exceptions {
+                            if host.hasSuffix(".\(exception.domain)") {
+                                isExceptedDomain = true
+                                break
+                            }
+                        }
+
+                        if (settings.defaultWebBrowser == nil && !isExceptedDomain) || isTonSite {
                             let controller = BrowserScreen(context: context, subject: .webPage(url: parsedUrl.absoluteString))
                             navigationController?.pushViewController(controller)
                         } else {
-                            if let window = navigationController?.view.window {
+                            if let window = navigationController?.view.window, !isExceptedDomain {
                                 let controller = SFSafariViewController(url: parsedUrl)
                                 controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
                                 controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
@@ -1057,17 +1106,6 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             } else {
                                 context.sharedContext.applicationBindings.openUrl(parsedUrl.absoluteString)
                             }
-                        }
-                    } else {
-                        let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))
-                        if let option = openInOptions.first(where: { $0.identifier == settings.defaultWebBrowser }) {
-                            if case let .openUrl(url) = option.action() {
-                                context.sharedContext.applicationBindings.openUrl(url)
-                            } else {
-                                context.sharedContext.applicationBindings.openUrl(url)
-                            }
-                        } else {
-                            context.sharedContext.applicationBindings.openUrl(url)
                         }
                     }
                 })

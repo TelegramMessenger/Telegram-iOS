@@ -62,6 +62,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let deviceContactsNumbers: Set<String>
     public let isStandalone: Bool
     public let isInline: Bool
+    public let showSensitiveContent: Bool
     
     public init(
         automaticDownloadPeerType: MediaAutoDownloadPeerType,
@@ -94,7 +95,8 @@ public final class ChatMessageItemAssociatedData: Equatable {
         chatThemes: [TelegramTheme] = [],
         deviceContactsNumbers: Set<String> = Set(),
         isStandalone: Bool = false,
-        isInline: Bool = false
+        isInline: Bool = false,
+        showSensitiveContent: Bool = false
     ) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadPeerId = automaticDownloadPeerId
@@ -127,6 +129,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.deviceContactsNumbers = deviceContactsNumbers
         self.isStandalone = isStandalone
         self.isInline = isInline
+        self.showSensitiveContent = showSensitiveContent
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -217,6 +220,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
         if lhs.isInline != rhs.isInline {
             return false
         }
+        if lhs.showSensitiveContent != rhs.showSensitiveContent {
+            return false
+        }
         return true
     }
 }
@@ -292,12 +298,12 @@ public struct ChatControllerInitialAttachBotStart {
 }
 
 public struct ChatControllerInitialBotAppStart {
-    public let botApp: BotApp
+    public let botApp: BotApp?
     public let payload: String?
     public let justInstalled: Bool
     public let compact: Bool
     
-    public init(botApp: BotApp, payload: String?, justInstalled: Bool, compact: Bool) {
+    public init(botApp: BotApp?, payload: String?, justInstalled: Bool, compact: Bool) {
         self.botApp = botApp
         self.payload = payload
         self.justInstalled = justInstalled
@@ -774,7 +780,7 @@ public enum ChatControllerSubject: Equatable {
         }
     }
     
-    case message(id: MessageSubject, highlight: MessageHighlight?, timecode: Double?)
+    case message(id: MessageSubject, highlight: MessageHighlight?, timecode: Double?, setupReply: Bool)
     case scheduledMessages
     case pinnedMessages(id: EngineMessage.Id?)
     case messageOptions(peerIds: [EnginePeer.Id], ids: [EngineMessage.Id], info: MessageOptionsInfo)
@@ -782,8 +788,8 @@ public enum ChatControllerSubject: Equatable {
     
     public static func ==(lhs: ChatControllerSubject, rhs: ChatControllerSubject) -> Bool {
         switch lhs {
-        case let .message(lhsId, lhsHighlight, lhsTimecode):
-            if case let .message(rhsId, rhsHighlight, rhsTimecode) = rhs, lhsId == rhsId && lhsHighlight == rhsHighlight && lhsTimecode == rhsTimecode {
+        case let .message(lhsId, lhsHighlight, lhsTimecode, lhsSetupReply):
+            if case let .message(rhsId, rhsHighlight, rhsTimecode, rhsSetupReply) = rhs, lhsId == rhsId && lhsHighlight == rhsHighlight && lhsTimecode == rhsTimecode && lhsSetupReply == rhsSetupReply {
                 return true
             } else {
                 return false
@@ -951,6 +957,7 @@ public protocol PeerInfoScreen: ViewController {
     
     func openBirthdaySetup()
     func toggleStorySelection(ids: [Int32], isSelected: Bool)
+    func togglePaneIsReordering(isReordering: Bool)
     func cancelItemSelection()
 }
 
@@ -1004,6 +1011,7 @@ public protocol ChatController: ViewController {
     var parentController: ViewController? { get set }
     var customNavigationController: NavigationController? { get set }
     
+    var dismissPreviewing: (() -> Void)? { get set }
     var purposefulAction: (() -> Void)? { get set }
     
     var stateUpdated: ((ContainedViewLayoutTransition) -> Void)? { get set }
@@ -1044,6 +1052,8 @@ public protocol ChatController: ViewController {
     func updateIsScrollingLockedAtTop(isScrollingLockedAtTop: Bool)
     
     func playShakeAnimation()
+    
+    func removeAd(opaqueId: Data)
 }
 
 public protocol ChatMessagePreviewItemNode: AnyObject {
@@ -1186,4 +1196,6 @@ public protocol ChatHistoryListNode: ListView {
     func scrollToEndOfHistory()
     func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets)
     func messageInCurrentHistoryView(_ id: MessageId) -> Message?
+    
+    var contentPositionChanged: (ListViewVisibleContentOffset) -> Void { get set }
 }

@@ -1136,7 +1136,7 @@ private final class StoryContainerScreenComponent: Component {
                 var isSilentVideo = false
                 if case let .file(file) = slice.item.storyItem.media {
                     for attribute in file.attributes {
-                        if case let .Video(_, _, flags, _) = attribute {
+                        if case let .Video(_, _, flags, _, _) = attribute {
                             if flags.contains(.isSilent) {
                                 isSilentVideo = true
                             }
@@ -1654,7 +1654,12 @@ private final class StoryContainerScreenComponent: Component {
                                             environment.controller()?.dismiss()
                                         }
                                         
-                                        let _ = component.context.engine.messages.deleteStories(peerId: slice.peer.id, ids: [slice.item.storyItem.id]).start()
+                                        if case let .user(user) = slice.peer, user.botInfo != nil {
+                                            //TODO:release
+                                            let _ = component.context.engine.messages.deleteBotPreviews(peerId: slice.peer.id, language: nil, media: [slice.item.storyItem.media._asMedia()]).startStandalone()
+                                        } else {
+                                            let _ = component.context.engine.messages.deleteStories(peerId: slice.peer.id, ids: [slice.item.storyItem.id]).startStandalone()
+                                        }
                                     }
                                 },
                                 markAsSeen: { [weak self] id in
@@ -1662,6 +1667,18 @@ private final class StoryContainerScreenComponent: Component {
                                         return
                                     }
                                     component.content.markAsSeen(id: id)
+                                },
+                                reorder: { [weak self] in
+                                    guard let self, let environment = self.environment else {
+                                        return
+                                    }
+                                    var performReorderAction: (() -> Void)?
+                                    if let controller = environment.controller() as? StoryContainerScreen {
+                                        performReorderAction = controller.performReorderAction
+                                    }
+                                    environment.controller()?.dismiss(completion: {
+                                        performReorderAction?()
+                                    })
                                 },
                                 controller: { [weak self] in
                                     return self?.environment?.controller()
@@ -2021,6 +2038,7 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
     }
     
     public var customBackAction: (() -> Void)?
+    public var performReorderAction: (() -> Void)?
     
     public init(
         context: AccountContext,
@@ -2180,6 +2198,8 @@ func allowedStoryReactions(context: AccountContext) -> Signal<[ReactionItem], No
                     largeApplicationAnimation: nil,
                     isCustom: true
                 ))
+            case .stars:
+                break
             }
         }
         

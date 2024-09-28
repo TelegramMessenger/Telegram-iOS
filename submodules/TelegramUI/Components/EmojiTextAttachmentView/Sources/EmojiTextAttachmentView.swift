@@ -438,6 +438,8 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 if tinted {
                     self.updateTintColor()
                 }
+            case .ton:
+                self.updateTon()
             }
         } else if let file = file {
             self.updateFile(file: file, attemptSynchronousLoad: attemptSynchronousLoad)
@@ -623,6 +625,10 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         self.contents = tinted ? tintedStarImage?.cgImage : starImage?.cgImage
     }
     
+    private func updateTon() {
+        self.contents = tonImage?.cgImage
+    }
+    
     private func updateFile(file: TelegramMediaFile, attemptSynchronousLoad: Bool) {
         guard let arguments = self.arguments else {
             return
@@ -770,7 +776,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
 }
 
 public final class EmojiTextAttachmentView: UIView {
-    private let contentLayer: InlineStickerItemLayer
+    public let contentLayer: InlineStickerItemLayer
     
     public var isActive: Bool = true {
         didSet {
@@ -820,7 +826,7 @@ public final class EmojiTextAttachmentView: UIView {
 public final class CustomEmojiContainerView: UIView {
     private let emojiViewProvider: (ChatTextInputTextCustomEmojiAttribute) -> UIView?
     
-    private var emojiLayers: [InlineStickerItemLayer.Key: UIView] = [:]
+    public private(set) var emojiLayers: [InlineStickerItemLayer.Key: UIView] = [:]
     
     public init(emojiViewProvider: @escaping (ChatTextInputTextCustomEmojiAttribute) -> UIView?) {
         self.emojiViewProvider = emojiViewProvider
@@ -899,7 +905,17 @@ private let starImage: UIImage? = {
         context.clear(CGRect(origin: .zero, size: size))
         
         if let image = UIImage(bundleImageName: "Premium/Stars/StarLarge"), let cgImage = image.cgImage {
-            context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 2.0, dy: 2.0), byTiling: false)
+            context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 1.0, dy: 1.0), byTiling: false)
+        }
+    })?.withRenderingMode(.alwaysTemplate)
+}()
+
+private let tonImage: UIImage? = {
+    generateImage(CGSize(width: 32.0, height: 32.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        
+        if let image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonBig"), color: UIColor(rgb: 0x007aff)), let cgImage = image.cgImage {
+            context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 4.0, dy: 4.0), byTiling: false)
         }
     })?.withRenderingMode(.alwaysTemplate)
 }()

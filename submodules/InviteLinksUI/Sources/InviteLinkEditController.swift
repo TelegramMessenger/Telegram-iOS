@@ -17,17 +17,30 @@ import ContextUI
 import TelegramStringFormatting
 import UndoUI
 import ItemListDatePickerItem
+import TextFormat
 
 private final class InviteLinkEditControllerArguments {
     let context: AccountContext
     let updateState: ((InviteLinkEditControllerState) -> InviteLinkEditControllerState) -> Void
+    let focusOnItem: (InviteLinksEditEntryTag) -> Void
+    let errorWithItem: (InviteLinksEditEntryTag) -> Void
     let scrollToUsage: () -> Void
     let dismissInput: () -> Void
     let revoke: () -> Void
     
-    init(context: AccountContext, updateState: @escaping ((InviteLinkEditControllerState) -> InviteLinkEditControllerState) -> Void,  scrollToUsage: @escaping () -> Void, dismissInput: @escaping () -> Void, revoke: @escaping () -> Void) {
+    init(
+        context: AccountContext, 
+        updateState: @escaping ((InviteLinkEditControllerState) -> InviteLinkEditControllerState) -> Void,
+        focusOnItem: @escaping (InviteLinksEditEntryTag) -> Void,
+        errorWithItem: @escaping (InviteLinksEditEntryTag) -> Void,
+        scrollToUsage: @escaping () -> Void,
+        dismissInput: @escaping () -> Void,
+        revoke: @escaping () -> Void)
+    {
         self.context = context
         self.updateState = updateState
+        self.focusOnItem = focusOnItem
+        self.errorWithItem = errorWithItem
         self.scrollToUsage = scrollToUsage
         self.dismissInput = dismissInput
         self.revoke = revoke
@@ -36,6 +49,7 @@ private final class InviteLinkEditControllerArguments {
 
 private enum InviteLinksEditSection: Int32 {
     case title
+    case subscriptionFee
     case requestApproval
     case time
     case usage
@@ -43,6 +57,7 @@ private enum InviteLinksEditSection: Int32 {
 }
 
 private enum InviteLinksEditEntryTag: ItemListItemTag {
+    case subscriptionFee
     case usage
 
     func isEqual(to other: ItemListItemTag) -> Bool {
@@ -75,18 +90,23 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     case title(PresentationTheme, String, String)
     case titleInfo(PresentationTheme, String)
     
-    case requestApproval(PresentationTheme, String, Bool)
+    
+    case subscriptionFeeToggle(PresentationTheme, String, Bool, Bool)
+    case subscriptionFee(PresentationTheme, String, Bool, Int64?, String, Int64?)
+    case subscriptionFeeInfo(PresentationTheme, String)
+    
+    case requestApproval(PresentationTheme, String, Bool, Bool)
     case requestApprovalInfo(PresentationTheme, String)
     
     case timeHeader(PresentationTheme, String)
-    case timePicker(PresentationTheme, InviteLinkTimeLimit)
-    case timeExpiryDate(PresentationTheme, PresentationDateTimeFormat, Int32?, Bool)
-    case timeCustomPicker(PresentationTheme, PresentationDateTimeFormat, Int32?, Bool, Bool)
+    case timePicker(PresentationTheme, InviteLinkTimeLimit, Bool)
+    case timeExpiryDate(PresentationTheme, PresentationDateTimeFormat, Int32?, Bool, Bool)
+    case timeCustomPicker(PresentationTheme, PresentationDateTimeFormat, Int32?, Bool, Bool, Bool)
     case timeInfo(PresentationTheme, String)
     
     case usageHeader(PresentationTheme, String)
-    case usagePicker(PresentationTheme, PresentationDateTimeFormat, InviteLinkUsageLimit)
-    case usageCustomPicker(PresentationTheme, Int32?, Bool, Bool)
+    case usagePicker(PresentationTheme, PresentationDateTimeFormat, InviteLinkUsageLimit, Bool)
+    case usageCustomPicker(PresentationTheme, Int32?, Bool, Bool, Bool)
     case usageInfo(PresentationTheme, String)
     
     case revoke(PresentationTheme, String)
@@ -95,6 +115,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
         switch self {
             case .titleHeader, .title, .titleInfo:
                 return InviteLinksEditSection.title.rawValue
+            case .subscriptionFeeToggle, .subscriptionFee, .subscriptionFeeInfo:
+                return InviteLinksEditSection.subscriptionFee.rawValue
             case .requestApproval, .requestApprovalInfo:
                 return InviteLinksEditSection.requestApproval.rawValue
             case .timeHeader, .timePicker, .timeExpiryDate, .timeCustomPicker, .timeInfo:
@@ -114,30 +136,36 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 return 1
             case .titleInfo:
                 return 2
-            case .requestApproval:
+            case .subscriptionFeeToggle:
                 return 3
-            case .requestApprovalInfo:
+            case .subscriptionFee:
                 return 4
-            case .timeHeader:
+            case .subscriptionFeeInfo:
                 return 5
-            case .timePicker:
+            case .requestApproval:
                 return 6
-            case .timeExpiryDate:
+            case .requestApprovalInfo:
                 return 7
-            case .timeCustomPicker:
+            case .timeHeader:
                 return 8
-            case .timeInfo:
+            case .timePicker:
                 return 9
-            case .usageHeader:
+            case .timeExpiryDate:
                 return 10
-            case .usagePicker:
+            case .timeCustomPicker:
                 return 11
-            case .usageCustomPicker:
+            case .timeInfo:
                 return 12
-            case .usageInfo:
+            case .usageHeader:
                 return 13
-            case .revoke:
+            case .usagePicker:
                 return 14
+            case .usageCustomPicker:
+                return 15
+            case .usageInfo:
+                return 16
+            case .revoke:
+                return 17
         }
     }
     
@@ -161,8 +189,26 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .requestApproval(lhsTheme, lhsText, lhsValue):
-                if case let .requestApproval(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .subscriptionFeeToggle(lhsTheme, lhsText, lhsValue, lhsEnabled):
+                if case let .subscriptionFeeToggle(rhsTheme, rhsText, rhsValue, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsEnabled == rhsEnabled {
+                    return true
+                } else {
+                    return false
+                }
+            case let .subscriptionFee(lhsTheme, lhsText, lhsValue, lhsEnabled, lhsLabel, lhsMaxValue):
+                if case let .subscriptionFee(rhsTheme, rhsText, rhsValue, rhsEnabled, rhsLabel, rhsMaxValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsEnabled == rhsEnabled, lhsLabel == rhsLabel, lhsMaxValue == rhsMaxValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .subscriptionFeeInfo(lhsTheme, lhsText):
+                if case let .subscriptionFeeInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .requestApproval(lhsTheme, lhsText, lhsValue, lhsEnabled):
+                if case let .requestApproval(rhsTheme, rhsText, rhsValue, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
@@ -179,20 +225,20 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .timePicker(lhsTheme, lhsValue):
-                if case let .timePicker(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
+            case let .timePicker(lhsTheme, lhsValue, lhsEnabled):
+                if case let .timePicker(rhsTheme, rhsValue, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
                 }
-            case let .timeExpiryDate(lhsTheme, lhsDateTimeFormat, lhsDate, lhsActive):
-                if case let .timeExpiryDate(rhsTheme, rhsDateTimeFormat, rhsDate, rhsActive) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsDate == rhsDate, lhsActive == rhsActive {
+            case let .timeExpiryDate(lhsTheme, lhsDateTimeFormat, lhsDate, lhsActive, lhsEnabled):
+                if case let .timeExpiryDate(rhsTheme, rhsDateTimeFormat, rhsDate, rhsActive, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsDate == rhsDate, lhsActive == rhsActive, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
                 }
-            case let .timeCustomPicker(lhsTheme, lhsDateTimeFormat, lhsDate, lhsDisplayingDateSelection, lhsDisplayingTimeSelection):
-                if case let .timeCustomPicker(rhsTheme, rhsDateTimeFormat, rhsDate, rhsDisplayingDateSelection, rhsDisplayingTimeSelection) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsDate == rhsDate, lhsDisplayingDateSelection == rhsDisplayingDateSelection, lhsDisplayingTimeSelection == rhsDisplayingTimeSelection {
+            case let .timeCustomPicker(lhsTheme, lhsDateTimeFormat, lhsDate, lhsDisplayingDateSelection, lhsDisplayingTimeSelection, lhsEnabled):
+                if case let .timeCustomPicker(rhsTheme, rhsDateTimeFormat, rhsDate, rhsDisplayingDateSelection, rhsDisplayingTimeSelection, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsDate == rhsDate, lhsDisplayingDateSelection == rhsDisplayingDateSelection, lhsDisplayingTimeSelection == rhsDisplayingTimeSelection, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
@@ -209,14 +255,14 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .usagePicker(lhsTheme, lhsDateTimeFormat, lhsValue):
-                if case let .usagePicker(rhsTheme, rhsDateTimeFormat, rhsValue) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsValue == rhsValue {
+            case let .usagePicker(lhsTheme, lhsDateTimeFormat, lhsValue, lhsEnabled):
+                if case let .usagePicker(rhsTheme, rhsDateTimeFormat, rhsValue, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsValue == rhsValue, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
                 }
-            case let .usageCustomPicker(lhsTheme, lhsValue, lhsFocused, lhsCustomValue):
-                if case let .usageCustomPicker(rhsTheme, rhsValue, rhsFocused, rhsCustomValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue, lhsFocused == rhsFocused, lhsCustomValue == rhsCustomValue {
+            case let .usageCustomPicker(lhsTheme, lhsValue, lhsFocused, lhsCustomValue, lhsEnabled):
+                if case let .usageCustomPicker(rhsTheme, rhsValue, rhsFocused, rhsCustomValue, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue, lhsFocused == rhsFocused, lhsCustomValue == rhsCustomValue, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
@@ -246,7 +292,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
             case let .titleHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .title(_, placeholder, value):
-                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, maxLength: 32, sectionId: self.section, textUpdated: { value in
+                return ItemListSingleLineInputItem(context: arguments.context, presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, maxLength: 32, sectionId: self.section, textUpdated: { value in
                     arguments.updateState { state in
                         var updatedState = state
                         updatedState.title = value
@@ -255,8 +301,49 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 }, action: {})
             case let .titleInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .requestApproval(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            case let .subscriptionFeeToggle(_, text, value, enabled):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.updateState { state in
+                        var updatedState = state
+                        updatedState.subscriptionEnabled = value
+                        if value {
+                            updatedState.requestApproval = false
+                        } else {
+                            updatedState.subscriptionFee = nil
+                        }
+                        return updatedState
+                    }
+                    if value {
+                        Queue.mainQueue().after(0.1) {
+                            arguments.focusOnItem(.subscriptionFee)
+                        }
+                    }
+                })
+            case let .subscriptionFee(_, placeholder, enabled, value, label, maxValue):
+                let title = NSMutableAttributedString(string: "⭐️", font: Font.semibold(18.0), textColor: .white)
+                if let range = title.string.range(of: "⭐️") {
+                    title.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: title.string))
+                    title.addAttribute(.baselineOffset, value: -1.0, range: NSRange(range, in: title.string))
+                }
+                return ItemListSingleLineInputItem(context: arguments.context, presentationData: presentationData, title: title, text: value.flatMap { "\($0)" } ?? "", placeholder: placeholder, label: label, type: .number, spacing: 3.0, enabled: enabled, tag: InviteLinksEditEntryTag.subscriptionFee, sectionId: self.section, textUpdated: { text in
+                    arguments.updateState { state in
+                        var updatedState = state
+                        if var value = Int64(text) {
+                            if let maxValue, value > maxValue {
+                                value = maxValue
+                                arguments.errorWithItem(.subscriptionFee)
+                            }
+                            updatedState.subscriptionFee = value
+                        } else {
+                            updatedState.subscriptionFee = nil
+                        }
+                        return updatedState
+                    }
+                },  action: {})
+            case let .subscriptionFeeInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
+            case let .requestApproval(_, text, value, enabled):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updateState { state in
                         var updatedState = state
                         updatedState.requestApproval = value
@@ -267,8 +354,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .timeHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .timePicker(_, value):
-                return ItemListInviteLinkTimeLimitItem(theme: presentationData.theme, strings: presentationData.strings, value: value, enabled: true, sectionId: self.section, updated: { value in
+            case let .timePicker(_, value, enabled):
+                return ItemListInviteLinkTimeLimitItem(theme: presentationData.theme, strings: presentationData.strings, value: value, enabled: enabled, sectionId: self.section, updated: { value in
                     arguments.updateState({ state in
                         var updatedState = state
                         if value != updatedState.time {
@@ -279,14 +366,14 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                         return updatedState
                     })
                 })
-            case let .timeExpiryDate(theme, dateTimeFormat, value, active):
+            case let .timeExpiryDate(theme, dateTimeFormat, value, active, enabled):
                 let text: String
                 if let value = value {
                     text = stringForMediumDate(timestamp: value, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
                 } else {
                     text = presentationData.strings.InviteLink_Create_TimeLimitExpiryDateNever
                 }
-                return ItemListDisclosureItem(presentationData: presentationData, title: presentationData.strings.InviteLink_Create_TimeLimitExpiryDate, label: text, labelStyle: active ? .coloredText(theme.list.itemAccentColor) : .text, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: presentationData.strings.InviteLink_Create_TimeLimitExpiryDate, enabled: enabled, label: text, labelStyle: active ? .coloredText(theme.list.itemAccentColor) : .text, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
                     arguments.dismissInput()
                     arguments.updateState { state in
                         var updatedState = state
@@ -298,7 +385,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                         return updatedState
                     }
                 })
-            case let .timeCustomPicker(_, dateTimeFormat, date, displayingDateSelection, displayingTimeSelection):
+            case let .timeCustomPicker(_, dateTimeFormat, date, displayingDateSelection, displayingTimeSelection, enabled):
+                let _ = enabled
                 let title = presentationData.strings.InviteLink_Create_TimeLimitExpiryTime
                 return ItemListDatePickerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, date: date, title: title, displayingDateSelection: displayingDateSelection, displayingTimeSelection: displayingTimeSelection, sectionId: self.section, style: .blocks, toggleDateSelection: {
                     arguments.updateState({ state in
@@ -329,8 +417,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .usageHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .usagePicker(_, dateTimeFormat, value):
-                return ItemListInviteLinkUsageLimitItem(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, value: value, enabled: true, sectionId: self.section, updated: { value in
+            case let .usagePicker(_, dateTimeFormat, value, enabled):
+                return ItemListInviteLinkUsageLimitItem(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, value: value, enabled: enabled, sectionId: self.section, updated: { value in
                     arguments.dismissInput()
                     arguments.updateState({ state in
                         var updatedState = state
@@ -342,14 +430,14 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                         return updatedState
                     })
                 })
-            case let .usageCustomPicker(theme, value, focused, customValue):
+            case let .usageCustomPicker(theme, value, focused, customValue, enabled):
                 let text: String
                 if let value = value, value != 0 {
                     text = String(value)
                 } else {
                     text = focused ? "" : presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsersUnlimited
                 }
-                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsers, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .number, alignment: .right, selectAllOnFocus: true, secondaryStyle: !customValue, tag: InviteLinksEditEntryTag.usage, sectionId: self.section, textUpdated: { updatedText in
+                return ItemListSingleLineInputItem(context: arguments.context, presentationData: presentationData, title: NSAttributedString(string: presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsers, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .number, alignment: .right, enabled: enabled, selectAllOnFocus: true, secondaryStyle: !customValue, tag: InviteLinksEditEntryTag.usage, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateState { state in
                         var updatedState = state
                         if updatedText.isEmpty {
@@ -391,26 +479,54 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     }
 }
 
-private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state: InviteLinkEditControllerState, isGroup: Bool, isPublic: Bool, presentationData: PresentationData) -> [InviteLinksEditEntry] {
+private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state: InviteLinkEditControllerState, isGroup: Bool, isPublic: Bool, presentationData: PresentationData, configuration: StarsSubscriptionConfiguration) -> [InviteLinksEditEntry] {
     var entries: [InviteLinksEditEntry] = []
     
     entries.append(.titleHeader(presentationData.theme, presentationData.strings.InviteLink_Create_LinkNameTitle.uppercased()))
     entries.append(.title(presentationData.theme, presentationData.strings.InviteLink_Create_LinkName, state.title))
     entries.append(.titleInfo(presentationData.theme, presentationData.strings.InviteLink_Create_LinkNameInfo))
     
-    if !isPublic {
-        entries.append(.requestApproval(presentationData.theme, presentationData.strings.InviteLink_Create_RequestApproval, state.requestApproval))
-        var requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
-        if state.requestApproval {
-            requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOnInfoChannel
+    let isEditingEnabled = invite?.pricing == nil
+    let isSubscription = state.subscriptionEnabled
+    if !isGroup {
+        entries.append(.subscriptionFeeToggle(presentationData.theme, presentationData.strings.InviteLink_Create_Fee, state.subscriptionEnabled, isEditingEnabled))
+        if state.subscriptionEnabled {
+            var label: String = ""
+            if let subscriptionFee = state.subscriptionFee, subscriptionFee > 0 {
+                var usdRate = 0.012
+                if let usdWithdrawRate = configuration.usdWithdrawRate {
+                    usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
+                }
+                label = presentationData.strings.InviteLink_Create_FeePerMonth("≈\(formatTonUsdValue(subscriptionFee, divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat))").string
+            }
+            entries.append(.subscriptionFee(presentationData.theme, presentationData.strings.InviteLink_Create_FeePlaceholder, isEditingEnabled, state.subscriptionFee, label, configuration.maxFee))
+        }
+        let infoText: String
+        if let _ = invite, state.subscriptionEnabled {
+            infoText = presentationData.strings.InviteLink_Create_FeeEditInfo
         } else {
-            requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
+            infoText = presentationData.strings.InviteLink_Create_FeeInfo
+        }
+        entries.append(.subscriptionFeeInfo(presentationData.theme, infoText))
+    }
+    
+    if !isPublic {
+        entries.append(.requestApproval(presentationData.theme, presentationData.strings.InviteLink_Create_RequestApproval, state.requestApproval, isEditingEnabled && !isSubscription))
+        var requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
+        if isSubscription {
+            requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalFeeUnavailable
+        } else {
+            if state.requestApproval {
+                requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOnInfoChannel
+            } else {
+                requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
+            }
         }
         entries.append(.requestApprovalInfo(presentationData.theme, requestApprovalInfoText))
     }
     
     entries.append(.timeHeader(presentationData.theme,  presentationData.strings.InviteLink_Create_TimeLimit.uppercased()))
-    entries.append(.timePicker(presentationData.theme, state.time))
+    entries.append(.timePicker(presentationData.theme, state.time, isEditingEnabled))
     
     let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
     var time: Int32?
@@ -419,21 +535,21 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     } else if let value = state.time.value {
         time = currentTime + value
     }
-    entries.append(.timeExpiryDate(presentationData.theme, presentationData.dateTimeFormat, time, state.pickingExpiryDate || state.pickingExpiryTime))
+    entries.append(.timeExpiryDate(presentationData.theme, presentationData.dateTimeFormat, time, state.pickingExpiryDate || state.pickingExpiryTime, isEditingEnabled))
     if state.pickingExpiryDate || state.pickingExpiryTime {
-        entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, time, state.pickingExpiryDate, state.pickingExpiryTime))
+        entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, time, state.pickingExpiryDate, state.pickingExpiryTime, isEditingEnabled))
     }
     entries.append(.timeInfo(presentationData.theme, presentationData.strings.InviteLink_Create_TimeLimitInfo))
     
     if !state.requestApproval || isPublic {
         entries.append(.usageHeader(presentationData.theme,  presentationData.strings.InviteLink_Create_UsersLimit.uppercased()))
-        entries.append(.usagePicker(presentationData.theme, presentationData.dateTimeFormat, state.usage))
+        entries.append(.usagePicker(presentationData.theme, presentationData.dateTimeFormat, state.usage, isEditingEnabled))
         
         var customValue = false
         if case .custom = state.usage {
             customValue = true
         }
-        entries.append(.usageCustomPicker(presentationData.theme, state.usage.value, state.pickingUsageLimit, customValue))
+        entries.append(.usageCustomPicker(presentationData.theme, state.usage.value, state.pickingUsageLimit, customValue, isEditingEnabled))
         entries.append(.usageInfo(presentationData.theme, presentationData.strings.InviteLink_Create_UsersLimitInfo))
     }
     
@@ -449,6 +565,8 @@ private struct InviteLinkEditControllerState: Equatable {
     var usage: InviteLinkUsageLimit
     var time: InviteLinkTimeLimit
     var requestApproval = false
+    var subscriptionEnabled = false
+    var subscriptionFee: Int64?
     var pickingExpiryDate = false
     var pickingExpiryTime = false
     var pickingUsageLimit = false
@@ -460,7 +578,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
     let actionsDisposable = DisposableSet()
 
     let initialState: InviteLinkEditControllerState
-    if let invite = invite, case let .link(_, title, _, requestApproval, _, _, _, _, expireDate, usageLimit, count, _) = invite {
+    if let invite = invite, case let .link(_, title, _, requestApproval, _, _, _, _, expireDate, usageLimit, count, _, pricing) = invite {
         var usageLimit = usageLimit
         if let limit = usageLimit, let count = count, count > 0 {
             usageLimit = limit - count
@@ -478,9 +596,9 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
             timeLimit = .unlimited
         }
         
-        initialState = InviteLinkEditControllerState(title: title ?? "", usage: InviteLinkUsageLimit(value: usageLimit), time: timeLimit, requestApproval: requestApproval, pickingExpiryDate: false, pickingExpiryTime: false, pickingUsageLimit: false)
+        initialState = InviteLinkEditControllerState(title: title ?? "", usage: InviteLinkUsageLimit(value: usageLimit), time: timeLimit, requestApproval: requestApproval, subscriptionEnabled: pricing != nil, subscriptionFee: pricing?.amount, pickingExpiryDate: false, pickingExpiryTime: false, pickingUsageLimit: false)
     } else {
-        initialState = InviteLinkEditControllerState(title: "", usage: .unlimited, time: .unlimited, requestApproval: false, pickingExpiryDate: false, pickingExpiryTime: false, pickingUsageLimit: false)
+        initialState = InviteLinkEditControllerState(title: "", usage: .unlimited, time: .unlimited, requestApproval: false, subscriptionEnabled: false, subscriptionFee: nil, pickingExpiryDate: false, pickingExpiryTime: false, pickingUsageLimit: false)
     }
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -492,9 +610,15 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
     var dismissImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
     var scrollToUsageImpl: (() -> Void)?
+    var focusImpl: ((InviteLinksEditEntryTag) -> Void)?
+    var errorImpl: ((InviteLinksEditEntryTag) -> Void)?
     
     let arguments = InviteLinkEditControllerArguments(context: context, updateState: { f in
         updateState(f)
+    }, focusOnItem: { tag in
+        focusImpl?(tag)
+    }, errorWithItem: { tag in
+        errorImpl?(tag)
     }, scrollToUsage: {
         scrollToUsageImpl?()
     }, dismissInput: {
@@ -555,6 +679,8 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     
+    let configuration = StarsSubscriptionConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    
     let previousState = Atomic<InviteLinkEditControllerState?>(value: nil)
     let signal = combineLatest(
         presentationData,
@@ -570,14 +696,21 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
             dismissImpl?()
         })
         
-        let rightNavigationButton = ItemListNavigationButton(content: .text(invite == nil ? presentationData.strings.Common_Create : presentationData.strings.Common_Save), style: state.updating ? .activity : .bold, enabled: true, action: {
+        var doneIsEnabled = true
+        if state.subscriptionEnabled {
+            if (state.subscriptionFee ?? 0) == 0 {
+                doneIsEnabled = false
+            }
+        }
+        
+        let rightNavigationButton = ItemListNavigationButton(content: .text(invite == nil ? presentationData.strings.Common_Create : presentationData.strings.Common_Save), style: state.updating ? .activity : .bold, enabled: doneIsEnabled, action: {
             updateState { state in
                 var updatedState = state
                 updatedState.updating = true
                 return updatedState
             }
             
-            let expireDate: Int32?
+            var expireDate: Int32?
             if case let .custom(value) = state.time {
                 expireDate = value
             } else if let value = state.time.value {
@@ -589,11 +722,20 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
 
             let titleString = state.title.trimmingCharacters(in: .whitespacesAndNewlines)
             let title = titleString.isEmpty ? nil : titleString
-            let usageLimit = state.usage.value
-            let requestNeeded = state.requestApproval && !isPublic
+            var usageLimit = state.usage.value
+            var requestNeeded: Bool? = state.requestApproval && !isPublic
             
             if invite == nil {
-                let _ = (context.engine.peers.createPeerExportedInvitation(peerId: peerId, title: title, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
+                let subscriptionPricing: StarsSubscriptionPricing?
+                if let subscriptionFee = state.subscriptionFee {
+                    subscriptionPricing = StarsSubscriptionPricing(
+                        period: context.account.testingEnvironment ? StarsSubscriptionPricing.testPeriod : StarsSubscriptionPricing.monthPeriod,
+                        amount: subscriptionFee
+                    )
+                } else {
+                    subscriptionPricing = nil
+                }
+                let _ = (context.engine.peers.createPeerExportedInvitation(peerId: peerId, title: title, expireDate: expireDate, usageLimit: requestNeeded == true ? 0 : usageLimit, requestNeeded: requestNeeded, subscriptionPricing: subscriptionPricing)
                 |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                 |> deliverOnMainQueue).start(next: { invite in
                     completion?(invite)
@@ -606,13 +748,24 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
                     }
                     presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 })
-            } else if let initialInvite = invite, case let .link(link, _, _, initialRequestApproval, _, _, _, _, initialExpireDate, initialUsageLimit, _, _) = initialInvite {
-                if initialExpireDate == expireDate && initialUsageLimit == usageLimit && initialRequestApproval == requestNeeded {
+            } else if let initialInvite = invite, case let .link(link, initialTitle, _, initialRequestApproval, _, _, _, _, initialExpireDate, initialUsageLimit, _, _, _) = initialInvite {
+                if (initialExpireDate ?? 0) == expireDate && (initialUsageLimit ?? 0) == usageLimit && initialRequestApproval == requestNeeded && (initialTitle ?? "") == title {
                     completion?(initialInvite)
                     dismissImpl?()
                     return
                 }
-                let _ = (context.engine.peers.editPeerExportedInvitation(peerId: peerId, link: link, title: title, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
+                
+                if (initialExpireDate ?? 0) == expireDate {
+                    expireDate = nil
+                }
+                if (initialUsageLimit ?? 0) == usageLimit {
+                    usageLimit = nil
+                }
+                if initialRequestApproval == requestNeeded {
+                    requestNeeded = nil
+                }
+                
+                let _ = (context.engine.peers.editPeerExportedInvitation(peerId: peerId, link: link, title: title, expireDate: expireDate, usageLimit: requestNeeded == true ? 0 : usageLimit, requestNeeded: requestNeeded)
                 |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                 |> deliverOnMainQueue).start(next: { invite in
                     completion?(invite)
@@ -630,7 +783,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
         
         let previousState = previousState.swap(state)
         var animateChanges = false
-        if let previousState = previousState, previousState.pickingExpiryDate != state.pickingExpiryDate || previousState.pickingExpiryTime != state.pickingExpiryTime || previousState.requestApproval != state.requestApproval {
+        if let previousState = previousState, previousState.pickingExpiryDate != state.pickingExpiryDate || previousState.pickingExpiryTime != state.pickingExpiryTime || previousState.requestApproval != state.requestApproval || previousState.subscriptionEnabled != state.subscriptionEnabled {
             animateChanges = true
         }
         
@@ -642,7 +795,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(invite == nil ? presentationData.strings.InviteLink_Create_Title : presentationData.strings.InviteLink_Create_EditTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkEditControllerEntries(invite: invite, state: state, isGroup: isGroup, isPublic: isPublic, presentationData: presentationData), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkEditControllerEntries(invite: invite, state: state, isGroup: isGroup, isPublic: isPublic, presentationData: presentationData, configuration: configuration), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }
@@ -686,5 +839,43 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
     dismissImpl = { [weak controller] in
         controller?.dismiss()
     }
+    focusImpl = { [weak controller] targetTag in
+        controller?.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ItemListSingleLineInputItemNode, let tag = itemNode.tag, tag.isEqual(to: targetTag) {
+                itemNode.focus()
+            }
+        }
+    }
+    let hapticFeedback = HapticFeedback()
+    errorImpl = { [weak controller] targetTag in
+        hapticFeedback.error()
+        controller?.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ItemListSingleLineInputItemNode, let tag = itemNode.tag, tag.isEqual(to: targetTag) {
+                itemNode.animateError()
+            }
+        }
+    }
     return controller
+}
+
+struct StarsSubscriptionConfiguration {
+    static var defaultValue: StarsSubscriptionConfiguration {
+        return StarsSubscriptionConfiguration(maxFee: 2500, usdWithdrawRate: 1200)
+    }
+    
+    let maxFee: Int64?
+    let usdWithdrawRate: Int64?
+    
+    fileprivate init(maxFee: Int64?, usdWithdrawRate: Int64?) {
+        self.maxFee = maxFee
+        self.usdWithdrawRate = usdWithdrawRate
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> StarsSubscriptionConfiguration {
+        if let data = appConfiguration.data, let value = data["stars_subscription_amount_max"] as? Double, let usdRate = data["stars_usd_withdraw_rate_x1000"] as? Double {
+            return StarsSubscriptionConfiguration(maxFee: Int64(value), usdWithdrawRate: Int64(usdRate))
+        } else {
+            return .defaultValue
+        }
+    }
 }

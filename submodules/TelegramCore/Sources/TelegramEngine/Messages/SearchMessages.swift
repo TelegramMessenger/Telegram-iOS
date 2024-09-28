@@ -236,6 +236,59 @@ private func mergedResult(_ state: SearchMessagesState) -> SearchMessagesResult 
     return SearchMessagesResult(messages: messages, readStates: readStates, threadInfo: threadInfo, totalCount: state.main.totalCount + (state.additional?.totalCount ?? 0), completed: state.main.completed && (state.additional?.completed ?? true))
 }
 
+func _internal_getSearchMessageCount(account: Account, location: SearchMessagesLocation, query: String) -> Signal<Int?, NoError> {
+    guard case let .peer(peerId, fromId, _, _, threadId, _, _) = location else {
+        return .single(nil)
+    }
+    return account.postbox.transaction { transaction -> (Api.InputPeer?, Api.InputPeer?) in
+        var chatPeer = transaction.getPeer(peerId).flatMap(apiInputPeer)
+        var fromPeer: Api.InputPeer?
+        if let fromId {
+            if let value = transaction.getPeer(fromId).flatMap(apiInputPeer) {
+                fromPeer = value
+            } else {
+                chatPeer = nil
+            }
+        }
+        
+        return (chatPeer, fromPeer)
+    }
+    |> mapToSignal { inputPeer, fromPeer -> Signal<Int?, NoError> in
+        guard let inputPeer else {
+            return .single(nil)
+        }
+        
+        var flags: Int32 = 0
+        
+        if let _ = fromPeer {
+            flags |= (1 << 0)
+        }
+        
+        var topMsgId: Int32?
+        if let threadId = threadId {
+            flags |= (1 << 1)
+            topMsgId = Int32(clamping: threadId)
+        }
+        
+        return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromPeer, savedPeerId: nil, savedReaction: nil, topMsgId: topMsgId, filter: .inputMessagesFilterEmpty, minDate: 0, maxDate: 0, offsetId: 0, addOffset: 0, limit: 1, maxId: 0, minId: 0, hash: 0))
+        |> map { result -> Int? in
+            switch result {
+            case let .channelMessages(_, _, count, _, _, _, _, _):
+                return Int(count)
+            case let .messages(messages, _, _):
+                return messages.count
+            case let .messagesNotModified(count):
+                return Int(count)
+            case let .messagesSlice(_, count, _, _, _, _, _):
+                return Int(count)
+            }
+        }
+        |> `catch` { _ -> Signal<Int?, NoError> in
+            return .single(nil)
+        }
+    }
+}
+
 func _internal_searchMessages(account: Account, location: SearchMessagesLocation, query: String, state: SearchMessagesState?, centerId: MessageId?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
     if case let .peer(peerId, fromId, tags, reactions, threadId, minDate, maxDate) = location, fromId == nil, tags == nil, peerId == account.peerId, let reactions, let reaction = reactions.first, (minDate == nil || minDate == 0), (maxDate == nil || maxDate == 0) {
         return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in

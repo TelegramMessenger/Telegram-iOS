@@ -21,6 +21,10 @@ import ShareController
 import UndoUI
 import ContextUI
 import SaveToCameraRoll
+import Pasteboard
+import AdUI
+import AdsInfoScreen
+import AdsReportScreen
 
 enum ChatMediaGalleryThumbnail: Equatable {
     case image(ImageMediaReference)
@@ -168,7 +172,9 @@ class ChatImageGalleryItem: GalleryItem {
             }
         }
         
-        if let location = self.location {
+        if let _ = message.adAttribute {
+            node._title.set(.single(self.presentationData.strings.Gallery_Ad))
+        } else if let location = self.location {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").string))
         }
                 
@@ -253,6 +259,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let dataDisposable = MetaDisposable()
     private let recognitionDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
+    private var fetchedDimensions: PixelDimensions?
     
     private let pagingEnabledPromise = ValuePromise<Bool>(true)
     
@@ -530,69 +537,218 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.moreBarButton.play()
         self.moreBarButton.contextAction?(self.moreBarButton.containerNode, nil)
     }
-
-    private func contextMenuMainItems() -> Signal<[ContextMenuItem], NoError> {
-        var items: [ContextMenuItem] = []
+    
+    private func adMenuMainItems() -> Signal<[ContextMenuItem], NoError> {
+        guard let message = self.message, let adAttribute = message.adAttribute else {
+            return .single([])
+        }
         
-        if let message = self.message {
-            let context = self.context
-            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
+        let context = self.context
+        let presentationData = self.presentationData
+        var actions: [ContextMenuItem] = []
+        if adAttribute.canReport {
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_AboutAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
+            }, iconSource: nil, action: { [weak self] _, f in
+                f(.dismissWithoutContent)
+                if let navigationController = self?.baseNavigationController() as? NavigationController {
+                    navigationController.pushViewController(AdsInfoScreen(context: context))
+                }
+            })))
+            
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_ReportAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
+            }, iconSource: nil, action: { [weak self] _, f in
+                f(.default)
                 
-                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId))
-                         |> deliverOnMainQueue).start(next: { [weak self] peer in
-                    guard let strongSelf = self, let peer = peer else {
-                        return
-                    }
-                    if let navigationController = strongSelf.baseNavigationController() {
-                        strongSelf.beginCustomDismiss(true)
-                        
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil)))
-                        
-                        Queue.mainQueue().after(0.3) {
-                            strongSelf.completeCustomDismiss()
+                let _ = (context.engine.messages.reportAdMessage(peerId: message.id.peerId, opaqueId: adAttribute.opaqueId, option: nil)
+                |> deliverOnMainQueue).start(next: { [weak self] result in
+                    if case let .options(title, options) = result {
+                        if let navigationController = self?.baseNavigationController() as? NavigationController {
+                            navigationController.pushViewController(
+                                AdsReportScreen(
+                                    context: context,
+                                    peerId: message.id.peerId,
+                                    opaqueId: adAttribute.opaqueId,
+                                    title: title,
+                                    options: options,
+                                    forceDark: true,
+                                    completed: {
+                                        if let navigationController = self?.baseNavigationController() as? NavigationController, let chatController = navigationController.viewControllers.last as? ChatController {
+                                            chatController.removeAd(opaqueId: adAttribute.opaqueId)
+                                        }
+                                    }
+                                )
+                            )
                         }
                     }
-                    f(.default)
                 })
             })))
             
-            if !message.isCopyProtected() && !self.peerIsCopyProtected && message.paidContent == nil, let media = self.contextAndMedia?.1 {
-                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Gallery_SaveImage, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
-                    f(.default)
-                    
-                    let _ = (SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: media)
-                    |> deliverOnMainQueue).start(completed: { [weak self] in
-                        guard let strongSelf = self else {
-                            return
+            actions.append(.separator)
+                           
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_RemoveAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.primaryTextColor)
+            }, iconSource: nil, action: { [weak self] c, _ in
+                c?.dismiss(completion: {
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: true, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: true, dismissed: nil)
+                        replaceImpl?(controller)
+                    }, dismissed: nil)
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    if let navigationController = self?.baseNavigationController() as? NavigationController {
+                        navigationController.pushViewController(controller)
+                    }
+                })
+            })))
+        } else {
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
+            }, iconSource: nil, action: { [weak self] _, f in
+                f(.dismissWithoutContent)
+                if let navigationController = self?.baseNavigationController() as? NavigationController {
+                    navigationController.pushViewController(AdInfoScreen(context: context, forceDark: true))
+                }
+            })))
+            
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+            if !context.isPremium && !premiumConfiguration.isPremiumDisabled {
+                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Hide, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.primaryTextColor)
+                }, iconSource: nil, action: { [weak self] c, _ in
+                    c?.dismiss(completion: {
+                        var replaceImpl: ((ViewController) -> Void)?
+                        let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: true, action: {
+                            let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: true, dismissed: nil)
+                            replaceImpl?(controller)
+                        }, dismissed: nil)
+                        replaceImpl = { [weak controller] c in
+                            controller?.replace(with: c)
                         }
-                        guard let controller = strongSelf.galleryController() else {
-                            return
+                        if let navigationController = self?.baseNavigationController() as? NavigationController {
+                            navigationController.pushViewController(controller)
                         }
-                        controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: strongSelf.presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     })
                 })))
             }
+            
+            if !message.text.isEmpty {
+                actions.append(.separator)
+                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuCopy, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
+                }, action: { [weak self] _, f in
+                    var messageEntities: [MessageTextEntity]?
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? TextEntitiesMessageAttribute {
+                            messageEntities = attribute.entities
+                        }
+                    }
+                    
+                    storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                    
+                    Queue.mainQueue().after(0.2, {
+                        guard let self, let controller = self.galleryController() else {
+                            return
+                        }
+                        controller.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: presentationData.strings.Conversation_MessageCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    })
+                    
+                    f(.default)
+                })))
+            }
         }
-        
-        if self.canDelete() {
-            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] _, f in
-                f(.default)
 
-                if let strongSelf = self {
-                    strongSelf.footerContentNode.deleteButtonPressed()
+        return .single(actions)
+    }
+
+    private func contextMenuMainItems() -> Signal<[ContextMenuItem], NoError> {
+        let peer: Signal<EnginePeer?, NoError>
+        if let message = self.message {
+            peer = self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId))
+        } else {
+            peer = .single(nil)
+        }
+    
+        let context = self.context
+        return peer
+        |> map { [weak self] peer -> [ContextMenuItem] in
+            guard let self else {
+                return []
+            }
+            var items: [ContextMenuItem] = []
+            if let message = self.message {
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
+                    if let self, let peer, let navigationController = self.baseNavigationController() {
+                        self.beginCustomDismiss(true)
+                        
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false)))
+                        
+                        Queue.mainQueue().after(0.3) {
+                            self.completeCustomDismiss()
+                        }
+                    }
+                    f(.default)
+                })))
+                
+                if !message.isCopyProtected() && !self.peerIsCopyProtected && message.paidContent == nil, let media = self.contextAndMedia?.1 {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Gallery_SaveImage, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
+                        f(.default)
+                        
+                        let _ = (SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: media)
+                        |> deliverOnMainQueue).start(completed: { [weak self] in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            guard let controller = strongSelf.galleryController() else {
+                                return
+                            }
+                            controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: strongSelf.presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                        })
+                    })))
                 }
-            })))
-        }
+            }
+            
+            if let peer, let message = self.message, canSendMessagesToPeer(peer._asPeer()) {
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuReply, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reply"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
+                    if let self, let navigationController = self.baseNavigationController() {
+                        self.beginCustomDismiss(true)
+                        
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: true)))
+                        
+                        Queue.mainQueue().after(0.3) {
+                            self.completeCustomDismiss()
+                        }
+                    }
+                    f(.default)
+                })))
+            }
+            
+            if self.canDelete() {
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] _, f in
+                    f(.default)
 
-        return .single(items)
+                    if let strongSelf = self {
+                        strongSelf.footerContentNode.deleteButtonPressed()
+                    }
+                })))
+            }
+            return items
+        }
     }
     
     private func openMoreMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
-        let items: Signal<[ContextMenuItem], NoError> = self.contextMenuMainItems()
+        let items: Signal<[ContextMenuItem], NoError>
+        if let message = self.message, let _ = message.adAttribute {
+            items = self.adMenuMainItems()
+        } else {
+            items = self.contextMenuMainItems()
+        }
         guard let controller = self.baseNavigationController()?.topViewController as? ViewController else {
             return
         }
-
         let contextController = ContextController(presentationData: self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme), source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.moreBarButton.referenceNode)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
         controller.presentInGlobalOverlay(contextController)
     }
@@ -651,9 +807,9 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         })
     }
     
-    func setFile(context: AccountContext, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference) {
-        if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) {
-            if var largestSize = fileReference.media.dimensions {
+    func setFile(context: AccountContext, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, force: Bool = false) {
+        if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) || force {
+            if var largestSize = (fileReference.media.dimensions ?? self.fetchedDimensions) {
                 var displaySize = largestSize.cgSize.dividedByScreenScale()
                 if let previewDimensions = largestImageRepresentation(fileReference.media.previewRepresentations)?.dimensions {
                     let previewAspect = CGFloat(previewDimensions.width) / CGFloat(previewDimensions.height)
@@ -693,6 +849,22 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: userLocation, userContentType: .image, reference: fileReference.resourceReference(fileReference.media.resource)).start())
             } else {
+                let _ = (chatMessageFileDatas(account: context.account, userLocation: userLocation, fileReference: fileReference, progressive: false, fetched: true)
+                |> mapToSignal { value -> Signal<UIImage?, NoError> in
+                    if value._2, let path = value._1, let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                        return .single(UIImage(data: data))
+                    }
+                    return .complete()
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] image in
+                    if let self, let image {
+                        self.fetchedDimensions = PixelDimensions(image.size)
+                        self.setFile(context: context, userLocation: userLocation, fileReference: fileReference, force: true)
+                    }
+                })
+                
+                
+                
                 self._ready.set(.single(Void()))
             }
         }

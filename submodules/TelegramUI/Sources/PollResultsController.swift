@@ -223,7 +223,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .solutionText(text, entities):
             let _ = entities
-            //TODO:localize
+            //TODO:release
             return ItemListMultilineTextItem(presentationData: presentationData, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks)
         case let .optionPeer(optionId, _, peer, optionText, optionTextEntities, optionAdditionalText, optionCount, optionExpanded, opaqueIdentifier, shimmeringAlternation, isFirstInOption):
             let font = Font.regular(13.0)
@@ -333,7 +333,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, me
                     displayCount = Int(voterCount)
                 }
                 for peerIndex in 0 ..< displayCount {
-                    let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+                    let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil)
                     let peer = EngineRenderedPeer(peer: EnginePeer(fakeUser))
                     entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: optionTextHeader, optionTextEntities: optionTextHeaderEntities, optionAdditionalText: optionAdditionalTextHeader, optionCount: voterCount, optionExpanded: false, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: peerIndex % 2, isFirstInOption: peerIndex == 0))
                 }

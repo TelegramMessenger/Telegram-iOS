@@ -3510,7 +3510,7 @@ public final class EmojiPagerContentComponent: Component {
                         }
                         
                         if case .icon = item.content {
-                            itemLayer.update(content: item.content, theme: keyboardChildEnvironment.theme)
+                            itemLayer.update(content: item.content, theme: keyboardChildEnvironment.theme, strings: keyboardChildEnvironment.strings)
                         }
                         
                         itemLayer.update(

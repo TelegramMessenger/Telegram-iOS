@@ -23,6 +23,10 @@ import OpenInExternalAppUI
 import AVKit
 import TextFormat
 import SliderContextItem
+import Pasteboard
+import AdUI
+import AdsInfoScreen
+import AdsReportScreen
 
 public enum UniversalVideoGalleryItemContentInfo {
     case message(Message, Int?)
@@ -89,6 +93,8 @@ public class UniversalVideoGalleryItem: GalleryItem {
         
         if let indexData = self.indexData {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").string))
+        } else if case let .message(message, _) = self.contentInfo, let _ = message.adAttribute {
+            node._title.set(.single(self.presentationData.strings.Gallery_Ad))
         }
         
         node.setupItem(self)
@@ -1235,7 +1241,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 if let file = file {
                     for attribute in file.attributes {
-                        if case let .Video(duration, _, _, _) = attribute, duration >= 30 {
+                        if case let .Video(duration, _, _, _, _) = attribute, duration >= 30 {
                             hintSeekable = true
                             break
                         }
@@ -1474,7 +1480,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if let _ = message.paidContent, message.id.namespace == Namespaces.Message.Local {
                     hasMoreButton = false
                 }
-                 
+                
+                if let _ = message.adAttribute {
+                    hasMoreButton = true
+                }
+                
                 if hasMoreButton {
                     let moreMenuItem = UIBarButtonItem(customDisplayNode: self.moreBarButton)!
                     moreMenuItem.accessibilityLabel = self.presentationData.strings.Common_More
@@ -1528,15 +1538,17 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
         self.playbackRatePromise.set(self.playbackRate ?? 1.0)
         
+        var isAd = false
         if let contentInfo = item.contentInfo {
             switch contentInfo {
                 case let .message(message, _):
+                    isAd = message.adAttribute != nil
                     self.footerContentNode.setMessage(message, displayInfo: !item.displayInfoOnTop, peerIsCopyProtected: item.peerIsCopyProtected)
                 case let .webPage(webPage, media, _):
                     self.footerContentNode.setWebPage(webPage, media: media)
             }
         }
-        self.footerContentNode.setup(origin: item.originData, caption: item.caption)
+        self.footerContentNode.setup(origin: item.originData, caption: item.caption, isAd: isAd)
     }
     
     override func controlsVisibilityUpdated(isVisible: Bool) {
@@ -2478,9 +2490,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             return
         }
         var dismissImpl: (() -> Void)?
-        let items: Signal<[ContextMenuItem], NoError> = self.contextMenuMainItems(dismiss: {
-            dismissImpl?()
-        })
+        let items: Signal<[ContextMenuItem], NoError>
+        if case let .message(message, _) = self.item?.contentInfo, let _ = message.adAttribute {
+            items = self.adMenuMainItems()
+        } else {
+            items = self.contextMenuMainItems(dismiss: {
+                dismissImpl?()
+            })
+        }
+        
         let contextController = ContextController(presentationData: self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme), source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.moreBarButton.referenceNode)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
         self.isShowingContextMenuPromise.set(true)
         controller.presentInGlobalOverlay(contextController)
@@ -2504,16 +2522,149 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
         return speedList
     }
+    
+    private func adMenuMainItems() -> Signal<[ContextMenuItem], NoError> {
+        guard case let .message(message, _) = self.item?.contentInfo, let adAttribute = message.adAttribute else {
+            return .single([])
+        }
+        
+        let context = self.context
+        let presentationData = self.presentationData
+        var actions: [ContextMenuItem] = []
+        if adAttribute.canReport {
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_AboutAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
+            }, iconSource: nil, action: { [weak self] _, f in
+                f(.dismissWithoutContent)
+                if let navigationController = self?.baseNavigationController() as? NavigationController {
+                    navigationController.pushViewController(AdsInfoScreen(context: context, forceDark: true))
+                }
+            })))
+            
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_ReportAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
+            }, iconSource: nil, action: { [weak self] _, f in
+                f(.default)
+                
+                let _ = (context.engine.messages.reportAdMessage(peerId: message.id.peerId, opaqueId: adAttribute.opaqueId, option: nil)
+                |> deliverOnMainQueue).start(next: { [weak self] result in
+                    if case let .options(title, options) = result {
+                        if let navigationController = self?.baseNavigationController() as? NavigationController {
+                            navigationController.pushViewController(
+                                AdsReportScreen(
+                                    context: context,
+                                    peerId: message.id.peerId,
+                                    opaqueId: adAttribute.opaqueId,
+                                    title: title,
+                                    options: options,
+                                    forceDark: true,
+                                    completed: {
+                                        if let navigationController = self?.baseNavigationController() as? NavigationController, let chatController = navigationController.viewControllers.last as? ChatController {
+                                            chatController.removeAd(opaqueId: adAttribute.opaqueId)
+                                        }
+                                    }
+                                )
+                            )
+                        }
+                    }
+                })
+            })))
+            
+            actions.append(.separator)
+                           
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_RemoveAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.primaryTextColor)
+            }, iconSource: nil, action: { [weak self] c, _ in
+                c?.dismiss(completion: {
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: true, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: true, dismissed: nil)
+                        replaceImpl?(controller)
+                    }, dismissed: nil)
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    if let navigationController = self?.baseNavigationController() as? NavigationController {
+                        navigationController.pushViewController(controller)
+                    }
+                })
+            })))
+        } else {
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
+            }, iconSource: nil, action: { [weak self] _, f in
+                f(.dismissWithoutContent)
+                if let navigationController = self?.baseNavigationController() as? NavigationController {
+                    navigationController.pushViewController(AdInfoScreen(context: context, forceDark: true))
+                }
+            })))
+            
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+            if !context.isPremium && !premiumConfiguration.isPremiumDisabled {
+                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Hide, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.primaryTextColor)
+                }, iconSource: nil, action: { [weak self] c, _ in
+                    c?.dismiss(completion: {
+                        var replaceImpl: ((ViewController) -> Void)?
+                        let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: true, action: {
+                            let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: true, dismissed: nil)
+                            replaceImpl?(controller)
+                        }, dismissed: nil)
+                        replaceImpl = { [weak controller] c in
+                            controller?.replace(with: c)
+                        }
+                        if let navigationController = self?.baseNavigationController() as? NavigationController {
+                            navigationController.pushViewController(controller)
+                        }
+                    })
+                })))
+            }
+            
+            if !message.text.isEmpty {
+                actions.append(.separator)
+                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuCopy, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
+                }, action: { [weak self] _, f in
+                    var messageEntities: [MessageTextEntity]?
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? TextEntitiesMessageAttribute {
+                            messageEntities = attribute.entities
+                        }
+                    }
+                    
+                    storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                    
+                    Queue.mainQueue().after(0.2, {
+                        guard let self, let controller = self.galleryController() else {
+                            return
+                        }
+                        controller.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: presentationData.strings.Conversation_MessageCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    })
+                    
+                    f(.default)
+                })))
+            }
+        }
+
+        return .single(actions)
+    }
+
 
     private func contextMenuMainItems(dismiss: @escaping () -> Void) -> Signal<[ContextMenuItem], NoError> {
         guard let videoNode = self.videoNode, let item = self.item else {
             return .single([])
         }
+        
+        let peer: Signal<EnginePeer?, NoError>
+        if let (message, _, _) = self.contentInfo() {
+            peer = self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId))
+        } else {
+            peer = .single(nil)
+        }
 
-        return videoNode.status
+        return combineLatest(queue: Queue.mainQueue(), videoNode.status, peer)
         |> take(1)
-        |> deliverOnMainQueue
-        |> map { [weak self] status -> [ContextMenuItem] in
+        |> map { [weak self] status, peer -> [ContextMenuItem] in
             guard let status = status, let strongSelf = self else {
                 return []
             }
@@ -2552,23 +2703,19 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let (message, _, _) = strongSelf.contentInfo() {
                 let context = strongSelf.context
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
-                    
-                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId))
-                    |> deliverOnMainQueue).start(next: { [weak self] peer in
-                        guard let strongSelf = self, let peer = peer else {
-                            return
+                    guard let strongSelf = self, let peer = peer else {
+                        return
+                    }
+                    if let navigationController = strongSelf.baseNavigationController() {
+                        strongSelf.beginCustomDismiss(true)
+                        
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false)))
+                        
+                        Queue.mainQueue().after(0.3) {
+                            strongSelf.completeCustomDismiss()
                         }
-                        if let navigationController = strongSelf.baseNavigationController() {
-                            strongSelf.beginCustomDismiss(true)
-                            
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil)))
-                            
-                            Queue.mainQueue().after(0.3) {
-                                strongSelf.completeCustomDismiss()
-                            }
-                        }
-                        f(.default)
-                    })
+                    }
+                    f(.default)
                 })))
             }
 
@@ -2637,6 +2784,22 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 })))
             }
+            
+            if let peer, let (message, _, _) = strongSelf.contentInfo(), canSendMessagesToPeer(peer._asPeer()) {
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuReply, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reply"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
+                    if let self, let navigationController = self.baseNavigationController() {
+                        self.beginCustomDismiss(true)
+                        
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: true)))
+                        
+                        Queue.mainQueue().after(0.3) {
+                            self.completeCustomDismiss()
+                        }
+                    }
+                    f(.default)
+                })))
+            }
+            
             if strongSelf.canDelete() {
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                     f(.default)

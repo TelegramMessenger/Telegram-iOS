@@ -20,14 +20,14 @@ public final class InstantPageImageItem: InstantPageItem {
     
     let webPage: TelegramMediaWebpage
     
-    let media: InstantPageMedia
+    public let media: InstantPageMedia
     let attributes: [InstantPageImageAttribute]
     
     public var medias: [InstantPageMedia] {
         return [self.media]
     }
     
-    let interactive: Bool
+    public let interactive: Bool
     let roundCorners: Bool
     let fit: Bool
     
@@ -44,8 +44,8 @@ public final class InstantPageImageItem: InstantPageItem {
         self.fit = fit
     }
     
-    public func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
-        return InstantPageImageNode(context: context, sourceLocation: sourceLocation, theme: theme, webPage: self.webPage, media: self.media, attributes: self.attributes, interactive: self.interactive, roundCorners: self.roundCorners, fit: self.fit, openMedia: openMedia, longPressMedia: longPressMedia, activatePinchPreview: activatePinchPreview, pinchPreviewFinished: pinchPreviewFinished)
+    public func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?, getPreloadedResource: @escaping (String) -> Data?) -> InstantPageNode? {
+        return InstantPageImageNode(context: context, sourceLocation: sourceLocation, theme: theme, webPage: self.webPage, media: self.media, attributes: self.attributes, interactive: self.interactive, roundCorners: self.roundCorners, fit: self.fit, openMedia: openMedia, longPressMedia: longPressMedia, activatePinchPreview: activatePinchPreview, pinchPreviewFinished: pinchPreviewFinished, getPreloadedResource: getPreloadedResource)
     }
     
     public func matchesAnchor(_ anchor: String) -> Bool {

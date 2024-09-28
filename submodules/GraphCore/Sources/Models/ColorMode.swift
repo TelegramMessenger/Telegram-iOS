@@ -30,13 +30,31 @@ public protocol ChartThemeContainer {
 public class ChartStrings {
     public let zoomOut: String
     public let total: String
+    public let revenueInTon: String
+    public let revenueInStars: String
+    public let revenueInUsd: String
     
-    public init(zoomOut: String, total: String) {
+    public init(
+        zoomOut: String,
+        total: String,
+        revenueInTon: String,
+        revenueInStars: String,
+        revenueInUsd: String
+    ) {
         self.zoomOut = zoomOut
         self.total = total
+        self.revenueInTon = revenueInTon
+        self.revenueInStars = revenueInStars
+        self.revenueInUsd = revenueInUsd
     }
     
-    public static var defaultStrings = ChartStrings(zoomOut: "Zoom Out", total: "Total")
+    public static var defaultStrings = ChartStrings(
+        zoomOut: "Zoom Out",
+        total: "Total",
+        revenueInTon: "Revenue in TON",
+        revenueInStars: "Revenue in Stars",
+        revenueInUsd: "Revenue in USD"
+    )
 }
 
 public class ChartTheme {    

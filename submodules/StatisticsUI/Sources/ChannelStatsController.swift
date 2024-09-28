@@ -238,8 +238,9 @@ private enum StatsEntry: ItemListNodeEntry {
     case adsStarsRevenueGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType, Double)
     
     case adsProceedsTitle(PresentationTheme, String)
-    case adsProceedsOverview(PresentationTheme, RevenueStats, StarsRevenueStats?)
-
+    case adsProceedsOverview(PresentationTheme, RevenueStats?, StarsRevenueStats?)
+    case adsProceedsInfo(PresentationTheme, String)
+    
     case adsTonBalanceTitle(PresentationTheme, String)
     case adsTonBalance(PresentationTheme, RevenueStats, Bool, Bool)
     case adsTonBalanceInfo(PresentationTheme, String)
@@ -307,7 +308,7 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StatsSection.adsTonRevenue.rawValue
             case .adsStarsRevenueTitle, .adsStarsRevenueGraph:
                 return StatsSection.adsStarsRevenue.rawValue
-            case .adsProceedsTitle, .adsProceedsOverview:
+            case .adsProceedsTitle, .adsProceedsOverview, .adsProceedsInfo:
                 return StatsSection.adsProceeds.rawValue
             case .adsTonBalanceTitle, .adsTonBalance, .adsTonBalanceInfo:
                 return StatsSection.adsTonBalance.rawValue
@@ -430,24 +431,26 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 20007
             case .adsProceedsOverview:
                 return 20008
-            case .adsTonBalanceTitle:
+            case .adsProceedsInfo:
                 return 20009
-            case .adsTonBalance:
+            case .adsTonBalanceTitle:
                 return 20010
-            case .adsTonBalanceInfo:
+            case .adsTonBalance:
                 return 20011
-            case .adsStarsBalanceTitle:
+            case .adsTonBalanceInfo:
                 return 20012
-            case .adsStarsBalance:
+            case .adsStarsBalanceTitle:
                 return 20013
-            case .adsStarsBalanceInfo:
+            case .adsStarsBalance:
                 return 20014
-            case .adsTransactionsTitle:
+            case .adsStarsBalanceInfo:
                 return 20015
-            case .adsTransactionsTabs:
+            case .adsTransactionsTitle:
                 return 20016
+            case .adsTransactionsTabs:
+                return 20017
             case let .adsTransaction(index, _, _):
-                return 20017 + index
+                return 20018 + index
             case let .adsStarsTransaction(index, _, _):
                 return 30017 + index
             case .adsTransactionsExpand:
@@ -785,6 +788,12 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .adsProceedsInfo(lhsTheme, lhsText):
+                if case let .adsProceedsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .adsTonBalanceTitle(lhsTheme, lhsText):
                 if case let .adsTonBalanceTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -904,7 +913,8 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .boostersInfo(_, text),
                  let .boostLinkInfo(_, text),
                  let .boostGiftsInfo(_, text),
-                 let .adsCpmInfo(_, text):
+                 let .adsCpmInfo(_, text),
+                 let .adsProceedsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .overview(_, stats):
                 return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: false, stats: stats, sectionId: self.section, style: .blocks)
@@ -952,7 +962,7 @@ private enum StatsEntry: ItemListNodeEntry {
             case let .booster(_, _, _, boost):
                 let count = boost.multiplier
                 let expiresValue = stringForDate(timestamp: boost.expires, strings: presentationData.strings)
-                let expiresString: String
+                var expiresString: String
                 
                 let durationMonths = Int32(round(Float(boost.expires - boost.date) / (86400.0 * 30.0)))
                 let durationString = presentationData.strings.Stats_Boosts_ShortMonth("\(durationMonths)").string
@@ -988,17 +998,23 @@ private enum StatsEntry: ItemListNodeEntry {
                         expiresString = presentationData.strings.Stats_Boosts_ExpiresOn(expiresValue).string
                     }
                 } else {
+                    expiresString = "\(durationString) • \(expiresValue)"
                     if boost.flags.contains(.isUnclaimed) {
                         title = presentationData.strings.Stats_Boosts_Unclaimed
                         icon = .image(color: color, name: "Premium/Unclaimed")
                     } else if boost.flags.contains(.isGiveaway) {
-                        title = presentationData.strings.Stats_Boosts_ToBeDistributed
-                        icon = .image(color: color, name: "Premium/ToBeDistributed")
+                        if let stars = boost.stars {
+                            title = presentationData.strings.Stats_Boosts_Stars(Int32(stars))
+                            icon = .image(color: .stars, name: "Premium/PremiumStar")
+                            expiresString = expiresValue
+                        } else {
+                            title = presentationData.strings.Stats_Boosts_ToBeDistributed
+                            icon = .image(color: color, name: "Premium/ToBeDistributed")
+                        }
                     } else {
                         title = "Unknown"
                         icon = .image(color: color, name: "Premium/ToBeDistributed")
                     }
-                    expiresString = "\(durationString) • \(expiresValue)"
                 }
                 return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: icon, title: title, titleFont: .bold, titleBadge: count > 1 ? "\(count)" : nil, subtitle: expiresString, label: label.flatMap { .semitransparent($0) }, sectionId: self.section, action: {
                     arguments.openBoost(boost)
@@ -1014,7 +1030,7 @@ private enum StatsEntry: ItemListNodeEntry {
             case let .boostOverview(_, stats, isGroup):
                 return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: isGroup, stats: stats, sectionId: self.section, style: .blocks)
             case let .boostLink(_, link):
-                let invite: ExportedInvitation = .link(link: link, title: nil, isPermanent: false, requestApproval: false, isRevoked: false, adminId: PeerId(0), date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil)
+                let invite: ExportedInvitation = .link(link: link, title: nil, isPermanent: false, requestApproval: false, isRevoked: false, adminId: PeerId(0), date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil, pricing: nil)
                 return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, count: 0, peers: [], displayButton: true, displayImporters: false, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
                     arguments.copyBoostLink(link)
                 }, shareAction: {
@@ -1028,17 +1044,28 @@ private enum StatsEntry: ItemListNodeEntry {
                 })
             case let .boostPrepaid(_, _, title, subtitle, prepaidGiveaway):
                 let color: GiftOptionItem.Icon.Color
-                switch prepaidGiveaway.months {
-                case 3:
-                    color = .green
-                case 6:
-                    color = .blue
-                case 12:
-                    color = .red
-                default:
-                    color = .blue
+                let icon: String
+                var boosts: Int32
+                switch prepaidGiveaway.prize {
+                case let .premium(months):
+                    switch months {
+                    case 3:
+                        color = .green
+                    case 6:
+                        color = .blue
+                    case 12:
+                        color = .red
+                    default:
+                        color = .blue
+                    }
+                    icon = "Premium/Giveaway"
+                    boosts = prepaidGiveaway.quantity * 4
+                case let .stars(_, boostCount):
+                    color = .stars
+                    icon = "Premium/PremiumStar"
+                    boosts = boostCount
                 }
-                return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, titleBadge: "\(prepaidGiveaway.quantity * 4)", subtitle: subtitle, label: nil, sectionId: self.section, action: {
+                return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: icon), title: title, titleFont: .bold, titleBadge: "\(boosts)", subtitle: subtitle, label: nil, sectionId: self.section, action: {
                     arguments.createPrepaidGiveaway(prepaidGiveaway)
                 })
             case let .adsHeader(_, text):
@@ -1046,7 +1073,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     arguments.openMonetizationIntro()
                 })
             case let .adsProceedsOverview(_, stats, starsStats):
-                return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: false, stats: stats, additionalStats: starsStats, sectionId: self.section, style: .blocks)
+                return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: false, stats: stats ?? starsStats, additionalStats: stats != nil ? starsStats : nil, sectionId: self.section, style: .blocks)
             case let .adsTonBalance(_, stats, canWithdraw, isEnabled):
                 return MonetizationBalanceItem(
                     context: arguments.context,
@@ -1140,7 +1167,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     detailText = stringForMediumCompactDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
                 }
             
-                let label = amountAttributedString(formatBalanceText(transaction.amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, showPlus: true), integralFont: font, fractionalFont: smallLabelFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
+                let label = tonAmountAttributedString(formatTonAmountText(transaction.amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, showPlus: true), integralFont: font, fractionalFont: smallLabelFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
             
                 label.insert(NSAttributedString(string: " $ ", font: font, textColor: labelColor), at: 1)
                 if let range = label.string.range(of: "$"), let icon = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonMedium"), color: labelColor) {
@@ -1413,7 +1440,17 @@ private func boostsEntries(
         entries.append(.boostPrepaidTitle(presentationData.theme, presentationData.strings.Stats_Boosts_PrepaidGiveawaysTitle))
         var i: Int32 = 0
         for giveaway in boostData.prepaidGiveaways {
-            entries.append(.boostPrepaid(i, presentationData.theme, presentationData.strings.Stats_Boosts_PrepaidGiveawayCount(giveaway.quantity), presentationData.strings.Stats_Boosts_PrepaidGiveawayMonths("\(giveaway.months)").string, giveaway))
+            let title: String
+            let text: String
+            switch giveaway.prize {
+            case let .premium(months):
+                title = presentationData.strings.Stats_Boosts_PrepaidGiveawayCount(giveaway.quantity)
+                text = presentationData.strings.Stats_Boosts_PrepaidGiveawayMonths("\(months)").string
+            case let .stars(stars, _):
+                title = presentationData.strings.Stats_Boosts_Stars(Int32(stars))
+                text = presentationData.strings.Stats_Boosts_StarsWinners(giveaway.quantity)
+            }
+            entries.append(.boostPrepaid(i, presentationData.theme, title, text, giveaway))
             i += 1
         }
         entries.append(.boostPrepaidInfo(presentationData.theme, presentationData.strings.Stats_Boosts_PrepaidGiveawaysInfo))
@@ -1516,67 +1553,92 @@ private func monetizationEntries(
     starsTransactionsInfo: StarsTransactionsContext.State,
     adsRestricted: Bool,
     premiumConfiguration: PremiumConfiguration,
-    monetizationConfiguration: MonetizationConfiguration
+    monetizationConfiguration: MonetizationConfiguration,
+    canViewRevenue: Bool,
+    canViewStarsRevenue: Bool
 ) -> [StatsEntry] {
     var entries: [StatsEntry] = []
-    entries.append(.adsHeader(presentationData.theme, presentationData.strings.Monetization_Header))
     
-    if !data.topHoursGraph.isEmpty {
-        entries.append(.adsImpressionsTitle(presentationData.theme, presentationData.strings.Monetization_ImpressionsTitle))
-        entries.append(.adsImpressionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.topHoursGraph, .hourlyStep))
+    if canViewRevenue {
+        entries.append(.adsHeader(presentationData.theme, presentationData.strings.Monetization_Header))
+        
+        if !data.topHoursGraph.isEmpty {
+            entries.append(.adsImpressionsTitle(presentationData.theme, presentationData.strings.Monetization_ImpressionsTitle))
+            entries.append(.adsImpressionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.topHoursGraph, .hourlyStep))
+        }
+        
+        if !data.revenueGraph.isEmpty {
+            entries.append(.adsTonRevenueTitle(presentationData.theme, presentationData.strings.Monetization_AdRevenueTitle))
+            entries.append(.adsTonRevenueGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.revenueGraph, .currency, data.usdRate))
+        }
     }
     
-    if !data.revenueGraph.isEmpty {
-        entries.append(.adsTonRevenueTitle(presentationData.theme, presentationData.strings.Monetization_AdRevenueTitle))
-        entries.append(.adsTonRevenueGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.revenueGraph, .currency, data.usdRate))
-    }
-    
-    if let starsData, !starsData.revenueGraph.isEmpty {
-        entries.append(.adsStarsRevenueTitle(presentationData.theme, presentationData.strings.Monetization_StarsRevenueTitle))
-        entries.append(.adsStarsRevenueGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, starsData.revenueGraph, .stars, starsData.usdRate))
+    if canViewStarsRevenue {
+        if let starsData, !starsData.revenueGraph.isEmpty {
+            entries.append(.adsStarsRevenueTitle(presentationData.theme, presentationData.strings.Monetization_StarsRevenueTitle))
+            entries.append(.adsStarsRevenueGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, starsData.revenueGraph, .stars, starsData.usdRate))
+        }
     }
         
-    entries.append(.adsProceedsTitle(presentationData.theme, presentationData.strings.Monetization_OverviewTitle))
-    entries.append(.adsProceedsOverview(presentationData.theme, data, starsData))
+    entries.append(.adsProceedsTitle(presentationData.theme, presentationData.strings.Monetization_StarsProceeds_Title))
+    entries.append(.adsProceedsOverview(presentationData.theme, canViewRevenue ? data : nil, canViewStarsRevenue ? starsData : nil))
+    
+    let hasTonBalance = data.balances.overallRevenue > 0
+    let hasStarsBalance = (starsData?.balances.overallRevenue ?? 0) > 0
+    
+    let proceedsInfo: String
+    if (canViewStarsRevenue && hasStarsBalance) && (canViewRevenue && hasTonBalance) {
+        proceedsInfo = presentationData.strings.Monetization_Proceeds_TonAndStars_Info
+    } else if canViewStarsRevenue && hasStarsBalance {
+        proceedsInfo = presentationData.strings.Monetization_Proceeds_Stars_Info
+    } else {
+        proceedsInfo = presentationData.strings.Monetization_Proceeds_Ton_Info
+    }
+    entries.append(.adsProceedsInfo(presentationData.theme, proceedsInfo))
     
     var isCreator = false
     if let peer, case let .channel(channel) = peer, channel.flags.contains(.isCreator) {
         isCreator = true
     }
-    entries.append(.adsTonBalanceTitle(presentationData.theme, presentationData.strings.Monetization_TonBalanceTitle))
-    entries.append(.adsTonBalance(presentationData.theme, data, isCreator && data.balances.availableBalance > 0, monetizationConfiguration.withdrawalAvailable))
-
-    if isCreator {
-        let withdrawalInfoText: String
-        if data.balances.availableBalance == 0 {
-            withdrawalInfoText = presentationData.strings.Monetization_Balance_ZeroInfo
-        } else if monetizationConfiguration.withdrawalAvailable {
-            withdrawalInfoText = presentationData.strings.Monetization_Balance_AvailableInfo
-        } else {
-            withdrawalInfoText = presentationData.strings.Monetization_Balance_ComingLaterInfo
+    
+    if canViewRevenue {
+        entries.append(.adsTonBalanceTitle(presentationData.theme, presentationData.strings.Monetization_TonBalanceTitle))
+        entries.append(.adsTonBalance(presentationData.theme, data, isCreator && data.balances.availableBalance > 0, data.balances.withdrawEnabled))
+    
+        if isCreator {
+            let withdrawalInfoText: String
+            if data.balances.availableBalance == 0 {
+                withdrawalInfoText = presentationData.strings.Monetization_Balance_ZeroInfo
+            } else if monetizationConfiguration.withdrawalAvailable {
+                withdrawalInfoText = presentationData.strings.Monetization_Balance_AvailableInfo
+            } else {
+                withdrawalInfoText = presentationData.strings.Monetization_Balance_ComingLaterInfo
+            }
+            entries.append(.adsTonBalanceInfo(presentationData.theme, withdrawalInfoText))
         }
-        entries.append(.adsTonBalanceInfo(presentationData.theme, withdrawalInfoText))
     }
     
-    if let starsData, starsData.balances.overallRevenue > 0 {
-        entries.append(.adsStarsBalanceTitle(presentationData.theme, presentationData.strings.Monetization_StarsBalanceTitle))
-        entries.append(.adsStarsBalance(presentationData.theme, starsData, isCreator && starsData.balances.availableBalance > 0, starsData.balances.withdrawEnabled, starsData.balances.nextWithdrawalTimestamp))
-        entries.append(.adsStarsBalanceInfo(presentationData.theme, presentationData.strings.Monetization_Balance_StarsInfo))
+    if canViewStarsRevenue {
+        if let starsData, starsData.balances.overallRevenue > 0 {
+            entries.append(.adsStarsBalanceTitle(presentationData.theme, presentationData.strings.Monetization_StarsBalanceTitle))
+            entries.append(.adsStarsBalance(presentationData.theme, starsData, isCreator && starsData.balances.availableBalance > 0, starsData.balances.withdrawEnabled, starsData.balances.nextWithdrawalTimestamp))
+            entries.append(.adsStarsBalanceInfo(presentationData.theme, presentationData.strings.Monetization_Balance_StarsInfo))
+        }
     }
     
     var addedTransactionsTabs = false
-    if !transactionsInfo.transactions.isEmpty && !starsTransactionsInfo.transactions.isEmpty {
+    if !transactionsInfo.transactions.isEmpty && !starsTransactionsInfo.transactions.isEmpty && canViewRevenue && canViewStarsRevenue {
         addedTransactionsTabs = true
         entries.append(.adsTransactionsTabs(presentationData.theme, presentationData.strings.Monetization_TonTransactions, presentationData.strings.Monetization_StarsTransactions, state.starsSelected))
     }
     
     var displayTonTransactions = false
-    if !transactionsInfo.transactions.isEmpty && (starsTransactionsInfo.transactions.isEmpty || !state.starsSelected) {
+    if canViewRevenue && !transactionsInfo.transactions.isEmpty && (starsTransactionsInfo.transactions.isEmpty || !state.starsSelected) {
         displayTonTransactions = true
     }
     
     var displayStarsTransactions = false
-    if !starsTransactionsInfo.transactions.isEmpty && (transactionsInfo.transactions.isEmpty || state.starsSelected) {
+    if canViewStarsRevenue && !starsTransactionsInfo.transactions.isEmpty && (transactionsInfo.transactions.isEmpty || state.starsSelected) {
         displayStarsTransactions = true
     }
     
@@ -1642,7 +1704,7 @@ private func monetizationEntries(
         }
     }
     
-    if isCreator {
+    if isCreator && canViewRevenue {
         var switchOffAdds: Bool? = nil
         if let boostData, boostData.level >= premiumConfiguration.minChannelRestrictAdsLevel {
             switchOffAdds = adsRestricted
@@ -1675,7 +1737,9 @@ private func channelStatsControllerEntries(
     starsTransactions: StarsTransactionsContext.State,
     adsRestricted: Bool,
     premiumConfiguration: PremiumConfiguration,
-    monetizationConfiguration: MonetizationConfiguration
+    monetizationConfiguration: MonetizationConfiguration,
+    canViewRevenue: Bool,
+    canViewStarsRevenue: Bool
 ) -> [StatsEntry] {
     switch state.section {
     case .stats:
@@ -1715,7 +1779,9 @@ private func channelStatsControllerEntries(
                 starsTransactionsInfo: starsTransactions,
                 adsRestricted: adsRestricted,
                 premiumConfiguration: premiumConfiguration,
-                monetizationConfiguration: monetizationConfiguration
+                monetizationConfiguration: monetizationConfiguration,
+                canViewRevenue: canViewRevenue,
+                canViewStarsRevenue: canViewStarsRevenue
             )
         }
     }
@@ -1882,8 +1948,13 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         }
         
         if boost.peer == nil, boost.flags.contains(.isGiveaway) && !boost.flags.contains(.isUnclaimed) {
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Stats_Boosts_TooltipToBeDistributed, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
+            if let _ = boost.stars {
+                let controller = context.sharedContext.makeStarsGiveawayBoostScreen(context: context, peerId: peerId, boost: boost)
+                pushImpl?(controller)
+            } else {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                presentImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Stats_Boosts_TooltipToBeDistributed, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
+            }
             return
         }
         
@@ -2010,9 +2081,12 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let peer = Promise<EnginePeer?>()
     peer.set(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
     
+    let canViewStatsValue = Atomic<Bool>(value: true)
     let peerData = context.engine.data.get(
-         TelegramEngine.EngineData.Item.Peer.AdsRestricted(id: peerId),
-         TelegramEngine.EngineData.Item.Peer.CanViewRevenue(id: peerId)
+        TelegramEngine.EngineData.Item.Peer.CanViewStats(id: peerId),
+        TelegramEngine.EngineData.Item.Peer.AdsRestricted(id: peerId),
+        TelegramEngine.EngineData.Item.Peer.CanViewRevenue(id: peerId),
+        TelegramEngine.EngineData.Item.Peer.CanViewStarsRevenue(id: peerId)
     )
     
     let longLoadingSignal: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(2.0, queue: Queue.mainQueue()))
@@ -2038,7 +2112,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     )
     |> deliverOnMainQueue
     |> map { presentationData, state, peer, data, messageView, stories, boostData, boostersState, giftsState, revenueState, revenueTransactions, starsState, starsTransactions, peerData, longLoading -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let (adsRestricted, canViewRevenue) = peerData
+        let (canViewStats, adsRestricted, canViewRevenue, canViewStarsRevenue) = peerData
+        
+        let _ = canViewStatsValue.swap(canViewStats)
         
         var isGroup = false
         if let peer, case let .channel(channel) = peer, case .group = channel.info {
@@ -2116,21 +2192,31 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
             case .stats:
                 index = 0
             case .boosts:
-                index = 1
+                if canViewStats {
+                    index = 1
+                } else {
+                    index = 0
+                }
             case .monetization:
-                index = 2
+                if canViewStats {
+                    index = 2
+                } else {
+                    index = 1
+                }
             }
             var tabs: [String] = []
-            tabs.append(presentationData.strings.Stats_Statistics)
+            if canViewStats {
+                tabs.append(presentationData.strings.Stats_Statistics)
+            }
             tabs.append(presentationData.strings.Stats_Boosts)
-            if canViewRevenue {
+            if canViewRevenue || canViewStarsRevenue {
                 tabs.append(presentationData.strings.Stats_Monetization)
             }
             title = .textWithTabs(peer?.compactDisplayTitle ?? "", tabs, index)
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelStatsControllerEntries(presentationData: presentationData, state: state, peer: peer, data: data, messages: messages, stories: stories, interactions: interactions, boostData: boostData, boostersState: boostersState, giftsState: giftsState, giveawayAvailable: premiumConfiguration.giveawayGiftsPurchaseAvailable, isGroup: isGroup, boostsOnly: boostsOnly, revenueState: revenueState?.stats, revenueTransactions: revenueTransactions, starsState: starsState?.stats, starsTransactions: starsTransactions, adsRestricted: adsRestricted, premiumConfiguration: premiumConfiguration, monetizationConfiguration: monetizationConfiguration), style: .blocks, emptyStateItem: emptyStateItem, headerItem: headerItem, crossfadeState: previous == nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelStatsControllerEntries(presentationData: presentationData, state: state, peer: peer, data: data, messages: messages, stories: stories, interactions: interactions, boostData: boostData, boostersState: boostersState, giftsState: giftsState, giveawayAvailable: premiumConfiguration.giveawayGiftsPurchaseAvailable, isGroup: isGroup, boostsOnly: boostsOnly, revenueState: revenueState?.stats, revenueTransactions: revenueTransactions, starsState: starsState?.stats, starsTransactions: starsTransactions, adsRestricted: adsRestricted, premiumConfiguration: premiumConfiguration, monetizationConfiguration: monetizationConfiguration, canViewRevenue: canViewRevenue, canViewStarsRevenue: canViewStarsRevenue), style: .blocks, emptyStateItem: emptyStateItem, headerItem: headerItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
@@ -2152,12 +2238,21 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     }
     controller.titleControlValueChanged = { value in
         updateState { state in
+            let canViewStats = canViewStatsValue.with { $0 }
             let section: ChannelStatsSection
             switch value {
             case 0:
-                section = .stats
+                if canViewStats {
+                    section = .stats
+                } else {
+                    section = .boosts
+                }
             case 1:
-                section = .boosts
+                if canViewStats {
+                    section = .boosts
+                } else {
+                    section = .monetization
+                }
             case 2:
                 section = .monetization
                 let _ = (ApplicationSpecificNotice.monetizationIntroDismissed(accountManager: context.sharedContext.accountManager)
@@ -2263,7 +2358,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                     }
                     
                     if let navigationController = controller?.navigationController as? NavigationController {
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil)))
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false)))
                     }
                 })
             })
@@ -2310,7 +2405,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 return
             }
             if let navigationController = controller?.navigationController as? NavigationController {
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
             }
         })
     }

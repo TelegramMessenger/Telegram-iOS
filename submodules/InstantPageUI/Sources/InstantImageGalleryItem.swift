@@ -9,6 +9,7 @@ import TelegramPresentationData
 import AccountContext
 import PhotoResources
 import GalleryUI
+import Tuples
 
 private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
@@ -50,8 +51,9 @@ class InstantImageGalleryItem: GalleryItem {
     let location: InstantPageGalleryEntryLocation?
     let openUrl: (InstantPageUrlItem) -> Void
     let openUrlOptions: (InstantPageUrlItem) -> Void
+    let getPreloadedResource: (String) -> Data?
     
-    init(context: AccountContext, presentationData: PresentationData, itemId: AnyHashable, userLocation: MediaResourceUserLocation, imageReference: ImageMediaReference, caption: NSAttributedString, credit: NSAttributedString, location: InstantPageGalleryEntryLocation?, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, itemId: AnyHashable, userLocation: MediaResourceUserLocation, imageReference: ImageMediaReference, caption: NSAttributedString, credit: NSAttributedString, location: InstantPageGalleryEntryLocation?, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void, getPreloadedResource: @escaping (String) -> Data?) {
         self.itemId = itemId
         self.userLocation = userLocation
         self.context = context
@@ -62,10 +64,11 @@ class InstantImageGalleryItem: GalleryItem {
         self.location = location
         self.openUrl = openUrl
         self.openUrlOptions = openUrlOptions
+        self.getPreloadedResource = getPreloadedResource
     }
     
     func node(synchronous: Bool) -> GalleryItemNode {
-        let node = InstantImageGalleryItemNode(context: self.context, presentationData: self.presentationData, openUrl: self.openUrl, openUrlOptions: self.openUrlOptions)
+        let node = InstantImageGalleryItemNode(context: self.context, presentationData: self.presentationData, openUrl: self.openUrl, openUrlOptions: self.openUrlOptions, getPreloadedResource: self.getPreloadedResource)
         
         node.setImage(userLocation: self.userLocation, imageReference: self.imageReference)
     
@@ -106,8 +109,11 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var fetchDisposable = MetaDisposable()
     
-    init(context: AccountContext, presentationData: PresentationData, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
+    private var getPreloadedResource: (String) -> Data?
+    
+    init(context: AccountContext, presentationData: PresentationData, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void, getPreloadedResource: @escaping (String) -> Data?) {
         self.context = context
+        self.getPreloadedResource = getPreloadedResource
         
         self.imageNode = TransformImageNode()
         self.footerContentNode = InstantPageGalleryFooterContentNode(context: context, presentationData: presentationData)
@@ -147,9 +153,38 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
             if let largestSize = largestRepresentationForPhoto(imageReference.media) {
                 let displaySize = largestSize.dimensions.cgSize.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: .black))()
-                self.imageNode.setSignal(chatMessagePhoto(postbox: self.context.account.postbox, userLocation: userLocation, photoReference: imageReference), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions.cgSize, self.imageNode)
-                self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: userLocation, userContentType: .image, reference: imageReference.resourceReference(largestSize.resource)).start())
+                
+                if let externalResource = largestSize.resource as? InstantPageExternalMediaResource {
+                    var url = externalResource.url
+                    if !url.hasPrefix("http") && !url.hasPrefix("https") && url.hasPrefix("//") {
+                        url = "https:\(url)"
+                    }
+                    let photoData: Signal<Tuple4<Data?, Data?, ChatMessagePhotoQuality, Bool>, NoError>
+                    if let preloadedData = getPreloadedResource(externalResource.url) {
+                        photoData = .single(Tuple4(nil, preloadedData, .full, true))
+                    } else {
+                        photoData = self.context.engine.resources.httpData(url: url, preserveExactUrl: true)
+                        |> map(Optional.init)
+                        |> `catch` { _ -> Signal<Data?, NoError> in
+                            return .single(nil)
+                        }
+                        |> map { data in
+                            if let data {
+                                return Tuple4(nil, data, .full, true)
+                            } else {
+                                return Tuple4(nil, nil, .full, false)
+                            }
+                        }
+                    }
+                    self.imageNode.setSignal(chatMessagePhotoInternal(photoData: photoData)
+                    |> map { _, _, generate in
+                        return generate
+                    })
+                } else {
+                    self.imageNode.setSignal(chatMessagePhoto(postbox: self.context.account.postbox, userLocation: userLocation, photoReference: imageReference), dispatchOnDisplayLink: false)
+                    self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: userLocation, userContentType: .image, reference: imageReference.resourceReference(largestSize.resource)).start())
+                }
             } else {
                 self._ready.set(.single(Void()))
             }

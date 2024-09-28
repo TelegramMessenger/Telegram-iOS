@@ -3,8 +3,12 @@ import Postbox
 import SwiftSignalKit
 import MtProtoKit
 
-public func fetchHttpResource(url: String) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
-    if let urlString = url.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryAllowed), let url = URL(string: urlString) {
+public func fetchHttpResource(url: String, preserveExactUrl: Bool = false) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+    var urlString: String? = url
+    if !preserveExactUrl {
+        urlString = url.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryAllowed)
+    }
+    if let urlString, let url = URL(string: urlString) {
         let signal = MTHttpRequestOperation.data(forHttpUrl: url)!
         return Signal { subscriber in
             subscriber.putNext(.reset)

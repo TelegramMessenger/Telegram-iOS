@@ -109,7 +109,7 @@ func _internal_peerSendAsAvailablePeers(accountPeerId: PeerId, network: Network,
             return .single([])
         }
         
-        if let channel = peer as? TelegramChannel, case .group = channel.info {
+        if let _ = peer as? TelegramChannel {
         } else {
             return .single([])
         }
@@ -138,7 +138,7 @@ func _internal_peerSendAsAvailablePeers(accountPeerId: PeerId, network: Network,
                     for chat in chats {
                         if let groupOrChannel = parsedPeers.get(chat.peerId) {
                             switch chat {
-                            case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _):
+                            case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _):
                                 if let participantsCount = participantsCount {
                                     subscribers[groupOrChannel.id] = participantsCount
                                 }

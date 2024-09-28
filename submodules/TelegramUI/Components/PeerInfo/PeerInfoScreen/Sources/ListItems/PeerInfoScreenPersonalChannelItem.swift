@@ -176,13 +176,14 @@ public final class LoadingOverlayNode: ASDisplayNode {
                         
             let chatListPresentationData = ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)
             
-            let peer1: EnginePeer = .user(TelegramUser(id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil))
+            let peer1: EnginePeer = .user(TelegramUser(id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil))
             let timestamp1: Int32 = 100000
             let peers: [EnginePeer.Id: EnginePeer] = [:]
             let interaction = ChatListNodeInteraction(context: context, animationCache: context.animationCache, animationRenderer: context.animationRenderer, activateSearch: {}, peerSelected: { _, _, _, _ in }, disabledPeerSelected: { _, _, _ in }, togglePeerSelected: { _, _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
             }, messageSelected: { _, _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, setPeerThreadMuted: { _, _, _ in }, deletePeer: { _, _ in }, deletePeerThread: { _, _ in }, setPeerThreadStopped: { _, _, _ in }, setPeerThreadPinned: { _, _, _ in }, setPeerThreadHidden: { _, _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, toggleThreadsSelection: { _, _ in }, hidePsa: { _ in }, activateChatPreview: { _, _, _, gesture, _ in
                 gesture?.cancel()
-            }, present: { _ in }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openPremiumGift: { _ in }, openPremiumManagement: {}, openActiveSessions: {}, openBirthdaySetup: {}, performActiveSessionAction: { _, _ in }, openChatFolderUpdates: {}, hideChatFolderUpdates: {}, openStories: { _, _ in }, dismissNotice: { _ in
+            }, present: { _ in }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openPremiumGift: { _ in }, openPremiumManagement: {}, openActiveSessions: {}, openBirthdaySetup: {}, performActiveSessionAction: { _, _ in }, openChatFolderUpdates: {}, hideChatFolderUpdates: {}, openStories: { _, _ in }, openStarsTopup: { _ in
+            }, dismissNotice: { _ in
             }, editPeer: { _ in
             })
             
@@ -416,7 +417,7 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
         }
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenPersonalChannelItem else {
             return 50.0
         }
@@ -532,6 +533,8 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
                 }
                 
                 StoryContainerScreen.openPeerStories(context: item.context, peerId: item.data.peer.id, parentController: controller, avatarNode: itemNode.avatarNode)
+            },
+            openStarsTopup: { _ in
             },
             dismissNotice: { _ in
             },

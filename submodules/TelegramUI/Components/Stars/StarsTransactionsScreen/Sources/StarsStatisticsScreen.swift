@@ -193,6 +193,10 @@ final class StarsStatisticsScreenComponent: Component {
         deinit {
             self.stateDisposable?.dispose()
         }
+        
+        func scrollToTop() {
+            self.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.scrollView.contentInset.top), animated: true)
+        }
                         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
@@ -462,8 +466,10 @@ final class StarsStatisticsScreenComponent: Component {
                                 return nil
                             }
                         },
-                        tapAction: { attributes, _ in
-                            component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_BotRevenue_Withdraw_Info_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                        tapAction: { [weak self] attributes, _ in
+                            if let controller = self?.controller?() as? StarsStatisticsScreen, let navigationController = controller.navigationController as? NavigationController {
+                                component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_BotRevenue_Withdraw_Info_URL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                            }
                         }
                     )),
                     items: [AnyComponentWithIdentity(id: 0, component: AnyComponent(
@@ -783,6 +789,13 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
         }
         
         self.transactionsContext.loadMore()
+        
+        self.scrollToTop = { [weak self] in
+            guard let self, let componentView = self.node.hostView.componentView as? StarsStatisticsScreenComponent.View else {
+                return
+            }
+            componentView.scrollToTop()
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {

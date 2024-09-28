@@ -19,6 +19,8 @@ internal:
   except:
     - tags
   script:
+    - export PATH=/opt/homebrew/opt/ruby/bin:$PATH                                  
+    - export PATH=`gem environment gemdir`/bin:$PATH
     - python3 -u build-system/Make/Make.py remote-build --darwinContainers="$DARWIN_CONTAINERS" --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath="$TELEGRAM_PRIVATE_DATA_PATH/build-configurations/enterprise-configuration.json" --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=enterprise --configuration=release_arm64
     - python3 -u build-system/Make/DeployToAppCenter.py --configuration="$TELEGRAM_PRIVATE_DATA_PATH/appcenter-configurations/appcenter-internal.json" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
   environment:
@@ -93,6 +95,8 @@ beta_testflight:
   except:
     - tags
   script:
+    - export PATH=/opt/homebrew/opt/ruby/bin:$PATH                                  
+    - export PATH=`gem environment gemdir`/bin:$PATH
     - python3 -u build-system/Make/Make.py remote-build --darwinContainers="$DARWIN_CONTAINERS" --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath="build-system/appstore-configuration.json" --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=appstore --configuration=release_arm64
   environment:
     name: testflight_llc

@@ -35,6 +35,9 @@ class GeneralChartComponentController: ChartThemeContainer {
     var initialHorizontalRange: ClosedRange<CGFloat> = BaseConstants.defaultRange
     var initialVerticalRange: ClosedRange<CGFloat> = BaseConstants.defaultRange
     
+    var currency: GraphCurrency?
+    var conversionRate: Double = 1.0
+    
     public var cartViewBounds: (() -> CGRect) = { fatalError() }
     public var chartFrame: (() -> CGRect) = { fatalError() }
     
@@ -201,7 +204,7 @@ class GeneralChartComponentController: ChartThemeContainer {
     
     var detailsVisible = false
     func showDetailsView(at chartPosition: CGFloat, detailsViewPosition: CGFloat, dataIndex: Int, date: Date, animated: Bool, feedback: Bool) {
-        setDetailsViewModel?(chartDetailsViewModel(closestDate: date, pointIndex: dataIndex), animated, feedback)
+        setDetailsViewModel?(chartDetailsViewModel(closestDate: date, pointIndex: dataIndex, currency: self.currency, rate: self.conversionRate), animated, feedback)
         setDetailsChartVisibleClosure?(true, true)
         setDetailsViewPositionClosure?(detailsViewPosition)
         detailsVisible = true
@@ -329,8 +332,8 @@ class GeneralChartComponentController: ChartThemeContainer {
         return (updatedRange, verticalLabels)
     }
 
-    func chartDetailsViewModel(closestDate: Date, pointIndex: Int) -> ChartDetailsViewModel {
-        let values: [ChartDetailsViewModel.Value] = chartsCollection.chartValues.enumerated().map { arg in
+    func chartDetailsViewModel(closestDate: Date, pointIndex: Int, currency: GraphCurrency? = nil, rate: Double = 1.0) -> ChartDetailsViewModel {
+        var values: [ChartDetailsViewModel.Value] = chartsCollection.chartValues.enumerated().map { arg in
             let (index, component) = arg
             return ChartDetailsViewModel.Value(prefix: nil,
                                                title: component.name,
@@ -338,6 +341,39 @@ class GeneralChartComponentController: ChartThemeContainer {
                                                color: component.color,
                                                visible: chartVisibility[index])
         }
+        
+        if let currency, let firstValue = values.first, let color = GColor(hexString: "#dda747") {
+            let updatedTitle: String
+            switch currency {
+            case .ton:
+                updatedTitle = self.strings.revenueInTon
+            case .xtr:
+                updatedTitle = self.strings.revenueInStars
+            }
+            values[0] = ChartDetailsViewModel.Value(
+                prefix: nil,
+                title: updatedTitle,
+                value: firstValue.value,
+                color: color,
+                visible: firstValue.visible
+            )
+            
+            let convertedValue = (self.verticalLimitsNumberFormatter.number(from: firstValue.value) as? Double ?? 0.0) * rate
+            let convertedValueString: String
+            if convertedValue > 1.0 {
+                convertedValueString = String(format: "%0.1f", convertedValue)
+            } else {
+                convertedValueString = String(format: "%0.3f", convertedValue)
+            }
+            values.append(ChartDetailsViewModel.Value(
+                prefix: nil,
+                title: self.strings.revenueInUsd,
+                value: "≈$\(convertedValueString)",
+                color: color,
+                visible: firstValue.visible
+            ))
+        }
+        
         let dateString: String
         if isZoomed {
             dateString = BaseConstants.timeDateFormatter.string(from: closestDate)

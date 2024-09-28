@@ -61,13 +61,6 @@ public enum ChatTranslationDisplayType {
     case translated
 }
 
-public enum ChatOpenWebViewSource: Equatable {
-    case generic
-    case menu
-    case inline(bot: EnginePeer)
-    case webApp(botApp: BotApp)
-}
-
 public final class ChatPanelInterfaceInteraction {
     public let setupReplyMessage: (MessageId?, @escaping (ContainedViewLayoutTransition, @escaping () -> Void) -> Void) -> Void
     public let setupEditMessage: (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void

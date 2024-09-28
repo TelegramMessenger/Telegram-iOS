@@ -76,6 +76,7 @@ public final class PremiumStarComponent: Component {
     let hasIdleAnimations: Bool
     let colors: [UIColor]?
     let particleColor: UIColor?
+    let backgroundColor: UIColor?
     
     public init(
         theme: PresentationTheme,
@@ -83,7 +84,8 @@ public final class PremiumStarComponent: Component {
         isVisible: Bool,
         hasIdleAnimations: Bool,
         colors: [UIColor]? = nil,
-        particleColor: UIColor? = nil
+        particleColor: UIColor? = nil,
+        backgroundColor: UIColor? = nil
     ) {
         self.theme = theme
         self.isIntro = isIntro
@@ -91,10 +93,11 @@ public final class PremiumStarComponent: Component {
         self.hasIdleAnimations = hasIdleAnimations
         self.colors = colors
         self.particleColor = particleColor
+        self.backgroundColor = backgroundColor
     }
     
     public static func ==(lhs: PremiumStarComponent, rhs: PremiumStarComponent) -> Bool {
-        return lhs.theme === rhs.theme && lhs.isIntro == rhs.isIntro && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations && lhs.colors == rhs.colors && lhs.particleColor == rhs.particleColor
+        return lhs.theme === rhs.theme && lhs.isIntro == rhs.isIntro && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations && lhs.colors == rhs.colors && lhs.particleColor == rhs.particleColor && lhs.backgroundColor == rhs.backgroundColor
     }
     
     public final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
@@ -290,6 +293,101 @@ public final class PremiumStarComponent: Component {
             }
         }
         
+        private func updateColors(animated: Bool = false) {
+            guard let component = self.component, let colors = component.colors, let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
+                return
+            }
+            if animated {
+                UIView.animate(withDuration: 0.25, animations: {
+                    node.geometry?.materials.first?.diffuse.contents = generateDiffuseTexture(colors: colors)
+                })
+            } else {
+                node.geometry?.materials.first?.diffuse.contents = generateDiffuseTexture(colors: colors)
+            }
+            
+            let names: [String] = [
+                "particles_left",
+                "particles_right",
+                "particles_left_bottom",
+                "particles_right_bottom",
+                "particles_center"
+            ]
+            
+            let starNames: [String] = [
+                "coins_left",
+                "coins_right"
+            ]
+            
+            if let particleColor = component.particleColor {
+                for name in starNames {
+                    if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
+                        if animated {
+                            particleSystem.warmupDuration = 0.0
+                        }
+                        particleSystem.particleIntensity = 1.0
+                        particleSystem.particleIntensityVariation = 0.05
+                        particleSystem.particleColor = particleColor
+                        particleSystem.particleColorVariation = SCNVector4Make(0.07, 0.0, 0.1, 0.0)
+                        node.isHidden = false
+                        
+                        if let propertyControllers = particleSystem.propertyControllers, let sizeController = propertyControllers[.size], let colorController = propertyControllers[.color] {
+                            let animation = CAKeyframeAnimation()
+                            if let existing = colorController.animation as? CAKeyframeAnimation {
+                                animation.keyTimes = existing.keyTimes
+                                animation.values = existing.values?.compactMap { ($0 as? UIColor)?.alpha } ?? []
+                            } else {
+                                animation.values = [ 0.0, 1.0, 1.0, 0.0 ]
+                            }
+                            let opacityController = SCNParticlePropertyController(animation: animation)
+                            particleSystem.propertyControllers = [
+                                .size: sizeController,
+                                .opacity: opacityController
+                            ]
+                        }
+                    }
+                }
+            } else {
+                if animated {
+                    for name in starNames {
+                        if let node = scene.rootNode.childNode(withName: name, recursively: false) {
+                            node.isHidden = true
+                        }
+                    }
+                }
+            }
+            
+            for name in names {
+                if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
+                    if let particleColor = component.particleColor {
+                        particleSystem.particleIntensity = min(1.0, 2.0 * particleSystem.particleIntensity)
+                        particleSystem.particleIntensityVariation = 0.05
+                        particleSystem.particleColor = particleColor
+                        particleSystem.particleColorVariation = SCNVector4Make(0.1, 0.0, 0.12, 0.0)
+                    } else {
+                        particleSystem.particleColorVariation = SCNVector4Make(0.12, 0.03, 0.035, 0.0)
+                        if animated {
+                            particleSystem.particleColor = UIColor(rgb: 0xaa69ea)
+                        }
+                    }
+                                            
+                    if let propertyControllers = particleSystem.propertyControllers, let sizeController = propertyControllers[.size], let colorController = propertyControllers[.color] {
+                        let animation = CAKeyframeAnimation()
+                        if let existing = colorController.animation as? CAKeyframeAnimation {
+                            animation.keyTimes = existing.keyTimes
+                            animation.values = existing.values?.compactMap { ($0 as? UIColor)?.alpha } ?? []
+                        } else {
+                            animation.values = [ 0.0, 1.0, 1.0, 0.0 ]
+                        }
+                        let opacityController = SCNParticlePropertyController(animation: animation)
+                        particleSystem.propertyControllers = [
+                            .size: sizeController,
+                            .opacity: opacityController
+                        ]
+                    }
+                }
+            }
+        }
+        
         private var didSetup = false
         private func setup() {
             guard !self.didSetup, let scene = loadCompressedScene(name: "star2", version: sceneVersion) else {
@@ -300,78 +398,7 @@ public final class PremiumStarComponent: Component {
             self.sceneView.scene = scene
             self.sceneView.delegate = self
             
-            if let component = self.component, let node = scene.rootNode.childNode(withName: "star", recursively: false), let colors =
-                component.colors {
-                node.geometry?.materials.first?.diffuse.contents = generateDiffuseTexture(colors: colors)
-                                
-                let names: [String] = [
-                    "particles_left",
-                    "particles_right",
-                    "particles_left_bottom",
-                    "particles_right_bottom",
-                    "particles_center"
-                ]
-                
-                let starNames: [String] = [
-                    "coins_left",
-                    "coins_right"
-                ]
-                
-                if let particleColor = component.particleColor {
-                    for name in starNames {
-                        if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
-                            particleSystem.particleIntensity = 1.0
-                            particleSystem.particleIntensityVariation = 0.05
-                            particleSystem.particleColor = particleColor
-                            particleSystem.particleColorVariation = SCNVector4Make(0.07, 0.0, 0.1, 0.0)
-                            node.isHidden = false
-                            
-                            if let propertyControllers = particleSystem.propertyControllers, let sizeController = propertyControllers[.size], let colorController = propertyControllers[.color] {
-                                let animation = CAKeyframeAnimation()
-                                if let existing = colorController.animation as? CAKeyframeAnimation {
-                                    animation.keyTimes = existing.keyTimes
-                                    animation.values = existing.values?.compactMap { ($0 as? UIColor)?.alpha } ?? []
-                                } else {
-                                    animation.values = [ 0.0, 1.0, 1.0, 0.0 ]
-                                }
-                                let opacityController = SCNParticlePropertyController(animation: animation)
-                                particleSystem.propertyControllers = [
-                                    .size: sizeController,
-                                    .opacity: opacityController
-                                ]
-                            }
-                        }
-                    }
-                }
-                
-                for name in names {
-                    if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
-                        if let particleColor = component.particleColor {
-                            particleSystem.particleIntensity = min(1.0, 2.0 * particleSystem.particleIntensity)
-                            particleSystem.particleIntensityVariation = 0.05
-                            particleSystem.particleColor = particleColor
-                            particleSystem.particleColorVariation = SCNVector4Make(0.1, 0.0, 0.12, 0.0)
-                        } else {
-                            particleSystem.particleColorVariation = SCNVector4Make(0.12, 0.03, 0.035, 0.0)
-                        }
-                                                
-                        if let propertyControllers = particleSystem.propertyControllers, let sizeController = propertyControllers[.size], let colorController = propertyControllers[.color] {
-                            let animation = CAKeyframeAnimation()
-                            if let existing = colorController.animation as? CAKeyframeAnimation {
-                                animation.keyTimes = existing.keyTimes
-                                animation.values = existing.values?.compactMap { ($0 as? UIColor)?.alpha } ?? []
-                            } else {
-                                animation.values = [ 0.0, 1.0, 1.0, 0.0 ]
-                            }
-                            let opacityController = SCNParticlePropertyController(animation: animation)
-                            particleSystem.propertyControllers = [ 
-                                .size: sizeController,
-                                .opacity: opacityController
-                            ]
-                        }
-                    }
-                }
-            }
+            self.updateColors()
             
             if self.animateFrom != nil {
                 let _ = self.sceneView.snapshot()
@@ -515,10 +542,6 @@ public final class PremiumStarComponent: Component {
                 return
             }
             
-//            if let material = node.geometry?.materials.first {
-//                material.metalness.intensity = 0.4
-//            }
-            
             let animation = CABasicAnimation(keyPath: "contentsTransform")
             animation.fillMode = .forwards
             animation.fromValue = NSValue(scnMatrix4: initial)
@@ -536,7 +559,13 @@ public final class PremiumStarComponent: Component {
             node.geometry?.materials.first?.emission.addAnimation(group, forKey: "shimmer")
         }
         
-        private func playAppearanceAnimation(velocity: CGFloat? = nil, smallAngle: Bool = false, mirror: Bool = false, explode: Bool = false) {
+        private func playAppearanceAnimation(
+            velocity: CGFloat? = nil,
+            smallAngle: Bool = false,
+            mirror: Bool = false,
+            explode: Bool = false,
+            force: Bool = false
+        ) {
             guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
                 return
             }
@@ -621,7 +650,7 @@ public final class PremiumStarComponent: Component {
             }
         
             var from = node.presentation.eulerAngles
-            if abs(from.y - .pi * 2.0) < 0.001 {
+            if abs(from.y) - .pi * 2.0 < 0.05 {
                 from.y = 0.0
             }
             node.removeAnimation(forKey: "tapRotate")
@@ -633,6 +662,7 @@ public final class PremiumStarComponent: Component {
             if mirror {
                 toValue *= -1
             }
+            
             let to = SCNVector3(x: 0.0, y: toValue, z: 0.0)
             let distance = rad2deg(to.y - from.y)
             
@@ -657,12 +687,20 @@ public final class PremiumStarComponent: Component {
         }
         
         func update(component: PremiumStarComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+            let previousComponent = self.component
             self.component = component
             
             self.setup()
             
-            if let _ = component.particleColor {
-                self.sceneView.backgroundColor = component.theme.list.blocksBackgroundColor
+            if let previousComponent, component.colors != previousComponent.colors {
+                self.updateColors(animated: true)
+                self.playAppearanceAnimation(velocity: nil, mirror: component.colors?.contains(UIColor(rgb: 0xe57d02)) == true, explode: true, force: true)
+            }
+            
+            if let backgroundColor = component.backgroundColor {
+                self.sceneView.backgroundColor = backgroundColor
+            } else {
+                self.sceneView.backgroundColor = .clear
             }
             
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
@@ -678,6 +716,211 @@ public final class PremiumStarComponent: Component {
     
     public func makeView() -> View {
         return View(frame: CGRect(), isIntro: self.isIntro)
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
+    }
+}
+
+public final class StandalonePremiumStarComponent: Component {
+    let theme: PresentationTheme
+    let colors: [UIColor]?
+    
+    public init(
+        theme: PresentationTheme,
+        colors: [UIColor]? = nil
+    ) {
+        self.theme = theme
+        self.colors = colors
+    }
+    
+    public static func ==(lhs: StandalonePremiumStarComponent, rhs: StandalonePremiumStarComponent) -> Bool {
+        return lhs.theme === rhs.theme && lhs.colors == rhs.colors
+    }
+    
+    public final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
+        public final class Tag {
+            public init() {
+            }
+        }
+        
+        public func matches(tag: Any) -> Bool {
+            if let _ = tag as? Tag {
+                return true
+            }
+            return false
+        }
+        
+        private var component: StandalonePremiumStarComponent?
+        
+        private var _ready = Promise<Bool>()
+        public var ready: Signal<Bool, NoError> {
+            return self._ready.get()
+        }
+        
+        private let sceneView: SCNView
+                
+        private var timer: SwiftSignalKit.Timer?
+        
+        override init(frame: CGRect) {
+            self.sceneView = SCNView(frame: CGRect(origin: .zero, size: CGSize(width: 64.0, height: 64.0)))
+            self.sceneView.backgroundColor = .clear
+            self.sceneView.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
+            self.sceneView.isUserInteractionEnabled = false
+            self.sceneView.preferredFramesPerSecond = 60
+            self.sceneView.isJitteringEnabled = true
+            
+            super.init(frame: frame)
+            
+            self.addSubview(self.sceneView)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.timer?.invalidate()
+        }
+        
+        private var didSetup = false
+        private func setup() {
+            guard !self.didSetup, let scene = loadCompressedScene(name: "star2", version: sceneVersion) else {
+                return
+            }
+            
+            self.didSetup = true
+            self.sceneView.scene = scene
+            self.sceneView.delegate = self
+            
+            if let component = self.component, let node = scene.rootNode.childNode(withName: "star", recursively: false), let colors =
+                component.colors {
+                node.geometry?.materials.first?.diffuse.contents = generateDiffuseTexture(colors: colors)
+            }
+            
+            for node in scene.rootNode.childNodes {
+                if let name = node.name, name.hasPrefix("particles") {
+                    node.isHidden = true
+                }
+            }
+            
+            self.didSetReady = true
+            self._ready.set(.single(true))
+            self.onReady()
+        }
+        
+        private var didSetReady = false
+        public func renderer(_ renderer: SCNSceneRenderer, didRenderScene scene: SCNScene, atTime time: TimeInterval) {
+            if !self.didSetReady {
+                self.didSetReady = true
+                
+                Queue.mainQueue().justDispatch {
+                    self._ready.set(.single(true))
+                    self.onReady()
+                }
+            }
+        }
+        
+        private func onReady() {
+            //self.setupScaleAnimation()
+            //self.setupGradientAnimation()
+            
+            self.playAppearanceAnimation(mirror: true)
+        }
+        
+        private func setupScaleAnimation() {
+            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
+                return
+            }
+
+            let fromScale: Float = 0.1
+            let toScale: Float = 0.092
+            
+            let animation = CABasicAnimation(keyPath: "scale")
+            animation.duration = 2.0
+            animation.fromValue = NSValue(scnVector3: SCNVector3(x: fromScale, y: fromScale, z: fromScale))
+            animation.toValue = NSValue(scnVector3: SCNVector3(x: toScale, y: toScale, z: toScale))
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            animation.autoreverses = true
+            animation.repeatCount = .infinity
+
+            node.addAnimation(animation, forKey: "scale")
+        }
+        
+        private func setupGradientAnimation() {
+            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
+                return
+            }
+            guard let initial = node.geometry?.materials.first?.diffuse.contentsTransform else {
+                return
+            }
+            
+            let animation = CABasicAnimation(keyPath: "contentsTransform")
+            animation.duration = 4.5
+            animation.fromValue = NSValue(scnMatrix4: initial)
+            animation.toValue = NSValue(scnMatrix4: SCNMatrix4Translate(initial, -0.35, 0.35, 0))
+            animation.timingFunction = CAMediaTimingFunction(name: .linear)
+            animation.autoreverses = true
+            animation.repeatCount = .infinity
+            
+            node.geometry?.materials.first?.diffuse.addAnimation(animation, forKey: "gradient")
+        }
+        
+        private func playAppearanceAnimation(velocity: CGFloat? = nil, smallAngle: Bool = false, mirror: Bool = false) {
+            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
+                return
+            }
+        
+            var from = node.presentation.eulerAngles
+            if abs(from.y - .pi * 2.0) < 0.001 {
+                from.y = 0.0
+            }
+            node.removeAnimation(forKey: "tapRotate")
+            
+            var toValue: Float = smallAngle ? 0.0 : .pi * 2.0
+            if let velocity = velocity, !smallAngle && abs(velocity) > 200 && velocity < 0.0 {
+                toValue *= -1
+            }
+            if mirror {
+                toValue *= -1
+            }
+            let to = SCNVector3(x: 0.0, y: toValue, z: 0.0)
+            let distance = rad2deg(to.y - from.y)
+            
+            guard !distance.isZero else {
+                return
+            }
+            
+            let animation = CABasicAnimation(keyPath: "eulerAngles")
+            animation.fromValue = NSValue(scnVector3: from)
+            animation.toValue = NSValue(scnVector3: to)
+            animation.duration = 0.4 * UIView.animationDurationFactor()
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            animation.completion = { [weak node] finished in
+                if finished {
+                    node?.eulerAngles = SCNVector3(x: 0.0, y: 0.0, z: 0.0)
+                }
+            }
+            node.addAnimation(animation, forKey: "rotate")
+        }
+        
+        func update(component: StandalonePremiumStarComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            
+            self.setup()
+            
+            self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
+            if self.sceneView.superview == self {
+                self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
+            }
+            
+            return availableSize
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
     }
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {

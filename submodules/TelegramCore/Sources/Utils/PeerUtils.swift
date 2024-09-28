@@ -30,6 +30,9 @@ public extension Peer {
         
         if let restrictionInfo = restrictionInfo {
             for rule in restrictionInfo.rules {
+                if rule.reason == "sensitive" {
+                    continue
+                }
                 if rule.platform == "all" || rule.platform == platform || contentSettings.addContentRestrictionReasons.contains(rule.platform) {
                     if !contentSettings.ignoreContentRestrictionReasons.contains(rule.reason) {
                         return rule.text
@@ -191,6 +194,15 @@ public extension Peer {
         }
     }
     
+    var isSubscription: Bool {
+        switch self {
+        case let channel as TelegramChannel:
+            return channel.subscriptionUntilDate != nil
+        default:
+            return false
+        }
+    }
+    
     var isCloseFriend: Bool {
         switch self {
         case let user as TelegramUser:
@@ -209,6 +221,25 @@ public extension Peer {
         default:
             return false
         }
+    }
+    
+    func hasSensitiveContent(platform: String) -> Bool {
+        var restrictionInfo: PeerAccessRestrictionInfo?
+        switch self {
+        case let user as TelegramUser:
+            restrictionInfo = user.restrictionInfo
+        case let channel as TelegramChannel:
+            restrictionInfo = channel.restrictionInfo
+        default:
+            break
+        }
+        
+        if let restrictionInfo, let rule = restrictionInfo.rules.first(where: { $0.reason == "sensitive" }) {
+            if rule.platform == "all" || rule.platform == platform {
+                return true
+            }
+        }
+        return false
     }
     
     var isForum: Bool {

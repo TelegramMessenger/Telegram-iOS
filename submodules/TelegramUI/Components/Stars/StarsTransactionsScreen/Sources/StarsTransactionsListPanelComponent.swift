@@ -203,12 +203,16 @@ final class StarsTransactionsListPanelComponent: Component {
                                   
                     let fontBaseDisplaySize = 17.0
                     
-                    let itemTitle: String
+                    var itemTitle: String
                     let itemSubtitle: String?
                     var itemDate: String
+                    var itemPeer = item.peer
                     switch item.peer {
                     case let .peer(peer):
-                        if !item.media.isEmpty {
+                        if let _ = item.giveawayMessageId {
+                            itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
+                            itemSubtitle = environment.strings.Stars_Intro_Transaction_GiveawayPrize
+                        } else if !item.media.isEmpty {
                             itemTitle = environment.strings.Stars_Intro_Transaction_MediaPurchase
                             itemSubtitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                         } else if let title = item.title {
@@ -216,7 +220,15 @@ final class StarsTransactionsListPanelComponent: Component {
                             itemSubtitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                         } else {
                             itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
-                            itemSubtitle = nil
+                            if item.flags.contains(.isReaction) {
+                                itemSubtitle = environment.strings.Stars_Intro_Transaction_Reaction_Title
+                            } else if item.flags.contains(.isGift) {
+                                itemSubtitle = environment.strings.Stars_Intro_Transaction_Gift_Title
+                            } else if let _ = item.subscriptionPeriod {
+                                itemSubtitle = environment.strings.Stars_Intro_Transaction_SubscriptionFee_Title
+                            } else {
+                                itemSubtitle = nil
+                            }
                         }
                     case .appStore:
                         itemTitle = environment.strings.Stars_Intro_Transaction_AppleTopUp_Title
@@ -226,8 +238,14 @@ final class StarsTransactionsListPanelComponent: Component {
                         itemSubtitle = environment.strings.Stars_Intro_Transaction_GoogleTopUp_Subtitle
                     case .fragment:
                         if component.isAccount {
-                            itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
-                            itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
+                            if item.flags.contains(.isGift) {
+                                itemTitle = environment.strings.Stars_Intro_Transaction_Gift_UnknownUser
+                                itemSubtitle = environment.strings.Stars_Intro_Transaction_Gift_Title
+                                itemPeer = .fragment
+                            } else {
+                                itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
+                                itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
+                            }
                         } else {
                             itemTitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Title
                             itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Subtitle
@@ -254,9 +272,15 @@ final class StarsTransactionsListPanelComponent: Component {
                     }
                     itemLabel = NSAttributedString(string: labelString, font: Font.medium(fontBaseDisplaySize), textColor: labelString.hasPrefix("-") ? environment.theme.list.itemDestructiveColor : environment.theme.list.itemDisclosureActions.constructive.fillColor)
                     
+                    var itemDateColor = environment.theme.list.itemSecondaryTextColor
                     itemDate = stringForMediumCompactDate(timestamp: item.date, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
                     if item.flags.contains(.isRefund) {
                         itemDate += " – \(environment.strings.Stars_Intro_Transaction_Refund)"
+                    } else if item.flags.contains(.isPending) {
+                        itemDate += " – \(environment.strings.Monetization_Transaction_Pending)"
+                    } else if item.flags.contains(.isFailed) {
+                        itemDate += " – \(environment.strings.Monetization_Transaction_Failed)"
+                        itemDateColor = environment.theme.list.itemDestructiveColor
                     }
                     
                     var titleComponents: [AnyComponentWithIdentity<Empty>] = []
@@ -287,7 +311,7 @@ final class StarsTransactionsListPanelComponent: Component {
                             text: .plain(NSAttributedString(
                                 string: itemDate,
                                 font: Font.regular(floor(fontBaseDisplaySize * 14.0 / 17.0)),
-                                textColor: environment.theme.list.itemSecondaryTextColor
+                                textColor: itemDateColor
                             )),
                             maximumNumberOfLines: 1
                         )))
@@ -298,7 +322,7 @@ final class StarsTransactionsListPanelComponent: Component {
                             theme: environment.theme,
                             title: AnyComponent(VStack(titleComponents, alignment: .left, spacing: 2.0)),
                             contentInsets: UIEdgeInsets(top: 9.0, left: environment.containerInsets.left, bottom: 8.0, right: environment.containerInsets.right),
-                            leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: item.peer, photo: item.photo, media: item.media, backgroundColor: environment.theme.list.plainBackgroundColor))), false),
+                            leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: itemPeer, photo: item.photo, media: item.media, backgroundColor: environment.theme.list.plainBackgroundColor))), false),
                             icon: nil,
                             accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
                             action: { [weak self] _ in
@@ -379,7 +403,17 @@ final class StarsTransactionsListPanelComponent: Component {
                     let wasEmpty = self.items.isEmpty
                     let hadLocalTransactions = self.items.contains(where: { $0.flags.contains(.isLocal) })
                     
-                    self.items = status.transactions
+                    var existingIds = Set<String>()
+                    var filteredItems: [StarsContext.State.Transaction] = []
+                    for transaction in status.transactions {
+                        let id = transaction.extendedId
+                        if !existingIds.contains(id) {
+                            existingIds.insert(id)
+                            filteredItems.append(transaction)
+                        }
+                    }
+                    
+                    self.items = filteredItems
                     if !status.isLoading {
                         self.currentLoadMoreId = nil
                     }

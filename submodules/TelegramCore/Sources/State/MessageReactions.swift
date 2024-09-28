@@ -7,6 +7,7 @@ import MtProtoKit
 public enum UpdateMessageReaction {
     case builtin(String)
     case custom(fileId: Int64, file: TelegramMediaFile?)
+    case stars
     
     public var reaction: MessageReaction.Reaction {
         switch self {
@@ -14,6 +15,8 @@ public enum UpdateMessageReaction {
             return .builtin(value)
         case let .custom(fileId, _):
             return .custom(fileId)
+        case .stars:
+            return .stars
         }
     }
 }
@@ -83,6 +86,8 @@ public func updateMessageReactionsInteractively(account: Account, messageIds: [M
                                 mappedValue = .builtin(value)
                             case let .custom(fileId):
                                 mappedValue = .custom(fileId: fileId, file: nil)
+                            case .stars:
+                                mappedValue = .stars
                             }
                             reactions.append(mappedValue)
                         }
@@ -99,6 +104,8 @@ public func updateMessageReactionsInteractively(account: Account, messageIds: [M
                     }
                 case let .builtin(value):
                     mappedReactions.append(PendingReactionsMessageAttribute.PendingReaction(value: .builtin(value), sendAsPeerId: sendAsPeerId))
+                case .stars:
+                    mappedReactions.append(PendingReactionsMessageAttribute.PendingReaction(value: .stars, sendAsPeerId: sendAsPeerId))
                 }
             }
             
@@ -132,6 +139,8 @@ public func updateMessageReactionsInteractively(account: Account, messageIds: [M
                                     } else {
                                         continue
                                     }
+                                case .stars:
+                                    recentReactionItem = RecentReactionItem(.stars)
                                 }
                                 
                                 if let entry = CodableEntry(recentReactionItem) {
@@ -161,6 +170,115 @@ public func updateMessageReactionsInteractively(account: Account, messageIds: [M
         }
     }
     |> ignoreValues
+}
+
+func _internal_sendStarsReactionsInteractively(account: Account, messageId: MessageId, count: Int, isAnonymous: Bool?) -> Signal<Bool, NoError> {
+    return account.postbox.transaction { transaction -> Bool in
+        transaction.setPendingMessageAction(type: .sendStarsReaction, id: messageId, action: SendStarsReactionsAction(randomId: Int64.random(in: Int64.min ... Int64.max)))
+        var resolvedIsAnonymousValue = false
+        transaction.updateMessage(messageId, update: { currentMessage in
+            var storeForwardInfo: StoreMessageForwardInfo?
+            if let forwardInfo = currentMessage.forwardInfo {
+                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+            }
+            var mappedCount = Int32(count)
+            var attributes = currentMessage.attributes
+            var resolvedIsAnonymous = _internal_getStarsReactionDefaultToPrivate(transaction: transaction)
+            for attribute in attributes {
+                if let attribute = attribute as? ReactionsMessageAttribute {
+                    if let myReaction = attribute.topPeers.first(where: { $0.isMy }) {
+                        resolvedIsAnonymous = myReaction.isAnonymous
+                    }
+                }
+            }
+            loop: for j in 0 ..< attributes.count {
+                if let current = attributes[j] as? PendingStarsReactionsMessageAttribute {
+                    mappedCount += current.count
+                    resolvedIsAnonymous = current.isAnonymous
+                    attributes.remove(at: j)
+                    break loop
+                }
+            }
+            
+            if let isAnonymous {
+                resolvedIsAnonymous = isAnonymous
+                _internal_setStarsReactionDefaultToPrivate(isPrivate: isAnonymous, transaction: transaction)
+            }
+                
+            attributes.append(PendingStarsReactionsMessageAttribute(accountPeerId: account.peerId, count: mappedCount, isAnonymous: resolvedIsAnonymous))
+            
+            resolvedIsAnonymousValue = resolvedIsAnonymous
+            
+            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+        })
+        
+        return resolvedIsAnonymousValue
+    }
+}
+
+func cancelPendingSendStarsReactionInteractively(account: Account, messageId: MessageId) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        transaction.setPendingMessageAction(type: .sendStarsReaction, id: messageId, action: nil)
+        transaction.updateMessage(messageId, update: { currentMessage in
+            var storeForwardInfo: StoreMessageForwardInfo?
+            if let forwardInfo = currentMessage.forwardInfo {
+                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+            }
+            var attributes = currentMessage.attributes
+            loop: for j in 0 ..< attributes.count {
+                if let _ = attributes[j] as? PendingStarsReactionsMessageAttribute {
+                    attributes.remove(at: j)
+                    break loop
+                }
+            }
+            
+            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+        })
+    }
+    |> ignoreValues
+}
+
+func _internal_forceSendPendingSendStarsReaction(account: Account, messageId: MessageId) -> Signal<Never, NoError> {
+    account.stateManager.forceSendPendingStarsReaction(messageId: messageId)
+    
+    return .complete()
+}
+
+func _internal_updateStarsReactionIsAnonymous(account: Account, messageId: MessageId, isAnonymous: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        _internal_setStarsReactionDefaultToPrivate(isPrivate: isAnonymous, transaction: transaction)
+        
+        transaction.updateMessage(messageId, update: { currentMessage in
+            var storeForwardInfo: StoreMessageForwardInfo?
+            if let forwardInfo = currentMessage.forwardInfo {
+                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+            }
+            var attributes = currentMessage.attributes
+            for j in (0 ..< attributes.count).reversed() {
+                if let attribute = attributes[j] as? ReactionsMessageAttribute {
+                    var updatedTopPeers = attribute.topPeers
+                    if let index = updatedTopPeers.firstIndex(where: { $0.isMy }) {
+                        updatedTopPeers[index].isAnonymous = isAnonymous
+                    }
+                    attributes[j] = ReactionsMessageAttribute(canViewList: attribute.canViewList, isTags: attribute.isTags, reactions: attribute.reactions, recentPeers: attribute.recentPeers, topPeers: updatedTopPeers)
+                }
+            }
+            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+        })
+        
+        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+        guard let inputPeer else {
+            return .complete()
+        }
+        
+        return account.network.request(Api.functions.messages.togglePaidReactionPrivacy(peer: inputPeer, msgId: messageId.id, private: isAnonymous ? .boolTrue : .boolFalse))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> ignoreValues
+    }
 }
 
 private enum RequestUpdateMessageReactionError {
@@ -250,8 +368,85 @@ private func requestUpdateMessageReaction(postbox: Postbox, network: Network, st
     }
 }
 
+private func requestSendStarsReaction(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId) -> Signal<Never, RequestUpdateMessageReactionError> {
+    return postbox.transaction { transaction -> (Peer, Int32, Bool)? in
+        guard let peer = transaction.getPeer(messageId.peerId) else {
+            return nil
+        }
+        guard let message = transaction.getMessage(messageId) else {
+            return nil
+        }
+        var count: Int32 = 0
+        var isAnonymous = false
+        for attribute in message.attributes {
+            if let attribute = attribute as? PendingStarsReactionsMessageAttribute {
+                count += attribute.count
+                isAnonymous = attribute.isAnonymous
+                break
+            }
+        }
+        return (peer, count, isAnonymous)
+    }
+    |> castError(RequestUpdateMessageReactionError.self)
+    |> mapToSignal { peerAndValue in
+        guard let (peer, count, isAnonymous) = peerAndValue else {
+            return .fail(.generic)
+        }
+        guard let inputPeer = apiInputPeer(peer) else {
+            return .fail(.generic)
+        }
+        if messageId.namespace != Namespaces.Message.Cloud {
+            return .fail(.generic)
+        }
+        
+        if count > 0 {
+            let randomPartId = UInt64(UInt32(bitPattern: Int32.random(in: Int32.min ... Int32.max)))
+            let timestampPart = UInt64(UInt32(bitPattern: Int32(Date().timeIntervalSince1970)))
+            let randomId = (timestampPart << 32) | randomPartId
+            
+            var flags: Int32 = 0
+            flags |= 1 << 0
+            
+            let signal: Signal<Never, RequestUpdateMessageReactionError> = network.request(Api.functions.messages.sendPaidReaction(flags: flags, peer: inputPeer, msgId: messageId.id, count: count, randomId: Int64(bitPattern: randomId), private: isAnonymous ? .boolTrue : .boolFalse))
+            |> mapError { _ -> RequestUpdateMessageReactionError in
+                return .generic
+            }
+            |> mapToSignal { result -> Signal<Never, RequestUpdateMessageReactionError> in
+                stateManager.starsContext?.add(balance: Int64(-count), addTransaction: false)
+                
+                return postbox.transaction { transaction -> Void in
+                    transaction.setPendingMessageAction(type: .sendStarsReaction, id: messageId, action: UpdateMessageReactionsAction())
+                    transaction.updateMessage(messageId, update: { currentMessage in
+                        var storeForwardInfo: StoreMessageForwardInfo?
+                        if let forwardInfo = currentMessage.forwardInfo {
+                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+                        }
+                        let reactions = mergedMessageReactions(attributes: currentMessage.attributes, isTags: currentMessage.areReactionsTags(accountPeerId: stateManager.accountPeerId))
+                        var attributes = currentMessage.attributes
+                        for j in (0 ..< attributes.count).reversed() {
+                            if attributes[j] is PendingStarsReactionsMessageAttribute || attributes[j] is ReactionsMessageAttribute {
+                                attributes.remove(at: j)
+                            }
+                        }
+                        if let reactions {
+                            attributes.append(reactions)
+                        }
+                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                    })
+                    stateManager.addUpdates(result)
+                }
+                |> castError(RequestUpdateMessageReactionError.self)
+                |> ignoreValues
+            }
+            return signal
+        } else {
+            return .complete()
+        }
+    }
+}
+
 private final class ManagedApplyPendingMessageReactionsActionsHelper {
-    var operationDisposables: [MessageId: Disposable] = [:]
+    var operationDisposables: [MessageId: (PendingMessageActionData, Disposable)] = [:]
     
     func update(entries: [PendingMessageActionsEntry]) -> (disposeOperations: [Disposable], beginOperations: [(PendingMessageActionsEntry, MetaDisposable)]) {
         var disposeOperations: [Disposable] = []
@@ -260,23 +455,26 @@ private final class ManagedApplyPendingMessageReactionsActionsHelper {
         var hasRunningOperationForPeerId = Set<PeerId>()
         var validIds = Set<MessageId>()
         for entry in entries {
+            if let current = self.operationDisposables[entry.id], !current.0.isEqual(to: entry.action) {
+                self.operationDisposables.removeValue(forKey: entry.id)
+                disposeOperations.append(current.1)
+            }
+            
             if !hasRunningOperationForPeerId.contains(entry.id.peerId) {
                 hasRunningOperationForPeerId.insert(entry.id.peerId)
                 validIds.insert(entry.id)
                 
-                if self.operationDisposables[entry.id] == nil {
-                    let disposable = MetaDisposable()
-                    beginOperations.append((entry, disposable))
-                    self.operationDisposables[entry.id] = disposable
-                }
+                let disposable = MetaDisposable()
+                beginOperations.append((entry, disposable))
+                self.operationDisposables[entry.id] = (entry.action, disposable)
             }
         }
         
         var removeMergedIds: [MessageId] = []
-        for (id, disposable) in self.operationDisposables {
+        for (id, actionAndDisposable) in self.operationDisposables {
             if !validIds.contains(id) {
                 removeMergedIds.append(id)
-                disposeOperations.append(disposable)
+                disposeOperations.append(actionAndDisposable.1)
             }
         }
         
@@ -288,17 +486,30 @@ private final class ManagedApplyPendingMessageReactionsActionsHelper {
     }
     
     func reset() -> [Disposable] {
-        let disposables = Array(self.operationDisposables.values)
+        let disposables = Array(self.operationDisposables.values.map(\.1))
         self.operationDisposables.removeAll()
         return disposables
     }
 }
 
-private func withTakenAction(postbox: Postbox, type: PendingMessageActionType, id: MessageId, _ f: @escaping (Transaction, PendingMessageActionsEntry?) -> Signal<Never, NoError>) -> Signal<Never, NoError> {
+private func withTakenReactionsAction(postbox: Postbox, type: PendingMessageActionType, id: MessageId, _ f: @escaping (Transaction, PendingMessageActionsEntry?) -> Signal<Never, NoError>) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Signal<Never, NoError> in
         var result: PendingMessageActionsEntry?
         
         if let action = transaction.getPendingMessageAction(type: type, id: id) as? UpdateMessageReactionsAction {
+            result = PendingMessageActionsEntry(id: id, action: action)
+        }
+        
+        return f(transaction, result)
+    }
+    |> switchToLatest
+}
+
+private func withTakenStarsAction(postbox: Postbox, type: PendingMessageActionType, id: MessageId, _ f: @escaping (Transaction, PendingMessageActionsEntry?) -> Signal<Never, NoError>) -> Signal<Never, NoError> {
+    return postbox.transaction { transaction -> Signal<Never, NoError> in
+        var result: PendingMessageActionsEntry?
+        
+        if let action = transaction.getPendingMessageAction(type: type, id: id) as? SendStarsReactionsAction {
             result = PendingMessageActionsEntry(id: id, action: action)
         }
         
@@ -327,7 +538,7 @@ func managedApplyPendingMessageReactionsActions(postbox: Postbox, network: Netwo
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenAction(postbox: postbox, type: .updateReaction, id: entry.id, { transaction, entry -> Signal<Never, NoError> in
+                let signal = withTakenReactionsAction(postbox: postbox, type: .updateReaction, id: entry.id, { transaction, entry -> Signal<Never, NoError> in
                     if let entry = entry {
                         if let _ = entry.action as? UpdateMessageReactionsAction {
                             return synchronizeMessageReactions(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, id: entry.id)
@@ -340,6 +551,72 @@ func managedApplyPendingMessageReactionsActions(postbox: Postbox, network: Netwo
                 |> then(
                     postbox.transaction { transaction -> Void in
                     transaction.setPendingMessageAction(type: .updateReaction, id: entry.id, action: nil)
+                    }
+                    |> ignoreValues
+                )
+                
+                disposable.set(signal.start())
+            }
+        })
+        
+        return ActionDisposable {
+            let disposables = helper.with { helper -> [Disposable] in
+                return helper.reset()
+            }
+            for disposable in disposables {
+                disposable.dispose()
+            }
+            disposable.dispose()
+        }
+    }
+}
+
+func managedApplyPendingMessageStarsReactionsActions(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
+    return Signal { _ in
+        let helper = Atomic<ManagedApplyPendingMessageReactionsActionsHelper>(value: ManagedApplyPendingMessageReactionsActionsHelper())
+        
+        let actionsKey = PostboxViewKey.pendingMessageActions(type: .sendStarsReaction)
+        let disposable = postbox.combinedView(keys: [actionsKey]).start(next: { view in
+            var entries: [PendingMessageActionsEntry] = []
+            if let v = view.views[actionsKey] as? PendingMessageActionsView {
+                entries = v.entries
+            }
+            
+            let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PendingMessageActionsEntry, MetaDisposable)]) in
+                return helper.update(entries: entries)
+            }
+            
+            for disposable in disposeOperations {
+                disposable.dispose()
+            }
+            
+            for (entry, disposable) in beginOperations {
+                let signal = withTakenStarsAction(postbox: postbox, type: .sendStarsReaction, id: entry.id, { transaction, entry -> Signal<Never, NoError> in
+                    if let entry = entry {
+                        if let _ = entry.action as? SendStarsReactionsAction {
+                            let triggerSignal: Signal<Void, NoError> = stateManager.forceSendPendingStarsReaction
+                            |> filter {
+                                $0 == entry.id
+                            }
+                            |> map { _ -> Void in
+                                return Void()
+                            }
+                            |> take(1)
+                            |> timeout(5.0, queue: .mainQueue(), alternate: .single(Void()))
+                            
+                            return triggerSignal
+                            |> mapToSignal { _ -> Signal<Never, NoError> in
+                                return synchronizeMessageStarsReactions(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, id: entry.id)
+                            }
+                        } else {
+                            assertionFailure()
+                        }
+                    }
+                    return .complete()
+                })
+                |> then(
+                    postbox.transaction { transaction -> Void in
+                    transaction.setPendingMessageAction(type: .sendStarsReaction, id: entry.id, action: nil)
                     }
                     |> ignoreValues
                 )
@@ -373,6 +650,30 @@ private func synchronizeMessageReactions(transaction: Transaction, postbox: Post
                 var attributes = currentMessage.attributes
                 loop: for j in 0 ..< attributes.count {
                     if let _ = attributes[j] as? PendingReactionsMessageAttribute {
+                        attributes.remove(at: j)
+                        break loop
+                    }
+                }
+                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+            })
+        }
+        |> ignoreValues
+    }
+}
+
+private func synchronizeMessageStarsReactions(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, id: MessageId) -> Signal<Never, NoError> {
+    return requestSendStarsReaction(postbox: postbox, network: network, stateManager: stateManager, messageId: id)
+    |> `catch` { _ -> Signal<Never, NoError> in
+        return postbox.transaction { transaction -> Void in
+            transaction.setPendingMessageAction(type: .sendStarsReaction, id: id, action: nil)
+            transaction.updateMessage(id, update: { currentMessage in
+                var storeForwardInfo: StoreMessageForwardInfo?
+                if let forwardInfo = currentMessage.forwardInfo {
+                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+                }
+                var attributes = currentMessage.attributes
+                loop: for j in 0 ..< attributes.count {
+                    if let _ = attributes[j] as? PendingStarsReactionsMessageAttribute {
                         attributes.remove(at: j)
                         break loop
                     }
@@ -682,7 +983,13 @@ func _internal_updatePeerReactionSettings(account: Account, peerId: PeerId, reac
             reactionLimitValue = maxReactionCount
         }
         
-        return account.network.request(Api.functions.messages.setChatAvailableReactions(flags: flags, peer: inputPeer, availableReactions: mappedReactions, reactionsLimit: reactionLimitValue))
+        var paidEnabled: Api.Bool?
+        if let starsAllowed = reactionSettings.starsAllowed {
+            flags |= 1 << 1
+            paidEnabled = starsAllowed ? .boolTrue : .boolFalse
+        }
+        
+        return account.network.request(Api.functions.messages.setChatAvailableReactions(flags: flags, peer: inputPeer, availableReactions: mappedReactions, reactionsLimit: reactionLimitValue, paidEnabled: paidEnabled))
         |> map(Optional.init)
         |> `catch` { error -> Signal<Api.Updates?, UpdatePeerAllowedReactionsError> in
             if error.errorDescription == "CHAT_NOT_MODIFIED" {
@@ -721,4 +1028,32 @@ func _internal_updateDefaultReaction(account: Account, reaction: MessageReaction
         return .single(.boolFalse)
     }
     |> ignoreValues
+}
+
+struct StarsReactionDefaultToPrivateData: Codable {
+    var isPrivate: Bool
+    
+    init(isPrivate: Bool) {
+        self.isPrivate = isPrivate
+    }
+    
+    static func key() -> ValueBoxKey {
+        let value = ValueBoxKey(length: 8)
+        value.setInt64(0, value: 0)
+        return value
+    }
+}
+
+func _internal_getStarsReactionDefaultToPrivate(transaction: Transaction) -> Bool {
+    guard let value = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.starsReactionDefaultToPrivate, key: StarsReactionDefaultToPrivateData.key()))?.get(StarsReactionDefaultToPrivateData.self) else {
+        return false
+    }
+    return value.isPrivate
+}
+
+func _internal_setStarsReactionDefaultToPrivate(isPrivate: Bool, transaction: Transaction) {
+    guard let entry = CodableEntry(StarsReactionDefaultToPrivateData(isPrivate: isPrivate)) else {
+        return
+    }
+    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.starsReactionDefaultToPrivate, key: StarsReactionDefaultToPrivateData.key()), entry: entry)
 }

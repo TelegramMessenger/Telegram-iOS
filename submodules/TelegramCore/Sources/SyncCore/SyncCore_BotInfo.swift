@@ -51,13 +51,15 @@ public final class BotInfo: PostboxCoding, Equatable {
     public let video: TelegramMediaFile?
     public let commands: [BotCommand]
     public let menuButton: BotMenuButton
+    public let privacyPolicyUrl: String?
     
-    public init(description: String, photo: TelegramMediaImage?, video: TelegramMediaFile?, commands: [BotCommand], menuButton: BotMenuButton) {
+    public init(description: String, photo: TelegramMediaImage?, video: TelegramMediaFile?, commands: [BotCommand], menuButton: BotMenuButton, privacyPolicyUrl: String?) {
         self.description = description
         self.photo = photo
         self.video = video
         self.commands = commands
         self.menuButton = menuButton
+        self.privacyPolicyUrl = privacyPolicyUrl
     }
     
     public init(decoder: PostboxDecoder) {
@@ -74,6 +76,7 @@ public final class BotInfo: PostboxCoding, Equatable {
         }
         self.commands = decoder.decodeObjectArrayWithDecoderForKey("c")
         self.menuButton = (decoder.decodeObjectForKey("b", decoder: { BotMenuButton(decoder: $0) }) as? BotMenuButton) ?? .commands
+        self.privacyPolicyUrl = decoder.decodeOptionalStringForKey("pp")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -90,9 +93,14 @@ public final class BotInfo: PostboxCoding, Equatable {
         }
         encoder.encodeObjectArray(self.commands, forKey: "c")
         encoder.encodeObject(self.menuButton, forKey: "b")
+        if let privacyPolicyUrl = self.privacyPolicyUrl {
+            encoder.encodeString(privacyPolicyUrl, forKey: "pp")
+        } else {
+            encoder.encodeNil(forKey: "pp")
+        }
     }
     
     public static func ==(lhs: BotInfo, rhs: BotInfo) -> Bool {
-        return lhs.description == rhs.description && lhs.commands == rhs.commands && lhs.menuButton == rhs.menuButton && lhs.photo == rhs.photo
+        return lhs.description == rhs.description && lhs.commands == rhs.commands && lhs.menuButton == rhs.menuButton && lhs.photo == rhs.photo && lhs.privacyPolicyUrl == rhs.privacyPolicyUrl
     }
 }

@@ -98,12 +98,14 @@ public struct NavigateToMessageParams {
     public var quote: Quote?
     public var progress: Promise<Bool>?
     public var forceNew: Bool
+    public var setupReply: Bool
     
-    public init(timestamp: Double?, quote: Quote?, progress: Promise<Bool>? = nil, forceNew: Bool = false) {
+    public init(timestamp: Double?, quote: Quote?, progress: Promise<Bool>? = nil, forceNew: Bool = false, setupReply: Bool = false) {
         self.timestamp = timestamp
         self.quote = quote
         self.progress = progress
         self.forceNew = forceNew
+        self.setupReply = setupReply
     }
 }
 
@@ -178,7 +180,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let navigateToMessageStandalone: (MessageId) -> Void
     public let navigateToThreadMessage: (PeerId, Int64, MessageId?) -> Void
     public let tapMessage: ((Message) -> Void)?
-    public let clickThroughMessage: () -> Void
+    public let clickThroughMessage: (UIView?, CGPoint?) -> Void
     public let toggleMessagesSelection: ([MessageId], Bool) -> Void
     public let sendCurrentMessage: (Bool, ChatSendMessageEffect?) -> Void
     public let sendMessage: (String) -> Void
@@ -270,6 +272,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let scrollToMessageId: (MessageIndex) -> Void
     public let navigateToStory: (Message, StoryId) -> Void
     public let attemptedNavigationToPrivateQuote: (Peer?) -> Void
+    public let forceUpdateWarpContents: () -> Void
     
     public var canPlayMedia: Bool = false
     public var hiddenMedia: [MessageId: [Media]] = [:]
@@ -307,7 +310,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         navigateToMessageStandalone: @escaping (MessageId) -> Void,
         navigateToThreadMessage: @escaping (PeerId, Int64, MessageId?) -> Void,
         tapMessage: ((Message) -> Void)?,
-        clickThroughMessage: @escaping () -> Void,
+        clickThroughMessage: @escaping (UIView?, CGPoint?) -> Void,
         toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
         sendCurrentMessage: @escaping (Bool, ChatSendMessageEffect?) -> Void,
         sendMessage: @escaping (String) -> Void,
@@ -398,6 +401,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         scrollToMessageId: @escaping (MessageIndex) -> Void,
         navigateToStory: @escaping (Message, StoryId) -> Void,
         attemptedNavigationToPrivateQuote: @escaping (Peer?) -> Void,
+        forceUpdateWarpContents: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
         stickerSettings: ChatInterfaceStickerSettings,
@@ -507,6 +511,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.scrollToMessageId = scrollToMessageId
         self.navigateToStory = navigateToStory
         self.attemptedNavigationToPrivateQuote = attemptedNavigationToPrivateQuote
+        self.forceUpdateWarpContents = forceUpdateWarpContents
         
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         

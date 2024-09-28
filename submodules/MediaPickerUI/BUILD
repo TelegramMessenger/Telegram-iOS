@@ -50,6 +50,7 @@ swift_library(
         "//submodules/ChatSendMessageActionUI",
         "//submodules/ComponentFlow",
         "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/AnimatedCountLabelNode",
     ],
     visibility = [
         "//visibility:public",

@@ -1357,7 +1357,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     sideInset: 0.0,
                     title: peer.peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
                     peer: peer.peer,
-                    subtitle: peer.isContact ? environment.strings.ChatList_PeerTypeContact : environment.strings.ChatList_PeerTypeNonContactUser,
+                    subtitle: PeerListItemComponent.Subtitle(text: peer.isContact ? environment.strings.ChatList_PeerTypeContact : environment.strings.ChatList_PeerTypeNonContactUser, color: .neutral),
                     subtitleAccessory: .none,
                     presence: nil,
                     selectionState: .none,

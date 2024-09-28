@@ -109,6 +109,7 @@ import PeerNameColorItem
 import PeerSelectionScreen
 import UIKitRuntimeUtils
 import OldChannelsController
+import UrlHandling
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -126,7 +127,7 @@ protocol PeerInfoScreenItem: AnyObject {
 class PeerInfoScreenItemNode: ASDisplayNode, AccessibilityFocusableNode {
     var bringToFrontForHighlight: (() -> Void)?
     
-    func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         preconditionFailure()
     }
     
@@ -165,7 +166,7 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
         self.addSubnode(self.bottomSeparatorNode)
     }
     
-    func update(width: CGFloat, safeInsets: UIEdgeInsets, hasCorners: Bool, presentationData: PresentationData, items: [PeerInfoScreenItem], transition: ContainedViewLayoutTransition) -> CGFloat {
+    func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, hasCorners: Bool, presentationData: PresentationData, items: [PeerInfoScreenItem], transition: ContainedViewLayoutTransition) -> CGFloat {
         self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
         self.topSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
@@ -217,7 +218,7 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
                 bottomItem = items[i + 1]
             }
             
-            let itemHeight = itemNode.update(width: width, safeInsets: safeInsets, presentationData: presentationData, item: item, topItem: topItem, bottomItem: bottomItem, hasCorners: hasCorners, transition: itemTransition)
+            let itemHeight = itemNode.update(context: context, width: width, safeInsets: safeInsets, presentationData: presentationData, item: item, topItem: topItem, bottomItem: bottomItem, hasCorners: hasCorners, transition: itemTransition)
             let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: width, height: itemHeight))
             itemTransition.updateFrame(node: itemNode, frame: itemFrame)
             if wasAdded {
@@ -290,6 +291,10 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
     let selectionPanel: ChatMessageSelectionInputPanelNode
     let separatorNode: ASDisplayNode
     let backgroundNode: NavigationBackgroundNode
+    
+    var viewForOverlayContent: UIView? {
+        return self.selectionPanel.viewForOverlayContent
+    }
     
     init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, deleteMessages: @escaping () -> Void, shareMessages: @escaping () -> Void, forwardMessages: @escaping () -> Void, reportMessages: @escaping () -> Void, displayCopyProtectionTip: @escaping (ASDisplayNode, Bool) -> Void) {
         self.context = context
@@ -446,7 +451,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         
         let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(.default), chatLocation: .peer(id: self.peerId), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil, accountPeerColor: nil, businessIntro: nil)
-        let panelHeight = self.selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: layout.intrinsicInsets.bottom, additionalSideInsets: UIEdgeInsets(), maxHeight: 0.0, isSecondary: false, transition: transition, interfaceState: interfaceState, metrics: layout.metrics, isMediaInputExpanded: false)
+        let panelHeight = self.selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: layout.intrinsicInsets.bottom, additionalSideInsets: UIEdgeInsets(), maxHeight: layout.size.height, isSecondary: false, transition: transition, interfaceState: interfaceState, metrics: layout.metrics, isMediaInputExpanded: false)
         
         transition.updateFrame(node: self.selectionPanel, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: panelHeight)))
         
@@ -558,10 +563,9 @@ private final class PeerInfoInteraction {
     let editingOpenInviteLinksSetup: () -> Void
     let editingOpenDiscussionGroupSetup: () -> Void
     let editingOpenStars: () -> Void
-    let editingToggleMessageSignatures: (Bool) -> Void
     let openParticipantsSection: (PeerInfoParticipantsSection) -> Void
     let openRecentActions: () -> Void
-    let openStats: (Bool) -> Void
+    let openStats: (ChannelStatsSection) -> Void
     let editingOpenPreHistorySetup: () -> Void
     let editingOpenAutoremoveMesages: () -> Void
     let openPermissions: () -> Void
@@ -626,10 +630,9 @@ private final class PeerInfoInteraction {
         editingOpenInviteLinksSetup: @escaping () -> Void,
         editingOpenDiscussionGroupSetup: @escaping () -> Void,
         editingOpenStars: @escaping () -> Void,
-        editingToggleMessageSignatures: @escaping (Bool) -> Void,
         openParticipantsSection: @escaping (PeerInfoParticipantsSection) -> Void,
         openRecentActions: @escaping () -> Void,
-        openStats: @escaping (Bool) -> Void,
+        openStats: @escaping (ChannelStatsSection) -> Void,
         editingOpenPreHistorySetup: @escaping () -> Void,
         editingOpenAutoremoveMesages: @escaping () -> Void,
         openPermissions: @escaping () -> Void,
@@ -693,7 +696,6 @@ private final class PeerInfoInteraction {
         self.editingOpenInviteLinksSetup = editingOpenInviteLinksSetup
         self.editingOpenDiscussionGroupSetup = editingOpenDiscussionGroupSetup
         self.editingOpenStars = editingOpenStars
-        self.editingToggleMessageSignatures = editingToggleMessageSignatures
         self.openParticipantsSection = openParticipantsSection
         self.openRecentActions = openRecentActions
         self.openStats = openStats
@@ -1203,6 +1205,7 @@ private enum InfoSection: Int, CaseIterable {
     case calls
     case personalChannel
     case peerInfo
+    case peerInfoTrailing
     case peerMembers
 }
 
@@ -1210,6 +1213,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     guard let data = data else {
         return []
     }
+    
+    var currentPeerInfoSection: InfoSection = .peerInfo
         
     var items: [InfoSection: [PeerInfoScreenItem]] = [:]
     for section in InfoSection.allCases {
@@ -1265,12 +1270,12 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             } else {
                 label = presentationData.strings.ContactInfo_PhoneLabelMobile
             }
-            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 2, label: label, text: formattedPhone, textColor: .accent, action: { node, progress in
+            items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 2, label: label, text: formattedPhone, textColor: .accent, action: { node, progress in
                 interaction.openPhone(phone, node, nil, progress)
             }, longTapAction: nil, contextAction: { node, gesture, _ in
                 interaction.openPhone(phone, node, gesture, nil)
-            }, requestLayout: {
-                interaction.requestLayout(false)
+            }, requestLayout: { animated in
+                interaction.requestLayout(animated)
             }))
         }
         if let mainUsername = user.addressName {
@@ -1280,7 +1285,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 additionalUsernames = presentationData.strings.Profile_AdditionalUsernames(String(usernames.map { "@\($0.username)" }.joined(separator: ", "))).string
             }
             
-            items[.peerInfo]!.append(
+            items[currentPeerInfoSection]!.append(
                 PeerInfoScreenLabeledValueItem(
                     id: 1,
                     label: presentationData.strings.Profile_Username,
@@ -1300,8 +1305,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         interaction.openQrCode()
                     }, contextAction: { node, gesture, _ in
                         interaction.openUsernameContextMenu(node, gesture)
-                    }, requestLayout: {
-                        interaction.requestLayout(false)
+                    }, requestLayout: { animated in
+                        interaction.requestLayout(animated)
                     }
                 )
             )
@@ -1326,30 +1331,94 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }
                 }
                 
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 400, context: context, label: hasBirthdayToday ? presentationData.strings.UserInfo_BirthdayToday : presentationData.strings.UserInfo_Birthday, text: stringForCompactBirthday(birthday, strings: presentationData.strings, showAge: true), textColor: .primary, leftIcon: hasBirthdayToday ? .birthday : nil, icon: hasBirthdayToday ? .premiumGift : nil, action: birthdayAction, longTapAction: nil, iconAction: {
+                items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 400, context: context, label: hasBirthdayToday ? presentationData.strings.UserInfo_BirthdayToday : presentationData.strings.UserInfo_Birthday, text: stringForCompactBirthday(birthday, strings: presentationData.strings, showAge: true), textColor: .primary, leftIcon: hasBirthdayToday ? .birthday : nil, icon: hasBirthdayToday ? .premiumGift : nil, action: birthdayAction, longTapAction: nil, iconAction: {
                     interaction.openPremiumGift()
-                }, contextAction: birthdayContextAction, requestLayout: {
+                }, contextAction: birthdayContextAction, requestLayout: { _ in
                 }))
+            }
+            
+            var hasAbout = false
+            if let about = cachedData.about, !about.isEmpty {
+                hasAbout = true
+            }
+            
+            var hasWebApp = false
+            if let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp) {
+                hasWebApp = true
             }
             
             if user.isFake {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: "", text: user.botInfo != nil ? presentationData.strings.UserInfo_FakeBotWarning : presentationData.strings.UserInfo_FakeUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: {
-                    interaction.requestLayout(false)
+                items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: "", text: user.botInfo != nil ? presentationData.strings.UserInfo_FakeBotWarning : presentationData.strings.UserInfo_FakeUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: { animated in
+                    interaction.requestLayout(animated)
                 }))
             } else if user.isScam {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: user.botInfo != nil ? presentationData.strings.UserInfo_ScamBotWarning : presentationData.strings.UserInfo_ScamUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: {
-                    interaction.requestLayout(false)
+                items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: user.botInfo != nil ? presentationData.strings.UserInfo_ScamBotWarning : presentationData.strings.UserInfo_ScamUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: { animated in
+                    interaction.requestLayout(animated)
                 }))
-            } else if let about = cachedData.about, !about.isEmpty {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.isPremium ? enabledPublicBioEntities : enabledPrivateBioEntities), action: isMyProfile ? { node, _ in
+            } else if hasAbout || hasWebApp {
+                var actionButton: PeerInfoScreenLabeledValueItem.Button?
+                if hasWebApp {
+                    actionButton = PeerInfoScreenLabeledValueItem.Button(title: presentationData.strings.PeerInfo_OpenAppButton, action: {
+                        guard let parentController = interaction.getController() else {
+                            return
+                        }
+                        
+                        if let navigationController = parentController.navigationController as? NavigationController, let minimizedContainer = navigationController.minimizedContainer {
+                            for controller in minimizedContainer.controllers {
+                                if let controller = controller as? AttachmentController, let mainController = controller.mainController as? WebAppController, mainController.botId == user.id && mainController.source == .generic {
+                                    navigationController.maximizeViewController(controller, animated: true)
+                                    return
+                                }
+                            }
+                        }
+                        
+                        context.sharedContext.openWebApp(
+                            context: context,
+                            parentController: parentController,
+                            updatedPresentationData: nil,
+                            peer: .user(user),
+                            threadId: nil,
+                            buttonText: "",
+                            url: "",
+                            simple: true,
+                            source: .generic,
+                            skipTermsOfService: true
+                        )
+                    })
+                }
+                
+                var label: String = ""
+                if let about = cachedData.about, !about.isEmpty {
+                    label = user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo
+                }
+                
+                items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: label, text: cachedData.about ?? "", textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.isPremium ? enabledPublicBioEntities : enabledPrivateBioEntities), action: isMyProfile ? { node, _ in
                     bioContextAction(node, nil, nil)
-                } : nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: {
-                    interaction.requestLayout(false)
+                } : nil, linkItemAction: bioLinkAction, button: actionButton, contextAction: bioContextAction, requestLayout: { animated in
+                    interaction.requestLayout(animated)
                 }))
+                
+                if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: 800, text: presentationData.strings.PeerInfo_AppFooterAdmin, linkAction: { action in
+                        if case let .tap(url) = action {
+                            context.sharedContext.applicationBindings.openUrl(url)
+                        }
+                    }))
+                    
+                    currentPeerInfoSection = .peerInfoTrailing
+                } else if actionButton != nil {
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: 800, text: presentationData.strings.PeerInfo_AppFooter, linkAction: { action in
+                        if case let .tap(url) = action {
+                            context.sharedContext.applicationBindings.openUrl(url)
+                        }
+                    }))
+                    
+                    currentPeerInfoSection = .peerInfoTrailing
+                }
             }
             
             if let businessHours = cachedData.businessHours {
-                items[.peerInfo]!.append(PeerInfoScreenBusinessHoursItem(id: 300, label: presentationData.strings.PeerInfo_BusinessHours_Label, businessHours: businessHours, requestLayout: { animated in
+                items[currentPeerInfoSection]!.append(PeerInfoScreenBusinessHoursItem(id: 300, label: presentationData.strings.PeerInfo_BusinessHours_Label, businessHours: businessHours, requestLayout: { animated in
                     interaction.requestLayout(animated)
                 }, longTapAction: nil, contextAction: workingHoursContextAction))
             }
@@ -1357,7 +1426,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             if let businessLocation = cachedData.businessLocation {
                 if let coordinates = businessLocation.coordinates {
                     let imageSignal = chatMapSnapshotImage(engine: context.engine, resource: MapSnapshotMediaResource(latitude: coordinates.latitude, longitude: coordinates.longitude, width: 90, height: 90))
-                    items[.peerInfo]!.append(PeerInfoScreenAddressItem(
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenAddressItem(
                         id: 301,
                         label: presentationData.strings.PeerInfo_Location_Label,
                         text: businessLocation.address,
@@ -1368,7 +1437,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         contextAction: businessLocationContextAction
                     ))
                 } else {
-                    items[.peerInfo]!.append(PeerInfoScreenAddressItem(
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenAddressItem(
                         id: 301,
                         label: presentationData.strings.PeerInfo_Location_Label,
                         text: businessLocation.address,
@@ -1382,25 +1451,25 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         
         if !isMyProfile {
             if let reactionSourceMessageId = reactionSourceMessageId, !data.isContact {
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
+                items[currentPeerInfoSection]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
                     interaction.openChat(nil)
                 }))
                 
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_BanAndReport, color: .destructive, action: {
+                items[currentPeerInfoSection]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_BanAndReport, color: .destructive, action: {
                     interaction.openReport(.reaction(reactionSourceMessageId))
                 }))
             } else if let _ = nearbyPeerDistance {
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
+                items[currentPeerInfoSection]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
                     interaction.openChat(nil)
                 }))
                 
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_Report, color: .destructive, action: {
+                items[currentPeerInfoSection]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_Report, color: .destructive, action: {
                     interaction.openReport(.user)
                 }))
             } else {
                 if !data.isContact {
                     if user.botInfo == nil {
-                        items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.PeerInfo_AddToContacts, action: {
+                        items[currentPeerInfoSection]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.PeerInfo_AddToContacts, action: {
                             interaction.openAddContact()
                         }))
                     }
@@ -1412,14 +1481,14 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 }
                 
                 if isBlocked {
-                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Unblock : presentationData.strings.Conversation_Unblock, action: {
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Unblock : presentationData.strings.Conversation_Unblock, action: {
                         interaction.updateBlocked(false)
                     }))
                 } else {
                     if user.flags.contains(.isSupport) || data.isContact {
                     } else {
                         if user.botInfo == nil {
-                            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
+                            items[currentPeerInfoSection]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
                                 interaction.updateBlocked(true)
                             }))
                         }
@@ -1427,22 +1496,47 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 }
                 
                 if let encryptionKeyFingerprint = data.encryptionKeyFingerprint {
-                    items[.peerInfo]!.append(PeerInfoScreenDisclosureEncryptionKeyItem(id: 5, text: presentationData.strings.Profile_EncryptionKey, fingerprint: encryptionKeyFingerprint, action: {
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenDisclosureEncryptionKeyItem(id: 5, text: presentationData.strings.Profile_EncryptionKey, fingerprint: encryptionKeyFingerprint, action: {
                         interaction.openEncryptionKey()
                     }))
                 }
+                                
+                let starsBalance = data.starsRevenueStatsState?.balances.currentBalance ?? 0
+                let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? 0
                 
-                if user.botInfo != nil {
-                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 6, text: presentationData.strings.ReportPeer_Report, action: {
+                if overallStarsBalance > 0 {
+                    var string = ""
+                    if overallStarsBalance > 0 {
+                        string.append("*\(presentationStringsFormattedNumber(Int32(starsBalance), presentationData.dateTimeFormat.groupingSeparator))")
+                    }
+                    let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                    if let range = attributedString.string.range(of: "*") {
+                        attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
+                        attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
+                    }
+                    
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenDisclosureItem(id: 9, label: .attributedText(attributedString), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.balance, action: {
+                        interaction.editingOpenStars()
+                    }))
+                }
+                   
+                if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenDisclosureItem(id: 10, label: .none, text: presentationData.strings.Bot_Settings, icon: UIImage(bundleImageName: "Chat/Info/SettingsIcon"), action: {
+                        interaction.openEditing()
+                    }))
+                }
+                
+                if let botInfo = user.botInfo, !botInfo.flags.contains(.canEdit) {
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenActionItem(id: 6, text: presentationData.strings.ReportPeer_Report, action: {
                         interaction.openReport(.default)
                     }))
                 }
                 
                 if let botInfo = user.botInfo, botInfo.flags.contains(.worksWithGroups) {
-                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 7, text: presentationData.strings.Bot_AddToChat, color: .accent, action: {
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenActionItem(id: 7, text: presentationData.strings.Bot_AddToChat, color: .accent, action: {
                         interaction.openAddBotToGroup()
                     }))
-                    items[.peerInfo]!.append(PeerInfoScreenCommentItem(id: 8, text: presentationData.strings.Bot_AddToChatInfo))
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: 8, text: presentationData.strings.Bot_AddToChatInfo))
                 }
             }
         }
@@ -1455,7 +1549,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         let ItemAdmins = 6
         let ItemMembers = 7
         let ItemMemberRequests = 8
-        let ItemEdit = 9
+        let ItemBalance = 9
+        let ItemEdit = 10
         
         if let _ = data.threadData {
             let mainUsername: String
@@ -1472,7 +1567,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             
             let linkText = "https://t.me/\(mainUsername)/\(threadId)"
             
-            items[.peerInfo]!.append(
+            items[currentPeerInfoSection]!.append(
                 PeerInfoScreenLabeledValueItem(
                     id: ItemUsername,
                     label: presentationData.strings.Channel_LinkItem,
@@ -1491,15 +1586,15 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         }
                     }, iconAction: {
                         interaction.openQrCode()
-                    }, requestLayout: {
-                        interaction.requestLayout(false)
+                    }, requestLayout: { animated in
+                        interaction.requestLayout(animated)
                     }
                 )
             )
             if let _ = channel.addressName {
                 
             } else {
-                items[.peerInfo]!.append(PeerInfoScreenCommentItem(id: ItemUsernameInfo, text: presentationData.strings.PeerInfo_PrivateShareLinkInfo))
+                items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: ItemUsernameInfo, text: presentationData.strings.PeerInfo_PrivateShareLinkInfo))
             }
         } else {
             if let location = (data.cachedData as? CachedChannelData)?.peerGeoLocation {
@@ -1524,7 +1619,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     additionalUsernames = presentationData.strings.Profile_AdditionalUsernames(String(usernames.map { "@\($0.username)" }.joined(separator: ", "))).string
                 }
                 
-                items[.peerInfo]!.append(
+                items[currentPeerInfoSection]!.append(
                     PeerInfoScreenLabeledValueItem(
                         id: ItemUsername,
                         label: presentationData.strings.Channel_LinkItem,
@@ -1548,8 +1643,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             }
                         }, iconAction: {
                             interaction.openQrCode()
-                        }, requestLayout: {
-                            interaction.requestLayout(false)
+                        }, requestLayout: { animated in
+                            interaction.requestLayout(animated)
                         }
                     )
                 )
@@ -1579,10 +1674,10 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     if case .group = channel.info {
                         enabledEntities = enabledPrivateBioEntities
                     }
-                    items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledEntities), action: isMyProfile ? { node, _ in
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledEntities), action: isMyProfile ? { node, _ in
                         bioContextAction(node, nil, nil)
-                    } : nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: {
-                        interaction.requestLayout(true)
+                    } : nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: { animated in
+                        interaction.requestLayout(animated)
                     }))
                 }
                 
@@ -1609,6 +1704,40 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                                 }))
                             }
                             
+                            if cachedData.flags.contains(.canViewRevenue) || cachedData.flags.contains(.canViewStarsRevenue) {
+                                let revenueBalance = data.revenueStatsState?.balances.currentBalance ?? 0
+                                let starsBalance = data.starsRevenueStatsState?.balances.currentBalance ?? 0
+                                
+                                let overallRevenueBalance = data.revenueStatsState?.balances.overallRevenue ?? 0
+                                let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? 0
+                                
+                                if overallRevenueBalance > 0 || overallStarsBalance > 0 {
+                                    var string = ""
+                                    if overallRevenueBalance > 0 {
+                                        string.append("#\(formatTonAmountText(revenueBalance, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))")
+                                    }
+                                    if overallStarsBalance > 0 {
+                                        if !string.isEmpty {
+                                            string.append(" ")
+                                        }
+                                        string.append("*\(presentationStringsFormattedNumber(Int32(starsBalance), presentationData.dateTimeFormat.groupingSeparator))")
+                                    }
+                                    let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                                    if let range = attributedString.string.range(of: "#") {
+                                        attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .ton), range: NSRange(range, in: attributedString.string))
+                                        attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
+                                    }
+                                    if let range = attributedString.string.range(of: "*") {
+                                        attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 1, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
+                                        attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
+                                    }
+                                    
+                                    items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemBalance, label: .attributedText(attributedString), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.balance, action: {
+                                        interaction.openStats(.monetization)
+                                    }))
+                                }
+                            }
+                            
                             items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemEdit, label: .none, text: presentationData.strings.Channel_Info_Settings, icon: UIImage(bundleImageName: "Chat/Info/SettingsIcon"), action: {
                                 interaction.openEditing()
                             }))
@@ -1631,10 +1760,10 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }
             
             if let aboutText = aboutText {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPrivateBioEntities), action: isMyProfile ? { node, _ in
+                items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPrivateBioEntities), action: isMyProfile ? { node, _ in
                     bioContextAction(node, nil, nil)
-                } : nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: {
-                    interaction.requestLayout(true)
+                } : nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: { animated in
+                    interaction.requestLayout(animated)
                 }))
             }
         }
@@ -1721,7 +1850,6 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             let ItemInfo = 3
             let ItemDelete = 4
             let ItemUsername = 5
-            let ItemStars = 6
             
             let ItemIntro = 7
             let ItemCommands = 8
@@ -1732,13 +1860,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text("@\(user.addressName ?? "")"), text: presentationData.strings.PeerInfo_Bot_Username, icon: PresentationResourcesSettings.bot, action: {
                     interaction.editingOpenPublicLinkSetup()
                 }))
-                
-                if let starsRevenueStats = data.starsRevenueStatsState, starsRevenueStats.balances.overallRevenue > 0 {
-                    items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStars, label: .text(presentationData.strings.PeerInfo_Bot_Balance_Stars(Int32(starsRevenueStats.balances.currentBalance))), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.stars, action: {
-                        interaction.editingOpenStars()
-                    }))
-                }
-                
+                                
                 items[.peerSettings]!.append(PeerInfoScreenActionItem(id: ItemIntro, text: presentationData.strings.PeerInfo_Bot_EditIntro, icon: UIImage(bundleImageName: "Peer Info/BotIntro"), action: {
                     interaction.openPeerMention("botfather", .withBotStartPayload(ChatControllerInitialBotStart(payload: "\(user.addressName ?? "")-intro", behavior: .interactive)))
                 }))
@@ -1875,9 +1997,17 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                         case .all:
                             label = presentationData.strings.PeerInfo_LabelAllReactions
                         case .empty:
-                            label = presentationData.strings.PeerInfo_ReactionsDisabled
+                            if let starsAllowed = reactionSettings.starsAllowed, starsAllowed {
+                                label = "1"
+                            } else {
+                                label = presentationData.strings.PeerInfo_ReactionsDisabled
+                            }
                         case let .limited(reactions):
-                            label = "\(reactions.count)"
+                            var countValue = reactions.count
+                            if let starsAllowed = reactionSettings.starsAllowed, starsAllowed {
+                                countValue += 1
+                            }
+                            label = "\(countValue)"
                         }
                     } else {
                         label = ""
@@ -1959,7 +2089,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 
                 if let cachedData = data.cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats) {
                     items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStats, label: .none, text: presentationData.strings.Channel_Info_Stats, icon: UIImage(bundleImageName: "Chat/Info/StatsIcon"), action: {
-                        interaction.openStats(false)
+                        interaction.openStats(.stats)
                     }))
                 }
                 
@@ -2472,6 +2602,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         isEditing: false,
         selectedMessageIds: nil,
         selectedStoryIds: nil,
+        paneIsReordering: false,
         updatingAvatar: nil,
         updatingBio: nil,
         avatarUploadProgress: nil,
@@ -2640,17 +2771,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             editingOpenStars: { [weak self] in
                 self?.editingOpenStars()
             },
-            editingToggleMessageSignatures: { [weak self] value in
-                self?.editingToggleMessageSignatures(value: value)
-            },
             openParticipantsSection: { [weak self] section in
                 self?.openParticipantsSection(section: section)
             },
             openRecentActions: { [weak self] in
                 self?.openRecentActions()
             },
-            openStats: { [weak self] boosts in
-                self?.openStats(boosts: boosts)
+            openStats: { [weak self] section in
+                self?.openStats(section: section)
             },
             editingOpenPreHistorySetup: { [weak self] in
                 self?.editingOpenPreHistorySetup()
@@ -2882,7 +3010,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 }
                                 
                                 let currentPeerId = strongSelf.peerId
-                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
+                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), keepStack: .always, useExisting: false, purposefulAction: {
                                     var viewControllers = navigationController.viewControllers
                                     var indexesToRemove = Set<Int>()
                                     var keptCurrentChatController = false
@@ -3044,7 +3172,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                         }
                                         
                                         let currentPeerId = strongSelf.peerId
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), keepStack: .always, useExisting: false, purposefulAction: {
                                             var viewControllers = navigationController.viewControllers
                                             var indexesToRemove = Set<Int>()
                                             var keptCurrentChatController = false
@@ -3171,7 +3299,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, navigateToMessage: { _, _, _ in
         }, navigateToMessageStandalone: { _ in
         }, navigateToThreadMessage: { _, _, _ in
-        }, tapMessage: nil, clickThroughMessage: {
+        }, tapMessage: nil, clickThroughMessage: { _, _ in
         }, toggleMessagesSelection: { [weak self] ids, value in
             guard let strongSelf = self else {
                 return
@@ -3229,7 +3357,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             
             if let foundGalleryMessage = foundGalleryMessage {
-                strongSelf.context.sharedContext.openChatInstantPage(context: strongSelf.context, message: foundGalleryMessage, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
+                if let controller = strongSelf.context.sharedContext.makeInstantPageController(context: strongSelf.context, message: foundGalleryMessage, sourcePeerType: associatedData?.automaticDownloadPeerType) {
+                    navigationController.pushViewController(controller)
+                }
             }
         }, openWallpaper: { _ in
         }, openTheme: { _ in
@@ -3361,6 +3491,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, scrollToMessageId: { _ in
         }, navigateToStory: { _, _ in
         }, attemptedNavigationToPrivateQuote: { _ in
+        }, forceUpdateWarpContents: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().startStrict(next: { [weak self] ids in
@@ -3529,6 +3660,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             guard let self else {
                 return
             }
+            
             self.headerNode.navigationButtonContainer.performAction?(.postStory, nil, nil)
         }
 
@@ -4122,13 +4254,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 strongSelf.chatInterfaceInteraction.selectionState = strongSelf.state.selectedMessageIds.flatMap { ChatInterfaceSelectionState(selectedIds: $0) }
                 strongSelf.paneContainerNode.updateSelectedMessageIds(strongSelf.state.selectedMessageIds, animated: true)
             case .selectionDone:
-                strongSelf.state = strongSelf.state.withSelectedMessageIds(nil).withSelectedStoryIds(nil)
+                strongSelf.state = strongSelf.state.withSelectedMessageIds(nil).withSelectedStoryIds(nil).withPaneIsReordering(false)
                 if let (layout, navigationHeight) = strongSelf.validLayout {
                     strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring), additive: false)
                 }
                 strongSelf.chatInterfaceInteraction.selectionState = strongSelf.state.selectedMessageIds.flatMap { ChatInterfaceSelectionState(selectedIds: $0) }
                 strongSelf.paneContainerNode.updateSelectedMessageIds(strongSelf.state.selectedMessageIds, animated: true)
                 strongSelf.paneContainerNode.updateSelectedStoryIds(strongSelf.state.selectedStoryIds, animated: true)
+                strongSelf.paneContainerNode.updatePaneIsReordering(isReordering: strongSelf.state.paneIsReordering, animated: true)
             case .search, .searchWithTags, .standaloneSearch:
                 strongSelf.activateSearch()
             case .more:
@@ -4952,7 +5085,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         
         return self.context.sharedContext.openChatMessage(OpenChatMessageParams(context: self.context, chatLocation: self.chatLocation, chatFilterTag: nil, chatLocationContextHolder: self.chatLocationContextHolder, message: galleryMessage, standalone: false, reverseMessageGalleryOrder: true, navigationController: navigationController, dismissInput: { [weak self] in
             self?.view.endEditing(true)
-        }, present: { [weak self] c, a in
+        }, present: { [weak self] c, a, _ in
             self?.controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
         }, transitionNode: { [weak self] messageId, media, _ in
             guard let strongSelf = self else {
@@ -4992,6 +5125,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 strongSelf.openHashtag(hashtag, peerName: peerName)
             }
         }, openBotCommand: { _ in
+        }, openAd: { _ in
         }, addContact: { [weak self] phoneNumber in
             if let strongSelf = self {
                 strongSelf.context.sharedContext.openAddContact(context: strongSelf.context, firstName: "", lastName: "", phoneNumber: phoneNumber, label: defaultContactLabel, present: { [weak self] controller, arguments in
@@ -5136,43 +5270,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func openPeer(peerId: PeerId, navigation: ChatControllerInteractionNavigateToPeer) {
-        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-        |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
-            guard let self, let peer = peer else {
-                return
-            }
-            
-            switch navigation {
-            case .default:
-                if let navigationController = self.controller?.navigationController as? NavigationController {
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), keepStack: .always))
-                }
-            case let .chat(_, subject, peekData):
-                if let navigationController = self.controller?.navigationController as? NavigationController {
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: subject, keepStack: .always, peekData: peekData))
-                }
-            case .info:
-                if peer.restrictionText(platform: "ios", contentSettings: self.context.currentContentSettings.with { $0 }) == nil {
-                    if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
-                        (self.controller?.navigationController as? NavigationController)?.pushViewController(infoController)
-                    }
-                }
-            case let .withBotStartPayload(startPayload):
-                if let navigationController = self.controller?.navigationController as? NavigationController {
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), botStart: startPayload))
-                }
-            case let .withAttachBot(attachBotStart):
-                if let navigationController = self.controller?.navigationController as? NavigationController {
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), attachBotStart: attachBotStart))
-                }
-            case let .withBotApp(botAppStart):
-                if let navigationController = self.controller?.navigationController as? NavigationController {
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), botAppStart: botAppStart))
-                }
-            }
-        })
+        guard let navigationController = self.controller?.navigationController as? NavigationController else {
+            return
+        }
+        PeerInfoScreenImpl.openPeer(context: self.context, peerId: peerId, navigation: navigation, navigationController: navigationController)
     }
-    
+        
     private func openPeerMention(_ name: String, navigation: ChatControllerInteractionNavigateToPeer = .default) {
         let disposable: MetaDisposable
         if let resolvePeerByNameDisposable = self.resolvePeerByNameDisposable {
@@ -5311,16 +5414,54 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             guard let self else {
                 return
             }
+            let context = self.context
+            let peerId = self.peerId
+            let params = WebAppParameters(source: .settings, peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, botVerified: bot.peer.isVerified, url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: bot.flags.contains(.hasSettings), fullSize: true)
             
-            let params = WebAppParameters(source: .settings, peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: bot.flags.contains(.hasSettings), fullSize: true)
-            let controller = standaloneWebAppController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, params: params, threadId: nil, openUrl: { [weak self] url, concealed, commit in
-                self?.openUrl(url: url, concealed: concealed, external: false, forceExternal: true, commit: commit)
+            var openUrlImpl: ((String, Bool, @escaping () -> Void) -> Void)?
+            var presentImpl: ((ViewController, Any?) -> Void)?
+            
+            let controller = standaloneWebAppController(context: context, updatedPresentationData: self.controller?.updatedPresentationData, params: params, threadId: nil, openUrl: { url, concealed, commit in
+               openUrlImpl?(url, concealed, commit)
             }, requestSwitchInline: { _, _, _ in
             }, getNavigationController: { [weak self] in
-                return self?.controller?.navigationController as? NavigationController
+                return (self?.controller?.navigationController as? NavigationController) ?? context.sharedContext.mainWindow?.viewController as? NavigationController
             })
             controller.navigationPresentation = .flatModal
             self.controller?.push(controller)
+            
+            openUrlImpl = { [weak self, weak controller] url, concealed, commit in
+                let _ = openUserGeneratedUrl(context: context, peerId: peerId, url: url, concealed: concealed, present: { [weak self] c in
+                    self?.controller?.present(c, in: .window(.root))
+                }, openResolved: { result in
+                    var navigationController: NavigationController?
+                    if let current = self?.controller?.navigationController as? NavigationController {
+                        navigationController = current
+                    } else if let current = controller?.navigationController as? NavigationController {
+                        navigationController = current
+                    }
+                    context.sharedContext.openResolvedUrl(result, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
+                        if let navigationController {
+                            PeerInfoScreenImpl.openPeer(context: context, peerId: peer.id, navigation: navigation, navigationController: navigationController)
+                        }
+                        commit()
+                    }, sendFile: nil,
+                    sendSticker: nil,
+                    sendEmoji: nil,
+                    requestMessageActionUrlAuth: nil,
+                    joinVoiceChat: { peerId, invite, call in
+                        
+                    },
+                    present: { c, a in
+                        presentImpl?(c, a)
+                    }, dismissInput: {
+                        context.sharedContext.mainWindow?.viewController?.view.endEditing(false)
+                    }, contentContext: nil, progress: nil, completion: nil)
+                })
+            }
+            presentImpl = { [weak controller] c, a in
+                controller?.present(c, in: .window(.root), with: a)
+            }
             
             if installed {
                 Queue.mainQueue().after(0.3, {
@@ -5825,6 +5966,30 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             })))
                         }
                         
+                        var addedPrivacy = false
+                        var privacyPolicyUrl: String?
+                        if let cachedData = (data.cachedData as? CachedUserData), let botInfo = cachedData.botInfo {
+                            if let url = botInfo.privacyPolicyUrl {
+                                privacyPolicyUrl = url
+                            } else if botInfo.commands.contains(where: { $0.text == "privacy" }) {
+                                
+                            } else {
+                                privacyPolicyUrl = presentationData.strings.WebApp_PrivacyPolicy_URL
+                            }
+                        }
+                        if let privacyPolicyUrl {
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_BotPrivacy, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                
+                                guard let self else {
+                                    return
+                                }
+                                self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: privacyPolicyUrl, forceExternal: false, presentationData: self.presentationData, navigationController: self.controller?.navigationController as? NavigationController, dismissInput: {})
+                            })))
+                            addedPrivacy = true
+                        }
                         if let cachedData = data.cachedData as? CachedUserData, let botInfo = cachedData.botInfo {
                             for command in botInfo.commands {
                                 if command.text == "settings" {
@@ -5841,7 +6006,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                         f(.dismissWithoutContent)
                                         self?.performBotCommand(command: .help)
                                     })))
-                                } else if command.text == "privacy" {
+                                } else if command.text == "privacy" && !addedPrivacy {
                                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_BotPrivacy, icon: { theme in
                                         generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor)
                                     }, action: { [weak self] _, f in
@@ -6125,7 +6290,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             }, action: { [weak self] _, f in
                                 f(.dismissWithoutContent)
                                 
-                                self?.openStats()
+                                self?.openStats(section: .stats)
                             })))
                         }
                         if cachedData.flags.contains(.translationHidden) {
@@ -7813,7 +7978,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.controller?.push(PeerInfoStoryGridScreen(context: self.context, peerId: self.peerId, scope: .archive))
     }
     
-    private func openStats(boosts: Bool = false, boostStatus: ChannelBoostStatus? = nil) {
+    private func openStats(section: ChannelStatsSection, boostStatus: ChannelBoostStatus? = nil) {
         guard let controller = self.controller, let data = self.data, let peer = data.peer else {
             return
         }
@@ -7823,7 +7988,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         if let channel = peer as? TelegramChannel, case .group = channel.info {
             statsController = groupStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id)
         } else {
-            statsController = channelStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, section: boosts ? .boosts : .stats, boostStatus: boostStatus)
+            statsController = channelStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, section: section, boostStatus: boostStatus)
         }
         controller.push(statsController)
     }
@@ -8431,10 +8596,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let _ = self.context.engine.peers.setChannelForumMode(id: self.peerId, isForum: isEnabled).startStandalone()
         }
     }
-    
-    private func editingToggleMessageSignatures(value: Bool) {
-        self.toggleShouldChannelMessagesSignaturesDisposable.set(self.context.engine.peers.toggleShouldChannelMessagesSignatures(peerId: self.peerId, enabled: value).startStrict())
-    }
         
     private func openParticipantsSection(section: PeerInfoParticipantsSection) {
         guard let data = self.data, let peer = data.peer else {
@@ -8460,7 +8621,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         guard let peer = self.data?.peer else {
             return
         }
-        let controller = self.context.sharedContext.makeChatRecentActionsController(context: self.context, peer: peer, adminPeerId: nil)
+        let controller = self.context.sharedContext.makeChatRecentActionsController(context: self.context, peer: peer, adminPeerId: nil, starsState: self.data?.starsRevenueStatsState)
         self.controller?.push(controller)
     }
     
@@ -9099,7 +9260,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         case .fallback:
                             (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: nil, text: strongSelf.presentationData.strings.Privacy_ProfilePhoto_PublicPhotoSuccess, round: true, undoText: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                         case .custom:
-                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.UserInfo_SetCustomPhoto_SuccessPhotoText(peer.compactDisplayTitle).string, action: nil, duration: 5), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, title: nil, text: strongSelf.presentationData.strings.UserInfo_SetCustomPhoto_SuccessPhotoText(peer.compactDisplayTitle).string, action: nil, duration: 5), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                             
                             let _ = (strongSelf.context.peerChannelMemberCategoriesContextsManager.profilePhotos(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, peerId: strongSelf.peerId, fetch: peerInfoProfilePhotos(context: strongSelf.context, peerId: strongSelf.peerId)) |> ignoreValues).startStandalone()
                         case .suggest:
@@ -9336,7 +9497,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         case .fallback:
                             (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: nil, text: strongSelf.presentationData.strings.Privacy_ProfilePhoto_PublicVideoSuccess, round: true, undoText: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                         case .custom:
-                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.UserInfo_SetCustomPhoto_SuccessVideoText(peer.compactDisplayTitle).string, action: nil, duration: 5), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, title: nil, text: strongSelf.presentationData.strings.UserInfo_SetCustomPhoto_SuccessVideoText(peer.compactDisplayTitle).string, action: nil, duration: 5), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                             
                             let _ = (strongSelf.context.peerChannelMemberCategoriesContextsManager.profilePhotos(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, peerId: strongSelf.peerId, fetch: peerInfoProfilePhotos(context: strongSelf.context, peerId: strongSelf.peerId)) |> ignoreValues).startStandalone()
                         case .suggest:
@@ -9676,95 +9837,164 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.controller?.push(controller)
     }
     
+    private func openBotPreviewEditor(target: Stories.PendingTarget, source: Any, transitionIn: (UIView, CGRect, UIImage?)?) {
+        let context = self.context
+
+        let externalState = MediaEditorTransitionOutExternalState(
+            storyTarget: target,
+            isForcedTarget: false,
+            isPeerArchived: false,
+            transitionOut: nil
+        )
+        
+        let controller = context.sharedContext.makeBotPreviewEditorScreen(
+            context: context,
+            source: source,
+            target: target,
+            transitionArguments: transitionIn,
+            transitionOut: { [weak self] in
+                guard let self else {
+                    return nil
+                }
+                
+                if let pane = self.paneContainerNode.currentPane?.node as? PeerInfoStoryPaneNode, let transitionView = pane.extractPendingStoryTransitionView() {
+                    return BotPreviewEditorTransitionOut(
+                        destinationView: transitionView,
+                        destinationRect: transitionView.bounds,
+                        destinationCornerRadius: 0.0,
+                        completion: { [weak transitionView] in
+                            transitionView?.removeFromSuperview()
+                        }
+                    )
+                }
+                
+                return nil
+            },
+            externalState: externalState,
+            completion: { result, commit in
+                if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                    var viewControllers = rootController.viewControllers
+                    viewControllers = viewControllers.filter { !($0 is AttachmentController)}
+                    rootController.setViewControllers(viewControllers, animated: false)
+                    
+                    rootController.proceedWithStoryUpload(target: target, result: result, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                }
+            },
+            cancelled: {}
+        )
+        self.controller?.push(controller)
+    }
+    
     private func openPostStory(sourceFrame: CGRect?) {
         self.postingAvailabilityDisposable?.dispose()
         
-        let canPostStatus: Signal<StoriesUploadAvailability, NoError>
-        #if DEBUG && false
-        canPostStatus = .single(StoriesUploadAvailability.premiumRequired)
-        #else
-        canPostStatus = self.context.engine.messages.checkStoriesUploadAvailability(target: .peer(self.peerId))
-        #endif
-        
-        self.postingAvailabilityDisposable = (canPostStatus
-        |> deliverOnMainQueue).startStrict(next: { [weak self] status in
-            guard let self else {
+        if let data = self.data, let user = data.peer as? TelegramUser, let botInfo = user.botInfo {
+            if !botInfo.flags.contains(.canEdit) {
                 return
             }
-            switch status {
-            case .available:
-                var cameraTransitionIn: StoryCameraTransitionIn?
-                if let rightButton = self.headerNode.navigationButtonContainer.rightButtonNodes[.postStory] {
-                    cameraTransitionIn = StoryCameraTransitionIn(
-                        sourceView: rightButton.view,
-                        sourceRect: rightButton.view.bounds,
-                        sourceCornerRadius: rightButton.view.bounds.height * 0.5
-                    )
-                }
-                
-                if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                    let coordinator = rootController.openStoryCamera(customTarget: self.peerId, transitionIn: cameraTransitionIn, transitionedIn: {}, transitionOut: self.storyCameraTransitionOut())
-                    coordinator?.animateIn()
-                }
-            case .channelBoostRequired:
-                self.postingAvailabilityDisposable?.dispose()
-                
-                self.postingAvailabilityDisposable = combineLatest(
-                    queue: Queue.mainQueue(),
-                    self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)),
-                    self.context.engine.peers.getChannelBoostStatus(peerId: self.peerId),
-                    self.context.engine.peers.getMyBoostStatus()
-                ).startStrict(next: { [weak self] peer, boostStatus, myBoostStatus in
-                    guard let self, let peer, let boostStatus, let myBoostStatus else {
+            let controller = self.context.sharedContext.makeStoryMediaPickerScreen(
+                context: self.context,
+                isDark: false,
+                getSourceRect: { return .zero },
+                completion: { [weak self] result, transitionView, transitionRect, transitionImage, transitionOut, dismissed in
+                    guard let self else {
                         return
                     }
                     
-                    if let navigationController = self.controller?.navigationController as? NavigationController {
-                        if let previousController = navigationController.viewControllers.last as? ShareWithPeersScreen {
-                            previousController.dismiss()
-                        }
-                        let controller = self.context.sharedContext.makePremiumBoostLevelsController(context: self.context, peerId: peer.id, subject: .stories, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: false, openStats: { [weak self] in
-                            if let self {
-                                self.openStats(boosts: true, boostStatus: boostStatus)
-                            }
-                        })
-                        navigationController.pushViewController(controller)
+                    guard let pane = self.paneContainerNode.currentPane?.node as? PeerInfoStoryPaneNode else {
+                        return
                     }
                     
-                    self.hapticFeedback.impact(.light)
-                }).strict()
-            case .premiumRequired, .monthlyLimit, .weeklyLimit, .expiringLimit:
-                if let sourceFrame {
-                    let context = self.context
-                    let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.maxY), size: CGSize())
-                    
-                    let text: String
-                    text = self.presentationData.strings.StoryFeed_TooltipPremiumPostingLimited
-                    
-                    let tooltipController = TooltipScreen(
-                        context: context,
-                        account: context.account,
-                        sharedContext: context.sharedContext,
-                        text: .markdown(text: text),
-                        style: .customBlur(UIColor(rgb: 0x2a2a2a), 2.0),
-                        icon: .none,
-                        location: .point(location, .top),
-                        shouldDismissOnTouch: { [weak self] point, containerFrame in
-                            if containerFrame.contains(point) {
-                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: false, dismissed: nil)
-                                self?.controller?.push(controller)
-                                return .dismiss(consume: true)
-                            } else {
-                                return .dismiss(consume: false)
-                            }
-                        }
-                    )
-                    self.controller?.present(tooltipController, in: .current)
+                    self.openBotPreviewEditor(target: .botPreview(id: self.peerId, language: pane.currentBotPreviewLanguage?.id), source: result, transitionIn: (transitionView, transitionRect, transitionImage))
+                },
+                dismissed: {},
+                groupsPresented: {}
+            )
+            self.controller?.push(controller)
+        } else {
+            let canPostStatus: Signal<StoriesUploadAvailability, NoError>
+            canPostStatus = self.context.engine.messages.checkStoriesUploadAvailability(target: .peer(self.peerId))
+            
+            self.postingAvailabilityDisposable = (canPostStatus
+            |> deliverOnMainQueue).startStrict(next: { [weak self] status in
+                guard let self else {
+                    return
                 }
-            default:
-                break
-            }
-        }).strict()
+                switch status {
+                case .available:
+                    var cameraTransitionIn: StoryCameraTransitionIn?
+                    if let rightButton = self.headerNode.navigationButtonContainer.rightButtonNodes[.postStory] {
+                        cameraTransitionIn = StoryCameraTransitionIn(
+                            sourceView: rightButton.view,
+                            sourceRect: rightButton.view.bounds,
+                            sourceCornerRadius: rightButton.view.bounds.height * 0.5
+                        )
+                    }
+                    
+                    if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                        let coordinator = rootController.openStoryCamera(customTarget: self.peerId == self.context.account.peerId ? nil : .peer(self.peerId), transitionIn: cameraTransitionIn, transitionedIn: {}, transitionOut: self.storyCameraTransitionOut())
+                        coordinator?.animateIn()
+                    }
+                case .channelBoostRequired:
+                    self.postingAvailabilityDisposable?.dispose()
+                    
+                    self.postingAvailabilityDisposable = combineLatest(
+                        queue: Queue.mainQueue(),
+                        self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)),
+                        self.context.engine.peers.getChannelBoostStatus(peerId: self.peerId),
+                        self.context.engine.peers.getMyBoostStatus()
+                    ).startStrict(next: { [weak self] peer, boostStatus, myBoostStatus in
+                        guard let self, let peer, let boostStatus, let myBoostStatus else {
+                            return
+                        }
+                        
+                        if let navigationController = self.controller?.navigationController as? NavigationController {
+                            if let previousController = navigationController.viewControllers.last as? ShareWithPeersScreen {
+                                previousController.dismiss()
+                            }
+                            let controller = self.context.sharedContext.makePremiumBoostLevelsController(context: self.context, peerId: peer.id, subject: .stories, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: false, openStats: { [weak self] in
+                                if let self {
+                                    self.openStats(section: .boosts, boostStatus: boostStatus)
+                                }
+                            })
+                            navigationController.pushViewController(controller)
+                        }
+                        
+                        self.hapticFeedback.impact(.light)
+                    }).strict()
+                case .premiumRequired, .monthlyLimit, .weeklyLimit, .expiringLimit:
+                    if let sourceFrame {
+                        let context = self.context
+                        let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.maxY), size: CGSize())
+                        
+                        let text: String
+                        text = self.presentationData.strings.StoryFeed_TooltipPremiumPostingLimited
+                        
+                        let tooltipController = TooltipScreen(
+                            context: context,
+                            account: context.account,
+                            sharedContext: context.sharedContext,
+                            text: .markdown(text: text),
+                            style: .customBlur(UIColor(rgb: 0x2a2a2a), 2.0),
+                            icon: .none,
+                            location: .point(location, .top),
+                            shouldDismissOnTouch: { [weak self] point, containerFrame in
+                                if containerFrame.contains(point) {
+                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: false, dismissed: nil)
+                                    self?.controller?.push(controller)
+                                    return .dismiss(consume: true)
+                                } else {
+                                    return .dismiss(consume: false)
+                                }
+                            }
+                        )
+                        self.controller?.present(tooltipController, in: .current)
+                    }
+                default:
+                    break
+                }
+            }).strict()
+        }
     }
     
     private func storyCameraTransitionOut() -> (Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut? {
@@ -9773,16 +10003,31 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 return nil
             }
             
-            if !self.headerNode.isAvatarExpanded {
-                let transitionView = self.headerNode.avatarListNode.avatarContainerNode.avatarNode.contentNode.view
-                return StoryCameraTransitionOut(
-                    destinationView: transitionView,
-                    destinationRect: transitionView.bounds,
-                    destinationCornerRadius: transitionView.bounds.height * 0.5
-                )
+            if let data = self.data, let user = data.peer as? TelegramUser, let _ = user.botInfo {
+                if let pane = self.paneContainerNode.currentPane?.node as? PeerInfoStoryPaneNode, let transitionView = pane.extractPendingStoryTransitionView() {
+                    return StoryCameraTransitionOut(
+                        destinationView: transitionView,
+                        destinationRect: transitionView.bounds,
+                        destinationCornerRadius: 0.0,
+                        completion: { [weak transitionView] in
+                            transitionView?.removeFromSuperview()
+                        }
+                    )
+                }
+                
+                return nil
+            } else {
+                if !self.headerNode.isAvatarExpanded {
+                    let transitionView = self.headerNode.avatarListNode.avatarContainerNode.avatarNode.contentNode.view
+                    return StoryCameraTransitionOut(
+                        destinationView: transitionView,
+                        destinationRect: transitionView.bounds,
+                        destinationCornerRadius: transitionView.bounds.height * 0.5
+                    )
+                }
+                
+                return nil
             }
-            
-            return nil
         }
     }
     
@@ -10671,153 +10916,96 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private func displayMediaGalleryContextMenu(source: ContextReferenceContentNode, gesture: ContextGesture?) {
         let peerId = self.peerId
         
-        let _ = (self.context.engine.data.get(EngineDataMap([
-            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: self.chatLocation.threadId, tag: .photo),
-            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: self.chatLocation.threadId, tag: .video)
-        ]))
-        |> deliverOnMainQueue).startStandalone(next: { [weak self] messageCounts in
-            guard let strongSelf = self else {
+        if let currentPaneKey = self.paneContainerNode.currentPaneKey, case .botPreview = currentPaneKey {
+            guard let controller = self.controller else {
                 return
             }
-
-            var mediaCount: [MessageTags: Int32] = [:]
-            for (key, count) in messageCounts {
-                mediaCount[key.tag] = count.flatMap(Int32.init) ?? 0
-            }
-
-            let photoCount: Int32 = mediaCount[.photo] ?? 0
-            let videoCount: Int32 = mediaCount[.video] ?? 0
-
-            guard let controller = strongSelf.controller else {
+            guard let pane = self.paneContainerNode.currentPane?.node as? PeerInfoStoryPaneNode else {
                 return
             }
-            guard let pane = strongSelf.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode else {
+            guard let data = self.data, let user = data.peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) else {
                 return
             }
-
+            
             var items: [ContextMenuItem] = []
-
-            let strings = strongSelf.presentationData.strings
-
-            var recurseGenerateAction: ((Bool) -> ContextMenuActionItem)?
-            let generateAction: (Bool) -> ContextMenuActionItem = { [weak pane] isZoomIn in
-                let nextZoomLevel = isZoomIn ? pane?.availableZoomLevels().increment : pane?.availableZoomLevels().decrement
-                let canZoom: Bool = nextZoomLevel != nil
-
-                return ContextMenuActionItem(id: isZoomIn ? 0 : 1, text: isZoomIn ? strings.SharedMedia_ZoomIn : strings.SharedMedia_ZoomOut, textColor: canZoom ? .primary : .disabled, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: isZoomIn ? "Chat/Context Menu/ZoomIn" : "Chat/Context Menu/ZoomOut"), color: canZoom ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
-                }, action: canZoom ? { action in
-                    guard let pane = pane, let zoomLevel = isZoomIn ? pane.availableZoomLevels().increment : pane.availableZoomLevels().decrement else {
-                        return
-                    }
-                    pane.updateZoomLevel(level: zoomLevel)
-                    if let recurseGenerateAction = recurseGenerateAction {
-                        action.updateAction(0, recurseGenerateAction(true))
-                        action.updateAction(1, recurseGenerateAction(false))
-                    }
-                } : nil)
-            }
-            recurseGenerateAction = { isZoomIn in
-                return generateAction(isZoomIn)
-            }
-
-            items.append(.action(generateAction(true)))
-            items.append(.action(generateAction(false)))
-
+            
+            let strings = self.presentationData.strings
+            
             var ignoreNextActions = false
-            if strongSelf.chatLocation.threadId == nil {
-                items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowCalendar, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor)
-                }, action: { _, a in
+            
+            if pane.canAddMoreBotPreviews() {
+                items.append(.action(ContextMenuActionItem(text: strings.BotPreviews_MenuAddPreview, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, a in
                     if ignoreNextActions {
                         return
                     }
                     ignoreNextActions = true
                     a(.default)
                     
-                    self?.openMediaCalendar()
+                    if let self {
+                        self.headerNode.navigationButtonContainer.performAction?(.postStory, nil, nil)
+                    }
                 })))
             }
-
-            if photoCount != 0 && videoCount != 0 {
-                items.append(.separator)
-
-                let showPhotos: Bool
-                switch pane.contentType {
-                case .photo, .photoOrVideo:
-                    showPhotos = true
-                default:
-                    showPhotos = false
-                }
-                let showVideos: Bool
-                switch pane.contentType {
-                case .video, .photoOrVideo:
-                    showVideos = true
-                default:
-                    showVideos = false
-                }
-
-                items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowPhotos, icon: { theme in
-                    if !showPhotos {
-                        return nil
-                    }
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+            
+            if pane.canReorder() {
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.BotPreviews_MenuReorder, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak pane] _, a in
-                    a(.default)
-
-                    guard let pane = pane else {
+                    if ignoreNextActions {
                         return
                     }
-                    let updatedContentType: PeerInfoVisualMediaPaneNode.ContentType
-                    switch pane.contentType {
-                    case .photoOrVideo:
-                        updatedContentType = .video
-                    case .photo:
-                        updatedContentType = .photo
-                    case .video:
-                        updatedContentType = .photoOrVideo
-                    default:
-                        updatedContentType = pane.contentType
-                    }
-                    pane.updateContentType(contentType: updatedContentType)
-                })))
-                items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowVideos, icon: { theme in
-                    if !showVideos {
-                        return nil
-                    }
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                }, action: { [weak pane] _, a in
+                    ignoreNextActions = true
                     a(.default)
-
-                    guard let pane = pane else {
-                        return
+                    
+                    if let pane {
+                        pane.beginReordering()
                     }
-                    let updatedContentType: PeerInfoVisualMediaPaneNode.ContentType
-                    switch pane.contentType {
-                    case .photoOrVideo:
-                        updatedContentType = .photo
-                    case .photo:
-                        updatedContentType = .photoOrVideo
-                    case .video:
-                        updatedContentType = .video
-                    default:
-                        updatedContentType = pane.contentType
-                    }
-                    pane.updateContentType(contentType: updatedContentType)
                 })))
             }
-
-            let contextController = ContextController(presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-            contextController.passthroughTouchEvent = { sourceView, point in
+            
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuSelect, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, a in
+                if ignoreNextActions {
+                    return
+                }
+                ignoreNextActions = true
+                a(.default)
+                
+                if let self {
+                    self.toggleStorySelection(ids: [], isSelected: true)
+                }
+            })))
+            
+            if let language = pane.currentBotPreviewLanguage {
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.BotPreviews_MenuDeleteLanguage(language.name).string, textColor: .destructive, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                }, action: { [weak pane] _, a in
+                    if ignoreNextActions {
+                        return
+                    }
+                    ignoreNextActions = true
+                    a(.default)
+                    
+                    if let pane {
+                        pane.presentDeleteBotPreviewLanguage()
+                    }
+                })))
+            }
+            
+            let contextController = ContextController(presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            contextController.passthroughTouchEvent = { [weak self] sourceView, point in
                 guard let strongSelf = self else {
                     return .ignore
                 }
-
+                
                 let localPoint = strongSelf.view.convert(sourceView.convert(point, to: nil), from: nil)
                 guard let localResult = strongSelf.hitTest(localPoint, with: nil) else {
                     return .dismiss(consume: true, result: nil)
                 }
-
+                
                 var testView: UIView? = localResult
                 while true {
                     if let testViewValue = testView {
@@ -10840,12 +11028,188 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         break
                     }
                 }
-
+                
                 return .dismiss(consume: true, result: nil)
             }
-            strongSelf.mediaGalleryContextMenu = contextController
+            self.mediaGalleryContextMenu = contextController
             controller.presentInGlobalOverlay(contextController)
-        })
+        } else {
+            let _ = (self.context.engine.data.get(EngineDataMap([
+                TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: self.chatLocation.threadId, tag: .photo),
+                TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: self.chatLocation.threadId, tag: .video)
+            ]))
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] messageCounts in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                var mediaCount: [MessageTags: Int32] = [:]
+                for (key, count) in messageCounts {
+                    mediaCount[key.tag] = count.flatMap(Int32.init) ?? 0
+                }
+                
+                let photoCount: Int32 = mediaCount[.photo] ?? 0
+                let videoCount: Int32 = mediaCount[.video] ?? 0
+                
+                guard let controller = strongSelf.controller else {
+                    return
+                }
+                guard let pane = strongSelf.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode else {
+                    return
+                }
+                
+                var items: [ContextMenuItem] = []
+                
+                let strings = strongSelf.presentationData.strings
+                
+                var recurseGenerateAction: ((Bool) -> ContextMenuActionItem)?
+                let generateAction: (Bool) -> ContextMenuActionItem = { [weak pane] isZoomIn in
+                    let nextZoomLevel = isZoomIn ? pane?.availableZoomLevels().increment : pane?.availableZoomLevels().decrement
+                    let canZoom: Bool = nextZoomLevel != nil
+                    
+                    return ContextMenuActionItem(id: isZoomIn ? 0 : 1, text: isZoomIn ? strings.SharedMedia_ZoomIn : strings.SharedMedia_ZoomOut, textColor: canZoom ? .primary : .disabled, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: isZoomIn ? "Chat/Context Menu/ZoomIn" : "Chat/Context Menu/ZoomOut"), color: canZoom ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
+                    }, action: canZoom ? { action in
+                        guard let pane = pane, let zoomLevel = isZoomIn ? pane.availableZoomLevels().increment : pane.availableZoomLevels().decrement else {
+                            return
+                        }
+                        pane.updateZoomLevel(level: zoomLevel)
+                        if let recurseGenerateAction = recurseGenerateAction {
+                            action.updateAction(0, recurseGenerateAction(true))
+                            action.updateAction(1, recurseGenerateAction(false))
+                        }
+                    } : nil)
+                }
+                recurseGenerateAction = { isZoomIn in
+                    return generateAction(isZoomIn)
+                }
+                
+                items.append(.action(generateAction(true)))
+                items.append(.action(generateAction(false)))
+                
+                var ignoreNextActions = false
+                if strongSelf.chatLocation.threadId == nil {
+                    items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowCalendar, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor)
+                    }, action: { _, a in
+                        if ignoreNextActions {
+                            return
+                        }
+                        ignoreNextActions = true
+                        a(.default)
+                        
+                        self?.openMediaCalendar()
+                    })))
+                }
+                
+                if photoCount != 0 && videoCount != 0 {
+                    items.append(.separator)
+                    
+                    let showPhotos: Bool
+                    switch pane.contentType {
+                    case .photo, .photoOrVideo:
+                        showPhotos = true
+                    default:
+                        showPhotos = false
+                    }
+                    let showVideos: Bool
+                    switch pane.contentType {
+                    case .video, .photoOrVideo:
+                        showVideos = true
+                    default:
+                        showVideos = false
+                    }
+                    
+                    items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowPhotos, icon: { theme in
+                        if !showPhotos {
+                            return nil
+                        }
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak pane] _, a in
+                        a(.default)
+                        
+                        guard let pane = pane else {
+                            return
+                        }
+                        let updatedContentType: PeerInfoVisualMediaPaneNode.ContentType
+                        switch pane.contentType {
+                        case .photoOrVideo:
+                            updatedContentType = .video
+                        case .photo:
+                            updatedContentType = .photo
+                        case .video:
+                            updatedContentType = .photoOrVideo
+                        default:
+                            updatedContentType = pane.contentType
+                        }
+                        pane.updateContentType(contentType: updatedContentType)
+                    })))
+                    items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowVideos, icon: { theme in
+                        if !showVideos {
+                            return nil
+                        }
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak pane] _, a in
+                        a(.default)
+                        
+                        guard let pane = pane else {
+                            return
+                        }
+                        let updatedContentType: PeerInfoVisualMediaPaneNode.ContentType
+                        switch pane.contentType {
+                        case .photoOrVideo:
+                            updatedContentType = .photo
+                        case .photo:
+                            updatedContentType = .photoOrVideo
+                        case .video:
+                            updatedContentType = .video
+                        default:
+                            updatedContentType = pane.contentType
+                        }
+                        pane.updateContentType(contentType: updatedContentType)
+                    })))
+                }
+                
+                let contextController = ContextController(presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                contextController.passthroughTouchEvent = { sourceView, point in
+                    guard let strongSelf = self else {
+                        return .ignore
+                    }
+                    
+                    let localPoint = strongSelf.view.convert(sourceView.convert(point, to: nil), from: nil)
+                    guard let localResult = strongSelf.hitTest(localPoint, with: nil) else {
+                        return .dismiss(consume: true, result: nil)
+                    }
+                    
+                    var testView: UIView? = localResult
+                    while true {
+                        if let testViewValue = testView {
+                            if let node = testViewValue.asyncdisplaykit_node as? PeerInfoHeaderNavigationButton {
+                                node.isUserInteractionEnabled = false
+                                DispatchQueue.main.async {
+                                    node.isUserInteractionEnabled = true
+                                }
+                                return .dismiss(consume: false, result: nil)
+                            } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
+                                node.brieflyDisableTouchActions()
+                                return .dismiss(consume: false, result: nil)
+                            } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoStoryPaneNode {
+                                node.brieflyDisableTouchActions()
+                                return .dismiss(consume: false, result: nil)
+                            } else {
+                                testView = testViewValue.superview
+                            }
+                        } else {
+                            break
+                        }
+                    }
+                    
+                    return .dismiss(consume: true, result: nil)
+                }
+                strongSelf.mediaGalleryContextMenu = contextController
+                controller.presentInGlobalOverlay(contextController)
+            })
+        }
     }
 
     private func openMediaCalendar() {
@@ -10901,7 +11265,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         chatController: nil,
                         context: strongSelf.context,
                         chatLocation: .peer(EnginePeer(peer)),
-                        subject: .message(id: .id(index.id), highlight: nil, timecode: nil),
+                        subject: .message(id: .id(index.id), highlight: nil, timecode: nil, setupReply: false),
                         botStart: nil,
                         updateTextInputState: nil,
                         keepStack: .never,
@@ -10922,7 +11286,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     ))
                 })))
 
-                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: strongSelf.peerId), subject: .message(id: .id(index.id), highlight: nil, timecode: nil), botStart: nil, mode: .standard(.previewing), params: nil)
+                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: strongSelf.peerId), subject: .message(id: .id(index.id), highlight: nil, timecode: nil, setupReply: false), botStart: nil, mode: .standard(.previewing), params: nil)
                 chatController.canReadHistory.set(false)
                 let contextController = ContextController(presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, sourceRect: sourceRect, passthroughTouches: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
@@ -11036,7 +11400,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.headerNode.customNavigationContentNode = self.paneContainerNode.currentPane?.node.navigationContentNode
         
         var isScrollEnabled = !self.isMediaOnly && self.headerNode.customNavigationContentNode == nil
-        if self.state.selectedStoryIds != nil {
+        if self.state.selectedStoryIds != nil || self.state.paneIsReordering {
             isScrollEnabled = false
         }
         if self.scrollNode.view.isScrollEnabled != isScrollEnabled {
@@ -11125,7 +11489,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         contentHeight -= 16.0
                     }
                 }
-                let sectionHeight = sectionNode.update(width: sectionWidth, safeInsets: UIEdgeInsets(), hasCorners: !insets.left.isZero, presentationData: self.presentationData, items: sectionItems, transition: transition)
+                let sectionHeight = sectionNode.update(context: self.context, width: sectionWidth, safeInsets: UIEdgeInsets(), hasCorners: !insets.left.isZero, presentationData: self.presentationData, items: sectionItems, transition: transition)
                 let sectionFrame = CGRect(origin: CGPoint(x: insets.left, y: contentHeight), size: CGSize(width: sectionWidth, height: sectionHeight))
                 if additive {
                     transition.updateFrameAdditive(node: sectionNode, frame: sectionFrame)
@@ -11184,9 +11548,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     self.editingSections[sectionId] = sectionNode
                     self.scrollNode.addSubnode(sectionNode)
                 }
-                 
+                
                 let sectionWidth = layout.size.width - insets.left - insets.right
-                let sectionHeight = sectionNode.update(width: sectionWidth, safeInsets: UIEdgeInsets(), hasCorners: !insets.left.isZero, presentationData: self.presentationData, items: sectionItems, transition: transition)
+                let sectionHeight = sectionNode.update(context: self.context, width: sectionWidth, safeInsets: UIEdgeInsets(), hasCorners: !insets.left.isZero, presentationData: self.presentationData, items: sectionItems, transition: transition)
                 let sectionFrame = CGRect(origin: CGPoint(x: insets.left, y: contentHeight), size: CGSize(width: sectionWidth, height: sectionHeight))
                 
                 if wasAdded {
@@ -11351,6 +11715,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 })
                 self.paneContainerNode.selectionPanelNode = selectionPanelNode
                 self.paneContainerNode.addSubnode(selectionPanelNode)
+                if let viewForOverlayContent = selectionPanelNode.viewForOverlayContent {
+                    self.paneContainerNode.view.addSubview(viewForOverlayContent)
+                }
             }
             selectionPanelNode.selectionPanel.selectedMessages = selectedMessageIds
             let panelHeight = selectionPanelNode.update(layout: layout, presentationData: self.presentationData, transition: wasAdded ? .immediate : transition)
@@ -11358,13 +11725,23 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             if wasAdded {
                 selectionPanelNode.frame = panelFrame
                 transition.animatePositionAdditive(node: selectionPanelNode, offset: CGPoint(x: 0.0, y: panelHeight))
+                
+                if let viewForOverlayContent = selectionPanelNode.viewForOverlayContent {
+                    viewForOverlayContent.frame = panelFrame
+                    transition.animatePositionAdditive(layer: viewForOverlayContent.layer, offset: CGPoint(x: 0.0, y: panelHeight))
+                }
             } else {
                 transition.updateFrame(node: selectionPanelNode, frame: panelFrame)
+                
+                if let viewForOverlayContent = selectionPanelNode.viewForOverlayContent {
+                    transition.updateFrame(view: viewForOverlayContent, frame: panelFrame)
+                }
             }
         } else if let selectionPanelNode = self.paneContainerNode.selectionPanelNode {
             self.paneContainerNode.selectionPanelNode = nil
             transition.updateFrame(node: selectionPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: selectionPanelNode.bounds.size), completion: { [weak selectionPanelNode] _ in
                 selectionPanelNode?.removeFromSupernode()
+                selectionPanelNode?.viewForOverlayContent?.removeFromSuperview()
             })
         }
         
@@ -11471,7 +11848,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             
             var disableTabSwitching = false
-            if self.state.selectedStoryIds != nil {
+            if self.state.selectedStoryIds != nil || self.state.paneIsReordering {
                 disableTabSwitching = true
             }
                         
@@ -11502,7 +11879,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     rightNavigationButtons.insert(PeerInfoHeaderNavigationButtonSpec(key: .postStory, isForExpandedView: false), at: 0)
                 }
                 
-                if self.state.selectedMessageIds == nil && self.state.selectedStoryIds == nil {
+                if self.state.selectedMessageIds == nil && self.state.selectedStoryIds == nil && !self.state.paneIsReordering {
                     if let currentPaneKey = self.paneContainerNode.currentPaneKey {
                         switch currentPaneKey {
                         case .files, .music, .links, .members:
@@ -11522,6 +11899,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             }
                         case .media:
                             rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .more, isForExpandedView: true))
+                        case .botPreview:
+                            if let data = self.data, data.hasBotPreviewItems, let user = data.peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
+                                rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .more, isForExpandedView: true))
+                            }
                         default:
                             break
                         }
@@ -11861,6 +12242,17 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring), additive: false)
         }
         self.paneContainerNode.updateSelectedStoryIds(self.state.selectedStoryIds, animated: true)
+    }
+    
+    func togglePaneIsReordering(isReordering: Bool) {
+        self.expandTabs(animated: true)
+        
+        self.state = self.state.withPaneIsReordering(true)
+        
+        if let (layout, navigationHeight) = self.validLayout {
+            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring), additive: false)
+        }
+        self.paneContainerNode.updatePaneIsReordering(isReordering: self.state.paneIsReordering, animated: true)
     }
     
     func cancelItemSelection() {
@@ -12372,6 +12764,33 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         self.controllerNode.updateProfileVideo(image, asset: asset, adjustments: adjustments, mode: mode)
     }
     
+    static func openPeer(context: AccountContext, peerId: PeerId, navigation: ChatControllerInteractionNavigateToPeer, navigationController: NavigationController) {
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        |> deliverOnMainQueue).startStandalone(next: { peer in
+            guard let peer else {
+                return
+            }
+            switch navigation {
+            case .default:
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), keepStack: .always))
+            case let .chat(_, subject, peekData):
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: subject, keepStack: .always, peekData: peekData))
+            case .info:
+                if peer.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) == nil {
+                    if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                        navigationController.pushViewController(infoController)
+                    }
+                }
+            case let .withBotStartPayload(startPayload):
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), botStart: startPayload))
+            case let .withAttachBot(attachBotStart):
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), attachBotStart: attachBotStart))
+            case let .withBotApp(botAppStart):
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), botAppStart: botAppStart))
+            }
+        })
+    }
+    
     public static func displayChatNavigationMenu(context: AccountContext, chatNavigationStack: [ChatNavigationStackItem], nextFolderId: Int32?, parentController: ViewController, backButtonView: UIView, navigationController: NavigationController, gesture: ContextGesture) {
         let peerMap = EngineDataMap(
             Set(chatNavigationStack.map(\.peerId)).map(TelegramEngine.EngineData.Item.Peer.Peer.init)
@@ -12679,6 +13098,10 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     
     public func toggleStorySelection(ids: [Int32], isSelected: Bool) {
         self.controllerNode.toggleStorySelection(ids: ids, isSelected: isSelected)
+    }
+    
+    public func togglePaneIsReordering(isReordering: Bool) {
+        self.controllerNode.togglePaneIsReordering(isReordering: isReordering)
     }
     
     public func cancelItemSelection() {

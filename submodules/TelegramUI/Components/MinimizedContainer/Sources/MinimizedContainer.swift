@@ -10,13 +10,14 @@ import UIKitRuntimeUtils
 
 private let minimizedNavigationHeight: CGFloat = 44.0
 private let minimizedTopMargin: CGFloat = 3.0
+private let maximizeLastStandingController = false
 
 final class ScrollViewImpl: UIScrollView {
-    var passthrough = false
+    var shouldPassthrough: () -> Bool = { return false }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let result = super.hitTest(point, with: event)
-        if result === self && self.passthrough {
+        if result === self && self.shouldPassthrough() {
             return nil
         }
         return result
@@ -26,13 +27,27 @@ final class ScrollViewImpl: UIScrollView {
 public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     final class Item {
         let id: AnyHashable
-        let controller: ViewController
+        let controller: MinimizableController
         let beforeMaximize: (NavigationController, @escaping () -> Void) -> Void
+        let topEdgeOffset: CGFloat?
         
-        init(id: AnyHashable, controller: ViewController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void) {
+        init(
+            id: AnyHashable,
+            controller: MinimizableController,
+            beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void,
+            topEdgeOffset: CGFloat?
+        ) {
             self.id = id
             self.controller = controller
             self.beforeMaximize = beforeMaximize
+            self.topEdgeOffset = topEdgeOffset
+        }
+    }
+    
+    final class SnapshotContainerView: UIView {
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            self.removeFromSuperview()
+            return nil
         }
     }
     
@@ -54,7 +69,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         private let shadowNode: ASImageNode
         
         private var controllerView: UIView?
-        fileprivate let snapshotContainerView = UIView()
+        fileprivate let snapshotContainerView = SnapshotContainerView()
         fileprivate var snapshotView: UIView?
         fileprivate var blurredSnapshotView: UIView?
         
@@ -98,7 +113,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             self.snapshotContainerView.isUserInteractionEnabled = false
             
             super.init()
-                        
+
             self.clipsToBounds = true
             self.cornerRadius = 10.0
             applySmoothRoundedCorners(self.layer)
@@ -112,7 +127,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             
             Queue.mainQueue().after(0.45) {
                 self.isReady = true
-                if !self.isDismissed, let snapshotView = self.controllerView?.snapshotView(afterScreenUpdates: false) {
+                if !self.isDismissed, let snapshotView = self.item.controller.makeContentSnapshotView() {
                     self.containerNode.view.addSubview(self.snapshotContainerView)
                     self.snapshotView = snapshotView
                     self.controllerView?.removeFromSuperview()
@@ -141,7 +156,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             self.headerNode.controllers = [item.controller]
         }
         
-        func setTitleControllers(_ controllers: [ViewController]?) {
+        func setTitleControllers(_ controllers: [MinimizableController]?) {
             self.headerNode.controllers = controllers ?? [self.item.controller]
         }
         
@@ -234,7 +249,10 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             
             if let snapshotView = self.snapshotView {
                 var snapshotFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - snapshotView.bounds.size.width) / 2.0), y: 0.0), size: snapshotView.bounds.size)
-                
+                if self.item.controller.minimizedTopEdgeOffset == nil && isExpanded {
+                    snapshotFrame = snapshotFrame.offsetBy(dx: 0.0, dy: -12.0)
+                }
+                    
                 var requiresBlur = false
                 var blurFrame = snapshotFrame
                 if snapshotView.frame.width * 1.1 < size.width {
@@ -291,7 +309,12 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     private var presentationDataDisposable: Disposable?
     
     public private(set) var isExpanded: Bool = false
-    public var willMaximize: (() -> Void)?
+    public var willMaximize: ((MinimizedContainer) -> Void)?
+    public var willDismiss: ((MinimizedContainer) -> Void)?
+    public var didDismiss: ((MinimizedContainer) -> Void)?
+    
+    public private(set) var statusBarStyle: StatusBarStyle = .White
+    public var statusBarStyleUpdated: (() -> Void)?
     
     private let bottomEdgeView: UIImageView
     private let blurView: BlurView
@@ -310,7 +333,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     private var isApplyingTransition = false
     private var validLayout: ContainerViewLayout?
     
-    public var controllers: [ViewController] {
+    public var controllers: [MinimizableController] {
         return self.items.map { $0.controller }
     }
     
@@ -369,6 +392,12 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         self.scrollView.alwaysBounceVertical = true
         self.scrollView.showsVerticalScrollIndicator = false
         self.scrollView.showsHorizontalScrollIndicator = false
+        self.scrollView.shouldPassthrough = { [weak self] in
+            guard let self else {
+                return true
+            }
+            return !self.isExpanded
+        }
         
         let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
         panGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
@@ -452,13 +481,13 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         case .changed:
             guard let _ = self.dismissingItemId else { return }
             
-            var delta = gestureRecognizer.translation(in: scrollView)
-            delta.y = 0
+            var translation = gestureRecognizer.translation(in: scrollView)
+            translation.y = 0
             
             if let offset = self.dismissingItemOffset {
-                self.dismissingItemOffset = offset + delta.x
+                self.dismissingItemOffset = offset + translation.x
             } else {
-                self.dismissingItemOffset = delta.x
+                self.dismissingItemOffset = translation.x
             }
             
             gestureRecognizer.setTranslation(.zero, in: scrollView)
@@ -470,17 +499,38 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 if let offset = self.dismissingItemOffset {
                     let velocity = gestureRecognizer.velocity(in: self.view)
                     if offset < -self.frame.width / 3.0 || velocity.x < -300.0 {
-                        self.currentTransition = .dismiss(itemId: itemId)
-                        
-                        self.items.removeAll(where: { $0.id == itemId })
-                        if self.items.count == 1 {
-                            self.isExpanded = false
-                            self.willMaximize?()
-                            needsLayout = false
+                        let proceed = {
+                            self.currentTransition = .dismiss(itemId: itemId)
+                            
+                            self.items.removeAll(where: { $0.id == itemId })
+                            if self.items.count == 1, maximizeLastStandingController {
+                                self.isExpanded = false
+                                self.willMaximize?(self)
+                                needsLayout = false
+                            } else if self.items.count == 0 {
+                                self.willDismiss?(self)
+                                self.isExpanded = false
+                            }
                         }
+                        if let item = self.items.first(where: { $0.id == itemId }), !item.controller.shouldDismissImmediately() {
+                            self.displayDismissConfirmation(completion: { commit in
+                                self.dismissingItemOffset = nil
+                                self.dismissingItemId = nil
+                                if commit {
+                                    proceed()
+                                } else {
+                                    self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
+                                }
+                            })
+                        } else {
+                            proceed()
+                            self.dismissingItemOffset = nil
+                            self.dismissingItemId = nil
+                        }
+                    } else {
+                        self.dismissingItemOffset = nil
+                        self.dismissingItemId = nil
                     }
-                    self.dismissingItemOffset = nil
-                    self.dismissingItemId = nil
                 }
             }
             if needsLayout {
@@ -501,16 +551,26 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         return result
     }
     
-    public func addController(_ viewController: ViewController, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, transition: ContainedViewLayoutTransition) {
+    public func addController(_ viewController: MinimizableController, topEdgeOffset: CGFloat?, beforeMaximize: @escaping (NavigationController, @escaping () -> Void) -> Void, transition: ContainedViewLayoutTransition) {
         let item = Item(
             id: AnyHashable(Int64.random(in: Int64.min ... Int64.max)),
             controller: viewController,
-            beforeMaximize: beforeMaximize
+            beforeMaximize: beforeMaximize,
+            topEdgeOffset: topEdgeOffset
         )
         self.items.append(item)
         
         self.currentTransition = .minimize(itemId: item.id)
         self.requestUpdate(transition: transition)
+    }
+    
+    public func removeController(_ viewController: MinimizableController) {
+        guard let item = self.items.first(where: { $0.controller === viewController }) else {
+            return
+        }
+        
+        self.items.removeAll(where: { $0.id == item.id })
+        self.requestUpdate(transition: .animated(duration: 0.25, curve: .easeInOut))
     }
     
     private enum Transition: Equatable {
@@ -534,7 +594,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         }
     }
     
-    public func maximizeController(_ viewController: ViewController, animated: Bool, completion: @escaping (Bool) -> Void) {
+    public func maximizeController(_ viewController: MinimizableController, animated: Bool, completion: @escaping (Bool) -> Void) {
         guard let item = self.items.first(where: { $0.controller === viewController }) else {
             completion(self.items.count == 0)
             return
@@ -570,6 +630,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         guard !self.items.isEmpty && !self.isExpanded && self.currentTransition == nil else {
             return
         }
+        
         if self.items.count == 1, let item = self.items.first {
             if let navigationController = self.navigationController {
                 item.beforeMaximize(navigationController, { [weak self] in
@@ -577,6 +638,12 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 })
             }
         } else {
+            let contentOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.bounds.height)
+            self.scrollView.contentOffset = CGPoint(x: 0.0, y: contentOffset)
+            for itemNode in self.itemNodes.values {
+                itemNode.frame = itemNode.frame.offsetBy(dx: 0.0, dy: contentOffset)
+            }
+            
             self.isExpanded = true
             self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
         }
@@ -598,16 +665,42 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         if scrollView.contentOffset.y < -64.0, let lastItemId = self.items.last?.id, let itemNode = self.itemNodes[lastItemId] {
             let velocity = scrollView.panGestureRecognizer.velocity(in: self.view).y
             let distance = layout.size.height - self.collapsedHeight(layout: layout) - itemNode.frame.minY
-            let initialVelocity = distance != 0.0 ? abs(velocity / distance) : 0.0
+            let initialVelocity = min(8.0, distance != 0.0 ? abs(velocity / distance) : 0.0)
             
             self.isExpanded = false
             scrollView.isScrollEnabled = false
             scrollView.panGestureRecognizer.isEnabled = false
             scrollView.panGestureRecognizer.isEnabled = true
-            scrollView.contentOffset = contentOffset
+            scrollView.setContentOffset(contentOffset, animated: false)
             self.currentTransition = .collapse
             self.requestUpdate(transition: .animated(duration: 0.4, curve: .customSpring(damping: 180.0, initialVelocity: initialVelocity)))
         }
+    }
+    
+    private func displayDismissConfirmation(completion: @escaping (Bool) -> Void) {
+        let actionSheet = ActionSheetController(presentationData: self.presentationData)
+        actionSheet.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: self.presentationData.strings.WebApp_CloseConfirmation),
+                ActionSheetButtonItem(title: self.presentationData.strings.WebApp_CloseAnyway, color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    completion(true)
+                })
+            ]),
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    completion(false)
+                })
+            ])
+        ])
+        actionSheet.dismissed = { cancelled in
+            guard cancelled else {
+                return
+            }
+            completion(false)
+        }
+        self.navigationController?.presentOverlay(controller: actionSheet, inGlobal: false, blockInteraction: false)
     }
     
     private func requestUpdate(transition: ContainedViewLayoutTransition, completion: @escaping (Transition) -> Void = { _ in }) {
@@ -673,11 +766,15 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         
         var index = 0
         let contentHeight = frameForIndex(index: self.items.count - 1, size: layout.size, insets: itemInsets, itemCount: self.items.count, boundingSize: layout.size).midY - 70.0
+        
+        var effectiveScrollBounds = self.scrollView.bounds
+        effectiveScrollBounds.origin.y = max(0.0, min(contentHeight - self.scrollView.bounds.height, effectiveScrollBounds.origin.y))
+        
         for item in self.items {
             if let currentTransition = self.currentTransition {
                 if currentTransition.matches(item: item) {
                     continue
-                } else if case .dismiss = currentTransition, self.items.count == 1 {
+                } else if case .dismiss = currentTransition, self.items.count == 1 && maximizeLastStandingController {
                     continue
                 }
             }
@@ -694,35 +791,82 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 self.scrollView.addSubnode(itemNode)
                 self.itemNodes[item.id] = itemNode
             }
-            itemNode.closeTapped = { [weak self] in
+            itemNode.closeTapped = { [weak self, weak itemNode] in
                 guard let self else {
                     return
                 }
                 if self.isExpanded {
-                    var needsLayout = true
-                    self.currentTransition = .dismiss(itemId: item.id)
-                    
-                    self.items.removeAll(where: { $0.id == item.id })
-                    if self.items.count == 1 {
-                        self.isExpanded = false
-                        self.willMaximize?()
-                        needsLayout = false
+                    let proceed = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        var needsLayout = true
+                        self.currentTransition = .dismiss(itemId: item.id)
+                        
+                        self.items.removeAll(where: { $0.id == item.id })
+                        if self.items.count == 1, maximizeLastStandingController {
+                            self.isExpanded = false
+                            self.willMaximize?(self)
+                            needsLayout = false
+                        } else if self.items.count == 0 {
+                            self.isExpanded = false
+                            self.willDismiss?(self)
+                        }
+                        if needsLayout {
+                            self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
+                        }
                     }
-                    if needsLayout {
-                        self.requestUpdate(transition: .animated(duration: 0.4, curve: .spring))
+                    if let item = itemNode?.item, !item.controller.shouldDismissImmediately() {
+                        self.displayDismissConfirmation(completion: { commit in
+                            if commit {
+                                proceed()
+                            }
+                        })
+                    } else {
+                        proceed()
                     }
                 } else {
-                    self.navigationController?.dismissMinimizedControllers(animated: true)
+                    if self.items.count > 1 {
+                        let actionSheet = ActionSheetController(presentationData: self.presentationData)
+                        actionSheet.setItemGroups([
+                            ActionSheetItemGroup(items: [
+                                ActionSheetTextItem(title: self.presentationData.strings.WebApp_Minimized_CloseAllTitle),
+                                ActionSheetButtonItem(title: self.presentationData.strings.WebApp_Minimized_CloseAll(Int32(self.items.count)), color: .destructive, action: { [weak self, weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    
+                                    self?.navigationController?.dismissMinimizedControllers(animated: true)
+                                })
+                            ]),
+                            ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])
+                        ])
+                        self.navigationController?.presentOverlay(controller: actionSheet, inGlobal: false, blockInteraction: false)
+                    } else if let item = self.items.first {
+                        if !item.controller.shouldDismissImmediately() {
+                            self.displayDismissConfirmation(completion: { [weak self] commit in
+                                if commit {
+                                    self?.navigationController?.dismissMinimizedControllers(animated: true)
+                                }
+                            })
+                        } else {
+                            self.navigationController?.dismissMinimizedControllers(animated: true)
+                        }
+                    }
                 }
             }
-            itemNode.tapped = { [weak self] in
+            itemNode.tapped = { [weak self, weak itemNode] in
                 guard let self else {
                     return
                 }
-                if self.isExpanded {
+                if self.isExpanded, let itemNode {
                     if let navigationController = self.navigationController {
-                        itemNode.item.beforeMaximize(navigationController, { [weak self] in
-                            self?.navigationController?.maximizeViewController(item.controller, animated: true)
+                        itemNode.item.beforeMaximize(navigationController, { [weak self, weak itemNode] in
+                            if let item = itemNode?.item {
+                                self?.navigationController?.maximizeViewController(item.controller, animated: true)
+                            }
                         })
                     }
                 } else {
@@ -741,14 +885,14 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             
             if self.isExpanded {
                 let currentItemFrame = frameForIndex(index: index, size: layout.size, insets: itemInsets, itemCount: self.items.count, boundingSize: layout.size)
-                let currentItemTransform = final3dTransform(for: currentItemFrame.minY, size: currentItemFrame.size, contentHeight: contentHeight, itemCount: self.items.count, additionalAngle: self.highlightedItemId == item.id ? 0.04 : nil, scrollBounds: self.scrollView.bounds, insets: itemInsets)
+                let currentItemTransform = final3dTransform(for: currentItemFrame.minY, size: currentItemFrame.size, contentHeight: contentHeight, itemCount: self.items.count, additionalAngle: self.highlightedItemId == item.id ? 0.04 : nil, scrollBounds: effectiveScrollBounds, insets: itemInsets)
                                 
                 var effectiveItemFrame = currentItemFrame
-                var effectiveItemTransform = currentItemTransform
+                let effectiveItemTransform = currentItemTransform
                 
                 if let dismissingItemId = self.dismissingItemId, let deletingIndex = self.items.firstIndex(where: { $0.id == dismissingItemId }), let offset = self.dismissingItemOffset {
-                    var targetItemFrame: CGRect?
-                    var targetItemTransform: CATransform3D?
+//                    var targetItemFrame: CGRect?
+//                    var targetItemTransform: CATransform3D?
                     if deletingIndex == index {
                         let effectiveOffset: CGFloat
                         if offset <= 0.0 {
@@ -757,25 +901,26 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                             effectiveOffset = scrollingRubberBandingOffset(offset: offset, bandingStart: 0.0, range: 20.0)
                         }
                         effectiveItemFrame = effectiveItemFrame.offsetBy(dx: effectiveOffset, dy: 0.0)
-                    } else if index < deletingIndex {
-                        let frame = frameForIndex(index: index, size: layout.size, insets: itemInsets, itemCount: self.items.count - 1, boundingSize: layout.size)
-                        let spacing = interitemSpacing(itemCount: self.items.count - 1, boundingSize: layout.size, insets: itemInsets)
-                        
-                        targetItemFrame = frame
-                        targetItemTransform = final3dTransform(for: frame.minY, size: layout.size, contentHeight: contentHeight - layout.size.height - spacing, itemCount: self.items.count - 1, scrollBounds: self.scrollView.bounds, insets: itemInsets)
-                    } else {
-                        let frame = frameForIndex(index: index - 1, size: layout.size, insets: itemInsets, itemCount: self.items.count - 1, boundingSize: layout.size)
-                        let spacing = interitemSpacing(itemCount: self.items.count - 1, boundingSize: layout.size, insets: itemInsets)
-                        
-                        targetItemFrame = frame
-                        targetItemTransform = final3dTransform(for: frame.minY, size: layout.size, contentHeight: contentHeight - layout.size.height - spacing, itemCount: self.items.count - 1, scrollBounds: self.scrollView.bounds, insets: itemInsets)
-                    }
+                    } 
+//                    else if index < deletingIndex {
+//                        let frame = frameForIndex(index: index, size: layout.size, insets: itemInsets, itemCount: self.items.count - 1, boundingSize: layout.size)
+//                        let spacing = interitemSpacing(itemCount: self.items.count - 1, boundingSize: layout.size, insets: itemInsets)
+//                        
+//                        targetItemFrame = frame
+//                        targetItemTransform = final3dTransform(for: frame.minY, size: layout.size, contentHeight: contentHeight - layout.size.height - spacing, itemCount: self.items.count - 1, scrollBounds: self.scrollView.bounds, insets: itemInsets)
+//                    } else {
+//                        let frame = frameForIndex(index: index - 1, size: layout.size, insets: itemInsets, itemCount: self.items.count - 1, boundingSize: layout.size)
+//                        let spacing = interitemSpacing(itemCount: self.items.count - 1, boundingSize: layout.size, insets: itemInsets)
+//                        
+//                        targetItemFrame = frame
+//                        targetItemTransform = final3dTransform(for: frame.minY, size: layout.size, contentHeight: contentHeight - layout.size.height - spacing, itemCount: self.items.count - 1, scrollBounds: self.scrollView.bounds, insets: itemInsets)
+//                    }
                     
-                    if let targetItemFrame, let targetItemTransform {
-                        let fraction = max(0.0, min(1.0, -1.0 * offset / (layout.size.width * 1.5)))
-                        effectiveItemFrame = effectiveItemFrame.interpolate(with: targetItemFrame, fraction: fraction)
-                        effectiveItemTransform = effectiveItemTransform.interpolate(with: targetItemTransform, fraction: fraction)
-                    }
+//                    if let targetItemFrame, let targetItemTransform {
+//                        let fraction = max(0.0, min(1.0, -1.0 * offset / (layout.size.width * 1.5)))
+//                        effectiveItemFrame = effectiveItemFrame.interpolate(with: targetItemFrame, fraction: fraction)
+//                        effectiveItemTransform = effectiveItemTransform.interpolate(with: targetItemTransform, fraction: fraction)
+//                    }
                 }
                 itemFrame = effectiveItemFrame
                 itemTransform = effectiveItemTransform
@@ -786,6 +931,8 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 var hideTransform = false
                 if let currentTransition = self.currentTransition {
                     if case let .maximize(itemId) = currentTransition {
+                        itemOffset += self.scrollView.bounds.origin.y
+                        
                         itemOffset += layout.size.height * 0.25
                         if let lastItemNode = self.scrollView.subviews.last?.asyncdisplaykit_node as? ItemNode, lastItemNode.item.id == itemId {
                             hideTransform = true
@@ -836,14 +983,37 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         
         let contentSize = CGSize(width: layout.size.width, height: contentHeight)
         if self.scrollView.contentSize != contentSize {
+            var contentSizeDelta: CGFloat?
+            if contentSize.height < self.scrollView.contentSize.height, transition.isAnimated {
+                let currentContentOffset = self.scrollView.contentOffset.y
+                let updatedContentOffset = max(0.0, contentSize.height - self.scrollView.bounds.height)
+                contentSizeDelta = currentContentOffset - updatedContentOffset
+            }
             self.scrollView.contentSize = contentSize
+            if let contentSizeDelta {
+                transition.animateBounds(layer: self.scrollView.layer, from: CGRect(origin: CGPoint(x: 0.0, y: self.scrollView.contentOffset.y + contentSizeDelta), size: self.scrollView.bounds.size))
+            }
         }
         if self.scrollView.frame != bounds {
             self.scrollView.frame = bounds
         }
-        self.scrollView.passthrough = !self.isExpanded
         self.scrollView.isScrollEnabled = self.isExpanded
         self.expandedTapGestureRecoginzer?.isEnabled = self.isExpanded
+        
+        var resolvedStatusBarStyle: StatusBarStyle = .Ignore
+        if self.isExpanded {
+            if self.scrollView.contentOffset.y > additionalInsetTop + insets.top / 2.0 {
+                resolvedStatusBarStyle = .Hide
+            } else {
+                resolvedStatusBarStyle = .White
+            }
+        }
+        if self.statusBarStyle != resolvedStatusBarStyle {
+            self.statusBarStyle = resolvedStatusBarStyle
+            Queue.mainQueue().justDispatch {
+                self.statusBarStyleUpdated?()
+            }
+        }
         
         if let currentTransition = self.currentTransition {
             self.isApplyingTransition = true
@@ -865,14 +1035,19 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 itemNode.animateIn()
                 
                 var initialOffset = insets.top
-                if let minimizedTopEdgeOffset = itemNode.item.controller.minimizedTopEdgeOffset {
-                    initialOffset += minimizedTopEdgeOffset
-                }
-                if layout.size.width < layout.size.height {
-                    initialOffset += 10.0
-                }
-                if let minimizedBounds = itemNode.item.controller.minimizedBounds {
-                    initialOffset += -minimizedBounds.minY
+                if let topEdgeOffset = itemNode.item.topEdgeOffset {
+                    initialOffset += topEdgeOffset
+                    dimView.removeFromSuperview()
+                } else {
+                    if let minimizedTopEdgeOffset = itemNode.item.controller.minimizedTopEdgeOffset {
+                        initialOffset += minimizedTopEdgeOffset
+                    }
+                    if layout.size.width < layout.size.height {
+                        initialOffset += 10.0
+                    }
+                    if let minimizedBounds = itemNode.item.controller.minimizedBounds {
+                        initialOffset += -minimizedBounds.minY
+                    }
                 }
                 
                 transition.animatePosition(node: itemNode, from: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0 + initialOffset), completion: { _ in
@@ -900,6 +1075,14 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                     transition.updateBounds(node: itemNode, bounds: CGRect(origin: .zero, size: layout.size))
                 }
                 transition.updateTransform(node: itemNode, transform: CATransform3DIdentity)
+                
+                if let _ = itemNode.snapshotView {
+                    if itemNode.item.controller.minimizedTopEdgeOffset == nil, let snapshotView = itemNode.snapshotView, snapshotView.frame.origin.y == -12.0 {
+                        let snapshotFrame = snapshotView.frame.offsetBy(dx: 0.0, dy: 12.0)
+                        transition.updateFrame(view: snapshotView, frame: snapshotFrame)
+                    }
+                }
+                
                 transition.updatePosition(node: itemNode, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0 + topInset + self.scrollView.contentOffset.y), completion: { _ in
                     self.isApplyingTransition = false
                     if self.currentTransition == currentTransition {
@@ -910,10 +1093,11 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                     
                     if let _ = itemNode.snapshotView {
                         let snapshotContainerView = itemNode.snapshotContainerView
+                        snapshotContainerView.isUserInteractionEnabled = true
                         snapshotContainerView.layer.allowsGroupOpacity = true
                         snapshotContainerView.center = CGPoint(x: itemNode.item.controller.displayNode.view.bounds.width / 2.0, y: snapshotContainerView.bounds.height / 2.0)
                         itemNode.item.controller.displayNode.view.addSubview(snapshotContainerView)
-                        Queue.mainQueue().after(0.15, {
+                        Queue.mainQueue().after(0.35, {
                             snapshotContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
                                 snapshotContainerView.removeFromSuperview()
                             })
@@ -931,7 +1115,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 guard let dismissedItemNode = self.itemNodes[itemId] else {
                     return
                 }
-                if self.items.count == 1 {
+                if self.items.count == 1, maximizeLastStandingController {
                     if let itemNode = self.itemNodes.first(where: { $0.0 != itemId })?.value, let navigationController = self.navigationController {
                         itemNode.item.beforeMaximize(navigationController, { [weak self] in
                             guard let self else {
@@ -945,6 +1129,14 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                             
                             itemNode.animateOut()
                             transition.updateTransform(node: itemNode, transform: CATransform3DIdentity)
+                            
+                            if let _ = itemNode.snapshotView {
+                                if itemNode.item.controller.minimizedTopEdgeOffset == nil, let snapshotView = itemNode.snapshotView, snapshotView.frame.origin.y == -12.0 {
+                                    let snapshotFrame = snapshotView.frame.offsetBy(dx: 0.0, dy: 12.0)
+                                    transition.updateFrame(view: snapshotView, frame: snapshotFrame)
+                                }
+                            }
+                            
                             transition.updatePosition(node: itemNode, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0 + topInset + self.scrollView.contentOffset.y), completion: { _ in
                                 self.isApplyingTransition = false
                                 if self.currentTransition == currentTransition {
@@ -963,6 +1155,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                     }
                     transition.updatePosition(node: dismissedItemNode, position: CGPoint(x: -layout.size.width, y: dismissedItemNode.position.y))
                 } else {
+                    let isLast = self.items.isEmpty
                     transition.updatePosition(node: dismissedItemNode, position: CGPoint(x: -layout.size.width, y: dismissedItemNode.position.y), completion: { _ in
                         self.isApplyingTransition = false
                         if self.currentTransition == currentTransition {
@@ -972,7 +1165,15 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                         
                         self.itemNodes[itemId] = nil
                         dismissedItemNode.removeFromSupernode()
+                        
+                        if isLast {
+                            self.didDismiss?(self)
+                        }
                     })
+                    if isLast {
+                        let dismissOffset = collapsedHeight(layout: layout)
+                        transition.updatePosition(layer: self.bottomEdgeView.layer, position: self.bottomEdgeView.layer.position.offsetBy(dx: 0.0, dy: dismissOffset))
+                    }
                 }
             case .dismissAll:
                 let dismissOffset = collapsedHeight(layout: layout)

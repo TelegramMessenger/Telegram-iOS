@@ -11,6 +11,9 @@ import ContextUI
 import SwiftSignalKit
 import TextLoadingEffect
 import EmojiTextAttachmentView
+import ComponentFlow
+import ButtonComponent
+import ComponentDisplayAdapters
 
 enum PeerInfoScreenLabeledValueTextColor {
     case primary
@@ -49,6 +52,16 @@ private struct TextLinkItemSource: Equatable {
 }
 
 final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
+    final class Button {
+        let title: String
+        let action: () -> Void
+        
+        init(title: String, action: @escaping () -> Void) {
+            self.title = title
+            self.action = action
+        }
+    }
+    
     let id: AnyHashable
     let context: AccountContext?
     let label: String
@@ -62,8 +75,9 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
     let longTapAction: ((ASDisplayNode) -> Void)?
     let linkItemAction: ((TextLinkItemActionType, TextLinkItem, ASDisplayNode, CGRect?, Promise<Bool>?) -> Void)?
     let iconAction: (() -> Void)?
+    let button: Button?
     let contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
-    let requestLayout: () -> Void
+    let requestLayout: (Bool) -> Void
     
     init(
         id: AnyHashable,
@@ -79,8 +93,9 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
         longTapAction: ((ASDisplayNode) -> Void)? = nil,
         linkItemAction: ((TextLinkItemActionType, TextLinkItem, ASDisplayNode, CGRect?, Promise<Bool>?) -> Void)? = nil,
         iconAction: (() -> Void)? = nil,
+        button: Button? = nil,
         contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil,
-        requestLayout: @escaping () -> Void
+        requestLayout: @escaping (Bool) -> Void
     ) {
         self.id = id
         self.context = context
@@ -95,6 +110,7 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
         self.longTapAction = longTapAction
         self.linkItemAction = linkItemAction
         self.iconAction = iconAction
+        self.button = button
         self.contextAction = contextAction
         self.requestLayout = requestLayout
     }
@@ -121,6 +137,8 @@ private func generateExpandBackground(size: CGSize, color: UIColor) -> UIImage? 
 }
 
 private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
+    private weak var context: AccountContext?
+    
     private let containerNode: ContextControllerSourceNode
     private let contextSourceNode: ContextExtractedContentContainingNode
     
@@ -147,6 +165,8 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
     private var animatedEmojiLayer: InlineStickerItemLayer?
     
     private var linkHighlightingNode: LinkHighlightingNode?
+    
+    private var actionButton: ComponentView<Empty>?
     
     private let activateArea: AccessibilityAreaNode
     
@@ -316,7 +336,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
     
     @objc private func expandPressed() {
         self.isExpanded = true
-        self.item?.requestLayout()
+        self.item?.requestLayout(true)
     }
     
     @objc private func iconPressed() {
@@ -383,8 +403,8 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                                 if self.linkItemWithProgress != currentLinkItem {
                                     self.linkItemWithProgress = currentLinkItem
                                     
-                                    if let validLayout = self.validLayout {
-                                        let _ = self.update(width: validLayout.width, safeInsets: validLayout.safeInsets, presentationData: validLayout.presentationData, item: validLayout.item, topItem: validLayout.topItem, bottomItem: validLayout.bottomItem, hasCorners: validLayout.hasCorners, transition: .immediate)
+                                    if let validLayout = self.validLayout, let context = self.context {
+                                        let _ = self.update(context: context, width: validLayout.width, safeInsets: validLayout.safeInsets, presentationData: validLayout.presentationData, item: validLayout.item, topItem: validLayout.topItem, bottomItem: validLayout.bottomItem, hasCorners: validLayout.hasCorners, transition: .immediate)
                                     }
                                 }
                             })
@@ -412,8 +432,8 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                                 if self.linkItemWithProgress != currentLinkItem {
                                     self.linkItemWithProgress = currentLinkItem
                                     
-                                    if let validLayout = self.validLayout {
-                                        let _ = self.update(width: validLayout.width, safeInsets: validLayout.safeInsets, presentationData: validLayout.presentationData, item: validLayout.item, topItem: validLayout.topItem, bottomItem: validLayout.bottomItem, hasCorners: validLayout.hasCorners, transition: .immediate)
+                                    if let validLayout = self.validLayout, let context = self.context {
+                                        let _ = self.update(context: context, width: validLayout.width, safeInsets: validLayout.safeInsets, presentationData: validLayout.presentationData, item: validLayout.item, topItem: validLayout.topItem, bottomItem: validLayout.bottomItem, hasCorners: validLayout.hasCorners, transition: .immediate)
                                     }
                                 }
                             })
@@ -430,11 +450,12 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         }
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenLabeledValueItem else {
             return 10.0
         }
         
+        self.context = context
         self.validLayout = (width, safeInsets, presentationData, item, topItem, bottomItem, hasCorners)
         
         self.item = item
@@ -649,6 +670,56 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         
         if additionalTextSize.height > 0.0 {
             height += additionalTextSize.height + 3.0
+        }
+        
+        if let button = item.button {
+            if textSize.height > 0.0 {
+                height += 3.0
+            } else {
+                height -= 7.0
+            }
+            
+            let actionButton: ComponentView<Empty>
+            if let current = self.actionButton {
+                actionButton = current
+            } else {
+                actionButton = ComponentView()
+                self.actionButton = actionButton
+            }
+            
+            let actionButtonSize = actionButton.update(
+                transition: ComponentTransition(transition),
+                component: AnyComponent(ButtonComponent(
+                    background: ButtonComponent.Background(
+                        color: presentationData.theme.list.itemCheckColors.fillColor,
+                        foreground: presentationData.theme.list.itemCheckColors.foregroundColor,
+                        pressedColor: presentationData.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
+                    ),
+                    content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: button.title, font: Font.semibold(17.0), color: presentationData.theme.list.itemCheckColors.foregroundColor))),
+                    isEnabled: true,
+                    allowActionWhenDisabled: false,
+                    displaysProgress: false,
+                    action: {
+                        button.action()
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: width - sideInset * 2.0, height: 50.0)
+            )
+            let actionButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: height), size: actionButtonSize)
+            if let actionButtonView = actionButton.view {
+                if actionButtonView.superview == nil {
+                    self.contextSourceNode.contentNode.view.addSubview(actionButtonView)
+                }
+                transition.updateFrame(view: actionButtonView, frame: actionButtonFrame)
+            }
+            height += actionButtonSize.height
+            height += 16.0
+        } else {
+            if let actionButton = self.actionButton {
+                self.actionButton = nil
+                actionButton.view?.removeFromSuperview()
+            }
         }
         
         let highlightNodeOffset: CGFloat = topItem == nil ? 0.0 : UIScreenPixel

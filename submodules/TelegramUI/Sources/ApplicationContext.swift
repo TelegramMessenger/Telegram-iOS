@@ -31,6 +31,8 @@ import StoryContainerScreen
 import ChatMessageNotificationItem
 import PhoneNumberFormat
 import AttachmentUI
+import MinimizedContainer
+import BrowserUI
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -169,9 +171,12 @@ final class AuthorizedApplicationContext {
         self.notificationController = NotificationContainerController(context: context)
         
         self.rootController = TelegramRootController(context: context)
-        self.rootController.minimizedContainer = self.sharedApplicationContext.minimizedContainer
+        self.rootController.minimizedContainer = self.sharedApplicationContext.minimizedContainer[context.account.id]
         self.rootController.minimizedContainerUpdated = { [weak self] minimizedContainer in
-            self?.sharedApplicationContext.minimizedContainer = minimizedContainer
+            guard let self else {
+                return
+            }
+            self.sharedApplicationContext.minimizedContainer[self.context.account.id] = minimizedContainer
         }
         
         self.rootController.globalOverlayControllersUpdated = { [weak self] in
@@ -437,8 +442,12 @@ final class AuthorizedApplicationContext {
                                             return false
                                         }
                                         
-                                        if let topContoller = strongSelf.rootController.topViewController as? AttachmentController {
+                                        if let minimizedContainer = strongSelf.rootController.minimizedContainer, minimizedContainer.isExpanded {
+                                            minimizedContainer.collapse()
+                                        } else if let topContoller = strongSelf.rootController.topViewController as? AttachmentController {
                                             topContoller.minimizeIfNeeded()
+                                        }  else if let topContoller = strongSelf.rootController.topViewController as? BrowserScreen {
+                                            topContoller.requestMinimize(topEdgeOffset: nil, initialVelocity: nil)
                                         }
                                         
                                         for controller in strongSelf.rootController.viewControllers {
@@ -817,7 +826,7 @@ final class AuthorizedApplicationContext {
                                     return
                                 }
                                 
-                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil)))
+                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false)))
                             })
                         }
                         
@@ -936,7 +945,7 @@ final class AuthorizedApplicationContext {
                         chatLocation = .peer(peer)
                     }
                     
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: chatLocation, subject: isOutgoingMessage ? messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil) } : nil, activateInput: activateInput ? .text : nil))
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: chatLocation, subject: isOutgoingMessage ? messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false) } : nil, activateInput: activateInput ? .text : nil))
                 })
             }
         }

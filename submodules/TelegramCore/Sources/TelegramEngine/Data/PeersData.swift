@@ -48,13 +48,13 @@ extension EnginePeerCachedInfoItem: Equatable where T: Equatable {
 
 public enum EngineChannelParticipant: Equatable {
     case creator(id: EnginePeer.Id, adminInfo: ChannelParticipantAdminInfo?, rank: String?)
-    case member(id: EnginePeer.Id, invitedAt: Int32, adminInfo: ChannelParticipantAdminInfo?, banInfo: ChannelParticipantBannedInfo?, rank: String?)
+    case member(id: EnginePeer.Id, invitedAt: Int32, adminInfo: ChannelParticipantAdminInfo?, banInfo: ChannelParticipantBannedInfo?, rank: String?, subscriptionUntilDate: Int32?)
     
     public var peerId: EnginePeer.Id {
         switch self {
         case let .creator(id, _, _):
             return id
-        case let .member(id, _, _, _, _):
+        case let .member(id, _, _, _, _, _):
             return id
         }
     }
@@ -65,8 +65,8 @@ public extension EngineChannelParticipant {
         switch participant {
         case let .creator(id, adminInfo, rank):
             self = .creator(id: id, adminInfo: adminInfo, rank: rank)
-        case let .member(id, invitedAt, adminInfo, banInfo, rank):
-            self = .member(id: id, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: banInfo, rank: rank)
+        case let .member(id, invitedAt, adminInfo, banInfo, rank, subscriptionUntilDate):
+            self = .member(id: id, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: banInfo, rank: rank, subscriptionUntilDate: subscriptionUntilDate)
         }
     }
     
@@ -74,8 +74,8 @@ public extension EngineChannelParticipant {
         switch self {
         case let .creator(id, adminInfo, rank):
             return .creator(id: id, adminInfo: adminInfo, rank: rank)
-        case let .member(id, invitedAt, adminInfo, banInfo, rank):
-            return .member(id: id, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: banInfo, rank: rank)
+        case let .member(id, invitedAt, adminInfo, banInfo, rank, subscriptionUntilDate):
+            return .member(id: id, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: banInfo, rank: rank, subscriptionUntilDate: subscriptionUntilDate)
         }
     }
 }
@@ -1096,6 +1096,33 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
         
+        public struct CanViewStarsRevenue: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = Bool
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                if let cachedData = view.cachedPeerData as? CachedChannelData {
+                    return cachedData.flags.contains(.canViewStarsRevenue)
+                } else {
+                    return false
+                }
+            }
+        }
         public struct PaidMediaAllowed: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public typealias Result = Bool
 
@@ -2015,6 +2042,137 @@ public extension TelegramEngine.EngineData.Item {
                 }
                 if let cachedData = view.cachedPeerData as? CachedUserData {
                     return cachedData.flags.contains(.adsEnabled)
+                } else {
+                    return false
+                }
+            }
+        }
+        
+        public struct BotPreview: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = CachedUserData.BotPreview?
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                if let cachedData = view.cachedPeerData as? CachedUserData {
+                    return cachedData.botPreview
+                } else {
+                    return nil
+                }
+            }
+        }
+
+        public struct BotMenu: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = Optional<BotMenuButton>
+            
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+            
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+            
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                if let cachedData = view.cachedPeerData as? CachedUserData {
+                    return cachedData.botInfo?.menuButton
+                } else {
+                    return nil
+                }
+            }
+        }
+        
+        public struct BotCommands: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = Optional<[BotCommand]>
+            
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+            
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+            
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                if let cachedData = view.cachedPeerData as? CachedUserData {
+                    return cachedData.botInfo?.commands
+                } else {
+                    return nil
+                }
+            }
+        }
+        
+        public struct BotPrivacyPolicyUrl: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = Optional<String>
+            
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+            
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+            
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                if let cachedData = view.cachedPeerData as? CachedUserData {
+                    return cachedData.botInfo?.privacyPolicyUrl
+                } else {
+                    return nil
+                }
+            }
+        }
+        
+        public struct StarsReactionDefaultToPrivate: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = Bool
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .cachedItem(ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.starsReactionDefaultToPrivate, key: StarsReactionDefaultToPrivateData.key()))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                if let value = (view as? CachedItemView)?.value?.get(StarsReactionDefaultToPrivateData.self) {
+                    return value.isPrivate
                 } else {
                     return false
                 }

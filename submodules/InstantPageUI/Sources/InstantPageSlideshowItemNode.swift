@@ -187,7 +187,7 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, ASScrollViewDe
         let media = self.items[index]
         let contentNode: ASDisplayNode
         if case .image = media.media {
-            contentNode = InstantPageImageNode(context: self.context, sourceLocation: self.sourceLocation, theme: self.theme, webPage: self.webPage, media: media, attributes: [], interactive: true, roundCorners: false, fit: false, openMedia: self.openMedia, longPressMedia: self.longPressMedia, activatePinchPreview: self.activatePinchPreview, pinchPreviewFinished: self.pinchPreviewFinished)
+            contentNode = InstantPageImageNode(context: self.context, sourceLocation: self.sourceLocation, theme: self.theme, webPage: self.webPage, media: media, attributes: [], interactive: true, roundCorners: false, fit: false, openMedia: self.openMedia, longPressMedia: self.longPressMedia, activatePinchPreview: self.activatePinchPreview, pinchPreviewFinished: self.pinchPreviewFinished, getPreloadedResource: { _ in return nil })
         } else if case .file = media.media {
             contentNode = ASDisplayNode()
         } else {

@@ -614,6 +614,7 @@ private final class PremiumGiftCodeSheetComponent: CombinedComponent {
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     followContentSizeChanges: true,
+                    clipsContent: true,
                     animateOut: animateOut
                 ),
                 environment: {

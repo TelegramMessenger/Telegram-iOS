@@ -200,13 +200,13 @@ public extension Api {
 }
 public extension Api {
     enum MessageReactions: TypeConstructorDescription {
-        case messageReactions(flags: Int32, results: [Api.ReactionCount], recentReactions: [Api.MessagePeerReaction]?)
+        case messageReactions(flags: Int32, results: [Api.ReactionCount], recentReactions: [Api.MessagePeerReaction]?, topReactors: [Api.MessageReactor]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messageReactions(let flags, let results, let recentReactions):
+                case .messageReactions(let flags, let results, let recentReactions, let topReactors):
                     if boxed {
-                        buffer.appendInt32(1328256121)
+                        buffer.appendInt32(171155211)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -219,14 +219,19 @@ public extension Api {
                     for item in recentReactions! {
                         item.serialize(buffer, true)
                     }}
+                    if Int(flags) & Int(1 << 4) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(topReactors!.count))
+                    for item in topReactors! {
+                        item.serialize(buffer, true)
+                    }}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messageReactions(let flags, let results, let recentReactions):
-                return ("messageReactions", [("flags", flags as Any), ("results", results as Any), ("recentReactions", recentReactions as Any)])
+                case .messageReactions(let flags, let results, let recentReactions, let topReactors):
+                return ("messageReactions", [("flags", flags as Any), ("results", results as Any), ("recentReactions", recentReactions as Any), ("topReactors", topReactors as Any)])
     }
     }
     
@@ -241,11 +246,62 @@ public extension Api {
             if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessagePeerReaction.self)
             } }
+            var _4: [Api.MessageReactor]?
+            if Int(_1!) & Int(1 << 4) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageReactor.self)
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MessageReactions.messageReactions(flags: _1!, results: _2!, recentReactions: _3, topReactors: _4)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum MessageReactor: TypeConstructorDescription {
+        case messageReactor(flags: Int32, peerId: Api.Peer?, count: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .messageReactor(let flags, let peerId, let count):
+                    if boxed {
+                        buffer.appendInt32(1269016922)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 3) != 0 {peerId!.serialize(buffer, true)}
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageReactor(let flags, let peerId, let count):
+                return ("messageReactor", [("flags", flags as Any), ("peerId", peerId as Any), ("count", count as Any)])
+    }
+    }
+    
+        public static func parse_messageReactor(_ reader: BufferReader) -> MessageReactor? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Peer?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            } }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 3) == 0) || _2 != nil
+            let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.MessageReactions.messageReactions(flags: _1!, results: _2!, recentReactions: _3)
+                return Api.MessageReactor.messageReactor(flags: _1!, peerId: _2, count: _3!)
             }
             else {
                 return nil

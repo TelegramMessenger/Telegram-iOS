@@ -3,6 +3,7 @@ import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import AvatarNode
+import AccountContext
 
 enum PeerInfoScreenActionColor {
     case accent
@@ -89,7 +90,7 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
         self.iconDisposable.dispose()
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenActionItem else {
             return 10.0
         }

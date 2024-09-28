@@ -24,6 +24,7 @@ import WebsiteType
 import GalleryData
 import StoryContainerScreen
 import WallpaperGalleryScreen
+import BrowserUI
 
 func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
     var story: TelegramMediaStory?
@@ -163,7 +164,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                         return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                     }
                     return nil
-                }))
+                }), .window(.root))
                 return true
             case .map:
                 params.dismissInput()
@@ -220,21 +221,53 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     }
                 }, getSourceRect: params.getSourceRect)
                 params.dismissInput()
-                params.present(controller, nil)
+                params.present(controller, nil, .window(.root))
                 return true
             case let .document(file, immediateShare):
                 params.dismissInput()
                 let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
                 if immediateShare {
                     let controller = ShareController(context: params.context, subject: .media(.standalone(media: file)), immediateExternalShare: true)
-                    params.present(controller, nil)
+                    params.present(controller, nil, .window(.root))
                 } else if let rootController = params.navigationController?.view.window?.rootViewController {
                     let proceed = {
-                        presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file, canShare: !params.message.isCopyProtected())
+                        let canShare = !params.message.isCopyProtected()
+                        var useBrowserScreen = false
+                        if BrowserScreen.supportedDocumentMimeTypes.contains(file.mimeType) {
+                            useBrowserScreen = true
+                        } else if let fileName = file.fileName as? NSString, BrowserScreen.supportedDocumentExtensions.contains(fileName.pathExtension.lowercased())  {
+                            useBrowserScreen = true
+                        }
+                        if useBrowserScreen {
+                            if let navigationController = params.navigationController, let minimizedContainer = navigationController.minimizedContainer {
+                                for controller in minimizedContainer.controllers {
+                                    if let controller = controller as? BrowserScreen, controller.subject.fileId == file.fileId {
+                                        navigationController.maximizeViewController(controller, animated: true)
+                                        return
+                                    }
+                                }
+                            }
+                            
+                            let subject: BrowserScreen.Subject
+                            if file.mimeType == "application/pdf" {
+                                subject = .pdfDocument(file: file, canShare: canShare)
+                            } else {
+                                subject = .document(file: file, canShare: canShare)
+                            }
+                            let controller = BrowserScreen(context: params.context, subject: subject)
+                            controller.openDocument = { file, canShare in
+                                controller.dismiss()
+                                
+                                presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file, canShare: canShare)
+                            }
+                            params.navigationController?.pushViewController(controller)
+                        } else {
+                            presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file, canShare: canShare)
+                        }
                     }
                     if file.mimeType.contains("image/svg") {
                         let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
-                        params.present(textAlertController(context: params.context, title: nil, text: presentationData.strings.OpenFile_PotentiallyDangerousContentAlert, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.OpenFile_Proceed, action: { proceed() })] ), nil)
+                        params.present(textAlertController(context: params.context, title: nil, text: presentationData.strings.OpenFile_PotentiallyDangerousContentAlert, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.OpenFile_Proceed, action: { proceed() })] ), nil, .window(.root))
                     } else {
                         proceed()
                     }
@@ -296,7 +329,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                             return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                         }
                         return nil
-                    }))
+                    }), params.message.adAttribute != nil ? .current : .window(.root))
                 })
                 return true
             case let .secretGallery(gallery):
@@ -307,7 +340,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                         return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                     }
                     return nil
-                }))
+                }), .window(.root))
                 return true
             case let .other(otherMedia):
                 params.dismissInput()
@@ -350,7 +383,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                         return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                     }
                     return nil
-                }))
+                }), .window(.root))
             case let .theme(media):
                 params.dismissInput()
                 let path = params.context.account.postbox.mediaBox.completedResourcePath(media.resource)
@@ -369,13 +402,16 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
     return false
 }
 
-func openChatInstantPageImpl(context: AccountContext, message: Message, sourcePeerType: MediaAutoDownloadPeerType?, navigationController: NavigationController) {
-    if let (webpage, anchor) = instantPageAndAnchor(message: message) {
-        let sourceLocation = InstantPageSourceLocation(userLocation: .peer(message.id.peerId), peerType: sourcePeerType ?? .channel)
-        
-        let pageController = InstantPageController(context: context, webPage: webpage, sourceLocation: sourceLocation, anchor: anchor)
-        navigationController.pushViewController(pageController)
+func makeInstantPageControllerImpl(context: AccountContext, message: Message, sourcePeerType: MediaAutoDownloadPeerType?) -> ViewController? {
+    guard let (webpage, anchor) = instantPageAndAnchor(message: message) else {
+        return nil
     }
+    let sourceLocation = InstantPageSourceLocation(userLocation: .peer(message.id.peerId), peerType: sourcePeerType ?? .channel)
+    return makeInstantPageControllerImpl(context: context, webPage: webpage, anchor: anchor, sourceLocation: sourceLocation)
+}
+
+func makeInstantPageControllerImpl(context: AccountContext, webPage: TelegramMediaWebpage, anchor: String?, sourceLocation: InstantPageSourceLocation) -> ViewController {
+    return BrowserScreen(context: context, subject: .instantPage(webPage: webPage, anchor: anchor, sourceLocation: sourceLocation, preloadedResources: nil))
 }
 
 func openChatWallpaperImpl(context: AccountContext, message: Message, present: @escaping (ViewController, Any?) -> Void) {

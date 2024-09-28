@@ -418,7 +418,7 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
             }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _, _ in }, navigateToMessageStandalone: { _ in
             }, navigateToThreadMessage: { _, _, _ in
             }, tapMessage: { _ in
-        }, clickThroughMessage: {
+        }, clickThroughMessage: { _, _ in
         }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in
             return false
         }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
@@ -492,6 +492,7 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
         }, scrollToMessageId: { _ in
         }, navigateToStory: { _, _ in
         }, attemptedNavigationToPrivateQuote: { _ in
+        }, forceUpdateWarpContents: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: self.context, backgroundNode: self.wallpaperBackgroundNode))
         

@@ -207,6 +207,31 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                             strongSelf.beginReactionAnimation(reactionItem: reactionItem)
                         }
                     })
+                case .stars:
+                    for reaction in availableReactions.reactions {
+                        guard let centerAnimation = reaction.centerAnimation else {
+                            continue
+                        }
+                        guard let aroundAnimation = reaction.aroundAnimation else {
+                            continue
+                        }
+                        
+                        if reaction.value == updatedReaction {
+                            let reactionItem = ReactionItem(
+                                reaction: ReactionItem.Reaction(rawValue: reaction.value),
+                                appearAnimation: reaction.appearAnimation,
+                                stillAnimation: reaction.selectAnimation,
+                                listAnimation: centerAnimation,
+                                largeListAnimation: reaction.activateAnimation,
+                                applicationAnimation: aroundAnimation,
+                                largeApplicationAnimation: reaction.effectAnimation,
+                                isCustom: false
+                            )
+                            self.beginReactionAnimation(reactionItem: reactionItem)
+                            
+                            break
+                        }
+                    }
                 }
             }
         }
@@ -278,7 +303,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
             var peers = SimpleDictionary<PeerId, Peer>()
             let messages = SimpleDictionary<MessageId, Message>()
             
-            peers[userPeerId] = TelegramUser(id: userPeerId, accessHash: nil, firstName: item.strings.Settings_QuickReactionSetup_DemoMessageAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: .blue, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+            peers[userPeerId] = TelegramUser(id: userPeerId, accessHash: nil, firstName: item.strings.Settings_QuickReactionSetup_DemoMessageAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: .blue, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil)
             
             let messageText = item.strings.Settings_QuickReactionSetup_DemoMessageText
             
@@ -289,7 +314,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                     recentPeers.append(ReactionsMessageAttribute.RecentPeer(value: reaction, isLarge: false, isUnseen: false, isMy: true, peerId: accountPeer.id, timestamp: nil))
                     peers[accountPeer.id] = accountPeer
                 }
-                attributes.append(ReactionsMessageAttribute(canViewList: false, isTags: false, reactions: [MessageReaction(value: reaction, count: 1, chosenOrder: 0)], recentPeers: recentPeers))
+                attributes.append(ReactionsMessageAttribute(canViewList: false, isTags: false, reactions: [MessageReaction(value: reaction, count: 1, chosenOrder: 0)], recentPeers: recentPeers, topPeers: []))
             }
             
             let messageItem = item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: chatPeerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[userPeerId], text: messageText, attributes: attributes, media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])], theme: item.theme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: item.availableReactions, accountPeer: item.accountPeer, isCentered: true, isPreview: true, isStandalone: false)

@@ -14,6 +14,7 @@ import LiveLocationPositionNode
 import AppBundle
 import TelegramUIPreferences
 import ContextUI
+import Tuples
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -48,7 +49,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     private var themeUpdated: Bool = false
     
-    init(context: AccountContext, sourceLocation: InstantPageSourceLocation, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?) {
+    init(context: AccountContext, sourceLocation: InstantPageSourceLocation, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, getPreloadedResource: @escaping (String) -> Data?) {
         self.context = context
         self.theme = theme
         self.webPage = webPage
@@ -72,51 +73,103 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         self.addSubnode(self.pinchContainerNode)
         
         if case let .image(image) = media.media, let largest = largestImageRepresentation(image.representations) {
-            let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
-            self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, userLocation: sourceLocation.userLocation, photoReference: imageReference))
-            
-            if !interactive || shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings, peerType: sourceLocation.peerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: image) {
-                self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, userLocation: sourceLocation.userLocation, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerId: nil).start())
-            }
-            
-            self.fetchControls = FetchControls(fetch: { [weak self] manual in
-                if let strongSelf = self {
-                    strongSelf.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, userLocation: sourceLocation.userLocation, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerId: nil).start())
+            if let externalResource = largest.resource as? InstantPageExternalMediaResource {
+                var url = externalResource.url
+                if !url.hasPrefix("http") && !url.hasPrefix("https") && url.hasPrefix("//") {
+                    url = "https:\(url)"
                 }
-            }, cancel: {
-                chatMessagePhotoCancelInteractiveFetch(account: context.account, photoReference: imageReference)
-            })
-            
-            if interactive {
-                self.statusDisposable.set((context.account.postbox.mediaBox.resourceStatus(largest.resource) |> deliverOnMainQueue).start(next: { [weak self] status in
-                    displayLinkDispatcher.dispatch {
-                        if let strongSelf = self {
-                            strongSelf.fetchStatus = EngineMediaResource.FetchStatus(status)
-                            strongSelf.updateFetchStatus()
+                let photoData: Signal<Tuple4<Data?, Data?, ChatMessagePhotoQuality, Bool>, NoError>
+                if let preloadedData = getPreloadedResource(externalResource.url) {
+                    photoData = .single(Tuple4(nil, preloadedData, .full, true))
+                } else {
+                    photoData = context.engine.resources.httpData(url: url, preserveExactUrl: true)
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<Data?, NoError> in
+                        return .single(nil)
+                    }
+                    |> map { data in
+                        if let data {
+                            return Tuple4(nil, data, .full, true)
+                        } else {
+                            return Tuple4(nil, nil, .full, false)
                         }
                     }
-                }))
-                
-                if media.url != nil {
-                    self.linkIconNode.image = UIImage(bundleImageName: "Instant View/ImageLink")
-                    self.pinchContainerNode.contentNode.addSubnode(self.linkIconNode)
                 }
-
-                self.pinchContainerNode.contentNode.addSubnode(self.statusNode)
+                self.imageNode.setSignal(chatMessagePhotoInternal(photoData: photoData)
+                |> map { _, _, generate in
+                    return generate
+                })
+            } else {
+                let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
+                self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, userLocation: sourceLocation.userLocation, photoReference: imageReference))
+                
+                if !interactive || shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings, peerType: sourceLocation.peerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: image) {
+                    self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, userLocation: sourceLocation.userLocation, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerId: nil).start())
+                }
+                
+                self.fetchControls = FetchControls(fetch: { [weak self] manual in
+                    if let strongSelf = self {
+                        strongSelf.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, userLocation: sourceLocation.userLocation, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerId: nil).start())
+                    }
+                }, cancel: {
+                    chatMessagePhotoCancelInteractiveFetch(account: context.account, photoReference: imageReference)
+                })
+                
+                if interactive {
+                    self.statusDisposable.set((context.account.postbox.mediaBox.resourceStatus(largest.resource) |> deliverOnMainQueue).start(next: { [weak self] status in
+                        displayLinkDispatcher.dispatch {
+                            if let strongSelf = self {
+                                strongSelf.fetchStatus = EngineMediaResource.FetchStatus(status)
+                                strongSelf.updateFetchStatus()
+                            }
+                        }
+                    }))
+                    
+                    if media.url != nil {
+                        self.linkIconNode.image = UIImage(bundleImageName: "Instant View/ImageLink")
+                        self.pinchContainerNode.contentNode.addSubnode(self.linkIconNode)
+                    }
+                    
+                    self.pinchContainerNode.contentNode.addSubnode(self.statusNode)
+                }
             }
         } else if case let .file(file) = media.media {
-            let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
-            if file.mimeType.hasPrefix("image/") {
-                if !interactive || shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings, peerType: sourceLocation.peerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: file) {
-                    _ = freeMediaFileInteractiveFetched(account: context.account, userLocation: sourceLocation.userLocation, fileReference: fileReference).start()
+            if let externalResource = file.resource as? InstantPageExternalMediaResource {
+                let photoData: Signal<Tuple4<Data?, Data?, ChatMessagePhotoQuality, Bool>, NoError>
+                if let preloadedData = getPreloadedResource(externalResource.url) {
+                    photoData = .single(Tuple4(nil, preloadedData, .full, true))
+                } else {
+                    photoData = context.engine.resources.httpData(url: externalResource.url, preserveExactUrl: true)
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<Data?, NoError> in
+                        return .single(nil)
+                    }
+                    |> map { data in
+                        if let data {
+                            return Tuple4(nil, data, .full, true)
+                        } else {
+                            return Tuple4(nil, nil, .full, false)
+                        }
+                    }
                 }
-                self.imageNode.setSignal(instantPageImageFile(account: context.account, userLocation: sourceLocation.userLocation, fileReference: fileReference, fetched: true))
+                self.imageNode.setSignal(chatMessagePhotoInternal(photoData: photoData)
+                |> map { _, _, generate in
+                    return generate
+                })
             } else {
-                self.imageNode.setSignal(chatMessageVideo(postbox: context.account.postbox, userLocation: sourceLocation.userLocation, videoReference: fileReference))
-            }
-            if file.isVideo {
-                self.statusNode.transitionToState(.play(.white), animated: false, completion: {})
-                self.pinchContainerNode.contentNode.addSubnode(self.statusNode)
+                let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
+                if file.mimeType.hasPrefix("image/") {
+                    if !interactive || shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings, peerType: sourceLocation.peerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: file) {
+                        _ = freeMediaFileInteractiveFetched(account: context.account, userLocation: sourceLocation.userLocation, fileReference: fileReference).start()
+                    }
+                    self.imageNode.setSignal(instantPageImageFile(account: context.account, userLocation: sourceLocation.userLocation, fileReference: fileReference, fetched: true))
+                } else {
+                    self.imageNode.setSignal(chatMessageVideo(postbox: context.account.postbox, userLocation: sourceLocation.userLocation, videoReference: fileReference))
+                }
+                if file.isVideo {
+                    self.statusNode.transitionToState(.play(.white), animated: false, completion: {})
+                    self.pinchContainerNode.contentNode.addSubnode(self.statusNode)
+                }
             }
         } else if case let .geo(map) = media.media {
             self.addSubnode(self.pinNode)

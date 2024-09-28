@@ -144,7 +144,7 @@ private func preparedShareItem(postbox: Postbox, network: Network, to peerId: Pe
                 let estimatedSize = TGMediaVideoConverter.estimatedSize(for: preset, duration: finalDuration, hasAudio: true)
                 
                 let resource = LocalFileVideoMediaResource(randomId: Int64.random(in: Int64.min ... Int64.max), path: asset.url.path, adjustments: resourceAdjustments)
-                return standaloneUploadedFile(postbox: postbox, network: network, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: finalDuration, size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags, preloadSize: nil)], hintFileIsLarge: estimatedSize > 10 * 1024 * 1024)
+                return standaloneUploadedFile(postbox: postbox, network: network, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: finalDuration, size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags, preloadSize: nil, coverTime: nil)], hintFileIsLarge: estimatedSize > 10 * 1024 * 1024)
                 |> mapError { _ -> PreparedShareItemError in
                     return .generic
                 }
@@ -210,7 +210,7 @@ private func preparedShareItem(postbox: Postbox, network: Network, to peerId: Pe
                         let mimeType: String
                         if converted {
                             mimeType = "video/mp4"
-                            attributes = [.Video(duration: duration, size: PixelDimensions(width: Int32(dimensions.width), height: Int32(dimensions.height)), flags: [.supportsStreaming], preloadSize: nil), .Animated, .FileName(fileName: "animation.mp4")]
+                            attributes = [.Video(duration: duration, size: PixelDimensions(width: Int32(dimensions.width), height: Int32(dimensions.height)), flags: [.supportsStreaming], preloadSize: nil, coverTime: nil), .Animated, .FileName(fileName: "animation.mp4")]
                         } else {
                             mimeType = "animation/gif"
                             attributes = [.ImageSize(size: PixelDimensions(width: Int32(dimensions.width), height: Int32(dimensions.height))), .Animated, .FileName(fileName: fileName ?? "animation.gif")]

@@ -412,6 +412,7 @@ public extension Api {
     enum InputFile: TypeConstructorDescription {
         case inputFile(id: Int64, parts: Int32, name: String, md5Checksum: String)
         case inputFileBig(id: Int64, parts: Int32, name: String)
+        case inputFileStoryDocument(id: Api.InputDocument)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -432,6 +433,12 @@ public extension Api {
                     serializeInt32(parts, buffer: buffer, boxed: false)
                     serializeString(name, buffer: buffer, boxed: false)
                     break
+                case .inputFileStoryDocument(let id):
+                    if boxed {
+                        buffer.appendInt32(1658620744)
+                    }
+                    id.serialize(buffer, true)
+                    break
     }
     }
     
@@ -441,6 +448,8 @@ public extension Api {
                 return ("inputFile", [("id", id as Any), ("parts", parts as Any), ("name", name as Any), ("md5Checksum", md5Checksum as Any)])
                 case .inputFileBig(let id, let parts, let name):
                 return ("inputFileBig", [("id", id as Any), ("parts", parts as Any), ("name", name as Any)])
+                case .inputFileStoryDocument(let id):
+                return ("inputFileStoryDocument", [("id", id as Any)])
     }
     }
     
@@ -476,6 +485,19 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.InputFile.inputFileBig(id: _1!, parts: _2!, name: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputFileStoryDocument(_ reader: BufferReader) -> InputFile? {
+            var _1: Api.InputDocument?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputDocument
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputFile.inputFileStoryDocument(id: _1!)
             }
             else {
                 return nil
@@ -994,118 +1016,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.InputGroupCall.inputGroupCall(id: _1!, accessHash: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    indirect enum InputInvoice: TypeConstructorDescription {
-        case inputInvoiceMessage(peer: Api.InputPeer, msgId: Int32)
-        case inputInvoicePremiumGiftCode(purpose: Api.InputStorePaymentPurpose, option: Api.PremiumGiftCodeOption)
-        case inputInvoiceSlug(slug: String)
-        case inputInvoiceStars(option: Api.StarsTopupOption)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputInvoiceMessage(let peer, let msgId):
-                    if boxed {
-                        buffer.appendInt32(-977967015)
-                    }
-                    peer.serialize(buffer, true)
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    break
-                case .inputInvoicePremiumGiftCode(let purpose, let option):
-                    if boxed {
-                        buffer.appendInt32(-1734841331)
-                    }
-                    purpose.serialize(buffer, true)
-                    option.serialize(buffer, true)
-                    break
-                case .inputInvoiceSlug(let slug):
-                    if boxed {
-                        buffer.appendInt32(-1020867857)
-                    }
-                    serializeString(slug, buffer: buffer, boxed: false)
-                    break
-                case .inputInvoiceStars(let option):
-                    if boxed {
-                        buffer.appendInt32(497236696)
-                    }
-                    option.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputInvoiceMessage(let peer, let msgId):
-                return ("inputInvoiceMessage", [("peer", peer as Any), ("msgId", msgId as Any)])
-                case .inputInvoicePremiumGiftCode(let purpose, let option):
-                return ("inputInvoicePremiumGiftCode", [("purpose", purpose as Any), ("option", option as Any)])
-                case .inputInvoiceSlug(let slug):
-                return ("inputInvoiceSlug", [("slug", slug as Any)])
-                case .inputInvoiceStars(let option):
-                return ("inputInvoiceStars", [("option", option as Any)])
-    }
-    }
-    
-        public static func parse_inputInvoiceMessage(_ reader: BufferReader) -> InputInvoice? {
-            var _1: Api.InputPeer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
-            }
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputInvoice.inputInvoiceMessage(peer: _1!, msgId: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputInvoicePremiumGiftCode(_ reader: BufferReader) -> InputInvoice? {
-            var _1: Api.InputStorePaymentPurpose?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputStorePaymentPurpose
-            }
-            var _2: Api.PremiumGiftCodeOption?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.PremiumGiftCodeOption
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputInvoice.inputInvoicePremiumGiftCode(purpose: _1!, option: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputInvoiceSlug(_ reader: BufferReader) -> InputInvoice? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputInvoice.inputInvoiceSlug(slug: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputInvoiceStars(_ reader: BufferReader) -> InputInvoice? {
-            var _1: Api.StarsTopupOption?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.StarsTopupOption
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputInvoice.inputInvoiceStars(option: _1!)
             }
             else {
                 return nil

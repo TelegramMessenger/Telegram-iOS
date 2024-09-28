@@ -47,6 +47,13 @@ open class PortalSourceView: UIView {
         }
     }
     
+    public func removePortal(view: PortalView) {
+        if let index = self.portalReferences.firstIndex(where: { $0.portalView === view }) {
+            self.portalReferences.remove(at: index)
+        }
+        view.disablePortal()
+    }
+    
     func setGlobalPortal(view: GlobalPortalView?) {
         if let globalPortalView = self.globalPortalView {
             self.globalPortalView = nil

@@ -24,7 +24,7 @@ class LocationPickerInteraction {
     let toggleMapModeSelection: () -> Void
     let updateMapMode: (LocationMapMode) -> Void
     let goToUserLocation: () -> Void
-    let goToCoordinate: (CLLocationCoordinate2D) -> Void
+    let goToCoordinate: (CLLocationCoordinate2D, Bool) -> Void
     let openSearch: () -> Void
     let updateSearchQuery: (String) -> Void
     let dismissSearch: () -> Void
@@ -33,7 +33,7 @@ class LocationPickerInteraction {
     let openHomeWorkInfo: () -> Void
     let showPlacesInThisArea: () -> Void
     
-    init(sendLocation: @escaping (CLLocationCoordinate2D, String?, MapGeoAddress?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, sendVenue: @escaping (TelegramMediaMap, Int64?, String?) -> Void, toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, openSearch: @escaping () -> Void, updateSearchQuery: @escaping (String) -> Void, dismissSearch: @escaping () -> Void, dismissInput: @escaping () -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, openHomeWorkInfo: @escaping () -> Void, showPlacesInThisArea: @escaping ()-> Void) {
+    init(sendLocation: @escaping (CLLocationCoordinate2D, String?, MapGeoAddress?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, sendVenue: @escaping (TelegramMediaMap, Int64?, String?) -> Void, toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D, Bool) -> Void, openSearch: @escaping () -> Void, updateSearchQuery: @escaping (String) -> Void, dismissSearch: @escaping () -> Void, dismissInput: @escaping () -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, openHomeWorkInfo: @escaping () -> Void, showPlacesInThisArea: @escaping ()-> Void) {
         self.sendLocation = sendLocation
         self.sendLiveLocation = sendLiveLocation
         self.sendVenue = sendVenue
@@ -88,6 +88,7 @@ public final class LocationPickerController: ViewController, AttachmentContainab
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
+    public var isMinimized: Bool = false
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: LocationPickerMode, source: Source = .generic, initialLocation: CLLocationCoordinate2D? = nil, completion: @escaping (TelegramMediaMap, Int64?, String?, String?, String?) -> Void) {
         self.context = context
@@ -230,14 +231,14 @@ public final class LocationPickerController: ViewController, AttachmentContainab
                 return
             }
             strongSelf.controllerNode.goToUserLocation()
-        }, goToCoordinate: { [weak self] coordinate in
+        }, goToCoordinate: { [weak self] coordinate, zoomOut in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.controllerNode.updateState { state in
                 var state = state
                 state.displayingMapModeOptions = false
-                state.selectedLocation = .location(coordinate, nil)
+                state.selectedLocation = .location(coordinate, nil, zoomOut)
                 state.searchingVenuesAround = false
                 return state
             }
@@ -396,44 +397,6 @@ public final class LocationPickerController: ViewController, AttachmentContainab
 }
 
 private final class LocationPickerContext: AttachmentMediaPickerContext {
-    var selectionCount: Signal<Int, NoError> {
-        return .single(0)
-    }
-    
-    var caption: Signal<NSAttributedString?, NoError> {
-        return .single(nil)
-    }
-    
-    var hasCaption: Bool {
-        return false
-    }
-    
-    var captionIsAboveMedia: Signal<Bool, NoError> {
-        return .single(false)
-    }
-    
-    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
-    }
-    
-    public var loadingProgress: Signal<CGFloat?, NoError> {
-        return .single(nil)
-    }
-    
-    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
-        return .single(nil)
-    }
-            
-    func setCaption(_ caption: NSAttributedString) {
-    }
-    
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?) {
-    }
-    
-    func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?) {
-    }
-    
-    func mainButtonAction() {
-    }
 }
 
 public func storyLocationPickerController(

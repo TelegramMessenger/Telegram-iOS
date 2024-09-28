@@ -309,6 +309,7 @@ public extension Api {
         case reactionCustomEmoji(documentId: Int64)
         case reactionEmoji(emoticon: String)
         case reactionEmpty
+        case reactionPaid
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -330,6 +331,12 @@ public extension Api {
                     }
                     
                     break
+                case .reactionPaid:
+                    if boxed {
+                        buffer.appendInt32(1379771627)
+                    }
+                    
+                    break
     }
     }
     
@@ -341,6 +348,8 @@ public extension Api {
                 return ("reactionEmoji", [("emoticon", emoticon as Any)])
                 case .reactionEmpty:
                 return ("reactionEmpty", [])
+                case .reactionPaid:
+                return ("reactionPaid", [])
     }
     }
     
@@ -368,6 +377,9 @@ public extension Api {
         }
         public static func parse_reactionEmpty(_ reader: BufferReader) -> Reaction? {
             return Api.Reaction.reactionEmpty
+        }
+        public static func parse_reactionPaid(_ reader: BufferReader) -> Reaction? {
+            return Api.Reaction.reactionPaid
         }
     
     }
@@ -854,142 +866,6 @@ public extension Api {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api {
-    enum ReportReason: TypeConstructorDescription {
-        case inputReportReasonChildAbuse
-        case inputReportReasonCopyright
-        case inputReportReasonFake
-        case inputReportReasonGeoIrrelevant
-        case inputReportReasonIllegalDrugs
-        case inputReportReasonOther
-        case inputReportReasonPersonalDetails
-        case inputReportReasonPornography
-        case inputReportReasonSpam
-        case inputReportReasonViolence
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputReportReasonChildAbuse:
-                    if boxed {
-                        buffer.appendInt32(-1376497949)
-                    }
-                    
-                    break
-                case .inputReportReasonCopyright:
-                    if boxed {
-                        buffer.appendInt32(-1685456582)
-                    }
-                    
-                    break
-                case .inputReportReasonFake:
-                    if boxed {
-                        buffer.appendInt32(-170010905)
-                    }
-                    
-                    break
-                case .inputReportReasonGeoIrrelevant:
-                    if boxed {
-                        buffer.appendInt32(-606798099)
-                    }
-                    
-                    break
-                case .inputReportReasonIllegalDrugs:
-                    if boxed {
-                        buffer.appendInt32(177124030)
-                    }
-                    
-                    break
-                case .inputReportReasonOther:
-                    if boxed {
-                        buffer.appendInt32(-1041980751)
-                    }
-                    
-                    break
-                case .inputReportReasonPersonalDetails:
-                    if boxed {
-                        buffer.appendInt32(-1631091139)
-                    }
-                    
-                    break
-                case .inputReportReasonPornography:
-                    if boxed {
-                        buffer.appendInt32(777640226)
-                    }
-                    
-                    break
-                case .inputReportReasonSpam:
-                    if boxed {
-                        buffer.appendInt32(1490799288)
-                    }
-                    
-                    break
-                case .inputReportReasonViolence:
-                    if boxed {
-                        buffer.appendInt32(505595789)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputReportReasonChildAbuse:
-                return ("inputReportReasonChildAbuse", [])
-                case .inputReportReasonCopyright:
-                return ("inputReportReasonCopyright", [])
-                case .inputReportReasonFake:
-                return ("inputReportReasonFake", [])
-                case .inputReportReasonGeoIrrelevant:
-                return ("inputReportReasonGeoIrrelevant", [])
-                case .inputReportReasonIllegalDrugs:
-                return ("inputReportReasonIllegalDrugs", [])
-                case .inputReportReasonOther:
-                return ("inputReportReasonOther", [])
-                case .inputReportReasonPersonalDetails:
-                return ("inputReportReasonPersonalDetails", [])
-                case .inputReportReasonPornography:
-                return ("inputReportReasonPornography", [])
-                case .inputReportReasonSpam:
-                return ("inputReportReasonSpam", [])
-                case .inputReportReasonViolence:
-                return ("inputReportReasonViolence", [])
-    }
-    }
-    
-        public static func parse_inputReportReasonChildAbuse(_ reader: BufferReader) -> ReportReason? {
-            return Api.ReportReason.inputReportReasonChildAbuse
-        }
-        public static func parse_inputReportReasonCopyright(_ reader: BufferReader) -> ReportReason? {
-            return Api.ReportReason.inputReportReasonCopyright
-        }
-        public static func parse_inputReportReasonFake(_ reader: BufferReader) -> ReportReason? {
-            return Api.ReportReason.inputReportReasonFake
-        }
-        public static func parse_inputReportReasonGeoIrrelevant(_ reader: BufferReader) -> ReportReason? {
-            return Api.ReportReason.inputReportReasonGeoIrrelevant
-        }
-        public static func parse_inputReportReasonIllegalDrugs(_ reader: BufferReader) -> ReportReason? {
-            return Api.ReportReason.inputReportReasonIllegalDrugs
-        }
-        public static func parse_inputReportReasonOther(_ reader: BufferReader) -> ReportReason? {
-            return Api.ReportReason.inputReportReasonOther
-        }
-        public static func parse_inputReportReasonPersonalDetails(_ reader: BufferReader) -> ReportReason? {
-            return Api.ReportReason.inputReportReasonPersonalDetails
-        }
-        public static func parse_inputReportReasonPornography(_ reader: BufferReader) -> ReportReason? {
-            return Api.ReportReason.inputReportReasonPornography
-        }
-        public static func parse_inputReportReasonSpam(_ reader: BufferReader) -> ReportReason? {
-            return Api.ReportReason.inputReportReasonSpam
-        }
-        public static func parse_inputReportReasonViolence(_ reader: BufferReader) -> ReportReason? {
-            return Api.ReportReason.inputReportReasonViolence
         }
     
     }

@@ -70,6 +70,7 @@ public final class MediaScrubberComponent: Component {
     public enum Style {
         case editor
         case videoMessage
+        case cover
     }
     
     let context: AccountContext
@@ -84,8 +85,10 @@ public final class MediaScrubberComponent: Component {
     let isPlaying: Bool
     
     let tracks: [Track]
+    let portalView: PortalView?
     
     let positionUpdated: (Double, Bool) -> Void
+    let coverPositionUpdated: (Double, Bool, @escaping () -> Void) -> Void
     let trackTrimUpdated: (Int32, Double, Double, Bool, Bool) -> Void
     let trackOffsetUpdated: (Int32, Double, Bool) -> Void
     let trackLongPressed: (Int32, UIView) -> Void
@@ -100,7 +103,9 @@ public final class MediaScrubberComponent: Component {
         maxDuration: Double,
         isPlaying: Bool,
         tracks: [Track],
+        portalView: PortalView? = nil,
         positionUpdated: @escaping (Double, Bool) -> Void,
+        coverPositionUpdated: @escaping (Double, Bool, @escaping () -> Void) -> Void = { _, _, _ in },
         trackTrimUpdated: @escaping (Int32, Double, Double, Bool, Bool) -> Void,
         trackOffsetUpdated: @escaping (Int32, Double, Bool) -> Void,
         trackLongPressed: @escaping (Int32, UIView) -> Void
@@ -114,7 +119,9 @@ public final class MediaScrubberComponent: Component {
         self.maxDuration = maxDuration
         self.isPlaying = isPlaying
         self.tracks = tracks
+        self.portalView = portalView
         self.positionUpdated = positionUpdated
+        self.coverPositionUpdated = coverPositionUpdated
         self.trackTrimUpdated = trackTrimUpdated
         self.trackOffsetUpdated = trackOffsetUpdated
         self.trackLongPressed = trackLongPressed
@@ -152,6 +159,7 @@ public final class MediaScrubberComponent: Component {
         private var trackViews: [Int32: TrackView] = [:]
         private let trimView: TrimView
         private let ghostTrimView: TrimView
+        private let cursorContentView: UIView
         private let cursorView: HandleView
         
         private var cursorDisplayLink: SharedDisplayLinkDriver.Link?
@@ -159,6 +167,7 @@ public final class MediaScrubberComponent: Component {
     
         private var selectedTrackId: Int32 = 0
         private var isPanningCursor = false
+        private var ignoreCursorPositionUpdate = false
         
         private var scrubberSize: CGSize?
         
@@ -169,6 +178,7 @@ public final class MediaScrubberComponent: Component {
             self.trimView = TrimView(frame: .zero)
             self.ghostTrimView = TrimView(frame: .zero)
             self.ghostTrimView.isHollow = true
+            self.cursorContentView = UIView()
             self.cursorView = HandleView()
             
             super.init(frame: frame)
@@ -177,6 +187,10 @@ public final class MediaScrubberComponent: Component {
             
             self.disablesInteractiveModalDismiss = true
             self.disablesInteractiveKeyboardGestureRecognizer = true
+            
+            self.cursorContentView.isUserInteractionEnabled = false
+            self.cursorContentView.clipsToBounds = true
+            self.cursorContentView.layer.cornerRadius = 10.0
             
             let positionImage = generateImage(CGSize(width: handleWidth, height: 50.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: .zero, size: size))
@@ -187,13 +201,13 @@ public final class MediaScrubberComponent: Component {
                 context.addPath(path.cgPath)
                 context.fillPath()
             })?.stretchableImage(withLeftCapWidth: Int(handleWidth / 2.0), topCapHeight: 25)
-            
             self.cursorView.image = positionImage
             self.cursorView.isUserInteractionEnabled = true
             self.cursorView.hitTestSlop = UIEdgeInsets(top: -8.0, left: -9.0, bottom: -8.0, right: -9.0)
                 
             self.addSubview(self.ghostTrimView)
             self.addSubview(self.trimView)
+            self.addSubview(self.cursorContentView)
             self.addSubview(self.cursorView)
             
             self.cursorView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleCursorPan(_:))))
@@ -317,10 +331,18 @@ public final class MediaScrubberComponent: Component {
             switch gestureRecognizer.state {
             case .began, .changed:
                 self.isPanningCursor = true
-                component.positionUpdated(position, false)
+                if case .cover = component.style {
+                    component.coverPositionUpdated(position, false, {})
+                } else {
+                    component.positionUpdated(position, false)
+                }
             case .ended, .cancelled:
                 self.isPanningCursor = false
-                component.positionUpdated(position, true)
+                if case .cover = component.style {
+                    component.coverPositionUpdated(position, false, {})
+                } else {
+                    component.positionUpdated(position, true)
+                }
             default:
                 break
             }
@@ -328,10 +350,23 @@ public final class MediaScrubberComponent: Component {
         }
         
         private func cursorFrame(size: CGSize, height: CGFloat, position: Double, duration : Double) -> CGRect {
+            var cursorWidth = handleWidth
+            var cursorMargin = handleWidth
+            var height = height
+            var isCover = false
+            var y: CGFloat = -5.0 - UIScreenPixel
+            if let component = self.component, case .cover = component.style {
+                cursorWidth = 30.0 + 12.0
+                cursorMargin = handleWidth
+                height = 50.0
+                isCover = true
+                y += 1.0
+            }
+            
             let cursorPadding: CGFloat = 8.0
             let cursorPositionFraction = duration > 0.0 ? position / duration : 0.0
-            let cursorPosition = floorToScreenPixels(handleWidth - 1.0 + (size.width - handleWidth * 2.0 + 2.0) * cursorPositionFraction)
-            var cursorFrame = CGRect(origin: CGPoint(x: cursorPosition - handleWidth / 2.0, y: -5.0 - UIScreenPixel), size: CGSize(width: handleWidth, height: height))
+            let cursorPosition = floorToScreenPixels(cursorMargin - 1.0 + (size.width - handleWidth * 2.0 + 2.0) * cursorPositionFraction)
+            var cursorFrame = CGRect(origin: CGPoint(x: cursorPosition - cursorWidth / 2.0, y: y), size: CGSize(width: cursorWidth, height: height))
             
             var leftEdge = self.ghostTrimView.leftHandleView.frame.maxX
             var rightEdge = self.ghostTrimView.rightHandleView.frame.minX
@@ -339,9 +374,13 @@ public final class MediaScrubberComponent: Component {
                 leftEdge = self.trimView.leftHandleView.frame.maxX
                 rightEdge = self.trimView.rightHandleView.frame.minX
             }
+            if isCover {
+                leftEdge = 0.0
+                rightEdge = size.width
+            }
             
             cursorFrame.origin.x = max(leftEdge - cursorPadding, cursorFrame.origin.x)
-            cursorFrame.origin.x = min(rightEdge - handleWidth + cursorPadding, cursorFrame.origin.x)
+            cursorFrame.origin.x = min(rightEdge - cursorWidth + cursorPadding, cursorFrame.origin.x)
             return cursorFrame
         }
         
@@ -377,6 +416,7 @@ public final class MediaScrubberComponent: Component {
                 updatedPosition = max(self.startPosition, min(self.endPosition, position + advance))
             }
             self.cursorView.frame = cursorFrame(size: scrubberSize, height: self.effectiveCursorHeight, position: updatedPosition, duration: self.trimDuration)
+            self.cursorContentView.frame = self.cursorView.frame.insetBy(dx: 6.0, dy: 2.0).offsetBy(dx: -1.0 - UIScreenPixel, dy: 0.0)
         }
                 
         public func update(component: MediaScrubberComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
@@ -384,11 +424,36 @@ public final class MediaScrubberComponent: Component {
             self.component = component
             self.state = state
             
+            if let portalView = component.portalView, portalView.view.superview == nil {
+                portalView.view.frame = CGRect(x: 0.0, y: 0.0, width: 30.0, height: 48.0)
+                portalView.view.clipsToBounds = true
+                self.cursorContentView.addSubview(portalView.view)
+            }
+            
             switch component.style {
             case .editor:
                 self.cursorView.isHidden = false
             case .videoMessage:
                 self.cursorView.isHidden = true
+            case .cover:
+                self.cursorView.isHidden = false
+                self.trimView.isHidden = true
+                self.ghostTrimView.isHidden = true
+                
+                if isFirstTime {
+                    let positionImage = generateImage(CGSize(width: 30.0 + 12.0, height: 50.0), rotatedContext: { size, context in
+                        context.clear(CGRect(origin: .zero, size: size))
+                        context.setStrokeColor(UIColor.white.cgColor)
+                        let lineWidth = 2.0 - UIScreenPixel
+                        context.setLineWidth(lineWidth)
+                        context.setShadow(offset: .zero, blur: 2.0, color: UIColor(rgb: 0x000000, alpha: 0.55).cgColor)
+                        
+                        let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: 6.0 - lineWidth / 2.0, y: 2.0 - lineWidth / 2.0), size: CGSize(width: 30.0 - lineWidth, height: 48.0 - lineWidth)), cornerRadius: 9.0)
+                        context.addPath(path.cgPath)
+                        context.strokePath()
+                    })
+                    self.cursorView.image = positionImage
+                }
             }
             
             var totalHeight: CGFloat = 0.0
@@ -419,6 +484,23 @@ public final class MediaScrubberComponent: Component {
                 } else {
                     trackTransition = .immediate
                     trackView = TrackView()
+                    trackView.onTap = { [weak self] fraction in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        var position = max(self.startPosition, min(self.endPosition, self.trimDuration * fraction))
+                        if let offset = self.mainAudioTrackOffset {
+                            position += offset
+                        }
+                        self.ignoreCursorPositionUpdate = true
+                        component.coverPositionUpdated(position, true, { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.ignoreCursorPositionUpdate = false
+                            self.state?.updated(transition: .immediate)
+                        })
+                    }
                     trackView.onSelection = { [weak self] id in
                         guard let self else {
                             return
@@ -520,7 +602,7 @@ public final class MediaScrubberComponent: Component {
 
             let fullTrackHeight: CGFloat
             switch component.style {
-            case .editor:
+            case .editor, .cover:
                 fullTrackHeight = trackHeight
             case .videoMessage:
                 fullTrackHeight = 33.0
@@ -583,7 +665,7 @@ public final class MediaScrubberComponent: Component {
             transition.setFrame(view: self.ghostTrimView, frame: ghostTrimViewFrame)
             transition.setAlpha(view: self.ghostTrimView, alpha: ghostTrimVisible ? 0.75 : 0.0)
             
-            if case .videoMessage = component.style {
+            if [.videoMessage, .cover].contains(component.style) {
                 for (_ , trackView) in self.trackViews {
                     trackView.updateOpaqueEdges(
                         left: leftHandleFrame.minX,
@@ -606,11 +688,15 @@ public final class MediaScrubberComponent: Component {
                 self.cursorPositionAnimation = nil
                 self.cursorDisplayLink?.isPaused = true
                 
-                var cursorPosition = component.position
-                if let offset = self.mainAudioTrackOffset {
-                    cursorPosition -= offset
+                if !self.ignoreCursorPositionUpdate {
+                    var cursorPosition = component.position
+                    if let offset = self.mainAudioTrackOffset {
+                        cursorPosition -= offset
+                    }
+                    let cursorFrame = cursorFrame(size: scrubberSize, height: self.effectiveCursorHeight, position: cursorPosition, duration: trimDuration)
+                    transition.setFrame(view: self.cursorView, frame: cursorFrame)
+                    transition.setFrame(view: self.cursorContentView, frame: cursorFrame.insetBy(dx: 6.0, dy: 2.0).offsetBy(dx: -1.0  - UIScreenPixel, dy: 0.0))
                 }
-                transition.setFrame(view: self.cursorView, frame: cursorFrame(size: scrubberSize, height: self.effectiveCursorHeight, position: cursorPosition, duration: trimDuration))
             } else {
                 if let (_, _, end, ended) = self.cursorPositionAnimation {
                     if ended, component.position >= self.startPosition && component.position < end - 1.0 {
@@ -663,6 +749,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     fileprivate var videoOpaqueFrameLayers: [VideoFrameLayer] = []
     
     var onSelection: (Int32) -> Void = { _ in }
+    var onTap: (CGFloat) -> Void = { _ in }
     var offsetUpdated: (Double, Bool) -> Void = { _, _ in }
     var updated: (ComponentTransition) -> Void = { _ in }
     
@@ -716,7 +803,6 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         
         self.scrollView.delegate = self
         
-        self.videoTransparentFramesContainer.alpha = 0.5
         self.videoTransparentFramesContainer.clipsToBounds = true
         self.videoTransparentFramesContainer.isUserInteractionEnabled = false
         
@@ -739,10 +825,15 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     }
     
     @objc private func handleTap(_ gestureRecognizer: UITapGestureRecognizer) {
-        guard let (track, _, _, _) = self.params else {
+        guard let params = self.params else {
             return
         }
-        self.onSelection(track.id)
+        if case .cover = params.style {
+            let location = gestureRecognizer.location(in: self)
+            self.onTap(location.x / self.frame.width)
+        } else {
+            self.onSelection(params.track.id)
+        }
     }
     
     private func updateTrackOffset(done: Bool) {
@@ -786,6 +877,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     }
     
     private var params: (
+        style: MediaScrubberComponent.Style,
         track: MediaScrubberComponent.Track,
         isSelected: Bool,
         availableSize: CGSize,
@@ -834,21 +926,24 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         transition: ComponentTransition
     ) -> CGSize {
         let previousParams = self.params
-        self.params = (track, isSelected, availableSize, duration)
+        self.params = (style, track, isSelected, availableSize, duration)
         
         let fullTrackHeight: CGFloat
         let framesCornerRadius: CGFloat
         switch style {
-        case .editor:
+        case .editor, .cover:
             fullTrackHeight = trackHeight
             framesCornerRadius = 9.0
+            self.videoTransparentFramesContainer.alpha = 0.35
         case .videoMessage:
             fullTrackHeight = 33.0
             framesCornerRadius = fullTrackHeight / 2.0
+            self.videoTransparentFramesContainer.alpha = 0.5
         }
         self.videoTransparentFramesContainer.layer.cornerRadius = framesCornerRadius
         self.videoOpaqueFramesContainer.layer.cornerRadius = framesCornerRadius
         
+
         let scrubberSize = CGSize(width: availableSize.width, height: isSelected ? fullTrackHeight : collapsedTrackHeight)
         
         var screenSpanDuration = duration
@@ -1362,7 +1457,7 @@ private class TrimView: UIView {
         let highlightColor: UIColor
         
         switch style {
-        case .editor:
+        case .editor, .cover:
             effectiveHandleWidth = handleWidth
             fullTrackHeight = trackHeight
             capsuleOffset = 5.0 - UIScreenPixel

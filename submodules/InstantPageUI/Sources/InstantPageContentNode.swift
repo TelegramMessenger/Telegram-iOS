@@ -22,6 +22,7 @@ public final class InstantPageContentNode : ASDisplayNode {
     private let openUrl: (InstantPageUrlItem) -> Void
     private let activatePinchPreview: ((PinchSourceContainerNode) -> Void)?
     private let pinchPreviewFinished: ((InstantPageNode) -> Void)?
+    private let getPreloadedResource: (String) -> Data?
     
     var currentLayoutTiles: [InstantPageTile] = []
     var currentLayoutItemsWithNodes: [InstantPageItem] = []
@@ -42,7 +43,7 @@ public final class InstantPageContentNode : ASDisplayNode {
     
     private var previousVisibleBounds: CGRect?
     
-    init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, sourceLocation: InstantPageSourceLocation, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize, inOverlayPanel: Bool = false, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void) {
+    init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, sourceLocation: InstantPageSourceLocation, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize, inOverlayPanel: Bool = false, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, getPreloadedResource: @escaping (String) -> Data?) {
         self.context = context
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder
@@ -55,6 +56,7 @@ public final class InstantPageContentNode : ASDisplayNode {
         self.pinchPreviewFinished = pinchPreviewFinished
         self.openPeer = openPeer
         self.openUrl = openUrl
+        self.getPreloadedResource = getPreloadedResource
         
         self.currentLayout = InstantPageLayout(origin: CGPoint(), contentSize: contentSize, items: items)
         self.contentSize = contentSize
@@ -210,7 +212,7 @@ public final class InstantPageContentNode : ASDisplayNode {
                     }, updateWebEmbedHeight: { _ in
                     }, updateDetailsExpanded: { [weak self] expanded in
                         self?.updateDetailsExpanded(detailsIndex, expanded)
-                    }, currentExpandedDetails: self.currentExpandedDetails) {
+                    }, currentExpandedDetails: self.currentExpandedDetails, getPreloadedResource: self.getPreloadedResource) {
                         newNode.frame = itemFrame
                         newNode.updateLayout(size: itemFrame.size, transition: transition)
                         if let topNode = topNode {
@@ -319,7 +321,7 @@ public final class InstantPageContentNode : ASDisplayNode {
         //        }
     }
     
-    func updateDetailsExpanded(_ index: Int, _ expanded: Bool, animated: Bool = true, requestLayout: Bool = true) {
+    public func updateDetailsExpanded(_ index: Int, _ expanded: Bool, animated: Bool = true, requestLayout: Bool = true) {
         if var currentExpandedDetails = self.currentExpandedDetails {
             currentExpandedDetails[index] = expanded
             self.currentExpandedDetails = currentExpandedDetails
@@ -353,7 +355,7 @@ public final class InstantPageContentNode : ASDisplayNode {
         return contentOffset
     }
     
-    func nodeForDetailsItem(_ item: InstantPageDetailsItem) -> InstantPageDetailsNode? {
+    public func nodeForDetailsItem(_ item: InstantPageDetailsItem) -> InstantPageDetailsNode? {
         for (_, itemNode) in self.visibleItemsWithNodes {
             if let detailsNode = itemNode as? InstantPageDetailsNode, detailsNode.item === item {
                 return detailsNode

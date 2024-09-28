@@ -65,7 +65,7 @@ func resolveMissingStickerSets(network: Network, postbox: Postbox, stickerSets: 
     var missingSignals: [Signal<(Int, Api.StickerSetCovered)?, NoError>] = []
     for i in 0 ..< stickerSets.count {
         switch stickerSets[i] {
-        case let .stickerSetNoCovered(value):
+        case let .stickerSetNoCovered(value), let .stickerSetCovered(value, _):
             switch value {
             case let .stickerSet(_, _, id, accessHash, _, _, _, _, _, _, _, hash):
                 if ignorePacksWithHashes[id] == hash {
@@ -143,7 +143,7 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox, category: F
                 case .featuredStickersNotModified:
                     return .single(.notModified)
                 case let .featuredStickers(flags, _, _, sets, unread):
-                    return resolveMissingStickerSets(network: network, postbox: postbox, stickerSets: sets, ignorePacksWithHashes: initialPackMap.mapValues({ item in
+                    return resolveMissingStickerSets(network: network, postbox: postbox, stickerSets: sets, ignorePacksWithHashes: initialPackMap.filter { $0.value.topItems.count > 1 }.mapValues({ item in
                         item.info.hash
                     }))
                     |> castError(MTRpcError.self)
@@ -153,8 +153,10 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox, category: F
                         for set in sets {
                             var (info, items) = parsePreviewStickerSet(set, namespace: category.collectionIdNamespace)
                             if let previousPack = initialPackMap[info.id.id] {
-                                if previousPack.info.hash == info.hash {
+                                if previousPack.info.hash == info.hash, previousPack.topItems.count > 1 {
                                     items = previousPack.topItems
+                                } else {
+                                    items = Array(items.prefix(5))
                                 }
                             }
                             updatedPacks.append(FeaturedStickerPackItem(info: info, topItems: items, unread: unreadIds.contains(info.id.id)))

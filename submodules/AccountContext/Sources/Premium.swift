@@ -49,6 +49,7 @@ public enum PremiumGiftSource: Equatable {
     case attachMenu
     case settings([EnginePeer.Id: TelegramBirthday]?)
     case chatList([EnginePeer.Id: TelegramBirthday]?)
+    case stars([EnginePeer.Id: TelegramBirthday]?)
     case channelBoost
     case deeplink(String?)
 }
@@ -121,6 +122,16 @@ public enum BoostSubject: Equatable {
     case noAds
 }
 
+public enum StarsPurchasePurpose: Equatable {
+    case generic
+    case topUp(requiredStars: Int64, purpose: String?)
+    case transfer(peerId: EnginePeer.Id, requiredStars: Int64)
+    case reactions(peerId: EnginePeer.Id, requiredStars: Int64)
+    case subscription(peerId: EnginePeer.Id, requiredStars: Int64, renew: Bool)
+    case gift(peerId: EnginePeer.Id)
+    case unlockMedia(requiredStars: Int64)
+}
+
 public struct PremiumConfiguration {
     public static var defaultValue: PremiumConfiguration {
         return PremiumConfiguration(
@@ -130,6 +141,7 @@ public struct PremiumConfiguration {
             showPremiumGiftInAttachMenu: false,
             showPremiumGiftInTextField: false,
             giveawayGiftsPurchaseAvailable: false,
+            starsGiftsPurchaseAvailable: false,
             boostsPerGiftCount: 3,
             audioTransciptionTrialMaxDuration: 300,
             audioTransciptionTrialCount: 2,
@@ -156,6 +168,7 @@ public struct PremiumConfiguration {
     public let showPremiumGiftInAttachMenu: Bool
     public let showPremiumGiftInTextField: Bool
     public let giveawayGiftsPurchaseAvailable: Bool
+    public let starsGiftsPurchaseAvailable: Bool
     public let boostsPerGiftCount: Int32
     public let audioTransciptionTrialMaxDuration: Int32
     public let audioTransciptionTrialCount: Int32
@@ -181,6 +194,7 @@ public struct PremiumConfiguration {
         showPremiumGiftInAttachMenu: Bool,
         showPremiumGiftInTextField: Bool,
         giveawayGiftsPurchaseAvailable: Bool,
+        starsGiftsPurchaseAvailable: Bool,
         boostsPerGiftCount: Int32,
         audioTransciptionTrialMaxDuration: Int32,
         audioTransciptionTrialCount: Int32,
@@ -205,6 +219,7 @@ public struct PremiumConfiguration {
         self.showPremiumGiftInAttachMenu = showPremiumGiftInAttachMenu
         self.showPremiumGiftInTextField = showPremiumGiftInTextField
         self.giveawayGiftsPurchaseAvailable = giveawayGiftsPurchaseAvailable
+        self.starsGiftsPurchaseAvailable = starsGiftsPurchaseAvailable
         self.boostsPerGiftCount = boostsPerGiftCount
         self.audioTransciptionTrialMaxDuration = audioTransciptionTrialMaxDuration
         self.audioTransciptionTrialCount = audioTransciptionTrialCount
@@ -237,6 +252,7 @@ public struct PremiumConfiguration {
                 showPremiumGiftInAttachMenu: data["premium_gift_attach_menu_icon"] as? Bool ?? defaultValue.showPremiumGiftInAttachMenu,
                 showPremiumGiftInTextField: data["premium_gift_text_field_icon"] as? Bool ?? defaultValue.showPremiumGiftInTextField,
                 giveawayGiftsPurchaseAvailable: data["giveaway_gifts_purchase_available"] as? Bool ?? defaultValue.giveawayGiftsPurchaseAvailable,
+                starsGiftsPurchaseAvailable: data["stars_gifts_enabled"] as? Bool ?? defaultValue.starsGiftsPurchaseAvailable,
                 boostsPerGiftCount: get(data["boosts_per_sent_gift"]) ?? defaultValue.boostsPerGiftCount,
                 audioTransciptionTrialMaxDuration: get(data["transcribe_audio_trial_duration_max"]) ?? defaultValue.audioTransciptionTrialMaxDuration,
                 audioTransciptionTrialCount: get(data["transcribe_audio_trial_weekly_number"]) ?? defaultValue.audioTransciptionTrialCount,

@@ -186,6 +186,7 @@ extension ChatControllerImpl {
             audioTrackOffset: nil,
             audioTrackVolume: nil,
             audioTrackSamples: nil,
+            coverImageTimestamp: nil,
             qualityPreset: nil
         )
         
@@ -210,7 +211,7 @@ extension ChatControllerImpl {
                 var fileAttributes: [TelegramMediaFileAttribute] = []
                 fileAttributes.append(.FileName(fileName: "sticker.webm"))
                 fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
-                fileAttributes.append(.Video(duration: animatedImage.duration, size: PixelDimensions(width: 512, height: 512), flags: [], preloadSize: nil))
+                fileAttributes.append(.Video(duration: animatedImage.duration, size: PixelDimensions(width: 512, height: 512), flags: [], preloadSize: nil, coverTime: nil))
                 
                 let previewRepresentations: [TelegramMediaImageRepresentation] = []
 //                if let thumbnailResource {

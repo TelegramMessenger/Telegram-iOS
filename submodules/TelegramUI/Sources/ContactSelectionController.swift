@@ -17,6 +17,7 @@ import ChatSendMessageActionUI
 
 class ContactSelectionControllerImpl: ViewController, ContactSelectionController, PresentableController, AttachmentContainable {
     private let context: AccountContext
+    private let mode: ContactSelectionControllerMode
     private let autoDismiss: Bool
     
     fileprivate var contactsNode: ContactSelectionControllerNode {
@@ -35,7 +36,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     
     private let index: PeerNameIndex = .lastNameFirst
     private let titleProducer: (PresentationStrings) -> String
-    private let options: [ContactListAdditionalOption]
+    private let options: Signal<[ContactListAdditionalOption], NoError>
     private let displayDeviceContacts: Bool
     private let displayCallIcons: Bool
     private let multipleSelection: Bool
@@ -88,11 +89,13 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     var cancelPanGesture: () -> Void = { }
     var isContainerPanning: () -> Bool = { return false }
     var isContainerExpanded: () -> Bool = { return false }
+    var isMinimized: Bool = false
     
     var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)?
     
     init(_ params: ContactSelectionControllerParams) {
         self.context = params.context
+        self.mode = params.mode
         self.autoDismiss = params.autoDismiss
         self.titleProducer = params.title
         self.options = params.options
@@ -206,7 +209,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactSelectionControllerNode(context: self.context, presentationData: self.presentationData, options: self.options, displayDeviceContacts: self.displayDeviceContacts, displayCallIcons: self.displayCallIcons, multipleSelection: self.multipleSelection, requirePhoneNumbers: self.requirePhoneNumbers)
+        self.displayNode = ContactSelectionControllerNode(context: self.context, mode: self.mode, presentationData: self.presentationData, options: self.options, displayDeviceContacts: self.displayDeviceContacts, displayCallIcons: self.displayCallIcons, multipleSelection: self.multipleSelection, requirePhoneNumbers: self.requirePhoneNumbers)
         self._ready.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar
@@ -451,29 +454,6 @@ final class ContactsPickerContext: AttachmentMediaPickerContext {
         } else {
             return .single(0)
         }
-    }
-    
-    var caption: Signal<NSAttributedString?, NoError> {
-        return .single(nil)
-    }
-    
-    var hasCaption: Bool {
-        return false
-    }
-    
-    var captionIsAboveMedia: Signal<Bool, NoError> {
-        return .single(false)
-    }
-    
-    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
-    }
-    
-    public var loadingProgress: Signal<CGFloat?, NoError> {
-        return .single(nil)
-    }
-    
-    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
-        return .single(nil)
     }
         
     init(controller: ContactSelectionControllerImpl) {

@@ -920,26 +920,18 @@ public extension Api.bots {
     
     }
 }
-public extension Api.channels {
-    enum AdminLogResults: TypeConstructorDescription {
-        case adminLogResults(events: [Api.ChannelAdminLogEvent], chats: [Api.Chat], users: [Api.User])
+public extension Api.bots {
+    enum PopularAppBots: TypeConstructorDescription {
+        case popularAppBots(flags: Int32, nextOffset: String?, users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .adminLogResults(let events, let chats, let users):
+                case .popularAppBots(let flags, let nextOffset, let users):
                     if boxed {
-                        buffer.appendInt32(-309659827)
+                        buffer.appendInt32(428978491)
                     }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(events.count))
-                    for item in events {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
                     for item in users {
@@ -951,29 +943,25 @@ public extension Api.channels {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .adminLogResults(let events, let chats, let users):
-                return ("adminLogResults", [("events", events as Any), ("chats", chats as Any), ("users", users as Any)])
+                case .popularAppBots(let flags, let nextOffset, let users):
+                return ("popularAppBots", [("flags", flags as Any), ("nextOffset", nextOffset as Any), ("users", users as Any)])
     }
     }
     
-        public static func parse_adminLogResults(_ reader: BufferReader) -> AdminLogResults? {
-            var _1: [Api.ChannelAdminLogEvent]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ChannelAdminLogEvent.self)
-            }
-            var _2: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
+        public static func parse_popularAppBots(_ reader: BufferReader) -> PopularAppBots? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = parseString(reader) }
             var _3: [Api.User]?
             if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.channels.AdminLogResults.adminLogResults(events: _1!, chats: _2!, users: _3!)
+                return Api.bots.PopularAppBots.popularAppBots(flags: _1!, nextOffset: _2, users: _3!)
             }
             else {
                 return nil

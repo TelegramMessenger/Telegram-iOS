@@ -621,7 +621,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                     text: .plain(attributedText),
                     horizontalAlignment: self.textAlignment == .center ? .center : .left,
                     truncationType: .end,
-                    maximumNumberOfLines: 3,
+                    maximumNumberOfLines: 0,
                     lineSpacing: 0.2,
                     highlightAction: nil,
                     tapAction: { _, _ in

@@ -491,6 +491,16 @@ public enum MediaAutoDownloadPeerType {
     case channel
 }
 
+public struct InstantPageSourceLocation {
+    public var userLocation: MediaResourceUserLocation
+    public var peerType: MediaAutoDownloadPeerType
+    
+    public init(userLocation: MediaResourceUserLocation, peerType: MediaAutoDownloadPeerType) {
+        self.userLocation = userLocation
+        self.peerType = peerType
+    }
+}
+
 public func effectiveAutodownloadCategories(settings: MediaAutoDownloadSettings, networkType: MediaAutoDownloadNetworkType) -> MediaAutoDownloadCategories {
     let connection = settings.connectionSettings(for: networkType)
     switch connection.preset {

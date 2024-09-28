@@ -65,7 +65,7 @@ public final class StarsAvatarComponent: Component {
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
-            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 16.0))
+            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 20.0))
             
             super.init(frame: frame)
             
@@ -309,15 +309,21 @@ public final class StarsAvatarComponent: Component {
 
 public final class StarsLabelComponent: CombinedComponent {
     let text: NSAttributedString
+    let subtext: NSAttributedString?
     
     public init(
-        text: NSAttributedString
+        text: NSAttributedString,
+        subtext: NSAttributedString? = nil
     ) {
         self.text = text
+        self.subtext = subtext
     }
     
     public static func ==(lhs: StarsLabelComponent, rhs: StarsLabelComponent) -> Bool {
         if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.subtext != rhs.subtext {
             return false
         }
         return true
@@ -325,6 +331,7 @@ public final class StarsLabelComponent: CombinedComponent {
     
     public static var body: Body {
         let text = Child(MultilineTextComponent.self)
+        let subLabel = Child(MultilineTextComponent.self)
         let icon = Child(BundleIconComponent.self)
 
         return { context in
@@ -332,30 +339,59 @@ public final class StarsLabelComponent: CombinedComponent {
         
             let text = text.update(
                 component: MultilineTextComponent(text: .plain(component.text)),
-                availableSize: CGSize(width: 100.0, height: 40.0),
+                availableSize: CGSize(width: 140.0, height: 40.0),
                 transition: context.transition
             )
             
+
+            var subtext: _UpdatedChildComponent? = nil
+            if let sublabel = component.subtext {
+                subtext = subLabel.update(
+                    component: MultilineTextComponent(text: .plain(sublabel)),
+                    availableSize: CGSize(width: 100.0, height: 40.0),
+                    transition: context.transition
+                )
+            }
+                        
             let iconSize = CGSize(width: 20.0, height: 20.0)
             let icon = icon.update(
                 component: BundleIconComponent(
-                    name: "Premium/Stars/StarLarge",
+                    name: "Premium/Stars/StarMedium",
                     tintColor: nil
                 ),
                 availableSize: iconSize,
                 transition: context.transition
             )
             
-            let spacing: CGFloat = 3.0
+            let spacing: CGFloat = 0.0
             let totalWidth = text.size.width + spacing + iconSize.width
-            let size = CGSize(width: totalWidth, height: iconSize.height)
+            var size = CGSize(width: totalWidth, height: iconSize.height)
+            let firstLineSize = size.height
+            if let subtext {
+                size.height += subtext.size.height
+            }
+            
+            let iconPosition: CGFloat
+            let textPosition: CGFloat
+            if let _ = component.subtext {
+                iconPosition = iconSize.width / 2.0
+                textPosition = totalWidth - text.size.width / 2.0
+            } else {
+                textPosition = text.size.width / 2.0
+                iconPosition = totalWidth - iconSize.width / 2.0
+            }
             
             context.add(text
-                .position(CGPoint(x: text.size.width / 2.0, y: size.height / 2.0))
+                .position(CGPoint(x: textPosition, y: firstLineSize / 2.0))
             )
             context.add(icon
-                .position(CGPoint(x: totalWidth - iconSize.width / 2.0, y: size.height / 2.0 - UIScreenPixel))
+                .position(CGPoint(x: iconPosition, y: firstLineSize / 2.0 - UIScreenPixel))
             )
+            if let subtext {
+                context.add(subtext
+                    .position(CGPoint(x: size.width - subtext.size.width / 2.0, y: firstLineSize + subtext.size.height / 2.0))
+                )
+            }
             return size
         }
     }

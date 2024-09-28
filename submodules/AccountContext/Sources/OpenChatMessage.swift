@@ -32,7 +32,7 @@ public final class OpenChatMessageParams {
     public let navigationController: NavigationController?
     public let modal: Bool
     public let dismissInput: () -> Void
-    public let present: (ViewController, Any?) -> Void
+    public let present: (ViewController, Any?, PresentationContextType) -> Void
     public let transitionNode: (MessageId, Media, Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
     public let addToTransitionSurface: (UIView) -> Void
     public let openUrl: (String) -> Void
@@ -63,7 +63,7 @@ public final class OpenChatMessageParams {
         navigationController: NavigationController?,
         modal: Bool = false,
         dismissInput: @escaping () -> Void,
-        present: @escaping (ViewController, Any?) -> Void,
+        present: @escaping (ViewController, Any?, PresentationContextType) -> Void,
         transitionNode: @escaping (MessageId, Media, Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?,
         addToTransitionSurface: @escaping (UIView) -> Void,
         openUrl: @escaping (String) -> Void,
