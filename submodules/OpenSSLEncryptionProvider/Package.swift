@@ -23,10 +23,8 @@ let package = Package(
             publicHeadersPath: "PublicHeaders",
             cSettings: [
                 .headerSearchPath("PublicHeaders"),
-                .unsafeFlags([
-                    "-I../../../../core-xprojects/openssl/build/openssl/include",
-                    "-I../EncryptionProvider/PublicHeaders"
-                ])
+                .headerSearchPath("SharedHeaders/openssl/include"),
+                .headerSearchPath("SharedHeaders/EncryptionProvider"),
             ]),
     ]
 )
