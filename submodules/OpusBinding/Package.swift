@@ -28,7 +28,7 @@ let package = Package(
             cSettings: [
                 .headerSearchPath("PublicHeaders"),
                 .headerSearchPath("PublicHeaders/OpusBinding"),
-                .headerSearchPath("SharedHeades/libopus/include"),
+                .headerSearchPath("SharedHeaders/libopus/include"),
                 .headerSearchPath("Sources"),
             ]),
     ]

@@ -67,4 +67,5 @@ build-input/*
 *.pyc
 submodules/OpusBinding/SharedHeaders/*
 submodules/FFMpegBinding/SharedHeaders/*
+submodules/OpenSSLEncryptionProvider/SharedHeaders/*
 
