@@ -343,15 +343,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             if oldValue != self.visibility {
-                switch self.visibility {
-                case .none:
-                    self.textNode.visibilityRect = nil
-                case let .visible(_, subRect):
-                    var subRect = subRect
-                    subRect.origin.x = 0.0
-                    subRect.size.width = 10000.0
-                    self.textNode.visibilityRect = subRect
-                }
+                self.updateVisibility()
             }
         }
     }
@@ -593,6 +585,21 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         let isPlaying = self.visibilityStatus == true && !self.forceStopAnimations
+        
+        var effectiveVisibility = self.visibility
+        if !isPlaying {
+            effectiveVisibility = .none
+        }
+        
+        switch effectiveVisibility {
+        case .none:
+            self.textNode.visibilityRect = nil
+        case let .visible(_, subRect):
+            var subRect = subRect
+            subRect.origin.x = 0.0
+            subRect.size.width = 10000.0
+            self.textNode.visibilityRect = subRect
+        }
         
         var canPlayEffects = isPlaying
         if !item.controllerInteraction.canReadHistory {

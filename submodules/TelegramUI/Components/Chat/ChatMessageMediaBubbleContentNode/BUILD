@@ -24,6 +24,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/TelegramUI/Components/Chat/ChatMessageInteractiveMediaNode",
+        "//submodules/TelegramUniversalVideoContent",
     ],
     visibility = [
         "//visibility:public",

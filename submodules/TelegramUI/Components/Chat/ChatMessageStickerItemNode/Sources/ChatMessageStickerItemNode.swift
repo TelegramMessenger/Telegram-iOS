@@ -101,6 +101,8 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
         }
     }
     
+    private var forceStopAnimations: Bool = false
+    
     required public init(rotated: Bool) {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
@@ -2160,6 +2162,9 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
         if !item.controllerInteraction.canReadHistory {
             isPlaying = false
         }
+        if self.forceStopAnimations {
+            isPlaying = false
+        }
         
         if !isPlaying {
             self.removeEffectAnimations()
@@ -2189,6 +2194,11 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                 self.playMessageEffect(force: false)
             }
         }
+    }
+    
+    override public func updateStickerSettings(forceStopAnimations: Bool) {
+        self.forceStopAnimations = forceStopAnimations
+        self.updateVisibility()
     }
     
     override public func messageEffectTargetView() -> UIView? {
