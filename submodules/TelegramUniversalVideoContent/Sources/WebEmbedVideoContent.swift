@@ -58,6 +58,10 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
         return self._bufferingStatus.get()
     }
     
+    var isNativePictureInPictureActive: Signal<Bool, NoError> {
+        return .single(false)
+    }
+    
     private var seekId: Int = 0
     
     private let _ready = Promise<Void>()
@@ -206,5 +210,12 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     }
 
     func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool) {
+    }
+    
+    func enterNativePictureInPicture() -> Bool {
+        return false
+    }
+    
+    func exitNativePictureInPicture() {
     }
 }
