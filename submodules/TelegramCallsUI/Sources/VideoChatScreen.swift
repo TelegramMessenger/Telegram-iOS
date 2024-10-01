@@ -1282,7 +1282,7 @@ final class VideoChatScreenComponent: Component {
             
             var maxTitleWidth: CGFloat = availableSize.width - sideInset * 2.0 - navigationButtonAreaWidth * 2.0 - 4.0 * 2.0
             if isTwoColumnLayout {
-                maxTitleWidth -= 98.0
+                maxTitleWidth -= 110.0
             }
             
             let titleSize = self.title.update(
