@@ -6946,10 +6946,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
-        self.stickerSettingsDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]), self.disableStickerAnimationsPromise.get()).startStrict(next: { [weak self] sharedData, disableStickerAnimations in
+        self.stickerSettingsDisposable = combineLatest(queue: Queue.mainQueue(),
+            context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]),
+            self.disableStickerAnimationsPromise.get(),
+            context.sharedContext.hasGroupCallOnScreen
+        ).startStrict(next: { [weak self] sharedData, disableStickerAnimations, hasGroupCallOnScreen in
             var stickerSettings = StickerSettings.defaultSettings
             if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
                 stickerSettings = value
+            }
+            
+            var disableStickerAnimations = disableStickerAnimations
+            if hasGroupCallOnScreen {
+                disableStickerAnimations = true
             }
             
             let chatStickerSettings = ChatInterfaceStickerSettings(stickerSettings: stickerSettings)

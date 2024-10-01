@@ -28,8 +28,8 @@ let package = Package(
             cSettings: [
                 .headerSearchPath("PublicHeaders"),
                 .headerSearchPath("PublicHeaders/OpusBinding"),
+                .headerSearchPath("SharedHeaders/libopus/include"),
                 .headerSearchPath("Sources"),
-                .unsafeFlags(["-I../../../../core-xprojects/libopus/build/libopus/include"])
             ]),
     ]
 )

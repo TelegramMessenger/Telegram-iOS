@@ -16,13 +16,19 @@ final class VideoChatMuteIconComponent: Component {
     
     let color: UIColor
     let content: Content
+    let shadowColor: UIColor?
+    let shadowBlur: CGFloat
 
     init(
         color: UIColor,
-        content: Content
+        content: Content,
+        shadowColor: UIColor? = nil,
+        shadowBlur: CGFloat = 0.0
     ) {
         self.color = color
         self.content = content
+        self.shadowColor = shadowColor
+        self.shadowBlur = shadowBlur
     }
 
     static func ==(lhs: VideoChatMuteIconComponent, rhs: VideoChatMuteIconComponent) -> Bool {
@@ -30,6 +36,12 @@ final class VideoChatMuteIconComponent: Component {
             return false
         }
         if lhs.content != rhs.content {
+            return false
+        }
+        if lhs.shadowColor != rhs.shadowColor {
+            return false
+        }
+        if lhs.shadowBlur != rhs.shadowBlur {
             return false
         }
         return true
@@ -75,9 +87,9 @@ final class VideoChatMuteIconComponent: Component {
                 }
                 
                 let animationSize = availableSize
-                let animationFrame = animationSize.centered(in: CGRect(origin: CGPoint(), size: availableSize))
+                let animationFrame = animationSize.centered(in: CGRect(origin: CGPoint(), size: availableSize)).insetBy(dx: -component.shadowBlur, dy: -component.shadowBlur)
                 transition.setFrame(view: icon.view, frame: animationFrame)
-                icon.update(state: VoiceChatMicrophoneNode.State(muted: isMuted, filled: isFilled, color: component.color), animated: !transition.animation.isImmediate)
+                icon.update(state: VoiceChatMicrophoneNode.State(muted: isMuted, filled: isFilled, color: component.color, shadowColor: component.shadowColor, shadowBlur: component.shadowBlur), animated: !transition.animation.isImmediate)
             } else {
                 if let icon = self.icon {
                     self.icon = nil
@@ -97,7 +109,9 @@ final class VideoChatMuteIconComponent: Component {
                     transition: transition,
                     component: AnyComponent(BundleIconComponent(
                         name: "Call/StatusScreen",
-                        tintColor: component.color
+                        tintColor: component.color,
+                        shadowColor: component.shadowColor,
+                        shadowBlur: component.shadowBlur
                     )),
                     environment: {},
                     containerSize: availableSize

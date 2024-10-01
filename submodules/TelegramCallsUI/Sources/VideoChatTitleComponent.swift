@@ -12,17 +12,23 @@ final class VideoChatTitleComponent: Component {
     let status: String
     let isRecording: Bool
     let strings: PresentationStrings
+    let tapAction: (() -> Void)?
+    let longTapAction: (() -> Void)?
 
     init(
         title: String,
         status: String,
         isRecording: Bool,
-        strings: PresentationStrings
+        strings: PresentationStrings,
+        tapAction: (() -> Void)?,
+        longTapAction: (() -> Void)?
     ) {
         self.title = title
         self.status = status
         self.isRecording = isRecording
         self.strings = strings
+        self.tapAction = tapAction
+        self.longTapAction = longTapAction
     }
 
     static func ==(lhs: VideoChatTitleComponent, rhs: VideoChatTitleComponent) -> Bool {
@@ -36,6 +42,12 @@ final class VideoChatTitleComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if (lhs.tapAction == nil) != (rhs.tapAction == nil) {
+            return false
+        }
+        if (lhs.longTapAction == nil) != (rhs.longTapAction == nil) {
             return false
         }
         return true
@@ -55,6 +67,12 @@ final class VideoChatTitleComponent: Component {
         private var currentActivityStatus: String?
         private var currentSize: CGSize?
         
+        private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
+        
+        public var recordingIndicatorView: UIView? {
+            return self.recordingImageView
+        }
+        
         override init(frame: CGRect) {
             self.hierarchyTrackingLayer = HierarchyTrackingLayer()
             
@@ -67,10 +85,31 @@ final class VideoChatTitleComponent: Component {
                 }
                 self.updateAnimations()
             }
+            
+            let tapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+            tapRecognizer.tapActionAtPoint = { _ in
+                return .waitForSingleTap
+            }
+            self.addGestureRecognizer(tapRecognizer)
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        @objc private func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+            guard let component = self.component else {
+                return
+            }
+            if case .ended = recognizer.state {
+                if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
+                    if case .tap = gesture {
+                        component.tapAction?()
+                    } else if case .longTap = gesture {
+                        component.longTapAction?()
+                    }
+                }
+            }
         }
         
         private func updateAnimations() {
@@ -153,7 +192,14 @@ final class VideoChatTitleComponent: Component {
             
             self.component = component
             
+            self.tapRecognizer?.isEnabled = component.longTapAction != nil || component.tapAction != nil
+            
             let spacing: CGFloat = 1.0
+            
+            var maxTitleWidth = availableSize.width
+            if component.isRecording {
+                maxTitleWidth -= 10.0
+            }
             
             let titleSize = self.title.update(
                 transition: .immediate,
@@ -161,7 +207,7 @@ final class VideoChatTitleComponent: Component {
                     text: .plain(NSAttributedString(string: component.title, font: Font.semibold(17.0), textColor: .white))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 100.0)
+                containerSize: CGSize(width: maxTitleWidth, height: 100.0)
             )
             
             let statusComponent: AnyComponent<Empty>
@@ -181,15 +227,18 @@ final class VideoChatTitleComponent: Component {
             let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) * 0.5), y: 0.0), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
+                    titleView.layer.anchorPoint = CGPoint()
+                    titleView.isUserInteractionEnabled = false
                     self.addSubview(titleView)
                 }
-                transition.setPosition(view: titleView, position: titleFrame.center)
+                transition.setPosition(view: titleView, position: titleFrame.origin)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
             }
             
             let statusFrame = CGRect(origin: CGPoint(x: floor((size.width - statusSize.width) * 0.5), y: titleFrame.maxY + spacing), size: statusSize)
             if let statusView = self.status.view {
                 if statusView.superview == nil {
+                    statusView.isUserInteractionEnabled = false
                     self.addSubview(statusView)
                 }
                 transition.setPosition(view: statusView, position: statusFrame.center)

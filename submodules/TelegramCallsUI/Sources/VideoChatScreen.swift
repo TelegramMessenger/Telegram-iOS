@@ -22,6 +22,7 @@ import ShareController
 import AvatarNode
 import TelegramAudio
 import LegacyComponents
+import TooltipUI
 
 final class VideoChatScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -83,6 +84,7 @@ final class VideoChatScreenComponent: Component {
         var scheduleInfo: ComponentView<Empty>?
         
         var reconnectedAsEventsDisposable: Disposable?
+        var memberEventsDisposable: Disposable?
         
         var peer: EnginePeer?
         var callState: PresentationGroupCallState?
@@ -144,6 +146,7 @@ final class VideoChatScreenComponent: Component {
             self.membersDisposable?.dispose()
             self.applicationStateDisposable?.dispose()
             self.reconnectedAsEventsDisposable?.dispose()
+            self.memberEventsDisposable?.dispose()
             self.displayAsPeersDisposable?.dispose()
             self.audioOutputStateDisposable?.dispose()
             self.inviteLinksDisposable?.dispose()
@@ -819,7 +822,7 @@ final class VideoChatScreenComponent: Component {
                         
                         self.members = members
                         
-                        if let members, let _ = self.expandedParticipantsVideoState {
+                        if let members, let expandedParticipantsVideoState = self.expandedParticipantsVideoState, !expandedParticipantsVideoState.isUIHidden {
                             var videoCount = 0
                             for participant in members.participants {
                                 if participant.presentationDescription != nil {
@@ -1008,6 +1011,31 @@ final class VideoChatScreenComponent: Component {
                     }
                     self.presentUndoOverlay(content: .invitedToVoiceChat(context: component.call.accountContext, peer: peer, title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
                 })
+                
+                self.memberEventsDisposable = (component.call.memberEvents
+                |> deliverOnMainQueue).start(next: { [weak self] event in
+                    guard let self, let members = self.members, let component = self.component, let environment = self.environment else {
+                        return
+                    }
+                    if event.joined {
+                        var displayEvent = false
+                        if case let .channel(channel) = self.peer, case .broadcast = channel.info {
+                            displayEvent = false
+                        }
+                        if members.totalCount < 250 {
+                            displayEvent = true
+                        } else if event.peer.isVerified {
+                            displayEvent = true
+                        } else if event.isContact || event.isInChatList {
+                            displayEvent = true
+                        }
+                        
+                        if displayEvent {
+                            let text = environment.strings.VoiceChat_PeerJoinedText(event.peer.displayTitle(strings: environment.strings, displayOrder: component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
+                            self.presentUndoOverlay(content: .invitedToVoiceChat(context: component.call.accountContext, peer: event.peer, title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
+                        }
+                    }
+                })
             }
             
             self.isPresentedValue.set(environment.isVisible)
@@ -1072,7 +1100,7 @@ final class VideoChatScreenComponent: Component {
                 } else {
                     containerOffset = verticalPanState.fraction * availableSize.height
                 }
-                self.containerView.layer.cornerRadius = environment.deviceMetrics.screenCornerRadius
+                self.containerView.layer.cornerRadius = containerOffset.isZero ? 0.0 : environment.deviceMetrics.screenCornerRadius
             }
             
             transition.setFrame(view: self.containerView, frame: CGRect(origin: CGPoint(x: 0.0, y: containerOffset), size: availableSize), completion: { [weak self] completed in
@@ -1249,13 +1277,49 @@ final class VideoChatScreenComponent: Component {
             } else {
                 idleTitleStatusText = " "
             }
+            
+            let canManageCall = self.callState?.canManageCall ?? false
+            
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(VideoChatTitleComponent(
                     title: self.callState?.title ?? self.peer?.debugDisplayTitle ?? " ",
                     status: idleTitleStatusText,
                     isRecording: self.callState?.recordingStartTimestamp != nil,
-                    strings: environment.strings
+                    strings: environment.strings,
+                    tapAction: self.callState?.recordingStartTimestamp != nil ? { [weak self] in
+                        guard let self, let component = self.component, let environment = self.environment else {
+                            return
+                        }
+                        guard let titleView = self.title.view as? VideoChatTitleComponent.View, let recordingIndicatorView = titleView.recordingIndicatorView else {
+                            return
+                        }
+                        var hasTooltipAlready = false
+                        environment.controller()?.forEachController { controller -> Bool in
+                            if controller is TooltipScreen {
+                                hasTooltipAlready = true
+                            }
+                            return true
+                        }
+                        if !hasTooltipAlready {
+                            let location = recordingIndicatorView.convert(recordingIndicatorView.bounds, to: self)
+                            let text: String
+                            if case let .channel(channel) = self.peer, case .broadcast = channel.info {
+                                text = environment.strings.LiveStream_RecordingInProgress
+                            } else {
+                                text = environment.strings.VoiceChat_RecordingInProgress
+                            }
+                            environment.controller()?.present(TooltipScreen(account: component.call.accountContext.account, sharedContext: component.call.accountContext.sharedContext, text: .plain(text: text), icon: nil, location: .point(location.offsetBy(dx: 1.0, dy: 0.0), .top), displayDuration: .custom(3.0), shouldDismissOnTouch: { _, _ in
+                                return .dismiss(consume: true)
+                            }), in: .current)
+                        }
+                    } : nil,
+                    longTapAction: canManageCall ? { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.openTitleEditing()
+                    } : nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - navigationButtonAreaWidth * 2.0 - 4.0 * 2.0, height: 100.0)
@@ -1263,7 +1327,6 @@ final class VideoChatScreenComponent: Component {
             let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: topInset + floor((navigationBarHeight - titleSize.height) * 0.5)), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
-                    titleView.isUserInteractionEnabled = false
                     self.containerView.addSubview(titleView)
                 }
                 transition.setFrame(view: titleView, frame: titleFrame)
@@ -1436,7 +1499,7 @@ final class VideoChatScreenComponent: Component {
                 component: AnyComponent(VideoChatParticipantsComponent(
                     call: component.call,
                     participants: mappedParticipants,
-                    speakingParticipants: members?.speakingParticipants ?? Set(),
+                    speakingParticipants: self.members?.speakingParticipants ?? Set(),
                     expandedVideoState: self.expandedParticipantsVideoState,
                     theme: environment.theme,
                     strings: environment.strings,
@@ -1699,7 +1762,9 @@ final class VideoChatScreenComponent: Component {
             let videoButtonContent: VideoChatActionButtonComponent.Content
             if let callState = self.callState, let muteState = callState.muteState, !muteState.canUnmute {
                 var buttonAudio: VideoChatActionButtonComponent.Content.Audio = .speaker
+                var buttonIsEnabled = false
                 if let (availableOutputs, maybeCurrentOutput) = self.audioOutputState, let currentOutput = maybeCurrentOutput {
+                    buttonIsEnabled = availableOutputs.count > 1
                     switch currentOutput {
                     case .builtin:
                         buttonAudio = .builtin
@@ -1723,7 +1788,7 @@ final class VideoChatScreenComponent: Component {
                         buttonAudio = .none
                     }
                 }
-                videoButtonContent = .audio(audio: buttonAudio)
+                videoButtonContent = .audio(audio: buttonAudio, isEnabled: buttonIsEnabled)
             } else {
                 //TODO:release
                 videoButtonContent = .video(isActive: false)

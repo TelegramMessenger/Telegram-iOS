@@ -5,12 +5,16 @@ import Display
 
 private final class VoiceChatMicrophoneNodeDrawingState: NSObject {
     let color: UIColor
+    let shadowColor: UIColor?
+    let shadowBlur: CGFloat
     let filled: Bool
     let transition: CGFloat
     let reverse: Bool
     
-    init(color: UIColor, filled: Bool, transition: CGFloat, reverse: Bool) {
+    init(color: UIColor, shadowColor: UIColor?, shadowBlur: CGFloat, filled: Bool, transition: CGFloat, reverse: Bool) {
         self.color = color
+        self.shadowColor = shadowColor
+        self.shadowBlur = shadowBlur
         self.filled = filled
         self.transition = transition
         self.reverse = reverse
@@ -24,11 +28,15 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
         let muted: Bool
         let color: UIColor
         let filled: Bool
+        let shadowColor: UIColor?
+        let shadowBlur: CGFloat
         
-        init(muted: Bool, filled: Bool, color: UIColor) {
+        init(muted: Bool, filled: Bool, color: UIColor, shadowColor: UIColor? = nil, shadowBlur: CGFloat = 0.0) {
             self.muted = muted
             self.filled = filled
             self.color = color
+            self.shadowColor = shadowColor
+            self.shadowBlur = shadowBlur
         }
         
         static func ==(lhs: State, rhs: State) -> Bool {
@@ -39,6 +47,12 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
                 return false
             }
             if lhs.filled != rhs.filled {
+                return false
+            }
+            if lhs.shadowColor != rhs.shadowColor {
+                return false
+            }
+            if lhs.shadowBlur != rhs.shadowBlur {
                 return false
             }
             return true
@@ -122,6 +136,8 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
         var transitionFraction: CGFloat = self.state.muted ? 1.0 : 0.0
         var color = self.state.color
+        var shadowColor = self.state.shadowColor
+        var shadowBlur = self.state.shadowBlur
         
         var reverse = false
         if let transitionContext = self.transitionContext {
@@ -138,9 +154,17 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
             if transitionContext.previousState.color.rgb != color.rgb {
                 color = transitionContext.previousState.color.interpolateTo(color, fraction: t)!
             }
+            
+            if let previousShadowColor = transitionContext.previousState.shadowColor, let shadowColorValue = shadowColor, previousShadowColor.rgb != shadowColorValue.rgb {
+                shadowColor = previousShadowColor.interpolateTo(shadowColorValue, fraction: t)!
+            }
+            
+            if transitionContext.previousState.shadowBlur != shadowBlur {
+                shadowBlur = transitionContext.previousState.shadowBlur * (1.0 - t) + shadowBlur * t
+            }
         }
         
-        return VoiceChatMicrophoneNodeDrawingState(color: color, filled: self.state.filled, transition: transitionFraction, reverse: reverse)
+        return VoiceChatMicrophoneNodeDrawingState(color: color, shadowColor: shadowColor, shadowBlur: shadowBlur, filled: self.state.filled, transition: transitionFraction, reverse: reverse)
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -155,8 +179,17 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
         guard let parameters = parameters as? VoiceChatMicrophoneNodeDrawingState else {
             return
         }
+        
+        var bounds = bounds
+        bounds = bounds.insetBy(dx: parameters.shadowBlur, dy: parameters.shadowBlur)
+        
+        context.translateBy(x: bounds.minX, y: bounds.minY)
 
         context.setFillColor(parameters.color.cgColor)
+        
+        if let shadowColor = parameters.shadowColor, parameters.shadowBlur != 0.0 {
+            context.setShadow(offset: CGSize(), blur: parameters.shadowBlur, color: shadowColor.cgColor)
+        }
         
         var clearLineWidth: CGFloat = 2.0
         var lineWidth: CGFloat = 1.0 + UIScreenPixel

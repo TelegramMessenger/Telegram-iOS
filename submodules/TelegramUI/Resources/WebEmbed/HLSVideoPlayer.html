@@ -28,6 +28,7 @@
 
     var isManifestParsed = false;
     var isFirstFrameReady = false;
+    var isPictureInPictureActive = false;
 
     var currentTimeUpdateTimeout = null;
 
@@ -52,12 +53,22 @@
         video.addEventListener("waiting", function() { 
             refreshPlayerStatus();
         });
+        video.addEventListener("enterpictureinpicture", function() { 
+            isPictureInPictureActive = true;
+            refreshPlayerStatus();
+        }, false);
+        video.addEventListener("leavepictureinpicture", function() { 
+            isPictureInPictureActive = false;
+            refreshPlayerStatus();
+        }, false);
+
 
         hls = new Hls({
             startLevel: 0,
             testBandwidth: false,
             debug: params['debug'],
-            autoStartLoad: false
+            autoStartLoad: false,
+            abrEwmaDefaultEstimate: params['bandwidthEstimate']
         });
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
             isManifestParsed = true;
@@ -109,6 +120,19 @@
         video.muted = value;
     }
 
+    function playerRequestPictureInPicture() {
+        if (video !== document.pictureInPictureElement) {
+            video.requestPictureInPicture().then(function() {
+                isPictureInPictureActive = true;
+                refreshPlayerStatus();
+            });
+        }
+    }
+
+    function playerStopPictureInPicture() {
+        document.exitPictureInPicture();
+    }
+
     function getLevels() {
         var levels = [];
         for (var i = 0; i < hls.levels.length; i++) {
@@ -136,7 +160,8 @@
             'rate': isPlaying ? video.playbackRate : 0.0,
             'defaultRate': video.playbackRate,
             'levels': getLevels(),
-            'currentLevel': hls.currentLevel
+            'currentLevel': hls.currentLevel,
+            'isPictureInPictureActive': isPictureInPictureActive
         });
 
         refreshPlayerCurrentTime();
@@ -157,7 +182,8 @@
 
     function refreshPlayerCurrentTime() {
         postPlayerEvent('playerCurrentTime', {
-            'value': video.currentTime
+            'value': video.currentTime,
+            'bandwidthEstimate': hls.bandwidthEstimate
         });
         currentTimeUpdateTimeout = setTimeout(() => {
             refreshPlayerCurrentTime()

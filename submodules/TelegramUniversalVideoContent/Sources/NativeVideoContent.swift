@@ -206,6 +206,10 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         return self._bufferingStatus.get()
     }
     
+    var isNativePictureInPictureActive: Signal<Bool, NoError> {
+        return .single(false)
+    }
+    
     private let _ready = Promise<Void>()
     var ready: Signal<Void, NoError> {
         return self._ready.get()
@@ -684,5 +688,12 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
 
     func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool) {
         self.playerNode.setCanPlaybackWithoutHierarchy(canPlaybackWithoutHierarchy)
+    }
+    
+    func enterNativePictureInPicture() -> Bool {
+        return false
+    }
+    
+    func exitNativePictureInPicture() {
     }
 }
