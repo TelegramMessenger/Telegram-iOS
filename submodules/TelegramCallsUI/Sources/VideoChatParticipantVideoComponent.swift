@@ -205,7 +205,7 @@ final class VideoChatParticipantVideoComponent: Component {
             super.init(frame: frame)
             
             self.addSubview(self.extractedContainerView)
-            self.targetViewForActivationProgress = self.extractedContainerView
+            self.targetViewForActivationProgress = self.extractedContainerView.contentView
             
             self.extractedContainerView.contentView.addSubview(self.pinchContainerNode.view)
             self.pinchContainerNode.contentNode.view.addSubview(self.backgroundGradientView)
@@ -276,6 +276,8 @@ final class VideoChatParticipantVideoComponent: Component {
             
             transition.setPosition(view: self.extractedContainerView, position: CGRect(origin: CGPoint(), size: availableSize).center)
             transition.setBounds(view: self.extractedContainerView, bounds: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setPosition(view: self.extractedContainerView.contentView, position: CGRect(origin: CGPoint(), size: availableSize).center)
+            transition.setBounds(view: self.extractedContainerView.contentView, bounds: CGRect(origin: CGPoint(), size: availableSize))
             self.extractedContainerView.contentRect = CGRect(origin: CGPoint(), size: availableSize)
             
             transition.setFrame(view: self.pinchContainerNode.contentNode.view, frame: CGRect(origin: CGPoint(), size: availableSize))
