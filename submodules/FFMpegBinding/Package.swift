@@ -27,7 +27,7 @@ let package = Package(
             publicHeadersPath: "Public",
             cSettings: [
                 .headerSearchPath("Public"),
-                .unsafeFlags(["-I../../../../core-xprojects/ffmpeg/build/ffmpeg/include"])
+                .headerSearchPath("SharedHeaders/ffmpeg/include"),
             ]),
     ]
 )
