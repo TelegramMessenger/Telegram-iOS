@@ -986,8 +986,8 @@ public extension Api {
         case messageActionEmpty
         case messageActionGameScore(gameId: Int64, score: Int32)
         case messageActionGeoProximityReached(fromId: Api.Peer, toId: Api.Peer, distance: Int32)
-        case messageActionGiftCode(flags: Int32, boostPeer: Api.Peer?, months: Int32, slug: String, currency: String?, amount: Int64?, cryptoCurrency: String?, cryptoAmount: Int64?)
-        case messageActionGiftPremium(flags: Int32, currency: String, amount: Int64, months: Int32, cryptoCurrency: String?, cryptoAmount: Int64?)
+        case messageActionGiftCode(flags: Int32, boostPeer: Api.Peer?, months: Int32, slug: String, currency: String?, amount: Int64?, cryptoCurrency: String?, cryptoAmount: Int64?, message: Api.TextWithEntities?)
+        case messageActionGiftPremium(flags: Int32, currency: String, amount: Int64, months: Int32, cryptoCurrency: String?, cryptoAmount: Int64?, message: Api.TextWithEntities?)
         case messageActionGiftStars(flags: Int32, currency: String, amount: Int64, stars: Int64, cryptoCurrency: String?, cryptoAmount: Int64?, transactionId: String?)
         case messageActionGiveawayLaunch(flags: Int32, stars: Int64?)
         case messageActionGiveawayResults(flags: Int32, winnersCount: Int32, unclaimedCount: Int32)
@@ -1141,9 +1141,9 @@ public extension Api {
                     toId.serialize(buffer, true)
                     serializeInt32(distance, buffer: buffer, boxed: false)
                     break
-                case .messageActionGiftCode(let flags, let boostPeer, let months, let slug, let currency, let amount, let cryptoCurrency, let cryptoAmount):
+                case .messageActionGiftCode(let flags, let boostPeer, let months, let slug, let currency, let amount, let cryptoCurrency, let cryptoAmount, let message):
                     if boxed {
-                        buffer.appendInt32(1737240073)
+                        buffer.appendInt32(1456486804)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {boostPeer!.serialize(buffer, true)}
@@ -1153,10 +1153,11 @@ public extension Api {
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt64(amount!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {serializeString(cryptoCurrency!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt64(cryptoAmount!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {message!.serialize(buffer, true)}
                     break
-                case .messageActionGiftPremium(let flags, let currency, let amount, let months, let cryptoCurrency, let cryptoAmount):
+                case .messageActionGiftPremium(let flags, let currency, let amount, let months, let cryptoCurrency, let cryptoAmount, let message):
                     if boxed {
-                        buffer.appendInt32(-935499028)
+                        buffer.appendInt32(1818391802)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(currency, buffer: buffer, boxed: false)
@@ -1164,6 +1165,7 @@ public extension Api {
                     serializeInt32(months, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(cryptoCurrency!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt64(cryptoAmount!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {message!.serialize(buffer, true)}
                     break
                 case .messageActionGiftStars(let flags, let currency, let amount, let stars, let cryptoCurrency, let cryptoAmount, let transactionId):
                     if boxed {
@@ -1439,10 +1441,10 @@ public extension Api {
                 return ("messageActionGameScore", [("gameId", gameId as Any), ("score", score as Any)])
                 case .messageActionGeoProximityReached(let fromId, let toId, let distance):
                 return ("messageActionGeoProximityReached", [("fromId", fromId as Any), ("toId", toId as Any), ("distance", distance as Any)])
-                case .messageActionGiftCode(let flags, let boostPeer, let months, let slug, let currency, let amount, let cryptoCurrency, let cryptoAmount):
-                return ("messageActionGiftCode", [("flags", flags as Any), ("boostPeer", boostPeer as Any), ("months", months as Any), ("slug", slug as Any), ("currency", currency as Any), ("amount", amount as Any), ("cryptoCurrency", cryptoCurrency as Any), ("cryptoAmount", cryptoAmount as Any)])
-                case .messageActionGiftPremium(let flags, let currency, let amount, let months, let cryptoCurrency, let cryptoAmount):
-                return ("messageActionGiftPremium", [("flags", flags as Any), ("currency", currency as Any), ("amount", amount as Any), ("months", months as Any), ("cryptoCurrency", cryptoCurrency as Any), ("cryptoAmount", cryptoAmount as Any)])
+                case .messageActionGiftCode(let flags, let boostPeer, let months, let slug, let currency, let amount, let cryptoCurrency, let cryptoAmount, let message):
+                return ("messageActionGiftCode", [("flags", flags as Any), ("boostPeer", boostPeer as Any), ("months", months as Any), ("slug", slug as Any), ("currency", currency as Any), ("amount", amount as Any), ("cryptoCurrency", cryptoCurrency as Any), ("cryptoAmount", cryptoAmount as Any), ("message", message as Any)])
+                case .messageActionGiftPremium(let flags, let currency, let amount, let months, let cryptoCurrency, let cryptoAmount, let message):
+                return ("messageActionGiftPremium", [("flags", flags as Any), ("currency", currency as Any), ("amount", amount as Any), ("months", months as Any), ("cryptoCurrency", cryptoCurrency as Any), ("cryptoAmount", cryptoAmount as Any), ("message", message as Any)])
                 case .messageActionGiftStars(let flags, let currency, let amount, let stars, let cryptoCurrency, let cryptoAmount, let transactionId):
                 return ("messageActionGiftStars", [("flags", flags as Any), ("currency", currency as Any), ("amount", amount as Any), ("stars", stars as Any), ("cryptoCurrency", cryptoCurrency as Any), ("cryptoAmount", cryptoAmount as Any), ("transactionId", transactionId as Any)])
                 case .messageActionGiveawayLaunch(let flags, let stars):
@@ -1718,6 +1720,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 3) != 0 {_7 = parseString(reader) }
             var _8: Int64?
             if Int(_1!) & Int(1 << 3) != 0 {_8 = reader.readInt64() }
+            var _9: Api.TextWithEntities?
+            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
+                _9 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
             let _c3 = _3 != nil
@@ -1726,8 +1732,9 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.MessageAction.messageActionGiftCode(flags: _1!, boostPeer: _2, months: _3!, slug: _4!, currency: _5, amount: _6, cryptoCurrency: _7, cryptoAmount: _8)
+            let _c9 = (Int(_1!) & Int(1 << 4) == 0) || _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.MessageAction.messageActionGiftCode(flags: _1!, boostPeer: _2, months: _3!, slug: _4!, currency: _5, amount: _6, cryptoCurrency: _7, cryptoAmount: _8, message: _9)
             }
             else {
                 return nil
@@ -1746,14 +1753,19 @@ public extension Api {
             if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
             var _6: Int64?
             if Int(_1!) & Int(1 << 0) != 0 {_6 = reader.readInt64() }
+            var _7: Api.TextWithEntities?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.MessageAction.messageActionGiftPremium(flags: _1!, currency: _2!, amount: _3!, months: _4!, cryptoCurrency: _5, cryptoAmount: _6)
+            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.MessageAction.messageActionGiftPremium(flags: _1!, currency: _2!, amount: _3!, months: _4!, cryptoCurrency: _5, cryptoAmount: _6, message: _7)
             }
             else {
                 return nil

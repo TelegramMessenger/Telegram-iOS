@@ -15,7 +15,7 @@ public enum AppStoreTransactionPurpose {
     case upgrade
     case restore
     case gift(peerId: EnginePeer.Id, currency: String, amount: Int64)
-    case giftCode(peerIds: [EnginePeer.Id], boostPeer: EnginePeer.Id?, currency: String, amount: Int64)
+    case giftCode(peerIds: [EnginePeer.Id], boostPeer: EnginePeer.Id?, currency: String, amount: Int64, text: String?, entities: [MessageTextEntity]?)
     case giveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64)
     case stars(count: Int64, currency: String, amount: Int64)
     case starsGift(peerId: EnginePeer.Id, count: Int64, currency: String, amount: Int64)
@@ -43,7 +43,7 @@ private func apiInputStorePaymentPurpose(account: Account, purpose: AppStoreTran
             }
             return .single(.inputStorePaymentGiftPremium(userId: inputUser, currency: currency, amount: amount))
         }
-    case let .giftCode(peerIds, boostPeerId, currency, amount):
+    case let .giftCode(peerIds, boostPeerId, currency, amount, text, entities):
         return account.postbox.transaction { transaction -> Api.InputStorePaymentPurpose in
             var flags: Int32 = 0
             var apiBoostPeer: Api.InputPeer?
@@ -59,8 +59,13 @@ private func apiInputStorePaymentPurpose(account: Account, purpose: AppStoreTran
                 apiBoostPeer = apiPeer
                 flags |= (1 << 0)
             }
-   
-            return .inputStorePaymentPremiumGiftCode(flags: flags, users: apiInputUsers, boostPeer: apiBoostPeer, currency: currency, amount: amount)
+            
+            var message: Api.TextWithEntities?
+            if let text {
+                flags |= (1 << 1)
+                message = .textWithEntities(text: text, entities: apiEntitiesFromMessageTextEntities(entities ?? [], associatedPeers: SimpleDictionary()))
+            }
+            return .inputStorePaymentPremiumGiftCode(flags: flags, users: apiInputUsers, boostPeer: apiBoostPeer, currency: currency, amount: amount, message: message)
         }
     case let .giveaway(boostPeerId, additionalPeerIds, countries, onlyNewSubscribers, showWinners, prizeDescription, randomId, untilDate, currency, amount):
         return account.postbox.transaction { transaction -> Signal<Api.InputStorePaymentPurpose, NoError> in

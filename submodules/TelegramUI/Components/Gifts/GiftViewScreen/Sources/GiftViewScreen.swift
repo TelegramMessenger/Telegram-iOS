@@ -235,11 +235,13 @@ private final class GiftViewSheetContent: CombinedComponent {
                 descriptionText = modifiedString
             }
             
-            let formattedAmount = presentationStringsFormattedNumber(abs(Int32(stars)), dateTimeFormat.groupingSeparator)
+            var formattedAmount = presentationStringsFormattedNumber(abs(Int32(stars)), dateTimeFormat.groupingSeparator)
+            if !incoming && stars > 0 {
+                formattedAmount = "- \(formattedAmount)"
+            }
             let countFont: UIFont = Font.semibold(17.0)
             let amountText = formattedAmount
-            let countColor = theme.list.itemDisclosureActions.constructive.fillColor
-            
+            let countColor = incoming ? theme.list.itemDisclosureActions.constructive.fillColor : theme.list.itemDestructiveColor
             
             let title = title.update(
                 component: MultilineTextComponent(
@@ -344,7 +346,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                     id: "availability",
                     title: strings.Gift_View_Availability,
                     component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: "\(remains) of \(limitTotal)", font: tableFont, textColor: tableTextColor)))
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_View_Availability_Of("\(remains)", "\(limitTotal)").string, font: tableFont, textColor: tableTextColor)))
                     )
                 ))
             }

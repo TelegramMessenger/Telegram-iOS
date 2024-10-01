@@ -711,7 +711,7 @@ public extension Api {
 public extension Api {
     indirect enum InputStorePaymentPurpose: TypeConstructorDescription {
         case inputStorePaymentGiftPremium(userId: Api.InputUser, currency: String, amount: Int64)
-        case inputStorePaymentPremiumGiftCode(flags: Int32, users: [Api.InputUser], boostPeer: Api.InputPeer?, currency: String, amount: Int64)
+        case inputStorePaymentPremiumGiftCode(flags: Int32, users: [Api.InputUser], boostPeer: Api.InputPeer?, currency: String, amount: Int64, message: Api.TextWithEntities?)
         case inputStorePaymentPremiumGiveaway(flags: Int32, boostPeer: Api.InputPeer, additionalPeers: [Api.InputPeer]?, countriesIso2: [String]?, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64)
         case inputStorePaymentPremiumSubscription(flags: Int32)
         case inputStorePaymentStarsGift(userId: Api.InputUser, stars: Int64, currency: String, amount: Int64)
@@ -728,9 +728,9 @@ public extension Api {
                     serializeString(currency, buffer: buffer, boxed: false)
                     serializeInt64(amount, buffer: buffer, boxed: false)
                     break
-                case .inputStorePaymentPremiumGiftCode(let flags, let users, let boostPeer, let currency, let amount):
+                case .inputStorePaymentPremiumGiftCode(let flags, let users, let boostPeer, let currency, let amount, let message):
                     if boxed {
-                        buffer.appendInt32(-1551868097)
+                        buffer.appendInt32(-75955309)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -741,6 +741,7 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {boostPeer!.serialize(buffer, true)}
                     serializeString(currency, buffer: buffer, boxed: false)
                     serializeInt64(amount, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {message!.serialize(buffer, true)}
                     break
                 case .inputStorePaymentPremiumGiveaway(let flags, let boostPeer, let additionalPeers, let countriesIso2, let prizeDescription, let randomId, let untilDate, let currency, let amount):
                     if boxed {
@@ -818,8 +819,8 @@ public extension Api {
         switch self {
                 case .inputStorePaymentGiftPremium(let userId, let currency, let amount):
                 return ("inputStorePaymentGiftPremium", [("userId", userId as Any), ("currency", currency as Any), ("amount", amount as Any)])
-                case .inputStorePaymentPremiumGiftCode(let flags, let users, let boostPeer, let currency, let amount):
-                return ("inputStorePaymentPremiumGiftCode", [("flags", flags as Any), ("users", users as Any), ("boostPeer", boostPeer as Any), ("currency", currency as Any), ("amount", amount as Any)])
+                case .inputStorePaymentPremiumGiftCode(let flags, let users, let boostPeer, let currency, let amount, let message):
+                return ("inputStorePaymentPremiumGiftCode", [("flags", flags as Any), ("users", users as Any), ("boostPeer", boostPeer as Any), ("currency", currency as Any), ("amount", amount as Any), ("message", message as Any)])
                 case .inputStorePaymentPremiumGiveaway(let flags, let boostPeer, let additionalPeers, let countriesIso2, let prizeDescription, let randomId, let untilDate, let currency, let amount):
                 return ("inputStorePaymentPremiumGiveaway", [("flags", flags as Any), ("boostPeer", boostPeer as Any), ("additionalPeers", additionalPeers as Any), ("countriesIso2", countriesIso2 as Any), ("prizeDescription", prizeDescription as Any), ("randomId", randomId as Any), ("untilDate", untilDate as Any), ("currency", currency as Any), ("amount", amount as Any)])
                 case .inputStorePaymentPremiumSubscription(let flags):
@@ -867,13 +868,18 @@ public extension Api {
             _4 = parseString(reader)
             var _5: Int64?
             _5 = reader.readInt64()
+            var _6: Api.TextWithEntities?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputStorePaymentPurpose.inputStorePaymentPremiumGiftCode(flags: _1!, users: _2!, boostPeer: _3, currency: _4!, amount: _5!)
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.InputStorePaymentPurpose.inputStorePaymentPremiumGiftCode(flags: _1!, users: _2!, boostPeer: _3, currency: _4!, amount: _5!, message: _6)
             }
             else {
                 return nil

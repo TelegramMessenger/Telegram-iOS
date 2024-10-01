@@ -5,7 +5,7 @@ import TelegramPresentationData
 import AnimationUI
 import Display
 
-class DynamicIslandMaskNode: ASDisplayNode {
+final class DynamicIslandMaskNode: ASDisplayNode {
     var animationNode: AnimationNode?
     
     var isForum = false {
@@ -39,7 +39,7 @@ class DynamicIslandMaskNode: ASDisplayNode {
     }
 }
 
-class DynamicIslandBlurNode: ASDisplayNode {
+final class DynamicIslandBlurNode: ASDisplayNode {
     private var effectView: UIVisualEffectView?
     private let fadeNode = ASDisplayNode()
     let gradientNode = ASImageNode()
