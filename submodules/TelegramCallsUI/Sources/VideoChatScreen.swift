@@ -1280,6 +1280,11 @@ final class VideoChatScreenComponent: Component {
             
             let canManageCall = self.callState?.canManageCall ?? false
             
+            var maxTitleWidth: CGFloat = availableSize.width - sideInset * 2.0 - navigationButtonAreaWidth * 2.0 - 4.0 * 2.0
+            if isTwoColumnLayout {
+                maxTitleWidth -= 88.0
+            }
+            
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(VideoChatTitleComponent(
@@ -1322,7 +1327,7 @@ final class VideoChatScreenComponent: Component {
                     } : nil
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - navigationButtonAreaWidth * 2.0 - 4.0 * 2.0, height: 100.0)
+                containerSize: CGSize(width: maxTitleWidth, height: 100.0)
             )
             let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: topInset + floor((navigationBarHeight - titleSize.height) * 0.5)), size: titleSize)
             if let titleView = self.title.view {
