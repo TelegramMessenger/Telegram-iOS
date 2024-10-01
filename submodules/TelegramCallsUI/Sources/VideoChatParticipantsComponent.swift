@@ -1398,7 +1398,10 @@ final class VideoChatParticipantsComponent: Component {
                     environment: {},
                     containerSize: itemLayout.expandedGrid.itemContainerFrame().size
                 )
-                let expandedThumbnailsFrame = CGRect(origin: CGPoint(x: 0.0, y: expandedGridItemContainerFrame.height - expandedThumbnailsSize.height), size: expandedThumbnailsSize)
+                var expandedThumbnailsFrame = CGRect(origin: CGPoint(x: 0.0, y: expandedGridItemContainerFrame.height - expandedThumbnailsSize.height), size: expandedThumbnailsSize)
+                if expandedVideoState.isUIHidden {
+                    expandedThumbnailsFrame.origin.y += expandedThumbnailsSize.height
+                }
                 if let expandedThumbnailsComponentView = expandedThumbnailsView.view {
                     if expandedThumbnailsComponentView.superview == nil {
                         self.expandedGridItemContainer.addSubview(expandedThumbnailsComponentView)
