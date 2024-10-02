@@ -3672,7 +3672,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                     url: "",
                                     simple: true,
                                     source: .generic,
-                                    skipTermsOfService: true
+                                    skipTermsOfService: true,
+                                    payload: nil
                                 )
                             } else {
                                 self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(

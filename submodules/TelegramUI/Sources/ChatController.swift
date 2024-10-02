@@ -9721,7 +9721,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     commit()
                                 })
                             } else {
-                                strongSelf.context.sharedContext.openWebApp(context: strongSelf.context, parentController: strongSelf, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, threadId: nil, buttonText: "", url: "", simple: true, source: .generic, skipTermsOfService: false)
+                                strongSelf.context.sharedContext.openWebApp(context: strongSelf.context, parentController: strongSelf, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, threadId: nil, buttonText: "", url: "", simple: true, source: .generic, skipTermsOfService: false, payload: botAppStart.payload)
                                 commit()
                             }
                         }

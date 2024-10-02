@@ -74,6 +74,7 @@ final class GiftSetupScreenComponent: Component {
         private let scrollView: ScrollView
         
         private let navigationTitle = ComponentView<Empty>()
+        private let remainingCount = ComponentView<Empty>()
         private let introContent = ComponentView<Empty>()
         private let introSection = ComponentView<Empty>()
         private let hideSection = ComponentView<Empty>()
@@ -296,11 +297,15 @@ final class GiftSetupScreenComponent: Component {
             guard let component = self.component, case let .starGift(starGift) = component.subject, let starsContext = component.context.starsContext, let starsState = starsContext.currentState else {
                 return
             }
-            
+                        
             let proceed = { [weak self] in
                 guard let self else {
                     return
                 }
+                
+                self.inProgress = true
+                self.state?.updated()
+                
                 let entities = generateChatInputTextEntities(self.textInputState.text)
                 let source: BotPaymentInvoiceSource = .starGift(hideName: self.hideName, peerId: component.peerId, giftId: starGift.id, text: self.textInputState.text.string, entities: entities)
                 
@@ -558,6 +563,43 @@ final class GiftSetupScreenComponent: Component {
             contentHeight += environment.navigationHeight
             contentHeight += 26.0
             
+            if case let .starGift(starGift) = component.subject, let availability = starGift.availability {
+                //TODO:localize
+                let remains: Int32 = Int32(CGFloat(availability.remains) * 0.66)
+                let position = CGFloat(remains) / CGFloat(availability.total)
+                let remainsString = "\(remains)" //presentationStringsFormattedNumber(remains, environment.dateTimeFormat.groupingSeparator)
+                let totalString = presentationStringsFormattedNumber(availability.total, environment.dateTimeFormat.groupingSeparator)
+                let remainingCountSize = self.remainingCount.update(
+                    transition: transition,
+                    component: AnyComponent(RemainingCountComponent(
+                        inactiveColor: environment.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.3),
+                        activeColors: [UIColor(rgb: 0x5bc2ff), UIColor(rgb: 0x2d9eff)],
+                        inactiveTitle: "Limited",
+                        inactiveValue: "",
+                        inactiveTitleColor: environment.theme.list.itemSecondaryTextColor,
+                        activeTitle: "",
+                        activeValue: totalString,
+                        activeTitleColor: .white,
+                        badgeText: "\(remainsString)",
+                        badgePosition: position,
+                        badgeGraphPosition: position,
+                        invertProgress: true
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                )
+                let remainingCountFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight - 36.0), size: remainingCountSize)
+                if let remainingCountView = self.remainingCount.view {
+                    if remainingCountView.superview == nil {
+                        self.scrollView.addSubview(remainingCountView)
+                    }
+                    transition.setFrame(view: remainingCountView, frame: remainingCountFrame)
+                }
+                contentHeight += remainingCountSize.height
+                contentHeight -= 36.0
+                contentHeight += sectionSpacing
+            }
+            
             let giftConfiguration = GiftConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
                
             var introSectionItems: [AnyComponentWithIdentity<Empty>] = []
@@ -648,14 +690,7 @@ final class GiftSetupScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
-                    header: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.Gift_Send_Customize_Title,
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
-                        )),
-                        maximumNumberOfLines: 0
-                    )),
+                    header: nil,
                     footer: introFooter,
                     items: introSectionItems
                 )),
