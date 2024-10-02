@@ -11,6 +11,7 @@ import SwiftSignalKit
 import MetalEngine
 import CallScreen
 import AvatarNode
+import ContextUI
 
 final class VideoChatParticipantThumbnailComponent: Component {
     let call: PresentationGroupCall
@@ -21,6 +22,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
     let isSpeaking: Bool
     let interfaceOrientation: UIInterfaceOrientation
     let action: (() -> Void)?
+    let contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     
     init(
         call: PresentationGroupCall,
@@ -30,7 +32,8 @@ final class VideoChatParticipantThumbnailComponent: Component {
         isSelected: Bool,
         isSpeaking: Bool,
         interfaceOrientation: UIInterfaceOrientation,
-        action: (() -> Void)?
+        action: (() -> Void)?,
+        contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     ) {
         self.call = call
         self.theme = theme
@@ -40,6 +43,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
         self.isSpeaking = isSpeaking
         self.interfaceOrientation = interfaceOrientation
         self.action = action
+        self.contextAction = contextAction
     }
     
     static func ==(lhs: VideoChatParticipantThumbnailComponent, rhs: VideoChatParticipantThumbnailComponent) -> Bool {
@@ -64,6 +68,12 @@ final class VideoChatParticipantThumbnailComponent: Component {
         if lhs.interfaceOrientation != rhs.interfaceOrientation {
             return false
         }
+        if (lhs.action == nil) != (rhs.action == nil) {
+            return false
+        }
+        if (lhs.contextAction == nil) != (rhs.contextAction == nil) {
+            return false
+        }
         return true
     }
     
@@ -79,7 +89,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
         }
     }
     
-    final class View: HighlightTrackingButton {
+    final class View: ContextControllerSourceView {
         private static let selectedBorderImage: UIImage? = {
             return generateStretchableFilledCircleImage(diameter: 20.0, color: nil, strokeColor: UIColor.white, strokeWidth: 2.0)?.withRenderingMode(.alwaysTemplate)
         }()
@@ -87,6 +97,10 @@ final class VideoChatParticipantThumbnailComponent: Component {
         private var component: VideoChatParticipantThumbnailComponent?
         private weak var componentState: EmptyComponentState?
         private var isUpdating: Bool = false
+        
+        private let extractedContainerView: ContextExtractedContentContainingView
+        
+        private let backgroundLayer: SimpleLayer
         
         private var avatarNode: AvatarNode?
         private let title = ComponentView<Empty>()
@@ -101,13 +115,30 @@ final class VideoChatParticipantThumbnailComponent: Component {
         private var videoSpec: VideoSpec?
         
         override init(frame: CGRect) {
+            self.extractedContainerView = ContextExtractedContentContainingView()
+            
+            self.backgroundLayer = SimpleLayer()
+            self.backgroundLayer.backgroundColor = UIColor(rgb: 0x1C1C1E).cgColor
+            
             super.init(frame: frame)
             
-            //TODO:release optimize
-            self.clipsToBounds = true
-            self.layer.cornerRadius = 10.0
+            self.addSubview(self.extractedContainerView)
+            self.targetViewForActivationProgress = self.extractedContainerView.contentView
             
-            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            self.extractedContainerView.contentView.layer.addSublayer(self.backgroundLayer)
+            
+            self.extractedContainerView.contentView.clipsToBounds = true
+            self.extractedContainerView.contentView.layer.cornerRadius = 10.0
+            
+            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+            
+            self.activated = { [weak self] gesture, _ in
+                guard let self, let component = self.component else {
+                    gesture.cancel()
+                    return
+                }
+                component.contextAction?(EnginePeer(component.participant.peer), self.extractedContainerView, gesture)
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -118,21 +149,19 @@ final class VideoChatParticipantThumbnailComponent: Component {
             self.videoDisposable?.dispose()
         }
         
-        @objc private func pressed() {
-            guard let component = self.component, let action = component.action else {
-                return
+        @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+            if case .ended = recognizer.state {
+                guard let component = self.component, let action = component.action else {
+                    return
+                }
+                action()
             }
-            action()
         }
         
         func update(component: VideoChatParticipantThumbnailComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
-            }
-            
-            if self.component == nil {
-                self.backgroundColor = UIColor(rgb: 0x1C1C1E)
             }
             
             let previousComponent = self.component
@@ -156,6 +185,14 @@ final class VideoChatParticipantThumbnailComponent: Component {
             self.component = component
             self.componentState = state
             
+            transition.setFrame(layer: self.backgroundLayer, frame: CGRect(origin: CGPoint(), size: availableSize))
+            
+            transition.setPosition(view: self.extractedContainerView, position: CGRect(origin: CGPoint(), size: availableSize).center)
+            transition.setBounds(view: self.extractedContainerView, bounds: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setPosition(view: self.extractedContainerView.contentView, position: CGRect(origin: CGPoint(), size: availableSize).center)
+            transition.setBounds(view: self.extractedContainerView.contentView, bounds: CGRect(origin: CGPoint(), size: availableSize))
+            self.extractedContainerView.contentRect = CGRect(origin: CGPoint(), size: availableSize)
+            
             let avatarNode: AvatarNode
             if let current = self.avatarNode {
                 avatarNode = current
@@ -163,7 +200,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
                 avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 17.0))
                 avatarNode.isUserInteractionEnabled = false
                 self.avatarNode = avatarNode
-                self.addSubview(avatarNode.view)
+                self.extractedContainerView.contentView.addSubview(avatarNode.view)
             }
             
             let avatarSize = CGSize(width: 50.0, height: 50.0)
@@ -188,7 +225,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
             let muteStatusFrame = CGRect(origin: CGPoint(x: availableSize.width + 5.0 - muteStatusSize.width, y: availableSize.height + 5.0 - muteStatusSize.height), size: muteStatusSize)
             if let muteStatusView = self.muteStatus.view as? VideoChatMuteIconComponent.View {
                 if muteStatusView.superview == nil {
-                    self.addSubview(muteStatusView)
+                    self.extractedContainerView.contentView.addSubview(muteStatusView)
                 }
                 transition.setPosition(view: muteStatusView, position: muteStatusFrame.center)
                 transition.setBounds(view: muteStatusView, bounds: CGRect(origin: CGPoint(), size: muteStatusFrame.size))
@@ -208,7 +245,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
                 if titleView.superview == nil {
                     titleView.layer.anchorPoint = CGPoint()
                     titleView.isUserInteractionEnabled = false
-                    self.addSubview(titleView)
+                    self.extractedContainerView.contentView.addSubview(titleView)
                 }
                 transition.setPosition(view: titleView, position: titleFrame.origin)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
@@ -222,7 +259,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
                     videoBackgroundLayer = SimpleLayer()
                     videoBackgroundLayer.backgroundColor = UIColor(white: 0.1, alpha: 1.0).cgColor
                     self.videoBackgroundLayer = videoBackgroundLayer
-                    self.layer.insertSublayer(videoBackgroundLayer, above: avatarNode.layer)
+                    self.extractedContainerView.contentView.layer.insertSublayer(videoBackgroundLayer, above: avatarNode.layer)
                     videoBackgroundLayer.isHidden = true
                 }
                 
@@ -232,8 +269,8 @@ final class VideoChatParticipantThumbnailComponent: Component {
                 } else {
                     videoLayer = PrivateCallVideoLayer()
                     self.videoLayer = videoLayer
-                    self.layer.insertSublayer(videoLayer.blurredLayer, above: videoBackgroundLayer)
-                    self.layer.insertSublayer(videoLayer, above: videoLayer.blurredLayer)
+                    self.extractedContainerView.contentView.layer.insertSublayer(videoLayer.blurredLayer, above: videoBackgroundLayer)
+                    self.extractedContainerView.contentView.layer.insertSublayer(videoLayer, above: videoLayer.blurredLayer)
                     
                     videoLayer.blurredLayer.opacity = 0.25
                     
@@ -346,7 +383,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
                     selectedBorderView = UIImageView()
                     self.selectedBorderView = selectedBorderView
                     selectedBorderView.alpha = 0.0
-                    self.addSubview(selectedBorderView)
+                    self.extractedContainerView.contentView.addSubview(selectedBorderView)
                     selectedBorderView.image = View.selectedBorderImage
                     
                     selectedBorderView.frame = CGRect(origin: CGPoint(), size: availableSize)
@@ -438,6 +475,7 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
     let speakingParticipants: Set<EnginePeer.Id>
     let interfaceOrientation: UIInterfaceOrientation
     let updateSelectedParticipant: (Participant.Key) -> Void
+    let contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
 
     init(
         call: PresentationGroupCall,
@@ -446,7 +484,8 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
         selectedParticipant: Participant.Key?,
         speakingParticipants: Set<EnginePeer.Id>,
         interfaceOrientation: UIInterfaceOrientation,
-        updateSelectedParticipant: @escaping (Participant.Key) -> Void
+        updateSelectedParticipant: @escaping (Participant.Key) -> Void,
+        contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     ) {
         self.call = call
         self.theme = theme
@@ -455,6 +494,7 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
         self.speakingParticipants = speakingParticipants
         self.interfaceOrientation = interfaceOrientation
         self.updateSelectedParticipant = updateSelectedParticipant
+        self.contextAction = contextAction
     }
 
     static func ==(lhs: VideoChatExpandedParticipantThumbnailsComponent, rhs: VideoChatExpandedParticipantThumbnailsComponent) -> Bool {
@@ -474,6 +514,9 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
             return false
         }
         if lhs.interfaceOrientation != rhs.interfaceOrientation {
+            return false
+        }
+        if (lhs.contextAction == nil) != (rhs.contextAction == nil) {
             return false
         }
         return true
@@ -617,7 +660,8 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
                                     return
                                 }
                                 component.updateSelectedParticipant(participantKey)
-                            }
+                            },
+                            contextAction: component.contextAction
                         )),
                         environment: {},
                         containerSize: itemFrame.size

@@ -648,6 +648,8 @@ final class VideoChatParticipantsComponent: Component {
         
         private var isPinchToZoomActive: Bool = false
         
+        private var stopRequestingNonCentralVideo: Bool = false
+        private var stopRequestingNonCentralVideoTimer: Foundation.Timer?
         private var currentLoadMoreToken: String?
         
         private var mainScrollViewEventCycleState: EventCycleState?
@@ -720,6 +722,10 @@ final class VideoChatParticipantsComponent: Component {
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.stopRequestingNonCentralVideoTimer?.invalidate()
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -1381,12 +1387,21 @@ final class VideoChatParticipantsComponent: Component {
                                 return
                             }
                             component.updateMainParticipant(VideoParticipantKey(id: key.id, isPresentation: key.isPresentation), nil)
+                        },
+                        contextAction: { [weak self] peer, sourceView, gesture in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.openParticipantContextMenu(peer.id, sourceView, gesture)
                         }
                     )),
                     environment: {},
                     containerSize: itemLayout.expandedGrid.itemContainerFrame().size
                 )
-                let expandedThumbnailsFrame = CGRect(origin: CGPoint(x: 0.0, y: expandedGridItemContainerFrame.height - expandedThumbnailsSize.height), size: expandedThumbnailsSize)
+                var expandedThumbnailsFrame = CGRect(origin: CGPoint(x: 0.0, y: expandedGridItemContainerFrame.height - expandedThumbnailsSize.height), size: expandedThumbnailsSize)
+                if expandedVideoState.isUIHidden {
+                    expandedThumbnailsFrame.origin.y += expandedThumbnailsSize.height
+                }
                 if let expandedThumbnailsComponentView = expandedThumbnailsView.view {
                     if expandedThumbnailsComponentView.superview == nil {
                         self.expandedGridItemContainer.addSubview(expandedThumbnailsComponentView)
@@ -1599,8 +1614,32 @@ final class VideoChatParticipantsComponent: Component {
                 self.isUpdating = false
             }
             
+            let previousComponent = self.component
             self.component = component
             self.state = state
+            
+            if let expandedVideoState = component.expandedVideoState, expandedVideoState.isUIHidden {
+                if self.stopRequestingNonCentralVideoTimer == nil || previousComponent?.expandedVideoState != expandedVideoState {
+                    self.stopRequestingNonCentralVideoTimer?.invalidate()
+                    
+                    self.stopRequestingNonCentralVideoTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false, block: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.stopRequestingNonCentralVideo = true
+                        self.stopRequestingNonCentralVideoTimer = nil
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .immediate, isLocal: true)
+                        }
+                    })
+                }
+            } else {
+                self.stopRequestingNonCentralVideo = false
+                if let stopRequestingNonCentralVideoTimer = self.stopRequestingNonCentralVideoTimer {
+                    self.stopRequestingNonCentralVideoTimer = nil
+                    stopRequestingNonCentralVideoTimer.invalidate()
+                }
+            }
             
             let measureListItemSize = self.measureListItemView.update(
                 transition: .immediate,
@@ -1749,13 +1788,19 @@ final class VideoChatParticipantsComponent: Component {
                     }
                     
                     if let videoChannel = participant.requestedVideoChannel(minQuality: .thumbnail, maxQuality: maxVideoQuality) {
-                        if !requestedVideo.contains(videoChannel) {
-                            requestedVideo.append(videoChannel)
+                        if self.stopRequestingNonCentralVideo && component.expandedVideoState != nil && maxVideoQuality != .full {
+                        } else {
+                            if !requestedVideo.contains(videoChannel) {
+                                requestedVideo.append(videoChannel)
+                            }
                         }
                     }
                     if let videoChannel = participant.requestedPresentationVideoChannel(minQuality: .thumbnail, maxQuality: maxPresentationQuality) {
-                        if !requestedVideo.contains(videoChannel) {
-                            requestedVideo.append(videoChannel)
+                        if self.stopRequestingNonCentralVideo && component.expandedVideoState != nil && maxPresentationQuality != .full {
+                        } else {
+                            if !requestedVideo.contains(videoChannel) {
+                                requestedVideo.append(videoChannel)
+                            }
                         }
                     }
                 }
