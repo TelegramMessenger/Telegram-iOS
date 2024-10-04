@@ -564,8 +564,7 @@ final class GiftSetupScreenComponent: Component {
             contentHeight += 26.0
             
             if case let .starGift(starGift) = component.subject, let availability = starGift.availability {
-                //TODO:localize
-                let remains: Int32 = Int32(CGFloat(availability.remains) * 0.66)
+                let remains: Int32 = availability.remains
                 let position = CGFloat(remains) / CGFloat(availability.total)
                 let remainsString = "\(remains)" //presentationStringsFormattedNumber(remains, environment.dateTimeFormat.groupingSeparator)
                 let totalString = presentationStringsFormattedNumber(availability.total, environment.dateTimeFormat.groupingSeparator)

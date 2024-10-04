@@ -462,6 +462,10 @@ public extension EnginePeer {
     var addressName: String? {
         return self._asPeer().addressName
     }
+    
+    var usernames: [TelegramPeerUsername] {
+        return self._asPeer().usernames
+    }
 
     var indexName: EnginePeer.IndexName {
         return EnginePeer.IndexName(self._asPeer().indexName)
