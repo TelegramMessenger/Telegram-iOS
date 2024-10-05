@@ -604,6 +604,8 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
     private var hiddenMediaManagerIndex: Int?
 
     private var messageRemovedDisposable: Disposable?
+    
+    private var isNativePictureInPictureActiveDisposable: Disposable?
 
     init(context: AccountContext, overlayController: OverlayMediaController, mediaManager: MediaManager, accountId: AccountRecordId, hiddenMedia: (MessageId, Media)?, videoNode: UniversalVideoNode, canSkip: Bool, willBegin: @escaping (PictureInPictureContentImpl) -> Void, didEnd: @escaping (PictureInPictureContentImpl) -> Void, expand: @escaping (@escaping () -> Void) -> Void) {
         self.overlayController = overlayController
@@ -617,30 +619,84 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
 
         super.init()
 
-        let contentDelegate = PlaybackDelegate(node: self.node)
-        self.contentDelegate = contentDelegate
+        if let videoLayer = videoNode.getVideoLayer() {
+            let contentDelegate = PlaybackDelegate(node: self.node)
+            self.contentDelegate = contentDelegate
+            
+            let pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: videoLayer, playbackDelegate: contentDelegate))
+            self.pictureInPictureController = pictureInPictureController
+            contentDelegate.pictureInPictureController = pictureInPictureController
+            
+            pictureInPictureController.canStartPictureInPictureAutomaticallyFromInline = false
+            pictureInPictureController.requiresLinearPlayback = !canSkip
+            pictureInPictureController.delegate = self
+            self.pictureInPictureController = pictureInPictureController
+            let timer = SwiftSignalKit.Timer(timeout: 0.005, repeat: true, completion: { [weak self] in
+                guard let strongSelf = self, let pictureInPictureController = strongSelf.pictureInPictureController else {
+                    return
+                }
+                if pictureInPictureController.isPictureInPicturePossible {
+                    strongSelf.pictureInPictureTimer?.invalidate()
+                    strongSelf.pictureInPictureTimer = nil
+                    
+                    pictureInPictureController.startPictureInPicture()
+                }
+            }, queue: .mainQueue())
+            self.pictureInPictureTimer = timer
+            timer.start()
+        } else {
+            var currentIsNativePictureInPictureActive = false
+            self.isNativePictureInPictureActiveDisposable = (videoNode.isNativePictureInPictureActive
+            |> deliverOnMainQueue).startStrict(next: { [weak self] isNativePictureInPictureActive in
+                guard let self else {
+                    return
+                }
+                
+                if currentIsNativePictureInPictureActive == isNativePictureInPictureActive {
+                    return
+                }
+                currentIsNativePictureInPictureActive = isNativePictureInPictureActive
+                
+                if isNativePictureInPictureActive {
+                    Queue.mainQueue().after(0.0, { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.willBegin(self)
+                        
+                        if let overlayController = self.overlayController {
+                            overlayController.setPictureInPictureContentHidden(content: self, isHidden: true)
+                        }
+                        
+                        self.didEnd(self)
+                    })
+                } else {
+                    self.expand { [weak self] in
+                        guard let self else {
+                            return
+                        }
 
-        let pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: videoNode.getVideoLayer()!, playbackDelegate: contentDelegate))
-        self.pictureInPictureController = pictureInPictureController
-        contentDelegate.pictureInPictureController = pictureInPictureController
-        
-        pictureInPictureController.canStartPictureInPictureAutomaticallyFromInline = false
-        pictureInPictureController.requiresLinearPlayback = !canSkip
-        pictureInPictureController.delegate = self
-        self.pictureInPictureController = pictureInPictureController
-        let timer = SwiftSignalKit.Timer(timeout: 0.005, repeat: true, completion: { [weak self] in
-            guard let strongSelf = self, let pictureInPictureController = strongSelf.pictureInPictureController else {
-                return
-            }
-            if pictureInPictureController.isPictureInPicturePossible {
-                strongSelf.pictureInPictureTimer?.invalidate()
-                strongSelf.pictureInPictureTimer = nil
+                        self.didExpand = true
 
-                pictureInPictureController.startPictureInPicture()
-            }
-        }, queue: .mainQueue())
-        self.pictureInPictureTimer = timer
-        timer.start()
+                        if let overlayController = self.overlayController {
+                            overlayController.setPictureInPictureContentHidden(content: self, isHidden: false)
+                            self.node.alpha = 0.02
+                        }
+                        
+                        guard let overlayController = self.overlayController else {
+                            return
+                        }
+                        overlayController.removePictureInPictureContent(content: self)
+                        self.node.canAttachContent = false
+                        if self.didExpand {
+                            return
+                        }
+                        self.node.continuePlayingWithoutSound()
+                    }
+                }
+            })
+            let _ = videoNode.enterNativePictureInPicture()
+        }
 
         if let hiddenMedia = hiddenMedia {
             self.hiddenMediaManagerIndex = mediaManager.galleryHiddenMediaManager.addSource(Signal<(MessageId, Media)?, NoError>.single(hiddenMedia)
@@ -676,6 +732,7 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
 
     deinit {
         self.messageRemovedDisposable?.dispose()
+        self.isNativePictureInPictureActiveDisposable?.dispose()
         self.pictureInPictureTimer?.invalidate()
         self.node.setCanPlaybackWithoutHierarchy(false)
 
@@ -743,10 +800,6 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
             }
 
             completionHandler(true)
-
-            /*Queue.mainQueue().after(0.2, {
-                self?.node.canAttachContent = false
-            })*/
         }
     }
 }
@@ -1186,7 +1239,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 videoScale = 2.0
             }
             let videoSize = CGSize(width: item.content.dimensions.width * videoScale, height: item.content.dimensions.height * videoScale)
-            videoNode.updateLayout(size: videoSize, transition: .immediate)
+            let actualVideoSize = CGSize(width: item.content.dimensions.width, height: item.content.dimensions.height)
+            videoNode.updateLayout(size: videoSize, actualSize: actualVideoSize, transition: .immediate)
             videoNode.ownsContentNodeUpdated = { [weak self] value in
                 if let strongSelf = self {
                     strongSelf.updateDisplayPlaceholder(!value)
@@ -1294,7 +1348,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
 
-            self.moreButtonStateDisposable.set(combineLatest(queue: .mainQueue(),
+            /*self.moreButtonStateDisposable.set(combineLatest(queue: .mainQueue(),
                 self.playbackRatePromise.get(),
                 self.isShowingContextMenuPromise.get()
             ).start(next: { [weak self] playbackRate, isShowingContextMenu in
@@ -1333,7 +1387,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         strongSelf.moreBarButtonRateTimestamp = CFAbsoluteTimeGetCurrent()
                     }
                 }
-            }))
+            }))*/
 
             self.statusDisposable.set((combineLatest(queue: .mainQueue(), videoNode.status, mediaFileStatus)
             |> deliverOnMainQueue).start(next: { [weak self] value, fetchStatus in
@@ -2305,6 +2359,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let playbackRate = self.playbackRate
 
             if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported(), isNativePictureInPictureSupported {
+                
                 self.disablePictureInPicturePlaceholder = true
 
                 let overlayVideoNode = UniversalVideoNode(accountId: self.context.account.id, postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .overlay)
@@ -2837,7 +2892,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 }
                 
-                if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil {
+                if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil && !(item.content is HLSVideoContent) {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveVideo, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
                         f(.default)
                         

@@ -175,6 +175,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let options: [ItemListPeerItemRevealOption]
     let additionalActions: [ContactsPeerItemAction]
     let actionIcon: ContactsPeerItemActionIcon
+    let searchQuery: String?
     let action: ((ContactsPeerItemPeer) -> Void)?
     let disabledAction: ((ContactsPeerItemPeer) -> Void)?
     let setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)?
@@ -215,6 +216,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         actionIcon: ContactsPeerItemActionIcon = .none,
         index: SortIndex?,
         header: ListViewItemHeader?,
+        searchQuery: String? = nil,
         action: ((ContactsPeerItemPeer) -> Void)?,
         disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil,
         setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)? = nil,
@@ -245,6 +247,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.options = options
         self.additionalActions = additionalActions
         self.actionIcon = actionIcon
+        self.searchQuery = searchQuery
         self.action = action
         self.disabledAction = disabledAction
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -880,7 +883,16 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemSecondaryTextColor)
                         }
                     case let .addressName(suffix):
-                        if let addressName = peer.addressName {
+                        var addressName = peer.addressName
+                        if let currentAddressName = addressName, let searchQuery = item.searchQuery?.lowercased(), !peer.usernames.isEmpty && !currentAddressName.lowercased().contains(searchQuery) {
+                            for username in peer.usernames {
+                                if username.username.lowercased().contains(searchQuery) {
+                                    addressName = username.username
+                                    break
+                                }
+                            }
+                        }
+                        if let addressName {
                             let addressNameString = NSAttributedString(string: "@" + addressName, font: statusFont, textColor: item.presentationData.theme.list.itemAccentColor)
                             if !suffix.isEmpty {
                                 let suffixString = NSAttributedString(string: suffix, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)

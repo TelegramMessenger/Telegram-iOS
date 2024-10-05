@@ -14,7 +14,7 @@ import UndoUI
 import UrlHandling
 import TelegramPresentationData
 
-func openWebAppImpl(context: AccountContext, parentController: ViewController, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peer: EnginePeer, threadId: Int64?, buttonText: String, url: String, simple: Bool, source: ChatOpenWebViewSource, skipTermsOfService: Bool) {
+func openWebAppImpl(context: AccountContext, parentController: ViewController, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peer: EnginePeer, threadId: Int64?, buttonText: String, url: String, simple: Bool, source: ChatOpenWebViewSource, skipTermsOfService: Bool, payload: String?) {
     let presentationData: PresentationData
     if let parentController = parentController as? ChatControllerImpl {
         presentationData = parentController.presentationData
@@ -135,22 +135,16 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
                 }
             }, didDismiss: { [weak parentController] in
                 if let parentController = parentController as? ChatControllerImpl {
-//                    let isFocused = parentController.chatDisplayNode.textInputPanelNode?.isFocused ?? false
-//                    parentController.chatDisplayNode.insertSubnode(parentController.chatDisplayNode.inputPanelContainerNode, aboveSubnode: parentController.chatDisplayNode.inputContextPanelContainer)
-//                    if isFocused {
-//                        parentController.chatDisplayNode.textInputPanelNode?.ensureFocused()
-//                    }
-                    
                     parentController.updateChatPresentationInterfaceState(interactive: false) { state in
                         return state.updatedForceInputCommandsHidden(false)
                     }
                 }
             }, getNavigationController: { [weak parentController] in
+                var navigationController: NavigationController?
                 if let parentController = parentController as? ChatControllerImpl {
-                    return parentController.effectiveNavigationController ?? context.sharedContext.mainWindow?.viewController as? NavigationController
-                } else {
-                    return parentController?.navigationController as? NavigationController
+                    navigationController = parentController.effectiveNavigationController
                 }
+                return navigationController ?? (context.sharedContext.mainWindow?.viewController as? NavigationController)
             })
             controller.navigationPresentation = .flatModal
             parentController.push(controller)
@@ -201,7 +195,7 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
                 } else {
                     source = url.isEmpty ? .generic : .simple
                 }
-                let params = WebAppParameters(source: source, peerId: peer.id, botId: botId, botName: botName, botVerified: botVerified, url: result.url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: result.flags.contains(.fullSize))
+                let params = WebAppParameters(source: source, peerId: peer.id, botId: botId, botName: botName, botVerified: botVerified, url: result.url, queryId: nil, payload: payload, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: result.flags.contains(.fullSize))
                 let controller = standaloneWebAppController(context: context, updatedPresentationData: updatedPresentationData, params: params, threadId: threadId, openUrl: { [weak parentController] url, concealed, commit in
                     ChatControllerImpl.botOpenUrl(context: context, peerId: peer.id, controller: parentController as? ChatControllerImpl, url: url, concealed: concealed, present: { c, a in
                         presentImpl?(c, a)
@@ -209,11 +203,11 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
                 }, requestSwitchInline: { [weak parentController] query, chatTypes, completion in
                     ChatControllerImpl.botRequestSwitchInline(context: context, controller: parentController as? ChatControllerImpl, peerId: peer.id, botAddress: botAddress, query: query, chatTypes: chatTypes, completion: completion)
                 }, getNavigationController: { [weak parentController] in
+                    var navigationController: NavigationController?
                     if let parentController = parentController as? ChatControllerImpl {
-                        return parentController.effectiveNavigationController ?? context.sharedContext.mainWindow?.viewController as? NavigationController
-                    } else {
-                        return parentController?.navigationController as? NavigationController
+                        navigationController = parentController.effectiveNavigationController
                     }
+                    return navigationController ?? (context.sharedContext.mainWindow?.viewController as? NavigationController)
                 })
                 controller.navigationPresentation = .flatModal
                 if let parentController = parentController as? ChatControllerImpl {
@@ -257,11 +251,11 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
                         parentController.chatDisplayNode.historyNode.scrollToEndOfHistory()
                     }
                 }, getNavigationController: { [weak parentController] in
+                    var navigationController: NavigationController?
                     if let parentController = parentController as? ChatControllerImpl {
-                        return parentController.effectiveNavigationController ?? context.sharedContext.mainWindow?.viewController as? NavigationController
-                    } else {
-                        return parentController?.navigationController as? NavigationController
+                        navigationController = parentController.effectiveNavigationController
                     }
+                    return navigationController ?? (context.sharedContext.mainWindow?.viewController as? NavigationController)
                 })
                 controller.navigationPresentation = .flatModal
                 if let parentController = parentController as? ChatControllerImpl {
@@ -316,7 +310,7 @@ public extension ChatControllerImpl {
         }
         self.chatDisplayNode.dismissInput()
         
-        self.context.sharedContext.openWebApp(context: self.context, parentController: self, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), threadId: self.chatLocation.threadId, buttonText: buttonText, url: url, simple: simple, source: source, skipTermsOfService: false)
+        self.context.sharedContext.openWebApp(context: self.context, parentController: self, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), threadId: self.chatLocation.threadId, buttonText: buttonText, url: url, simple: simple, source: source, skipTermsOfService: false, payload: nil)
     }
     
     static func botRequestSwitchInline(context: AccountContext, controller: ChatControllerImpl?, peerId: EnginePeer.Id, botAddress: String, query: String, chatTypes: [ReplyMarkupButtonRequestPeerType]?, completion:  @escaping () -> Void) -> Void {
@@ -567,7 +561,7 @@ public extension ChatControllerImpl {
                 }
             })
         } else {
-            self.context.sharedContext.openWebApp(context: self.context, parentController: self, updatedPresentationData: self.updatedPresentationData, peer: botPeer, threadId: nil, buttonText: "", url: "", simple: true, source: .generic, skipTermsOfService: false)
+            self.context.sharedContext.openWebApp(context: self.context, parentController: self, updatedPresentationData: self.updatedPresentationData, peer: botPeer, threadId: nil, buttonText: "", url: "", simple: true, source: .generic, skipTermsOfService: false, payload: payload)
         }
     }
 }

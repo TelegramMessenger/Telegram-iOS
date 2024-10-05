@@ -14,6 +14,10 @@ import WallpaperBackgroundNode
 import ListItemComponentAdaptor
 
 final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
+    enum Subject: Equatable {
+        case premium(months: Int32, amount: Int64, currency: String)
+        case starGift(gift: StarGift)
+    }
     let context: AccountContext
     let theme: PresentationTheme
     let componentTheme: PresentationTheme
@@ -26,7 +30,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
     let nameDisplayOrder: PresentationPersonNameOrder
     
     let accountPeer: EnginePeer?
-    let gift: StarGift
+    let subject: ChatGiftPreviewItem.Subject
     let text: String
     let entities: [MessageTextEntity]
     
@@ -42,7 +46,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         dateTimeFormat: PresentationDateTimeFormat,
         nameDisplayOrder: PresentationPersonNameOrder,
         accountPeer: EnginePeer?,
-        gift: StarGift,
+        subject: ChatGiftPreviewItem.Subject,
         text: String,
         entities: [MessageTextEntity]
     ) {
@@ -57,7 +61,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
         self.accountPeer = accountPeer
-        self.gift = gift
+        self.subject = subject
         self.text = text
         self.entities = entities
     }
@@ -206,9 +210,22 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                 
                 peers[authorPeerId] = item.accountPeer?._asPeer()
                 
-                let media: [Media] = [
-                    TelegramMediaAction(action: .starGift(gift: item.gift, convertStars: item.gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false))
-                ]
+                let media: [Media]
+                switch item.subject {
+                case let .premium(months, amount, currency):
+                    media = [
+                        TelegramMediaAction(
+                            action: .giftPremium(currency: currency, amount: amount, months: months, cryptoCurrency: nil, cryptoAmount: nil, text: item.text, entities: item.entities)
+                        )
+                    ]
+                case let .starGift(gift):
+                    media = [
+                        TelegramMediaAction(
+                            action: .starGift(gift: gift, convertStars: gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false)
+                        )
+                    ]
+                }
+                
                 let message = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[authorPeerId], text: "", attributes: [], media: media, peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                 items.append(item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [message], theme: item.componentTheme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false))
             }

@@ -16,6 +16,7 @@ import ChatMessageItemCommon
 import ChatMessageInteractiveMediaNode
 import ChatControllerInteraction
 import InvisibleInkDustNode
+import TelegramUniversalVideoContent
 
 public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     override public var supportsMosaic: Bool {
@@ -163,7 +164,9 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                                     automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
                                 }
                             } else if (telegramFile.isVideo && !telegramFile.isAnimated) && item.context.sharedContext.energyUsageSettings.autoplayVideo {
-                                if case .full = automaticDownload {
+                                if NativeVideoContent.isHLSVideo(file: telegramFile) {
+                                    automaticPlayback = true
+                                } else if case .full = automaticDownload {
                                     automaticPlayback = true
                                 } else {
                                     automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
@@ -207,7 +210,9 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                                 automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
                             }
                         } else if (telegramFile.isVideo && !telegramFile.isAnimated) && item.context.sharedContext.energyUsageSettings.autoplayVideo {
-                            if case .full = automaticDownload {
+                            if NativeVideoContent.isHLSVideo(file: telegramFile) {
+                                automaticPlayback = true
+                            } else if case .full = automaticDownload {
                                 automaticPlayback = true
                             } else {
                                 automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil

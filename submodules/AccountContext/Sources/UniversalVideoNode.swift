@@ -19,8 +19,9 @@ public protocol UniversalVideoContentNode: AnyObject {
     var ready: Signal<Void, NoError> { get }
     var status: Signal<MediaPlayerStatus, NoError> { get }
     var bufferingStatus: Signal<(RangeSet<Int64>, Int64)?, NoError> { get }
+    var isNativePictureInPictureActive: Signal<Bool, NoError> { get }
         
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
+    func updateLayout(size: CGSize, actualSize: CGSize, transition: ContainedViewLayoutTransition)
     
     func play()
     func pause()
@@ -41,6 +42,8 @@ public protocol UniversalVideoContentNode: AnyObject {
     func fetchControl(_ control: UniversalVideoNodeFetchControl)
     func notifyPlaybackControlsHidden(_ hidden: Bool)
     func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool)
+    func enterNativePictureInPicture() -> Bool
+    func exitNativePictureInPicture()
 }
 
 public protocol UniversalVideoContent {
@@ -68,7 +71,7 @@ public protocol UniversalVideoDecoration: AnyObject {
     
     func updateContentNode(_ contentNode: (UniversalVideoContentNode & ASDisplayNode)?)
     func updateContentNodeSnapshot(_ snapshot: UIView?)
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
+    func updateLayout(size: CGSize, actualSize: CGSize, transition: ContainedViewLayoutTransition)
     func tap()
 }
 
@@ -100,7 +103,7 @@ public final class UniversalVideoNode: ASDisplayNode {
     private let autoplay: Bool
     private let snapshotContentWhenGone: Bool
     
-    private var contentNode: (UniversalVideoContentNode & ASDisplayNode)?
+    private(set) var contentNode: (UniversalVideoContentNode & ASDisplayNode)?
     private var contentNodeId: Int32?
     
     private var playbackCompletedIndex: Int?
@@ -123,6 +126,11 @@ public final class UniversalVideoNode: ASDisplayNode {
     private let _bufferingStatus = Promise<(RangeSet<Int64>, Int64)?>()
     public var bufferingStatus: Signal<(RangeSet<Int64>, Int64)?, NoError> {
         return self._bufferingStatus.get()
+    }
+    
+    private let _isNativePictureInPictureActive = Promise<Bool>()
+    public var isNativePictureInPictureActive: Signal<Bool, NoError> {
+        return self._isNativePictureInPictureActive.get()
     }
     
     private let _ready = Promise<Void>()
@@ -181,6 +189,7 @@ public final class UniversalVideoNode: ASDisplayNode {
         
         self._status.set(self.manager.statusSignal(content: self.content))
         self._bufferingStatus.set(self.manager.bufferingStatusSignal(content: self.content))
+        self._isNativePictureInPictureActive.set(self.manager.isNativePictureInPictureActiveSignal(content: self.content))
         
         self.decoration.setStatus(self.status)
         
@@ -247,8 +256,8 @@ public final class UniversalVideoNode: ASDisplayNode {
         }
     }
     
-    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.decoration.updateLayout(size: size, transition: transition)
+    public func updateLayout(size: CGSize, actualSize: CGSize? = nil, transition: ContainedViewLayoutTransition) {
+        self.decoration.updateLayout(size: size, actualSize: actualSize ?? size, transition: transition)
     }
     
     public func play() {
@@ -415,6 +424,24 @@ public final class UniversalVideoNode: ASDisplayNode {
         self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
             if let contentNode = contentNode {
                 contentNode.setCanPlaybackWithoutHierarchy(canPlaybackWithoutHierarchy)
+            }
+        })
+    }
+    
+    public func enterNativePictureInPicture() -> Bool {
+        var result = false
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                result = contentNode.enterNativePictureInPicture()
+            }
+        })
+        return result
+    }
+    
+    public func exitNativePictureInPicture() {
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                contentNode.exitNativePictureInPicture()
             }
         })
     }

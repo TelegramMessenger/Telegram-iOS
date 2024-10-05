@@ -36,13 +36,13 @@ final class VideoChatActionButtonComponent: Component {
             case leave
         }
         
-        case audio(audio: Audio)
+        case audio(audio: Audio, isEnabled: Bool)
         case video(isActive: Bool)
         case leave
         
         fileprivate var iconType: IconType {
             switch self {
-            case let .audio(audio):
+            case let .audio(audio, _):
                 let mappedAudio: IconType.Audio
                 switch audio {
                 case .none, .builtin, .speaker:
@@ -136,14 +136,16 @@ final class VideoChatActionButtonComponent: Component {
             let titleText: String
             let backgroundColor: UIColor
             let iconDiameter: CGFloat
+            var isEnabled: Bool = true
             switch component.content {
-            case let .audio(audio):
+            case let .audio(audio, isEnabledValue):
                 var isActive = false
                 switch audio {
                 case .none, .builtin:
                     titleText = component.strings.Call_Speaker
                 case .speaker:
-                    isActive = true
+                    isEnabled = isEnabledValue
+                    isActive = isEnabledValue
                     titleText = component.strings.Call_Speaker
                 case .headphones:
                     titleText = component.strings.Call_Audio
@@ -276,7 +278,10 @@ final class VideoChatActionButtonComponent: Component {
                     self.addSubview(iconView)
                 }
                 transition.setFrame(view: iconView, frame: iconFrame)
+                transition.setAlpha(view: iconView, alpha: isEnabled ? 1.0 : 0.6)
             }
+            
+            self.isEnabled = isEnabled
             
             return size
         }

@@ -17,6 +17,7 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/TelegramPresentationData",
         "//submodules/TelegramUIPreferences",
+        "//submodules/TelegramStringFormatting",
         "//submodules/AccountContext",
         "//submodules/PresentationDataUtils",
         "//submodules/Markdown",
@@ -41,6 +42,7 @@ swift_library(
         "//submodules/BotPaymentsUI",
         "//submodules/TelegramUI/Components/EmojiSuggestionsComponent",
         "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
+        "//submodules/InAppPurchaseManager",
     ],
     visibility = [
         "//visibility:public",

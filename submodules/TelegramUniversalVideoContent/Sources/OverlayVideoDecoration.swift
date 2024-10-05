@@ -47,7 +47,7 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
     
     private let statusDisposable = MetaDisposable()
     
-    private var validLayoutSize: CGSize?
+    private var validLayout: (size: CGSize, actualSize: CGSize)?
     
     init(contentDimensions: CGSize, unminimize: @escaping () -> Void, togglePlayPause: @escaping () -> Void, expand: @escaping () -> Void, close: @escaping () -> Void, controlsAreShowingUpdated: @escaping (Bool) -> Void) {
         self.contentDimensions = contentDimensions
@@ -106,9 +106,9 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
             if let contentNode = contentNode {
                 if contentNode.supernode !== self.contentContainerNode {
                     self.contentContainerNode.addSubnode(contentNode)
-                    if let validLayoutSize = self.validLayoutSize {
-                        contentNode.frame = self.frameForContent(size: validLayoutSize)
-                        contentNode.updateLayout(size: validLayoutSize, transition: .immediate)
+                    if let validLayout = self.validLayout {
+                        contentNode.frame = self.frameForContent(size: validLayout.size)
+                        contentNode.updateLayout(size: validLayout.size, actualSize: validLayout.actualSize, transition: .immediate)
                     }
                 }
             }
@@ -118,8 +118,8 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
     func updateContentNodeSnapshot(_ snapshot: UIView?) {
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayoutSize = size
+    func updateLayout(size: CGSize, actualSize: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, actualSize)
         
         let contentFrame = self.frameForContent(size: size)
         
@@ -146,7 +146,7 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
         
         if let contentNode = self.contentNode {
             transition.updateFrame(node: contentNode, frame: contentFrame)
-            contentNode.updateLayout(size: contentFrame.size, transition: transition)
+            contentNode.updateLayout(size: contentFrame.size, actualSize: contentFrame.size, transition: transition)
         }
     }
     
@@ -209,8 +209,8 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
             if self.minimizedBlurView == nil {
                 let minimizedBlurView = UIVisualEffectView(effect: nil)
                 self.minimizedBlurView = minimizedBlurView
-                if let validLayoutSize = self.validLayoutSize {
-                    minimizedBlurView.frame = CGRect(origin: CGPoint(), size: validLayoutSize)
+                if let validLayout = self.validLayout {
+                    minimizedBlurView.frame = CGRect(origin: CGPoint(), size: validLayout.size)
                 }
                 minimizedBlurView.isHidden = true
                 self.foregroundContainerNode.view.addSubview(minimizedBlurView)
@@ -222,8 +222,8 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
                 self.minimizedBlurView?.contentView.addSubview(minimizedArrowView)
             }
             if let minimizedArrowView = self.minimizedArrowView {
-                if let validLayoutSize = self.validLayoutSize {
-                    setupArrowFrame(size: validLayoutSize, edge: edge, view: minimizedArrowView)
+                if let validLayout = self.validLayout {
+                    setupArrowFrame(size: validLayout.size, edge: edge, view: minimizedArrowView)
                 }
                 minimizedArrowView.setAngled(!adjusting, animated: true)
             }

@@ -24,7 +24,7 @@ final class OverlayInstantVideoDecoration: UniversalVideoDecoration {
     private var contentNode: (ASDisplayNode & UniversalVideoContentNode)?
     private var contentNodeSnapshot: UIView?
     
-    private var validLayoutSize: CGSize?
+    private var validLayout: (size: CGSize, actualSize: CGSize)?
     
     init(tapped: @escaping () -> Void) {
         self.tapped = tapped
@@ -58,9 +58,9 @@ final class OverlayInstantVideoDecoration: UniversalVideoDecoration {
                 self.progressNode.status = contentNode.status
                 if contentNode.supernode !== self.contentContainerNode {
                     self.contentContainerNode.addSubnode(contentNode)
-                    if let validLayoutSize = self.validLayoutSize {
-                        contentNode.frame = CGRect(origin: CGPoint(), size: validLayoutSize)
-                        contentNode.updateLayout(size: validLayoutSize, transition: .immediate)
+                    if let validLayout = self.validLayout {
+                        contentNode.frame = CGRect(origin: CGPoint(), size: validLayout.size)
+                        contentNode.updateLayout(size: validLayout.size, actualSize: validLayout.actualSize, transition: .immediate)
                     }
                 }
             }
@@ -74,15 +74,15 @@ final class OverlayInstantVideoDecoration: UniversalVideoDecoration {
             
             if let snapshot = snapshot {
                 self.contentContainerNode.view.addSubview(snapshot)
-                if let _ = self.validLayoutSize {
+                if let _ = self.validLayout {
                     snapshot.frame = CGRect(origin: CGPoint(), size: snapshot.frame.size)
                 }
             }
         }
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayoutSize = size
+    func updateLayout(size: CGSize, actualSize: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, actualSize)
         
         self.contentContainerNode.cornerRadius = size.width / 2.0
         
@@ -96,7 +96,7 @@ final class OverlayInstantVideoDecoration: UniversalVideoDecoration {
         transition.updateFrame(node: self.contentContainerNode, frame: CGRect(origin: CGPoint(), size: size))
         if let contentNode = self.contentNode {
             transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -0.5, dy: -0.5))
-            contentNode.updateLayout(size: size, transition: transition)
+            contentNode.updateLayout(size: size, actualSize: actualSize, transition: transition)
         }
         
         if let contentNodeSnapshot = self.contentNodeSnapshot {

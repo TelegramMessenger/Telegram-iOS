@@ -143,6 +143,7 @@ public struct PremiumConfiguration {
             showPremiumGiftInTextField: false,
             giveawayGiftsPurchaseAvailable: false,
             starsGiftsPurchaseAvailable: false,
+            starGiftsPurchaseBlocked: true,
             boostsPerGiftCount: 3,
             audioTransciptionTrialMaxDuration: 300,
             audioTransciptionTrialCount: 2,
@@ -170,6 +171,7 @@ public struct PremiumConfiguration {
     public let showPremiumGiftInTextField: Bool
     public let giveawayGiftsPurchaseAvailable: Bool
     public let starsGiftsPurchaseAvailable: Bool
+    public let starGiftsPurchaseBlocked: Bool
     public let boostsPerGiftCount: Int32
     public let audioTransciptionTrialMaxDuration: Int32
     public let audioTransciptionTrialCount: Int32
@@ -196,6 +198,7 @@ public struct PremiumConfiguration {
         showPremiumGiftInTextField: Bool,
         giveawayGiftsPurchaseAvailable: Bool,
         starsGiftsPurchaseAvailable: Bool,
+        starGiftsPurchaseBlocked: Bool,
         boostsPerGiftCount: Int32,
         audioTransciptionTrialMaxDuration: Int32,
         audioTransciptionTrialCount: Int32,
@@ -221,6 +224,7 @@ public struct PremiumConfiguration {
         self.showPremiumGiftInTextField = showPremiumGiftInTextField
         self.giveawayGiftsPurchaseAvailable = giveawayGiftsPurchaseAvailable
         self.starsGiftsPurchaseAvailable = starsGiftsPurchaseAvailable
+        self.starGiftsPurchaseBlocked = starGiftsPurchaseBlocked
         self.boostsPerGiftCount = boostsPerGiftCount
         self.audioTransciptionTrialMaxDuration = audioTransciptionTrialMaxDuration
         self.audioTransciptionTrialCount = audioTransciptionTrialCount
@@ -254,6 +258,7 @@ public struct PremiumConfiguration {
                 showPremiumGiftInTextField: data["premium_gift_text_field_icon"] as? Bool ?? defaultValue.showPremiumGiftInTextField,
                 giveawayGiftsPurchaseAvailable: data["giveaway_gifts_purchase_available"] as? Bool ?? defaultValue.giveawayGiftsPurchaseAvailable,
                 starsGiftsPurchaseAvailable: data["stars_gifts_enabled"] as? Bool ?? defaultValue.starsGiftsPurchaseAvailable,
+                starGiftsPurchaseBlocked: data["stargifts_blocked"] as? Bool ?? defaultValue.starGiftsPurchaseBlocked,
                 boostsPerGiftCount: get(data["boosts_per_sent_gift"]) ?? defaultValue.boostsPerGiftCount,
                 audioTransciptionTrialMaxDuration: get(data["transcribe_audio_trial_duration_max"]) ?? defaultValue.audioTransciptionTrialMaxDuration,
                 audioTransciptionTrialCount: get(data["transcribe_audio_trial_weekly_number"]) ?? defaultValue.audioTransciptionTrialCount,

@@ -23,7 +23,7 @@ public final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     
     private var contentNode: (ASDisplayNode & UniversalVideoContentNode)?
     
-    private var validLayoutSize: CGSize?
+    private var validLayout: (size: CGSize, actualSize: CGSize)?
     
     public init(corners: ImageCorners, nativeSize: CGSize, contentMode: ChatBubbleVideoDecorationContentMode, backgroundColor: UIColor) {
         self.corners = corners
@@ -82,23 +82,23 @@ public final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
             if let contentNode = contentNode {
                 if contentNode.supernode !== self.contentContainerNode {
                     self.contentContainerNode.addSubnode(contentNode)
-                    if let size = self.validLayoutSize {
+                    if let validLayout = self.validLayout {
                         var scaledSize: CGSize
                         switch self.contentMode {
                             case .aspectFit:
-                                scaledSize = self.nativeSize.aspectFitted(size)
+                                scaledSize = self.nativeSize.aspectFitted(validLayout.size)
                             case .aspectFill:
-                                scaledSize = self.nativeSize.aspectFilled(size)
+                            scaledSize = self.nativeSize.aspectFilled(validLayout.size)
                         }
-                        if abs(scaledSize.width - size.width) < 2.0 {
-                            scaledSize.width = size.width
+                        if abs(scaledSize.width - validLayout.size.width) < 2.0 {
+                            scaledSize.width = validLayout.size.width
                         }
-                        if abs(scaledSize.height - size.height) < 2.0 {
-                            scaledSize.height = size.height
+                        if abs(scaledSize.height - validLayout.size.height) < 2.0 {
+                            scaledSize.height = validLayout.size.height
                         }
                         
-                        contentNode.frame = CGRect(origin: CGPoint(x: floor((size.width - scaledSize.width) / 2.0), y: floor((size.height - scaledSize.height) / 2.0)), size: scaledSize)
-                        contentNode.updateLayout(size: scaledSize, transition: .immediate)
+                        contentNode.frame = CGRect(origin: CGPoint(x: floor((validLayout.size.width - scaledSize.width) / 2.0), y: floor((validLayout.size.height - scaledSize.height) / 2.0)), size: scaledSize)
+                        contentNode.updateLayout(size: scaledSize, actualSize: scaledSize, transition: .immediate)
                     }
                 }
             }
@@ -108,8 +108,8 @@ public final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     public func updateContentNodeSnapshot(_ snapshot: UIView?) {
     }
     
-    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayoutSize = size
+    public func updateLayout(size: CGSize, actualSize: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, actualSize)
         
         let bounds = CGRect(origin: CGPoint(), size: size)
         if let backgroundNode = self.backgroundNode {
@@ -137,7 +137,7 @@ public final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
                 scaledSize.height = size.height
             }
             transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: floor((size.width - scaledSize.width) / 2.0), y: floor((size.height - scaledSize.height) / 2.0)), size: scaledSize))
-            contentNode.updateLayout(size: scaledSize, transition: transition)
+            contentNode.updateLayout(size: scaledSize, actualSize: scaledSize, transition: transition)
         }
     }
     

@@ -910,7 +910,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             if self.source == .profile || self.source == .attachMenu, let peerId = self.peerIds.first {
                 purpose = .gift(peerId: peerId, currency: currency, amount: amount)
             } else {
-                purpose = .giftCode(peerIds: self.peerIds, boostPeer: nil, currency: currency, amount: amount)
+                purpose = .giftCode(peerIds: self.peerIds, boostPeer: nil, currency: currency, amount: amount, text: nil, entities: nil)
                 quantity = Int32(self.peerIds.count)
             }
             

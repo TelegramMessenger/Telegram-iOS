@@ -34,6 +34,10 @@ public extension Camera {
                 self = .iPhone15Pro
             case .iPhone15ProMax:
                 self = .iPhone15ProMax
+            case .iPhone16Pro:
+                self = .iPhone15Pro
+            case .iPhone16ProMax:
+                self = .iPhone15ProMax
             case .unknown:
                 self = .unknown
             default:
