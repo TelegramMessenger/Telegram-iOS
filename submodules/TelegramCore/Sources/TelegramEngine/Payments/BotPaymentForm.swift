@@ -588,6 +588,7 @@ public enum SendBotPaymentFormError {
     case precheckoutFailed
     case paymentFailed
     case alreadyPaid
+    case starGiftOutOfStock
 }
 
 public enum SendBotPaymentResult {
@@ -702,6 +703,8 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                 return .fail(.paymentFailed)
             } else if error.errorDescription == "INVOICE_ALREADY_PAID" {
                 return .fail(.alreadyPaid)
+            } else if error.errorDescription == "STARGIFT_USAGE_LIMITED" {
+                return .fail(.starGiftOutOfStock)
             }
             return .fail(.generic)
         }

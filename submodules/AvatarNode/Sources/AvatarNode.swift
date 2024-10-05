@@ -931,13 +931,13 @@ public final class AvatarNode: ASDisplayNode {
                     if let repliesIcon = repliesIcon {
                         context.draw(repliesIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - repliesIcon.size.width) / 2.0), y: floor((bounds.size.height - repliesIcon.size.height) / 2.0)), size: repliesIcon.size))
                     }
-                } else if case .anonymousSavedMessagesIcon = parameters.icon {
+                } else if case let .anonymousSavedMessagesIcon(isColored) = parameters.icon {
                     let factor = bounds.size.width / 60.0
                     context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
                     context.scaleBy(x: factor, y: -factor)
                     context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
                     
-                    if let theme = parameters.theme, theme.overallDarkAppearance {
+                    if let theme = parameters.theme, theme.overallDarkAppearance, !isColored {
                         if let anonymousSavedMessagesDarkIcon = anonymousSavedMessagesDarkIcon {
                             context.draw(anonymousSavedMessagesDarkIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - anonymousSavedMessagesDarkIcon.size.width) / 2.0), y: floor((bounds.size.height - anonymousSavedMessagesDarkIcon.size.height) / 2.0)), size: anonymousSavedMessagesDarkIcon.size))
                         }

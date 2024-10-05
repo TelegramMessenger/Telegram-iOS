@@ -43,6 +43,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiSuggestionsComponent",
         "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
         "//submodules/InAppPurchaseManager",
+        "//submodules/Components/BlurredBackgroundComponent",
     ],
     visibility = [
         "//visibility:public",

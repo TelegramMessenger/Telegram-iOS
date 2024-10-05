@@ -64,6 +64,7 @@ public final class GiftItemComponent: Component {
     let ribbon: Ribbon?
     let isLoading: Bool
     let isHidden: Bool
+    let isSoldOut: Bool
     
     public init(
         context: AccountContext,
@@ -75,7 +76,8 @@ public final class GiftItemComponent: Component {
         price: String,
         ribbon: Ribbon? = nil,
         isLoading: Bool = false,
-        isHidden: Bool = false
+        isHidden: Bool = false,
+        isSoldOut: Bool = false
     ) {
         self.context = context
         self.theme = theme
@@ -87,6 +89,7 @@ public final class GiftItemComponent: Component {
         self.ribbon = ribbon
         self.isLoading = isLoading
         self.isHidden = isHidden
+        self.isSoldOut = isSoldOut
     }
 
     public static func ==(lhs: GiftItemComponent, rhs: GiftItemComponent) -> Bool {
@@ -118,6 +121,9 @@ public final class GiftItemComponent: Component {
             return false
         }
         if lhs.isHidden != rhs.isHidden {
+            return false
+        }
+        if lhs.isSoldOut != rhs.isSoldOut {
             return false
         }
         return true
@@ -284,14 +290,26 @@ public final class GiftItemComponent: Component {
                 }
             }
             
+            let buttonColor: UIColor
+            var isStars = false
+            if component.isSoldOut {
+                buttonColor = component.theme.list.itemDestructiveColor
+            } else if component.price.containsEmoji {
+                buttonColor = UIColor(rgb: 0xd3720a)
+                isStars = true
+            } else {
+                buttonColor = component.theme.list.itemAccentColor
+            }
+            
             let buttonSize = self.button.update(
                 transition: transition,
                 component: AnyComponent(
                     ButtonContentComponent(
                         context: component.context,
                         text: component.price, 
-                        color: component.price.containsEmoji ? UIColor(rgb: 0xd3720a) : component.theme.list.itemAccentColor,
-                        isStars: component.price.containsEmoji)
+                        color: buttonColor,
+                        isStars: isStars
+                    )
                 ),
                 environment: {},
                 containerSize: availableSize

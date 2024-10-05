@@ -119,6 +119,7 @@ public class RemainingCountComponent: Component {
         
         private let badgeForeground: SimpleLayer
         private let badgeLabel: BadgeLabelView
+        private let badgeLeftLabel = ComponentView<Empty>()
         private let badgeLabelMaskView = UIImageView()
         
         private var badgeTailPosition: CGFloat = 0.0
@@ -737,7 +738,6 @@ final class BadgeLabelView: UIView {
     }
     
     private var itemViews: [Int: StackView] = [:]
-    private var staticLabel = UILabel()
     
     init() {
         super.init(frame: .zero)
@@ -752,7 +752,6 @@ final class BadgeLabelView: UIView {
     
     var color: UIColor = .white {
         didSet {
-            self.staticLabel.textColor = self.color
             for (_, view) in self.itemViews {
                 view.color = self.color
             }
@@ -760,25 +759,6 @@ final class BadgeLabelView: UIView {
     }
     
     func update(value: String, transition: ComponentTransition) -> CGSize {
-        if value.contains(" ") {
-            for (_, view) in self.itemViews {
-                view.isHidden = true
-            }
-            
-            if self.staticLabel.superview == nil {
-                self.staticLabel.textColor = self.color
-                self.staticLabel.font = font
-                
-                self.addSubview(self.staticLabel)
-            }
-            
-            self.staticLabel.text = value
-            let size = self.staticLabel.sizeThatFits(CGSize(width: 100.0, height: 100.0))
-            self.staticLabel.frame = CGRect(origin: .zero, size: CGSize(width: size.width, height: labelHeight))
-            
-            return CGSize(width: ceil(self.staticLabel.bounds.width), height: ceil(self.staticLabel.bounds.height))
-        }
-        
         let string = value
         let stringArray = Array(string.map { String($0) }.reversed())
         

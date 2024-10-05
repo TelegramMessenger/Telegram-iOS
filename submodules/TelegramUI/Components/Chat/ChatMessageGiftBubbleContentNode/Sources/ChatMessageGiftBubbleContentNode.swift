@@ -50,6 +50,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private let buttonStarsNode: PremiumStarsNode
     private let buttonTitleNode: TextNode
     
+    private let moreTextNode: TextNode
+    
     private var maskView: UIImageView?
     private var maskOverlayView: UIView?
     
@@ -60,6 +62,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var isExpanded: Bool = false
     private var appliedIsExpanded: Bool = false
+    
+    private var isStarGift = false
     
     private var currentProgressDisposable: Disposable?
     
@@ -138,6 +142,10 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.ribbonTextNode.isUserInteractionEnabled = false
         self.ribbonTextNode.displaysAsynchronously = false
         
+        self.moreTextNode = TextNode()
+        self.moreTextNode.isUserInteractionEnabled = false
+        self.moreTextNode.displaysAsynchronously = false
+        
         super.init()
 
         self.addSubnode(self.labelNode)
@@ -147,6 +155,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.textClippingNode.addSubnode(self.subtitleNode.textNode)
         self.addSubnode(self.placeholderNode)
         self.addSubnode(self.animationNode)
+        self.addSubnode(self.moreTextNode)
         
         self.addSubnode(self.buttonNode)
         self.buttonNode.addSubnode(self.buttonStarsNode)
@@ -183,11 +192,32 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.currentProgressDisposable?.dispose()
     }
     
+    override public func didLoad() {
+        super.didLoad()
+        
+        self.maskView = UIImageView()
+        
+        let maskOverlayView = UIView()
+        maskOverlayView.alpha = 0.0
+        maskOverlayView.backgroundColor = .white
+        self.maskOverlayView = maskOverlayView
+        
+        self.maskView?.addSubview(maskOverlayView)
+    }
+    
     @objc private func buttonPressed() {
         guard let item = self.item else {
             return
         }
         let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default, progress: self.makeProgress()))
+    }
+    
+    private func expandPressed() {
+        self.isExpanded = !self.isExpanded
+        guard let item = self.item else{
+            return
+        }
+        let _ = item.controllerInteraction.requestMessageUpdate(item.message.id, false)
     }
     
     private func makeProgress() -> Promise<Bool> {
@@ -263,6 +293,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         let makeButtonTitleLayout = TextNode.asyncLayout(self.buttonTitleNode)
         let makeRibbonTextLayout = TextNode.asyncLayout(self.ribbonTextNode)
         let makeMeasureTextLayout = TextNode.asyncLayout(nil)
+        let makeMoreTextLayout = TextNode.asyncLayout(self.moreTextNode)
     
         let cachedMaskBackgroundImage = self.cachedMaskBackgroundImage
         
@@ -290,6 +321,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 var ribbonTitle = ""
                 var hasServiceMessage = true
                 var textSpacing: CGFloat = 0.0
+                var isStarGift = false
                 for media in item.message.media {
                     if let action = media as? TelegramMediaAction {
                         switch action.action {
@@ -377,6 +409,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 hasServiceMessage = false
                             }
                         case let .starGift(gift, convertStars, giftText, giftEntities, _, savedToProfile, converted):
+                            isStarGift = true
                             let authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
                             title = item.presentationData.strings.Notification_StarGift_Title(authorName).string
                             if let giftText, !giftText.isEmpty {
@@ -439,8 +472,10 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
+                let (moreLayout, moreApply) = makeMoreTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Notification_PremiumGift_More, font: Font.semibold(13.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                
                 let attributedText: NSAttributedString
-                if let _ = animationFile {
+                if !entities.isEmpty {
                     attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: Font.regular(13.0), linkFont: Font.regular(13.0), boldFont: Font.semibold(13.0), italicFont: Font.italic(13.0), boldItalicFont: Font.semiboldItalic(13.0), fixedFont: Font.monospace(13.0), blockQuoteFont: Font.regular(13.0), message: nil)
                 } else {
                     attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(
@@ -578,6 +613,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             strongSelf.item = item
+                            strongSelf.isStarGift = isStarGift
                             
                             strongSelf.updateVisibility()
                             
@@ -599,6 +635,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             ))
                             let _ = buttonTitleApply()
                             let _ = ribbonTextApply()
+                            let _ = moreApply()
                             
                             let labelFrame = CGRect(origin: CGPoint(x: 8.0, y: 2.0), size: labelLayout.size)
                             strongSelf.labelNode.frame = labelFrame
@@ -606,7 +643,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             let titleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - titleLayout.size.width) / 2.0) , y: mediaBackgroundFrame.minY + 151.0), size: titleLayout.size)
                             strongSelf.titleNode.frame = titleFrame
                             
-                            let clippingTextFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - subtitleLayout.size.width) / 2.0) , y: titleFrame.maxY + textSpacing), size: CGSize(width: boundingWidth, height: clippedTextHeight))
+                            let clippingTextFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - subtitleLayout.size.width) / 2.0) , y: titleFrame.maxY + textSpacing), size: CGSize(width: subtitleLayout.size.width, height: clippedTextHeight))
                             
                             let subtitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - subtitleLayout.size.width) / 2.0) , y: titleFrame.maxY + textSpacing), size: subtitleLayout.size)
                             strongSelf.subtitleNode.textNode.frame = CGRect(origin: .zero, size: subtitleLayout.size)
@@ -617,10 +654,10 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 animation.animator.updateFrame(layer: strongSelf.textClippingNode.layer, frame: clippingTextFrame, completion: nil)
                             }
                             if let maskView = strongSelf.maskView, let maskOverlayView = strongSelf.maskOverlayView {
-                                animation.animator.updateFrame(layer: maskView.layer, frame: CGRect(origin: .zero, size: CGSize(width: boundingWidth, height: clippingTextFrame.size.height)), completion: nil)
-                                animation.animator.updateFrame(layer: maskOverlayView.layer, frame: CGRect(origin: .zero, size: CGSize(width: boundingWidth, height: clippingTextFrame.size.height)), completion: nil)
+                                animation.animator.updateFrame(layer: maskView.layer, frame: CGRect(origin: .zero, size: CGSize(width: clippingTextFrame.width, height: clippingTextFrame.height)), completion: nil)
+                                animation.animator.updateFrame(layer: maskOverlayView.layer, frame: CGRect(origin: .zero, size: CGSize(width: clippingTextFrame.width, height: clippingTextFrame.height)), completion: nil)
                             }
-                            
+                            animation.animator.updateFrame(layer: strongSelf.moreTextNode.layer, frame: CGRect(origin: CGPoint(x: clippingTextFrame.maxX - moreLayout.size.width, y: clippingTextFrame.maxY - moreLayout.size.height), size: moreLayout.size), completion: nil)
                             
                             if !subtitleLayout.spoilers.isEmpty {
                                 let dustColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
@@ -734,24 +771,16 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.updateAbsoluteRect(rect, within: size)
                             }
                             
-                            if canExpand {
-                                if strongSelf.maskView?.image == nil {
-                                    strongSelf.maskView?.image = generateMaskImage()
+                            if canExpand, let maskView = strongSelf.maskView {
+                                if maskView.image == nil {
+                                    maskView.image = generateMaskImage()
                                 }
                                 strongSelf.textClippingNode.view.mask = strongSelf.maskView
                                 
-//                                var expandIconFrame: CGRect = .zero
-//                                if let icon = strongSelf.expandIcon.image {
-//                                    expandIconFrame = CGRect(origin: CGPoint(x: boundingWidth - icon.size.width - 19.0, y: backgroundFrame.maxY - icon.size.height - 6.0), size: icon.size)
-//                                    if wasHidden || isFirstTime {
-//                                        strongSelf.expandIcon.position = expandIconFrame.center
-//                                    } else {
-//                                        animation.animator.updatePosition(layer: strongSelf.expandIcon.layer, position: expandIconFrame.center, completion: nil)
-//                                    }
-//                                    strongSelf.expandIcon.bounds = CGRect(origin: .zero, size: expandIconFrame.size)
-//                                }
+                                animation.animator.updateAlpha(layer: strongSelf.moreTextNode.layer, alpha: strongSelf.isExpanded ? 0.0 : 1.0, completion: nil)
                             } else {
                                 strongSelf.textClippingNode.view.mask = nil
+                                strongSelf.moreTextNode.alpha = 0.0
                             }
                             
                             switch strongSelf.visibility {
@@ -876,6 +905,9 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         
         if self.buttonNode.frame.contains(point) {
             return ChatMessageBubbleContentTapAction(content: .ignore)
+        } else if self.textClippingNode.frame.contains(point) && !self.isExpanded && !self.moreTextNode.alpha.isZero {
+            self.expandPressed()
+            return ChatMessageBubbleContentTapAction(content: .ignore)
         } else if let backgroundNode = self.backgroundNode, backgroundNode.frame.contains(point) {
             return ChatMessageBubbleContentTapAction(content: .openMessage)
         } else if self.mediaBackgroundContent?.frame.contains(point) == true {
@@ -934,7 +966,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
             
             if !alreadySeen && self.animationNode.isPlaying {
                 item.controllerInteraction.playNextOutgoingGift = false
-                Queue.mainQueue().after(1.0) {
+                
+                Queue.mainQueue().after(self.isStarGift ? 0.1 : 1.0) {
                     item.controllerInteraction.animateDiceSuccess(false, true)
                 }
             }
@@ -943,7 +976,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
 }
 
 private func generateMaskImage() -> UIImage? {
-    return generateImage(CGSize(width: 140, height: 30), rotatedContext: { size, context in
+    return generateImage(CGSize(width: 100.0, height: 30.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: .zero, size: size))
         
         context.setFillColor(UIColor.white.cgColor)
@@ -956,7 +989,7 @@ private func generateMaskImage() -> UIImage? {
         let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
         
         context.setBlendMode(.copy)
-        context.clip(to: CGRect(origin: CGPoint(x: 10.0, y: 8.0), size: CGSize(width: 130.0, height: 22.0)))
-        context.drawLinearGradient(gradient, start: CGPoint(x: 10.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
-    })?.resizableImage(withCapInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 22.0, right: 130.0))
+        context.clip(to: CGRect(origin: CGPoint(x: 10.0, y: 12.0), size: CGSize(width: 130.0, height: 18.0)))
+        context.drawLinearGradient(gradient, start: CGPoint(x: 30.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
+    })?.resizableImage(withCapInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 18.0, right: 70.0))
 }
