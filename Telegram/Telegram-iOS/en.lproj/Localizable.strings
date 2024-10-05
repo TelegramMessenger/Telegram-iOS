@@ -12950,7 +12950,7 @@ Sorry for the inconvenience.";
 "SharedMedia.GiftCount_any" = "%@ gifts";
 
 "Stars.Info.Title" = "What are Stars?";
-"Stars.Info.Description" = "Buy packages of Stars on Telegram that let you do following:";
+"Stars.Info.Description" = "Telegram Stars allow users to:";
 "Stars.Info.Gift.Title" = "Send Gifts to Friends";
 "Stars.Info.Gift.Text" = "Give your friends gifts that can be kept on their profiles or converted to Stars.";
 "Stars.Info.Miniapp.Title" = "Use Stars in Miniapps";
@@ -12976,6 +12976,7 @@ Sorry for the inconvenience.";
 "Gift.View.HiddenName" = "Hidden Name";
 "Gift.View.Date" = "Date";
 "Gift.View.Availability" = "Availability";
+"Gift.View.Availability.Of" = "%1$@ of %2$@";
 "Gift.View.Hide" = "Hide from My Page";
 "Gift.View.Display" = "Display on My Page";
 "Gift.View.Convert" = "Convert to %@";
@@ -12986,7 +12987,7 @@ Sorry for the inconvenience.";
 "Gift.Hidden.Title" = "Gift Removed from Profile";
 "Gift.Hidden.Text" = "The gift is no longer displayed in [your profile]().";
 "Gift.Convert.Title" = "Convert Gift to Stars";
-"Gift.Convert.Text" = "Do you want to convert this gift from **%1$@** to **%2$@**?\n\nThis action cannot be undone.";
+"Gift.Convert.Text" = "Do you want to convert this gift from **%1$@** to **%2$@**?\n\nThis will permanently destroy the gift.";
 "Gift.Convert.Stars_1" = "%@ Star";
 "Gift.Convert.Stars_any" = "%@ Stars";
 "Gift.Convert.Convert" = "Convert";
@@ -13032,10 +13033,12 @@ Sorry for the inconvenience.";
 
 "Gift.Send.Title" = "Send a Gift";
 "Gift.Send.Customize.Title" = "CUSTOMIZE YOUR GIFT";
-"Gift.Send.Customize.MessagePlaceholder" = "Enter Message";
+"Gift.Send.Customize.MessagePlaceholder" = "Enter Message (Optional)";
+"Gift.Send.Customize.Info" = "Only %@ will see your message.";
 "Gift.Send.HideMyName" = "Hide My Name";
 "Gift.Send.HideMyName.Info" = "Hide my name and message from visitors to %1$@'s profile. %2$@ will still see your name and message.";
 "Gift.Send.Send" = "Send a Gift for";
+"Gift.Send.Limited" = "Limited";
 
 "Profile.SendGift" = "Send a Gift";
 "Settings.SendGift" = "Send a Gift";
@@ -13047,9 +13050,22 @@ Sorry for the inconvenience.";
 "Report.Title.User" = "Report User";
 "Report.Title.Group" = "Report Group";
 "Report.Title.Channel" = "Report Channel";
+"Report.Title.Bot" = "Report Bot";
 "Report.Comment.Placeholder" = "Add Comment";
 "Report.Comment.Placeholder.Optional" = "Add Comment (Optional)";
 "Report.Comment.Info" = "Please help us by telling what is wrong with the message you have selected.";
 "Report.Send" = "Send Report";
 
-f
+"Notification.PremiumGift.MonthsTitle_1" = "%@ Month Premium";
+"Notification.PremiumGift.MonthsTitle_any" = "%@ Months Premium";
+
+"Notification.PremiumGift.YearsTitle_1" = "%@ Year Premium";
+"Notification.PremiumGift.YearsTitle_any" = "%@ Years Premium";
+
+"Notification.PremiumGift.SubscriptionDescription" = "Subscription for exclusive Telegram features.";
+
+"Notification.StarsGift.Stars_1" = "%@ Star";
+"Notification.StarsGift.Stars_any" = "%@ Stars";
+
+"WebBrowser.AuthChallenge.Title" = "Sign in to %@";
+"WebBrowser.AuthChallenge.Text" = "Your login information will be sent securely.";

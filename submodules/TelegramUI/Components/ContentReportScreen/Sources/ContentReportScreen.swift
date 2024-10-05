@@ -468,8 +468,12 @@ private final class SheetContent: CombinedComponent {
             switch component.subject {
             case .peer:
                 if let peer = state.peer {
-                    if case .user = peer {
-                        mainTitle = environment.strings.Report_Title_User
+                    if case let .user(user) = peer {
+                        if let _ = user.botInfo {
+                            mainTitle = environment.strings.Report_Title_Bot
+                        } else {
+                            mainTitle = environment.strings.Report_Title_User
+                        }
                     } else if case let .channel(channel) = peer, case .broadcast = channel.info {
                         mainTitle = environment.strings.Report_Title_Channel
                     } else {

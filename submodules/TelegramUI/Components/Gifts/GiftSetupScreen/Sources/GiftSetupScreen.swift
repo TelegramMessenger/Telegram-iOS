@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramStringFormatting
 import PresentationDataUtils
 import AccountContext
 import ComponentFlow
@@ -27,24 +28,25 @@ import EmojiSuggestionsComponent
 import ChatPresentationInterfaceState
 import AudioToolbox
 import TextFormat
+import InAppPurchaseManager
 
 final class GiftSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
     let peerId: EnginePeer.Id
-    let gift: StarGift
+    let subject: GiftSetupScreen.Subject
     let completion: (() -> Void)?
     
     init(
         context: AccountContext,
         peerId: EnginePeer.Id,
-        gift: StarGift,
+        subject: GiftSetupScreen.Subject,
         completion: (() -> Void)? = nil
     ) {
         self.context = context
         self.peerId = peerId
-        self.gift = gift
+        self.subject = subject
         self.completion = completion
     }
 
@@ -55,7 +57,7 @@ final class GiftSetupScreenComponent: Component {
         if lhs.peerId != rhs.peerId {
             return false
         }
-        if lhs.gift != rhs.gift {
+        if lhs.subject != rhs.subject {
             return false
         }
         return true
@@ -72,6 +74,7 @@ final class GiftSetupScreenComponent: Component {
         private let scrollView: ScrollView
         
         private let navigationTitle = ComponentView<Empty>()
+        private let remainingCount = ComponentView<Empty>()
         private let introContent = ComponentView<Empty>()
         private let introSection = ComponentView<Empty>()
         private let hideSection = ComponentView<Empty>()
@@ -103,6 +106,7 @@ final class GiftSetupScreenComponent: Component {
         private var currentEmojiSuggestionView: ComponentHostView<Empty>?
         
         private var hideName = false
+        private var inProgress = false
         
         private var previousHadInputHeight: Bool = false
         private var previousInputHeight: CGFloat?
@@ -139,6 +143,8 @@ final class GiftSetupScreenComponent: Component {
             self.addSubview(self.scrollView)
             
             self.scrollView.layer.addSublayer(self.topOverscrollLayer)
+                
+            self.disablesInteractiveKeyboardGestureRecognizer = true
         }
         
         required init?(coder: NSCoder) {
@@ -189,16 +195,122 @@ final class GiftSetupScreenComponent: Component {
         }
         
         func proceed() {
-            guard let component = self.component, let starsContext = component.context.starsContext, let starsState = starsContext.currentState else {
+            guard let component = self.component else {
+                return
+            }
+            switch component.subject {
+            case .premium:
+                self.proceedWithPremiumGift()
+            case .starGift:
+                self.proceedWithStarGift()
+            }
+        }
+        
+        func proceedWithPremiumGift() {
+            guard let component = self.component, case let .premium(product) = component.subject, let storeProduct = product.storeProduct, let inAppPurchaseManager = component.context.inAppPurchaseManager else {
                 return
             }
             
+            self.inProgress = true
+            self.state?.updated()
+
+            let (currency, amount) = storeProduct.priceCurrencyAndAmount
+                     
+            addAppLogEvent(postbox: component.context.account.postbox, type: "premium_gift.promo_screen_accept")
+
+            let entities = generateChatInputTextEntities(self.textInputState.text)
+            let purpose: AppStoreTransactionPurpose = .giftCode(peerIds: [component.peerId], boostPeer: nil, currency: currency, amount: amount, text: self.textInputState.text.string, entities: entities)
+            let quantity: Int32 = 1
+                        
+            let completion = component.completion
+            
+            let _ = (component.context.engine.payments.canPurchasePremium(purpose: purpose)
+            |> deliverOnMainQueue).start(next: { [weak self] available in
+                guard let self else {
+                    return
+                }
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                if available {
+                    let _ = (inAppPurchaseManager.buyProduct(storeProduct, quantity: quantity, purpose: purpose)
+                    |> deliverOnMainQueue).start(next: { [weak self] status in
+                        if let completion {
+                            completion()
+                        } else {
+                            guard let self, case .purchased = status, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController else {
+                                return
+                            }
+                            
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
+                            var foundController = false
+                            for controller in controllers.reversed() {
+                                if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
+                                    chatController.hintPlayNextOutgoingGift()
+                                    foundController = true
+                                    break
+                                }
+                            }
+                            if !foundController {
+                                let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                                chatController.hintPlayNextOutgoingGift()
+                                controllers.append(chatController)
+                            }
+                            navigationController.setViewControllers(controllers, animated: true)
+                        }
+                    }, error: { [weak self] error in
+                        guard let self, let controller = self.environment?.controller() else {
+                            return
+                        }
+                        self.state?.updated(transition: .immediate)
+
+                        var errorText: String?
+                        switch error {
+                            case .generic:
+                                errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                            case .network:
+                                errorText = presentationData.strings.Premium_Purchase_ErrorNetwork
+                            case .notAllowed:
+                                errorText = presentationData.strings.Premium_Purchase_ErrorNotAllowed
+                            case .cantMakePayments:
+                                errorText = presentationData.strings.Premium_Purchase_ErrorCantMakePayments
+                            case .assignFailed:
+                                errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                            case .tryLater:
+                                errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                            case .cancelled:
+                                break
+                        }
+                        
+                        if let errorText {
+                            addAppLogEvent(postbox: component.context.account.postbox, type: "premium_gift.promo_screen_fail")
+                            
+                            let alertController = textAlertController(context: component.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                            controller.present(alertController, in: .window(.root))
+                        }
+                    })
+                } else {
+                    self.inProgress = false
+                    self.state?.updated(transition: .immediate)
+                }
+            })
+        }
+        
+        func proceedWithStarGift() {
+            guard let component = self.component, case let .starGift(starGift) = component.subject, let starsContext = component.context.starsContext, let starsState = starsContext.currentState else {
+                return
+            }
+                        
             let proceed = { [weak self] in
                 guard let self else {
                     return
                 }
+                
+                self.inProgress = true
+                self.state?.updated()
+                
                 let entities = generateChatInputTextEntities(self.textInputState.text)
-                let source: BotPaymentInvoiceSource = .starGift(hideName: self.hideName, peerId: component.peerId, giftId: component.gift.id, text: self.textInputState.text.string, entities: entities)
+                let source: BotPaymentInvoiceSource = .starGift(hideName: self.hideName, peerId: component.peerId, giftId: starGift.id, text: self.textInputState.text.string, entities: entities)
+                
                 let inputData = BotCheckoutController.InputData.fetch(context: component.context, source: source)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
@@ -242,11 +354,13 @@ final class GiftSetupScreenComponent: Component {
                             }
                             navigationController.setViewControllers(controllers, animated: true)
                         }
+                        
+                        starsContext.load(force: true)
                     })
                 })
             }
             
-            if starsState.balance < component.gift.price {
+            if starsState.balance < starGift.price {
                 let _ = (self.optionsPromise.get()
                 |> filter { $0 != nil }
                 |> take(1)
@@ -258,7 +372,7 @@ final class GiftSetupScreenComponent: Component {
                         context: component.context,
                         starsContext: starsContext,
                         options: options ?? [],
-                        purpose: .starGift(peerId: component.peerId, requiredStars: component.gift.price),
+                        purpose: .starGift(peerId: component.peerId, requiredStars: starGift.price),
                         completion: { [weak starsContext] stars in
                             starsContext?.add(balance: stars)
                             Queue.mainQueue().after(0.1) {
@@ -349,9 +463,7 @@ final class GiftSetupScreenComponent: Component {
                             return
                         }
                         if let textInputView = self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View {
-                            if self.textInputState.isEditing {
-                                textInputView.insertText(text: text)
-                            }
+                            textInputView.insertText(text: text)
                         }
                     },
                     backwardsDeleteText: { [weak self] in
@@ -400,6 +512,16 @@ final class GiftSetupScreenComponent: Component {
                         }
                     }
                 )
+                
+                if case .starGift = component.subject {
+                    self.optionsDisposable = (component.context.engine.payments.starsTopUpOptions()
+                    |> deliverOnMainQueue).start(next: { [weak self] options in
+                        guard let self else {
+                            return
+                        }
+                        self.options = options
+                    })
+                }
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -452,6 +574,42 @@ final class GiftSetupScreenComponent: Component {
             
             contentHeight += environment.navigationHeight
             contentHeight += 26.0
+            
+            if case let .starGift(starGift) = component.subject, let availability = starGift.availability {
+                let remains: Int32 = availability.remains
+                let position = CGFloat(remains) / CGFloat(availability.total)
+                let remainsString = "\(remains)"
+                let totalString = presentationStringsFormattedNumber(availability.total, environment.dateTimeFormat.groupingSeparator)
+                let remainingCountSize = self.remainingCount.update(
+                    transition: transition,
+                    component: AnyComponent(RemainingCountComponent(
+                        inactiveColor: environment.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.3),
+                        activeColors: [UIColor(rgb: 0x5bc2ff), UIColor(rgb: 0x2d9eff)],
+                        inactiveTitle: environment.strings.Gift_Send_Limited,
+                        inactiveValue: "",
+                        inactiveTitleColor: environment.theme.list.itemSecondaryTextColor,
+                        activeTitle: "",
+                        activeValue: totalString,
+                        activeTitleColor: .white,
+                        badgeText: "\(remainsString)",
+                        badgePosition: position,
+                        badgeGraphPosition: position,
+                        invertProgress: true
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                )
+                let remainingCountFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight - 36.0), size: remainingCountSize)
+                if let remainingCountView = self.remainingCount.view {
+                    if remainingCountView.superview == nil {
+                        self.scrollView.addSubview(remainingCountView)
+                    }
+                    transition.setFrame(view: remainingCountView, frame: remainingCountFrame)
+                }
+                contentHeight += remainingCountSize.height
+                contentHeight -= 36.0
+                contentHeight += sectionSpacing
+            }
             
             let giftConfiguration = GiftConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
                
@@ -521,20 +679,30 @@ final class GiftSetupScreenComponent: Component {
                     inputHeight = environment.inputHeight
                 }
             }
+            
+            let peerName = self.peerMap[component.peerId]?.compactDisplayTitle ?? ""
+            
+            let introFooter: AnyComponent<Empty>?
+            switch component.subject {
+            case .premium:
+                introFooter = AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: environment.strings.Gift_Send_Customize_Info(peerName).string,
+                        font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                        textColor: environment.theme.list.freeTextColor
+                    )),
+                    maximumNumberOfLines: 0
+                ))
+            case .starGift:
+                introFooter = nil
+            }
                           
             let introSectionSize = self.introSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
-                    header: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.Gift_Send_Customize_Title,
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
-                        )),
-                        maximumNumberOfLines: 0
-                    )),
-                    footer: nil,
+                    header: nil,
+                    footer: introFooter,
                     items: introSectionItems
                 )),
                 environment: {},
@@ -553,6 +721,15 @@ final class GiftSetupScreenComponent: Component {
                         
             let listItemParams = ListViewItemLayoutParams(width: availableSize.width - sideInset * 2.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
             if let accountPeer = self.peerMap[component.context.account.peerId] {
+                let subject: ChatGiftPreviewItem.Subject
+                switch component.subject {
+                case let .premium(product):
+                    let (currency, amount) = product.storeProduct?.priceCurrencyAndAmount ?? ("USD", 1)
+                    subject = .premium(months: product.months, amount: amount, currency: currency)
+                case let .starGift(gift):
+                    subject = .starGift(gift: gift)
+                }
+                
                 let introContentSize = self.introContent.update(
                     transition: transition,
                     component: AnyComponent(
@@ -569,7 +746,7 @@ final class GiftSetupScreenComponent: Component {
                                 dateTimeFormat: environment.dateTimeFormat,
                                 nameDisplayOrder: presentationData.nameDisplayOrder,
                                 accountPeer: accountPeer,
-                                gift: component.gift,
+                                subject: subject,
                                 text: self.textInputState.text.string,
                                 entities: generateChatInputTextEntities(self.textInputState.text)
                             ),
@@ -589,55 +766,56 @@ final class GiftSetupScreenComponent: Component {
                 }
             }
     
-            let peerName = self.peerMap[component.peerId]?.compactDisplayTitle ?? ""
-            let hideSectionSize = self.hideSection.update(
-                transition: transition,
-                component: AnyComponent(ListSectionComponent(
-                    theme: environment.theme,
-                    header: nil,
-                    footer: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.Gift_Send_HideMyName_Info(peerName, peerName).string,
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
+            if case .starGift = component.subject {
+                let hideSectionSize = self.hideSection.update(
+                    transition: transition,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: environment.theme,
+                        header: nil,
+                        footer: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: environment.strings.Gift_Send_HideMyName_Info(peerName, peerName).string,
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
                         )),
-                        maximumNumberOfLines: 0
+                        items: [
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
+                                theme: environment.theme,
+                                title: AnyComponent(VStack([
+                                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                                        text: .plain(NSAttributedString(
+                                            string: environment.strings.Gift_Send_HideMyName,
+                                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                            textColor: environment.theme.list.itemPrimaryTextColor
+                                        )),
+                                        maximumNumberOfLines: 1
+                                    ))),
+                                ], alignment: .left, spacing: 2.0)),
+                                accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.hideName, action: { [weak self] _ in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.hideName = !self.hideName
+                                    self.state?.updated(transition: .spring(duration: 0.4))
+                                })),
+                                action: nil
+                            )))
+                        ]
                     )),
-                    items: [
-                        AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
-                            theme: environment.theme,
-                            title: AnyComponent(VStack([
-                                AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                                    text: .plain(NSAttributedString(
-                                        string: environment.strings.Gift_Send_HideMyName,
-                                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                        textColor: environment.theme.list.itemPrimaryTextColor
-                                    )),
-                                    maximumNumberOfLines: 1
-                                ))),
-                            ], alignment: .left, spacing: 2.0)),
-                            accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.hideName, action: { [weak self] _ in
-                                guard let self else {
-                                    return
-                                }
-                                self.hideName = !self.hideName
-                                self.state?.updated(transition: .spring(duration: 0.4))
-                            })),
-                            action: nil
-                        )))
-                    ]
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
-            )
-            let hideSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: hideSectionSize)
-            if let hideSectionView = self.hideSection.view {
-                if hideSectionView.superview == nil {
-                    self.scrollView.addSubview(hideSectionView)
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                )
+                let hideSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: hideSectionSize)
+                if let hideSectionView = self.hideSection.view {
+                    if hideSectionView.superview == nil {
+                        self.scrollView.addSubview(hideSectionView)
+                    }
+                    transition.setFrame(view: hideSectionView, frame: hideSectionFrame)
                 }
-                transition.setFrame(view: hideSectionView, frame: hideSectionFrame)
+                contentHeight += hideSectionSize.height
             }
-            contentHeight += hideSectionSize.height
             
             contentHeight += bottomContentInset
             
@@ -647,8 +825,18 @@ final class GiftSetupScreenComponent: Component {
             if self.starImage == nil || self.starImage?.1 !== environment.theme {
                 self.starImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: environment.theme.list.itemCheckColors.foregroundColor)!, environment.theme)
             }
-            let amountString = presentationStringsFormattedNumber(Int32(component.gift.price), presentationData.dateTimeFormat.groupingSeparator)
-            let buttonAttributedString = NSMutableAttributedString(string: "\(environment.strings.Gift_Send_Send)  #  \(amountString)", font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
+
+            let buttonString: String
+            switch component.subject {
+            case let .premium(product):
+                let amountString = product.price
+                buttonString = "\(environment.strings.Gift_Send_Send) \(amountString)"
+            case let .starGift(starGift):
+                let amountString = presentationStringsFormattedNumber(Int32(starGift.price), presentationData.dateTimeFormat.groupingSeparator)
+                buttonString = "\(environment.strings.Gift_Send_Send)  #  \(amountString)"
+            }
+            
+            let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             if let range = buttonAttributedString.string.range(of: "#"), let starImage = self.starImage?.0 {
                 buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
                 buttonAttributedString.addAttribute(.foregroundColor, value: environment.theme.list.itemCheckColors.foregroundColor, range: NSRange(range, in: buttonAttributedString.string))
@@ -669,7 +857,7 @@ final class GiftSetupScreenComponent: Component {
                         component: AnyComponent(MultilineTextComponent(text: .plain(buttonAttributedString)))
                     ),
                     isEnabled: true,
-                    displaysProgress: false,
+                    displaysProgress: self.inProgress,
                     action: { [weak self] in
                         self?.proceed()
                     }
@@ -825,7 +1013,7 @@ final class GiftSetupScreenComponent: Component {
                     }
                 }
             }
-            if self.recenterOnTag == nil && self.previousHadInputHeight != (environment.inputHeight > 0.0) {
+            if self.recenterOnTag == nil && self.previousHadInputHeight != (environment.inputHeight > 0.0), case .keyboard = self.currentInputMode {
                 if self.textInputState.isEditing {
                     self.recenterOnTag = self.textInputTag
                 }
@@ -1039,12 +1227,17 @@ final class GiftSetupScreenComponent: Component {
 }
 
 public final class GiftSetupScreen: ViewControllerComponentContainer {
+    public enum Subject: Equatable {
+        case premium(PremiumGiftProduct)
+        case starGift(StarGift)
+    }
+    
     private let context: AccountContext
     
     public init(
         context: AccountContext,
         peerId: EnginePeer.Id,
-        gift: StarGift,
+        subject: Subject,
         completion: (() -> Void)? = nil
     ) {
         self.context = context
@@ -1052,7 +1245,7 @@ public final class GiftSetupScreen: ViewControllerComponentContainer {
         super.init(context: context, component: GiftSetupScreenComponent(
             context: context,
             peerId: peerId,
-            gift: gift,
+            subject: subject,
             completion: completion
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
         
@@ -1068,9 +1261,6 @@ public final class GiftSetupScreen: ViewControllerComponentContainer {
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    deinit {
     }
     
     @objc private func cancelPressed() {
@@ -1103,5 +1293,33 @@ private struct GiftConfiguration {
         } else {
             return .defaultValue
         }
+    }
+}
+
+public struct PremiumGiftProduct: Equatable {
+    public let giftOption: CachedPremiumGiftOption
+    public let storeProduct: InAppPurchaseManager.Product?
+    public let discount: Int?
+    
+    public var id: String {
+        return self.storeProduct?.id ?? (self.giftOption.storeProductId ?? "")
+    }
+    
+    public var months: Int32 {
+        return self.giftOption.months
+    }
+    
+    public var price: String {
+        return self.storeProduct?.price ?? formatCurrencyAmount(self.giftOption.amount, currency: self.giftOption.currency)
+    }
+    
+    public var pricePerMonth: String {
+        return self.storeProduct?.pricePerMonth(Int(self.months)) ?? ""
+    }
+    
+    public init(giftOption: CachedPremiumGiftOption, storeProduct: InAppPurchaseManager.Product?, discount: Int?) {
+        self.giftOption = giftOption
+        self.storeProduct = storeProduct
+        self.discount = discount
     }
 }

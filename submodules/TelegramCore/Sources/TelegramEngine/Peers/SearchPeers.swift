@@ -51,7 +51,7 @@ public func _internal_searchPeers(accountPeerId: PeerId, postbox: Postbox, netwo
                             }
                         }
                     }
-                    
+                                        
                     updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                     
                     var renderedMyPeers: [FoundPeer] = []
@@ -61,7 +61,11 @@ public func _internal_searchPeers(accountPeerId: PeerId, postbox: Postbox, netwo
                             if let group = peer as? TelegramGroup, group.migrationReference != nil {
                                 continue
                             }
-                            renderedMyPeers.append(FoundPeer(peer: peer, subscribers: subscribers[peerId]))
+                            if let user = peer as? TelegramUser {
+                                renderedMyPeers.append(FoundPeer(peer: peer, subscribers: user.subscriberCount))
+                            } else {
+                                renderedMyPeers.append(FoundPeer(peer: peer, subscribers: subscribers[peerId]))
+                            }
                         }
                     }
                     
@@ -72,7 +76,11 @@ public func _internal_searchPeers(accountPeerId: PeerId, postbox: Postbox, netwo
                             if let group = peer as? TelegramGroup, group.migrationReference != nil {
                                 continue
                             }
-                            renderedPeers.append(FoundPeer(peer: peer, subscribers: subscribers[peerId]))
+                            if let user = peer as? TelegramUser {
+                                renderedPeers.append(FoundPeer(peer: peer, subscribers: user.subscriberCount))
+                            } else {
+                                renderedPeers.append(FoundPeer(peer: peer, subscribers: subscribers[peerId]))
+                            }
                         }
                     }
                     

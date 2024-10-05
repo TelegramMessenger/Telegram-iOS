@@ -254,7 +254,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                     }
                 case let .messageActionRequestedPeer(_, peers):
                     result.append(contentsOf: peers.map(\.peerId))
-                case let .messageActionGiftCode(_, boostPeer, _, _, _, _, _, _):
+                case let .messageActionGiftCode(_, boostPeer, _, _, _, _, _, _, _):
                     if let boostPeer = boostPeer {
                         result.append(boostPeer.peerId)
                     }

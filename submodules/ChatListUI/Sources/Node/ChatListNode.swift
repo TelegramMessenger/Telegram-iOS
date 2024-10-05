@@ -1714,9 +1714,20 @@ public final class ChatListNode: ListView {
             guard let self else {
                 return
             }
-            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList(birthdays), completion: nil)
-            controller.navigationPresentation = .modal
-            self.push?(controller)
+            if let birthdays, birthdays.count == 1, let peerId = birthdays.keys.first {
+                let _ = (self.context.engine.payments.premiumGiftCodeOptions(peerId: nil, onlyCached: true)
+                |> filter { !$0.isEmpty }
+                |> deliverOnMainQueue).start(next: { giftOptions in
+                    let premiumOptions = giftOptions.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
+                    let controller = self.context.sharedContext.makeGiftOptionsController(context: self.context, peerId: peerId, premiumOptions: premiumOptions)
+                    controller.navigationPresentation = .modal
+                    self.push?(controller)
+                })
+            } else {
+                let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList(birthdays), completion: nil)
+                controller.navigationPresentation = .modal
+                self.push?(controller)
+            }
         }, openPremiumManagement: { [weak self] in
             guard let self else {
                 return

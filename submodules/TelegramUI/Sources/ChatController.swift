@@ -1172,7 +1172,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             strongSelf.push(wallpaperPreviewController)
                             return true
-                        case let .giftPremium(_, _, duration, _, _):
+                        case let .giftPremium(_, _, duration, _, _, _, _):
                             strongSelf.chatDisplayNode.dismissInput()
                             let fromPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? strongSelf.context.account.peerId : message.id.peerId
                             let toPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? message.id.peerId : strongSelf.context.account.peerId
@@ -1187,7 +1187,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let controller = strongSelf.context.sharedContext.makeStarsGiftScreen(context: strongSelf.context, message: EngineMessage(message))
                             strongSelf.push(controller)
                             return true
-                        case let .giftCode(slug, _, _, _, _, _, _, _, _):
+                        case let .giftCode(slug, _, _, _, _, _, _, _, _, _, _):
                             strongSelf.openResolved(result: .premiumGiftCode(slug: slug), sourceMessageId: message.id, progress: params.progress)
                             return true
                         case .prizeStars:
@@ -9721,7 +9721,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     commit()
                                 })
                             } else {
-                                strongSelf.context.sharedContext.openWebApp(context: strongSelf.context, parentController: strongSelf, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, threadId: nil, buttonText: "", url: "", simple: true, source: .generic, skipTermsOfService: false)
+                                strongSelf.context.sharedContext.openWebApp(context: strongSelf.context, parentController: strongSelf, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, threadId: nil, buttonText: "", url: "", simple: true, source: .generic, skipTermsOfService: false, payload: botAppStart.payload)
                                 commit()
                             }
                         }

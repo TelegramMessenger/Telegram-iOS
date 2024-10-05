@@ -1382,7 +1382,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             url: "",
                             simple: true,
                             source: .generic,
-                            skipTermsOfService: true
+                            skipTermsOfService: true,
+                            payload: nil
                         )
                     })
                 }

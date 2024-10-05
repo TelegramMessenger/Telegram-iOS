@@ -735,7 +735,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case let .webViewData(text):
                 attributedString = NSAttributedString(string: strings.Notification_WebAppSentData(text).string, font: titleFont, textColor: primaryTextColor)
-            case let .giftPremium(currency, amount, _, _, _):
+            case let .giftPremium(currency, amount, _, _, _, _, _):
                 let price = formatCurrencyAmount(amount, currency: currency)
                 if message.author?.id == accountPeerId {
                     attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_SentYou(price)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
@@ -952,7 +952,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     let resultTitleString = strings.Notification_ChangedToSameWallpaper(compactAuthorName)
                     attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 }
-            case let .giftCode(_, _, _, boostPeerId, _, currency, amount, _, _):
+            case let .giftCode(_, _, _, boostPeerId, _, currency, amount, _, _, _, _):
                 if boostPeerId == nil, let currency, let amount {
                     let price = formatCurrencyAmount(amount, currency: currency)
                     if message.author?.id == accountPeerId {
@@ -1058,7 +1058,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 let _ = text
                 let _ = entities
                 
-                let starsPrice = "\(gift.price) Stars"
+                let starsPrice = strings.Notification_StarsGift_Stars(Int32(gift.price))
                 var authorName = compactAuthorName
                 var peerIds: [(Int, EnginePeer.Id?)] = [(0, message.author?.id)]
                 if message.id.peerId.namespace == Namespaces.Peer.CloudUser && message.id.peerId.id._internalGetInt64Value() == 777000 {

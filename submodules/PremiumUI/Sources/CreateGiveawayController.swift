@@ -1356,7 +1356,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                     return
                 }
                 let (currency, amount) = selectedProduct.storeProduct.priceCurrencyAndAmount
-                purpose = .giftCode(peerIds: state.peers, boostPeer: peerId, currency: currency, amount: amount)
+                purpose = .giftCode(peerIds: state.peers, boostPeer: peerId, currency: currency, amount: amount, text: nil, entities: nil)
                 quantity = Int32(state.peers.count)
                 storeProduct = selectedProduct.storeProduct
             case .starsGiveaway:
