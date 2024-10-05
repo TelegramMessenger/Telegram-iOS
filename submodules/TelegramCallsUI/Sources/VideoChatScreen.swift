@@ -1022,7 +1022,7 @@ final class VideoChatScreenComponent: Component {
                         if case let .channel(channel) = self.peer, case .broadcast = channel.info {
                             displayEvent = false
                         }
-                        if members.totalCount < 250 {
+                        if members.totalCount < 40 {
                             displayEvent = true
                         } else if event.peer.isVerified {
                             displayEvent = true

@@ -11,6 +11,7 @@ import AccountContext
 import PhotoResources
 import UIKitRuntimeUtils
 import RangeSet
+import VideoToolbox
 
 private extension CGRect {
     var center: CGPoint {
@@ -24,6 +25,11 @@ public enum NativeVideoContentId: Hashable {
     case contextResult(Int64, String)
     case profileVideo(Int64, String?)
 }
+
+private let isAv1Supported: Bool = {
+    let value = VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)
+    return value
+}()
 
 public final class NativeVideoContent: UniversalVideoContent {
     public let id: AnyHashable
@@ -58,7 +64,17 @@ public final class NativeVideoContent: UniversalVideoContent {
     let hasSentFramesToDisplay: (() -> Void)?
     
     public static func isVideoCodecSupported(videoCodec: String) -> Bool {
-        return videoCodec == "h264" || videoCodec == "h265" || videoCodec == "avc" || videoCodec == "hevc"
+        if videoCodec == "h264" || videoCodec == "h265" || videoCodec == "avc" || videoCodec == "hevc" {
+            return true
+        }
+        
+        if videoCodec == "av1" {
+            if isAv1Supported {
+                return true
+            }
+        }
+        
+        return false
     }
     
     public static func isHLSVideo(file: TelegramMediaFile) -> Bool {

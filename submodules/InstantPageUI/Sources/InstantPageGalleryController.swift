@@ -398,7 +398,7 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
-        self.galleryNode.completeCustomDismiss = { [weak self] in
+        self.galleryNode.completeCustomDismiss = { [weak self] _ in
             self?._hiddenMedia.set(.single(nil))
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }

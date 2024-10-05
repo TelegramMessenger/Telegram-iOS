@@ -687,7 +687,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false)))
                         
                         Queue.mainQueue().after(0.3) {
-                            self.completeCustomDismiss()
+                            self.completeCustomDismiss(false)
                         }
                     }
                     f(.default)
@@ -719,7 +719,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: true)))
                         
                         Queue.mainQueue().after(0.3) {
-                            self.completeCustomDismiss()
+                            self.completeCustomDismiss(false)
                         }
                     }
                     f(.default)

@@ -25,9 +25,22 @@ public final class HLSQualitySet {
             if let alternativeFile = alternativeRepresentation as? TelegramMediaFile {
                 for attribute in alternativeFile.attributes {
                     if case let .Video(_, size, _, _, _, videoCodec) = attribute {
-                        let _ = size
                         if let videoCodec, NativeVideoContent.isVideoCodecSupported(videoCodec: videoCodec) {
-                            qualityFiles[Int(size.height)] = baseFile.withMedia(alternativeFile)
+                            let key = Int(size.height)
+                            if let currentFile = qualityFiles[key] {
+                                var currentCodec: String?
+                                for attribute in currentFile.media.attributes {
+                                    if case let .Video(_, _, _, _, _, videoCodec) = attribute {
+                                        currentCodec = videoCodec
+                                    }
+                                }
+                                if let currentCodec, currentCodec == "av1" {
+                                } else {
+                                    qualityFiles[key] = baseFile.withMedia(alternativeFile)
+                                }
+                            } else {
+                                qualityFiles[key] = baseFile.withMedia(alternativeFile)
+                            }
                         }
                     }
                 }
