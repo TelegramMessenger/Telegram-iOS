@@ -1193,17 +1193,17 @@ final class VideoChatParticipantsComponent: Component {
                     
                     let subtitle: PeerListItemComponent.Subtitle
                     if participant.peer.id == component.call.accountContext.account.peerId {
-                        subtitle = PeerListItemComponent.Subtitle(text: "this is you", color: .accent)
+                        subtitle = PeerListItemComponent.Subtitle(text: component.strings.VoiceChat_You, color: .accent)
                     } else if component.speakingParticipants.contains(participant.peer.id) {
                         if let volume = participant.volume, volume / 100 != 100 {
-                            subtitle = PeerListItemComponent.Subtitle(text: "\(volume / 100)% speaking", color: .constructive)
+                            subtitle = PeerListItemComponent.Subtitle(text: component.strings.VoiceChat_StatusSpeakingVolume("\(volume / 100)%").string, color: .constructive)
                         } else {
-                            subtitle = PeerListItemComponent.Subtitle(text: "speaking", color: .constructive)
+                            subtitle = PeerListItemComponent.Subtitle(text: component.strings.VoiceChat_StatusSpeaking, color: .constructive)
                         }
                     } else if let about = participant.about, !about.isEmpty {
                         subtitle = PeerListItemComponent.Subtitle(text: about, color: .neutral)
                     } else {
-                        subtitle = PeerListItemComponent.Subtitle(text: "listening", color: .neutral)
+                        subtitle = PeerListItemComponent.Subtitle(text: component.strings.VoiceChat_StatusListening, color: .neutral)
                     }
                     
                     let rightAccessoryComponent: AnyComponent<Empty> = AnyComponent(VideoChatParticipantStatusComponent(
@@ -1667,12 +1667,12 @@ final class VideoChatParticipantsComponent: Component {
             if let participants = component.participants, let inviteType = participants.inviteType {
                 switch inviteType {
                 case .invite:
-                    inviteText = "Invite Members"
+                    inviteText = component.strings.VoiceChat_InviteMember
                 case .shareLink:
-                    inviteText = "Share Invite Link"
+                    inviteText = component.strings.VoiceChat_Share
                 }
             } else {
-                inviteText = "Invite Members"
+                inviteText = component.strings.VoiceChat_InviteMember
             }
             let inviteListItemSize = self.inviteListItemView.update(
                 transition: transition,

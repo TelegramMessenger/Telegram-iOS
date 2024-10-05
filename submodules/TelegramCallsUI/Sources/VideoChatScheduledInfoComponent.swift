@@ -123,7 +123,7 @@ final class VideoChatScheduledInfoComponent: Component {
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Starts in", font: Font.with(size: 23.0, design: .round, weight: .semibold), textColor: .white))
+                    text: .plain(NSAttributedString(string: component.strings.VoiceChat_StartsIn, font: Font.with(size: 23.0, design: .round, weight: .semibold), textColor: .white))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - 16.0 * 2.0, height: 200.0)

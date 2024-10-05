@@ -164,7 +164,7 @@ final class VideoChatActionButtonComponent: Component {
                 }
                 iconDiameter = 60.0
             case let .video(isActive):
-                titleText = "video"
+                titleText = component.strings.VoiceChat_Video
                 switch component.microphoneState {
                 case .connecting:
                     backgroundColor = UIColor(white: 0.1, alpha: 1.0)
@@ -177,7 +177,7 @@ final class VideoChatActionButtonComponent: Component {
                 }
                 iconDiameter = 60.0
             case .leave:
-                titleText = "leave"
+                titleText = component.strings.VoiceChat_Leave
                 backgroundColor = UIColor(rgb: 0x47191E)
                 iconDiameter = 22.0
             }
