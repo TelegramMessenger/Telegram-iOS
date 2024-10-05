@@ -185,6 +185,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             var savedToProfile = false
             var converted = false
             var giftId: Int64 = 0
+            var date: Int32 = 0
             if let arguments = component.subject.arguments {
                 animationFile = arguments.gift.file
                 stars = arguments.gift.price
@@ -196,6 +197,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 savedToProfile = arguments.savedToProfile
                 converted = arguments.converted
                 giftId = arguments.gift.id
+                date = arguments.date
             } else {
                 animationFile = nil
                 stars = 0
@@ -333,7 +335,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 id: "date",
                 title: strings.Gift_View_Date,
                 component: AnyComponent(
-                    MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: Int32(Date().timeIntervalSince1970), strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
+                    MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
                 )
             ))
             
@@ -342,11 +344,13 @@ private final class GiftViewSheetContent: CombinedComponent {
                 if let gift = state.starGiftsMap[giftId], let availability = gift.availability {
                     remains = availability.remains
                 }
+                let remainsString = presentationStringsFormattedNumber(remains, environment.dateTimeFormat.groupingSeparator)
+                let totalString = presentationStringsFormattedNumber(limitTotal, environment.dateTimeFormat.groupingSeparator)
                 tableItems.append(.init(
                     id: "availability",
                     title: strings.Gift_View_Availability,
                     component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_View_Availability_Of("\(remains)", "\(limitTotal)").string, font: tableFont, textColor: tableTextColor)))
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_View_Availability_Of("\(remainsString)", "\(totalString)").string, font: tableFont, textColor: tableTextColor)))
                     )
                 ))
             }
@@ -719,14 +723,14 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         case message(EngineMessage)
         case profileGift(EnginePeer.Id, ProfileGiftsContext.State.StarGift)
         
-        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, convertStars: Int64, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool)? {
+        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool)? {
             switch self {
             case let .message(message):
                 if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted) = action.action {
-                    return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, convertStars, text, entities, nameHidden, savedToProfile, converted)
+                    return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted)
                 }
             case let .profileGift(peerId, gift):
-                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.convertStars ?? 0, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false)
+                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.date, gift.convertStars ?? 0, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false)
             }
             return nil
         }
