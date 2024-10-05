@@ -2596,6 +2596,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             return
         }
         
+        if !(item.content is NativeVideoContent) {
+            return
+        }
+        
+        var useNative = true
+        if let data = self.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_native_pip"] {
+            useNative = false
+        }
+        if !useNative {
+            return
+        }
+        
         var hiddenMedia: (MessageId, Media)? = nil
         switch item.contentInfo {
         case let .message(message, _):
