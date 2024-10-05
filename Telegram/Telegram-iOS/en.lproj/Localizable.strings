@@ -13038,6 +13038,7 @@ Sorry for the inconvenience.";
 "Gift.Send.HideMyName" = "Hide My Name";
 "Gift.Send.HideMyName.Info" = "Hide my name and message from visitors to %1$@'s profile. %2$@ will still see your name and message.";
 "Gift.Send.Send" = "Send a Gift for";
+"Gift.Send.Limited" = "Limited";
 
 "Profile.SendGift" = "Send a Gift";
 "Settings.SendGift" = "Send a Gift";

@@ -181,6 +181,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             let text: String?
             let entities: [MessageTextEntity]?
             let limitTotal: Int32?
+            var outgoing = false
             var incoming = false
             var savedToProfile = false
             var converted = false
@@ -193,6 +194,11 @@ private final class GiftViewSheetContent: CombinedComponent {
                 entities = arguments.entities
                 limitTotal = arguments.gift.availability?.total
                 convertStars = arguments.convertStars
+                if case .message = component.subject {
+                    outgoing = !arguments.incoming
+                } else {
+                    outgoing = false
+                }
                 incoming = arguments.incoming || arguments.peerId == component.context.account.peerId
                 savedToProfile = arguments.savedToProfile
                 converted = arguments.converted
@@ -238,12 +244,12 @@ private final class GiftViewSheetContent: CombinedComponent {
             }
             
             var formattedAmount = presentationStringsFormattedNumber(abs(Int32(stars)), dateTimeFormat.groupingSeparator)
-            if !incoming && stars > 0 {
+            if outgoing {
                 formattedAmount = "- \(formattedAmount)"
             }
             let countFont: UIFont = Font.semibold(17.0)
             let amountText = formattedAmount
-            let countColor = incoming ? theme.list.itemDisclosureActions.constructive.fillColor : theme.list.itemDestructiveColor
+            let countColor = outgoing ? theme.list.itemDestructiveColor : theme.list.itemDisclosureActions.constructive.fillColor
             
             let title = title.update(
                 component: MultilineTextComponent(
@@ -367,7 +373,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                             animationCache: component.context.animationCache,
                             animationRenderer: component.context.animationRenderer,
                             placeholderColor: theme.list.mediaPlaceholderColor,
-                            text: .plain(attributedText)
+                            text: .plain(attributedText),
+                            maximumNumberOfLines: 0
                         )
                     )
                 ))
@@ -1071,17 +1078,26 @@ private final class TableComponent: CombinedComponent {
                 } else {
                     insets = UIEdgeInsets(top: 0.0, left: horizontalPadding, bottom: 0.0, right: horizontalPadding)
                 }
-                let valueChild = valueChildren[item.id].update(
-                    component: item.component,
-                    availableSize: CGSize(width: rightColumnWidth - insets.left - insets.right, height: context.availableSize.height),
-                    transition: context.transition
-                )
-                updatedValueChildren.append((valueChild, insets))
                 
                 var titleHeight: CGFloat = 0.0
                 if let titleChild = updatedTitleChildren[i] {
                     titleHeight = titleChild.size.height
                 }
+                
+                let availableValueWidth: CGFloat
+                if titleHeight > 0.0 {
+                    availableValueWidth = rightColumnWidth
+                } else {
+                    availableValueWidth = context.availableSize.width
+                }
+                
+                let valueChild = valueChildren[item.id].update(
+                    component: item.component,
+                    availableSize: CGSize(width: availableValueWidth - insets.left - insets.right, height: context.availableSize.height),
+                    transition: context.transition
+                )
+                updatedValueChildren.append((valueChild, insets))
+               
                 let rowHeight = max(40.0, max(titleHeight, valueChild.size.height) + verticalPadding * 2.0)
                 rowHeights[i] = rowHeight
                 totalHeight += rowHeight

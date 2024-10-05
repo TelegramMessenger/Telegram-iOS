@@ -138,8 +138,10 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             
             var validIds: [AnyHashable] = []
             var itemFrame = CGRect(origin: CGPoint(x: sideInset, y: 60.0), size: starsOptionSize)
+            
+            var index: Int32 = 0
             for product in starsProducts {
-                let itemId = AnyHashable(product.date)
+                let itemId = AnyHashable(index)
                 validIds.append(itemId)
                 
                 var itemTransition = transition
@@ -221,6 +223,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     itemFrame.origin.x = sideInset
                     itemFrame.origin.y += starsOptionSize.height + optionSpacing
                 }
+                index += 1
             }
             
             var removeIds: [AnyHashable] = []
@@ -243,7 +246,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 self.starsItems.removeValue(forKey: id)
             }
             
-            var contentHeight = ceil(CGFloat(starsProducts.count) / 3.0) * starsOptionSize.height + 60.0 + 16.0
+            var contentHeight = ceil(CGFloat(starsProducts.count) / 3.0) * (starsOptionSize.height + optionSpacing) - optionSpacing + 60.0 + 16.0
             
             if self.peerId == self.context.account.peerId {
                 let transition = ComponentTransition.immediate

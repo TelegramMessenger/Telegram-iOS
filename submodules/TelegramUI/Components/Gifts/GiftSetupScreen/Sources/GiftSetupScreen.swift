@@ -143,6 +143,8 @@ final class GiftSetupScreenComponent: Component {
             self.addSubview(self.scrollView)
             
             self.scrollView.layer.addSublayer(self.topOverscrollLayer)
+                
+            self.disablesInteractiveKeyboardGestureRecognizer = true
         }
         
         required init?(coder: NSCoder) {
@@ -352,6 +354,8 @@ final class GiftSetupScreenComponent: Component {
                             }
                             navigationController.setViewControllers(controllers, animated: true)
                         }
+                        
+                        starsContext.load(force: true)
                     })
                 })
             }
@@ -459,9 +463,7 @@ final class GiftSetupScreenComponent: Component {
                             return
                         }
                         if let textInputView = self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View {
-                            if self.textInputState.isEditing {
-                                textInputView.insertText(text: text)
-                            }
+                            textInputView.insertText(text: text)
                         }
                     },
                     backwardsDeleteText: { [weak self] in
@@ -510,6 +512,16 @@ final class GiftSetupScreenComponent: Component {
                         }
                     }
                 )
+                
+                if case .starGift = component.subject {
+                    self.optionsDisposable = (component.context.engine.payments.starsTopUpOptions()
+                    |> deliverOnMainQueue).start(next: { [weak self] options in
+                        guard let self else {
+                            return
+                        }
+                        self.options = options
+                    })
+                }
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -566,14 +578,14 @@ final class GiftSetupScreenComponent: Component {
             if case let .starGift(starGift) = component.subject, let availability = starGift.availability {
                 let remains: Int32 = availability.remains
                 let position = CGFloat(remains) / CGFloat(availability.total)
-                let remainsString = "\(remains)" //presentationStringsFormattedNumber(remains, environment.dateTimeFormat.groupingSeparator)
+                let remainsString = "\(remains)"
                 let totalString = presentationStringsFormattedNumber(availability.total, environment.dateTimeFormat.groupingSeparator)
                 let remainingCountSize = self.remainingCount.update(
                     transition: transition,
                     component: AnyComponent(RemainingCountComponent(
                         inactiveColor: environment.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.3),
                         activeColors: [UIColor(rgb: 0x5bc2ff), UIColor(rgb: 0x2d9eff)],
-                        inactiveTitle: "Limited",
+                        inactiveTitle: environment.strings.Gift_Send_Limited,
                         inactiveValue: "",
                         inactiveTitleColor: environment.theme.list.itemSecondaryTextColor,
                         activeTitle: "",
@@ -1001,7 +1013,7 @@ final class GiftSetupScreenComponent: Component {
                     }
                 }
             }
-            if self.recenterOnTag == nil && self.previousHadInputHeight != (environment.inputHeight > 0.0) {
+            if self.recenterOnTag == nil && self.previousHadInputHeight != (environment.inputHeight > 0.0), case .keyboard = self.currentInputMode {
                 if self.textInputState.isEditing {
                     self.recenterOnTag = self.textInputTag
                 }
@@ -1249,9 +1261,6 @@ public final class GiftSetupScreen: ViewControllerComponentContainer {
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    deinit {
     }
     
     @objc private func cancelPressed() {
