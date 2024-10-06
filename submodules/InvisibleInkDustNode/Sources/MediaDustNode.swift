@@ -40,12 +40,12 @@ public class MediaDustLayer: CALayer {
         emitter.setValue(0.01, forKey: "massRange")
         self.emitter = emitter
         
-        let alphaBehavior = createEmitterBehavior(type: "valueOverLife")
+        let alphaBehavior = CAEmitterCell.createEmitterBehavior(type: "valueOverLife")
         alphaBehavior.setValue("color.alpha", forKey: "keyPath")
         alphaBehavior.setValue([0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1], forKey: "values")
         alphaBehavior.setValue(true, forKey: "additive")
         
-        let scaleBehavior = createEmitterBehavior(type: "valueOverLife")
+        let scaleBehavior = CAEmitterCell.createEmitterBehavior(type: "valueOverLife")
         scaleBehavior.setValue("scale", forKey: "keyPath")
         scaleBehavior.setValue([0.0, 0.5], forKey: "values")
         scaleBehavior.setValue([0.0, 0.05], forKey: "locations")
@@ -105,6 +105,7 @@ public class MediaDustNode: ASDisplayNode {
     private var staticNode: ASImageNode?
     private var staticParams: CGSize?
     
+    public var revealOnTap = true
     public var isRevealed = false
     private var isExploding = false
     
@@ -154,31 +155,31 @@ public class MediaDustNode: ASDisplayNode {
             emitter.setValue(0.01, forKey: "massRange")
             self.emitter = emitter
             
-            let alphaBehavior = createEmitterBehavior(type: "valueOverLife")
+            let alphaBehavior = CAEmitterCell.createEmitterBehavior(type: "valueOverLife")
             alphaBehavior.setValue("color.alpha", forKey: "keyPath")
             alphaBehavior.setValue([0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1], forKey: "values")
             alphaBehavior.setValue(true, forKey: "additive")
             
-            let scaleBehavior = createEmitterBehavior(type: "valueOverLife")
+            let scaleBehavior = CAEmitterCell.createEmitterBehavior(type: "valueOverLife")
             scaleBehavior.setValue("scale", forKey: "keyPath")
             scaleBehavior.setValue([0.0, 0.5], forKey: "values")
             scaleBehavior.setValue([0.0, 0.05], forKey: "locations")
             
-            let randomAttractor0 = createEmitterBehavior(type: "simpleAttractor")
+            let randomAttractor0 = CAEmitterCell.createEmitterBehavior(type: "simpleAttractor")
             randomAttractor0.setValue("randomAttractor0", forKey: "name")
             randomAttractor0.setValue(20, forKey: "falloff")
             randomAttractor0.setValue(35, forKey: "radius")
             randomAttractor0.setValue(5, forKey: "stiffness")
             randomAttractor0.setValue(NSValue(cgPoint: .zero), forKey: "position")
             
-            let randomAttractor1 = createEmitterBehavior(type: "simpleAttractor")
+            let randomAttractor1 = CAEmitterCell.createEmitterBehavior(type: "simpleAttractor")
             randomAttractor1.setValue("randomAttractor1", forKey: "name")
             randomAttractor1.setValue(20, forKey: "falloff")
             randomAttractor1.setValue(35, forKey: "radius")
             randomAttractor1.setValue(5, forKey: "stiffness")
             randomAttractor1.setValue(NSValue(cgPoint: .zero), forKey: "position")
             
-            let fingerAttractor = createEmitterBehavior(type: "simpleAttractor")
+            let fingerAttractor = CAEmitterCell.createEmitterBehavior(type: "simpleAttractor")
             fingerAttractor.setValue("fingerAttractor", forKey: "name")
             
             let behaviors = [randomAttractor0, randomAttractor1, fingerAttractor, alphaBehavior, scaleBehavior]
@@ -217,6 +218,10 @@ public class MediaDustNode: ASDisplayNode {
         }
         
         self.tapped()
+        
+        guard self.revealOnTap else {
+            return
+        }
         
         self.isRevealed = true
         

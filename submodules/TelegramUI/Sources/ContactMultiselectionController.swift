@@ -169,7 +169,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 
                 strongSelf.updateTitle()
             })
-        case let .premiumGifting(birthdays, selectToday):
+        case let .premiumGifting(birthdays, selectToday, _):
             if let birthdays, selectToday {
                 let today = Calendar(identifier: .gregorian).component(.day, from: Date())
                 var todayPeers: [EnginePeer.Id] = []
@@ -256,13 +256,13 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 self.rightNavigationButton = rightNavigationButton
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             }
-        case .premiumGifting:
+        case let .premiumGifting(_, _, hasActions):
             let maxCount: Int32 = self.limit ?? 10
             var count = 0
             if case let .contacts(contactsNode) = self.contactsNode.contentNode {
                 count = contactsNode.selectionState?.selectedPeerIndices.count ?? 0
             }
-            self.titleView.title = CounterControllerTitle(title: self.presentationData.strings.Premium_Gift_ContactSelection_Title, counter: "\(count)/\(maxCount)")
+            self.titleView.title = CounterControllerTitle(title: hasActions ? self.presentationData.strings.Premium_Gift_ContactSelection_Title : self.presentationData.strings.Stars_Purchase_GiftStars, counter: "\(count)/\(maxCount)")
         case .requestedUsersSelection:
             let maxCount: Int32 = self.limit ?? 10
             var count = 0

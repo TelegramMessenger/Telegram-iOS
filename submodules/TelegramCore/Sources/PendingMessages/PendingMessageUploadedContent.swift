@@ -165,8 +165,10 @@ func mediaContentToUpload(accountPeerId: PeerId, network: Network, postbox: Post
             if media.count == results.count {
                 return .content(PendingMessageUploadedContentAndReuploadInfo(
                     content: .media(.inputMediaPaidMedia(
+                        flags: 0,
                         starsAmount: paidContent.amount,
-                        extendedMedia: media
+                        extendedMedia: media,
+                        payload: nil
                     ), text),
                     reuploadInfo: nil,
                     cacheReferenceKey: nil
@@ -701,7 +703,7 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                 attributes.append(.documentAttributeSticker(flags: flags, alt: displayText, stickerset: stickerSet, maskCoords: inputMaskCoords))
             case .HasLinkedStickers:
                 attributes.append(.documentAttributeHasStickers)
-            case let .Video(duration, size, videoFlags, preloadSize):
+            case let .Video(duration, size, videoFlags, preloadSize, coverTime, videoCodec):
                 var flags: Int32 = 0
                 if videoFlags.contains(.instantRoundVideo) {
                     flags |= (1 << 0)
@@ -715,8 +717,13 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                 if videoFlags.contains(.isSilent) {
                     flags |= (1 << 3)
                 }
-                
-                attributes.append(.documentAttributeVideo(flags: flags, duration: duration, w: Int32(size.width), h: Int32(size.height), preloadPrefixSize: preloadSize))
+                if let coverTime = coverTime, coverTime > 0.0 {
+                    flags |= (1 << 4)
+                }
+                if videoCodec != nil {
+                    flags |= (1 << 5)
+                }
+                attributes.append(.documentAttributeVideo(flags: flags, duration: duration, w: Int32(size.width), h: Int32(size.height), preloadPrefixSize: preloadSize, videoStartTs: coverTime, videoCodec: videoCodec))
             case let .Audio(isVoice, duration, title, performer, waveform):
                 var flags: Int32 = 0
                 if isVoice {
@@ -786,7 +793,7 @@ public func statsCategoryForFileWithAttributes(_ attributes: [TelegramMediaFileA
                 } else {
                     return .audio
                 }
-            case let .Video(_, _, flags, _):
+            case let .Video(_, _, flags, _, _, _):
                 if flags.contains(TelegramMediaVideoFlags.instantRoundVideo) {
                     return .voiceMessages
                 } else {
@@ -1061,8 +1068,8 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                                 |> mapError { _ -> PendingMessageUploadError in return .generic }
                                 |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                                     switch result {
-                                        case let .messageMediaDocument(_, document, _, _):
-                                        if let document = document, let mediaFile = telegramMediaFileFromApiDocument(document), let resource = mediaFile.resource as? CloudDocumentMediaResource, let fileReference = resource.fileReference {
+                                        case let .messageMediaDocument(_, document, altDocuments, _):
+                                        if let document = document, let mediaFile = telegramMediaFileFromApiDocument(document, altDocuments: altDocuments), let resource = mediaFile.resource as? CloudDocumentMediaResource, let fileReference = resource.fileReference {
                                                 var flags: Int32 = 0
                                                 var ttlSeconds: Int32?
                                                 if let autoclearMessageAttribute = autoclearMessageAttribute {

@@ -144,6 +144,34 @@ public func animationCacheFetchFile(postbox: Postbox, userLocation: MediaResourc
     }
 }
 
+public func animationCacheLoadLocalFile(name: String, type: AnimationCacheAnimationType, keyframeOnly: Bool, customColor: UIColor?) -> (AnimationCacheFetchOptions) -> Disposable {
+    return { options in
+        let source = AnimatedStickerNodeLocalFileSource(name: name)
+        let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
+            guard let result = result else {
+                return
+            }
+            
+            switch type {
+            case .video:
+                cacheVideoAnimation(path: result, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer, firstFrameOnly: options.firstFrameOnly, customColor: customColor)
+            case .lottie:
+                guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
+                    options.writer.finish()
+                    return
+                }
+                cacheLottieAnimation(data: data, width: Int(options.size.width), height: Int(options.size.height), keyframeOnly: keyframeOnly, writer: options.writer, firstFrameOnly: options.firstFrameOnly, customColor: customColor)
+            case .still:
+                cacheStillSticker(path: result, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer, customColor: customColor)
+            }
+        })
+                
+        return ActionDisposable {
+            dataDisposable.dispose()
+        }
+    }
+}
+
 private func generatePeerNameColorImage(nameColor: PeerNameColors.Colors, isDark: Bool, bounds: CGSize = CGSize(width: 40.0, height: 40.0), size: CGSize = CGSize(width: 40.0, height: 40.0)) -> UIImage? {
     return generateImage(bounds, rotatedContext: { contextSize, context in
         let bounds = CGRect(origin: CGPoint(), size: contextSize)
@@ -310,6 +338,8 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     private var didProcessTintColor: Bool = false
     
     public private(set) var file: TelegramMediaFile?
+    private var localAnimationName: String?
+    
     private var infoDisposable: Disposable?
     private var disposable: Disposable?
     private var fetchDisposable: Disposable?
@@ -438,6 +468,10 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 if tinted {
                     self.updateTintColor()
                 }
+            case .ton:
+                self.updateTon()
+            case let .animation(name):
+                self.updateLocalAnimation(name: name, attemptSynchronousLoad: attemptSynchronousLoad)
             }
         } else if let file = file {
             self.updateFile(file: file, attemptSynchronousLoad: attemptSynchronousLoad)
@@ -623,6 +657,46 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         self.contents = tinted ? tintedStarImage?.cgImage : starImage?.cgImage
     }
     
+    private func updateTon() {
+        self.contents = tonImage?.cgImage
+    }
+    
+    private func updateLocalAnimation(name: String, attemptSynchronousLoad: Bool) {
+        guard let arguments = self.arguments else {
+            return
+        }
+        
+        self.localAnimationName = name
+        
+        if attemptSynchronousLoad {
+            if !arguments.renderer.loadFirstFrameSynchronously(target: self, cache: arguments.cache, itemId: name, size: arguments.pixelSize) {
+                
+            }
+            
+            self.loadAnimation()
+        } else {
+            self.loadDisposable = arguments.renderer.loadFirstFrame(target: self, cache: arguments.cache, itemId: name, size: arguments.pixelSize, fetch: animationCacheLoadLocalFile(name: name, type: .lottie, keyframeOnly: true, customColor: nil), completion: { [weak self] result, isFinal in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.loadAnimation()
+            })
+        }
+    }
+    
+    private func loadLocalAnimation() {
+        guard let arguments = self.arguments else {
+            return
+        }
+        
+        guard let name = self.localAnimationName else {
+            return
+        }
+                
+        let keyframeOnly = arguments.pixelSize.width >= 120.0
+        self.disposable = arguments.renderer.add(target: self, cache: arguments.cache, itemId: name, unique: arguments.unique, size: arguments.pixelSize, fetch: animationCacheLoadLocalFile(name: name, type: .lottie, keyframeOnly: keyframeOnly, customColor: nil))
+    }
+    
     private func updateFile(file: TelegramMediaFile, attemptSynchronousLoad: Bool) {
         guard let arguments = self.arguments else {
             return
@@ -770,7 +844,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
 }
 
 public final class EmojiTextAttachmentView: UIView {
-    private let contentLayer: InlineStickerItemLayer
+    public let contentLayer: InlineStickerItemLayer
     
     public var isActive: Bool = true {
         didSet {
@@ -820,7 +894,7 @@ public final class EmojiTextAttachmentView: UIView {
 public final class CustomEmojiContainerView: UIView {
     private let emojiViewProvider: (ChatTextInputTextCustomEmojiAttribute) -> UIView?
     
-    private var emojiLayers: [InlineStickerItemLayer.Key: UIView] = [:]
+    public private(set) var emojiLayers: [InlineStickerItemLayer.Key: UIView] = [:]
     
     public init(emojiViewProvider: @escaping (ChatTextInputTextCustomEmojiAttribute) -> UIView?) {
         self.emojiViewProvider = emojiViewProvider
@@ -899,7 +973,17 @@ private let starImage: UIImage? = {
         context.clear(CGRect(origin: .zero, size: size))
         
         if let image = UIImage(bundleImageName: "Premium/Stars/StarLarge"), let cgImage = image.cgImage {
-            context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 2.0, dy: 2.0), byTiling: false)
+            context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 1.0, dy: 1.0), byTiling: false)
+        }
+    })?.withRenderingMode(.alwaysTemplate)
+}()
+
+private let tonImage: UIImage? = {
+    generateImage(CGSize(width: 32.0, height: 32.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        
+        if let image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonBig"), color: UIColor(rgb: 0x007aff)), let cgImage = image.cgImage {
+            context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 4.0, dy: 4.0), byTiling: false)
         }
     })?.withRenderingMode(.alwaysTemplate)
 }()

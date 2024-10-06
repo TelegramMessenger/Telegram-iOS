@@ -12,12 +12,15 @@ public struct MessageReaction: Equatable, PostboxCoding, Codable {
     public enum Reaction: Hashable, Comparable, Codable, PostboxCoding {
         case builtin(String)
         case custom(Int64)
+        case stars
         
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: StringCodingKey.self)
             
             if let value = try container.decodeIfPresent(String.self, forKey: "v") {
                 self = .builtin(value)
+            } else if let _ = try container.decodeIfPresent(Int64.self, forKey: "star") {
+                self = .stars
             } else {
                 self = .custom(try container.decode(Int64.self, forKey: "cfid"))
             }
@@ -26,6 +29,8 @@ public struct MessageReaction: Equatable, PostboxCoding, Codable {
         public init(decoder: PostboxDecoder) {
             if let value = decoder.decodeOptionalStringForKey("v") {
                 self = .builtin(value)
+            } else if let _ = decoder.decodeOptionalInt64ForKey("star") {
+                self = .stars
             } else {
                 self = .custom(decoder.decodeInt64ForKey("cfid", orElse: 0))
             }
@@ -39,6 +44,8 @@ public struct MessageReaction: Equatable, PostboxCoding, Codable {
                 try container.encode(value, forKey: "v")
             case let .custom(fileId):
                 try container.encode(fileId, forKey: "cfid")
+            case .stars:
+                try container.encode(0 as Int64, forKey: "star")
             }
         }
         
@@ -48,6 +55,8 @@ public struct MessageReaction: Equatable, PostboxCoding, Codable {
                 encoder.encodeString(value, forKey: "v")
             case let .custom(fileId):
                 encoder.encodeInt64(fileId, forKey: "cfid")
+            case .stars:
+                encoder.encodeInt64(0, forKey: "star")
             }
         }
         
@@ -59,6 +68,8 @@ public struct MessageReaction: Equatable, PostboxCoding, Codable {
                     return lhsValue < rhsValue
                 case .custom:
                     return true
+                case .stars:
+                    return false
                 }
             case let .custom(lhsValue):
                 switch rhs {
@@ -66,6 +77,17 @@ public struct MessageReaction: Equatable, PostboxCoding, Codable {
                     return false
                 case let .custom(rhsValue):
                     return lhsValue < rhsValue
+                case .stars:
+                    return false
+                }
+            case .stars:
+                switch rhs {
+                case .builtin:
+                    return true
+                case .custom:
+                    return true
+                case .stars:
+                    return false
                 }
             }
         }
@@ -88,6 +110,8 @@ public struct MessageReaction: Equatable, PostboxCoding, Codable {
     public init(decoder: PostboxDecoder) {
         if let value = decoder.decodeOptionalStringForKey("v") {
             self.value = .builtin(value)
+        } else if let _ = decoder.decodeOptionalInt64ForKey("star") {
+            self.value = .stars
         } else {
             self.value = .custom(decoder.decodeInt64ForKey("cfid", orElse: 0))
         }
@@ -106,6 +130,8 @@ public struct MessageReaction: Equatable, PostboxCoding, Codable {
         
         if let value = try container.decodeIfPresent(String.self, forKey: "v") {
             self.value = .builtin(value)
+        } else if let _ = try container.decodeIfPresent(Int64.self, forKey: "star") {
+            self.value = .stars
         } else {
             self.value = .custom(try container.decode(Int64.self, forKey: "cfid"))
         }
@@ -125,6 +151,8 @@ public struct MessageReaction: Equatable, PostboxCoding, Codable {
             encoder.encodeString(value, forKey: "v")
         case let .custom(fileId):
             encoder.encodeInt64(fileId, forKey: "cfid")
+        case .stars:
+            encoder.encodeInt64(0, forKey: "star")
         }
         encoder.encodeInt32(self.count, forKey: "c")
         if let chosenOrder = self.chosenOrder {
@@ -142,6 +170,8 @@ public struct MessageReaction: Equatable, PostboxCoding, Codable {
             try container.encode(value, forKey: "v")
         case let .custom(fileId):
             try container.encode(fileId, forKey: "cfid")
+        case .stars:
+            try container.encode(0 as Int64, forKey: "star")
         }
         try container.encode(self.count, forKey: "c")
         try container.encodeIfPresent(self.chosenOrder.flatMap(Int32.init), forKey: "cord")
@@ -157,6 +187,8 @@ extension MessageReaction.Reaction {
             self = .builtin(emoticon)
         case let .reactionCustomEmoji(documentId):
             self = .custom(documentId)
+        case .reactionPaid:
+            self = .stars
         }
     }
     
@@ -166,6 +198,8 @@ extension MessageReaction.Reaction {
             return .reactionEmoji(emoticon: value)
         case let .custom(fileId):
             return .reactionCustomEmoji(documentId: fileId)
+        case .stars:
+            return .reactionPaid
         }
     }
 }
@@ -191,6 +225,9 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
             var typeId: UInt8 = 1
             buffer.write(&typeId, offset: 0, length: 1)
             buffer.write(&fileId, offset: 0, length: 8)
+        case .stars:
+            var typeId: UInt8 = 2
+            buffer.write(&typeId, offset: 0, length: 1)
         }
         
         return buffer
@@ -231,6 +268,8 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
             var fileId: Int64 = 0
             readBuffer.read(&fileId, offset: 0, length: 8)
             return .custom(fileId)
+        case 2:
+            return .stars
         default:
             return nil
         }
@@ -256,6 +295,8 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         public init(decoder: PostboxDecoder) {
             if let value = decoder.decodeOptionalStringForKey("v") {
                 self.value = .builtin(value)
+            } else if let _ = decoder.decodeOptionalInt64ForKey("star") {
+                self.value = .stars
             } else {
                 self.value = .custom(decoder.decodeInt64ForKey("cfid", orElse: 0))
             }
@@ -272,6 +313,8 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
                 encoder.encodeString(value, forKey: "v")
             case let .custom(fileId):
                 encoder.encodeInt64(fileId, forKey: "cfid")
+            case .stars:
+                encoder.encodeInt64(0, forKey: "star")
             }
             encoder.encodeInt32(self.isLarge ? 1 : 0, forKey: "l")
             encoder.encodeInt32(self.isUnseen ? 1 : 0, forKey: "u")
@@ -285,10 +328,51 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         }
     }
     
+    public struct TopPeer: Equatable, PostboxCoding {
+        public var peerId: PeerId?
+        public var count: Int32
+        public var isTop: Bool
+        public var isMy: Bool
+        public var isAnonymous: Bool
+        
+        public init(peerId: PeerId?, count: Int32, isTop: Bool, isMy: Bool, isAnonymous: Bool) {
+            self.peerId = peerId
+            self.count = count
+            self.isMy = isMy
+            self.isTop = isTop
+            self.isAnonymous = isAnonymous
+        }
+        
+        public init(decoder: PostboxDecoder) {
+            if let peerId = decoder.decodeOptionalInt64ForKey("p") {
+                self.peerId = PeerId(peerId)
+            } else {
+                self.peerId = nil
+            }
+            self.count = decoder.decodeInt32ForKey("c", orElse: 0)
+            self.isTop = decoder.decodeBoolForKey("t", orElse: false)
+            self.isMy = decoder.decodeBoolForKey("m", orElse: false)
+            self.isAnonymous = decoder.decodeBoolForKey("anon", orElse: false)
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            if let peerId = self.peerId {
+                encoder.encodeInt64(peerId.toInt64(), forKey: "p")
+            } else {
+                encoder.encodeNil(forKey: "p")
+            }
+            encoder.encodeInt32(self.count, forKey: "c")
+            encoder.encodeBool(self.isTop, forKey: "t")
+            encoder.encodeBool(self.isMy, forKey: "m")
+            encoder.encodeBool(self.isAnonymous, forKey: "anon")
+        }
+    }
+    
     public let canViewList: Bool
     public let isTags: Bool
     public let reactions: [MessageReaction]
     public let recentPeers: [RecentPeer]
+    public let topPeers: [TopPeer]
     
     public var associatedPeerIds: [PeerId] {
         return self.recentPeers.map(\.peerId)
@@ -306,17 +390,20 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
                 if !result.contains(mediaId) {
                     result.append(mediaId)
                 }
+            case .stars:
+                break
             }
         }
         
         return result
     }
     
-    public init(canViewList: Bool, isTags: Bool, reactions: [MessageReaction], recentPeers: [RecentPeer]) {
+    public init(canViewList: Bool, isTags: Bool, reactions: [MessageReaction], recentPeers: [RecentPeer], topPeers: [TopPeer]) {
         self.canViewList = canViewList
         self.isTags = isTags
         self.reactions = reactions
         self.recentPeers = recentPeers
+        self.topPeers = topPeers
     }
     
     required public init(decoder: PostboxDecoder) {
@@ -324,6 +411,7 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         self.isTags = decoder.decodeBoolForKey("tg", orElse: false)
         self.reactions = decoder.decodeObjectArrayWithDecoderForKey("r")
         self.recentPeers = decoder.decodeObjectArrayWithDecoderForKey("rp")
+        self.topPeers = decoder.decodeObjectArrayWithDecoderForKey("tp")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -331,6 +419,7 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         encoder.encodeBool(self.isTags, forKey: "tg")
         encoder.encodeObjectArray(self.reactions, forKey: "r")
         encoder.encodeObjectArray(self.recentPeers, forKey: "rp")
+        encoder.encodeObjectArray(self.topPeers, forKey: "tp")
     }
     
     public static func ==(lhs: ReactionsMessageAttribute, rhs: ReactionsMessageAttribute) -> Bool {
@@ -344,6 +433,9 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
             return false
         }
         if lhs.recentPeers != rhs.recentPeers {
+            return false
+        }
+        if lhs.topPeers != rhs.topPeers {
             return false
         }
         return true
@@ -367,7 +459,8 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
                 var recentPeer = recentPeer
                 recentPeer.isUnseen = false
                 return recentPeer
-            }
+            },
+            topPeers: self.topPeers
         )
     }
 }
@@ -430,6 +523,8 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
                 if !result.contains(mediaId) {
                     result.append(mediaId)
                 }
+            case .stars:
+                break
             }
         }
         
@@ -464,5 +559,41 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
         encoder.encodeInt32(self.isLarge ? 1 : 0, forKey: "l")
         encoder.encodeInt32(self.storeAsRecentlyUsed ? 1 : 0, forKey: "used")
         encoder.encodeBool(self.isTags, forKey: "itag")
+    }
+}
+
+public final class PendingStarsReactionsMessageAttribute: MessageAttribute {
+    public let accountPeerId: PeerId?
+    public let count: Int32
+    public let isAnonymous: Bool
+    
+    public var associatedPeerIds: [PeerId] {
+        var peerIds: [PeerId] = []
+        if let accountPeerId = self.accountPeerId {
+            peerIds.append(accountPeerId)
+        }
+        return peerIds
+    }
+    
+    public init(accountPeerId: PeerId?, count: Int32, isAnonymous: Bool) {
+        self.accountPeerId = accountPeerId
+        self.count = count
+        self.isAnonymous = isAnonymous
+    }
+    
+    required public init(decoder: PostboxDecoder) {
+        self.accountPeerId = decoder.decodeOptionalInt64ForKey("ap").flatMap(PeerId.init)
+        self.count = decoder.decodeInt32ForKey("cnt", orElse: 1)
+        self.isAnonymous = decoder.decodeBoolForKey("anon", orElse: false)
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        if let accountPeerId = self.accountPeerId {
+            encoder.encodeInt64(accountPeerId.toInt64(), forKey: "ap")
+        } else {
+            encoder.encodeNil(forKey: "ap")
+        }
+        encoder.encodeInt32(self.count, forKey: "cnt")
+        encoder.encodeBool(self.isAnonymous, forKey: "anon")
     }
 }

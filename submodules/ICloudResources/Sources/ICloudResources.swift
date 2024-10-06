@@ -132,20 +132,24 @@ public func iCloudFileDescription(_ url: URL) -> Signal<ICloudFileDescription?, 
             subscriber.putCompletion()
             return EmptyDisposable
         } else {
-            let query = NSMetadataQuery()
-            query.searchScopes = [NSMetadataQueryUbiquitousDocumentsScope, NSMetadataQueryAccessibleUbiquitousExternalDocumentsScope]
-            query.predicate = NSPredicate(format: "%K.lastPathComponent == %@", NSMetadataItemFSNameKey, url.lastPathComponent)
-            query.valueListAttributes = [NSMetadataItemFSSizeKey]
+            final class WrappedQuery {
+                let query = NSMetadataQuery()
+            }
+            
+            let query = WrappedQuery()
+            query.query.searchScopes = [NSMetadataQueryUbiquitousDocumentsScope, NSMetadataQueryAccessibleUbiquitousExternalDocumentsScope]
+            query.query.predicate = NSPredicate(format: "%K.lastPathComponent == %@", NSMetadataItemFSNameKey, url.lastPathComponent)
+            query.query.valueListAttributes = [NSMetadataItemFSSizeKey]
             
             let observer = NotificationCenter.default.addObserver(forName: NSNotification.Name.NSMetadataQueryDidFinishGathering, object: query, queue: OperationQueue.main, using: { notification in
-                query.disableUpdates()
+                query.query.disableUpdates()
                 
-                guard let metadataItem = query.results.first as? NSMetadataItem else {
-                    query.enableUpdates()
+                guard let metadataItem = query.query.results.first as? NSMetadataItem else {
+                    query.query.enableUpdates()
                     return
                 }
                 
-                query.stop()
+                query.query.stop()
                 
                 guard let fileSize = metadataItem.value(forAttribute: NSMetadataItemFSSizeKey) as? NSNumber, fileSize != 0 else {
                     subscriber.putNext(nil)
@@ -157,11 +161,11 @@ public func iCloudFileDescription(_ url: URL) -> Signal<ICloudFileDescription?, 
                 subscriber.putCompletion()
             })
             
-            query.start()
+            query.query.start()
             
             return ActionDisposable {
                 Queue.mainQueue().async {
-                    query.stop()
+                    query.query.stop()
                     NotificationCenter.default.removeObserver(observer)
                 }
             }

@@ -22,7 +22,7 @@ public extension WidgetDataPeer.Message {
                     switch attribute {
                     case let .Sticker(altText, _, _):
                         content = .sticker(WidgetDataPeer.Message.Content.Sticker(altText: altText))
-                    case let .Video(duration, _, flags, _):
+                    case let .Video(duration, _, flags, _, _, _):
                         if flags.contains(.instantRoundVideo) {
                             content = .videoMessage(WidgetDataPeer.Message.Content.VideoMessage(duration: Int32(duration)))
                         } else {

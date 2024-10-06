@@ -88,11 +88,15 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
             return true
         }
         var isAnimated = false
-        self.text.enumerateAttributes(in: NSMakeRange(0, self.text.length), options: [], using: { attributes, range, _ in
-            if let _ = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
-                isAnimated = true
+        
+        if let renderSubEntities = self.renderSubEntities {
+            for entity in renderSubEntities {
+                if entity.isAnimated {
+                    isAnimated = true
+                    break
+                }
             }
-        })
+        }
         return isAnimated
     }
     

@@ -2,8 +2,9 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import WebKit
+@preconcurrency import WebKit
 import TelegramPresentationData
+import AccountContext
 
 private class WeakPaymentScriptMessageHandler: NSObject, WKScriptMessageHandler {
     private let f: (WKScriptMessage) -> ()
@@ -20,12 +21,14 @@ private class WeakPaymentScriptMessageHandler: NSObject, WKScriptMessageHandler 
 }
 
 final class BotCheckoutWebInteractionControllerNode: ViewControllerTracingNode, WKNavigationDelegate {
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let intent: BotCheckoutWebInteractionControllerIntent
     
     private var webView: WKWebView?
     
-    init(presentationData: PresentationData, url: String, intent: BotCheckoutWebInteractionControllerIntent) {
+    init(context: AccountContext, presentationData: PresentationData, url: String, intent: BotCheckoutWebInteractionControllerIntent) {
+        self.context = context
         self.presentationData = presentationData
         self.intent = intent
         
@@ -60,6 +63,7 @@ final class BotCheckoutWebInteractionControllerNode: ViewControllerTracingNode, 
                 if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                     webView.allowsLinkPreview = false
                 }
+                webView.navigationDelegate = self
             case .externalVerification:
                 webView = WKWebView()
                 if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
@@ -142,9 +146,25 @@ final class BotCheckoutWebInteractionControllerNode: ViewControllerTracingNode, 
                 decisionHandler(.cancel)
                 completion(true)
             } else {
+                if let url = navigationAction.request.url, let scheme = url.scheme {
+                    let defaultSchemes: [String] = ["http", "https"]
+                    if !defaultSchemes.contains(scheme) {
+                        decisionHandler(.cancel)
+                        self.context.sharedContext.applicationBindings.openUrl(url.absoluteString)
+                        return
+                    }
+                }
                 decisionHandler(.allow)
             }
         } else {
+            if let url = navigationAction.request.url, let scheme = url.scheme {
+                let defaultSchemes: [String] = ["http", "https"]
+                if !defaultSchemes.contains(scheme) {
+                    decisionHandler(.cancel)
+                    self.context.sharedContext.applicationBindings.openUrl(url.absoluteString)
+                    return
+                }
+            }
             decisionHandler(.allow)
         }
     }

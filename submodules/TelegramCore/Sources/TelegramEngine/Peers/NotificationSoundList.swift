@@ -104,7 +104,7 @@ public final class NotificationSoundList: Equatable, Codable {
 
 private extension NotificationSoundList.NotificationSound {
     convenience init?(apiDocument: Api.Document) {
-        guard let file = telegramMediaFileFromApiDocument(apiDocument) else {
+        guard let file = telegramMediaFileFromApiDocument(apiDocument, altDocuments: []) else {
             return nil
         }
         self.init(file: file)
@@ -313,7 +313,7 @@ func _internal_uploadNotificationSound(account: Account, title: String, data: Da
                 return .generic
             }
             |> mapToSignal { result -> Signal<NotificationSoundList.NotificationSound, UploadNotificationSoundError> in
-                guard let file = telegramMediaFileFromApiDocument(result) else {
+                guard let file = telegramMediaFileFromApiDocument(result, altDocuments: []) else {
                     return .fail(.generic)
                 }
                 return account.postbox.transaction { transaction -> NotificationSoundList.NotificationSound in

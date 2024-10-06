@@ -491,6 +491,16 @@ public enum MediaAutoDownloadPeerType {
     case channel
 }
 
+public struct InstantPageSourceLocation {
+    public var userLocation: MediaResourceUserLocation
+    public var peerType: MediaAutoDownloadPeerType
+    
+    public init(userLocation: MediaResourceUserLocation, peerType: MediaAutoDownloadPeerType) {
+        self.userLocation = userLocation
+        self.peerType = peerType
+    }
+}
+
 public func effectiveAutodownloadCategories(settings: MediaAutoDownloadSettings, networkType: MediaAutoDownloadNetworkType) -> MediaAutoDownloadCategories {
     let connection = settings.connectionSettings(for: networkType)
     switch connection.preset {
@@ -554,7 +564,10 @@ public func isAutodownloadEnabledForAnyPeerType(category: MediaAutoDownloadCateg
     return category.contacts || category.otherPrivate || category.groups || category.channels
 }
 
-public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings, peerType: MediaAutoDownloadPeerType, networkType: MediaAutoDownloadNetworkType, authorPeerId: PeerId? = nil, contactsPeerIds: Set<PeerId> = Set(), media: Media?, isStory: Bool = false) -> Bool {
+public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings, peerType: MediaAutoDownloadPeerType, networkType: MediaAutoDownloadNetworkType, authorPeerId: PeerId? = nil, contactsPeerIds: Set<PeerId> = Set(), media: Media?, isStory: Bool = false, isAd: Bool = false) -> Bool {
+    if isAd {
+        return true
+    }
     if (networkType == .cellular && !settings.cellular.enabled) || (networkType == .wifi && !settings.wifi.enabled) {
         return false
     }

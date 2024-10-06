@@ -628,7 +628,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                     
                     let dateLayoutInput: ChatMessageDateAndStatusNode.LayoutInput
-                    dateLayoutInput = .trailingContent(contentWidth: trailingWidthToMeasure, reactionSettings: item.presentationData.isPreview ? nil : ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions), preferAdditionalInset: false))
+                    dateLayoutInput = .trailingContent(contentWidth: trailingWidthToMeasure, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions), preferAdditionalInset: false))
                     
                     statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
                         context: item.context,
@@ -641,7 +641,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         constrainedSize: textConstrainedSize,
                         availableReactions: item.associatedData.availableReactions,
                         savedMessageTags: item.associatedData.savedMessageTags,
-                        reactions: dateReactionsAndPeers.reactions,
+                        reactions: item.presentationData.isPreview ? [] : dateReactionsAndPeers.reactions,
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                         areReactionsTags: item.topMessage.areReactionsTags(accountPeerId: item.context.account.peerId),
@@ -754,7 +754,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
-                            //TODO:localize
+                            //TODO:release
                             //strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
                     
                             strongSelf.updateIsTranslating(isTranslating)
@@ -995,7 +995,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     return ChatMessageBubbleContentTapAction(content: .none)
                 } else {
                     if let text = self.textNode.textNode.attributeSubstring(name: "Attribute__Blockquote", index: index) {
-                        return ChatMessageBubbleContentTapAction(content: .copy(text.1))
+                        return ChatMessageBubbleContentTapAction(content: .copy(text.0))
                     } else {
                         return ChatMessageBubbleContentTapAction(content: .none)
                     }
@@ -1376,7 +1376,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                let enableCopy = !item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected()
+                let enableCopy = (!item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected()) || item.message.id.peerId.isVerificationCodes
                 textSelectionNode.enableCopy = enableCopy
                 
                 var enableQuote = !item.message.text.isEmpty
@@ -1390,7 +1390,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 if !item.controllerInteraction.canSendMessages() && !enableCopy {
                     enableQuote = false
                 }
-                if item.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                if item.message.id.peerId.namespace == Namespaces.Peer.SecretChat || item.message.id.peerId.isVerificationCodes {
                     enableQuote = false
                 }
                 if item.message.containsSecretMedia {
@@ -1514,9 +1514,10 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         guard let item = self.item else {
             return nil
         }
-        guard let string = self.textNode.textNode.cachedLayout?.attributedString else {
+        guard let string = self.textNode.attributedString else {
             return nil
         }
+        
         let nsString = string.string as NSString
         let substring = nsString.substring(with: range)
         let offset = range.location

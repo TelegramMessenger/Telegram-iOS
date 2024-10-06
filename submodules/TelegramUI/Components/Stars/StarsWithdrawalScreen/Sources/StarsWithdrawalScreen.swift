@@ -55,7 +55,7 @@ private final class SheetContent: CombinedComponent {
         let background = Child(RoundedRectangle.self)
         let closeButton = Child(Button.self)
         let title = Child(Text.self)
-        let urlSection = Child(ListSectionComponent.self)
+        let amountSection = Child(ListSectionComponent.self)
         let button = Child(ButtonComponent.self)
         let balanceTitle = Child(MultilineTextComponent.self)
         let balanceValue = Child(MultilineTextComponent.self)
@@ -65,6 +65,8 @@ private final class SheetContent: CombinedComponent {
             let environment = context.environment[EnvironmentType.self]
             let component = context.component
             let state = context.state
+            
+            let controller = environment.controller
             
             let theme = environment.theme.withModalBlocksBackground()
             let strings = environment.strings
@@ -108,6 +110,7 @@ private final class SheetContent: CombinedComponent {
             let titleString: String
             let amountTitle: String
             let amountPlaceholder: String
+            let amountLabel: String?
             
             let minAmount: Int64?
             let maxAmount: Int64?
@@ -122,6 +125,7 @@ private final class SheetContent: CombinedComponent {
                 
                 minAmount = configuration.minWithdrawAmount
                 maxAmount = status.balances.availableBalance
+                amountLabel = nil
             case .paidMedia:
                 titleString = environment.strings.Stars_PaidContent_Title
                 amountTitle = environment.strings.Stars_PaidContent_AmountTitle
@@ -129,14 +133,22 @@ private final class SheetContent: CombinedComponent {
                
                 minAmount = 1
                 maxAmount = configuration.maxPaidMediaAmount
+                
+                var usdRate = 0.012
+                if let usdWithdrawRate = configuration.usdWithdrawRate, let amount = state.amount, amount > 0 {
+                    usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
+                    amountLabel = "≈\(formatTonUsdValue(amount, divide: false, rate: usdRate, dateTimeFormat: environment.dateTimeFormat))"
+                } else {
+                    amountLabel = nil
+                }
             case .reaction:
                 titleString = environment.strings.Stars_SendStars_Title
                 amountTitle = environment.strings.Stars_SendStars_AmountTitle
                 amountPlaceholder = environment.strings.Stars_SendStars_AmountPlaceholder
                 
                 minAmount = 1
-                //TODO:
                 maxAmount = configuration.maxPaidMediaAmount
+                amountLabel = nil
             }
             
             let title = title.update(
@@ -229,7 +241,9 @@ private final class SheetContent: CombinedComponent {
                         }
                     },
                     tapAction: { attributes, _ in
-                        component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_PaidContent_AmountInfo_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                        if let controller = controller() as? StarsWithdrawScreen, let navigationController = controller.navigationController as? NavigationController {
+                            component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_PaidContent_AmountInfo_URL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                        }
                     }
                 ))
             case let .reaction(starsToTop):
@@ -242,7 +256,7 @@ private final class SheetContent: CombinedComponent {
                 amountFooter = nil
             }
                          
-            let urlSection = urlSection.update(
+            let amountSection = amountSection.update(
                 component: ListSectionComponent(
                     theme: theme,
                     header: AnyComponent(MultilineTextComponent(
@@ -260,11 +274,13 @@ private final class SheetContent: CombinedComponent {
                             component: AnyComponent(
                                 AmountFieldComponent(
                                     textColor: theme.list.itemPrimaryTextColor,
+                                    secondaryColor: theme.list.itemSecondaryTextColor,
                                     placeholderColor: theme.list.itemPlaceholderTextColor,
                                     value: state.amount,
                                     minValue: minAmount,
                                     maxValue: maxAmount,
                                     placeholderText: amountPlaceholder,
+                                    labelText: amountLabel,
                                     amountUpdated: { [weak state] amount in
                                         state?.amount = amount
                                         state?.updated()
@@ -279,35 +295,34 @@ private final class SheetContent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
                 transition: context.transition
             )
-            context.add(urlSection
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + urlSection.size.height / 2.0))
+            context.add(amountSection
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + amountSection.size.height / 2.0))
                 .clipsToBounds(true)
                 .cornerRadius(10.0)
             )
-            contentSize.height += urlSection.size.height
+            contentSize.height += amountSection.size.height
             contentSize.height += 32.0
             
             let buttonString: String
             if case .paidMedia = component.mode {
                 buttonString = environment.strings.Stars_PaidContent_Create
             } else if let amount = state.amount {
-                buttonString = "\(environment.strings.Stars_Withdraw_Withdraw)   #  \(amount)"
+                buttonString = "\(environment.strings.Stars_Withdraw_Withdraw)   #  \(presentationStringsFormattedNumber(Int32(amount), environment.dateTimeFormat.groupingSeparator))"
             } else {
                 buttonString = environment.strings.Stars_Withdraw_Withdraw
             }
             
             if state.cachedStarImage == nil || state.cachedStarImage?.1 !== theme {
-                state.cachedStarImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: .white)!, theme)
+                state.cachedStarImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: theme.list.itemCheckColors.foregroundColor)!, theme)
             }
             
-            let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .center)
+            let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             if let range = buttonAttributedString.string.range(of: "#"), let starImage = state.cachedStarImage?.0 {
                 buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
                 buttonAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xffffff), range: NSRange(range, in: buttonAttributedString.string))
                 buttonAttributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: buttonAttributedString.string))
             }
             
-            let controller = environment.controller
             let button = button.update(
                 component: ButtonComponent(
                     background: ButtonComponent.Background(
@@ -333,7 +348,7 @@ private final class SheetContent: CombinedComponent {
                         }
                     }
                 ),
-                availableSize: CGSize(width: 361.0, height: 50),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50),
                 transition: .immediate
             )
             context.add(button
@@ -573,36 +588,45 @@ private final class AmountFieldComponent: Component {
     typealias EnvironmentType = Empty
     
     let textColor: UIColor
+    let secondaryColor: UIColor
     let placeholderColor: UIColor
     let value: Int64?
     let minValue: Int64?
     let maxValue: Int64?
     let placeholderText: String
+    let labelText: String?
     let amountUpdated: (Int64?) -> Void
     let tag: AnyObject?
     
     init(
         textColor: UIColor,
+        secondaryColor: UIColor,
         placeholderColor: UIColor,
         value: Int64?,
         minValue: Int64?,
         maxValue: Int64?,
         placeholderText: String,
+        labelText: String?,
         amountUpdated: @escaping (Int64?) -> Void,
         tag: AnyObject? = nil
     ) {
         self.textColor = textColor
+        self.secondaryColor = secondaryColor
         self.placeholderColor = placeholderColor
         self.value = value
         self.minValue = minValue
         self.maxValue = maxValue
         self.placeholderText = placeholderText
+        self.labelText = labelText
         self.amountUpdated = amountUpdated
         self.tag = tag
     }
     
     static func ==(lhs: AmountFieldComponent, rhs: AmountFieldComponent) -> Bool {
         if lhs.textColor != rhs.textColor {
+            return false
+        }
+        if lhs.secondaryColor != rhs.secondaryColor {
             return false
         }
         if lhs.placeholderColor != rhs.placeholderColor {
@@ -618,6 +642,9 @@ private final class AmountFieldComponent: Component {
             return false
         }
         if lhs.placeholderText != rhs.placeholderText {
+            return false
+        }
+        if lhs.labelText != rhs.labelText {
             return false
         }
         return true
@@ -637,6 +664,7 @@ private final class AmountFieldComponent: Component {
         private let placeholderView: ComponentView<Empty>
         private let iconView: UIImageView
         private let textField: TextFieldNodeView
+        private let labelView: ComponentView<Empty>
         
         private var component: AmountFieldComponent?
         private weak var state: EmptyComponentState?
@@ -644,6 +672,7 @@ private final class AmountFieldComponent: Component {
         override init(frame: CGRect) {
             self.placeholderView = ComponentView<Empty>()
             self.textField = TextFieldNodeView(frame: .zero)
+            self.labelView = ComponentView<Empty>()
             
             self.iconView = UIImageView(image: UIImage(bundleImageName: "Premium/Stars/StarLarge"))
 
@@ -737,6 +766,7 @@ private final class AmountFieldComponent: Component {
                        
             let size = CGSize(width: availableSize.width, height: 44.0)
             
+            let sideInset: CGFloat = 15.0
             var leftInset: CGFloat = 15.0
             if let icon = self.iconView.image {
                 leftInset += icon.size.width + 6.0
@@ -762,8 +792,32 @@ private final class AmountFieldComponent: Component {
                 }
                 
                 placeholderComponentView.frame = CGRect(origin: CGPoint(x: leftInset, y: floorToScreenPixels((size.height - placeholderSize.height) / 2.0) + 1.0 - UIScreenPixel), size: placeholderSize)
-                
                 placeholderComponentView.isHidden = !(self.textField.text ?? "").isEmpty
+            }
+            
+            if let labelText = component.labelText {
+                let labelSize = self.labelView.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        Text(
+                            text: labelText,
+                            font: Font.regular(17.0),
+                            color: component.secondaryColor
+                        )
+                    ),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                
+                if let labelView = self.labelView.view {
+                    if labelView.superview == nil {
+                        self.insertSubview(labelView, at: 0)
+                    }
+                    
+                    labelView.frame = CGRect(origin: CGPoint(x: size.width - sideInset - labelSize.width, y: floorToScreenPixels((size.height - labelSize.height) / 2.0) + 1.0 - UIScreenPixel), size: labelSize)
+                }
+            } else if let labelView = self.labelView.view, labelView.superview != nil {
+                labelView.removeFromSuperview()
             }
             
             self.textField.frame = CGRect(x: leftInset, y: 0.0, width: size.width - 30.0, height: 44.0)
@@ -805,15 +859,17 @@ func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor
 
 private struct StarsWithdrawConfiguration {
     static var defaultValue: StarsWithdrawConfiguration {
-        return StarsWithdrawConfiguration(minWithdrawAmount: nil, maxPaidMediaAmount: nil)
+        return StarsWithdrawConfiguration(minWithdrawAmount: nil, maxPaidMediaAmount: nil, usdWithdrawRate: nil)
     }
     
     let minWithdrawAmount: Int64?
     let maxPaidMediaAmount: Int64?
+    let usdWithdrawRate: Double?
     
-    fileprivate init(minWithdrawAmount: Int64?, maxPaidMediaAmount: Int64?) {
+    fileprivate init(minWithdrawAmount: Int64?, maxPaidMediaAmount: Int64?, usdWithdrawRate: Double?) {
         self.minWithdrawAmount = minWithdrawAmount
         self.maxPaidMediaAmount = maxPaidMediaAmount
+        self.usdWithdrawRate = usdWithdrawRate
     }
     
     static func with(appConfiguration: AppConfiguration) -> StarsWithdrawConfiguration {
@@ -826,8 +882,12 @@ private struct StarsWithdrawConfiguration {
             if let value = data["stars_paid_post_amount_max"] as? Double {
                 maxPaidMediaAmount = Int64(value)
             }
+            var usdWithdrawRate: Double?
+            if let value = data["stars_usd_withdraw_rate_x1000"] as? Double {
+                usdWithdrawRate = value
+            }
             
-            return StarsWithdrawConfiguration(minWithdrawAmount: minWithdrawAmount, maxPaidMediaAmount: maxPaidMediaAmount)
+            return StarsWithdrawConfiguration(minWithdrawAmount: minWithdrawAmount, maxPaidMediaAmount: maxPaidMediaAmount, usdWithdrawRate: usdWithdrawRate)
         } else {
             return .defaultValue
         }

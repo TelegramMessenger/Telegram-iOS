@@ -6,6 +6,7 @@ import Display
 import TelegramPresentationData
 
 public enum PeerInfoPaneKey: Int32 {
+    case botPreview
     case members
     case stories
     case storyArchive
@@ -19,6 +20,7 @@ public enum PeerInfoPaneKey: Int32 {
     case gifs
     case groupsInCommon
     case recommended
+    case gifts
 }
 
 public struct PeerInfoStatusData: Equatable {

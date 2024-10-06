@@ -12,6 +12,7 @@ private class AdMessagesHistoryContextImpl {
             case text
             case textEntities
             case media
+            case contentMedia
             case color
             case backgroundEmojiId
             case url
@@ -32,6 +33,7 @@ private class AdMessagesHistoryContextImpl {
         public let text: String
         public let textEntities: [MessageTextEntity]
         public let media: [Media]
+        public let contentMedia: [Media]
         public let color: PeerNameColor?
         public let backgroundEmojiId: Int64?
         public let url: String
@@ -47,6 +49,7 @@ private class AdMessagesHistoryContextImpl {
             text: String,
             textEntities: [MessageTextEntity],
             media: [Media],
+            contentMedia: [Media],
             color: PeerNameColor?,
             backgroundEmojiId: Int64?,
             url: String,
@@ -61,6 +64,7 @@ private class AdMessagesHistoryContextImpl {
             self.text = text
             self.textEntities = textEntities
             self.media = media
+            self.contentMedia = contentMedia
             self.color = color
             self.backgroundEmojiId = backgroundEmojiId
             self.url = url
@@ -89,6 +93,12 @@ private class AdMessagesHistoryContextImpl {
             self.media = mediaData.compactMap { data -> Media? in
                 return PostboxDecoder(buffer: MemoryBuffer(data: data)).decodeRootObject() as? Media
             }
+            
+            let contentMediaData = try container.decode([Data].self, forKey: .contentMedia)
+            self.contentMedia = contentMediaData.compactMap { data -> Media? in
+                return PostboxDecoder(buffer: MemoryBuffer(data: data)).decodeRootObject() as? Media
+            }
+            
             self.color = try container.decodeIfPresent(Int32.self, forKey: .color).flatMap { PeerNameColor(rawValue: $0) }
             self.backgroundEmojiId = try container.decodeIfPresent(Int64.self, forKey: .backgroundEmojiId)
 
@@ -116,6 +126,13 @@ private class AdMessagesHistoryContextImpl {
                 return encoder.makeData()
             }
             try container.encode(mediaData, forKey: .media)
+            
+            let contentMediaData = self.contentMedia.map { media -> Data in
+                let encoder = PostboxEncoder()
+                encoder.encodeRootObject(media)
+                return encoder.makeData()
+            }
+            try container.encode(contentMediaData, forKey: .contentMedia)
 
             try container.encodeIfPresent(self.color?.rawValue, forKey: .color)
             try container.encodeIfPresent(self.backgroundEmojiId, forKey: .backgroundEmojiId)
@@ -153,6 +170,14 @@ private class AdMessagesHistoryContextImpl {
                     return false
                 }
             }
+            if lhs.contentMedia.count != rhs.contentMedia.count {
+                return false
+            }
+            for i in 0 ..< lhs.contentMedia.count {
+                if !lhs.contentMedia[i].isEqual(to: rhs.contentMedia[i]) {
+                    return false
+                }
+            }
             if lhs.url != rhs.url {
                 return false
             }
@@ -181,7 +206,7 @@ private class AdMessagesHistoryContextImpl {
             case .recommended:
                 mappedMessageType = .recommended
             }
-            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, messageType: mappedMessageType, url: self.url, buttonText: self.buttonText, sponsorInfo: self.sponsorInfo, additionalInfo: self.additionalInfo, canReport: self.canReport))
+            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, messageType: mappedMessageType, url: self.url, buttonText: self.buttonText, sponsorInfo: self.sponsorInfo, additionalInfo: self.additionalInfo, canReport: self.canReport, hasContentMedia: !self.contentMedia.isEmpty))
             if !self.textEntities.isEmpty {
                 let attribute = TextEntitiesMessageAttribute(entities: self.textEntities)
                 attributes.append(attribute)
@@ -215,7 +240,8 @@ private class AdMessagesHistoryContextImpl {
                 profileColor: nil,
                 profileBackgroundEmojiId: nil,
                 emojiStatus: nil,
-                approximateBoostLevel: nil
+                approximateBoostLevel: nil,
+                subscriptionUntilDate: nil
             )
             messagePeers[author.id] = author
             
@@ -240,7 +266,7 @@ private class AdMessagesHistoryContextImpl {
                 author: author,
                 text: self.text,
                 attributes: attributes,
-                media: self.media,
+                media: !self.contentMedia.isEmpty ? self.contentMedia : self.media,
                 peers: messagePeers,
                 associatedMessages: SimpleDictionary<MessageId, Message>(),
                 associatedMessageIds: [],
@@ -421,7 +447,7 @@ private class AdMessagesHistoryContextImpl {
 
                         for message in messages {
                             switch message {
-                            case let .sponsoredMessage(flags, randomId, url, title, message, entities, photo, color, buttonText, sponsorInfo, additionalInfo):
+                            case let .sponsoredMessage(flags, randomId, url, title, message, entities, photo, media, color, buttonText, sponsorInfo, additionalInfo):
                                 var parsedEntities: [MessageTextEntity] = []
                                 if let entities = entities {
                                     parsedEntities = messageTextEntitiesFromApiEntities(entities)
@@ -441,6 +467,8 @@ private class AdMessagesHistoryContextImpl {
                                 }
                                 
                                 let photo = photo.flatMap { telegramMediaImageFromApiPhoto($0) }
+                                let (contentMedia, _, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
+                                
                                 parsedMessages.append(CachedMessage(
                                     opaqueId: randomId.makeData(),
                                     messageType: isRecommended ? .recommended : .sponsored,
@@ -448,6 +476,7 @@ private class AdMessagesHistoryContextImpl {
                                     text: message,
                                     textEntities: parsedEntities,
                                     media: photo.flatMap { [$0] } ?? [],
+                                    contentMedia: contentMedia.flatMap { [$0] } ?? [],
                                     color: nameColorIndex.flatMap { PeerNameColor(rawValue: $0) },
                                     backgroundEmojiId: backgroundEmojiId,
                                     url: url,
@@ -502,22 +531,8 @@ private class AdMessagesHistoryContextImpl {
         self.maskAsSeenDisposables.set(signal.start(), forKey: opaqueId)
     }
     
-    func markAction(opaqueId: Data) {
-        let account = self.account
-        let signal: Signal<Never, NoError> = account.postbox.transaction { transaction -> Api.InputChannel? in
-            return transaction.getPeer(self.peerId).flatMap(apiInputChannel)
-        }
-        |> mapToSignal { inputChannel -> Signal<Never, NoError> in
-            guard let inputChannel = inputChannel else {
-                return .complete()
-            }
-            return account.network.request(Api.functions.channels.clickSponsoredMessage(channel: inputChannel, randomId: Buffer(data: opaqueId)))
-            |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                return .single(.boolFalse)
-            }
-            |> ignoreValues
-        }
-        let _ = signal.start()
+    func markAction(opaqueId: Data, media: Bool, fullscreen: Bool) {
+        _internal_markAdAction(account: self.account, peerId: self.peerId, opaqueId: opaqueId, media: media, fullscreen: fullscreen)
     }
     
     func remove(opaqueId: Data) {
@@ -578,9 +593,9 @@ public class AdMessagesHistoryContext {
         }
     }
     
-    public func markAction(opaqueId: Data) {
+    public func markAction(opaqueId: Data, media: Bool, fullscreen: Bool) {
         self.impl.with { impl in
-            impl.markAction(opaqueId: opaqueId)
+            impl.markAction(opaqueId: opaqueId, media: media, fullscreen: fullscreen)
         }
     }
     
@@ -589,4 +604,29 @@ public class AdMessagesHistoryContext {
             impl.remove(opaqueId: opaqueId)
         }
     }
+}
+
+
+func _internal_markAdAction(account: Account, peerId: EnginePeer.Id, opaqueId: Data, media: Bool, fullscreen: Bool) {
+    let signal: Signal<Never, NoError> = account.postbox.transaction { transaction -> Api.InputChannel? in
+        return transaction.getPeer(peerId).flatMap(apiInputChannel)
+    }
+    |> mapToSignal { inputChannel -> Signal<Never, NoError> in
+        guard let inputChannel = inputChannel else {
+            return .complete()
+        }
+        var flags: Int32 = 0
+        if media {
+            flags |= (1 << 0)
+        }
+        if fullscreen {
+            flags |= (1 << 1)
+        }
+        return account.network.request(Api.functions.channels.clickSponsoredMessage(flags: flags, channel: inputChannel, randomId: Buffer(data: opaqueId)))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> ignoreValues
+    }
+    let _ = signal.start()
 }

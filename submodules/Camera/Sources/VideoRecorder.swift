@@ -123,6 +123,10 @@ private final class VideoRecorderImpl {
     private var previousAppendTime: Double?
     
     public func appendVideoSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
+        #if compiler(>=6.0) // Xcode 16
+        nonisolated(unsafe) let sampleBuffer = sampleBuffer
+        #endif
+        
         self.queue.async {
             guard self.hasError() == nil && !self.stopped else {
                 return
@@ -204,9 +208,9 @@ private final class VideoRecorderImpl {
 
                 if let videoInput = self.videoInput {
                     let time = CACurrentMediaTime()
-                    if let previousPresentationTime = self.previousPresentationTime, let previousAppendTime = self.previousAppendTime {
-                        print("appending \(presentationTime.seconds) (\(presentationTime.seconds - previousPresentationTime) ) on \(time) (\(time - previousAppendTime)")
-                    }
+//                    if let previousPresentationTime = self.previousPresentationTime, let previousAppendTime = self.previousAppendTime {
+//                        print("appending \(presentationTime.seconds) (\(presentationTime.seconds - previousPresentationTime) ) on \(time) (\(time - previousAppendTime)")
+//                    }
                     self.previousPresentationTime = presentationTime.seconds
                     self.previousAppendTime = time
                     
@@ -246,6 +250,10 @@ private final class VideoRecorderImpl {
     }
     
     public func appendAudioSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
+        #if compiler(>=6.0) // Xcode 16
+        nonisolated(unsafe) let sampleBuffer = sampleBuffer
+        #endif
+        
         self.queue.async {
             guard self.hasError() == nil && !self.stopped else {
                 return

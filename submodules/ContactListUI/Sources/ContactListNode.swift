@@ -569,7 +569,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
         if !topPeers.isEmpty {
             var index: Int = 0
             var sectionId: Int = 1
-            for (title, peerIds) in sections {
+            for (title, peerIds, hasActions) in sections {
                 var allSelected = true
                 if let selectedPeerIndices = selectionState?.selectedPeerIndices, !selectedPeerIndices.isEmpty {
                     for peerId in peerIds {
@@ -617,7 +617,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                         }
                         
                         let presence = presences[peer.id]
-                        entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, true, true, nil, false))
+                        entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, hasActions, true, nil, false))
                         
                         index += 1
                     }
@@ -629,7 +629,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
             if !sections.isEmpty, let selectionState {
                 var hasNonBirthdayPeers = false
                 var allBirthdayPeerIds = Set<EnginePeer.Id>()
-                for (_, peerIds) in sections {
+                for (_, peerIds, _) in sections {
                     for peerId in peerIds {
                         allBirthdayPeerIds.insert(peerId)
                     }
@@ -865,7 +865,7 @@ public enum ContactListPresentation {
     public enum TopPeers {
         case none
         case recent
-        case custom([(title: String, peerIds: [EnginePeer.Id])])
+        case custom([(title: String, peerIds: [EnginePeer.Id], hasActions: Bool)])
     }
     
     case orderedByPresence(options: [ContactListAdditionalOption])
@@ -1499,6 +1499,8 @@ public final class ContactListNode: ASDisplayNode {
                                     disabledPeerIds = disabledPeerIds.union(peerIds)
                                 case .excludeWithoutPhoneNumbers:
                                     requirePhoneNumbers = true
+                                case .excludeBots:
+                                    break
                                 }
                             }
                             
@@ -1711,7 +1713,7 @@ public final class ContactListNode: ASDisplayNode {
                     }
                 case let .custom(sections):
                     var peerIds: [EnginePeer.Id] = []
-                    for (_, sectionPeers) in sections {
+                    for (_, sectionPeers, _) in sections {
                         peerIds.append(contentsOf: sectionPeers)
                     }
                     topPeers = combineLatest(
@@ -1786,6 +1788,8 @@ public final class ContactListNode: ASDisplayNode {
                                 disabledPeerIds = disabledPeerIds.union(peerIds)
                             case .excludeWithoutPhoneNumbers:
                                 requirePhoneNumbers = true
+                            case .excludeBots:
+                                break
                             }
                         }
                         

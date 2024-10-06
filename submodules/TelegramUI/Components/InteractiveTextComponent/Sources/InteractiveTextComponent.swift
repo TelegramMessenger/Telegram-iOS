@@ -112,13 +112,14 @@ private final class InteractiveTextNodeLine {
     let isTruncated: Bool
     let isRTL: Bool
     var strikethroughs: [InteractiveTextNodeStrikethrough]
+    var underlines: [InteractiveTextNodeStrikethrough]
     var spoilers: [InteractiveTextNodeSpoiler]
     var spoilerWords: [InteractiveTextNodeSpoiler]
     var embeddedItems: [InteractiveTextNodeEmbeddedItem]
     var attachments: [InteractiveTextNodeAttachment]
     let additionalTrailingLine: (CTLine, Double)?
     
-    init(line: CTLine, constrainedWidth: CGFloat, frame: CGRect, intrinsicWidth: CGFloat, ascent: CGFloat, descent: CGFloat, range: NSRange?, isTruncated: Bool, isRTL: Bool, strikethroughs: [InteractiveTextNodeStrikethrough], spoilers: [InteractiveTextNodeSpoiler], spoilerWords: [InteractiveTextNodeSpoiler], embeddedItems: [InteractiveTextNodeEmbeddedItem], attachments: [InteractiveTextNodeAttachment], additionalTrailingLine: (CTLine, Double)?) {
+    init(line: CTLine, constrainedWidth: CGFloat, frame: CGRect, intrinsicWidth: CGFloat, ascent: CGFloat, descent: CGFloat, range: NSRange?, isTruncated: Bool, isRTL: Bool, strikethroughs: [InteractiveTextNodeStrikethrough], underlines: [InteractiveTextNodeStrikethrough], spoilers: [InteractiveTextNodeSpoiler], spoilerWords: [InteractiveTextNodeSpoiler], embeddedItems: [InteractiveTextNodeEmbeddedItem], attachments: [InteractiveTextNodeAttachment], additionalTrailingLine: (CTLine, Double)?) {
         self.line = line
         self.constrainedWidth = constrainedWidth
         self.frame = frame
@@ -129,6 +130,7 @@ private final class InteractiveTextNodeLine {
         self.isTruncated = isTruncated
         self.isRTL = isRTL
         self.strikethroughs = strikethroughs
+        self.underlines = underlines
         self.spoilers = spoilers
         self.spoilerWords = spoilerWords
         self.embeddedItems = embeddedItems
@@ -494,6 +496,9 @@ public final class InteractiveTextNodeLayout: NSObject {
     public var trailingLineWidth: CGFloat {
         if let lastSegment = self.segments.last, let lastLine = lastSegment.lines.last {
             var width = lastLine.frame.maxX
+            if let additionalTrailingLine = lastLine.additionalTrailingLine {
+                width += additionalTrailingLine.1
+            }
             
             if let blockQuote = lastSegment.blockQuote {
                 if lastLine.frame.intersects(blockQuote.frame) {
@@ -1449,6 +1454,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                         isTruncated: false,
                         isRTL: false,
                         strikethroughs: [],
+                        underlines: [],
                         spoilers: [],
                         spoilerWords: [],
                         embeddedItems: [],
@@ -1490,6 +1496,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                         isTruncated: false,
                         isRTL: isRTL && segment.blockQuote == nil,
                         strikethroughs: [],
+                        underlines: [],
                         spoilers: [],
                         spoilerWords: [],
                         embeddedItems: [],
@@ -1548,6 +1555,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                             isTruncated: true,
                             isRTL: lastLine.isRTL,
                             strikethroughs: [],
+                            underlines: [],
                             spoilers: [],
                             spoilerWords: [],
                             embeddedItems: [],
@@ -1602,11 +1610,12 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                         isTruncated: true,
                         isRTL: lastLine.isRTL,
                         strikethroughs: [],
+                        underlines: [],
                         spoilers: [],
                         spoilerWords: [],
                         embeddedItems: [],
                         attachments: [],
-                        additionalTrailingLine: (truncationToken, 0.0)
+                        additionalTrailingLine: (truncationToken, truncationTokenWidth)
                     )
                 }
             }
@@ -1733,6 +1742,11 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                             let upperX = ceil(CTLineGetOffsetForStringIndex(line.line, range.location + range.length, nil))
                             let x = lowerX < upperX ? lowerX : upperX
                             line.strikethroughs.append(InteractiveTextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: line.frame.height)))
+                        } else if let _ = attributes[NSAttributedString.Key.underlineStyle] {
+                            let lowerX = floor(CTLineGetOffsetForStringIndex(line.line, range.location, nil))
+                            let upperX = ceil(CTLineGetOffsetForStringIndex(line.line, range.location + range.length, nil))
+                            let x = lowerX < upperX ? lowerX : upperX
+                            line.underlines.append(InteractiveTextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: line.frame.height)))
                         }
                         
                         if let embeddedItem = (attributes[NSAttributedString.Key(rawValue: "TelegramEmbeddedItem")] as? AnyHashable ?? attributes[NSAttributedString.Key(rawValue: "Attribute__EmbeddedItem")] as? AnyHashable) {
@@ -2087,6 +2101,14 @@ final class TextContentItem {
     }
 }
 
+private let drawUnderlinesManually: Bool = {
+    if #available(iOS 18.0, *) {
+        return true
+    } else {
+        return false
+    }
+}()
+
 final class TextContentItemLayer: SimpleLayer {
     final class Params {
         let item: TextContentItem
@@ -2315,6 +2337,46 @@ final class TextContentItemLayer: SimpleLayer {
                                 context.translateBy(x: imageRect.midX, y: imageRect.midY)
                                 context.scaleBy(x: 1.0, y: -1.0)
                                 context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+                            }
+                        }
+                    }
+                    
+                    if drawUnderlinesManually {
+                        if !line.strikethroughs.isEmpty {
+                            for strikethrough in line.strikethroughs {
+                                guard let lineRange = line.range else {
+                                    continue
+                                }
+                                var textColor: UIColor?
+                                params.item.attributedString?.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
+                                    if range == strikethrough.range, let color = attributes[NSAttributedString.Key.foregroundColor] as? UIColor {
+                                        textColor = color
+                                    }
+                                }
+                                if let textColor = textColor {
+                                    context.setFillColor(textColor.cgColor)
+                                }
+                                let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+                                context.fill(CGRect(x: frame.minX, y: frame.midY, width: frame.width, height: 1.0))
+                            }
+                        }
+                        
+                        if !line.underlines.isEmpty {
+                            for strikethrough in line.underlines {
+                                guard let lineRange = line.range else {
+                                    continue
+                                }
+                                var textColor: UIColor?
+                                params.item.attributedString?.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
+                                    if range == strikethrough.range, let color = attributes[NSAttributedString.Key.foregroundColor] as? UIColor {
+                                        textColor = color
+                                    }
+                                }
+                                if let textColor = textColor {
+                                    context.setFillColor(textColor.cgColor)
+                                }
+                                let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+                                context.fill(CGRect(x: frame.minX, y: frame.maxY - 2.0, width: frame.width, height: 1.0))
                             }
                         }
                     }

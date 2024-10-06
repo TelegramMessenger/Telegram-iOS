@@ -309,7 +309,7 @@ func managedSynchronizeAttachMenuBots(accountPeerId: PeerId, postbox: Postbox, n
                                         for icon in botIcons {
                                             switch icon {
                                                 case let .attachMenuBotIcon(_, name, icon, _):
-                                                    if let iconName = AttachMenuBots.Bot.IconName(string: name), let icon = telegramMediaFileFromApiDocument(icon) {
+                                                    if let iconName = AttachMenuBots.Bot.IconName(string: name), let icon = telegramMediaFileFromApiDocument(icon, altDocuments: []) {
                                                         icons[iconName] = icon
                                                     }
                                             }
@@ -544,7 +544,7 @@ func _internal_getAttachMenuBot(accountPeerId: PeerId, postbox: Postbox, network
                                 for icon in botIcons {
                                     switch icon {
                                         case let .attachMenuBotIcon(_, name, icon, _):
-                                            if let iconName = AttachMenuBots.Bot.IconName(string: name), let icon = telegramMediaFileFromApiDocument(icon) {
+                                            if let iconName = AttachMenuBots.Bot.IconName(string: name), let icon = telegramMediaFileFromApiDocument(icon, altDocuments: []) {
                                                 icons[iconName] = icon
                                             }
                                     }
@@ -592,7 +592,7 @@ func _internal_getAttachMenuBot(accountPeerId: PeerId, postbox: Postbox, network
     |> switchToLatest
 }
 
-public enum BotAppReference {
+public enum BotAppReference : Equatable {
     case id(id: Int64, accessHash: Int64)
     case shortName(peerId: PeerId, shortName: String)
 }
@@ -755,7 +755,7 @@ func _internal_getBotApp(account: Account, reference: BotAppReference) -> Signal
                     if (botAppFlags & (1 << 2)) != 0 {
                         appFlags.insert(.hasSettings)
                     }
-                    return .single(BotApp(id: id, accessHash: accessHash, shortName: shortName, title: title, description: description, photo: telegramMediaImageFromApiPhoto(photo), document: document.flatMap(telegramMediaFileFromApiDocument), hash: hash, flags: appFlags))
+                    return .single(BotApp(id: id, accessHash: accessHash, shortName: shortName, title: title, description: description, photo: telegramMediaImageFromApiPhoto(photo), document: document.flatMap { telegramMediaFileFromApiDocument($0, altDocuments: []) }, hash: hash, flags: appFlags))
                 case .botAppNotModified:
                     return .complete()
                 }
@@ -770,7 +770,7 @@ extension BotApp {
     convenience init?(apiBotApp: Api.BotApp) {
         switch apiBotApp {
         case let .botApp(_, id, accessHash, shortName, title, description, photo, document, hash):
-            self.init(id: id, accessHash: accessHash, shortName: shortName, title: title, description: description, photo: telegramMediaImageFromApiPhoto(photo), document: document.flatMap(telegramMediaFileFromApiDocument), hash: hash, flags: [])
+            self.init(id: id, accessHash: accessHash, shortName: shortName, title: title, description: description, photo: telegramMediaImageFromApiPhoto(photo), document: document.flatMap { telegramMediaFileFromApiDocument($0, altDocuments: []) }, hash: hash, flags: [])
         case .botAppNotModified:
             return nil
         }

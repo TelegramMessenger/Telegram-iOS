@@ -7,9 +7,12 @@ import TelegramPresentationData
 import ItemListUI
 import ShimmerEffect
 import TelegramCore
+import TextNodeWithEntities
+import AccountContext
+import TextFormat
 
 func invitationAvailability(_ invite: ExportedInvitation) -> CGFloat {
-    if case let .link(_, _, _, _, isRevoked, _, date, startDate, expireDate, usageLimit, count, _) = invite {
+    if case let .link(_, _, _, _, isRevoked, _, date, startDate, expireDate, usageLimit, count, _, _) = invite {
         if isRevoked {
             return 0.0
         }
@@ -42,7 +45,7 @@ private enum ItemBackgroundColor: Equatable {
             case .blue:
                 return (UIColor(rgb: 0x00b5f7), UIColor(rgb: 0x00b2f6), UIColor(rgb: 0xa7f4ff))
             case .green:
-                return (UIColor(rgb: 0x4aca62), UIColor(rgb: 0x43c85c), UIColor(rgb: 0xc5ffe6))
+                return (UIColor(rgb: 0x31b73b), UIColor(rgb: 0x88d93b), UIColor(rgb: 0xc5ffe6))
             case .yellow:
                 return (UIColor(rgb: 0xf8a953), UIColor(rgb: 0xf7a64e), UIColor(rgb: 0xfeffd7))
             case .red:
@@ -54,6 +57,7 @@ private enum ItemBackgroundColor: Equatable {
 }
 
 public class ItemListInviteLinkItem: ListViewItem, ItemListItem {
+    let context: AccountContext
     let presentationData: ItemListPresentationData
     let invite: ExportedInvitation?
     let share: Bool
@@ -64,6 +68,7 @@ public class ItemListInviteLinkItem: ListViewItem, ItemListItem {
     public let tag: ItemListItemTag?
     
     public init(
+        context: AccountContext,
         presentationData: ItemListPresentationData,
         invite: ExportedInvitation?,
         share: Bool,
@@ -73,6 +78,7 @@ public class ItemListInviteLinkItem: ListViewItem, ItemListItem {
         contextAction: ((ExportedInvitation, ASDisplayNode, ContextGesture?) -> Void)?,
         tag: ItemListItemTag? = nil
     ) {
+        self.context = context
         self.presentationData = presentationData
         self.invite = invite
         self.share = share
@@ -170,11 +176,13 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
     
     private let titleNode: TextNode
     private let subtitleNode: TextNode
+    private let pricingNode: TextNodeWithEntities
     
     private var placeholderNode: ShimmerEffectNode?
     private var absoluteLocation: (CGRect, CGSize)?
     
     private var currentColor: ItemBackgroundColor?
+    private var currentIsPaid: Bool?
     private var layoutParams: (ItemListInviteLinkItem, ListViewItemLayoutParams, ItemListNeighbors, Bool, Bool)?
     
     public var tag: ItemListItemTag?
@@ -201,7 +209,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
         
         self.iconBackgroundNode = ASDisplayNode()
         self.iconBackgroundNode.setLayerBlock { () -> CALayer in
-            return CAShapeLayer()
+            return CAGradientLayer()
         }
         
         self.iconNode = ASImageNode()
@@ -218,6 +226,8 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
         self.subtitleNode.isUserInteractionEnabled = false
         self.subtitleNode.contentMode = .left
         self.subtitleNode.contentsScale = UIScreen.main.scale
+        
+        self.pricingNode = TextNodeWithEntities()
             
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
@@ -237,6 +247,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
         self.offsetContainerNode.addSubnode(self.iconNode)
         self.offsetContainerNode.addSubnode(self.titleNode)
         self.offsetContainerNode.addSubnode(self.subtitleNode)
+        self.offsetContainerNode.addSubnode(self.pricingNode.textNode)
         
         self.containerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self, let item = strongSelf.layoutParams?.0, let invite = item.invite, let contextAction = item.contextAction else {
@@ -266,20 +277,25 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                     self?.extractedBackgroundImageNode.image = nil
                 }
             })
+            transition.updateAlpha(node: strongSelf.pricingNode.textNode, alpha: isExtracted ? 0.0 : 1.0)
         }
     }
     
     public override func didLoad() {
         super.didLoad()
         
-        if let shapeLayer = self.iconBackgroundNode.layer as? CAShapeLayer {
-            shapeLayer.path = UIBezierPath(ovalIn: CGRect(x: 0.0, y: 0.0, width: 40.0, height: 40.0)).cgPath
+        self.iconBackgroundNode.cornerRadius = 20.0
+        if let iconBackgroundLayer = self.iconBackgroundNode.layer as? CAGradientLayer {
+            iconBackgroundLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
+            iconBackgroundLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
+            iconBackgroundLayer.type = .axial
         }
     }
     
     public func asyncLayout() -> (_ item: ItemListInviteLinkItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors, _ firstWithHeader: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
+        let makePricingLayout = TextNodeWithEntities.asyncLayout(self.pricingNode)
         
         let currentItem = self.layoutParams?.0
                 
@@ -299,14 +315,19 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
             let color: ItemBackgroundColor
             let nextColor: ItemBackgroundColor
             let transitionFraction: CGFloat
-            if let invite = item.invite, case let .link(_, _, _, _, isRevoked, _, _, _, expireDate, usageLimit, _, _) = invite {
+            if let invite = item.invite, case let .link(_, _, _, _, isRevoked, _, _, _, expireDate, usageLimit, _, _, pricing) = invite {
                 if isRevoked {
                     color = .gray
                     nextColor = .gray
                     transitionFraction = 0.0
                 } else if expireDate == nil && usageLimit == nil {
-                    color = .blue
-                    nextColor = .blue
+                    if let _ = pricing {
+                        color = .green
+                        nextColor = .green
+                    } else {
+                        color = .blue
+                        nextColor = .blue
+                    }
                     transitionFraction = 0.0
                 } else if availability >= 0.5 {
                     color = .green
@@ -327,26 +348,33 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                 transitionFraction = 0.0
             }
             
-            let topColor = color.colors.top
-            let nextTopColor = nextColor.colors.top
-            let iconColor: UIColor
+            let colors = color.colors
+            let nextColors = nextColor.colors
+            let topIconColor: UIColor
+            let bottomIconColor: UIColor
             if let _ = item.invite {
-                if case .blue = color {
-                    iconColor = item.presentationData.theme.list.itemAccentColor
+                if case .green = color, item.invite?.pricing != nil {
+                    topIconColor = color.colors.bottom
+                    bottomIconColor = color.colors.top
+                } else if case .blue = color {
+                    topIconColor = item.presentationData.theme.list.itemAccentColor
+                    bottomIconColor = topIconColor
                 } else {
-                    iconColor = nextTopColor.mixedWith(topColor, alpha: transitionFraction)
+                    topIconColor = nextColors.top.mixedWith(colors.top, alpha: transitionFraction)
+                    bottomIconColor = topIconColor
                 }
             } else {
-                iconColor = item.presentationData.theme.list.mediaPlaceholderColor
+                topIconColor = item.presentationData.theme.list.mediaPlaceholderColor
+                bottomIconColor = topIconColor
             }
             
             let inviteLink = item.invite?.link?.replacingOccurrences(of: "https://", with: "") ?? ""
             var titleText = inviteLink
             var subtitleText: String = ""
+            var pricingAttributedText: NSMutableAttributedString?
             var timerValue: TimerNode.Value?
             
-            
-            if let invite = item.invite, case let  .link(_, title, _, _, _, _, date, startDate, expireDate, usageLimit, count, requestedCount) = invite {
+            if let invite = item.invite, case let  .link(_, title, _, _, _, _, date, startDate, expireDate, usageLimit, count, requestedCount, subscriptionPricing) = invite {
                 if let title = title, !title.isEmpty {
                     titleText = title
                 }
@@ -373,6 +401,18 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                         subtitleText += ", "
                     }
                     subtitleText += item.presentationData.strings.MemberRequests_PeopleRequestedShort(requestedCount)
+                }
+                
+                if let subscriptionPricing {
+                    let text = NSMutableAttributedString()
+                    text.append(NSAttributedString(string: "⭐️\(subscriptionPricing.amount)\n", font: Font.semibold(17.0), textColor: item.presentationData.theme.list.itemPrimaryTextColor))
+                    text.append(NSAttributedString(string: item.presentationData.strings.InviteLink_PerMonth, font: Font.regular(13.0), textColor: item.presentationData.theme.list.itemSecondaryTextColor))
+                    if let range = text.string.range(of: "⭐️") {
+                        text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: text.string))
+                        text.addAttribute(NSAttributedString.Key.font, value: Font.semibold(15.0), range: NSRange(range, in: text.string))
+                        text.addAttribute(.baselineOffset, value: 3.5, range: NSRange(range, in: text.string))
+                    }
+                    pricingAttributedText = text
                 }
                 
                 if invite.isRevoked {
@@ -443,6 +483,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
            
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (pricingLayout, pricingApply) = makePricingLayout(TextNodeLayoutArguments(attributedString: pricingAttributedText, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .right, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
             
             let titleSpacing: CGFloat = 1.0
             
@@ -495,8 +536,11 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     strongSelf.contextSourceNode.contentRect = extractedRect
                      
-                    if let layer = strongSelf.iconBackgroundNode.layer as? CAShapeLayer {
-                        layer.fillColor = iconColor.cgColor
+                    if let iconBackgroundLayer = strongSelf.iconBackgroundNode.layer as? CAGradientLayer {
+                        iconBackgroundLayer.colors = [
+                            topIconColor.cgColor,
+                            bottomIconColor.cgColor
+                        ]
                     }
                     
                     if let _ = updatedTheme {
@@ -504,14 +548,23 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
-                        
-                        strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor)
+                    }
+                    
+                    let isPaid = item.invite?.pricing != nil
+                    if updatedTheme != nil || strongSelf.currentIsPaid != isPaid {
+                        strongSelf.currentIsPaid = isPaid
+                        if isPaid {
+                            strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/SubscriptionLink"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor)
+                        } else {
+                            strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/InviteLink"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor)
+                        }
                     }
                                         
                     let transition = ContainedViewLayoutTransition.immediate
                                         
                     let _ = titleApply()
                     let _ = subtitleApply()
+                    let _ = pricingApply(TextNodeWithEntities.Arguments(context: item.context, cache: item.context.animationCache, renderer: item.context.animationRenderer, placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, attemptSynchronous: false))
                     
                     switch item.style {
                         case .plain:
@@ -597,7 +650,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.timerNode = timerNode
                             strongSelf.offsetContainerNode.addSubnode(timerNode)
                         }
-                        timerNode.update(color: iconColor, value: timerValue)
+                        timerNode.update(color: topIconColor, value: timerValue)
                     } else if let timerNode = strongSelf.timerNode {
                         strongSelf.timerNode = nil
                         timerNode.removeFromSupernode()
@@ -607,6 +660,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                     
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.size))
                     transition.updateFrame(node: strongSelf.subtitleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: verticalInset + titleLayout.size.height + titleSpacing), size: subtitleLayout.size))
+                    transition.updateFrame(node: strongSelf.pricingNode.textNode, frame: CGRect(origin: CGPoint(x: layout.contentSize.width - rightInset - pricingLayout.size.width, y: floorToScreenPixels((layout.contentSize.height - pricingLayout.size.height) / 2.0)), size: pricingLayout.size))
                                         
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
                     

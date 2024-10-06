@@ -585,9 +585,7 @@ final class MediaPickerGridItemNode: GridItemNode {
             
             var typeIcon: UIImage?
             var duration: String?
-            if asset.isFavorite {
-                typeIcon = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Favorite"), color: .white)
-            } else if asset.mediaType == .video {
+            if asset.mediaType == .video {
                 if asset.mediaSubtypes.contains(.videoHighFrameRate) {
                     typeIcon = UIImage(bundleImageName: "Media Editor/MediaSlomo")
                 } else if asset.mediaSubtypes.contains(.videoTimelapse) {
@@ -596,6 +594,9 @@ final class MediaPickerGridItemNode: GridItemNode {
                     typeIcon = UIImage(bundleImageName: "Media Editor/MediaVideo")
                 }
                 duration = stringForDuration(Int32(asset.duration))
+            }
+            if asset.isFavorite {
+                typeIcon = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Favorite"), color: .white)
             }
             
             if typeIcon != nil {

@@ -12,14 +12,6 @@ struct ArbitraryRandomNumberGenerator : RandomNumberGenerator {
     func next() -> UInt64 { return UInt64(drand48() * Double(UInt64.max)) }
 }
 
-func createEmitterBehavior(type: String) -> NSObject {
-    let selector = ["behaviorWith", "Type:"].joined(separator: "")
-    let behaviorClass = NSClassFromString(["CA", "Emitter", "Behavior"].joined(separator: "")) as! NSObject.Type
-    let behaviorWithType = behaviorClass.method(for: NSSelectorFromString(selector))!
-    let castedBehaviorWithType = unsafeBitCast(behaviorWithType, to:(@convention(c)(Any?, Selector, Any?) -> NSObject).self)
-    return castedBehaviorWithType(behaviorClass, NSSelectorFromString(selector), type)
-}
-
 func generateMaskImage(size originalSize: CGSize, position: CGPoint, inverse: Bool) -> UIImage? {
     var size = originalSize
     var position = position
@@ -123,10 +115,10 @@ public class InvisibleInkDustView: UIView {
             emitter.setValue(2.0, forKey: "massRange")
             self.emitter = emitter
             
-            let fingerAttractor = createEmitterBehavior(type: "simpleAttractor")
+            let fingerAttractor = CAEmitterCell.createEmitterBehavior(type: "simpleAttractor")
             fingerAttractor.setValue("fingerAttractor", forKey: "name")
             
-            let alphaBehavior = createEmitterBehavior(type: "valueOverLife")
+            let alphaBehavior = CAEmitterCell.createEmitterBehavior(type: "valueOverLife")
             alphaBehavior.setValue("color.alpha", forKey: "keyPath")
             alphaBehavior.setValue([0.0, 0.0, 1.0, 0.0, -1.0], forKey: "values")
             alphaBehavior.setValue(true, forKey: "additive")
@@ -435,10 +427,10 @@ public class InvisibleInkDustNode: ASDisplayNode {
             emitter.setValue(2.0, forKey: "massRange")
             self.emitter = emitter
             
-            let fingerAttractor = createEmitterBehavior(type: "simpleAttractor")
+            let fingerAttractor = CAEmitterCell.createEmitterBehavior(type: "simpleAttractor")
             fingerAttractor.setValue("fingerAttractor", forKey: "name")
             
-            let alphaBehavior = createEmitterBehavior(type: "valueOverLife")
+            let alphaBehavior = CAEmitterCell.createEmitterBehavior(type: "valueOverLife")
             alphaBehavior.setValue("color.alpha", forKey: "keyPath")
             alphaBehavior.setValue([0.0, 0.0, 1.0, 0.0, -1.0], forKey: "values")
             alphaBehavior.setValue(true, forKey: "additive")

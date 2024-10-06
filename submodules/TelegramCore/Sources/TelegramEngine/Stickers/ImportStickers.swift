@@ -80,15 +80,15 @@ func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResour
                             var attributes: [Api.DocumentAttribute] = []
                             attributes.append(.documentAttributeSticker(flags: 0, alt: alt, stickerset: .inputStickerSetEmpty, maskCoords: nil))
                             if let duration {
-                                attributes.append(.documentAttributeVideo(flags: 0, duration: duration, w: dimensions.width, h: dimensions.height, preloadPrefixSize: nil))
+                                attributes.append(.documentAttributeVideo(flags: 0, duration: duration, w: dimensions.width, h: dimensions.height, preloadPrefixSize: nil, videoStartTs: nil, videoCodec: nil))
                             }
                             attributes.append(.documentAttributeImageSize(w: dimensions.width, h: dimensions.height))
                             return account.network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: file, thumb: thumbnailFile, mimeType: mimeType, attributes: attributes, stickers: nil, ttlSeconds: nil)))
                             |> mapError { _ -> UploadStickerError in return .generic }
                             |> mapToSignal { media -> Signal<UploadStickerStatus, UploadStickerError> in
                                 switch media {
-                                case let .messageMediaDocument(_, document, _, _):
-                                    if let document = document, let file = telegramMediaFileFromApiDocument(document), let uploadedResource = file.resource as? CloudDocumentMediaResource {
+                                case let .messageMediaDocument(_, document, altDocuments, _):
+                                    if let document = document, let file = telegramMediaFileFromApiDocument(document, altDocuments: altDocuments), let uploadedResource = file.resource as? CloudDocumentMediaResource {
                                         account.postbox.mediaBox.copyResourceData(from: resource.id, to: uploadedResource.id, synchronous: true)
                                         if let thumbnail, let previewRepresentation = file.previewRepresentations.first(where: { $0.dimensions == PixelDimensions(width: 320, height: 320) }) {
                                             account.postbox.mediaBox.copyResourceData(from: thumbnail.id, to: previewRepresentation.resource.id, synchronous: true)
@@ -144,7 +144,7 @@ public extension ImportSticker {
             fileAttributes.append(.FileName(fileName: "sticker.webm"))
             fileAttributes.append(.Animated)
             fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
-            fileAttributes.append(.Video(duration: self.duration ?? 3.0, size: self.dimensions, flags: [], preloadSize: nil))
+            fileAttributes.append(.Video(duration: self.duration ?? 3.0, size: self.dimensions, flags: [], preloadSize: nil, coverTime: nil, videoCodec: nil))
         } else if self.mimeType == "application/x-tgsticker" {
             fileAttributes.append(.FileName(fileName: "sticker.tgs"))
             fileAttributes.append(.Animated)
@@ -159,7 +159,7 @@ public extension ImportSticker {
             previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil))
         }
         
-        return StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: EngineMedia.Id(namespace: 0, id: 0), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: self.mimeType, size: nil, attributes: fileAttributes), indexKeys: [])
+        return StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: EngineMedia.Id(namespace: 0, id: 0), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: self.mimeType, size: nil, attributes: fileAttributes, alternativeRepresentations: []), indexKeys: [])
     }
 }
 
@@ -560,7 +560,7 @@ func _internal_getMyStickerSets(account: Account) -> Signal<[(StickerPackCollect
                     }
                     let info = StickerPackCollectionInfo(apiSet: set, namespace: namespace)
                     var firstItem: StickerPackItem?
-                    if let file = telegramMediaFileFromApiDocument(cover), let id = file.id {
+                    if let file = telegramMediaFileFromApiDocument(cover, altDocuments: []), let id = file.id {
                         firstItem = StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: id.id), file: file, indexKeys: [])
                     }
                     infos.append((info, firstItem))
@@ -579,7 +579,7 @@ func _internal_getMyStickerSets(account: Account) -> Signal<[(StickerPackCollect
                     let info = StickerPackCollectionInfo(apiSet: set, namespace: namespace)
                     var firstItem: StickerPackItem?
                     if let apiDocument = documents.first {
-                        if let file = telegramMediaFileFromApiDocument(apiDocument), let id = file.id {
+                        if let file = telegramMediaFileFromApiDocument(apiDocument, altDocuments: []), let id = file.id {
                             firstItem = StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: id.id), file: file, indexKeys: [])
                         }
                     }
@@ -642,7 +642,7 @@ private func parseStickerSetInfoAndItems(apiStickerSet: Api.messages.StickerSet)
         
         var items: [StickerPackItem] = []
         for apiDocument in documents {
-            if let file = telegramMediaFileFromApiDocument(apiDocument), let id = file.id {
+            if let file = telegramMediaFileFromApiDocument(apiDocument, altDocuments: []), let id = file.id {
                 let fileIndexKeys: [MemoryBuffer]
                 if let indexKeys = indexKeysByFile[id] {
                     fileIndexKeys = indexKeys

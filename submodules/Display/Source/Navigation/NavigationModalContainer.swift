@@ -90,6 +90,7 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         self.scrollNode.view.delaysContentTouches = false
         self.scrollNode.view.clipsToBounds = false
         self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
+        self.scrollNode.view.tag = 0x5C4011
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] _ in
             guard let strongSelf = self, !strongSelf.isDismissed else {
@@ -245,6 +246,8 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         self.view.endEditing(true)
     }
     
+    private var isDraggingHeader = false
+    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if self.ignoreScrolling || self.isDismissed {
             return
@@ -253,6 +256,9 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         progress = max(0.0, min(1.0, progress))
         self.dismissProgress = progress
         self.applyDismissProgress(transition: .immediate, completion: {})
+        
+        let location = scrollView.panGestureRecognizer.location(in: scrollView).offsetBy(dx: 0.0, dy: -self.container.frame.minY)
+        self.isDraggingHeader = location.y < 66.0
     }
     
     private func applyDismissProgress(transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
@@ -277,10 +283,20 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         let transition: ContainedViewLayoutTransition
         let dismissProgress: CGFloat
         if (velocity.y < -0.5 || progress >= 0.5) && self.checkInteractiveDismissWithControllers() {
-            dismissProgress = 1.0
-            targetOffset = 0.0
-            transition = .animated(duration: duration, curve: .easeInOut)
-            self.isDismissed = true
+            if let controller = self.container.controllers.last as? MinimizableController {
+                dismissProgress = 0.0
+                targetOffset = 0.0
+                transition = .immediate
+                
+                let topEdgeOffset = self.container.view.convert(self.container.bounds, to: self.view).minY
+                controller.requestMinimize(topEdgeOffset: topEdgeOffset, initialVelocity: velocity.y)
+                self.dim.removeFromSupernode()
+            } else {
+                dismissProgress = 1.0
+                targetOffset = 0.0
+                transition = .animated(duration: duration, curve: .easeInOut)
+                self.isDismissed = true
+            }
         } else {
             dismissProgress = 0.0
             targetOffset = self.bounds.height
@@ -485,7 +501,7 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
                 let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
                 let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
                 alphaTransition.updateAlpha(node: self.dim, alpha: 0.0, beginWithCurrentState: true)
-                if let lastController = self.container.controllers.last, lastController.isMinimized {
+                if let lastController = self.container.controllers.last as? MinimizableController, lastController.isMinimized {
                     self.dim.layer.removeAllAnimations()
                 }
                 positionTransition.updatePosition(node: self.container, position: CGPoint(x: self.container.position.x, y: self.bounds.height + self.container.bounds.height / 2.0 + self.bounds.height), beginWithCurrentState: true, completion: { [weak self] _ in

@@ -194,6 +194,7 @@ private final class AdminUserActionsSheetComponent: Component {
     let chatPeer: EnginePeer
     let peers: [RenderedChannelParticipant]
     let messageCount: Int
+    let deleteAllMessageCount: Int?
     let completion: (AdminUserActionsSheet.Result) -> Void
     
     init(
@@ -201,12 +202,14 @@ private final class AdminUserActionsSheetComponent: Component {
         chatPeer: EnginePeer,
         peers: [RenderedChannelParticipant],
         messageCount: Int,
+        deleteAllMessageCount: Int?,
         completion: @escaping (AdminUserActionsSheet.Result) -> Void
     ) {
         self.context = context
         self.chatPeer = chatPeer
         self.peers = peers
         self.messageCount = messageCount
+        self.deleteAllMessageCount = deleteAllMessageCount
         self.completion = completion
     }
     
@@ -221,6 +224,9 @@ private final class AdminUserActionsSheetComponent: Component {
             return false
         }
         if lhs.messageCount != rhs.messageCount {
+            return false
+        }
+        if lhs.deleteAllMessageCount != rhs.deleteAllMessageCount {
             return false
         }
         return true
@@ -525,7 +531,7 @@ private final class AdminUserActionsSheetComponent: Component {
                         allowedParticipantRights = []
                         allowedMediaRights = []
                         break loop
-                    case let .member(_, _, adminInfo, banInfo, _):
+                    case let .member(_, _, adminInfo, banInfo, _, _):
                         if adminInfo != nil {
                             (allowedParticipantRights, allowedMediaRights) = rightsFromBannedRights([])
                             break loop
@@ -619,7 +625,7 @@ private final class AdminUserActionsSheetComponent: Component {
                             switch peer.participant {
                             case .creator:
                                 canBanEveryone = false
-                            case let .member(_, _, adminInfo, banInfo, _):
+                            case let .member(_, _, adminInfo, banInfo, _, _):
                                 let _ = banInfo
                                 if let adminInfo {
                                     if channel.flags.contains(.isCreator) {
@@ -642,7 +648,7 @@ private final class AdminUserActionsSheetComponent: Component {
                 let sectionId: AnyHashable
                 let selectedPeers: Set<EnginePeer.Id>
                 let isExpanded: Bool
-                let title: String
+                var title: String
                 
                 switch section {
                 case .report:
@@ -870,7 +876,14 @@ private final class AdminUserActionsSheetComponent: Component {
                 )))
             }
             
-            let titleString: String = environment.strings.Chat_AdminActionSheet_DeleteTitle(Int32(component.messageCount))
+            var titleString: String = environment.strings.Chat_AdminActionSheet_DeleteTitle(Int32(component.messageCount))
+            
+            if let deleteAllMessageCount = component.deleteAllMessageCount {
+                if self.optionDeleteAllSelectedPeers == Set(component.peers.map(\.peer.id)) {
+                    titleString = environment.strings.Chat_AdminActionSheet_DeleteTitle(Int32(deleteAllMessageCount))
+                }
+            }
+            
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -884,7 +897,9 @@ private final class AdminUserActionsSheetComponent: Component {
                 if titleView.superview == nil {
                     self.navigationBarContainer.addSubview(titleView)
                 }
-                transition.setFrame(view: titleView, frame: titleFrame)
+                //transition.setPosition(view: titleView, position: titleFrame.center)
+                titleView.center = titleFrame.center
+                titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
             }
             
             let navigationBackgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: 54.0))
@@ -1424,10 +1439,10 @@ public class AdminUserActionsSheet: ViewControllerComponentContainer {
     
     private var isDismissed: Bool = false
     
-    public init(context: AccountContext, chatPeer: EnginePeer, peers: [RenderedChannelParticipant], messageCount: Int, completion: @escaping (Result) -> Void) {
+    public init(context: AccountContext, chatPeer: EnginePeer, peers: [RenderedChannelParticipant], messageCount: Int, deleteAllMessageCount: Int?, completion: @escaping (Result) -> Void) {
         self.context = context
         
-        super.init(context: context, component: AdminUserActionsSheetComponent(context: context, chatPeer: chatPeer, peers: peers, messageCount: messageCount, completion: completion), navigationBarAppearance: .none)
+        super.init(context: context, component: AdminUserActionsSheetComponent(context: context, chatPeer: chatPeer, peers: peers, messageCount: messageCount, deleteAllMessageCount: deleteAllMessageCount, completion: completion), navigationBarAppearance: .none)
         
         self.statusBar.statusBarStyle = .Ignore
         self.navigationPresentation = .flatModal

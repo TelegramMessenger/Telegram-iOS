@@ -32,7 +32,11 @@ swift_library(
         "//submodules/Components/SolidRoundedButtonComponent",
         "//submodules/AvatarNode",
         "//submodules/TelegramUI/Components/Stars/StarsImageComponent",
+        "//submodules/TelegramUI/Components/Stars/StarsAvatarComponent",
         "//submodules/GalleryUI",
+        "//submodules/TelegramUI/Components/MiniAppListScreen",
+        "//submodules/TelegramUI/Components/Premium/PremiumStarComponent",
+        "//submodules/TelegramUI/Components/Gifts/GiftAnimationComponent",
     ],
     visibility = [
         "//visibility:public",

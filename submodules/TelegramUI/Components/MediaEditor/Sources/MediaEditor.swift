@@ -476,6 +476,7 @@ public final class MediaEditor {
                 audioTrackOffset: nil,
                 audioTrackVolume: nil,
                 audioTrackSamples: nil,
+                coverImageTimestamp: nil,
                 qualityPreset: nil
             )
         }
@@ -498,6 +499,9 @@ public final class MediaEditor {
         } else if case let .video(_, _, _, _, _, duration) = subject {
             self.playerPlaybackState = PlaybackState(duration: duration, position: 0.0, isPlaying: false, hasAudio: true)
             self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
+        } else if case let .draft(mediaEditorDraft) = subject, mediaEditorDraft.isVideo {
+            self.playerPlaybackState = PlaybackState(duration: mediaEditorDraft.duration ?? 0.0, position: 0.0, isPlaying: false, hasAudio: true)
+            self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
         }
     }
     
@@ -519,7 +523,7 @@ public final class MediaEditor {
         self.renderer.consume(main: .texture(texture, time, hasTransparency), additional: additionalTexture.flatMap { .texture($0, time, false) }, render: true, displayEnabled: false)
     }
     
-    private func setupSource() {
+    private func setupSource(andPlay: Bool) {
         guard let renderTarget = self.previewView else {
             return
         }
@@ -829,6 +833,9 @@ public final class MediaEditor {
                     self.setupTimeObservers()
                     Queue.mainQueue().justDispatch {
                         let startPlayback = {
+                            guard andPlay else {
+                                return
+                            }
                             player.playImmediately(atRate: 1.0)
 //                            additionalPlayer?.playImmediately(atRate: 1.0)
                             self.audioPlayer?.playImmediately(atRate: 1.0)
@@ -940,13 +947,13 @@ public final class MediaEditor {
         self.audioDelayTimer = nil
     }
     
-    public func attachPreviewView(_ previewView: MediaEditorPreviewView) {
+    public func attachPreviewView(_ previewView: MediaEditorPreviewView, andPlay: Bool) {
         self.previewView?.renderer = nil
         
         self.previewView = previewView
         previewView.renderer = self.renderer
         
-        self.setupSource()
+        self.setupSource(andPlay: andPlay)
     }
     
     private var skipRendering = false
@@ -1507,7 +1514,15 @@ public final class MediaEditor {
     
     public func setVideoTrimRange(_ trimRange: Range<Double>, apply: Bool) {
         self.updateValues(mode: .skipRendering) { values in
-            return values.withUpdatedVideoTrimRange(trimRange)
+            var updatedValues = values.withUpdatedVideoTrimRange(trimRange)
+            if let coverImageTimestamp = updatedValues.coverImageTimestamp {
+                if coverImageTimestamp < trimRange.lowerBound {
+                    updatedValues = updatedValues.withUpdatedCoverImageTimestamp(trimRange.lowerBound)
+                } else if coverImageTimestamp > trimRange.upperBound {
+                    updatedValues = updatedValues.withUpdatedCoverImageTimestamp(trimRange.upperBound)
+                }
+            }
+            return updatedValues
         }
         
         if apply {
@@ -1730,6 +1745,12 @@ public final class MediaEditor {
             audioMixInputParameters.setVolume(Float(volume ?? 1.0), at: .zero)
             audioMix.inputParameters = [audioMixInputParameters]
             self.audioPlayer?.currentItem?.audioMix = audioMix
+        }
+    }
+    
+    public func setCoverImageTimestamp(_ coverImageTimestamp: Double?) {
+        self.updateValues(mode: .skipRendering) { values in
+            return values.withUpdatedCoverImageTimestamp(coverImageTimestamp)
         }
     }
     

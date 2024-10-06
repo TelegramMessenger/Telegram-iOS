@@ -131,7 +131,7 @@ class PercentChartComponentController: GeneralChartComponentController {
         verticalScalesRenderer.setVisible(visibility.contains(true), animated: animated)
     }
     
-    override func chartDetailsViewModel(closestDate: Date, pointIndex: Int) -> ChartDetailsViewModel {
+    override func chartDetailsViewModel(closestDate: Date, pointIndex: Int, currency: GraphCurrency? = nil, rate: Double = 1.0) -> ChartDetailsViewModel {
         let visibleValues = visibleDetailsChartValues
         
         let total = visibleValues.map { $0.values[pointIndex] }.reduce(0, +)

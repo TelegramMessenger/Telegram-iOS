@@ -538,7 +538,7 @@ public func peerAllowedReactionListController(
             }
             
             if initialAllowedReactions != .known(updatedValue) {
-                let _ = context.engine.peers.updatePeerReactionSettings(peerId: peerId, reactionSettings: PeerReactionSettings(allowedReactions: updatedValue, maxReactionCount: 11)).start()
+                let _ = context.engine.peers.updatePeerReactionSettings(peerId: peerId, reactionSettings: PeerReactionSettings(allowedReactions: updatedValue, maxReactionCount: 11, starsAllowed: nil)).start()
             }
         })
     }

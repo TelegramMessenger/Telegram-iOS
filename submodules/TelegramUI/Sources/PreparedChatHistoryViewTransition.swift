@@ -194,7 +194,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                         index += 1
                     }
                 }
-            case let .index(scrollSubject, position, directionHint, animated, highlight, displayLink):
+            case let .index(scrollSubject, position, directionHint, animated, highlight, displayLink, _):
                 let scrollIndex = scrollSubject
                 var position = position
                 if case .center = position, highlight {

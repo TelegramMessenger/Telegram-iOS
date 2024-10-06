@@ -10,14 +10,14 @@ func _internal_updateChannelMemberBannedRights(account: Account, peerId: PeerId,
         return account.postbox.transaction { transaction -> Signal<(ChannelParticipant?, RenderedChannelParticipant?, Bool), NoError> in
             if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer), let _ = transaction.getPeer(account.peerId), let memberPeer = transaction.getPeer(memberId), let inputPeer = apiInputPeer(memberPeer) {
                 let updatedParticipant: ChannelParticipant
-                if let currentParticipant = currentParticipant, case let .member(_, invitedAt, _, currentBanInfo, _) = currentParticipant {
+                if let currentParticipant = currentParticipant, case let .member(_, invitedAt, _, currentBanInfo, _, subscriptionUntilDate) = currentParticipant {
                     let banInfo: ChannelParticipantBannedInfo?
                     if let rights = rights, !rights.flags.isEmpty {
                         banInfo = ChannelParticipantBannedInfo(rights: rights, restrictedBy: currentBanInfo?.restrictedBy ?? account.peerId, timestamp: currentBanInfo?.timestamp ?? Int32(Date().timeIntervalSince1970), isMember: currentBanInfo?.isMember ?? true)
                     } else {
                         banInfo = nil
                     }
-                    updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: invitedAt, adminInfo: nil, banInfo: banInfo, rank: nil)
+                    updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: invitedAt, adminInfo: nil, banInfo: banInfo, rank: nil, subscriptionUntilDate: subscriptionUntilDate)
                 } else {
                     let banInfo: ChannelParticipantBannedInfo?
                     if let rights = rights, !rights.flags.isEmpty {
@@ -25,7 +25,7 @@ func _internal_updateChannelMemberBannedRights(account: Account, peerId: PeerId,
                     } else {
                         banInfo = nil
                     }
-                    updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: banInfo, rank: nil)
+                    updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: banInfo, rank: nil, subscriptionUntilDate: nil)
                 }
 
                 let apiRights: Api.ChatBannedRights
@@ -48,7 +48,7 @@ func _internal_updateChannelMemberBannedRights(account: Account, peerId: PeerId,
                         switch currentParticipant {
                             case .creator:
                                 break
-                            case let .member(_, _, adminInfo, banInfo, _):
+                            case let .member(_, _, adminInfo, banInfo, _, _):
                                 if let _ = adminInfo {
                                     wasAdmin = true
                                 }
@@ -131,7 +131,7 @@ func _internal_updateChannelMemberBannedRights(account: Account, peerId: PeerId,
                         if let presence = transaction.getPeerPresence(peerId: memberPeer.id) {
                             presences[memberPeer.id] = presence
                         }
-                        if case let .member(_, _, _, maybeBanInfo, _) = updatedParticipant, let banInfo = maybeBanInfo {
+                        if case let .member(_, _, _, maybeBanInfo, _, _) = updatedParticipant, let banInfo = maybeBanInfo {
                             if let peer = transaction.getPeer(banInfo.restrictedBy) {
                                 peers[peer.id] = peer
                             }

@@ -17,6 +17,8 @@ swift_library(
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/TgVoip:TgVoip",
         "//submodules/TgVoipWebrtc:TgVoipWebrtc",
+        "//submodules/FFMpegBinding",
+        "//submodules/ManagedFile",
     ],
     visibility = [
         "//visibility:public",

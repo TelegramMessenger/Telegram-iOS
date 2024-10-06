@@ -38,7 +38,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var enableVoipTcp: Bool
     public var experimentalCompatibility: Bool
     public var enableDebugDataDisplay: Bool
-    public var acceleratedStickers: Bool
+    public var rippleEffect: Bool
     public var inlineStickers: Bool
     public var localTranscription: Bool
     public var enableReactionOverrides: Bool
@@ -54,10 +54,12 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var storiesJpegExperiment: Bool
     public var crashOnMemoryPressure: Bool
     public var dustEffect: Bool
-    public var callV2: Bool
+    public var disableCallV2: Bool
+    public var experimentalCallMute: Bool
     public var allowWebViewInspection: Bool
     public var disableReloginTokens: Bool
     public var liveStreamV2: Bool
+    public var dynamicStreaming: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -74,7 +76,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
             enableVoipTcp: false,
             experimentalCompatibility: false,
             enableDebugDataDisplay: false,
-            acceleratedStickers: false,
+            rippleEffect: false,
             inlineStickers: false,
             localTranscription: false,
             enableReactionOverrides: false,
@@ -90,10 +92,12 @@ public struct ExperimentalUISettings: Codable, Equatable {
             storiesJpegExperiment: false,
             crashOnMemoryPressure: false,
             dustEffect: false,
-            callV2: false,
+            disableCallV2: false,
+            experimentalCallMute: false,
             allowWebViewInspection: false,
             disableReloginTokens: false,
-            liveStreamV2: false
+            liveStreamV2: false,
+            dynamicStreaming: false
         )
     }
     
@@ -111,7 +115,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         enableVoipTcp: Bool,
         experimentalCompatibility: Bool,
         enableDebugDataDisplay: Bool,
-        acceleratedStickers: Bool,
+        rippleEffect: Bool,
         inlineStickers: Bool,
         localTranscription: Bool,
         enableReactionOverrides: Bool,
@@ -127,10 +131,12 @@ public struct ExperimentalUISettings: Codable, Equatable {
         storiesJpegExperiment: Bool,
         crashOnMemoryPressure: Bool,
         dustEffect: Bool,
-        callV2: Bool,
+        disableCallV2: Bool,
+        experimentalCallMute: Bool,
         allowWebViewInspection: Bool,
         disableReloginTokens: Bool,
-        liveStreamV2: Bool
+        liveStreamV2: Bool,
+        dynamicStreaming: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -145,7 +151,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.enableVoipTcp = enableVoipTcp
         self.experimentalCompatibility = experimentalCompatibility
         self.enableDebugDataDisplay = enableDebugDataDisplay
-        self.acceleratedStickers = acceleratedStickers
+        self.rippleEffect = rippleEffect
         self.inlineStickers = inlineStickers
         self.localTranscription = localTranscription
         self.enableReactionOverrides = enableReactionOverrides
@@ -161,10 +167,12 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.storiesJpegExperiment = storiesJpegExperiment
         self.crashOnMemoryPressure = crashOnMemoryPressure
         self.dustEffect = dustEffect
-        self.callV2 = callV2
+        self.disableCallV2 = disableCallV2
+        self.experimentalCallMute = experimentalCallMute
         self.allowWebViewInspection = allowWebViewInspection
         self.disableReloginTokens = disableReloginTokens
         self.liveStreamV2 = liveStreamV2
+        self.dynamicStreaming = dynamicStreaming
     }
     
     public init(from decoder: Decoder) throws {
@@ -183,7 +191,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.enableVoipTcp = (try container.decodeIfPresent(Int32.self, forKey: "enableVoipTcp") ?? 0) != 0
         self.experimentalCompatibility = (try container.decodeIfPresent(Int32.self, forKey: "experimentalCompatibility") ?? 0) != 0
         self.enableDebugDataDisplay = (try container.decodeIfPresent(Int32.self, forKey: "enableDebugDataDisplay") ?? 0) != 0
-        self.acceleratedStickers = (try container.decodeIfPresent(Int32.self, forKey: "acceleratedStickers") ?? 0) != 0
+        self.rippleEffect = (try container.decodeIfPresent(Int32.self, forKey: "rippleEffect") ?? 0) != 0
         self.inlineStickers = (try container.decodeIfPresent(Int32.self, forKey: "inlineStickers") ?? 0) != 0
         self.localTranscription = (try container.decodeIfPresent(Int32.self, forKey: "localTranscription") ?? 0) != 0
         self.enableReactionOverrides = try container.decodeIfPresent(Bool.self, forKey: "enableReactionOverrides") ?? false
@@ -199,10 +207,12 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.storiesJpegExperiment = try container.decodeIfPresent(Bool.self, forKey: "storiesJpegExperiment") ?? false
         self.crashOnMemoryPressure = try container.decodeIfPresent(Bool.self, forKey: "crashOnMemoryPressure") ?? false
         self.dustEffect = try container.decodeIfPresent(Bool.self, forKey: "dustEffect") ?? false
-        self.callV2 = try container.decodeIfPresent(Bool.self, forKey: "callV2") ?? false
+        self.disableCallV2 = try container.decodeIfPresent(Bool.self, forKey: "disableCallV2") ?? false
+        self.experimentalCallMute = try container.decodeIfPresent(Bool.self, forKey: "experimentalCallMute") ?? false
         self.allowWebViewInspection = try container.decodeIfPresent(Bool.self, forKey: "allowWebViewInspection") ?? false
         self.disableReloginTokens = try container.decodeIfPresent(Bool.self, forKey: "disableReloginTokens") ?? false
         self.liveStreamV2 = try container.decodeIfPresent(Bool.self, forKey: "liveStreamV2") ?? false
+        self.dynamicStreaming = try container.decodeIfPresent(Bool.self, forKey: "dynamicStreaming") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -221,7 +231,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode((self.enableVoipTcp ? 1 : 0) as Int32, forKey: "enableVoipTcp")
         try container.encode((self.experimentalCompatibility ? 1 : 0) as Int32, forKey: "experimentalCompatibility")
         try container.encode((self.enableDebugDataDisplay ? 1 : 0) as Int32, forKey: "enableDebugDataDisplay")
-        try container.encode((self.acceleratedStickers ? 1 : 0) as Int32, forKey: "acceleratedStickers")
+        try container.encode((self.rippleEffect ? 1 : 0) as Int32, forKey: "rippleEffect")
         try container.encode((self.inlineStickers ? 1 : 0) as Int32, forKey: "inlineStickers")
         try container.encode((self.localTranscription ? 1 : 0) as Int32, forKey: "localTranscription")
         try container.encode(self.enableReactionOverrides, forKey: "enableReactionOverrides")
@@ -237,10 +247,12 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode(self.storiesJpegExperiment, forKey: "storiesJpegExperiment")
         try container.encode(self.crashOnMemoryPressure, forKey: "crashOnMemoryPressure")
         try container.encode(self.dustEffect, forKey: "dustEffect")
-        try container.encode(self.callV2, forKey: "callV2")
+        try container.encode(self.disableCallV2, forKey: "disableCallV2")
+        try container.encode(self.experimentalCallMute, forKey: "experimentalCallMute")
         try container.encode(self.allowWebViewInspection, forKey: "allowWebViewInspection")
         try container.encode(self.disableReloginTokens, forKey: "disableReloginTokens")
         try container.encode(self.liveStreamV2, forKey: "liveStreamV2")
+        try container.encode(self.dynamicStreaming, forKey: "dynamicStreaming")
     }
 }
 

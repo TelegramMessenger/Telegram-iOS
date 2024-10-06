@@ -10,75 +10,6 @@
 
 #import <CommonCrypto/CommonDigest.h>
 
-typedef enum {
-    UIDeviceUnknown,
-    
-    UIDeviceSimulator,
-    
-    UIDevice1GiPhone,
-    UIDevice3GiPhone,
-    UIDevice3GSiPhone,
-    UIDevice4iPhone,
-    UIDevice4SiPhone,
-    UIDevice5iPhone,
-    UIDevice5SiPhone,
-    UIDevice6iPhone,
-    UIDevice6PlusiPhone,
-    UIDevice6SiPhone,
-    UIDevice6SPlusiPhone,
-    UIDevice7iPhone,
-    UIDevice7PlusiPhone,
-    UIDevice8iPhone,
-    UIDevice8PlusiPhone,
-    UIDeviceXiPhone,
-    UIDeviceSEPhone,
-    UIDeviceSE2Phone,
-    UIDeviceXSiPhone,
-    UIDeviceXSMaxiPhone,
-    UIDeviceXRiPhone,
-    UIDevice11iPhone,
-    UIDevice11ProiPhone,
-    UIDevice11ProMaxiPhone,
-    UIDevice12MiniiPhone,
-    UIDevice12iPhone,
-    UIDevice12ProiPhone,
-    UIDevice12ProMaxiPhone,
-    
-    UIDevice1GiPod,
-    UIDevice2GiPod,
-    UIDevice3GiPod,
-    UIDevice4GiPod,
-    UIDevice5GiPod,
-    UIDevice6GiPod,
-    UIDevice7GiPod,
-    
-    UIDevice1GiPad,
-    UIDevice2GiPad,
-    UIDevice3GiPad,
-    UIDevice4GiPad,
-    UIDevice5GiPad,
-    UIDevice6GiPad,
-    
-    UIDeviceiPadPro12_93g,
-    UIDeviceiPadPro11,
-    UIDeviceiPadPro6g,
-    UIDeviceiPadPro10_5,
-    UIDeviceiPadPro12_9,
-    
-    UIDeviceAppleTV2,
-    UIDeviceAppleTV3,
-    UIDeviceAppleTV4,
-    
-    UIDeviceUnknowniPhone,
-    UIDeviceUnknowniPod,
-    UIDeviceUnknowniPad,
-    UIDeviceUnknownAppleTV,
-    UIDeviceIFPGA,
-    
-    UIDeviceOSX
-    
-} UIDevicePlatform;
-
 static NSData * _Nullable parseHexString(NSString * _Nonnull hex) {
     if ([hex length] % 2 != 0) {
         return nil;
@@ -603,6 +534,14 @@ NSString *suffix = @"";
         return @"iPhone 15 Pro";
     if ([platform isEqualToString:@"iPhone16,2"])
         return @"iPhone 15 Pro Max";
+    if ([platform isEqualToString:@"iPhone17,3"])
+        return @"iPhone 16";
+    if ([platform isEqualToString:@"iPhone17,4"])
+        return @"iPhone 16 Plus";
+    if ([platform isEqualToString:@"iPhone17,1"])
+        return @"iPhone 16 Pro";
+    if ([platform isEqualToString:@"iPhone17,2"])
+        return @"iPhone 16 Pro Max";
     
     if ([platform hasPrefix:@"iPod1"])
         return @"iPod touch 1G";
@@ -758,7 +697,23 @@ NSString *suffix = @"";
     if ([platform isEqualToString:@"iPad14,5"] ||
         [platform isEqualToString:@"iPad14,6"])
         return @"iPad Pro 12.9 inch (6th gen)";
-            
+    
+    if ([platform isEqualToString:@"iPad14,8"] ||
+        [platform isEqualToString:@"iPad14,9"])
+        return @"iPad Air (6th gen)";
+    
+    if ([platform isEqualToString:@"iPad14,10"] ||
+        [platform isEqualToString:@"iPad14,11"])
+        return @"iPad Air (7th gen)";
+    
+    if ([platform isEqualToString:@"iPad16,3"] ||
+        [platform isEqualToString:@"iPad16,4"])
+        return @"iPad Pro 11 inch (5th gen)";
+    
+    if ([platform isEqualToString:@"iPad16,5"] ||
+        [platform isEqualToString:@"iPad16,6"])
+        return @"iPad Pro 12.9 inch (7th gen)";
+    
     if ([platform hasPrefix:@"iPhone"])
         return @"Unknown iPhone";
     if ([platform hasPrefix:@"iPod"])

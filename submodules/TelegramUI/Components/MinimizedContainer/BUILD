@@ -14,9 +14,12 @@ swift_library(
         "//submodules/AsyncDisplayKit",
         "//submodules/Display",
         "//submodules/TelegramPresentationData",
-        "//submodules/ComponentFlow",
         "//submodules/AccountContext",
         "//submodules/UIKitRuntimeUtils",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/MultilineTextComponent",
+        "//submodules/Components/BundleIconComponent",
+        "//submodules/TelegramUI/Components/PlainButtonComponent",
     ],
     visibility = [
         "//visibility:public",

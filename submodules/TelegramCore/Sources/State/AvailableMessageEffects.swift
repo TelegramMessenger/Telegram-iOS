@@ -216,7 +216,7 @@ func managedSynchronizeAvailableMessageEffects(postbox: Postbox, network: Networ
                     case let .availableEffects(hash, effects, documents):
                         var files: [Int64: TelegramMediaFile] = [:]
                         for document in documents {
-                            if let file = telegramMediaFileFromApiDocument(document) {
+                            if let file = telegramMediaFileFromApiDocument(document, altDocuments: []) {
                                 files[file.fileId.id] = file
                             }
                         }

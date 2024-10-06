@@ -46,6 +46,12 @@ private func entryId(peerId: EnginePeer.Id?) -> ItemCacheEntryId {
     return ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.recommendedChannels, key: cacheKey)
 }
 
+private func appsEntryId() -> ItemCacheEntryId {
+    let cacheKey = ValueBoxKey(length: 8)
+    cacheKey.setInt64(0, value: 0)
+    return ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.recommendedApps, key: cacheKey)
+}
+
 func _internal_requestRecommendedChannels(account: Account, peerId: EnginePeer.Id?, forceUpdate: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> (Peer?, Bool) in
         if let peerId {
@@ -111,7 +117,7 @@ func _internal_requestRecommendedChannels(account: Account, peerId: EnginePeer.I
                 for chat in chats {
                     if let peer = transaction.getPeer(chat.peerId) {
                         peers.append(EnginePeer(peer))
-                        if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _) = chat, let participantsCount = participantsCount {
+                        if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _) = chat, let participantsCount = participantsCount {
                             transaction.updatePeerCachedData(peerIds: Set([peer.id]), update: { _, current in
                                 var current = current as? CachedChannelData ?? CachedChannelData()
                                 var participantsSummary = current.participantsSummary
@@ -126,6 +132,55 @@ func _internal_requestRecommendedChannels(account: Account, peerId: EnginePeer.I
                 }
                 if let entry = CodableEntry(CachedRecommendedChannels(peerIds: peers.map(\.id), count: count, isHidden: false, timestamp: Int32(Date().timeIntervalSince1970))) {
                     transaction.putItemCacheEntry(id: entryId(peerId: peerId), entry: entry)
+                }
+                return peers
+            }
+            |> ignoreValues
+        }
+    }
+}
+
+func _internal_requestRecommendedApps(account: Account, forceUpdate: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> (Peer?, Bool) in
+        if let entry = transaction.retrieveItemCacheEntry(id: appsEntryId())?.get(CachedRecommendedChannels.self), !entry.peerIds.isEmpty && !forceUpdate {
+            var shouldUpdate = false
+            if let timestamp = entry.timestamp {
+                if timestamp + 60 * 60 < Int32(Date().timeIntervalSince1970) {
+                    shouldUpdate = true
+                }
+            } else {
+                shouldUpdate = true
+            }
+            return (nil, shouldUpdate)
+        } else {
+            return (nil, true)
+        }
+    }
+    |> mapToSignal { channel, shouldUpdate in
+        if !shouldUpdate {
+            return .complete()
+        }
+        return account.network.request(Api.functions.bots.getPopularAppBots(offset: "", limit: 100))
+        |> retryRequest
+        |> mapToSignal { result -> Signal<Never, NoError> in
+            return account.postbox.transaction { transaction -> [EnginePeer] in
+                let users: [Api.User]
+                let parsedPeers: AccumulatedPeers
+                switch result {
+                case let .popularAppBots(_, nextOffset, apiUsers):
+                    let _ = nextOffset
+                    users = apiUsers
+                }
+                parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
+                updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: parsedPeers)
+                var peers: [EnginePeer] = []
+                for user in users {
+                    if let peer = transaction.getPeer(user.peerId) {
+                        peers.append(EnginePeer(peer))
+                    }
+                }
+                if let entry = CodableEntry(CachedRecommendedChannels(peerIds: peers.map(\.id), count: Int32(peers.count), isHidden: false, timestamp: Int32(Date().timeIntervalSince1970))) {
+                    transaction.putItemCacheEntry(id: appsEntryId(), entry: entry)
                 }
                 return peers
             }
@@ -158,6 +213,17 @@ public struct RecommendedChannels: Equatable {
 
 func _internal_recommendedChannelPeerIds(account: Account, peerId: EnginePeer.Id?) -> Signal<[EnginePeer.Id]?, NoError> {
     let key = PostboxViewKey.cachedItem(entryId(peerId: peerId))
+    return account.postbox.combinedView(keys: [key])
+    |> mapToSignal { views -> Signal<[EnginePeer.Id]?, NoError> in
+        guard let cachedChannels = (views.views[key] as? CachedItemView)?.value?.get(CachedRecommendedChannels.self), !cachedChannels.peerIds.isEmpty else {
+            return .single(nil)
+        }
+        return .single(cachedChannels.peerIds)
+    }
+}
+
+func _internal_recommendedAppPeerIds(account: Account) -> Signal<[EnginePeer.Id]?, NoError> {
+    let key = PostboxViewKey.cachedItem(appsEntryId())
     return account.postbox.combinedView(keys: [key])
     |> mapToSignal { views -> Signal<[EnginePeer.Id]?, NoError> in
         guard let cachedChannels = (views.views[key] as? CachedItemView)?.value?.get(CachedRecommendedChannels.self), !cachedChannels.peerIds.isEmpty else {

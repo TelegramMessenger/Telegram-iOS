@@ -45,6 +45,7 @@ public final class StoryFooterPanelComponent: Component {
     public let canViewChannelStats: Bool
     public let canShare: Bool
     public let externalViews: EngineStoryItem.Views?
+    public let displayViews: Bool
     public let expandFraction: CGFloat
     public let expandViewStats: () -> Void
     public let deleteAction: () -> Void
@@ -65,6 +66,7 @@ public final class StoryFooterPanelComponent: Component {
         canViewChannelStats: Bool,
         canShare: Bool,
         externalViews: EngineStoryItem.Views?,
+        displayViews: Bool,
         expandFraction: CGFloat,
         expandViewStats: @escaping () -> Void,
         deleteAction: @escaping () -> Void,
@@ -84,6 +86,7 @@ public final class StoryFooterPanelComponent: Component {
         self.canViewChannelStats = canViewChannelStats
         self.canShare = canShare
         self.externalViews = externalViews
+        self.displayViews = displayViews
         self.expandViewStats = expandViewStats
         self.expandFraction = expandFraction
         self.deleteAction = deleteAction
@@ -120,6 +123,9 @@ public final class StoryFooterPanelComponent: Component {
             return false
         }
         if lhs.externalViews != rhs.externalViews {
+            return false
+        }
+        if lhs.displayViews != rhs.displayViews {
             return false
         }
         if lhs.expandFraction != rhs.expandFraction {
@@ -413,7 +419,9 @@ public final class StoryFooterPanelComponent: Component {
             }
             
             let viewPart: String
-            if component.isChannel {
+            if !component.displayViews {
+                viewPart = ""
+            } else if component.isChannel {
                 viewPart = ""
             } else if viewCount == 0 {
                 viewPart = component.strings.Story_Footer_NoViews

@@ -14,9 +14,11 @@ import AttachmentUI
 import SearchBarNode
 import ChatSendAudioMessageContextPreview
 import ChatSendMessageActionUI
+import ContextUI
 
 class ContactSelectionControllerImpl: ViewController, ContactSelectionController, PresentableController, AttachmentContainable {
     private let context: AccountContext
+    private let mode: ContactSelectionControllerMode
     private let autoDismiss: Bool
     
     fileprivate var contactsNode: ContactSelectionControllerNode {
@@ -35,11 +37,14 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     
     private let index: PeerNameIndex = .lastNameFirst
     private let titleProducer: (PresentationStrings) -> String
-    private let options: [ContactListAdditionalOption]
+    private let options: Signal<[ContactListAdditionalOption], NoError>
     private let displayDeviceContacts: Bool
     private let displayCallIcons: Bool
     private let multipleSelection: Bool
     private let requirePhoneNumbers: Bool
+    
+    private let openProfile: ((EnginePeer) -> Void)?
+    private let sendMessage: ((EnginePeer) -> Void)?
     
     private var _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
@@ -88,11 +93,13 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     var cancelPanGesture: () -> Void = { }
     var isContainerPanning: () -> Bool = { return false }
     var isContainerExpanded: () -> Bool = { return false }
+    var isMinimized: Bool = false
     
     var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)?
     
     init(_ params: ContactSelectionControllerParams) {
         self.context = params.context
+        self.mode = params.mode
         self.autoDismiss = params.autoDismiss
         self.titleProducer = params.title
         self.options = params.options
@@ -101,6 +108,9 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.confirmation = params.confirmation
         self.multipleSelection = params.multipleSelection
         self.requirePhoneNumbers = params.requirePhoneNumbers
+        
+        self.openProfile = params.openProfile
+        self.sendMessage = params.sendMessage
         
         self.presentationData = params.updatedPresentationData?.initial ?? params.context.sharedContext.currentPresentationData.with { $0 }
         
@@ -206,7 +216,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactSelectionControllerNode(context: self.context, presentationData: self.presentationData, options: self.options, displayDeviceContacts: self.displayDeviceContacts, displayCallIcons: self.displayCallIcons, multipleSelection: self.multipleSelection, requirePhoneNumbers: self.requirePhoneNumbers)
+        self.displayNode = ContactSelectionControllerNode(context: self.context, mode: self.mode, presentationData: self.presentationData, options: self.options, displayDeviceContacts: self.displayDeviceContacts, displayCallIcons: self.displayCallIcons, multipleSelection: self.multipleSelection, requirePhoneNumbers: self.requirePhoneNumbers)
         self._ready.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar
@@ -216,15 +226,15 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         }
         
         self.contactsNode.requestOpenPeerFromSearch = { [weak self] peer in
-            self?.openPeer(peer: peer, action: .generic)
+            self?.openPeer(peer: peer, action: .generic, node: nil, gesture: nil)
         }
         
         self.contactsNode.contactListNode.activateSearch = { [weak self] in
             self?.activateSearch()
         }
         
-        self.contactsNode.contactListNode.openPeer = { [weak self] peer, action, _, _ in
-            self?.openPeer(peer: peer, action: action)
+        self.contactsNode.contactListNode.openPeer = { [weak self] peer, action, node, gesture in
+            self?.openPeer(peer: peer, action: action, node: node, gesture: gesture)
         }
                 
         self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
@@ -354,7 +364,40 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         }
     }
     
-    private func openPeer(peer: ContactListPeer, action: ContactListAction) {
+    private func openPeer(peer: ContactListPeer, action: ContactListAction, node: ASDisplayNode?, gesture: ContextGesture?) {
+        if case .more = action {
+            guard case let .peer(peer, _, _) = peer, let node = node as? ContextReferenceContentNode else {
+                return
+            }
+            
+            let presentationData = self.presentationData
+            
+            var items: [ContextMenuItem] = []
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Premium_Gift_ContactSelection_SendMessage, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MessageBubble"), color: theme.contextMenu.primaryColor)
+            }, iconPosition: .left, action: { [weak self] _, a in
+                a(.default)
+              
+                if let self {
+                    self.sendMessage?(EnginePeer(peer))
+                }
+            })))
+            
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Premium_Gift_ContactSelection_OpenProfile, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
+            }, iconPosition: .left, action: { [weak self] _, a in
+                a(.default)
+
+                if let self {
+                    self.openProfile?(EnginePeer(peer))
+                }
+            })))
+            
+            let contextController = ContextController(presentationData: presentationData, source: .reference(ContactContextReferenceContentSource(controller: self, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            self.present(contextController, in: .window(.root))
+            return
+        }
+        
         self.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
         self.confirmationDisposable.set((self.confirmation(peer) |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             if let strongSelf = self {
@@ -452,29 +495,6 @@ final class ContactsPickerContext: AttachmentMediaPickerContext {
             return .single(0)
         }
     }
-    
-    var caption: Signal<NSAttributedString?, NoError> {
-        return .single(nil)
-    }
-    
-    var hasCaption: Bool {
-        return false
-    }
-    
-    var captionIsAboveMedia: Signal<Bool, NoError> {
-        return .single(false)
-    }
-    
-    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
-    }
-    
-    public var loadingProgress: Signal<CGFloat?, NoError> {
-        return .single(nil)
-    }
-    
-    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
-        return .single(nil)
-    }
         
     init(controller: ContactSelectionControllerImpl) {
         self.controller = controller
@@ -495,5 +515,19 @@ final class ContactsPickerContext: AttachmentMediaPickerContext {
     }
     
     func mainButtonAction() {
+    }
+}
+
+private final class ContactContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceNode: ContextReferenceContentNode
+    
+    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

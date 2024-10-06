@@ -505,6 +505,8 @@ public final class EngineStoryViewListContext {
                                                         return nil
                                                     case let .custom(fileId):
                                                         return transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile
+                                                    case .stars:
+                                                        return nil
                                                     }
                                                 }
                                             )))
@@ -528,7 +530,7 @@ public final class EngineStoryViewListContext {
                                                         timestamp: item.timestamp,
                                                         expirationTimestamp: item.expirationTimestamp,
                                                         media: EngineMedia(media),
-                                                        alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                                                        alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                                                         mediaAreas: item.mediaAreas,
                                                         text: item.text,
                                                         entities: item.entities,
@@ -573,7 +575,7 @@ public final class EngineStoryViewListContext {
                                             timestamp: item.timestamp,
                                             expirationTimestamp: item.expirationTimestamp,
                                             media: item.media,
-                                            alternativeMedia: item.alternativeMedia,
+                                            alternativeMediaList: item.alternativeMediaList,
                                             mediaAreas: item.mediaAreas,
                                             text: item.text,
                                             entities: item.entities,
@@ -613,7 +615,7 @@ public final class EngineStoryViewListContext {
                                                     timestamp: item.timestamp,
                                                     expirationTimestamp: item.expirationTimestamp,
                                                     media: item.media,
-                                                    alternativeMedia: item.alternativeMedia,
+                                                    alternativeMediaList: item.alternativeMediaList,
                                                     mediaAreas: item.mediaAreas,
                                                     text: item.text,
                                                     entities: item.entities,
@@ -696,6 +698,8 @@ public final class EngineStoryViewListContext {
                                                     reactionFile = nil
                                                 case let .custom(fileId):
                                                     reactionFile = transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile
+                                                case .stars:
+                                                    reactionFile = nil
                                                 }
                                                 items.append(.view(Item.View(
                                                     peer: EnginePeer(peer),
@@ -723,7 +727,7 @@ public final class EngineStoryViewListContext {
                                                         timestamp: item.timestamp,
                                                         expirationTimestamp: item.expirationTimestamp,
                                                         media: EngineMedia(media),
-                                                        alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                                                        alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                                                         mediaAreas: item.mediaAreas,
                                                         text: item.text,
                                                         entities: item.entities,

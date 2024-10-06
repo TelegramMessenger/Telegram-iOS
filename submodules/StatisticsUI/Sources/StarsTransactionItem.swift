@@ -231,15 +231,21 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                     var itemDate: String
                     switch item.transaction.peer {
                     case let .peer(peer):
-                        if !item.transaction.media.isEmpty {
+                         if !item.transaction.media.isEmpty {
                             itemTitle = item.presentationData.strings.Stars_Intro_Transaction_MediaPurchase
                             itemSubtitle = peer.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast)
                         } else if let title = item.transaction.title {
                             itemTitle = title
                             itemSubtitle = peer.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast)
                         } else {
+                            if item.transaction.flags.contains(.isReaction) {
+                                itemSubtitle = item.presentationData.strings.Stars_Intro_Transaction_Reaction_Title
+                            } else if let _ = item.transaction.subscriptionPeriod {
+                                itemSubtitle = item.presentationData.strings.Stars_Intro_Transaction_SubscriptionFee_Title
+                            } else {
+                                itemSubtitle = nil
+                            }
                             itemTitle = peer.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast)
-                            itemSubtitle = nil
                         }
                     case .appStore:
                         itemTitle = item.presentationData.strings.Stars_Intro_Transaction_AppleTopUp_Title
@@ -272,9 +278,15 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     itemLabel = NSAttributedString(string: labelString, font: Font.medium(fontBaseDisplaySize), textColor: labelString.hasPrefix("-") ? item.presentationData.theme.list.itemDestructiveColor : item.presentationData.theme.list.itemDisclosureActions.constructive.fillColor)
                     
+                    var itemDateColor = item.presentationData.theme.list.itemSecondaryTextColor
                     itemDate = stringForMediumCompactDate(timestamp: item.transaction.date, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
                     if item.transaction.flags.contains(.isRefund) {
                         itemDate += " – \(item.presentationData.strings.Stars_Intro_Transaction_Refund)"
+                    } else if item.transaction.flags.contains(.isPending) {
+                        itemDate += " – \(item.presentationData.strings.Monetization_Transaction_Pending)"
+                    } else if item.transaction.flags.contains(.isFailed) {
+                        itemDate += " – \(item.presentationData.strings.Monetization_Transaction_Failed)"
+                        itemDateColor = item.presentationData.theme.list.itemDestructiveColor
                     }
                     
                     var titleComponents: [AnyComponentWithIdentity<Empty>] = []
@@ -305,7 +317,7 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                             text: .plain(NSAttributedString(
                                 string: itemDate,
                                 font: Font.regular(floor(fontBaseDisplaySize * 14.0 / 17.0)),
-                                textColor: item.presentationData.theme.list.itemSecondaryTextColor
+                                textColor: itemDateColor
                             )),
                             maximumNumberOfLines: 1
                         )))

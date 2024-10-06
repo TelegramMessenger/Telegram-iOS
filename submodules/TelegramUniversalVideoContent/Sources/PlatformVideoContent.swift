@@ -70,7 +70,7 @@ public final class PlatformVideoContent: UniversalVideoContent {
     }
     
     public let id: AnyHashable
-    let nativeId: PlatformVideoContentId
+    public let nativeId: PlatformVideoContentId
     let userLocation: MediaResourceUserLocation
     let content: Content
     public let dimensions: CGSize
@@ -95,7 +95,7 @@ public final class PlatformVideoContent: UniversalVideoContent {
         self.fetchAutomatically = fetchAutomatically
     }
     
-    public func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
+    public func makeContentNode(accountId: AccountRecordId, postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
         return PlatformVideoContentNode(postbox: postbox, audioSessionManager: audioSession, userLocation: self.userLocation, content: self.content, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically)
     }
     
@@ -446,6 +446,13 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
     }
     
     func setBaseRate(_ baseRate: Double) {
+    }
+    
+    func setVideoQuality(_ videoQuality: UniversalVideoContentVideoQuality) {
+    }
+    
+    func videoQualityState() -> (current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])? {
+        return nil
     }
     
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int {

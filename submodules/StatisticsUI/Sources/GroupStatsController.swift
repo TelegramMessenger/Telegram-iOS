@@ -686,7 +686,7 @@ private func canEditAdminRights(accountPeerId: EnginePeer.Id, channelPeer: Engin
             switch initialParticipant {
                 case .creator:
                     return false
-                case let .member(_, _, adminInfo, _, _):
+                case let .member(_, _, adminInfo, _, _, _):
                     if let adminInfo = adminInfo {
                         return adminInfo.canBeEditedByAccountPeer || adminInfo.promotedBy == accountPeerId
                     } else {
@@ -890,7 +890,7 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
             let _ = (context.account.postbox.loadedPeerWithId(peerId)
             |> take(1)
             |> deliverOnMainQueue).start(next: { peer in
-                let controller = context.sharedContext.makeChatRecentActionsController(context: context, peer: peer, adminPeerId: participantPeerId)
+                let controller = context.sharedContext.makeChatRecentActionsController(context: context, peer: peer, adminPeerId: participantPeerId, starsState: nil)
                 navigationController.pushViewController(controller)
             })
         }

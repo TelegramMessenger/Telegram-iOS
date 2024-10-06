@@ -59,12 +59,19 @@ open class ZoomableContentGalleryItemNode: GalleryItemNode, ASScrollViewDelegate
         self.addSubnode(self.scrollNode)
     }
     
+    open func contentTapAction() -> Bool {
+        return false
+    }
+    
     @objc open func contentTap(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         if recognizer.state == .ended {
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                 let pointInNode = self.scrollNode.view.convert(location, to: self.view)
                 if pointInNode.x < 44.0 || pointInNode.x > self.frame.width - 44.0 {
                 } else {
+                    if self.contentTapAction() {
+                        return 
+                    }
                     switch gesture {
                         case .tap:
                             self.toggleControlsVisibility()

@@ -37,10 +37,10 @@ public class LocalizationListItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let alwaysPlain: Bool
     let action: () -> Void
-    let setItemWithRevealedOptions: (String?, String?) -> Void
-    let removeItem: (String) -> Void
+    let setItemWithRevealedOptions: ((String?, String?) -> Void)?
+    let removeItem: ((String) -> Void)?
     
-    public init(presentationData: ItemListPresentationData, id: String, title: String, subtitle: String, checked: Bool, activity: Bool, loading: Bool, editing: LocalizationListItemEditing, enabled: Bool = true, sectionId: ItemListSectionId, alwaysPlain: Bool, action: @escaping () -> Void, setItemWithRevealedOptions: @escaping (String?, String?) -> Void, removeItem: @escaping (String) -> Void) {
+    public init(presentationData: ItemListPresentationData, id: String, title: String, subtitle: String, checked: Bool, activity: Bool, loading: Bool, editing: LocalizationListItemEditing, enabled: Bool = true, sectionId: ItemListSectionId, alwaysPlain: Bool, action: @escaping () -> Void, setItemWithRevealedOptions: ((String?, String?) -> Void)?, removeItem: ((String) -> Void)?) {
         self.presentationData = presentationData
         self.id = id
         self.title = title
@@ -138,7 +138,7 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
         if self.editableControlNode != nil {
             return false
         }
-        if let _ = self.layoutParams?.0, let item = self.item, !item.loading {
+        if let _ = self.layoutParams?.0, let item = self.item, !item.loading, item.enabled {
             return super.canBeSelected
         } else {
             return false
@@ -334,6 +334,9 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + leftInset, y: 8.0), size: titleLayout.size))
                     transition.updateFrame(node: strongSelf.subtitleNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + leftInset, y: strongSelf.titleNode.frame.maxY + 1.0), size: subtitleLayout.size))
                     
+                    strongSelf.titleNode.alpha = item.enabled ? 1.0 : 0.5
+                    strongSelf.subtitleNode.alpha = item.enabled ? 1.0 : 0.5
+                    
                     if let editableControlSizeAndApply = editableControlSizeAndApply {
                         let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: CGSize(width: editableControlSizeAndApply.0, height: layout.contentSize.height))
                         if strongSelf.editableControlNode == nil {
@@ -368,7 +371,7 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
-                    if item.editing.editable {
+                    if item.editing.editable, item.removeItem != nil {
                         strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
                     } else {
                         strongSelf.setRevealOptions((left: [], right: []))
@@ -491,13 +494,13 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
     
     override func revealOptionsInteractivelyOpened() {
         if let item = self.item {
-            item.setItemWithRevealedOptions(item.id, nil)
+            item.setItemWithRevealedOptions?(item.id, nil)
         }
     }
     
     override func revealOptionsInteractivelyClosed() {
         if let item = self.item {
-            item.setItemWithRevealedOptions(nil, item.id)
+            item.setItemWithRevealedOptions?(nil, item.id)
         }
     }
     
@@ -506,7 +509,7 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
         self.revealOptionsInteractivelyClosed()
         
         if let item = self.item {
-            item.removeItem(item.id)
+            item.removeItem?(item.id)
         }
     }
 }

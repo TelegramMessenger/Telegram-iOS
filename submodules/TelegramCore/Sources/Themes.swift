@@ -258,7 +258,7 @@ private func uploadTheme(account: Account, resource: MediaResource, thumbnailDat
                             return account.network.request(Api.functions.account.uploadTheme(flags: flags, file: file, thumb: thumbnailFile, fileName: fileName, mimeType: mimeType))
                             |> mapError { _ in return UploadThemeError.generic }
                             |> mapToSignal { document -> Signal<UploadThemeResult, UploadThemeError> in
-                                if let file = telegramMediaFileFromApiDocument(document) {
+                                if let file = telegramMediaFileFromApiDocument(document, altDocuments: []) {
                                     return .single(.complete(file))
                                 } else {
                                     return .fail(.generic)

@@ -287,6 +287,16 @@ public final class AccountStateManager {
             return self.storyUpdatesPipe.signal()
         }
         
+        fileprivate let botPreviewUpdatesPipe = ValuePipe<[InternalBotPreviewUpdate]>()
+        public var botPreviewUpdates: Signal<[InternalBotPreviewUpdate], NoError> {
+            return self.botPreviewUpdatesPipe.signal()
+        }
+        
+        fileprivate let forceSendPendingStarsReactionPipe = ValuePipe<MessageId>()
+        public var forceSendPendingStarsReaction: Signal<MessageId, NoError> {
+            return self.forceSendPendingStarsReactionPipe.signal()
+        }
+        
         private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
         private var updatedPeersNearbyContext = UpdatedPeersNearbySubscriberContext()
         private var updatedRevenueBalancesContext = UpdatedRevenueBalancesSubscriberContext()
@@ -1856,10 +1866,36 @@ public final class AccountStateManager {
         }
     }
     
+    var botPreviewUpdates: Signal<[InternalBotPreviewUpdate], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.botPreviewUpdates.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    func injectBotPreviewUpdates(updates: [InternalBotPreviewUpdate]) {
+        self.impl.with { impl in
+            impl.botPreviewUpdatesPipe.putNext(updates)
+        }
+    }
+    
+    var forceSendPendingStarsReaction: Signal<MessageId, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.forceSendPendingStarsReaction.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    func forceSendPendingStarsReaction(messageId: MessageId) {
+        self.impl.with { impl in
+            impl.forceSendPendingStarsReactionPipe.putNext(messageId)
+        }
+    }
+    
     var updateConfigRequested: (() -> Void)?
     var isPremiumUpdated: (() -> Void)?
     
     let messagesRemovedContext = MessagesRemovedContext()
+    
+    public weak var starsContext: StarsContext?
     
     init(
         accountPeerId: PeerId,

@@ -551,7 +551,11 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
     }
 
     public func setPeer(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor) {
-        self.containerNode.isGestureEnabled = peer.smallProfileImage != nil
+        if let messageReference = self.messageReference, let id = messageReference.id {
+            self.containerNode.isGestureEnabled = !id.peerId.isVerificationCodes
+        } else {
+            self.containerNode.isGestureEnabled = true
+        }
 
         var overrideImage: AvatarNodeImageOverride?
         if peer.isDeleted {
@@ -754,8 +758,10 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
             if self.peerId.namespace == Namespaces.Peer.Empty, case let .message(_, _, id, _, _, _, _) = self.messageReference?.content {
                 self.controllerInteraction?.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, false, self, self.avatarNode.frame)
             } else if let peer = self.peer {
-                if let adMessageId = self.adMessageId {
-                    self.controllerInteraction?.activateAdAction(adMessageId, nil)
+                if peer.id.isVerificationCodes {
+                    self.controllerInteraction?.playShakeAnimation()
+                } else if let adMessageId = self.adMessageId {
+                    self.controllerInteraction?.activateAdAction(adMessageId, nil, false, false)
                 } else {
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         self.controllerInteraction?.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, .default)

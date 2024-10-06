@@ -235,7 +235,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
     case Sticker(displayText: String, packReference: StickerPackReference?, maskData: StickerMaskCoords?)
     case ImageSize(size: PixelDimensions)
     case Animated
-    case Video(duration: Double, size: PixelDimensions, flags: TelegramMediaVideoFlags, preloadSize: Int32?)
+    case Video(duration: Double, size: PixelDimensions, flags: TelegramMediaVideoFlags, preloadSize: Int32?, coverTime: Double?, videoCodec: String?)
     case Audio(isVoice: Bool, duration: Int, title: String?, performer: String?, waveform: Data?)
     case HasLinkedStickers
     case hintFileIsLarge
@@ -262,7 +262,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
                     duration = Double(decoder.decodeInt32ForKey("du", orElse: 0))
                 }
             
-                self = .Video(duration: duration, size: PixelDimensions(width: decoder.decodeInt32ForKey("w", orElse: 0), height: decoder.decodeInt32ForKey("h", orElse: 0)), flags: TelegramMediaVideoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0)), preloadSize: decoder.decodeOptionalInt32ForKey("prs"))
+                self = .Video(duration: duration, size: PixelDimensions(width: decoder.decodeInt32ForKey("w", orElse: 0), height: decoder.decodeInt32ForKey("h", orElse: 0)), flags: TelegramMediaVideoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0)), preloadSize: decoder.decodeOptionalInt32ForKey("prs"), coverTime: decoder.decodeOptionalDoubleForKey("ct"), videoCodec: decoder.decodeOptionalStringForKey("vc"))
             case typeAudio:
                 let waveformBuffer = decoder.decodeBytesForKeyNoCopy("wf")
                 var waveform: Data?
@@ -309,7 +309,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
                 encoder.encodeInt32(Int32(size.height), forKey: "h")
             case .Animated:
                 encoder.encodeInt32(typeAnimated, forKey: "t")
-            case let .Video(duration, size, flags, preloadSize):
+            case let .Video(duration, size, flags, preloadSize, coverTime, videoCodec):
                 encoder.encodeInt32(typeVideo, forKey: "t")
                 encoder.encodeDouble(duration, forKey: "dur")
                 encoder.encodeInt32(Int32(size.width), forKey: "w")
@@ -319,6 +319,16 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
                     encoder.encodeInt32(preloadSize, forKey: "prs")
                 } else {
                     encoder.encodeNil(forKey: "prs")
+                }
+                if let coverTime = coverTime {
+                    encoder.encodeDouble(coverTime, forKey: "ct")
+                } else {
+                    encoder.encodeNil(forKey: "ct")
+                }
+                if let videoCodec {
+                    encoder.encodeString(videoCodec, forKey: "vc")
+                } else {
+                    encoder.encodeNil(forKey: "vc")
                 }
             case let .Audio(isVoice, duration, title, performer, waveform):
                 encoder.encodeInt32(typeAudio, forKey: "t")
@@ -435,6 +445,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     public let mimeType: String
     public let size: Int64?
     public let attributes: [TelegramMediaFileAttribute]
+    public let alternativeRepresentations: [Media]
     public let peerIds: [PeerId] = []
     
     public var id: MediaId? {
@@ -454,7 +465,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return result.isEmpty ? nil : result
     }
     
-    public init(fileId: MediaId, partialReference: PartialMediaReference?, resource: TelegramMediaResource, previewRepresentations: [TelegramMediaImageRepresentation], videoThumbnails: [TelegramMediaFile.VideoThumbnail], immediateThumbnailData: Data?, mimeType: String, size: Int64?, attributes: [TelegramMediaFileAttribute]) {
+    public init(fileId: MediaId, partialReference: PartialMediaReference?, resource: TelegramMediaResource, previewRepresentations: [TelegramMediaImageRepresentation], videoThumbnails: [TelegramMediaFile.VideoThumbnail], immediateThumbnailData: Data?, mimeType: String, size: Int64?, attributes: [TelegramMediaFileAttribute], alternativeRepresentations: [Media]) {
         self.fileId = fileId
         self.partialReference = partialReference
         self.resource = resource
@@ -464,6 +475,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         self.mimeType = mimeType
         self.size = size
         self.attributes = attributes
+        self.alternativeRepresentations = alternativeRepresentations
     }
     
     public init(decoder: PostboxDecoder) {
@@ -482,6 +494,13 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
             self.size = nil
         }
         self.attributes = decoder.decodeObjectArrayForKey("at")
+        if let altMedia = try? decoder.decodeObjectArrayWithCustomDecoderForKey("arep", decoder: { d in
+            return d.decodeRootObject() as! Media
+        }) {
+            self.alternativeRepresentations = altMedia
+        } else {
+            self.alternativeRepresentations = []
+        }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -508,6 +527,9 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
             encoder.encodeNil(forKey: "s64")
         }
         encoder.encodeObjectArray(self.attributes, forKey: "at")
+        encoder.encodeObjectArrayWithEncoder(self.alternativeRepresentations, forKey: "arep", encoder: { v, e in
+            e.encodeRootObject(v)
+        })
     }
     
     public required init(from decoder: Decoder) throws {
@@ -526,6 +548,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         self.mimeType = object.mimeType
         self.size = object.size
         self.attributes = object.attributes
+        self.alternativeRepresentations = object.alternativeRepresentations
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -592,7 +615,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     
     public var isInstantVideo: Bool {
         for attribute in self.attributes {
-            if case .Video(_, _, let flags, _) = attribute {
+            if case .Video(_, _, let flags, _, _, _) = attribute {
                 return flags.contains(.instantRoundVideo)
             }
         }
@@ -601,7 +624,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     
     public var preloadSize: Int32? {
         for attribute in self.attributes {
-            if case .Video(_, _, _, let preloadSize) = attribute {
+            if case .Video(_, _, _, let preloadSize, _, _) = attribute {
                 return preloadSize
             }
         }
@@ -798,6 +821,10 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
             return false
         }
         
+        if !areMediaArraysEqual(self.alternativeRepresentations, other.alternativeRepresentations) {
+            return false
+        }
+        
         return true
     }
     
@@ -844,27 +871,31 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
             return false
         }
         
+        if !areMediaArraysSemanticallyEqual(self.alternativeRepresentations, other.alternativeRepresentations) {
+            return false
+        }
+        
         return true
     }
     
     public func withUpdatedPartialReference(_ partialReference: PartialMediaReference?) -> TelegramMediaFile {
-        return TelegramMediaFile(fileId: self.fileId, partialReference: partialReference, resource: self.resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: self.attributes)
+        return TelegramMediaFile(fileId: self.fileId, partialReference: partialReference, resource: self.resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: self.attributes, alternativeRepresentations: self.alternativeRepresentations)
     }
 
     public func withUpdatedResource(_ resource: TelegramMediaResource) -> TelegramMediaFile {
-        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: self.attributes)
+        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: self.attributes, alternativeRepresentations: self.alternativeRepresentations)
     }
     
     public func withUpdatedSize(_ size: Int64?) -> TelegramMediaFile {
-        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: self.resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: size, attributes: self.attributes)
+        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: self.resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: size, attributes: self.attributes, alternativeRepresentations: self.alternativeRepresentations)
     }
     
     public func withUpdatedPreviewRepresentations(_ previewRepresentations: [TelegramMediaImageRepresentation]) -> TelegramMediaFile {
-        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: self.resource, previewRepresentations: previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: self.attributes)
+        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: self.resource, previewRepresentations: previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: self.attributes, alternativeRepresentations: self.alternativeRepresentations)
     }
     
     public func withUpdatedAttributes(_ attributes: [TelegramMediaFileAttribute]) -> TelegramMediaFile {
-        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: self.resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: attributes)
+        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: self.resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: attributes, alternativeRepresentations: self.alternativeRepresentations)
     }
 }
 

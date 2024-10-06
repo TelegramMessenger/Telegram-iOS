@@ -1473,7 +1473,7 @@ public extension Api {
         case documentAttributeHasStickers
         case documentAttributeImageSize(w: Int32, h: Int32)
         case documentAttributeSticker(flags: Int32, alt: String, stickerset: Api.InputStickerSet, maskCoords: Api.MaskCoords?)
-        case documentAttributeVideo(flags: Int32, duration: Double, w: Int32, h: Int32, preloadPrefixSize: Int32?)
+        case documentAttributeVideo(flags: Int32, duration: Double, w: Int32, h: Int32, preloadPrefixSize: Int32?, videoStartTs: Double?, videoCodec: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1529,15 +1529,17 @@ public extension Api {
                     stickerset.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {maskCoords!.serialize(buffer, true)}
                     break
-                case .documentAttributeVideo(let flags, let duration, let w, let h, let preloadPrefixSize):
+                case .documentAttributeVideo(let flags, let duration, let w, let h, let preloadPrefixSize, let videoStartTs, let videoCodec):
                     if boxed {
-                        buffer.appendInt32(-745541182)
+                        buffer.appendInt32(1137015880)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeDouble(duration, buffer: buffer, boxed: false)
                     serializeInt32(w, buffer: buffer, boxed: false)
                     serializeInt32(h, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(preloadPrefixSize!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeDouble(videoStartTs!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeString(videoCodec!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -1558,8 +1560,8 @@ public extension Api {
                 return ("documentAttributeImageSize", [("w", w as Any), ("h", h as Any)])
                 case .documentAttributeSticker(let flags, let alt, let stickerset, let maskCoords):
                 return ("documentAttributeSticker", [("flags", flags as Any), ("alt", alt as Any), ("stickerset", stickerset as Any), ("maskCoords", maskCoords as Any)])
-                case .documentAttributeVideo(let flags, let duration, let w, let h, let preloadPrefixSize):
-                return ("documentAttributeVideo", [("flags", flags as Any), ("duration", duration as Any), ("w", w as Any), ("h", h as Any), ("preloadPrefixSize", preloadPrefixSize as Any)])
+                case .documentAttributeVideo(let flags, let duration, let w, let h, let preloadPrefixSize, let videoStartTs, let videoCodec):
+                return ("documentAttributeVideo", [("flags", flags as Any), ("duration", duration as Any), ("w", w as Any), ("h", h as Any), ("preloadPrefixSize", preloadPrefixSize as Any), ("videoStartTs", videoStartTs as Any), ("videoCodec", videoCodec as Any)])
     }
     }
     
@@ -1671,13 +1673,19 @@ public extension Api {
             _4 = reader.readInt32()
             var _5: Int32?
             if Int(_1!) & Int(1 << 2) != 0 {_5 = reader.readInt32() }
+            var _6: Double?
+            if Int(_1!) & Int(1 << 4) != 0 {_6 = reader.readDouble() }
+            var _7: String?
+            if Int(_1!) & Int(1 << 5) != 0 {_7 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.DocumentAttribute.documentAttributeVideo(flags: _1!, duration: _2!, w: _3!, h: _4!, preloadPrefixSize: _5)
+            let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 5) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.DocumentAttribute.documentAttributeVideo(flags: _1!, duration: _2!, w: _3!, h: _4!, preloadPrefixSize: _5, videoStartTs: _6, videoCodec: _7)
             }
             else {
                 return nil

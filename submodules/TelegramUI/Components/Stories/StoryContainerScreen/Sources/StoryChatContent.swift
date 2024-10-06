@@ -48,6 +48,7 @@ public final class StoryContentContextImpl: StoryContentContext {
             self.peerId = peerId
             
             self.currentFocusedId = initialFocusedId
+            self.storedFocusedId = self.currentFocusedId
             self.currentFocusedIdUpdatedPromise.set(.single(Void()))
             
             context.engine.account.viewTracker.refreshCanSendMessagesForPeerIds(peerIds: [peerId])
@@ -280,7 +281,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         timestamp: item.timestamp,
                         expirationTimestamp: item.expirationTimestamp,
                         media: EngineMedia(media),
-                        alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                        alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                         mediaAreas: item.mediaAreas,
                         text: item.text,
                         entities: item.entities,
@@ -328,7 +329,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                                 timestamp: item.timestamp,
                                 expirationTimestamp: Int32.max,
                                 media: EngineMedia(item.media),
-                                alternativeMedia: nil,
+                                alternativeMediaList: [],
                                 mediaAreas: item.mediaAreas,
                                 text: item.text,
                                 entities: item.entities,
@@ -600,13 +601,14 @@ public final class StoryContentContextImpl: StoryContentContext {
         context: AccountContext,
         isHidden: Bool,
         focusedPeerId: EnginePeer.Id?,
+        focusedStoryId: Int32? = nil,
         singlePeer: Bool,
         fixedOrder: [EnginePeer.Id] = []
     ) {
         self.context = context
         self.isHidden = isHidden
         if let focusedPeerId {
-            self.focusedItem = (focusedPeerId, nil)
+            self.focusedItem = (focusedPeerId, focusedStoryId)
         }
         self.fixedSubscriptionOrder = fixedOrder
         
@@ -858,9 +860,11 @@ public final class StoryContentContextImpl: StoryContentContext {
                 }
                 
                 var centralIndex: Int?
-                if let (focusedPeerId, _) = self.focusedItem {
+                var centralStoryId: Int32?
+                if let (focusedPeerId, focusedStoryId) = self.focusedItem {
                     if let index = subscriptionItems.firstIndex(where: { $0.peer.id == focusedPeerId }) {
                         centralIndex = index
+                        centralStoryId = focusedStoryId
                     }
                 }
                 if centralIndex == nil {
@@ -874,7 +878,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                     if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: subscriptionItems[centralIndex].peer.id) {
                         centralPeerContext = existingContext
                     } else {
-                        centralPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex].peer.id, focusedId: nil, loadIds: loadIds)
+                        centralPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex].peer.id, focusedId: centralStoryId, loadIds: loadIds)
                     }
                     
                     var previousPeerContext: PeerContext?
@@ -994,8 +998,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                 }
                 
                 var selectedMedia: EngineMedia
-                if let slice = stateValue.slice, let alternativeMedia = item.alternativeMedia, (!slice.additionalPeerData.preferHighQualityStories && !item.isMy) {
-                    selectedMedia = alternativeMedia
+                if let slice = stateValue.slice, let alternativeMediaValue = item.alternativeMediaList.first, (!slice.additionalPeerData.preferHighQualityStories && !item.isMy) {
+                    selectedMedia = alternativeMediaValue
                 } else {
                     selectedMedia = item.media
                 }
@@ -1311,7 +1315,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     timestamp: itemValue.timestamp,
                     expirationTimestamp: itemValue.expirationTimestamp,
                     media: EngineMedia(media),
-                    alternativeMedia: itemValue.alternativeMedia.flatMap(EngineMedia.init),
+                    alternativeMediaList: itemValue.alternativeMediaList.map(EngineMedia.init),
                     mediaAreas: itemValue.mediaAreas,
                     text: itemValue.text,
                     entities: itemValue.entities,
@@ -1468,7 +1472,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
     
     private var currentPeerData: (EnginePeer.Id, Promise<PeerData>)?
     
-    public init(context: AccountContext, listContext: StoryListContext, initialId: Int32?, splitIndexIntoDays: Bool) {
+    public init(context: AccountContext, listContext: StoryListContext, initialId: StoryId?, splitIndexIntoDays: Bool) {
         self.context = context
         
         let preferHighQualityStories: Signal<Bool, NoError> = combineLatest(
@@ -1507,9 +1511,9 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                     focusedIndex = nil
                 }
             } else if let initialId = initialId {
-                if let index = state.items.firstIndex(where: { $0.storyItem.id == initialId }) {
+                if let index = state.items.firstIndex(where: { $0.id == initialId }) {
                     focusedIndex = index
-                } else if let index = state.items.firstIndex(where: { $0.storyItem.id <= initialId }) {
+                } else if let index = state.items.firstIndex(where: { $0.storyItem.id <= initialId.id }) {
                     focusedIndex = index
                 } else {
                     focusedIndex = nil
@@ -1688,8 +1692,8 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                                 }
                                 
                                 var selectedMedia: EngineMedia
-                                if let alternativeMedia = item.storyItem.alternativeMedia, (!preferHighQualityStories && !item.storyItem.isMy) {
-                                    selectedMedia = alternativeMedia
+                                if let alternativeMediaValue = item.storyItem.alternativeMediaList.first, (!preferHighQualityStories && !item.storyItem.isMy) {
+                                    selectedMedia = alternativeMediaValue
                                 } else {
                                     selectedMedia = item.storyItem.media
                                 }
@@ -1816,7 +1820,7 @@ public func preloadStoryMedia(context: AccountContext, info: StoryPreloadInfo) -
     case let .file(file):
         var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
         for attribute in file.attributes {
-            if case let .Video(_, _, _, preloadSize) = attribute {
+            if case let .Video(_, _, _, preloadSize, _, _) = attribute {
                 if let preloadSize {
                     fetchRange = (0 ..< Int64(preloadSize), .default)
                 }
@@ -1855,6 +1859,8 @@ public func preloadStoryMedia(context: AccountContext, info: StoryPreloadInfo) -
             if !customReactions.contains(fileId) {
                 customReactions.append(fileId)
             }
+        case .stars:
+            break
         }
     }
     if !builtinReactions.isEmpty {
@@ -1998,8 +2004,8 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
         var fetchPriorityDisposable: Disposable?
         
         let selectedMedia: EngineMedia
-        if !preferHighQualityStories, let alternativeMedia = storyItem.alternativeMedia {
-            selectedMedia = alternativeMedia
+        if !preferHighQualityStories, let alternativeMediaValue = storyItem.alternativeMediaList.first {
+            selectedMedia = alternativeMediaValue
         } else {
             selectedMedia = storyItem.media
         }
@@ -2041,7 +2047,7 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
         case let .file(file):
             var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
             for attribute in file.attributes {
-                if case let .Video(_, _, _, preloadSize) = attribute {
+                if case let .Video(_, _, _, preloadSize, _, _) = attribute {
                     if let preloadSize {
                         fetchRange = (0 ..< Int64(preloadSize), .default)
                     }
@@ -2086,6 +2092,8 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
                     if !customReactions.contains(fileId) {
                         customReactions.append(fileId)
                     }
+                case .stars:
+                    break
                 }
             }
         }
@@ -2239,7 +2247,7 @@ private func getCachedStory(storyId: StoryId, transaction: Transaction) -> Engin
             timestamp: item.timestamp,
             expirationTimestamp: item.expirationTimestamp,
             media: EngineMedia(media),
-            alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+            alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
             mediaAreas: item.mediaAreas,
             text: item.text,
             entities: item.entities,
@@ -2932,8 +2940,8 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                 }
                 
                 var selectedMedia: EngineMedia
-                if let slice = stateValue.slice, let alternativeMedia = item.alternativeMedia, (!slice.additionalPeerData.preferHighQualityStories && !item.isMy) {
-                    selectedMedia = alternativeMedia
+                if let slice = stateValue.slice, let alternativeMediaValue = item.alternativeMediaList.first, (!slice.additionalPeerData.preferHighQualityStories && !item.isMy) {
+                    selectedMedia = alternativeMediaValue
                 } else {
                     selectedMedia = item.media
                 }

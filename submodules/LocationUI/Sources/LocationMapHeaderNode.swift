@@ -183,7 +183,7 @@ public final class LocationMapHeaderNode: ASDisplayNode {
         let mapHeight: CGFloat = floor(layout.size.height * 1.3) + layout.intrinsicInsets.top * 2.0
         let mapFrame = CGRect(x: 0.0, y: floorToScreenPixels((size.height - mapHeight + navigationBarHeight) / 2.0) + offset + floor(layout.intrinsicInsets.top * 0.5), width: size.width, height: mapHeight)
         transition.updateFrame(node: self.mapNode, frame: mapFrame)
-        self.mapNode.updateLayout(size: mapFrame.size, topPadding: 0.0)
+        self.mapNode.updateLayout(size: mapFrame.size, topPadding: topPadding, inset: mapFrame.origin.y * -1.0 + navigationBarHeight, transition: transition)
         
         let inset: CGFloat = 6.0
         

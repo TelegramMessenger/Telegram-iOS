@@ -324,13 +324,15 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             self.closeAction?()
         }
         
-        if #available(iOS 16.0, *) {
-            let pipVideoCallViewController = AVPictureInPictureVideoCallViewController()
-            pipVideoCallViewController.view.addSubview(self.pipView)
-            self.pipView.frame = pipVideoCallViewController.view.bounds
-            self.pipView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            self.pipView.translatesAutoresizingMaskIntoConstraints = true
-            self.pipVideoCallViewController = pipVideoCallViewController
+        if !"".isEmpty {
+            if #available(iOS 16.0, *) {
+                let pipVideoCallViewController = AVPictureInPictureVideoCallViewController()
+                pipVideoCallViewController.view.addSubview(self.pipView)
+                self.pipView.frame = pipVideoCallViewController.view.bounds
+                self.pipView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                self.pipView.translatesAutoresizingMaskIntoConstraints = true
+                self.pipVideoCallViewController = pipVideoCallViewController
+            }
         }
         
         if let blurFilter = makeBlurFilter() {

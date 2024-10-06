@@ -763,7 +763,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 })
                             }
                             let mediaManager = item.context.sharedContext.mediaManager
-                            let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: ChatBubbleInstantVideoDecoration(inset: 2.0, backgroundImage: instantVideoBackgroundImage, tapped: {
+                            let videoNode = UniversalVideoNode(accountId: item.context.account.id, postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: ChatBubbleInstantVideoDecoration(inset: 2.0, backgroundImage: instantVideoBackgroundImage, tapped: {
                                 if let strongSelf = self {
                                     if let item = strongSelf.item {
                                         if strongSelf.infoBackgroundNode.alpha.isZero {
@@ -1586,7 +1586,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 return
                             }
                             
-                            self.item?.controllerInteraction.clickThroughMessage()
+                            self.item?.controllerInteraction.clickThroughMessage(self.view, location)
                         case .longTap, .doubleTap, .secondaryTap:
                             break
                         case .hold:

@@ -12,6 +12,10 @@ func cachedRecentPeersEntryId() -> ItemCacheEntryId {
     return ItemCacheEntryId(collectionId: 101, key: CachedRecentPeers.cacheKey())
 }
 
+func cachedRecentAppsEntryId() -> ItemCacheEntryId {
+    return ItemCacheEntryId(collectionId: 102, key: CachedRecentPeers.cacheKey())
+}
+
 public func _internal_recentPeers(accountPeerId: EnginePeer.Id, postbox: Postbox) -> Signal<RecentPeers, NoError> {
     let key = PostboxViewKey.cachedItem(cachedRecentPeersEntryId())
     return postbox.combinedView(keys: [key])
@@ -237,6 +241,83 @@ func _internal_removeRecentlyUsedInlineBot(account: Account, peerId: PeerId) -> 
         
         if let peer = transaction.getPeer(peerId), let apiPeer = apiInputPeer(peer) {
             return account.network.request(Api.functions.contacts.resetTopPeerRating(category: .topPeerCategoryBotsInline, peer: apiPeer))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}
+
+public func _internal_recentApps(accountPeerId: PeerId, postbox: Postbox) -> Signal<[EnginePeer.Id], NoError> {
+    let key = PostboxViewKey.cachedItem(cachedRecentAppsEntryId())
+    return postbox.combinedView(keys: [key])
+    |> mapToSignal { views -> Signal<[EnginePeer.Id], NoError> in
+        if let value = (views.views[key] as? CachedItemView)?.value?.get(CachedRecentPeers.self) {
+            return .single(value.ids)
+        } else {
+            return .single([])
+        }
+    }
+}
+
+public func _internal_managedUpdatedRecentApps(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let key = PostboxViewKey.cachedItem(cachedRecentAppsEntryId())
+    let peersEnabled = postbox.combinedView(keys: [key])
+    |> map { views -> Bool in
+        if let value = (views.views[key] as? CachedItemView)?.value?.get(CachedRecentPeers.self) {
+            return value.enabled
+        } else {
+            return true
+        }
+    }
+    |> distinctUntilChanged
+    
+    let updateOnce =
+        network.request(Api.functions.contacts.getTopPeers(flags: 1 << 16, offset: 0, limit: 50, hash: 0))
+    |> `catch` { _ -> Signal<Api.contacts.TopPeers, NoError> in
+        return .complete()
+    }
+    |> mapToSignal { result -> Signal<Void, NoError> in
+        return postbox.transaction { transaction -> Void in
+            switch result {
+            case let .topPeers(_, _, users):
+                let parsedPeers = AccumulatedPeers(users: users)
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                
+                if let entry = CodableEntry(CachedRecentPeers(enabled: true, ids: users.map { $0.peerId })) {
+                    transaction.putItemCacheEntry(id: cachedRecentAppsEntryId(), entry: entry)
+                }
+            case .topPeersNotModified:
+                break
+            case .topPeersDisabled:
+                if let entry = CodableEntry(CachedRecentPeers(enabled: false, ids: [])) {
+                    transaction.putItemCacheEntry(id: cachedRecentAppsEntryId(), entry: entry)
+                }
+            }
+        }
+    }
+    
+    return peersEnabled |> mapToSignal { _ -> Signal<Void, NoError> in
+        return updateOnce
+    }
+}
+
+func _internal_removeRecentlyUsedApp(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+        if let entry = transaction.retrieveItemCacheEntry(id: cachedRecentAppsEntryId()), let recentPeers = entry.get(CachedRecentPeers.self) {
+            let updatedRecentPeers = CachedRecentPeers(enabled: recentPeers.enabled, ids: recentPeers.ids.filter({ $0 != peerId }))
+            if let updatedEntry = CodableEntry(updatedRecentPeers) {
+                transaction.putItemCacheEntry(id: cachedRecentAppsEntryId(), entry: updatedEntry)
+            }
+        }
+        
+        if let peer = transaction.getPeer(peerId), let apiPeer = apiInputPeer(peer) {
+            return account.network.request(Api.functions.contacts.resetTopPeerRating(category: .topPeerCategoryBotsApp, peer: apiPeer))
             |> `catch` { _ -> Signal<Api.Bool, NoError> in
                 return .single(.boolFalse)
             }

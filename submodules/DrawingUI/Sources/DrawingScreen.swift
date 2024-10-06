@@ -3089,6 +3089,7 @@ public final class DrawingToolsInteraction {
             var isAdditional = false
             var isMessage = false
             var isLink = false
+            var isWeather = false
             if let entity = entityView.entity as? DrawingStickerEntity {
                 if case let .dualVideoReference(isAdditionalValue) = entity.content {
                     isVideo = true
@@ -3098,6 +3099,8 @@ public final class DrawingToolsInteraction {
                 }
             } else if entityView.entity is DrawingLinkEntity {
                 isLink = true
+            } else if entityView.entity is DrawingWeatherEntity {
+                isWeather = true
             }
             
             guard (!isVideo || isAdditional) && (!isMessage || !isTopmost) else {
@@ -3143,7 +3146,7 @@ public final class DrawingToolsInteraction {
                     }
                 }))
             }
-            if !isVideo && !isMessage && !isLink {
+            if !isVideo && !isMessage && !isLink && !isWeather {
                 if let stickerEntity = entityView.entity as? DrawingStickerEntity, case let .file(_, type) = stickerEntity.content, case .reaction = type {
                     
                 } else {
@@ -3209,10 +3212,12 @@ public final class DrawingToolsInteraction {
         self.isActive = false
     }
     
-    public func insertEntity(_ entity: DrawingEntity, scale: CGFloat? = nil, position: CGPoint? = nil) {
+    public func insertEntity(_ entity: DrawingEntity, scale: CGFloat? = nil, position: CGPoint? = nil, select: Bool = true) {
         self.entitiesView.prepareNewEntity(entity, scale: scale, position: position)
         self.entitiesView.add(entity)
-        self.entitiesView.selectEntity(entity, animate: !(entity is DrawingTextEntity))
+        if select {
+            self.entitiesView.selectEntity(entity, animate: !(entity is DrawingTextEntity))
+        }
         
         if let entityView = self.entitiesView.getView(for: entity.uuid) {
             if let textEntityView = entityView as? DrawingTextEntityView {

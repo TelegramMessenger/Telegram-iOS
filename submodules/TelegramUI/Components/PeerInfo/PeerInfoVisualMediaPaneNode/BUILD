@@ -46,6 +46,12 @@ swift_library(
         "//submodules/TelegramUI/Components/MediaEditorScreen",
         "//submodules/LocationUI",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/TelegramUI/Components/TabSelectorComponent",
+        "//submodules/TelegramUI/Components/Settings/LanguageSelectionScreen",
+        "//submodules/TelegramUI/Components/Gifts/GiftItemComponent",
+        "//submodules/TelegramUI/Components/Gifts/GiftViewScreen",
+        "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/Components/BalancedTextComponent",
     ],
     visibility = [
         "//visibility:public",

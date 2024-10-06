@@ -118,7 +118,7 @@ func _internal_outgoingMessageWithChatContextResult(to peerId: PeerId, threadId:
                 if let dimensions = externalReference.content?.dimensions {
                     fileAttributes.append(.ImageSize(size: dimensions))
                     if externalReference.type == "gif" {
-                        fileAttributes.append(.Video(duration: externalReference.content?.duration ?? 0.0, size: dimensions, flags: [], preloadSize: nil))
+                        fileAttributes.append(.Video(duration: externalReference.content?.duration ?? 0.0, size: dimensions, flags: [], preloadSize: nil, coverTime: nil, videoCodec: nil))
                     }
                 }
                 
@@ -136,7 +136,7 @@ func _internal_outgoingMessageWithChatContextResult(to peerId: PeerId, threadId:
                     resource = EmptyMediaResource()
                 }
                 
-                let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: videoThumbnails, immediateThumbnailData: nil, mimeType: externalReference.content?.mimeType ?? "application/binary", size: nil, attributes: fileAttributes)
+                let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: videoThumbnails, immediateThumbnailData: nil, mimeType: externalReference.content?.mimeType ?? "application/binary", size: nil, attributes: fileAttributes, alternativeRepresentations: [])
                 return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: file), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
             } else {
                 return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: nil, threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])

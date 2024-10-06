@@ -179,7 +179,17 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                 case .text:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingMessageIconImage : graphics.chatBubbleActionButtonOutgoingMessageIconImage
                 case let .url(value):
-                    if isTelegramMeLink(value), let internalUrl = parseFullInternalUrl(sharedContext: context.sharedContext, url: value), case .peer(_, .appStart) = internalUrl {
+                    var isApp = false
+                    if isTelegramMeLink(value), let internalUrl = parseFullInternalUrl(sharedContext: context.sharedContext, url: value) {
+                        if case .peer(_, .appStart) = internalUrl {
+                            isApp = true
+                        } else if case .peer(_, .attachBotStart) = internalUrl {
+                            isApp = true
+                        } else if case .startAttach = internalUrl {
+                            isApp = true
+                        }
+                    }
+                    if isApp {
                         iconImage = incoming ? graphics.chatBubbleActionButtonIncomingWebAppIconImage : graphics.chatBubbleActionButtonOutgoingWebAppIconImage
                     } else if value.lowercased().contains("?startgroup=") {
                         iconImage = incoming ? graphics.chatBubbleActionButtonIncomingAddToChatIconImage : graphics.chatBubbleActionButtonOutgoingAddToChatIconImage
@@ -205,6 +215,8 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingProfileIconImage : graphics.chatBubbleActionButtonOutgoingProfileIconImage
                 case .openWebView:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingWebAppIconImage : graphics.chatBubbleActionButtonOutgoingWebAppIconImage
+                case .copyText:
+                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingCopyIconImage : graphics.chatBubbleActionButtonOutgoingCopyIconImage
                 default:
                     iconImage = nil
             }

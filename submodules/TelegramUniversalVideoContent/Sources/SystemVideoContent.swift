@@ -29,7 +29,7 @@ public final class SystemVideoContent: UniversalVideoContent {
         self.duration = duration
     }
     
-    public func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
+    public func makeContentNode(accountId: AccountRecordId, postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
         return SystemVideoContentNode(postbox: postbox, audioSessionManager: audioSession, userLocation: self.userLocation, url: self.url, imageReference: self.imageReference, intrinsicDimensions: self.dimensions, approximateDuration: self.duration)
     }
 }
@@ -283,6 +283,13 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     }
     
     func setBaseRate(_ baseRate: Double) {
+    }
+    
+    func setVideoQuality(_ videoQuality: UniversalVideoContentVideoQuality) {
+    }
+    
+    func videoQualityState() -> (current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])? {
+        return nil
     }
     
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int {

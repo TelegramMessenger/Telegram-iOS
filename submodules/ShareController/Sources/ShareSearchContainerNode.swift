@@ -106,6 +106,7 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
     let requiresPremiumForMessaging: Bool
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let isGlobal: Bool
     
     var stableId: Int64 {
         if let peer = self.peer {
@@ -131,6 +132,9 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
         if lhs.theme !== rhs.theme {
             return false
         }
+        if lhs.isGlobal != rhs.isGlobal {
+            return false
+        }
         return true
     }
     
@@ -139,9 +143,13 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
     }
     
     func item(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-//        let item: ShareControllerPeerGridItem.ShareItem
-//        item = self.peer.flatMap { .peer(peer: $0, presence: self.presence, topicId: nil, threadData: nil) }
-        return ShareControllerPeerGridItem(environment: environment, context: context, theme: self.theme, strings: self.strings, item: self.peer.flatMap({ .peer(peer: $0, presence: self.presence, topicId: nil, threadData: nil, requiresPremiumForMessaging: self.requiresPremiumForMessaging) }), controllerInteraction: interfaceInteraction, search: true)
+        let sectionTitle: String?
+        if self.isGlobal {
+            sectionTitle = self.strings.Contacts_GlobalSearch.uppercased()
+        } else {
+            sectionTitle = nil
+        }
+        return ShareControllerPeerGridItem(environment: environment, context: context, theme: self.theme, strings: self.strings, item: self.peer.flatMap({ .peer(peer: $0, presence: self.presence, topicId: nil, threadData: nil, requiresPremiumForMessaging: self.requiresPremiumForMessaging) }), controllerInteraction: interfaceInteraction, sectionTitle: sectionTitle, search: true)
     }
 }
 
@@ -189,6 +197,14 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     let contentGridNode: GridNode
     private let recentGridNode: GridNode
+    
+    var effectiveGridNode: GridNode {
+        if !self.recentGridNode.isHidden {
+            return self.recentGridNode
+        } else {
+            return self.contentGridNode
+        }
+    }
     
     private let contentSeparatorNode: ASDisplayNode
     private let searchNode: ShareSearchBarNode
@@ -345,7 +361,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                     if strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery) {
                         if !existingPeerIds.contains(accountPeer.id) {
                             existingPeerIds.insert(accountPeer.id)
-                            entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(accountPeer)), presence: nil, requiresPremiumForMessaging: false, theme: theme, strings: strings))
+                            entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(accountPeer)), presence: nil, requiresPremiumForMessaging: false, theme: theme, strings: strings, isGlobal: false))
                             index += 1
                         }
                     }
@@ -354,7 +370,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                         if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id {
                             if !existingPeerIds.contains(renderedPeer.peerId) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(renderedPeer.peerId)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(renderedPeer), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, theme: theme, strings: strings))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(renderedPeer), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, theme: theme, strings: strings, isGlobal: false))
                                 index += 1
                             }
                         }
@@ -364,7 +380,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                     if foundRemotePeers.2 {
                         isPlaceholder = true
                         for _ in 0 ..< 4 {
-                            entries.append(ShareSearchPeerEntry(index: index, peer: nil, presence: nil, requiresPremiumForMessaging: false, theme: theme, strings: strings))
+                            entries.append(ShareSearchPeerEntry(index: index, peer: nil, presence: nil, requiresPremiumForMessaging: false, theme: theme, strings: strings, isGlobal: false))
                             index += 1
                         }
                     } else {
@@ -372,7 +388,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                             let peer = foundPeer.peer
                             if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(peer.id)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(foundPeer.peer)), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, theme: theme, strings: strings))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(foundPeer.peer)), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, theme: theme, strings: strings, isGlobal: false))
                                 index += 1
                             }
                         }
@@ -381,7 +397,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                             let peer = foundPeer.peer
                             if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(peer.id)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(peer)), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, theme: theme, strings: strings))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(peer)), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, theme: theme, strings: strings, isGlobal: true))
                                 index += 1
                             }
                         }
@@ -759,14 +775,16 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.cancelButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.cancelButtonNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         
-        self.contentGridNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        let gridNode = self.effectiveGridNode
+        
+        gridNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         
         if let targetFrame = self.frameForPeerId(peerId), let (size, bottomInset) = self.validLayout {
             let clippedNode = ASDisplayNode()
             clippedNode.clipsToBounds = true
             clippedNode.cornerRadius = 16.0
             clippedNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.searchNode.frame.minY - 15.0), size: CGSize(width: size.width, height: size.height - bottomInset))
-            self.contentGridNode.view.superview?.insertSubview(clippedNode.view, aboveSubview: self.contentGridNode.view)
+            gridNode.view.superview?.insertSubview(clippedNode.view, aboveSubview: gridNode.view)
             
             clippedNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             
@@ -779,9 +797,8 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
             maskView.addSubview(maskImageView)
             clippedNode.view.mask = maskView
             
-            
-            self.contentGridNode.alpha = 1.0
-            self.contentGridNode.forEachItemNode { itemNode in
+            gridNode.alpha = 1.0
+            gridNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.peerId == peerId {
                     itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
                     itemNode.layer.animateScale(from: 1.35, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak clippedNode] _ in
@@ -820,14 +837,16 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.cancelButtonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
         self.cancelButtonNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         
-        self.contentGridNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        let gridNode = self.effectiveGridNode
+        
+        gridNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         
         if let sourceFrame = self.frameForPeerId(peerId), let (size, bottomInset) = self.validLayout {
             let clippedNode = ASDisplayNode()
             clippedNode.clipsToBounds = true
             clippedNode.cornerRadius = 16.0
             clippedNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.searchNode.frame.minY - 15.0), size: CGSize(width: size.width, height: size.height - bottomInset))
-            self.contentGridNode.view.superview?.insertSubview(clippedNode.view, aboveSubview: self.contentGridNode.view)
+            gridNode.view.superview?.insertSubview(clippedNode.view, aboveSubview: gridNode.view)
             
             clippedNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             
@@ -840,7 +859,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
             maskView.addSubview(maskImageView)
             clippedNode.view.mask = maskView
             
-            self.contentGridNode.forEachItemNode { itemNode in
+            gridNode.forEachItemNode { itemNode in
                 if let snapshotView = itemNode.view.snapshotView(afterScreenUpdates: false) {
                     snapshotView.frame = itemNode.view.convert(itemNode.bounds, to: clippedNode.view)
                     clippedNode.view.addSubview(snapshotView)
@@ -862,7 +881,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 clippedNode?.view.removeFromSuperview()
             })
             
-            self.contentGridNode.alpha = 0.0
+            gridNode.alpha = 0.0
             
             return sourceFrame
         } else {

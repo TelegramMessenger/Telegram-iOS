@@ -17,6 +17,7 @@ private var nextRenderTargetId: Int64 = 1
 
 open class MultiAnimationRenderTarget: SimpleLayer {
     public let id: Int64
+    public var numFrames: Int?
     
     let deinitCallbacks = Bag<() -> Void>()
     let updateStateCallbacks = Bag<() -> Void>()
@@ -545,6 +546,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
                 }
                 
                 target.contents = loadedFrame.image.cgImage
+                target.numFrames = item.numFrames
                 
                 if let blurredRepresentationTarget = target.blurredRepresentationTarget {
                     blurredRepresentationTarget.contents = loadedFrame.blurredRepresentation(color: target.blurredRepresentationBackgroundColor)?.cgImage
@@ -580,6 +582,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
                         completion(false, true)
                         return
                     }
+                    target.numFrames = item.numFrames
                     if let loadedFrame = loadedFrame {
                         if let cgImage = loadedFrame.image.cgImage {
                             if hadIntermediateUpdate {

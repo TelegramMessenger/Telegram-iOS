@@ -1,6 +1,7 @@
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import AccountContext
 
 final class PeerInfoScreenHeaderItem: PeerInfoScreenItem {
     let id: AnyHashable
@@ -44,7 +45,7 @@ private final class PeerInfoScreenHeaderItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.activateArea)
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenHeaderItem else {
             return 10.0
         }

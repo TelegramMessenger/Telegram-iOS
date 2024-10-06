@@ -9,6 +9,7 @@ import UniversalMediaPlayer
 import TelegramPresentationData
 import RangeSet
 import ShimmerEffect
+import TelegramUniversalVideoContent
 
 private let textFont = Font.with(size: 13.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
 

@@ -179,7 +179,7 @@ public struct TelegramWallpaperNativeCodable: Codable {
 
 public enum TelegramWallpaper: Equatable {
     public static func emoticonWallpaper(emoticon: String) -> TelegramWallpaper {
-        return .file(File(id: -1, accessHash: -1, isCreator: false, isDefault: false, isPattern: false, isDark: false, slug: "", file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: EmptyMediaResource(), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(emoticon: emoticon)))
+        return .file(File(id: -1, accessHash: -1, isCreator: false, isDefault: false, isPattern: false, isDark: false, slug: "", file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: EmptyMediaResource(), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: [], alternativeRepresentations: []), settings: WallpaperSettings(emoticon: emoticon)))
     }
     
     public struct Gradient: Equatable {

@@ -1,5 +1,6 @@
 import Foundation
 import TelegramCore
+import UrlEscaping
 
 public func decodeCodableDrawingEntities(data: Data) -> [CodableDrawingEntity] {
     if let codableEntities = try? JSONDecoder().decode([CodableDrawingEntity].self, from: data) {
@@ -24,6 +25,7 @@ public enum CodableDrawingEntity: Equatable {
     case vector(DrawingVectorEntity)
     case location(DrawingLocationEntity)
     case link(DrawingLinkEntity)
+    case weather(DrawingWeatherEntity)
     
     public init?(entity: DrawingEntity) {
         if let entity = entity as? DrawingStickerEntity {
@@ -40,6 +42,8 @@ public enum CodableDrawingEntity: Equatable {
             self = .location(entity)
         } else if let entity = entity as? DrawingLinkEntity {
             self = .link(entity)
+        } else if let entity = entity as? DrawingWeatherEntity {
+            self = .weather(entity)
         } else {
             return nil
         }
@@ -60,6 +64,8 @@ public enum CodableDrawingEntity: Equatable {
         case let .location(entity):
             return entity
         case let .link(entity):
+            return entity
+        case let .weather(entity):
             return entity
         }
     }
@@ -108,6 +114,14 @@ public enum CodableDrawingEntity: Equatable {
                     cornerRadius = 10.0 / (entitySize.width * entity.scale)
                     size = entitySize
                 }
+            }
+        case let .weather(entity):
+            position = entity.position
+            size = entity.renderImage?.size
+            rotation = entity.rotation
+            scale = entity.scale
+            if let size {
+                cornerRadius = (size.height * 0.17) / size.width
             }
         default:
             return nil
@@ -170,13 +184,27 @@ public enum CodableDrawingEntity: Equatable {
                 return nil
             }
         case let .link(entity):
-            var url = entity.url
-            if !url.hasPrefix("http://") && !url.hasPrefix("https://") {
-                url = "https://\(url)"
-            }
             return .link(
                 coordinates: coordinates,
-                url: url
+                url: explicitUrl(entity.url)
+            )
+        case let .weather(entity):
+            let color: UInt32
+            switch entity.style {
+            case .white:
+                color = 0xffffffff
+            case .black:
+                color = 0xff000000
+            case .transparent:
+                color = 0x51000000
+            case .custom:
+                color = entity.color.toUIColor().argb
+            }
+            return .weather(
+                coordinates: coordinates,
+                emoji: entity.emoji,
+                temperature: entity.temperature,
+                color: Int32(bitPattern: color)
             )
         default:
             return nil
@@ -198,6 +226,7 @@ extension CodableDrawingEntity: Codable {
         case vector
         case location
         case link
+        case weather
     }
 
     public init(from decoder: Decoder) throws {
@@ -218,6 +247,8 @@ extension CodableDrawingEntity: Codable {
             self = .location(try container.decode(DrawingLocationEntity.self, forKey: .entity))
         case .link:
             self = .link(try container.decode(DrawingLinkEntity.self, forKey: .entity))
+        case .weather:
+            self = .weather(try container.decode(DrawingWeatherEntity.self, forKey: .entity))
         }
     }
 
@@ -244,6 +275,9 @@ extension CodableDrawingEntity: Codable {
             try container.encode(payload, forKey: .entity)
         case let .link(payload):
             try container.encode(EntityType.link, forKey: .type)
+            try container.encode(payload, forKey: .entity)
+        case let .weather(payload):
+            try container.encode(EntityType.weather, forKey: .type)
             try container.encode(payload, forKey: .entity)
         }
     }

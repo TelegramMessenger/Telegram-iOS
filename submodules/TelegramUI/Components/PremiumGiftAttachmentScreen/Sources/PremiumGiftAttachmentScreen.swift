@@ -5,18 +5,18 @@ import AsyncDisplayKit
 import ComponentFlow
 import SwiftSignalKit
 import AccountContext
-import PremiumUI
 import AttachmentUI
+import GiftOptionsScreen
 
-public class PremiumGiftAttachmentScreen: PremiumGiftScreen, AttachmentContainable {
+public class PremiumGiftAttachmentScreen: GiftOptionsScreen, AttachmentContainable {
     public var requestAttachmentMenuExpansion: () -> Void = {}
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
-    public var parentController: () -> ViewController? = {
-        return nil
-    }
+    public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    public var updateTabBarVisibility: (Bool, ContainedViewLayoutTransition) -> Void = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
+    public var isMinimized: Bool = false
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {
         return PremiumGiftContext(controller: self)
@@ -24,49 +24,16 @@ public class PremiumGiftAttachmentScreen: PremiumGiftScreen, AttachmentContainab
 }
 
 private final class PremiumGiftContext: AttachmentMediaPickerContext {
-    private weak var controller: PremiumGiftScreen?
-    
-    var selectionCount: Signal<Int, NoError> {
-        return .single(0)
-    }
-    
-    var caption: Signal<NSAttributedString?, NoError> {
-        return .single(nil)
-    }
-    
-    var hasCaption: Bool {
-        return false
-    }
-    
-    var captionIsAboveMedia: Signal<Bool, NoError> {
-        return .single(false)
-    }
-    
-    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
-    }
-    
-    public var loadingProgress: Signal<CGFloat?, NoError> {
-        return .single(nil)
-    }
-    
+    private weak var controller: GiftOptionsScreen?
+        
     public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
-        return self.controller?.mainButtonStatePromise.get() ?? .single(nil)
+        return .single(nil)
     }
     
-    init(controller: PremiumGiftScreen) {
+    init(controller: GiftOptionsScreen) {
         self.controller = controller
-    }
-            
-    func setCaption(_ caption: NSAttributedString) {
-    }
-    
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?) {
-    }
-    
-    func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?) {
     }
     
     func mainButtonAction() {
-        self.controller?.mainButtonPressed()
     }
 }

@@ -2,6 +2,7 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import ItemListUI
+import AccountContext
 
 final class PeerInfoScreenMultilineInputItem: PeerInfoScreenItem {
     let id: AnyHashable
@@ -53,7 +54,7 @@ final class PeerInfoScreenMultilineInputItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.bottomSeparatorNode)
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenMultilineInputItem else {
             return 10.0
         }

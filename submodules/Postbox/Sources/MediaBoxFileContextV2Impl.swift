@@ -2,7 +2,7 @@ import Foundation
 import RangeSet
 import SwiftSignalKit
 
-final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
+public final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
     private final class RangeRequest {
         let value: Range<Int64>
         let priority: MediaBoxFetchPriority
@@ -99,7 +99,7 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
     private final class PartialState {
         private let queue: Queue
         private let manager: MediaBoxFileManager
-        private let storageBox: StorageBox
+        private let storageBox: StorageBox?
         private let resourceId: Data
         private let partialPath: String
         private let fullPath: String
@@ -124,7 +124,7 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
         init(
             queue: Queue,
             manager: MediaBoxFileManager,
-            storageBox: StorageBox,
+            storageBox: StorageBox?,
             resourceId: Data,
             partialPath: String,
             fullPath: String,
@@ -461,7 +461,7 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
                         self.fileMap.fill(range)
                         self.fileMap.serialize(manager: self.manager, to: self.metaPath)
                         
-                        self.storageBox.update(id: self.resourceId, size: self.fileMap.sum)
+                        self.storageBox?.update(id: self.resourceId, size: self.fileMap.sum)
                     } else {
                         postboxLog("MediaBoxFileContextV2Impl: error seeking file to \(resourceOffset) at \(self.partialPath)")
                     }
@@ -474,7 +474,7 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
         private func processMovedFile() {
             if let size = fileSize(self.fullPath) {
                 self.isComplete = true
-                self.storageBox.update(id: self.resourceId, size: size)
+                self.storageBox?.update(id: self.resourceId, size: size)
             }
         }
         
@@ -623,7 +623,7 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
     
     private let queue: Queue
     private let manager: MediaBoxFileManager
-    private let storageBox: StorageBox
+    private let storageBox: StorageBox?
     private let resourceId: Data
     private let path: String
     private let partialPath: String
@@ -637,10 +637,10 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
         return self.references.isEmpty
     }
     
-    init?(
+    public init?(
         queue: Queue,
         manager: MediaBoxFileManager,
-        storageBox: StorageBox,
+        storageBox: StorageBox?,
         resourceId: Data,
         path: String,
         partialPath: String,
@@ -683,7 +683,7 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
         }
     }
     
-    func data(range: Range<Int64>, waitUntilAfterInitialFetch: Bool, next: @escaping (MediaResourceData) -> Void) -> Disposable {
+    public func data(range: Range<Int64>, waitUntilAfterInitialFetch: Bool, next: @escaping (MediaResourceData) -> Void) -> Disposable {
         assert(self.queue.isCurrent())
         
         if let size = fileSize(self.path) {
@@ -708,7 +708,7 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
         }
     }
     
-    func fetched(
+    public func fetched(
         range: Range<Int64>,
         priority: MediaBoxFetchPriority,
         fetch: @escaping (Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>,
@@ -734,7 +734,7 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
         }
     }
     
-    func fetchedFullRange(
+    public func fetchedFullRange(
         fetch: @escaping (Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>,
         error: @escaping (MediaResourceDataFetchError) -> Void,
         completed: @escaping () -> Void
@@ -758,7 +758,7 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
         }
     }
     
-    func cancelFullRangeFetches() {
+    public func cancelFullRangeFetches() {
         assert(self.queue.isCurrent())
         
         if let partialState = self.partialState {
@@ -766,7 +766,7 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
         }
     }
     
-    func rangeStatus(next: @escaping (RangeSet<Int64>) -> Void, completed: @escaping () -> Void) -> Disposable {
+    public func rangeStatus(next: @escaping (RangeSet<Int64>) -> Void, completed: @escaping () -> Void) -> Disposable {
         assert(self.queue.isCurrent())
         
         if let size = fileSize(self.path) {
@@ -781,7 +781,7 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
         }
     }
     
-    func status(next: @escaping (MediaResourceStatus) -> Void, completed: @escaping () -> Void, size: Int64?) -> Disposable {
+    public func status(next: @escaping (MediaResourceStatus) -> Void, completed: @escaping () -> Void, size: Int64?) -> Disposable {
         assert(self.queue.isCurrent())
         
         if let _ = fileSize(self.path) {

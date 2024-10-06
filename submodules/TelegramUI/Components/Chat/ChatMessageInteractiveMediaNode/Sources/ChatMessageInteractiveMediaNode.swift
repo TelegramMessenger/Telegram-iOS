@@ -217,7 +217,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     private let context: AccountContext
     
     private let blurredImageNode: TransformImageNode
-    private let dustNode: MediaDustNode
+    fileprivate let dustNode: MediaDustNode
     fileprivate let buttonNode: HighlightTrackingButtonNode
     private let highlightedBackgroundNode: ASDisplayNode
     private let iconNode: ASImageNode
@@ -306,6 +306,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     func reveal(animated: Bool = false) {
         self.isRevealed = true
         if animated {
+            self.dustNode.revealOnTap = true
             self.dustNode.tap(at: CGPoint(x: self.dustNode.bounds.width / 2.0, y: self.dustNode.bounds.height / 2.0))
         } else {
             self.blurredImageNode.removeFromSupernode()
@@ -413,8 +414,8 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
 }
 
 private func selectStoryMedia(item: Stories.Item, preferredHighQuality: Bool) -> Media? {
-    if !preferredHighQuality, let alternativeMedia = item.alternativeMedia {
-        return alternativeMedia
+    if !preferredHighQuality, let alternativeMediaValue = item.alternativeMediaList.first {
+        return alternativeMediaValue
     } else {
         return item.media
     }
@@ -429,7 +430,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     private var highQualityImageNode: TransformImageNode?
 
     private var videoNode: UniversalVideoNode?
-    private var videoContent: NativeVideoContent?
+    private var videoContent: UniversalVideoContent?
     private var animatedStickerNode: AnimatedStickerNode?
     private var statusNode: RadialStatusNode?
     public var videoNodeDecoration: ChatBubbleVideoDecoration?
@@ -452,6 +453,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     private var automaticDownload: InteractiveMediaNodeAutodownloadMode?
     public var automaticPlayback: Bool?
     private var preferredStoryHighQuality: Bool = false
+    private var showSensitiveContent: Bool = false
     
     private let statusDisposable = MetaDisposable()
     private let fetchControls = Atomic<FetchControls?>(value: nil)
@@ -676,10 +678,10 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 } else if let media = media as? TelegramMediaImage, let resource = largestImageRepresentation(media.representations)?.resource {
                                     messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: media, resource: resource)
                                 }
-                                if let alternativeMedia = item.alternativeMedia {
-                                    if let media = alternativeMedia as? TelegramMediaFile {
+                                if let alternativeMediaValue = item.alternativeMediaList.first {
+                                    if let media = alternativeMediaValue as? TelegramMediaFile {
                                         messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: media)
-                                    } else if let media = alternativeMedia as? TelegramMediaImage, let resource = largestImageRepresentation(media.representations)?.resource {
+                                    } else if let media = alternativeMediaValue as? TelegramMediaImage, let resource = largestImageRepresentation(media.representations)?.resource {
                                         messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: media, resource: resource)
                                     }
                                 }
@@ -713,7 +715,20 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 }
             } else if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
                 var videoContentMatch = true
-                if let content = self.videoContent, case let .message(stableId, mediaId) = content.nativeId {
+                if let content = self.videoContent as? NativeVideoContent, case let .message(stableId, mediaId) = content.nativeId {
+                    var media = self.media
+                    if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
+                        media = fullMedia
+                    }
+                    
+                    if let storyMedia = media as? TelegramMediaStory, let storyItem = self.message?.associatedStories[storyMedia.storyId]?.get(Stories.StoredItem.self) {
+                        if case let .item(item) = storyItem, let _ = item.media {
+                            media = selectStoryMedia(item: item, preferredHighQuality: self.preferredStoryHighQuality)
+                        }
+                    }
+                    
+                    videoContentMatch = self.message?.stableId == stableId && media?.id == mediaId
+                } else if let content = self.videoContent as? PlatformVideoContent, case let .message(_, stableId, mediaId) = content.nativeId {
                     var media = self.media
                     if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
                         media = fullMedia
@@ -1543,7 +1558,14 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                         }
                     }
 
-                    let arguments = TransformImageArguments(corners: corners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: isInlinePlayableVideo ? .fill(.black) : .blurBackground, emptyColor: emptyColor, custom: patternArguments)
+                    var videoCorners = corners
+                    var imageCorners = corners
+                    if let file = media as? TelegramMediaFile, file.isInstantVideo {
+                        videoCorners = ImageCorners(radius: boundingSize.width / 2.0)
+                        imageCorners = ImageCorners(radius: 0.0)
+                    }
+                    
+                    let arguments = TransformImageArguments(corners: imageCorners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: isInlinePlayableVideo ? .fill(.black) : .blurBackground, emptyColor: emptyColor, custom: patternArguments)
                     
                     let imageFrame = CGRect(origin: CGPoint(x: -arguments.insets.left, y: -arguments.insets.top), size: arguments.drawingSize).ensuredValid
                     let cleanImageFrame = CGRect(origin: imageFrame.origin, size: CGSize(width: imageFrame.width - arguments.corners.extendedEdges.right, height: imageFrame.height))
@@ -1563,7 +1585,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             strongSelf.automaticPlayback = automaticPlayback
                             strongSelf.automaticDownload = automaticDownload
                             strongSelf.preferredStoryHighQuality = associatedData.preferredStoryHighQuality
-                            
+                            strongSelf.showSensitiveContent = associatedData.showSensitiveContent
+                                                        
                             if let previousArguments = strongSelf.currentImageArguments {
                                 if previousArguments.imageSize == arguments.imageSize {
                                     strongSelf.pinchContainerNode.frame = imageFrame
@@ -1616,7 +1639,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 statusFrame.origin.y = floor(imageFrame.height / 2.0 - statusFrame.height / 2.0)
                                 statusNode.frame = statusFrame
                             }
-                            
+                                                        
                             var updatedVideoNodeReadySignal: Signal<Void, NoError>?
                             var updatedPlayerStatusSignal: Signal<MediaPlayerStatus?, NoError>?
                             if let currentReplaceVideoNode = replaceVideoNode {
@@ -1628,19 +1651,25 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 }
                                 
                                 if currentReplaceVideoNode, let updatedVideoFile = updateVideoFile {
-                                    let decoration = ChatBubbleVideoDecoration(corners: arguments.corners, nativeSize: nativeSize, contentMode: contentMode.bubbleVideoDecorationContentMode, backgroundColor: arguments.emptyColor ?? .black)
+                                    let decoration = ChatBubbleVideoDecoration(corners: videoCorners, nativeSize: nativeSize, contentMode: contentMode.bubbleVideoDecorationContentMode, backgroundColor: arguments.emptyColor ?? .black)
                                     strongSelf.videoNodeDecoration = decoration
                                     let mediaManager = context.sharedContext.mediaManager
                                     
                                     let streamVideo = isMediaStreamable(message: message, media: updatedVideoFile)
                                     let loopVideo = updatedVideoFile.isAnimated
-                                    let videoContent = NativeVideoContent(id: .message(message.stableId, updatedVideoFile.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo ? .conservative : .none, loopVideo: loopVideo, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false), continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo, placeholderColor: emptyColor, captureProtected: message.isCopyProtected() || isExtendedMedia, storeAfterDownload: { [weak context] in
-                                        guard let context, let peerId else {
-                                            return
-                                        }
-                                        let _ = storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: .message(message: MessageReference(message), media: updatedVideoFile), peerId: peerId).startStandalone()
-                                    })
-                                    let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: videoContent, priority: .embedded)
+                                    
+                                    let videoContent: UniversalVideoContent
+                                    if !"".isEmpty && NativeVideoContent.isHLSVideo(file: updatedVideoFile) {
+                                        videoContent = HLSVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: true, loopVideo: loopVideo)
+                                    } else {
+                                        videoContent = NativeVideoContent(id: .message(message.stableId, updatedVideoFile.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo ? .conservative : .none, loopVideo: loopVideo, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false), continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo, placeholderColor: emptyColor, captureProtected: message.isCopyProtected() || isExtendedMedia, storeAfterDownload: { [weak context] in
+                                            guard let context, let peerId else {
+                                                return
+                                            }
+                                            let _ = storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: .message(message: MessageReference(message), media: updatedVideoFile), peerId: peerId).startStandalone()
+                                        })
+                                    }
+                                    let videoNode = UniversalVideoNode(accountId: context.account.id, postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: videoContent, priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     videoNode.ownsContentNodeUpdated = { [weak self] owns in
                                         if let strongSelf = self {
@@ -1700,10 +1729,17 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }), strongSelf.extendedMediaOverlayNode == nil {
                                 strongSelf.internallyVisible = false
                             }
-                            
+                                                        
                             if let videoNode = strongSelf.videoNode {
-                                if !(replaceVideoNode ?? false), let decoration = videoNode.decoration as? ChatBubbleVideoDecoration, decoration.corners != corners {
-                                    decoration.updateCorners(corners)
+                                if !(replaceVideoNode ?? false), let decoration = videoNode.decoration as? ChatBubbleVideoDecoration, decoration.corners != videoCorners {
+                                    decoration.updateCorners(videoCorners)
+                                }
+                                
+                                if !videoCorners.isEmpty && imageCorners.isEmpty {
+                                    strongSelf.imageNode.clipsToBounds = true
+                                    strongSelf.imageNode.cornerRadius = videoCorners.topLeft.radius
+                                } else {
+                                    strongSelf.imageNode.cornerRadius = 0.0
                                 }
                                 
                                 videoNode.updateLayout(size: arguments.drawingSize, transition: .immediate)
@@ -2126,10 +2162,15 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 if let duration = file.duration, !message.flags.contains(.Unsent) {
                                     let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : Int32(duration), position: playerPosition)
                                     if isMediaStreamable(message: message, media: file) {
-                                        badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
-                                        mediaDownloadState = .fetching(progress: automaticPlayback ? nil : adjustedProgress)
-                                        if self.playerStatus?.status == .playing {
-                                            mediaDownloadState = nil
+                                        if NativeVideoContent.isHLSVideo(file: file) {
+                                            mediaDownloadState = .fetching(progress: nil)
+                                            badgeContent = .text(inset: 12.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: durationString), iconName: nil)
+                                        } else {
+                                            badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
+                                            mediaDownloadState = .fetching(progress: automaticPlayback ? nil : adjustedProgress)
+                                            if self.playerStatus?.status == .playing {
+                                                mediaDownloadState = nil
+                                            }
                                         }
                                         state = automaticPlayback ? .none : .play(messageTheme.mediaOverlayControlColors.foregroundColor)
                                     } else {
@@ -2228,7 +2269,11 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                         do {
                             let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : (file.duration.flatMap { Int32(floor($0)) } ?? 0), position: playerPosition)
                             if wideLayout {
-                                if isMediaStreamable(message: message, media: file), let fileSize = file.size, fileSize > 0 && fileSize != .max {
+                                if NativeVideoContent.isHLSVideo(file: file) {
+                                    state = automaticPlayback ? .none : .play(messageTheme.mediaOverlayControlColors.foregroundColor)
+                                    mediaDownloadState = nil
+                                    badgeContent = .text(inset: 12.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: durationString), iconName: nil)
+                                } else if isMediaStreamable(message: message, media: file), let fileSize = file.size, fileSize > 0 && fileSize != .max {
                                     state = automaticPlayback ? .none : .play(messageTheme.mediaOverlayControlColors.foregroundColor)
                                     badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: dataSizeString(fileSize, formatting: formatting), muted: muted, active: true)
                                     mediaDownloadState = .remote
@@ -2385,20 +2430,25 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             displaySpoiler = true
         } else if isSecretMedia {
             displaySpoiler = true
-        } else if message.isAgeRestricted() {
-            displaySpoiler = true
-            icon = .eye
+        } else if message.isSensitiveContent(platform: "ios") {
+            if !self.showSensitiveContent {
+                displaySpoiler = true
+                icon = .eye
+            }
         }
         
-        if displaySpoiler {
-            if self.extendedMediaOverlayNode == nil, let context = self.context {
+        if displaySpoiler, let context = self.context {
+            let extendedMediaOverlayNode: ExtendedMediaOverlayNode
+            if let current = self.extendedMediaOverlayNode {
+                extendedMediaOverlayNode = current
+            } else {
                 let enableAnimations = context.sharedContext.energyUsageSettings.fullTranslucency && !isPreview
-                let extendedMediaOverlayNode = ExtendedMediaOverlayNode(context: context, hasImageOverlay: !isSecretMedia, icon: icon,  enableAnimations: enableAnimations)
+                extendedMediaOverlayNode = ExtendedMediaOverlayNode(context: context, hasImageOverlay: !isSecretMedia, icon: icon,  enableAnimations: enableAnimations)
                 extendedMediaOverlayNode.tapped = { [weak self] in
                     guard let self else {
                         return
                     }
-                    if message.isAgeRestricted() {
+                    if message.isSensitiveContent(platform: "ios") {
                         self.activateAgeRestrictedMedia?()
                     } else {
                         self.internallyVisible = true
@@ -2409,7 +2459,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 self.extendedMediaOverlayNode = extendedMediaOverlayNode
                 self.pinchContainerNode.contentNode.insertSubnode(extendedMediaOverlayNode, aboveSubnode: self.imageNode)
             }
-            self.extendedMediaOverlayNode?.frame = self.imageNode.frame
+            extendedMediaOverlayNode.frame = self.imageNode.frame
             
             var tappable = false
             if !isSecretMedia {
@@ -2420,13 +2470,12 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     break
                 }
             }
-            
-            self.extendedMediaOverlayNode?.isUserInteractionEnabled = tappable
+            extendedMediaOverlayNode.isUserInteractionEnabled = tappable
             
             var viewText: String = ""
-            if message.isAgeRestricted() {
-                //TODO:localize
-                viewText = "18+ Content"
+            if case .eye = icon {
+                viewText = strings.Chat_SensitiveContent
+                extendedMediaOverlayNode.dustNode.revealOnTap = false
             } else {
                 outer: for attribute in message.attributes {
                     if let attribute = attribute as? ReplyMarkupMessageAttribute {
@@ -2441,8 +2490,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                         break
                     }
                 }
+                extendedMediaOverlayNode.dustNode.revealOnTap = true
             }
-            self.extendedMediaOverlayNode?.update(size: self.imageNode.frame.size, text: viewText, imageSignal: self.currentBlurredImageSignal, imageFrame: self.imageNode.view.convert(self.imageNode.bounds, to: self.extendedMediaOverlayNode?.view), corners: self.currentImageArguments?.corners)
+            extendedMediaOverlayNode.update(size: self.imageNode.frame.size, text: viewText, imageSignal: self.currentBlurredImageSignal, imageFrame: self.imageNode.view.convert(self.imageNode.bounds, to: extendedMediaOverlayNode.view), corners: self.currentImageArguments?.corners)
         } else if let extendedMediaOverlayNode = self.extendedMediaOverlayNode {
             self.extendedMediaOverlayNode = nil
             extendedMediaOverlayNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak extendedMediaOverlayNode] _ in
@@ -2650,12 +2700,12 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     }
     
     public func ignoreTapActionAtPoint(_ point: CGPoint) -> Bool {
-//        if let extendedMediaOverlayNode = self.extendedMediaOverlayNode {
-//            let convertedPoint = self.view.convert(point, to: extendedMediaOverlayNode.view)
-//            if extendedMediaOverlayNode.buttonNode.frame.contains(convertedPoint) {
-//                return true
-//            }
-//        }
+        if let extendedMediaOverlayNode = self.extendedMediaOverlayNode {
+            let convertedPoint = self.view.convert(point, to: extendedMediaOverlayNode.view)
+            if extendedMediaOverlayNode.buttonNode.frame.contains(convertedPoint) {
+                return true
+            }
+        }
         return false
     }
 }

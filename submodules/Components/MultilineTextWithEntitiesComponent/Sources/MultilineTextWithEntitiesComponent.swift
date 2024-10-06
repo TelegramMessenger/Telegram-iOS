@@ -170,7 +170,7 @@ public final class MultilineTextWithEntitiesComponent: Component {
             self.textNode.highlightAttributeAction = component.highlightAction
             self.textNode.tapAttributeAction = component.tapAction
             self.textNode.longTapAttributeAction = component.longTapAction
-                        
+                                    
             if case let .curve(duration, _) = transition.animation, let previousText = previousText, previousText != attributedString.string {
                 if let snapshotView = self.snapshotContentTree() {
                     snapshotView.center = self.center

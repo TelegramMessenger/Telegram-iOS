@@ -2571,7 +2571,7 @@ final class StorageUsageScreenComponent: Component {
                             navigationController: navigationController,
                             context: component.context,
                             chatLocation: chatLocation,
-                            subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil),
+                            subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false),
                             keepStack: .always
                         ))
                     })
@@ -2674,7 +2674,7 @@ final class StorageUsageScreenComponent: Component {
                             navigationController: navigationController,
                             context: component.context,
                             chatLocation: chatLocation,
-                            subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil),
+                            subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false),
                             keepStack: .always
                         ))
                     })
@@ -2733,7 +2733,8 @@ final class StorageUsageScreenComponent: Component {
                 navigationController: navigationController,
                 dismissInput: { [weak self] in
                     self?.endEditing(true)
-                }, present: { [weak self] c, a in
+                },
+                present: { [weak self] c, a, _ in
                     guard let self else {
                         return
                     }
@@ -2805,6 +2806,7 @@ final class StorageUsageScreenComponent: Component {
                     }
                     let _ = self
                 }, openBotCommand: { _ in
+                }, openAd: { _ in
                 }, addContact: { _ in
                 }, storeMediaPlaybackState: { [weak self] messageId, timestamp, playbackRate in
                     guard let self else {

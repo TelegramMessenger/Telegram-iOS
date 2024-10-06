@@ -18,7 +18,6 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/AccountContext:AccountContext",
         "//submodules/AttachmentUI:AttachmentUI",
-        "//submodules/CounterControllerTitleView:CounterControllerTitleView",
         "//submodules/HexColor:HexColor",
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/ShimmerEffect:ShimmerEffect",
@@ -34,7 +33,14 @@ swift_library(
         "//submodules/Markdown:Markdown",
         "//submodules/TextFormat:TextFormat",
         "//submodules/LocalAuth",
-        "//submodules/InstantPageCache"
+        "//submodules/InstantPageCache",
+        "//submodules/OpenInExternalAppUI",
+        "//submodules/ComponentFlow",
+        "//submodules/TelegramUI/Components/EmojiStatusComponent",
+        "//submodules/ShareController",
+        "//submodules/UndoUI",
+        "//submodules/OverlayStatusController",
+        "//submodules/TelegramUIPreferences",
     ],
     visibility = [
         "//visibility:public",

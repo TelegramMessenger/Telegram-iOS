@@ -13,6 +13,7 @@ import AccountContext
 import OpenInExternalAppUI
 import ItemListPeerActionItem
 import StorageUsageScreen
+import PresentationDataUtils
 
 public enum AutomaticSaveIncomingPeerType {
     case privateChats
@@ -34,9 +35,24 @@ private final class DataAndStorageControllerArguments {
     let toggleDownloadInBackground: (Bool) -> Void
     let openBrowserSelection: () -> Void
     let openIntents: () -> Void
-    let toggleEnableSensitiveContent: (Bool) -> Void
+    let toggleSensitiveContent: (Bool) -> Void
 
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, toggleVoiceUseLessData: @escaping (Bool) -> Void, openSaveIncoming: @escaping (AutomaticSaveIncomingPeerType) -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, togglePauseMusicOnRecording: @escaping (Bool) -> Void, toggleRaiseToListen: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
+    init(
+        openStorageUsage: @escaping () -> Void,
+        openNetworkUsage: @escaping () -> Void,
+        openProxy: @escaping () -> Void,
+        openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void,
+        resetAutomaticDownload: @escaping () -> Void,
+        toggleVoiceUseLessData: @escaping (Bool) -> Void,
+        openSaveIncoming: @escaping (AutomaticSaveIncomingPeerType) -> Void,
+        toggleSaveEditedPhotos: @escaping (Bool) -> Void,
+        togglePauseMusicOnRecording: @escaping (Bool) -> Void,
+        toggleRaiseToListen: @escaping (Bool) -> Void,
+        toggleDownloadInBackground: @escaping (Bool) -> Void,
+        openBrowserSelection: @escaping () -> Void,
+        openIntents: @escaping () -> Void,
+        toggleSensitiveContent: @escaping (Bool) -> Void
+    ) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
@@ -50,7 +66,7 @@ private final class DataAndStorageControllerArguments {
         self.toggleDownloadInBackground = toggleDownloadInBackground
         self.openBrowserSelection = openBrowserSelection
         self.openIntents = openIntents
-        self.toggleEnableSensitiveContent = toggleEnableSensitiveContent
+        self.toggleSensitiveContent = toggleSensitiveContent
     }
 }
 
@@ -62,7 +78,7 @@ private enum DataAndStorageSection: Int32 {
     case voiceCalls
     case other
     case connection
-    case enableSensitiveContent
+    case sensitiveContent
 }
 
 public enum DataAndStorageEntryTag: ItemListItemTag, Equatable {
@@ -72,6 +88,7 @@ public enum DataAndStorageEntryTag: ItemListItemTag, Equatable {
     case pauseMusicOnRecording
     case raiseToListen
     case autoSave(AutomaticSaveIncomingPeerType)
+    case sensitiveContent
     
     public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? DataAndStorageEntryTag, self == other {
@@ -100,16 +117,18 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case useLessVoiceData(PresentationTheme, String, Bool)
     case useLessVoiceDataInfo(PresentationTheme, String)
     case otherHeader(PresentationTheme, String)
+    case openLinksIn(PresentationTheme, String, String)
     case shareSheet(PresentationTheme, String)
     case saveEditedPhotos(PresentationTheme, String, Bool)
-    case openLinksIn(PresentationTheme, String, String)
     case pauseMusicOnRecording(PresentationTheme, String, Bool)
     case raiseToListen(PresentationTheme, String, Bool)
     case raiseToListenInfo(PresentationTheme, String)
     
+    case sensitiveContent(String, Bool)
+    case sensitiveContentInfo(String)
+    
     case connectionHeader(PresentationTheme, String)
     case connectionProxy(PresentationTheme, String, String)
-    case enableSensitiveContent(String, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -123,12 +142,12 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return DataAndStorageSection.backgroundDownload.rawValue
             case .useLessVoiceData, .useLessVoiceDataInfo:
                 return DataAndStorageSection.voiceCalls.rawValue
-            case .otherHeader, .shareSheet, .saveEditedPhotos, .openLinksIn, .pauseMusicOnRecording, .raiseToListen, .raiseToListenInfo:
+            case .otherHeader, .openLinksIn, .shareSheet, .saveEditedPhotos, .pauseMusicOnRecording, .raiseToListen, .raiseToListenInfo:
                 return DataAndStorageSection.other.rawValue
+            case .sensitiveContent, .sensitiveContentInfo:
+                return DataAndStorageSection.sensitiveContent.rawValue
             case .connectionHeader, .connectionProxy:
                 return DataAndStorageSection.connection.rawValue
-            case .enableSensitiveContent:
-                return DataAndStorageSection.enableSensitiveContent.rawValue
         }
     }
     
@@ -162,11 +181,11 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 24
             case .otherHeader:
                 return 29
-            case .shareSheet:
-                return 30
-            case .saveEditedPhotos:
-                return 31
             case .openLinksIn:
+                return 30
+            case .shareSheet:
+                return 31
+            case .saveEditedPhotos:
                 return 32
             case .pauseMusicOnRecording:
                 return 33
@@ -174,12 +193,14 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 34
             case .raiseToListenInfo:
                 return 35
-            case .connectionHeader:
+            case .sensitiveContent:
                 return 36
-            case .connectionProxy:
+            case .sensitiveContentInfo:
                 return 37
-            case .enableSensitiveContent:
+            case .connectionHeader:
                 return 38
+            case .connectionProxy:
+                return 39
         }
     }
     
@@ -257,6 +278,12 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .openLinksIn(lhsTheme, lhsText, lhsValue):
+                if case let .openLinksIn(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
             case let .shareSheet(lhsTheme, lhsText):
                 if case let .shareSheet(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -265,12 +292,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 }
             case let .saveEditedPhotos(lhsTheme, lhsText, lhsValue):
                 if case let .saveEditedPhotos(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .openLinksIn(lhsTheme, lhsText, lhsValue):
-                if case let .openLinksIn(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -289,6 +310,18 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 }
             case let .raiseToListenInfo(lhsTheme, lhsText):
                 if case let .raiseToListenInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .sensitiveContent(text, value):
+                if case .sensitiveContent(text, value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .sensitiveContentInfo(text):
+                if case .sensitiveContentInfo(text) = rhs {
                     return true
                 } else {
                     return false
@@ -313,12 +346,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 }
             case let .connectionProxy(lhsTheme, lhsText, lhsValue):
                 if case let .connectionProxy(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .enableSensitiveContent(text, value):
-                if case .enableSensitiveContent(text, value) = rhs {
                     return true
                 } else {
                     return false
@@ -386,6 +413,10 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .otherHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+            case let .openLinksIn(_, text, value):
+                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                    arguments.openBrowserSelection()
+                })
             case let .shareSheet(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openIntents()
@@ -394,10 +425,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleSaveEditedPhotos(value)
                 }, tag: DataAndStorageEntryTag.saveEditedPhotos)
-            case let .openLinksIn(_, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                    arguments.openBrowserSelection()
-                })
             case let .pauseMusicOnRecording(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.togglePauseMusicOnRecording(value)
@@ -407,6 +434,12 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                     arguments.toggleRaiseToListen(value)
                 }, tag: DataAndStorageEntryTag.raiseToListen)
             case let .raiseToListenInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
+            case let .sensitiveContent(text, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: false, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleSensitiveContent(value)
+                }, tag: DataAndStorageEntryTag.sensitiveContent)
+            case let .sensitiveContentInfo(text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .downloadInBackground(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
@@ -420,10 +453,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openProxy()
                 })
-            case let .enableSensitiveContent(text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleEnableSensitiveContent(value)
-                }, tag: nil)
         }
     }
 }
@@ -588,7 +617,7 @@ private func autosaveLabelAndValue(presentationData: PresentationData, settings:
     return (label, value)
 }
 
-private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData, defaultWebBrowser: String, contentSettingsConfiguration: ContentSettingsConfiguration?, networkUsage: Int64, storageUsage: Int64, mediaAutoSaveSettings: MediaAutoSaveSettings, autosaveExceptionPeers: [EnginePeer.Id: EnginePeer?]) -> [DataAndStorageEntry] {
+private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData, defaultWebBrowser: String, contentSettingsConfiguration: ContentSettingsConfiguration?, networkUsage: Int64, storageUsage: Int64, mediaAutoSaveSettings: MediaAutoSaveSettings, autosaveExceptionPeers: [EnginePeer.Id: EnginePeer?], mediaSettings: MediaDisplaySettings) -> [DataAndStorageEntry] {
     var entries: [DataAndStorageEntry] = []
     
     entries.append(.storageUsage(presentationData.theme, presentationData.strings.ChatSettings_Cache, dataSizeString(storageUsage, formatting: DataSizeStringFormatting(presentationData: presentationData))))
@@ -618,15 +647,20 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.useLessVoiceDataInfo(presentationData.theme, presentationData.strings.CallSettings_UseLessDataLongDescription))
     
     entries.append(.otherHeader(presentationData.theme, presentationData.strings.ChatSettings_Other))
+    entries.append(.openLinksIn(presentationData.theme, presentationData.strings.ChatSettings_OpenLinksIn, defaultWebBrowser))
     if #available(iOSApplicationExtension 13.2, iOS 13.2, *) {
         entries.append(.shareSheet(presentationData.theme, presentationData.strings.ChatSettings_IntentsSettings))
     }
     entries.append(.saveEditedPhotos(presentationData.theme, presentationData.strings.Settings_SaveEditedPhotos, data.generatedMediaStoreSettings.storeEditedPhotos))
-    entries.append(.openLinksIn(presentationData.theme, presentationData.strings.ChatSettings_OpenLinksIn, defaultWebBrowser))
     entries.append(.pauseMusicOnRecording(presentationData.theme, presentationData.strings.Settings_PauseMusicOnRecording, data.mediaInputSettings.pauseMusicOnRecording))
     entries.append(.raiseToListen(presentationData.theme, presentationData.strings.Settings_RaiseToListen, data.mediaInputSettings.enableRaiseToSpeak))
     entries.append(.raiseToListenInfo(presentationData.theme, presentationData.strings.Settings_RaiseToListenInfo))
 
+    if !"".isEmpty, let contentSettingsConfiguration = contentSettingsConfiguration, contentSettingsConfiguration.canAdjustSensitiveContent {
+        entries.append(.sensitiveContent(presentationData.strings.Settings_SensitiveContent, contentSettingsConfiguration.sensitiveContentEnabled))
+        entries.append(.sensitiveContentInfo(presentationData.strings.Settings_SensitiveContentInfo))
+    }
+    
     let proxyValue: String
     if let proxySettings = data.proxySettings, let activeServer = proxySettings.activeServer, proxySettings.enabled {
         switch activeServer.connection {
@@ -640,13 +674,7 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     }
     entries.append(.connectionHeader(presentationData.theme, presentationData.strings.ChatSettings_ConnectionType_Title.uppercased()))
     entries.append(.connectionProxy(presentationData.theme, presentationData.strings.SocksProxySetup_Title, proxyValue))
-    
-    #if DEBUG
-    if let contentSettingsConfiguration = contentSettingsConfiguration, contentSettingsConfiguration.canAdjustSensitiveContent {
-        entries.append(.enableSensitiveContent("Display Sensitive Content", contentSettingsConfiguration.sensitiveContentEnabled))
-    }
-    #endif
-    
+        
     return entries
 }
 
@@ -872,16 +900,30 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
     }, openIntents: {
         let controller = intentsSettingsController(context: context)
         pushControllerImpl?(controller)
-    }, toggleEnableSensitiveContent: { value in
-        let _ = (contentSettingsConfiguration.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak contentSettingsConfiguration] settings in
-            if var settings = settings {
-                settings.sensitiveContentEnabled = value
-                contentSettingsConfiguration?.set(.single(settings))
-            }
-        })
-        updateSensitiveContentDisposable.set(updateRemoteContentSettingsConfiguration(postbox: context.account.postbox, network: context.account.network, sensitiveContentEnabled: value).start())
+    }, toggleSensitiveContent: { value in
+        let update = {
+            let _ = (contentSettingsConfiguration.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak contentSettingsConfiguration] settings in
+                if var settings = settings {
+                    settings.sensitiveContentEnabled = value
+                    contentSettingsConfiguration?.set(.single(settings))
+                }
+            })
+            updateSensitiveContentDisposable.set(updateRemoteContentSettingsConfiguration(postbox: context.account.postbox, network: context.account.network, sensitiveContentEnabled: value).start())
+        }
+        if value {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let alertController = textAlertController(context: context, title: presentationData.strings.SensitiveContent_Enable_Title, text: presentationData.strings.SensitiveContent_Enable_Text, actions: [
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
+                TextAlertAction(type: .defaultAction, title: presentationData.strings.SensitiveContent_Enable_Confirm, action: {
+                    update()
+                })
+            ])
+            presentControllerImpl?(alertController, nil)
+        } else {
+            update()
+        }
     })
     
     let preferencesKey: PostboxViewKey = .preferences(keys: Set([ApplicationSpecificPreferencesKeys.mediaAutoSaveSettings]))
@@ -901,11 +943,13 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         ))
     }
 
+    let sensitiveContent = Atomic<Bool?>(value: nil)
+    
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
         statePromise.get(),
         dataAndStorageDataPromise.get(),
-        context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings]),
+        context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings, ApplicationSpecificSharedDataKeys.mediaDisplaySettings]),
         contentSettingsConfiguration.get(),
         preferences,
         usageSignal,
@@ -913,16 +957,26 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
     )
     |> map { presentationData, state, dataAndStorageData, sharedData, contentSettingsConfiguration, mediaAutoSaveSettings, usageSignal, autosaveExceptionPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let webBrowserSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) ?? WebBrowserSettings.defaultSettings
+        let mediaSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaDisplaySettings]?.get(MediaDisplaySettings.self) ?? MediaDisplaySettings.defaultSettings
+        
         let options = availableOpenInOptions(context: context, item: .url(url: "https://telegram.org"))
         let defaultWebBrowser: String
         if let option = options.first(where: { $0.identifier == webBrowserSettings.defaultWebBrowser }) {
             defaultWebBrowser = option.title
-        } else {
+        } else if webBrowserSettings.defaultWebBrowser == "inApp" {
             defaultWebBrowser = presentationData.strings.WebBrowser_InAppSafari
+        } else {
+            defaultWebBrowser = presentationData.strings.WebBrowser_Telegram
+        }
+        
+        let previousSensitiveContent = sensitiveContent.swap(contentSettingsConfiguration?.sensitiveContentEnabled)
+        var animateChanges = false
+        if previousSensitiveContent != contentSettingsConfiguration?.sensitiveContentEnabled {
+            animateChanges = true
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData, defaultWebBrowser: defaultWebBrowser, contentSettingsConfiguration: contentSettingsConfiguration, networkUsage: usageSignal.network, storageUsage: usageSignal.storage, mediaAutoSaveSettings: mediaAutoSaveSettings, autosaveExceptionPeers: autosaveExceptionPeers), style: .blocks, ensureVisibleItemTag: focusOnItemTag, emptyStateItem: nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData, defaultWebBrowser: defaultWebBrowser, contentSettingsConfiguration: contentSettingsConfiguration, networkUsage: usageSignal.network, storageUsage: usageSignal.storage, mediaAutoSaveSettings: mediaAutoSaveSettings, autosaveExceptionPeers: autosaveExceptionPeers, mediaSettings: mediaSettings), style: .blocks, ensureVisibleItemTag: focusOnItemTag, emptyStateItem: nil, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

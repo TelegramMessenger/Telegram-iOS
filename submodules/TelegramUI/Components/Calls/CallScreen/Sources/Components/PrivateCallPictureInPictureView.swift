@@ -191,7 +191,7 @@ final class PrivateCallPictureInPictureView: UIView {
         }
         
         if let videoMetrics = self.videoMetrics {
-            let resolvedRotationAngle = resolveVideoRotationAngle(angle: videoMetrics.rotationAngle, followsDeviceOrientation: videoMetrics.followsDeviceOrientation, interfaceOrientation: UIApplication.shared.statusBarOrientation)
+            let resolvedRotationAngle = resolveCallVideoRotationAngle(angle: videoMetrics.rotationAngle, followsDeviceOrientation: videoMetrics.followsDeviceOrientation, interfaceOrientation: UIApplication.shared.statusBarOrientation)
             
             var rotatedResolution = videoMetrics.resolution
             var videoIsRotated = false

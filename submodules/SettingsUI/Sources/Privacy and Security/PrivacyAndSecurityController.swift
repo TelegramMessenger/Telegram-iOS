@@ -682,7 +682,8 @@ private func privacyAndSecurityControllerEntries(
         } else {
             value = privacySettings.accountRemovalTimeout
         }
-        entries.append(.accountTimeout(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountIfAwayFor, timeIntervalString(strings: presentationData.strings, value: value)))
+        
+        entries.append(.accountTimeout(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountIfAwayFor,  presentationData.strings.MessageTimer_Months(max(1, value / (60 * 60 * 24 * 30)))))
     } else {
         entries.append(.accountTimeout(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountIfAwayFor, presentationData.strings.Channel_NotificationLoading))
     }
@@ -1174,10 +1175,12 @@ public func privacyAndSecurityController(
                     1 * 30 * 24 * 60 * 60,
                     3 * 30 * 24 * 60 * 60,
                     6 * 30 * 24 * 60 * 60,
-                    365 * 24 * 60 * 60
+                    365 * 24 * 60 * 60,
+                    548 * 24 * 60 * 60,
+                    730 * 24 * 60 * 60
                 ]
                 var timeoutItems: [ActionSheetItem] = timeoutValues.map { value in
-                    return ActionSheetButtonItem(title: timeIntervalString(strings: presentationData.strings, value: value), action: {
+                    return ActionSheetButtonItem(title: presentationData.strings.MessageTimer_Months(max(1, value / (60 * 60 * 24 * 30))), action: {
                         dismissAction()
                         timeoutAction(value)
                     })

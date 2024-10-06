@@ -10,6 +10,10 @@ public enum BotPaymentInvoiceSource {
     case premiumGiveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64, option: PremiumGiftCodeOption)
     case giftCode(users: [PeerId], currency: String, amount: Int64, option: PremiumGiftCodeOption)
     case stars(option: StarsTopUpOption)
+    case starsGift(peerId: EnginePeer.Id, count: Int64, currency: String, amount: Int64)
+    case starsChatSubscription(hash: String)
+    case starsGiveaway(stars: Int64, boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64, users: Int32)
+    case starGift(hideName: Bool, peerId: EnginePeer.Id, giftId: Int64, text: String?, entities: [MessageTextEntity]?)
 }
 
 public struct BotPaymentInvoiceFields: OptionSet {
@@ -127,7 +131,7 @@ public struct BotPaymentForm : Equatable {
     public let canSaveCredentials: Bool
     public let passwordMissing: Bool
     public let invoice: BotPaymentInvoice
-    public let paymentBotId: PeerId
+    public let paymentBotId: PeerId?
     public let providerId: PeerId?
     public let url: String?
     public let nativeProvider: BotPaymentNativeProvider?
@@ -135,7 +139,7 @@ public struct BotPaymentForm : Equatable {
     public let savedCredentials: [BotPaymentSavedCredentials]
     public let additionalPaymentMethods: [BotPaymentMethod]
     
-    public init(id: Int64, canSaveCredentials: Bool, passwordMissing: Bool, invoice: BotPaymentInvoice, paymentBotId: PeerId, providerId: PeerId?, url: String?, nativeProvider: BotPaymentNativeProvider?, savedInfo: BotPaymentRequestedInfo?, savedCredentials: [BotPaymentSavedCredentials], additionalPaymentMethods: [BotPaymentMethod]) {
+    public init(id: Int64, canSaveCredentials: Bool, passwordMissing: Bool, invoice: BotPaymentInvoice, paymentBotId: PeerId?, providerId: PeerId?, url: String?, nativeProvider: BotPaymentNativeProvider?, savedInfo: BotPaymentRequestedInfo?, savedCredentials: [BotPaymentSavedCredentials], additionalPaymentMethods: [BotPaymentMethod]) {
         self.id = id
         self.canSaveCredentials = canSaveCredentials
         self.passwordMissing = passwordMissing
@@ -307,9 +311,55 @@ func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInv
         if let _ = option.storeProductId {
             flags |= (1 << 0)
         }
-        return .inputInvoiceStars(
-            option: .starsTopupOption(flags: flags, stars: option.count, storeProduct: option.storeProductId, currency: option.currency, amount: option.amount)
-        )
+        return .inputInvoiceStars(purpose: .inputStorePaymentStarsTopup(stars: option.count, currency: option.currency, amount: option.amount))
+    case let .starsGift(peerId, count, currency, amount):
+        guard let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) else {
+            return nil
+        }
+        return .inputInvoiceStars(purpose: .inputStorePaymentStarsGift(userId: inputUser, stars: count, currency: currency, amount: amount))
+    case let .starsChatSubscription(hash):
+        return .inputInvoiceChatInviteSubscription(hash: hash)
+    case let .starsGiveaway(stars, boostPeerId, additionalPeerIds, countries, onlyNewSubscribers, showWinners, prizeDescription, randomId, untilDate, currency, amount, users):
+        guard let peer = transaction.getPeer(boostPeerId), let apiBoostPeer = apiInputPeer(peer) else {
+            return nil
+        }
+        var flags: Int32 = 0
+        if onlyNewSubscribers {
+            flags |= (1 << 0)
+        }
+        if showWinners {
+            flags |= (1 << 3)
+        }
+        var additionalPeers: [Api.InputPeer] = []
+        if !additionalPeerIds.isEmpty {
+            flags |= (1 << 1)
+            for peerId in additionalPeerIds {
+                if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                    additionalPeers.append(inputPeer)
+                }
+            }
+        }
+        if !countries.isEmpty {
+            flags |= (1 << 2)
+        }
+        if let _ = prizeDescription {
+            flags |= (1 << 4)
+        }
+        return .inputInvoiceStars(purpose: .inputStorePaymentStarsGiveaway(flags: flags, stars: stars, boostPeer: apiBoostPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount, users: users))
+    case let .starGift(hideName, peerId, giftId, text, entities):
+        guard let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) else {
+            return nil
+        }
+        var flags: Int32 = 0
+        if hideName {
+            flags |= (1 << 0)
+        }
+        var message: Api.TextWithEntities?
+        if let text, !text.isEmpty {
+            flags |= (1 << 1)
+            message = .textWithEntities(text: text, entities: entities.flatMap { apiEntitiesFromMessageTextEntities($0, associatedPeers: SimpleDictionary()) } ?? [])
+        }
+        return .inputInvoiceStarGift(flags: flags, userId: inputUser, giftId: giftId, message: message)
     }
 }
 
@@ -347,6 +397,9 @@ func _internal_fetchBotPaymentInvoice(postbox: Postbox, network: Network, source
                 case let .paymentFormStars(_, _, _, title, description, photo, invoice, _):
                     let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
                     return TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: nil, currency: parsedInvoice.currency, totalAmount: parsedInvoice.prices.reduce(0, { $0 + $1.amount }), startParam: "", extendedMedia: nil, flags: [], version: TelegramMediaInvoice.lastVersion)
+                case let .paymentFormStarGift(_, invoice):
+                    let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
+                    return TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: parsedInvoice.currency, totalAmount: parsedInvoice.prices.reduce(0, { $0 + $1.amount }), startParam: "", extendedMedia: nil, flags: [], version: TelegramMediaInvoice.lastVersion)
                 }
             }
             |> mapError { _ -> BotPaymentFormRequestError in }
@@ -417,6 +470,10 @@ func _internal_fetchBotPaymentForm(accountPeerId: PeerId, postbox: Postbox, netw
                 
                     let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
                     return BotPaymentForm(id: id, canSaveCredentials: false, passwordMissing: false, invoice: parsedInvoice, paymentBotId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), providerId: nil, url: nil, nativeProvider: nil, savedInfo: nil, savedCredentials: [], additionalPaymentMethods: [])
+                    
+                case let .paymentFormStarGift(id, invoice):
+                    let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
+                    return BotPaymentForm(id: id, canSaveCredentials: false, passwordMissing: false, invoice: parsedInvoice, paymentBotId: nil, providerId: nil, url: nil, nativeProvider: nil, savedInfo: nil, savedCredentials: [], additionalPaymentMethods: [])
                 }
             }
             |> mapError { _ -> BotPaymentFormRequestError in }
@@ -534,7 +591,7 @@ public enum SendBotPaymentFormError {
 }
 
 public enum SendBotPaymentResult {
-    case done(receiptMessageId: MessageId?)
+    case done(receiptMessageId: MessageId?, subscriptionPeerId: PeerId?)
     case externalVerificationRequired(url: String)
 }
 
@@ -578,6 +635,17 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                 case let .paymentResult(updates):
                     account.stateManager.addUpdates(updates)
                     var receiptMessageId: MessageId?
+                
+                    switch source {
+                    case .starsChatSubscription:
+                        let chats = updates.chats.compactMap { parseTelegramGroupOrChannel(chat: $0) }
+                        if let first = chats.first {
+                            return .done(receiptMessageId: nil, subscriptionPeerId: first.id)
+                        }
+                    default:
+                        break
+                    }
+                
                     for apiMessage in updates.messages {
                         if let message = StoreMessage(apiMessage: apiMessage, accountPeerId: account.peerId, peerIsForum: false) {
                             for media in message.media {
@@ -608,9 +676,13 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                                                     receiptMessageId = id
                                                 }
                                             }
-                                        case .giftCode:
-                                            receiptMessageId = nil
-                                        case .stars:
+                                        case let .starsGiveaway(_, _, _, _, _, _, _, randomId, _, _, _, _):
+                                            if message.globallyUniqueId == randomId {
+                                                if case let .Id(id) = message.id {
+                                                    receiptMessageId = id
+                                                }
+                                            }
+                                        case .giftCode, .stars, .starsGift, .starsChatSubscription, .starGift:
                                             receiptMessageId = nil
                                         }
                                     }
@@ -618,7 +690,7 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                             }
                         }
                     }
-                    return .done(receiptMessageId: receiptMessageId)
+                    return .done(receiptMessageId: receiptMessageId, subscriptionPeerId: nil)
                 case let .paymentVerificationNeeded(url):
                     return .externalVerificationRequired(url: url)
             }

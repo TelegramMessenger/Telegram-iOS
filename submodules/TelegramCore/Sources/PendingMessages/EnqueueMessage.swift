@@ -205,7 +205,7 @@ func augmentMediaWithReference(_ mediaReference: AnyMediaReference) -> Media {
 
 private func convertForwardedMediaForSecretChat(_ media: Media) -> Media {
     if let file = media as? TelegramMediaFile {
-        return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: file.partialReference, resource: file.resource, previewRepresentations: file.previewRepresentations, videoThumbnails: file.videoThumbnails, immediateThumbnailData: file.immediateThumbnailData, mimeType: file.mimeType, size: file.size, attributes: file.attributes)
+        return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: file.partialReference, resource: file.resource, previewRepresentations: file.previewRepresentations, videoThumbnails: file.videoThumbnails, immediateThumbnailData: file.immediateThumbnailData, mimeType: file.mimeType, size: file.size, attributes: file.attributes, alternativeRepresentations: [])
     } else if let image = media as? TelegramMediaImage {
         return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: Int64.random(in: Int64.min ... Int64.max)), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: image.reference, partialReference: image.partialReference, flags: [])
     } else {
@@ -714,9 +714,17 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         }
                     }
                 
-                    let authorId: PeerId?
+                    var authorId: PeerId?
                     if let sendAsPeer = sendAsPeer {
-                        authorId = sendAsPeer.id
+                        if let peer = peer as? TelegramChannel, case let .broadcast(info) = peer.info {
+                            if info.flags.contains(.messagesShouldHaveProfiles) {
+                                authorId = sendAsPeer.id
+                            } else {
+                                authorId = peer.id
+                            }
+                        } else {
+                            authorId = sendAsPeer.id
+                        }
                     } else if let peer = peer as? TelegramChannel {
                         if case .broadcast = peer.info {
                             authorId = peer.id
@@ -742,8 +750,20 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 if messageNamespace != Namespaces.Message.ScheduledLocal && messageNamespace != Namespaces.Message.QuickReplyLocal {
                                     attributes.append(ViewCountMessageAttribute(count: 1))
                                 }
+                                if info.flags.contains(.messagesShouldHaveProfiles) {
+                                    if sendAsPeer == nil {
+                                        authorId = account.peerId
+                                    }
+                                }
                                 if info.flags.contains(.messagesShouldHaveSignatures) {
-                                    attributes.append(AuthorSignatureMessageAttribute(signature: accountPeer.debugDisplayTitle))
+                                    if let sendAsPeer {
+                                        if sendAsPeer.id == peerId {
+                                        } else {
+                                            attributes.append(AuthorSignatureMessageAttribute(signature: sendAsPeer.debugDisplayTitle))
+                                        }
+                                    } else {
+                                        attributes.append(AuthorSignatureMessageAttribute(signature: accountPeer.debugDisplayTitle))
+                                    }
                                 }
                             case .group:
                                 break

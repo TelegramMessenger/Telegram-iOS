@@ -113,7 +113,10 @@ func interitemSpacing(itemCount: Int, boundingSize: CGSize, insets: UIEdgeInsets
 
 func frameForIndex(index: Int, size: CGSize, insets: UIEdgeInsets, itemCount: Int, boundingSize: CGSize) -> CGRect {
     let spacing = interitemSpacing(itemCount: itemCount, boundingSize: boundingSize, insets: insets)
-    let y = additionalInsetTop + insets.top + spacing * CGFloat(index)
+    var y = additionalInsetTop + insets.top + spacing * CGFloat(index)
+    if itemCount == 1 {
+        y += 72.0
+    }
     let origin = CGPoint(x: insets.left, y: y)
     
     return CGRect(origin: origin, size: CGSize(width: size.width - insets.left - insets.right, height: size.height))

@@ -19,7 +19,21 @@ public struct StatsPercentValue: Equatable {
     public let total: Double
 }
 
-public enum StatsGraph: Equatable {
+public enum StatsGraph: Equatable, Codable {
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case token
+        case error
+        case data
+    }
+    
+    private enum TypeKey: Int32 {
+        case onDemand
+        case failed
+        case loaded
+        case empty
+    }
+    
     case OnDemand(token: String)
     case Failed(error: String)
     case Loaded(token: String?, data: String)
@@ -44,6 +58,41 @@ public enum StatsGraph: Equatable {
                 return token
             default:
                 return nil
+        }
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        let type = TypeKey(rawValue: try container.decode(Int32.self, forKey: .type)) ?? .empty
+        switch type {
+        case .onDemand:
+            self = .OnDemand(token: try container.decode(String.self, forKey: .token))
+        case .failed:
+            self = .Failed(error: try container.decode(String.self, forKey: .error))
+        case .loaded:
+            self = .Loaded(token: try container.decodeIfPresent(String.self, forKey: .token), data: try container.decode(String.self, forKey: .data))
+        case .empty:
+            self = .Empty
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        switch self {
+        case let .OnDemand(token):
+            try container.encode(TypeKey.empty.rawValue, forKey: .type)
+            try container.encode(token, forKey: .token)
+        case let .Failed(error):
+            try container.encode(TypeKey.failed.rawValue, forKey: .type)
+            try container.encode(error, forKey: .error)
+        case let .Loaded(token, data):
+            try container.encode(TypeKey.loaded.rawValue, forKey: .type)
+            try container.encodeIfPresent(token, forKey: .token)
+            try container.encode(data, forKey: .data)
+        case .Empty:
+            try container.encode(TypeKey.empty.rawValue, forKey: .type)
         }
     }
 }

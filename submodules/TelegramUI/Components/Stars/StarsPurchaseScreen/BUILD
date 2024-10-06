@@ -37,6 +37,9 @@ swift_library(
         "//submodules/Components/BlurredBackgroundComponent",
         "//submodules/Components/BundleIconComponent",
         "//submodules/ConfettiEffect",
+        "//submodules/AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode",
+        "//submodules/TelegramUI/Components/Stars/ItemShimmeringLoadingComponent",
     ],
     visibility = [
         "//visibility:public",

@@ -1,4 +1,88 @@
 public extension Api {
+    enum NotificationSound: TypeConstructorDescription {
+        case notificationSoundDefault
+        case notificationSoundLocal(title: String, data: String)
+        case notificationSoundNone
+        case notificationSoundRingtone(id: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .notificationSoundDefault:
+                    if boxed {
+                        buffer.appendInt32(-1746354498)
+                    }
+                    
+                    break
+                case .notificationSoundLocal(let title, let data):
+                    if boxed {
+                        buffer.appendInt32(-2096391452)
+                    }
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(data, buffer: buffer, boxed: false)
+                    break
+                case .notificationSoundNone:
+                    if boxed {
+                        buffer.appendInt32(1863070943)
+                    }
+                    
+                    break
+                case .notificationSoundRingtone(let id):
+                    if boxed {
+                        buffer.appendInt32(-9666487)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .notificationSoundDefault:
+                return ("notificationSoundDefault", [])
+                case .notificationSoundLocal(let title, let data):
+                return ("notificationSoundLocal", [("title", title as Any), ("data", data as Any)])
+                case .notificationSoundNone:
+                return ("notificationSoundNone", [])
+                case .notificationSoundRingtone(let id):
+                return ("notificationSoundRingtone", [("id", id as Any)])
+    }
+    }
+    
+        public static func parse_notificationSoundDefault(_ reader: BufferReader) -> NotificationSound? {
+            return Api.NotificationSound.notificationSoundDefault
+        }
+        public static func parse_notificationSoundLocal(_ reader: BufferReader) -> NotificationSound? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.NotificationSound.notificationSoundLocal(title: _1!, data: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_notificationSoundNone(_ reader: BufferReader) -> NotificationSound? {
+            return Api.NotificationSound.notificationSoundNone
+        }
+        public static func parse_notificationSoundRingtone(_ reader: BufferReader) -> NotificationSound? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.NotificationSound.notificationSoundRingtone(id: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum NotifyPeer: TypeConstructorDescription {
         case notifyBroadcasts
         case notifyChats

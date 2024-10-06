@@ -109,6 +109,7 @@ public final class ChatListNodeInteraction {
     let openChatFolderUpdates: () -> Void
     let hideChatFolderUpdates: () -> Void
     let openStories: (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
+    let openStarsTopup: (Int64?) -> Void
     let dismissNotice: (ChatListNotice) -> Void
     let editPeer: (ChatListItem) -> Void
     
@@ -164,6 +165,7 @@ public final class ChatListNodeInteraction {
         openChatFolderUpdates: @escaping () -> Void,
         hideChatFolderUpdates: @escaping () -> Void,
         openStories: @escaping (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void,
+        openStarsTopup: @escaping (Int64?) -> Void,
         dismissNotice: @escaping (ChatListNotice) -> Void,
         editPeer: @escaping (ChatListItem) -> Void
     ) {
@@ -206,6 +208,7 @@ public final class ChatListNodeInteraction {
         self.openChatFolderUpdates = openChatFolderUpdates
         self.hideChatFolderUpdates = hideChatFolderUpdates
         self.openStories = openStories
+        self.openStarsTopup = openStarsTopup
         self.dismissNotice = dismissNotice
         self.editPeer = editPeer
     }
@@ -747,6 +750,8 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPremiumGift(birthdays)
                         case .reviewLogin:
                             break
+                        case let .starsSubscriptionLowBalance(amount, _):
+                            nodeInteraction?.openStarsTopup(amount)
                         }
                     case .hide:
                         nodeInteraction?.dismissNotice(notice)
@@ -1085,6 +1090,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPremiumGift(birthdays)
                         case .reviewLogin:
                             break
+                        case let .starsSubscriptionLowBalance(amount, _):
+                            nodeInteraction?.openStarsTopup(amount)
                         }
                     case .hide:
                         nodeInteraction?.dismissNotice(notice)
@@ -1204,6 +1211,7 @@ public final class ChatListNode: ListView {
     public var openStories: ((ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void)?
     public var openBirthdaySetup: (() -> Void)?
     public var openPremiumManagement: (() -> Void)?
+    public var openStarsTopup: ((Int64?) -> Void)?
     
     private var theme: PresentationTheme
     
@@ -1805,6 +1813,11 @@ public final class ChatListNode: ListView {
                 return
             }
             self.openStories?(subject, itemNode)
+        }, openStarsTopup: { [weak self] amount in
+            guard let self else {
+                return
+            }
+            self.openStarsTopup?(amount)
         }, dismissNotice: { [weak self] notice in
             guard let self else {
                 return
@@ -1906,6 +1919,8 @@ public final class ChatListNode: ListView {
         } else {
             displayArchiveIntro = .single(false)
         }
+        
+        let starsSubscriptionsContextPromise = Promise<StarsSubscriptionsContext?>(nil)
     
         self.updateIsMainTabDisposable = (self.isMainTab.get()
         |> deliverOnMainQueue).startStrict(next: { [weak self] isMainTab in
@@ -1928,9 +1943,10 @@ public final class ChatListNode: ListView {
                 twoStepData,
                 newSessionReviews(postbox: context.account.postbox),
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Birthday(id: context.account.peerId)),
-                context.account.stateManager.contactBirthdays
+                context.account.stateManager.contactBirthdays,
+                starsSubscriptionsContextPromise.get()
             )
-            |> mapToSignal { suggestions, dismissedSuggestions, configuration, newSessionReviews, birthday, birthdays -> Signal<ChatListNotice?, NoError> in
+            |> mapToSignal { suggestions, dismissedSuggestions, configuration, newSessionReviews, birthday, birthdays, starsSubscriptionsContext -> Signal<ChatListNotice?, NoError> in
                 if let newSessionReview = newSessionReviews.first {
                     return .single(.reviewLogin(newSessionReview: newSessionReview, totalCount: newSessionReviews.count))
                 }
@@ -1964,7 +1980,24 @@ public final class ChatListNode: ListView {
                     todayBirthdayPeerIds = []
                 }
                 
-                if suggestions.contains(.gracePremium) {
+                if suggestions.contains(.starsSubscriptionLowBalance) {
+                    if let starsSubscriptionsContext {
+                        return starsSubscriptionsContext.state
+                        |> map { state in
+                            if state.balance > 0 && !state.subscriptions.isEmpty {
+                                return .starsSubscriptionLowBalance(
+                                    amount: state.balance,
+                                    peers: state.subscriptions.map { $0.peer }
+                                )
+                            } else {
+                                return nil
+                            }
+                        }
+                    } else {
+                        starsSubscriptionsContextPromise.set(.single(context.engine.payments.peerStarsSubscriptionsContext(starsContext: nil, missingBalance: true)))
+                        return .single(nil)
+                    }
+                } else if suggestions.contains(.gracePremium) {
                     return .single(.premiumGrace)
                 } else if suggestions.contains(.setupBirthday) && birthday == nil {
                     return .single(.setupBirthday)
@@ -2265,7 +2298,7 @@ public final class ChatListNode: ListView {
                         guard !filter.contains(.onlyPrivateChats) || peer.peerId.namespace == Namespaces.Peer.CloudUser else { return false }
                         
                         if let peer = peer.peer {
-                            if peer.id.isReplies {
+                            if peer.id.isRepliesOrVerificationCodes {
                                 return false
                             }
                             
@@ -4216,7 +4249,7 @@ private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: Pres
         }
     }
     
-    if peer.id.isReplies {
+    if peer.id.isReplies || peer.id.isVerificationCodes {
         return nil
     } else if case let .user(user) = peer {
         if user.botInfo != nil || user.flags.contains(.isSupport) {

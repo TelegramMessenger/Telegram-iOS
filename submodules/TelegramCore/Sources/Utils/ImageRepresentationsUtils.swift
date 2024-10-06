@@ -112,7 +112,7 @@ public func parseMediaData(data: Data) -> Media? {
         if let photo = object as? Api.Photo {
             return telegramMediaImageFromApiPhoto(photo)
         } else if let document = object as? Api.Document {
-            return telegramMediaFileFromApiDocument(document)
+            return telegramMediaFileFromApiDocument(document, altDocuments: [])
         }
     }
     return nil

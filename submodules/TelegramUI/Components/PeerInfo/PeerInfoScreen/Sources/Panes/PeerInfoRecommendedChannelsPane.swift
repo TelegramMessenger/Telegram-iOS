@@ -100,7 +100,6 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
     private let listNode: ListView
     private var currentEntries: [RecommendedChannelsListEntry] = []
     private var currentState: (RecommendedChannels?, Bool)?
-    private var canLoadMore: Bool = false
     private var enqueuedTransactions: [RecommendedChannelsListTransaction] = []
     
     private var unlockBackground: UIImageView?

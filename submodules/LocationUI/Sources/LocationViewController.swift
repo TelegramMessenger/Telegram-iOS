@@ -80,7 +80,6 @@ public final class LocationViewController: ViewController {
     private let isStoryLocation: Bool
     
     private let locationManager = LocationManager()
-    private var permissionDisposable: Disposable?
     
     private var interaction: LocationViewInteraction?
     

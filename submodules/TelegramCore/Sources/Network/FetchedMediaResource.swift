@@ -13,12 +13,12 @@ extension MediaResourceReference {
     }
 }
 
-final class TelegramCloudMediaResourceFetchInfo: MediaResourceFetchInfo {
-    let reference: MediaResourceReference
-    let preferBackgroundReferenceRevalidation: Bool
-    let continueInBackground: Bool
+public final class TelegramCloudMediaResourceFetchInfo: MediaResourceFetchInfo {
+    public let reference: MediaResourceReference
+    public let preferBackgroundReferenceRevalidation: Bool
+    public let continueInBackground: Bool
     
-    init(reference: MediaResourceReference, preferBackgroundReferenceRevalidation: Bool, continueInBackground: Bool) {
+    public init(reference: MediaResourceReference, preferBackgroundReferenceRevalidation: Bool, continueInBackground: Bool) {
         self.reference = reference
         self.preferBackgroundReferenceRevalidation = preferBackgroundReferenceRevalidation
         self.continueInBackground = continueInBackground
@@ -184,6 +184,12 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
                     return representation.resource
                 }
             }
+            
+            for alternativeRepresentation in file.alternativeRepresentations {
+                if let result = findMediaResource(media: alternativeRepresentation, previousMedia: previousMedia, resource: resource) {
+                    return result
+                }
+            }
         }
     } else if let webPage = media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content {
         if let image = content.image, let result = findMediaResource(media: image, previousMedia: previousMedia, resource: resource) {
@@ -254,6 +260,12 @@ func findMediaResourceById(media: Media, resourceId: MediaResourceId) -> Telegra
                 return representation.resource
             }
         }
+        
+        for alternativeRepresentation in file.alternativeRepresentations {
+            if let result = findMediaResourceById(media: alternativeRepresentation, resourceId: resourceId) {
+                return result
+            }
+        }
     } else if let webPage = media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content {
         if let image = content.image, let result = findMediaResourceById(media: image, resourceId: resourceId) {
             return result
@@ -316,6 +328,7 @@ private enum MediaReferenceRevalidationKey: Hashable {
     case notificationSoundList
     case customEmoji(fileId: Int64)
     case story(peer: PeerReference, id: Int32)
+    case starsTransaction(transaction: StarsTransactionReference)
 }
 
 private final class MediaReferenceRevalidationItemContext {
@@ -492,7 +505,7 @@ final class MediaReferenceRevalidationContext {
                 return .fail(.generic)
             }
             for document in result {
-                if let file = telegramMediaFileFromApiDocument(document) {
+                if let file = telegramMediaFileFromApiDocument(document, altDocuments: []) {
                     return .single(file)
                 }
             }
@@ -752,6 +765,30 @@ final class MediaReferenceRevalidationContext {
         }
     }
     
+    func starsTransaction(accountPeerId: PeerId, postbox: Postbox, network: Network, background: Bool, transaction: StarsTransactionReference) -> Signal<StarsContext.State.Transaction, RevalidateMediaReferenceError> {
+        return self.genericItem(key: .starsTransaction(transaction: transaction), background: background, request: { next, error in
+            return (_internal_getStarsTransaction(accountPeerId: accountPeerId, postbox: postbox, network: network, transactionReference: transaction)
+            |> castError(RevalidateMediaReferenceError.self)
+            |> mapToSignal { result -> Signal<StarsContext.State.Transaction, RevalidateMediaReferenceError> in
+                if let result {
+                    return .single(result)
+                } else {
+                    return .fail(.generic)
+                }
+            }).start(next: { value in
+                next(value)
+            }, error: { _ in
+                error(.generic)
+            })
+        }) |> mapToSignal { next -> Signal<StarsContext.State.Transaction, RevalidateMediaReferenceError> in
+            if let next = next as? StarsContext.State.Transaction {
+                return .single(next)
+            } else {
+                return .fail(.generic)
+            }
+        }
+    }
+    
     func notificationSoundList(postbox: Postbox, network: Network, background: Bool) -> Signal<[TelegramMediaFile], RevalidateMediaReferenceError> {
         return self.genericItem(key: .notificationSoundList, background: background, request: { next, error in
             return (requestNotificationSoundList(network: network, hash: 0)
@@ -931,11 +968,24 @@ func revalidateMediaResourceReference(accountPeerId: PeerId, postbox: Postbox, n
                         }
                         if let updatedResource = findUpdatedMediaResource(media: media, previousMedia: nil, resource: resource) {
                             return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
-                        } else if let alternativeMedia = item.alternativeMedia, let updatedResource = findUpdatedMediaResource(media: alternativeMedia, previousMedia: nil, resource: resource) {
-                            return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
                         } else {
+                            for alternativeMediaValue in item.alternativeMediaList {
+                                if let updatedResource = findUpdatedMediaResource(media: alternativeMediaValue, previousMedia: nil, resource: resource) {
+                                    return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
+                                }
+                            }
                             return .fail(.generic)
                         }
+                    }
+                case let .starsTransaction(transaction, _):
+                    return revalidationContext.starsTransaction(accountPeerId: accountPeerId, postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, transaction: transaction)
+                    |> mapToSignal { transaction -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
+                        for transactionMedia in transaction.media {
+                            if let updatedResource = findUpdatedMediaResource(media: transactionMedia, previousMedia: nil, resource: resource) {
+                                return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
+                            }
+                        }
+                        return .fail(.generic)
                     }
                 case let .standalone(media):
                     if let file = media as? TelegramMediaFile {

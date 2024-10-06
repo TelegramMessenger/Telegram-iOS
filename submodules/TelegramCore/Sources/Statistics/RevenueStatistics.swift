@@ -4,11 +4,60 @@ import Postbox
 import TelegramApi
 import MtProtoKit
 
-public struct RevenueStats: Equatable {
-    public struct Balances: Equatable {
+public struct RevenueStats: Equatable, Codable {
+    private enum CodingKeys: String, CodingKey {
+        case topHoursGraph
+        case revenueGraph
+        case balances
+        case usdRate
+    }
+    
+    static func key(peerId: PeerId) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 8 + 4)
+        key.setInt64(0, value: peerId.toInt64())
+        return key
+    }
+    
+    public struct Balances: Equatable, Codable {
+        private enum CodingKeys: String, CodingKey {
+            case currentBalance
+            case availableBalance
+            case overallRevenue
+            case withdrawEnabled
+        }
+        
         public let currentBalance: Int64
         public let availableBalance: Int64
         public let overallRevenue: Int64
+        public let withdrawEnabled: Bool
+        
+        init(
+            currentBalance: Int64,
+            availableBalance: Int64,
+            overallRevenue: Int64,
+            withdrawEnabled: Bool
+        ) {
+            self.currentBalance = currentBalance
+            self.availableBalance = availableBalance
+            self.overallRevenue = overallRevenue
+            self.withdrawEnabled = withdrawEnabled
+        }
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.currentBalance = try container.decode(Int64.self, forKey: .currentBalance)
+            self.availableBalance = try container.decode(Int64.self, forKey: .availableBalance)
+            self.overallRevenue = try container.decode(Int64.self, forKey: .overallRevenue)
+            self.withdrawEnabled = try container.decode(Bool.self, forKey: .withdrawEnabled)
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.currentBalance, forKey: .currentBalance)
+            try container.encode(self.availableBalance, forKey: .availableBalance)
+            try container.encode(self.overallRevenue, forKey: .overallRevenue)
+            try container.encode(self.withdrawEnabled, forKey: .withdrawEnabled)
+        }
     }
     
     public let topHoursGraph: StatsGraph
@@ -21,6 +70,22 @@ public struct RevenueStats: Equatable {
         self.revenueGraph = revenueGraph
         self.balances = balances
         self.usdRate = usdRate
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.topHoursGraph = try container.decode(StatsGraph.self, forKey: .topHoursGraph)
+        self.revenueGraph = try container.decode(StatsGraph.self, forKey: .revenueGraph)
+        self.balances = try container.decode(Balances.self, forKey: .balances)
+        self.usdRate = try container.decode(Double.self, forKey: .usdRate)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.topHoursGraph, forKey: .topHoursGraph)
+        try container.encode(self.revenueGraph, forKey: .revenueGraph)
+        try container.encode(self.balances, forKey: .balances)
+        try container.encode(self.usdRate, forKey: .usdRate)
     }
     
     public static func == (lhs: RevenueStats, rhs: RevenueStats) -> Bool {
@@ -63,8 +128,8 @@ extension RevenueStats {
 extension RevenueStats.Balances {
     init(apiRevenueBalances: Api.BroadcastRevenueBalances) {
         switch apiRevenueBalances {
-        case let .broadcastRevenueBalances(currentBalance, availableBalance, overallRevenue):
-            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue)
+        case let .broadcastRevenueBalances(flags, currentBalance, availableBalance, overallRevenue):
+            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue, withdrawEnabled: ((flags & (1 << 0)) != 0))
         }
     }
 }
@@ -124,6 +189,17 @@ private final class RevenueStatsContextImpl {
         self._statePromise.set(.single(self._state))
         
         self.load()
+        
+        let _ = (account.postbox.transaction { transaction -> RevenueStats? in
+            return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedRevenueStats, key: StarsRevenueStats.key(peerId: peerId)))?.get(RevenueStats.self)
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] cachedResult in
+            guard let self, let cachedResult else {
+                return
+            }
+            self._state = RevenueStatsContextState(stats: cachedResult)
+            self._statePromise.set(.single(self._state))
+        })
     }
     
     deinit {
@@ -155,9 +231,17 @@ private final class RevenueStatsContextImpl {
         
         self.disposable.set((signal
         |> deliverOnMainQueue).start(next: { [weak self] stats in
-            if let strongSelf = self {
-                strongSelf._state = RevenueStatsContextState(stats: stats)
-                strongSelf._statePromise.set(.single(strongSelf._state))
+            if let self {
+                self._state = RevenueStatsContextState(stats: stats)
+                self._statePromise.set(.single(self._state))
+                
+                if let stats {
+                    let _ = (self.account.postbox.transaction { transaction in
+                        if let entry = CodableEntry(stats) {
+                            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedRevenueStats, key: StarsRevenueStats.key(peerId: peerId)), entry: entry)
+                        }
+                    }).start()
+                }
             }
         }))
     }

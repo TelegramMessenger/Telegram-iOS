@@ -276,6 +276,7 @@ private extension PresentationGroupCallState {
 private enum CurrentImpl {
     case call(OngoingGroupCallContext)
     case mediaStream(WrappedMediaStreamingContext)
+    case externalMediaStream(ExternalMediaStreamingContext)
 }
 
 private extension CurrentImpl {
@@ -283,7 +284,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             return callContext.joinPayload
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             let ssrcId = UInt32.random(in: 0 ..< UInt32(Int32.max - 1))
             let dict: [String: Any] = [
                 "fingerprints": [] as [Any],
@@ -303,7 +304,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             return callContext.networkState
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             return .single(OngoingGroupCallContext.NetworkState(isConnected: true, isTransitioningFromBroadcastToRtc: false))
         }
     }
@@ -312,7 +313,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             return callContext.audioLevels
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             return .single([])
         }
     }
@@ -321,7 +322,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             return callContext.isMuted
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             return .single(true)
         }
     }
@@ -330,7 +331,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             return callContext.isNoiseSuppressionEnabled
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             return .single(false)
         }
     }
@@ -339,7 +340,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.stop()
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -348,7 +349,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.setIsMuted(isMuted)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -357,7 +358,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.setIsNoiseSuppressionEnabled(isNoiseSuppressionEnabled)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -366,7 +367,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.requestVideo(capturer)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -375,7 +376,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.disableVideo()
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -384,7 +385,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.setVolume(ssrc: ssrc, volume: volume)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -393,7 +394,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.setRequestedVideoChannels(channels)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -402,7 +403,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.makeIncomingVideoView(endpointId: endpointId, requestClone: requestClone, completion: completion)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -413,6 +414,8 @@ private extension CurrentImpl {
             return callContext.video(endpointId: endpointId)
         case let .mediaStream(mediaStreamContext):
             return mediaStreamContext.video()
+        case .externalMediaStream:
+            return .never()
         }
     }
 
@@ -420,7 +423,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.addExternalAudioData(data: data)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -429,7 +432,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.getStats(completion: completion)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -438,7 +441,7 @@ private extension CurrentImpl {
         switch self {
         case let .call(callContext):
             callContext.setTone(tone: tone)
-        case .mediaStream:
+        case .mediaStream, .externalMediaStream:
             break
         }
     }
@@ -647,6 +650,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var genericCallContext: CurrentImpl?
     private var currentConnectionMode: OngoingGroupCallContext.ConnectionMode = .none
     private var didInitializeConnectionMode: Bool = false
+    
+    let externalMediaStream = Promise<ExternalMediaStreamingContext>()
 
     private var screencastCallContext: OngoingGroupCallContext?
     private var screencastBufferServerContext: IpcGroupCallBufferAppContext?
@@ -657,6 +662,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         var isPresentation: Bool
     }
     private var ssrcMapping: [UInt32: SsrcMapping] = [:]
+    
+    private var requestedVideoChannels: [OngoingGroupCallContext.VideoChannel] = []
+    private var suspendVideoChannelRequests: Bool = false
+    private var pendingVideoSubscribers = Bag<(String, MetaDisposable, (OngoingGroupCallContext.VideoFrameData) -> Void)>()
     
     private var summaryInfoState = Promise<SummaryInfoState?>(nil)
     private var summaryParticipantsState = Promise<SummaryParticipantsState?>(nil)
@@ -720,6 +729,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private let myAudioLevelPipe = ValuePipe<Float>()
     public var myAudioLevel: Signal<Float, NoError> {
         return self.myAudioLevelPipe.signal()
+    }
+    private let myAudioLevelAndSpeakingPipe = ValuePipe<(Float, Bool)>()
+    public var myAudioLevelAndSpeaking: Signal<(Float, Bool), NoError> {
+        return self.myAudioLevelAndSpeakingPipe.signal()
     }
     private var myAudioLevelDisposable = MetaDisposable()
     
@@ -1638,7 +1651,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 genericCallContext = current
             } else {
                 if self.isStream, self.accountContext.sharedContext.immediateExperimentalUISettings.liveStreamV2 {
-                    genericCallContext = .mediaStream(WrappedMediaStreamingContext(rejoinNeeded: { [weak self] in
+                    let externalMediaStream = ExternalMediaStreamingContext(id: self.internalId, rejoinNeeded: { [weak self] in
                         Queue.mainQueue().async {
                             guard let strongSelf = self else {
                                 return
@@ -1650,7 +1663,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 strongSelf.requestCall(movingFromBroadcastToRtc: false)
                             }
                         }
-                    }))
+                    })
+                    genericCallContext = .externalMediaStream(externalMediaStream)
+                    self.externalMediaStream.set(.single(externalMediaStream))
                 } else {
                     var outgoingAudioBitrateKbit: Int32?
                     let appConfiguration = self.accountContext.currentAppConfiguration.with({ $0 })
@@ -1676,7 +1691,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 strongSelf.requestCall(movingFromBroadcastToRtc: false)
                             }
                         }
-                    }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: self.isVideoEnabled ? .generic : .none, enableNoiseSuppression: false, disableAudioInput: self.isStream, preferX264: self.accountContext.sharedContext.immediateExperimentalUISettings.preferredVideoCodec == "H264", logPath: allocateCallLogPath(account: self.account), onMutedSpeechActivityDetected: { [weak self] value in
+                    }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: self.isVideoEnabled ? .generic : .none, enableNoiseSuppression: false, disableAudioInput: self.isStream, enableSystemMute: self.accountContext.sharedContext.immediateExperimentalUISettings.experimentalCallMute, preferX264: self.accountContext.sharedContext.immediateExperimentalUISettings.preferredVideoCodec == "H264", logPath: allocateCallLogPath(account: self.account), onMutedSpeechActivityDetected: { [weak self] value in
                         Queue.mainQueue().async {
                             guard let strongSelf = self else {
                                 return
@@ -1688,6 +1703,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                 self.genericCallContext = genericCallContext
                 self.stateVersionValue += 1
+                
+                genericCallContext.setRequestedVideoChannels(self.suspendVideoChannelRequests ? [] : self.requestedVideoChannels)
+                self.connectPendingVideoSubscribers()
             }
             
             self.joinDisposable.set((genericCallContext.joinPayload
@@ -1796,6 +1814,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             case .broadcast:
                                 strongSelf.currentConnectionMode = .broadcast
                                 mediaStreamContext.setAudioStreamData(audioStreamData: OngoingGroupCallContext.AudioStreamData(engine: strongSelf.accountContext.engine, callId: callInfo.id, accessHash: callInfo.accessHash, isExternalStream: callInfo.isStream))
+                            }
+                        case let .externalMediaStream(externalMediaStream):
+                            switch joinCallResult.connectionMode {
+                            case .rtc:
+                                strongSelf.currentConnectionMode = .rtc
+                            case .broadcast:
+                                strongSelf.currentConnectionMode = .broadcast
+                                externalMediaStream.setAudioStreamData(audioStreamData: OngoingGroupCallContext.AudioStreamData(engine: strongSelf.accountContext.engine, callId: callInfo.id, accessHash: callInfo.accessHash, isExternalStream: callInfo.isStream))
                             }
                         }
                     }
@@ -1935,6 +1961,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 
                 let mappedLevel = myLevel * 1.5
                 strongSelf.myAudioLevelPipe.putNext(mappedLevel)
+                strongSelf.myAudioLevelAndSpeakingPipe.putNext((mappedLevel, myLevelHasVoice))
                 strongSelf.processMyAudioLevel(level: mappedLevel, hasVoice: myLevelHasVoice)
                 strongSelf.isSpeakingPromise.set(orignalMyLevelHasVoice)
                 
@@ -2083,7 +2110,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     var topParticipants: [GroupCallParticipantsContext.Participant] = []
                     
                     var reportSpeakingParticipants: [PeerId: UInt32] = [:]
-                    let timestamp = CACurrentMediaTime()
+                    let timestamp = CFAbsoluteTimeGetCurrent()
                     for (peerId, ssrc) in speakingParticipants {
                         let shouldReport: Bool
                         if let previousTimestamp = strongSelf.speakingParticipantsReportTimestamp[peerId] {
@@ -2975,7 +3002,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.hasScreencast = true
 
-        let screencastCallContext = OngoingGroupCallContext(audioSessionActive: .single(true), video: self.screencastCapturer, requestMediaChannelDescriptions: { _, _ in EmptyDisposable }, rejoinNeeded: { }, outgoingAudioBitrateKbit: nil, videoContentType: .screencast, enableNoiseSuppression: false, disableAudioInput: true, preferX264: false, logPath: "", onMutedSpeechActivityDetected: { _ in })
+        let screencastCallContext = OngoingGroupCallContext(audioSessionActive: .single(true), video: self.screencastCapturer, requestMediaChannelDescriptions: { _, _ in EmptyDisposable }, rejoinNeeded: { }, outgoingAudioBitrateKbit: nil, videoContentType: .screencast, enableNoiseSuppression: false, disableAudioInput: true, enableSystemMute: false, preferX264: false, logPath: "", onMutedSpeechActivityDetected: { _ in })
         self.screencastCallContext = screencastCallContext
 
         self.screencastJoinDisposable.set((screencastCallContext.joinPayload
@@ -3040,7 +3067,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     public func setRequestedVideoList(items: [PresentationGroupCallRequestedVideo]) {
-        self.genericCallContext?.setRequestedVideoChannels(items.compactMap { item -> OngoingGroupCallContext.VideoChannel in
+        self.requestedVideoChannels = items.compactMap { item -> OngoingGroupCallContext.VideoChannel in
             let mappedMinQuality: OngoingGroupCallContext.VideoChannel.Quality
             let mappedMaxQuality: OngoingGroupCallContext.VideoChannel.Quality
             switch item.minQuality {
@@ -3068,7 +3095,20 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 minQuality: mappedMinQuality,
                 maxQuality: mappedMaxQuality
             )
-        })
+        }
+        if let genericCallContext = self.genericCallContext, !self.suspendVideoChannelRequests {
+            genericCallContext.setRequestedVideoChannels(self.requestedVideoChannels)
+        }
+    }
+    
+    public func setSuspendVideoChannelRequests(_ value: Bool) {
+        if self.suspendVideoChannelRequests != value {
+            self.suspendVideoChannelRequests = value
+            
+            if let genericCallContext = self.genericCallContext {
+                genericCallContext.setRequestedVideoChannels(self.suspendVideoChannelRequests ? [] : self.requestedVideoChannels)
+            }
+        }
     }
     
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {
@@ -3199,7 +3239,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 switch genericCallContext {
                 case let .call(callContext):
                     callContext.setConnectionMode(.none, keepBroadcastConnectedIfWasEnabled: movingFromBroadcastToRtc, isUnifiedBroadcast: false)
-                case .mediaStream:
+                case .mediaStream, .externalMediaStream:
                     assertionFailure()
                     break
                 }
@@ -3523,7 +3563,49 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
 
     func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError>? {
-        return self.genericCallContext?.video(endpointId: endpointId)
+        return Signal { [weak self] subscriber in
+            guard let self else {
+                return EmptyDisposable
+            }
+            
+            if let genericCallContext = self.genericCallContext {
+                return genericCallContext.video(endpointId: endpointId).start(next: { value in
+                    subscriber.putNext(value)
+                })
+            } else {
+                let disposable = MetaDisposable()
+                let index = self.pendingVideoSubscribers.add((endpointId, disposable, { value in
+                    subscriber.putNext(value)
+                }))
+                
+                return ActionDisposable { [weak self] in
+                    disposable.dispose()
+                    
+                    Queue.mainQueue().async {
+                        guard let self else {
+                            return
+                        }
+                        self.pendingVideoSubscribers.remove(index)
+                    }
+                }
+            }
+        }
+        |> runOn(.mainQueue())
+    }
+    
+    private func connectPendingVideoSubscribers() {
+        guard let genericCallContext = self.genericCallContext else {
+            return
+        }
+        
+        let items = self.pendingVideoSubscribers.copyItems()
+        self.pendingVideoSubscribers.removeAll()
+        
+        for (endpointId, disposable, f) in items {
+            disposable.set(genericCallContext.video(endpointId: endpointId).start(next: { value in
+                f(value)
+            }))
+        }
     }
     
     public func loadMoreMembers(token: String) {

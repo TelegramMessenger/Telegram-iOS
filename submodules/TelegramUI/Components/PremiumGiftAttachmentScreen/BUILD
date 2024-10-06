@@ -17,7 +17,7 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/AccountContext",
         "//submodules/AttachmentUI",
-        "//submodules/PremiumUI",
+        "//submodules/TelegramUI/Components/Gifts/GiftOptionsScreen",
     ],
     visibility = [
         "//visibility:public",

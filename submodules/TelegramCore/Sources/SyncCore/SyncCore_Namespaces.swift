@@ -14,6 +14,12 @@ public struct Namespaces {
         public static let allScheduled: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal])
         public static let allQuickReply: Set<Int32> = Set([Namespaces.Message.QuickReplyCloud, Namespaces.Message.QuickReplyLocal])
         public static let allNonRegular: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal, Namespaces.Message.QuickReplyCloud, Namespaces.Message.QuickReplyLocal])
+        public static let allLocal: [Int32] = [
+            Namespaces.Message.Local,
+            Namespaces.Message.SecretIncoming,
+            Namespaces.Message.ScheduledLocal,
+            Namespaces.Message.QuickReplyLocal
+        ]
     }
     
     public struct Media {
@@ -126,6 +132,11 @@ public struct Namespaces {
         public static let savedMessageTags: Int8 = 35
         public static let applicationIcons: Int8 = 36
         public static let availableMessageEffects: Int8 = 37
+        public static let cachedStarsRevenueStats: Int8 = 38
+        public static let cachedRevenueStats: Int8 = 39
+        public static let recommendedApps: Int8 = 40
+        public static let starsReactionDefaultToPrivate: Int8 = 41
+        public static let cachedPremiumGiftCodeOptions: Int8 = 42
     }
     
     public struct UnorderedItemList {
@@ -175,6 +186,7 @@ public extension PendingMessageActionType {
     static let updateReaction = PendingMessageActionType(rawValue: 1)
     static let sendScheduledMessageImmediately = PendingMessageActionType(rawValue: 2)
     static let readReaction = PendingMessageActionType(rawValue: 3)
+    static let sendStarsReaction = PendingMessageActionType(rawValue: 4)
 }
 
 public let peerIdNamespacesWithInitialCloudMessageHoles = [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel]
@@ -289,6 +301,7 @@ private enum PreferencesKeyValues: Int32 {
     case timezoneList = 38
     case botBiometricsState = 39
     case businessLinks = 40
+    case starGifts = 41
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -511,6 +524,12 @@ public struct PreferencesKeys {
     public static func businessLinks() -> ValueBoxKey {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.businessLinks.rawValue)
+        return key
+    }
+    
+    public static func starGifts() -> ValueBoxKey {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.starGifts.rawValue)
         return key
     }
 }

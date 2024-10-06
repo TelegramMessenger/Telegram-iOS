@@ -53,7 +53,7 @@ final class InstantPageMediaPlaylistItem: SharedMediaPlaylistItem {
                         } else {
                             return SharedMediaPlaybackData(type: .music, source: .telegramFile(reference: .webPage(webPage: WebpageReference(self.webPage), media: file), isCopyProtected: false, isViewOnce: false))
                         }
-                    case let .Video(_, _, flags, _):
+                    case let .Video(_, _, flags, _, _, _):
                         if flags.contains(.instantRoundVideo) {
                             return SharedMediaPlaybackData(type: .instantVideo, source: .telegramFile(reference: .webPage(webPage: WebpageReference(self.webPage), media: file), isCopyProtected: false, isViewOnce: false))
                         } else {
@@ -99,7 +99,7 @@ final class InstantPageMediaPlaylistItem: SharedMediaPlaylistItem {
                             
                             return SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: albumArt, long: false, caption: nil)
                         }
-                    case let .Video(_, _, flags, _):
+                    case let .Video(_, _, flags, _, _, _):
                         if flags.contains(.instantRoundVideo) {
                             return SharedMediaPlaybackDisplayData.instantVideo(author: nil, peer: nil, timestamp: 0)
                         } else {
@@ -141,30 +141,30 @@ struct InstantPagePlaylistLocation: Equatable, SharedMediaPlaylistLocation {
     }
 }
 
-final class InstantPageMediaPlaylist: SharedMediaPlaylist {
+public final class InstantPageMediaPlaylist: SharedMediaPlaylist {
     private let webPage: TelegramMediaWebpage
     private let items: [InstantPageMedia]
     private let initialItemIndex: Int
     
-    var location: SharedMediaPlaylistLocation {
+    public var location: SharedMediaPlaylistLocation {
         return InstantPagePlaylistLocation(webpageId: self.webPage.webpageId)
     }
     
-    var currentItemDisappeared: (() -> Void)?
+    public var currentItemDisappeared: (() -> Void)?
     
     private var currentItem: InstantPageMedia?
     private var playedToEnd: Bool = false
     private var order: MusicPlaybackSettingsOrder = .regular
-    private(set) var looping: MusicPlaybackSettingsLooping = .none
+    public private(set) var looping: MusicPlaybackSettingsLooping = .none
     
-    let id: SharedMediaPlaylistId
+    public let id: SharedMediaPlaylistId
     
     private let stateValue = Promise<SharedMediaPlaylistState>()
-    var state: Signal<SharedMediaPlaylistState, NoError> {
+    public var state: Signal<SharedMediaPlaylistState, NoError> {
         return self.stateValue.get()
     }
     
-    init(webPage: TelegramMediaWebpage, items: [InstantPageMedia], initialItemIndex: Int) {
+    public init(webPage: TelegramMediaWebpage, items: [InstantPageMedia], initialItemIndex: Int) {
         assert(Queue.mainQueue().isCurrent())
         
         self.id = InstantPageMediaPlaylistId(webpageId: webPage.webpageId)
@@ -176,7 +176,7 @@ final class InstantPageMediaPlaylist: SharedMediaPlaylist {
         self.control(.next)
     }
     
-    func control(_ action: SharedMediaPlaylistControlAction) {
+    public func control(_ action: SharedMediaPlaylistControlAction) {
         assert(Queue.mainQueue().isCurrent())
         
         switch action {
@@ -228,14 +228,14 @@ final class InstantPageMediaPlaylist: SharedMediaPlaylist {
         }
     }
     
-    func setOrder(_ order: MusicPlaybackSettingsOrder) {
+    public func setOrder(_ order: MusicPlaybackSettingsOrder) {
         if self.order != order {
             self.order = order
             self.updateState()
         }
     }
     
-    func setLooping(_ looping: MusicPlaybackSettingsLooping) {
+    public func setLooping(_ looping: MusicPlaybackSettingsLooping) {
         if self.looping != looping {
             self.looping = looping
             self.updateState()
@@ -246,6 +246,6 @@ final class InstantPageMediaPlaylist: SharedMediaPlaylist {
         self.stateValue.set(.single(SharedMediaPlaylistState(loading: false, playedToEnd: self.playedToEnd, item: self.currentItem.flatMap({ InstantPageMediaPlaylistItem(webPage: self.webPage, item: $0) }), nextItem: nil, previousItem: nil, order: self.order, looping: self.looping)))
     }
     
-    func onItemPlaybackStarted(_ item: SharedMediaPlaylistItem) {
+    public func onItemPlaybackStarted(_ item: SharedMediaPlaylistItem) {
     }
 }

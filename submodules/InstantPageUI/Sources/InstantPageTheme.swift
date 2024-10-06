@@ -84,32 +84,32 @@ public struct InstantPageTextCategories {
 }
 
 public final class InstantPageTheme {
-    let type: InstantPageThemeType
-    let pageBackgroundColor: UIColor
+    public let type: InstantPageThemeType
+    public let pageBackgroundColor: UIColor
     
-    let textCategories: InstantPageTextCategories
-    let serif: Bool
+    public let textCategories: InstantPageTextCategories
+    public let serif: Bool
     
-    let codeBlockBackgroundColor: UIColor
+    public let codeBlockBackgroundColor: UIColor
     
-    let linkColor: UIColor
-    let textHighlightColor: UIColor
-    let linkHighlightColor: UIColor
-    let markerColor: UIColor
+    public let linkColor: UIColor
+    public let textHighlightColor: UIColor
+    public let linkHighlightColor: UIColor
+    public let markerColor: UIColor
     
-    let panelBackgroundColor: UIColor
-    let panelHighlightedBackgroundColor: UIColor
-    let panelPrimaryColor: UIColor
-    let panelSecondaryColor: UIColor
-    let panelAccentColor: UIColor
+    public let panelBackgroundColor: UIColor
+    public let panelHighlightedBackgroundColor: UIColor
+    public let panelPrimaryColor: UIColor
+    public let panelSecondaryColor: UIColor
+    public let panelAccentColor: UIColor
     
-    let tableBorderColor: UIColor
-    let tableHeaderColor: UIColor
-    let controlColor: UIColor
+    public let tableBorderColor: UIColor
+    public let tableHeaderColor: UIColor
+    public let controlColor: UIColor
     
-    let imageTintColor: UIColor?
+    public let imageTintColor: UIColor?
     
-    let overlayPanelColor: UIColor
+    public let overlayPanelColor: UIColor
     
     public init(type: InstantPageThemeType, pageBackgroundColor: UIColor, textCategories: InstantPageTextCategories, serif: Bool, codeBlockBackgroundColor: UIColor, linkColor: UIColor, textHighlightColor: UIColor, linkHighlightColor: UIColor, markerColor: UIColor, panelBackgroundColor: UIColor, panelHighlightedBackgroundColor: UIColor, panelPrimaryColor: UIColor, panelSecondaryColor: UIColor, panelAccentColor: UIColor, tableBorderColor: UIColor, tableHeaderColor: UIColor, controlColor: UIColor, imageTintColor: UIColor?, overlayPanelColor: UIColor) {
         self.type = type
@@ -264,6 +264,10 @@ private let darkTheme = InstantPageTheme(
 
 private func fontSizeMultiplierForVariant(_ variant: InstantPagePresentationFontSize) -> CGFloat {
     switch variant {
+        case .xxsmall:
+            return 0.5
+        case .xsmall:
+            return 0.75
         case .small:
             return 0.85
         case .standard:
@@ -271,7 +275,7 @@ private func fontSizeMultiplierForVariant(_ variant: InstantPagePresentationFont
         case .large:
             return 1.15
         case .xlarge:
-            return 1.3
+            return 1.25
         case .xxlarge:
             return 1.5
     }
@@ -308,7 +312,7 @@ func instantPageThemeTypeForSettingsAndTime(themeSettings: PresentationThemeSett
     return (settings.themeType, false)
 }
 
-func instantPageThemeForType(_ type: InstantPageThemeType, settings: InstantPagePresentationSettings) -> InstantPageTheme {
+public func instantPageThemeForType(_ type: InstantPageThemeType, settings: InstantPagePresentationSettings) -> InstantPageTheme {
     switch type {
         case .light:
             return lightTheme.withUpdatedFontStyles(sizeMultiplier: fontSizeMultiplierForVariant(settings.fontSize), forceSerif: settings.forceSerif)
@@ -327,7 +331,7 @@ extension ActionSheetControllerTheme {
     }
 }
 
-extension ActionSheetController {
+public extension ActionSheetController {
     convenience init(instantPageTheme: InstantPageTheme) {
         self.init(theme: ActionSheetControllerTheme(instantPageTheme: instantPageTheme), allowInputInset: false)
     }

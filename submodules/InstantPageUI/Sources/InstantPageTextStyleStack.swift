@@ -100,12 +100,12 @@ final class InstantPageTextStyleStack {
                     }
                 case .subscript:
                     if baselineOffset == nil {
-                        baselineOffset = 0.35
+                        baselineOffset = -0.35
                         underline = false
                     }
                 case .superscript:
                     if baselineOffset == nil {
-                        baselineOffset = -0.35
+                        baselineOffset = 0.35
                     }
                 case let .markerColor(color):
                     if markerColor == nil {

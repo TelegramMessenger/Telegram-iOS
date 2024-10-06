@@ -75,9 +75,9 @@ public final class MediaStreamComponent: CombinedComponent {
         var videoStalled: Bool = true
         
         var videoIsPlayable: Bool {
-            !videoStalled && hasVideo
+            return true
+            //!videoStalled && hasVideo
         }
-//        var wantsPiP: Bool = false
         
         let deactivatePictureInPictureIfVisible = StoredActionSlot(Void.self)
         

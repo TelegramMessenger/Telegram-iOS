@@ -14,7 +14,7 @@ import ChatTitleView
 import BottomButtonPanelComponent
 import UndoUI
 import MoreHeaderButton
-import MediaEditorScreen
+import SaveProgressScreen
 import SaveToCameraRoll
 
 final class PeerInfoStoryGridScreenComponent: Component {

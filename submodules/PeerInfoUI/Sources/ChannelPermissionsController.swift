@@ -381,7 +381,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
             case let .peerItem(_, strings, dateTimeFormat, nameDisplayOrder, _, participant, editing, enabled, canOpen, defaultBannedRights):
                 var text: ItemListPeerItemText = .none
                 switch participant.participant {
-                    case let .member(_, _, _, banInfo, _):
+                    case let .member(_, _, _, banInfo, _, _):
                         var exceptionsString = ""
                         if let banInfo = banInfo {
                             let sendMediaRights = banSendMediaSubList().map { $0.0 }
@@ -937,7 +937,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
                     switch participant.participant {
                         case .creator:
                             return
-                        case let .member(_, _, adminInfo, _, _):
+                        case let .member(_, _, adminInfo, _, _, _):
                             if let adminInfo = adminInfo, adminInfo.promotedBy != context.account.peerId {
                                 presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_Members_AddBannedErrorAdmin, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 return

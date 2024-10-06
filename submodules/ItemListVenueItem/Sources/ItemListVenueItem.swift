@@ -10,11 +10,17 @@ import LocationResources
 import ShimmerEffect
 
 public final class ItemListVenueItem: ListViewItem, ItemListItem {
+    public enum InfoIcon {
+        case info
+        case goTo
+    }
+    
     let presentationData: ItemListPresentationData
     let engine: TelegramEngine
     let venue: TelegramMediaMap?
     let title: String?
     let subtitle: String?
+    let icon: InfoIcon
     let style: ItemListStyle
     let action: (() -> Void)?
     let infoAction: (() -> Void)?
@@ -22,12 +28,13 @@ public final class ItemListVenueItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let header: ListViewItemHeader?
     
-    public init(presentationData: ItemListPresentationData, engine: TelegramEngine, venue: TelegramMediaMap?, title: String? = nil, subtitle: String? = nil, sectionId: ItemListSectionId = 0, style: ItemListStyle, action: (() -> Void)?, infoAction: (() -> Void)? = nil, header: ListViewItemHeader? = nil) {
+    public init(presentationData: ItemListPresentationData, engine: TelegramEngine, venue: TelegramMediaMap?, title: String? = nil, subtitle: String? = nil, icon: ItemListVenueItem.InfoIcon = .info, sectionId: ItemListSectionId = 0, style: ItemListStyle, action: (() -> Void)?, infoAction: (() -> Void)? = nil, header: ListViewItemHeader? = nil) {
         self.presentationData = presentationData
         self.engine = engine
         self.venue = venue
         self.title = title
         self.subtitle = subtitle
+        self.icon = icon
         self.sectionId = sectionId
         self.style = style
         self.action = action
@@ -274,7 +281,15 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
-                        strongSelf.infoButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoIcon"), color: item.presentationData.theme.list.itemAccentColor), for: .normal)
+                        
+                        let iconName: String
+                        switch item.icon {
+                        case .info:
+                            iconName = "Location/InfoIcon"
+                        case .goTo:
+                            iconName = "Location/GoTo"
+                        }
+                        strongSelf.infoButton.setImage(generateTintedImage(image: UIImage(bundleImageName: iconName), color: item.presentationData.theme.list.itemAccentColor), for: .normal)
                     }
                                         
                     let transition = ContainedViewLayoutTransition.immediate

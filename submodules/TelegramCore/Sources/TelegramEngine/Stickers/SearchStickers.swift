@@ -320,7 +320,7 @@ func _internal_searchStickers(account: Account, query: [String], scope: SearchSt
                     
                         var files: [TelegramMediaFile] = []
                         for sticker in stickers {
-                            if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
+                            if let file = telegramMediaFileFromApiDocument(sticker, altDocuments: []), let id = file.id {
                                 files.append(file)
                                 if !currentItemIds.contains(id) {
                                     if file.isPremiumSticker {
@@ -705,7 +705,7 @@ func _internal_searchStickers(account: Account, category: EmojiSearchCategories.
                     
                         var files: [TelegramMediaFile] = []
                         for sticker in stickers {
-                            if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
+                            if let file = telegramMediaFileFromApiDocument(sticker, altDocuments: []), let id = file.id {
                                 files.append(file)
                                 if !currentItemIds.contains(id) {
                                     if file.isPremiumSticker {

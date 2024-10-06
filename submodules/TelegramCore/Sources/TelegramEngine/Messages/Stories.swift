@@ -5,12 +5,12 @@ import TelegramApi
 
 public enum EngineStoryInputMedia {
     case image(dimensions: PixelDimensions, data: Data, stickers: [TelegramMediaFile])
-    case video(dimensions: PixelDimensions, duration: Double, resource: TelegramMediaResource, firstFrameFile: TempBoxFile?, stickers: [TelegramMediaFile])
+    case video(dimensions: PixelDimensions, duration: Double, resource: TelegramMediaResource, firstFrameFile: TempBoxFile?, stickers: [TelegramMediaFile], coverTime: Double?)
     case existing(media: Media)
     
     var embeddedStickers: [TelegramMediaFile] {
         switch self {
-        case let .image(_, _, stickers), let .video(_, _, _, _, stickers):
+        case let .image(_, _, stickers), let .video(_, _, _, _, stickers, _):
             return stickers
         case .existing:
             return []
@@ -245,6 +245,7 @@ public enum Stories {
             case expirationTimestamp
             case media
             case alternativeMedia
+            case alternativeMediaList
             case mediaAreas
             case text
             case entities
@@ -268,7 +269,7 @@ public enum Stories {
         public let timestamp: Int32
         public let expirationTimestamp: Int32
         public let media: Media?
-        public let alternativeMedia: Media?
+        public let alternativeMediaList: [Media]
         public let mediaAreas: [MediaArea]
         public let text: String
         public let entities: [MessageTextEntity]
@@ -292,7 +293,7 @@ public enum Stories {
             timestamp: Int32,
             expirationTimestamp: Int32,
             media: Media?,
-            alternativeMedia: Media?,
+            alternativeMediaList: [Media],
             mediaAreas: [MediaArea],
             text: String,
             entities: [MessageTextEntity],
@@ -315,7 +316,7 @@ public enum Stories {
             self.timestamp = timestamp
             self.expirationTimestamp = expirationTimestamp
             self.media = media
-            self.alternativeMedia = alternativeMedia
+            self.alternativeMediaList = alternativeMediaList
             self.mediaAreas = mediaAreas
             self.text = text
             self.entities = entities
@@ -348,10 +349,18 @@ public enum Stories {
                 self.media = nil
             }
             
-            if let alternativeMediaData = try container.decodeIfPresent(Data.self, forKey: .alternativeMedia) {
-                self.alternativeMedia = PostboxDecoder(buffer: MemoryBuffer(data: alternativeMediaData)).decodeRootObject() as? Media
+            if let alternativeMediaListData = try container.decodeIfPresent([Data].self, forKey: .alternativeMediaList) {
+                self.alternativeMediaList = alternativeMediaListData.compactMap { data -> Media? in
+                    return PostboxDecoder(buffer: MemoryBuffer(data: data)).decodeRootObject() as? Media
+                }
+            } else if let alternativeMediaData = try container.decodeIfPresent(Data.self, forKey: .alternativeMedia) {
+                if let value = PostboxDecoder(buffer: MemoryBuffer(data: alternativeMediaData)).decodeRootObject() as? Media {
+                    self.alternativeMediaList = [value]
+                } else {
+                    self.alternativeMediaList = []
+                }
             } else {
-                self.alternativeMedia = nil
+                self.alternativeMediaList = []
             }
             
             self.mediaAreas = try container.decodeIfPresent([MediaArea].self, forKey: .mediaAreas) ?? []
@@ -388,12 +397,12 @@ public enum Stories {
                 try container.encode(mediaData, forKey: .media)
             }
             
-            if let alternativeMedia = self.alternativeMedia {
+            let alternativeMediaListData = self.alternativeMediaList.map { alternativeMediaValue -> Data in
                 let encoder = PostboxEncoder()
-                encoder.encodeRootObject(alternativeMedia)
-                let alternativeMediaData = encoder.makeData()
-                try container.encode(alternativeMediaData, forKey: .alternativeMedia)
+                encoder.encodeRootObject(alternativeMediaValue)
+                return encoder.makeData()
             }
+            try container.encode(alternativeMediaListData, forKey: .alternativeMediaList)
             
             try container.encode(self.mediaAreas, forKey: .mediaAreas)
             
@@ -436,14 +445,8 @@ public enum Stories {
                 }
             }
             
-            if let lhsAlternativeMedia = lhs.alternativeMedia, let rhsAlternativeMedia = rhs.alternativeMedia {
-                if !lhsAlternativeMedia.isEqual(to: rhsAlternativeMedia) {
-                    return false
-                }
-            } else {
-                if (lhs.alternativeMedia == nil) != (rhs.alternativeMedia == nil) {
-                    return false
-                }
+            if !areMediaArraysEqual(lhs.alternativeMediaList, rhs.alternativeMediaList) {
+                return false
             }
             
             if lhs.mediaAreas != rhs.mediaAreas {
@@ -849,7 +852,7 @@ private func prepareUploadStoryContent(account: Account, media: EngineStoryInput
             flags: []
         )
         return imageMedia
-    case let .video(dimensions, duration, resource, firstFrameFile, _):
+    case let .video(dimensions, duration, resource, firstFrameFile, _, coverTime):
         var previewRepresentations: [TelegramMediaImageRepresentation] = []
         if let firstFrameFile = firstFrameFile {
             account.postbox.mediaBox.storeCachedResourceRepresentation(resource.id.stringRepresentation, representationId: "first-frame", keepDuration: .general, tempFile: firstFrameFile)
@@ -871,8 +874,9 @@ private func prepareUploadStoryContent(account: Account, media: EngineStoryInput
             mimeType: "video/mp4",
             size: nil,
             attributes: [
-                TelegramMediaFileAttribute.Video(duration: duration, size: dimensions, flags: .supportsStreaming, preloadSize: nil)
-            ]
+                TelegramMediaFileAttribute.Video(duration: duration, size: dimensions, flags: .supportsStreaming, preloadSize: nil, coverTime: coverTime, videoCodec: nil)
+            ],
+            alternativeRepresentations: []
         )
         
         return fileMedia
@@ -1028,6 +1032,7 @@ private struct PendingStoryIdMappingKey: Hashable {
 }
 
 private let pendingStoryIdMapping = Atomic<[PendingStoryIdMappingKey: Int32]>(value: [:])
+private let pendingBotPreviewIdMapping = Atomic<[PendingStoryIdMappingKey: MediaId]>(value: [:])
 
 func _internal_lookUpPendingStoryIdMapping(peerId: PeerId, stableId: Int32) -> Int32? {
     return pendingStoryIdMapping.with { dict in
@@ -1037,6 +1042,22 @@ func _internal_lookUpPendingStoryIdMapping(peerId: PeerId, stableId: Int32) -> I
 
 private func _internal_putPendingStoryIdMapping(peerId: PeerId, stableId: Int32, id: Int32) {
     let _ = pendingStoryIdMapping.modify { dict in
+        var dict = dict
+        
+        dict[PendingStoryIdMappingKey(peerId: peerId, stableId: stableId)] = id
+        
+        return dict
+    }
+}
+
+func _internal_lookUpPendingBotPreviewIdMapping(peerId: PeerId, stableId: Int32) -> MediaId? {
+    return pendingBotPreviewIdMapping.with { dict in
+        return dict[PendingStoryIdMappingKey(peerId: peerId, stableId: stableId)]
+    }
+}
+
+private func _internal_putPendingBotPreviewIdMapping(peerId: PeerId, stableId: Int32, id: MediaId) {
+    let _ = pendingBotPreviewIdMapping.modify { dict in
         var dict = dict
         
         dict[PendingStoryIdMappingKey(peerId: peerId, stableId: stableId)] = id
@@ -1192,7 +1213,7 @@ func _internal_uploadStoryImpl(
                                                             timestamp: item.timestamp,
                                                             expirationTimestamp: item.expirationTimestamp,
                                                             media: item.media,
-                                                            alternativeMedia: item.alternativeMedia,
+                                                            alternativeMediaList: item.alternativeMediaList,
                                                             mediaAreas: item.mediaAreas,
                                                             text: item.text,
                                                             entities: item.entities,
@@ -1261,6 +1282,227 @@ func _internal_uploadStoryImpl(
     }
 }
 
+func _internal_uploadBotPreviewImpl(
+    postbox: Postbox,
+    network: Network,
+    accountPeerId: PeerId,
+    stateManager: AccountStateManager,
+    messageMediaPreuploadManager: MessageMediaPreuploadManager,
+    revalidationContext: MediaReferenceRevalidationContext,
+    auxiliaryMethods: AccountAuxiliaryMethods,
+    toPeerId: PeerId,
+    language: String?,
+    stableId: Int32,
+    media: Media,
+    mediaAreas: [MediaArea],
+    text: String,
+    entities: [MessageTextEntity],
+    embeddedStickers: [TelegramMediaFile],
+    randomId: Int64
+) -> Signal<StoryUploadResult, NoError> {
+    return postbox.transaction { transaction -> Api.InputUser? in
+        if let peer = transaction.getPeer(toPeerId) {
+            return apiInputUser(peer)
+        }
+        return nil
+    }
+    |> mapToSignal { inputUser -> Signal<StoryUploadResult, NoError> in
+        guard let inputUser else {
+            return .single(.completed(nil))
+        }
+        
+        let passFetchProgress = media is TelegramMediaFile
+        let (contentSignal, originalMedia) = uploadedStoryContent(postbox: postbox, network: network, media: media, mediaReference: nil, embeddedStickers: embeddedStickers, accountPeerId: accountPeerId, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: revalidationContext, auxiliaryMethods: auxiliaryMethods, passFetchProgress: passFetchProgress)
+        return contentSignal
+        |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
+            switch result {
+            case let .progress(progress):
+                return .single(.progress(progress.progress))
+            case let .content(content):
+                return postbox.transaction { transaction -> Signal<StoryUploadResult, NoError> in
+                    switch content.content {
+                    case let .media(inputMedia, _):
+                        return network.request(Api.functions.bots.addPreviewMedia(bot: inputUser, langCode: language ?? "", media: inputMedia))
+                        |> map(Optional.init)
+                        |> `catch` { _ -> Signal<Api.BotPreviewMedia?, NoError> in
+                            return .single(nil)
+                        }
+                        |> mapToSignal { resultPreviewMedia -> Signal<StoryUploadResult, NoError> in
+                            guard let resultPreviewMedia else {
+                                return .single(.completed(nil))
+                            }
+                            switch resultPreviewMedia {
+                            case let .botPreviewMedia(date, resultMedia):
+                                return postbox.transaction { transaction -> StoryUploadResult in
+                                    var currentState: Stories.LocalState
+                                    if let value = transaction.getLocalStoryState()?.get(Stories.LocalState.self) {
+                                        currentState = value
+                                    } else {
+                                        currentState = Stories.LocalState(items: [])
+                                    }
+                                    if let index = currentState.items.firstIndex(where: { $0.stableId == stableId }) {
+                                        currentState.items.remove(at: index)
+                                        transaction.setLocalStoryState(state: CodableEntry(currentState))
+                                    }
+                                    
+                                    if let resultMediaValue = textMediaAndExpirationTimerFromApiMedia(resultMedia, toPeerId).media {
+                                        applyMediaResourceChanges(from: originalMedia, to: resultMediaValue, postbox: postbox, force: originalMedia is TelegramMediaFile && resultMediaValue is TelegramMediaFile)
+                                        
+                                        let addedItem = CachedUserData.BotPreview.Item(media: resultMediaValue, timestamp: date)
+                                        
+                                        if let mediaId = resultMediaValue.id {
+                                            _internal_putPendingBotPreviewIdMapping(peerId: toPeerId, stableId: stableId, id: mediaId)
+                                        }
+                                        
+                                        if language == nil {
+                                            transaction.updatePeerCachedData(peerIds: Set([toPeerId]), update: { _, current in
+                                                guard var current = current as? CachedUserData else {
+                                                    return current
+                                                }
+                                                guard let currentBotPreview = current.botPreview else {
+                                                    return current
+                                                }
+                                                var items = currentBotPreview.items
+                                                if let index = items.firstIndex(where: { $0.media.id == resultMediaValue.id }) {
+                                                    items.remove(at: index)
+                                                }
+                                                items.insert(addedItem, at: 0)
+                                                let botPreview = CachedUserData.BotPreview(items: items, alternativeLanguageCodes: currentBotPreview.alternativeLanguageCodes)
+                                                current = current.withUpdatedBotPreview(botPreview)
+                                                return current
+                                            })
+                                        }
+                                        stateManager.injectBotPreviewUpdates(updates: [
+                                            .added(peerId: toPeerId, language: language, item: addedItem)
+                                        ])
+                                    }
+                                    
+                                    return .completed(nil)
+                                }
+                            }
+                        }
+                    default:
+                        return .complete()
+                    }
+                }
+                |> switchToLatest
+            default:
+                return .complete()
+            }
+        }
+    }
+}
+
+func _internal_deleteBotPreviews(account: Account, peerId: PeerId, language: String?, media: [Media]) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> (Api.InputUser?, [Api.InputMedia]) in
+        guard let inputPeer = transaction.getPeer(peerId).flatMap(apiInputUser) else {
+            return (nil, [])
+        }
+        
+        var inputMedia: [Api.InputMedia] = []
+        for item in media {
+            if let image = item as? TelegramMediaImage, let resource = image.representations.last?.resource as? CloudPhotoSizeMediaResource {
+                inputMedia.append(.inputMediaPhoto(flags: 0, id: .inputPhoto(id: resource.photoId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), ttlSeconds: nil))
+                inputMedia.append(Api.InputMedia.inputMediaPhoto(flags: 0, id: Api.InputPhoto.inputPhoto(id: resource.photoId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), ttlSeconds: nil))
+            } else if let file = item as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource {
+                inputMedia.append(.inputMediaDocument(flags: 0, id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), ttlSeconds: nil, query: nil))
+            }
+        }
+        if language == nil {
+            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current -> CachedPeerData? in
+                guard var current = current as? CachedUserData else {
+                    return current
+                }
+                guard let currentBotPreview = current.botPreview else {
+                    return current
+                }
+                var items = currentBotPreview.items
+                
+                items = items.filter({ item in
+                    guard let id = item.media.id else {
+                        return false
+                    }
+                    return !media.contains(where: { $0.id == id })
+                })
+                let botPreview = CachedUserData.BotPreview(items: items, alternativeLanguageCodes: currentBotPreview.alternativeLanguageCodes)
+                current = current.withUpdatedBotPreview(botPreview)
+                return current
+            })
+        }
+        
+        return (inputPeer, inputMedia)
+    }
+    |> mapToSignal { inputPeer, inputMedia -> Signal<Never, NoError> in
+        guard let inputPeer else {
+            return .complete()
+        }
+        
+        account.stateManager.injectBotPreviewUpdates(updates: [
+            .deleted(peerId: peerId, language: language, ids: media.compactMap(\.id))
+        ])
+        
+        return account.network.request(Api.functions.bots.deletePreviewMedia(bot: inputPeer, langCode: language ?? "", media: inputMedia))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> mapToSignal { _ -> Signal<Never, NoError> in
+            return .complete()
+        }
+    }
+}
+
+func _internal_deleteBotPreviewsLanguage(account: Account, peerId: PeerId, language: String, media: [Media]) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> (Api.InputUser?, [Api.InputMedia]) in
+        guard let inputPeer = transaction.getPeer(peerId).flatMap(apiInputUser) else {
+            return (nil, [])
+        }
+        
+        var inputMedia: [Api.InputMedia] = []
+        for item in media {
+            if let image = item as? TelegramMediaImage, let resource = image.representations.last?.resource as? CloudPhotoSizeMediaResource {
+                inputMedia.append(.inputMediaPhoto(flags: 0, id: .inputPhoto(id: resource.photoId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), ttlSeconds: nil))
+                inputMedia.append(Api.InputMedia.inputMediaPhoto(flags: 0, id: Api.InputPhoto.inputPhoto(id: resource.photoId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), ttlSeconds: nil))
+            } else if let file = item as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource {
+                inputMedia.append(.inputMediaDocument(flags: 0, id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), ttlSeconds: nil, query: nil))
+            }
+        }
+        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current -> CachedPeerData? in
+            guard var current = current as? CachedUserData else {
+                return current
+            }
+            guard let currentBotPreview = current.botPreview else {
+                return current
+            }
+            var alternativeLanguageCodes = currentBotPreview.alternativeLanguageCodes
+            alternativeLanguageCodes = alternativeLanguageCodes.filter { item in
+                return item != language
+            }
+            let botPreview = CachedUserData.BotPreview(items: currentBotPreview.items, alternativeLanguageCodes: alternativeLanguageCodes)
+            current = current.withUpdatedBotPreview(botPreview)
+            return current
+        })
+        
+        return (inputPeer, inputMedia)
+    }
+    |> mapToSignal { inputPeer, inputMedia -> Signal<Never, NoError> in
+        guard let inputPeer else {
+            return .complete()
+        }
+        
+        account.stateManager.injectBotPreviewUpdates(updates: [
+            .deleted(peerId: peerId, language: language, ids: media.compactMap(\.id))
+        ])
+        
+        return account.network.request(Api.functions.bots.deletePreviewMedia(bot: inputPeer, langCode: language, media: inputMedia))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> mapToSignal { _ -> Signal<Never, NoError> in
+            return .complete()
+        }
+    }
+}
+
 func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: EngineStoryInputMedia?, mediaAreas: [MediaArea]?, text: String?, entities: [MessageTextEntity]?, privacy: EngineStoryPrivacy?) -> Signal<StoryUploadResult, NoError> {
     let contentSignal: Signal<PendingMessageUploadedContentResult?, NoError>
     let originalMedia: Media?
@@ -1281,9 +1523,13 @@ func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: Eng
             return .single(.progress(progress.progress))
         }
         
+        var updatingCoverTime = false
         let inputMedia: Api.InputMedia?
         if let result = result, case let .content(uploadedContent) = result, case let .media(media, _) = uploadedContent.content {
             inputMedia = media
+        } else if case let .existing(media) = media, let file = media as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource {
+            inputMedia = .inputMediaUploadedDocument(flags: 0, file: .inputFileStoryDocument(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))), thumb: nil, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), stickers: nil, ttlSeconds: nil)
+            updatingCoverTime = true
         } else {
             inputMedia = nil
         }
@@ -1349,7 +1595,7 @@ func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: Eng
                             case let .storyItem(_, _, _, _, _, _, _, _, media, _, _, _, _):
                                 let (parsedMedia, _, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
                                 if let parsedMedia = parsedMedia, let originalMedia = originalMedia {
-                                    applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false)
+                                    applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false, skipPreviews: updatingCoverTime)
                                 }
                             default:
                                 break
@@ -1375,7 +1621,7 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 timestamp: item.timestamp,
                 expirationTimestamp: item.expirationTimestamp,
                 media: item.media,
-                alternativeMedia: item.alternativeMedia,
+                alternativeMediaList: item.alternativeMediaList,
                 mediaAreas: item.mediaAreas,
                 text: item.text,
                 entities: item.entities,
@@ -1407,7 +1653,7 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 timestamp: item.timestamp,
                 expirationTimestamp: item.expirationTimestamp,
                 media: item.media,
-                alternativeMedia: item.alternativeMedia,
+                alternativeMediaList: item.alternativeMediaList,
                 mediaAreas: item.mediaAreas,
                 text: item.text,
                 entities: item.entities,
@@ -1472,6 +1718,8 @@ func _internal_checkStoriesUploadAvailability(account: Account, target: Stories.
             return .inputPeerSelf
         case let .peer(peerId):
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
+        case .botPreview:
+            return nil
         }
     }
     |> mapToSignal { inputPeer -> Signal<StoriesUploadAvailability, NoError> in
@@ -1602,7 +1850,7 @@ func _internal_updateStoriesArePinned(account: Account, peerId: PeerId, ids: [In
                     timestamp: item.timestamp,
                     expirationTimestamp: item.expirationTimestamp,
                     media: item.media,
-                    alternativeMedia: item.alternativeMedia,
+                    alternativeMediaList: item.alternativeMediaList,
                     mediaAreas: item.mediaAreas,
                     text: item.text,
                     entities: item.entities,
@@ -1633,7 +1881,7 @@ func _internal_updateStoriesArePinned(account: Account, peerId: PeerId, ids: [In
                     timestamp: item.timestamp,
                     expirationTimestamp: item.expirationTimestamp,
                     media: item.media,
-                    alternativeMedia: item.alternativeMedia,
+                    alternativeMediaList: item.alternativeMediaList,
                     mediaAreas: item.mediaAreas,
                     text: item.text,
                     entities: item.entities,
@@ -1849,11 +2097,11 @@ extension Stories.StoredItem {
                     mergedForwardInfo = forwardFrom.flatMap(Stories.Item.ForwardInfo.init(apiForwardInfo:))
                 }
                 
-                var parsedAlternativeMedia: Media?
+                var parsedAlternativeMedia: [Media] = []
                 switch media {
-                case let .messageMediaDocument(_, _, altDocument, _):
-                    if let altDocument = altDocument {
-                        parsedAlternativeMedia = telegramMediaFileFromApiDocument(altDocument)
+                case let .messageMediaDocument(_, _, altDocuments, _):
+                    if let altDocuments {
+                        parsedAlternativeMedia = altDocuments.compactMap { telegramMediaFileFromApiDocument($0, altDocuments: []) }
                     }
                 default:
                     break
@@ -1864,7 +2112,7 @@ extension Stories.StoredItem {
                     timestamp: date,
                     expirationTimestamp: expireDate,
                     media: parsedMedia,
-                    alternativeMedia: parsedAlternativeMedia,
+                    alternativeMediaList: parsedAlternativeMedia,
                     mediaAreas: mediaAreas?.compactMap(mediaAreaFromApiMediaArea) ?? [],
                     text: caption ?? "",
                     entities: entities.flatMap { entities in return messageTextEntitiesFromApiEntities(entities) } ?? [],
@@ -1929,7 +2177,7 @@ func _internal_getStoryById(accountPeerId: PeerId, postbox: Postbox, network: Ne
                                 timestamp: item.timestamp,
                                 expirationTimestamp: item.expirationTimestamp,
                                 media: EngineMedia(media),
-                                alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                                alternativeMediaList: item.alternativeMediaList.map(EngineMedia.init),
                                 mediaAreas: item.mediaAreas,
                                 text: item.text,
                                 entities: item.entities,
@@ -2412,7 +2660,7 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
                         timestamp: item.timestamp,
                         expirationTimestamp: item.expirationTimestamp,
                         media: item.media,
-                        alternativeMedia: item.alternativeMedia,
+                        alternativeMediaList: item.alternativeMediaList,
                         mediaAreas: item.mediaAreas,
                         text: item.text,
                         entities: item.entities,
@@ -2446,7 +2694,7 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
                 timestamp: item.timestamp,
                 expirationTimestamp: item.expirationTimestamp,
                 media: item.media,
-                alternativeMedia: item.alternativeMedia,
+                alternativeMediaList: item.alternativeMediaList,
                 mediaAreas: item.mediaAreas,
                 text: item.text,
                 entities: item.entities,

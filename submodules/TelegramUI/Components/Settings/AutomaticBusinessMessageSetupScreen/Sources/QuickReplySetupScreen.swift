@@ -217,6 +217,8 @@ final class QuickReplySetupScreenComponent: Component {
                     },
                     openStories: { _, _ in
                     },
+                    openStarsTopup: { _ in
+                    },
                     dismissNotice: { _ in
                     },
                     editPeer: { [weak listNode] _ in
@@ -1317,6 +1319,7 @@ public final class QuickReplySetupScreen: ViewControllerComponentContainer, Atta
     public var isContainerExpanded: () -> Bool = {
         return false
     }
+    public var isMinimized: Bool = false
     public var mediaPickerContext: AttachmentMediaPickerContext?
     
     public init(context: AccountContext, initialData: InitialData, mode: Mode) {

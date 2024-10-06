@@ -20,7 +20,7 @@ import TooltipUI
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ShimmerEffect
-import WebUI
+import AttachmentUI
 
 private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     let index: Int

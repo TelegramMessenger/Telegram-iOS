@@ -29,7 +29,7 @@ extension ChatControllerImpl {
             guard let self else {
                 return
             }
-            self.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: fromId.peerId == id.peerId && !params.forceNew, forceNew: params.forceNew)
+            self.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: fromId.peerId == id.peerId && !params.forceNew, forceNew: params.forceNew, progress: params.progress)
         }
         
         let _ = (self.context.engine.data.get(
@@ -77,6 +77,7 @@ extension ChatControllerImpl {
         animated: Bool = true,
         completion: (() -> Void)? = nil,
         customPresentProgress: ((ViewController, Any?) -> Void)? = nil,
+        progress: Promise<Bool>? = nil,
         statusSubject: ChatLoadingMessageSubject = .generic
     ) {
         if !self.isNodeLoaded {
@@ -147,7 +148,7 @@ extension ChatControllerImpl {
                 } else {
                     navigateToLocation = .peer(peer)
                 }
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: navigateToLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), keepStack: .always))
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: navigateToLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), keepStack: .always))
                 
                 completion?()
             })
@@ -160,31 +161,156 @@ extension ChatControllerImpl {
                 guard let self, let peer = peer else {
                     return
                 }
-                if let navigationController = self.effectiveNavigationController {
-                    var chatLocation: NavigateToChatControllerParams.Location = .peer(peer)
-                    var displayMessageNotFoundToast = false
-                    if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
-                        if let message = message, let threadId = message.threadId {
-                            chatLocation = .replyThread(ChatReplyThreadMessage(peerId: peer.id, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
+                
+                var quote: ChatControllerSubject.MessageHighlight.Quote?
+                if case let .id(_, params) = messageLocation {
+                    quote = params.quote.flatMap { quote in ChatControllerSubject.MessageHighlight.Quote(string: quote.string, offset: quote.offset) }
+                }
+                var progressValue: Promise<Bool>?
+                if let value = progress {
+                    progressValue = value
+                } else if case let .id(_, params) = messageLocation {
+                    progressValue = params.progress
+                }
+                self.loadingMessage.set(.single(statusSubject) |> delay(0.1, queue: .mainQueue()))
+                
+                var chatLocation: NavigateToChatControllerParams.Location = .peer(peer)
+                var preloadChatLocation: ChatLocation = .peer(id: peer.id)
+                var displayMessageNotFoundToast = false
+                if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                    if let message = message, let threadId = message.threadId {
+                        let replyThreadMessage = ChatReplyThreadMessage(peerId: peer.id, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)
+                        chatLocation = .replyThread(replyThreadMessage)
+                        preloadChatLocation = .replyThread(message: replyThreadMessage)
+                    } else {
+                        displayMessageNotFoundToast = true
+                    }
+                }
+                
+                let searchLocation: ChatHistoryInitialSearchLocation
+                switch messageLocation {
+                case let .id(id, _):
+                    if case let .replyThread(message) = chatLocation, id == message.effectiveMessageId {
+                        searchLocation = .index(.absoluteLowerBound())
+                    } else {
+                        searchLocation = .id(id)
+                    }
+                case let .index(index):
+                    searchLocation = .index(index)
+                case .upperBound:
+                    searchLocation = .index(MessageIndex.upperBound(peerId: chatLocation.peerId))
+                }
+                var historyView: Signal<ChatHistoryViewUpdate, NoError>
+                
+                let subject: ChatControllerSubject = .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil, setupReply: false)
+                
+                historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: nil), count: 50, highlight: true, setupReply: false), id: 0), context: self.context, chatLocation: preloadChatLocation, subject: subject, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), fixedCombinedReadStates: nil, tag: nil, additionalData: [])
+                
+                var signal: Signal<(MessageIndex?, Bool), NoError>
+                signal = historyView
+                |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
+                    switch historyView {
+                    case .Loading:
+                        return .single((nil, true))
+                    case let .HistoryView(view, _, _, _, _, _, _):
+                        for entry in view.entries {
+                            if entry.message.id == messageLocation.messageId {
+                                return .single((entry.message.index, false))
+                            }
+                        }
+                        if case let .index(index) = searchLocation {
+                            return .single((index, false))
+                        }
+                        return .single((nil, false))
+                    }
+                }
+                |> take(until: { index in
+                    return SignalTakeAction(passthrough: true, complete: !index.1)
+                })
+                
+                /*#if DEBUG
+                signal = .single((nil, true)) |> then(signal |> delay(2.0, queue: .mainQueue()))
+                #endif*/
+                
+                var cancelImpl: (() -> Void)?
+                let presentationData = self.presentationData
+                let displayTime = CACurrentMediaTime()
+                let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+                    if let progressValue {
+                        progressValue.set(.single(true))
+                        return ActionDisposable {
+                            Queue.mainQueue().async() {
+                                progressValue.set(.single(false))
+                            }
+                        }
+                    } else if case .generic = statusSubject {
+                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                            if CACurrentMediaTime() - displayTime > 1.5 {
+                                cancelImpl?()
+                            }
+                        }))
+                        if let customPresentProgress = customPresentProgress {
+                            customPresentProgress(controller, nil)
                         } else {
-                            displayMessageNotFoundToast = true
+                            self?.present(controller, in: .window(.root))
                         }
+                        return ActionDisposable { [weak controller] in
+                            Queue.mainQueue().async() {
+                                controller?.dismiss()
+                            }
+                        }
+                    } else {
+                        return EmptyDisposable
+                    }
+                }
+                |> runOn(Queue.mainQueue())
+                |> delay(progressValue == nil ? 0.05 : 0.0, queue: Queue.mainQueue())
+                let progressDisposable = MetaDisposable()
+                var progressStarted = false
+                self.messageIndexDisposable.set((signal
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        progressDisposable.dispose()
+                    }
+                }
+                |> deliverOnMainQueue).startStrict(next: { [weak self] index in
+                    guard let self else {
+                        return
                     }
                     
-                    var quote: ChatControllerSubject.MessageHighlight.Quote?
-                    if case let .id(_, params) = messageLocation {
-                        quote = params.quote.flatMap { quote in ChatControllerSubject.MessageHighlight.Quote(string: quote.string, offset: quote.offset) }
+                    if let index = index.0 {
+                        let _ = index
+                        //strongSelf.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: index, animated: animated, quote: quote, scrollPosition: scrollPosition)
+                    } else if index.1 {
+                        if !progressStarted {
+                            progressStarted = true
+                            progressDisposable.set(progressSignal.start())
+                        }
+                        return
                     }
                     
-                    let context = self.context
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: chatLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil), keepStack: .always, chatListCompletion: { chatListController in
-                        if displayMessageNotFoundToast {
-                            let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
-                            chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Conversation_MessageDoesntExist, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
-                                return true
-                            }), in: .current)
-                        }
-                    }))
+                    if let navigationController = self.effectiveNavigationController {
+                        let context = self.context
+                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: chatLocation, subject: subject, keepStack: .always, chatListCompletion: { chatListController in
+                            if displayMessageNotFoundToast {
+                                let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+                                chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Conversation_MessageDoesntExist, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
+                                    return true
+                                }), in: .current)
+                            }
+                        }))
+                    }
+                }, completed: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.loadingMessage.set(.single(nil))
+                    }
+                    completion?()
+                }))
+                cancelImpl = { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.loadingMessage.set(.single(nil))
+                        strongSelf.messageIndexDisposable.set(nil)
+                    }
                 }
                 
                 completion?()
@@ -214,11 +340,13 @@ extension ChatControllerImpl {
                     }
                     
                     var quote: (string: String, offset: Int?)?
+                    var setupReply = false
                     if case let .id(_, params) = messageLocation {
                         quote = params.quote.flatMap { quote in (string: quote.string, offset: quote.offset) }
+                        setupReply = params.setupReply
                     }
-                    
-                    self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: message.index, animated: animated, quote: quote, scrollPosition: scrollPosition)
+
+                    self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: message.index, animated: animated, quote: quote, scrollPosition: scrollPosition, setupReply: setupReply)
                     
                     if delayCompletion {
                         Queue.mainQueue().after(0.25, {
@@ -236,12 +364,14 @@ extension ChatControllerImpl {
                 } else if case let .index(index) = messageLocation, index.id.id == 0, index.timestamp > 0, case .scheduledMessages = self.presentationInterfaceState.subject {
                     self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: index, animated: animated, scrollPosition: scrollPosition)
                 } else {
+                    var setupReply = false
                     var quote: (string: String, offset: Int?)?
                     if case let .id(messageId, params) = messageLocation {
                         if params.timestamp != nil {
                             self.scheduledScrollToMessageId = (messageId, params)
                         }
                         quote = params.quote.flatMap { ($0.string, $0.offset) }
+                        setupReply = params.setupReply
                     }
                     var progress: Promise<Bool>?
                     if case let .id(_, params) = messageLocation {
@@ -267,7 +397,7 @@ extension ChatControllerImpl {
                         }
                     }
                     var historyView: Signal<ChatHistoryViewUpdate, NoError>
-                    historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: nil), count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tag: nil, additionalData: [])
+                    historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: nil), count: 50, highlight: true, setupReply: setupReply), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tag: nil, additionalData: [])
                     
                     var signal: Signal<(MessageIndex?, Bool), NoError>
                     signal = historyView
@@ -338,7 +468,7 @@ extension ChatControllerImpl {
                     }
                     |> deliverOnMainQueue).startStrict(next: { [weak self] index in
                         if let strongSelf = self, let index = index.0 {
-                            strongSelf.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: index, animated: animated, quote: quote, scrollPosition: scrollPosition)
+                            strongSelf.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: index, animated: animated, quote: quote, scrollPosition: scrollPosition, setupReply: setupReply)
                         } else if index.1 {
                             if !progressStarted {
                                 progressStarted = true
@@ -380,11 +510,13 @@ extension ChatControllerImpl {
                 self.loadingMessage.set(.single(statusSubject) |> delay(0.1, queue: .mainQueue()))
                 
                 var quote: ChatControllerSubject.MessageHighlight.Quote?
+                var setupReply = false
                 if case let .id(_, params) = messageLocation {
                     quote = params.quote.flatMap { quote in ChatControllerSubject.MessageHighlight.Quote(string: quote.string, offset: quote.offset) }
+                    setupReply = params.setupReply
                 }
                 
-                let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: quote.flatMap { quote in MessageHistoryInitialSearchSubject.Quote(string: quote.string, offset: quote.offset) }), count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tag: nil, additionalData: [])
+                let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: quote.flatMap { quote in MessageHistoryInitialSearchSubject.Quote(string: quote.string, offset: quote.offset) }), count: 50, highlight: true, setupReply: setupReply), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tag: nil, additionalData: [])
                 var signal: Signal<MessageIndex?, NoError>
                 signal = historyView
                 |> mapToSignal { historyView -> Signal<MessageIndex?, NoError> in
@@ -416,11 +548,13 @@ extension ChatControllerImpl {
                                 
                                 if let navigationController = strongSelf.effectiveNavigationController {
                                     var quote: ChatControllerSubject.MessageHighlight.Quote?
+                                    var setupReply = false
                                     if case let .id(_, params) = messageLocation {
                                         quote = params.quote.flatMap { quote in ChatControllerSubject.MessageHighlight.Quote(string: quote.string, offset: quote.offset) }
+                                        setupReply = params.setupReply
                                     }
                                     
-                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil) }, keepStack: .always))
+                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil, setupReply: setupReply) }, keepStack: .always))
                                 }
                             })
                             completion?()
@@ -438,7 +572,7 @@ extension ChatControllerImpl {
                         return
                     }
                     if let navigationController = self.effectiveNavigationController {
-                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil) }))
+                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false) }))
                     }
                     completion?()
                 })

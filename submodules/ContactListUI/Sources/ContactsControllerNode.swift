@@ -93,17 +93,13 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.stringsPromise.set(.single(self.presentationData.strings))
         
-        var addNearbyImpl: (() -> Void)?
         var inviteImpl: (() -> Void)?
         
         let presentation = combineLatest(sortOrder, self.stringsPromise.get())
         |> map { sortOrder, strings -> ContactListPresentation in
-            let options = [ContactListAdditionalOption(title: strings.Contacts_AddPeopleNearby, icon: .generic(UIImage(bundleImageName: "Contact List/PeopleNearbyIcon")!), action: {
-                addNearbyImpl?()
-            }), ContactListAdditionalOption(title: strings.Contacts_InviteFriends, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: {
+            let options = [ContactListAdditionalOption(title: strings.Contacts_InviteFriends, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: {
                 inviteImpl?()
             })]
-            
             switch sortOrder {
                 case .presence:
                     return .orderedByPresence(options: options)
@@ -145,13 +141,7 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 }
             }
         }).strict()
-        
-        addNearbyImpl = { [weak self] in
-            if let strongSelf = self {
-                strongSelf.openPeopleNearby?()
-            }
-        }
-        
+                
         inviteImpl = { [weak self] in
             if let strongSelf = self {
                 strongSelf.openInvite?()

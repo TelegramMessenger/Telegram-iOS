@@ -30,6 +30,9 @@ public extension Peer {
         
         if let restrictionInfo = restrictionInfo {
             for rule in restrictionInfo.rules {
+                if rule.reason == "sensitive" {
+                    continue
+                }
                 if rule.platform == "all" || rule.platform == platform || contentSettings.addContentRestrictionReasons.contains(rule.platform) {
                     if !contentSettings.ignoreContentRestrictionReasons.contains(rule.reason) {
                         return rule.text
@@ -191,6 +194,15 @@ public extension Peer {
         }
     }
     
+    var isSubscription: Bool {
+        switch self {
+        case let channel as TelegramChannel:
+            return channel.subscriptionUntilDate != nil
+        default:
+            return false
+        }
+    }
+    
     var isCloseFriend: Bool {
         switch self {
         case let user as TelegramUser:
@@ -209,6 +221,25 @@ public extension Peer {
         default:
             return false
         }
+    }
+    
+    func hasSensitiveContent(platform: String) -> Bool {
+        var restrictionInfo: PeerAccessRestrictionInfo?
+        switch self {
+        case let user as TelegramUser:
+            restrictionInfo = user.restrictionInfo
+        case let channel as TelegramChannel:
+            restrictionInfo = channel.restrictionInfo
+        default:
+            break
+        }
+        
+        if let restrictionInfo, let rule = restrictionInfo.rules.first(where: { $0.reason == "sensitive" }) {
+            if rule.platform == "all" || rule.platform == platform {
+                return true
+            }
+        }
+        return false
     }
     
     var isForum: Bool {
@@ -393,12 +424,24 @@ public func isServicePeer(_ peer: Peer) -> Bool {
         if peer.id.isReplies {
             return true
         }
+        if peer.id.isVerificationCodes {
+            return true
+        }
         return (peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id._internalGetInt64Value() == 777000 || peer.id.id._internalGetInt64Value() == 333000))
     }
     return false
 }
 
 public extension PeerId {
+    var isTelegramNotifications: Bool {
+        if self.namespace == Namespaces.Peer.CloudUser {
+            if self.id._internalGetInt64Value() == 777000 {
+                return true
+            }
+        }
+        return false
+    }
+    
     var isReplies: Bool {
         if self.namespace == Namespaces.Peer.CloudUser {
             if self.id._internalGetInt64Value() == 708513 || self.id._internalGetInt64Value() == 1271266957 {
@@ -408,10 +451,25 @@ public extension PeerId {
         return false
     }
     
+    var isVerificationCodes: Bool {
+        if self.namespace == Namespaces.Peer.CloudUser {
+            if self.id._internalGetInt64Value() == 489000 {
+                return true
+            }
+        }
+        return false
+    }
+    
+    var isRepliesOrVerificationCodes: Bool {
+        return self.isReplies || self.isVerificationCodes
+    }
+    
     func isRepliesOrSavedMessages(accountPeerId: PeerId) -> Bool {
         if accountPeerId == self {
             return true
         } else if self.isReplies {
+            return true
+        } else if self.isVerificationCodes {
             return true
         } else {
             return false

@@ -13,13 +13,15 @@ final class SubscriptionsCountItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let value: Int32
+    let values: [Int32]
     let sectionId: ItemListSectionId
     let updated: (Int32) -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, value: Int32, sectionId: ItemListSectionId, updated: @escaping (Int32) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, value: Int32, values: [Int32], sectionId: ItemListSectionId, updated: @escaping (Int32) -> Void) {
         self.theme = theme
         self.strings = strings
         self.value = value
+        self.values = values
         self.sectionId = sectionId
         self.updated = updated
     }
@@ -64,13 +66,7 @@ private final class SubscriptionsCountItemNode: ListViewItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    private let label1TextNode: TextNode
-    private let label3TextNode: TextNode
-    private let label5TextNode: TextNode
-    private let label7TextNode: TextNode
-    private let label10TextNode: TextNode
-    private let label25TextNode: TextNode
-    private let label50TextNode: TextNode
+    private let textNodes: [TextNode]
     private var sliderView: TGPhotoEditorSliderView?
     
     private var item: SubscriptionsCountItem?
@@ -88,43 +84,36 @@ private final class SubscriptionsCountItemNode: ListViewItemNode {
         
         self.maskNode = ASImageNode()
         
-        self.label1TextNode = TextNode()
-        self.label1TextNode.isUserInteractionEnabled = false
-        self.label1TextNode.displaysAsynchronously = false
-        
-        self.label3TextNode = TextNode()
-        self.label3TextNode.isUserInteractionEnabled = false
-        self.label3TextNode.displaysAsynchronously = false
-        
-        self.label5TextNode = TextNode()
-        self.label5TextNode.isUserInteractionEnabled = false
-        self.label5TextNode.displaysAsynchronously = false
-        
-        self.label7TextNode = TextNode()
-        self.label7TextNode.isUserInteractionEnabled = false
-        self.label7TextNode.displaysAsynchronously = false
-        
-        self.label10TextNode = TextNode()
-        self.label10TextNode.isUserInteractionEnabled = false
-        self.label10TextNode.displaysAsynchronously = false
-        
-        self.label25TextNode = TextNode()
-        self.label25TextNode.isUserInteractionEnabled = false
-        self.label25TextNode.displaysAsynchronously = false
-        
-        self.label50TextNode = TextNode()
-        self.label50TextNode.isUserInteractionEnabled = false
-        self.label50TextNode.displaysAsynchronously = false
+        self.textNodes = (0 ..< 10).map { _ -> TextNode in
+            let textNode = TextNode()
+            textNode.isUserInteractionEnabled = false
+            textNode.displaysAsynchronously = false
+            return textNode
+        }
         
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.addSubnode(self.label1TextNode)
-        self.addSubnode(self.label3TextNode)
-        self.addSubnode(self.label5TextNode)
-        self.addSubnode(self.label7TextNode)
-        self.addSubnode(self.label10TextNode)
-        self.addSubnode(self.label25TextNode)
-        self.addSubnode(self.label50TextNode)
+        self.textNodes.forEach(self.addSubnode)
+    }
+    
+    func updateSliderView() {
+        if let sliderView = self.sliderView, let item = self.item {
+            sliderView.maximumValue = CGFloat(item.values.count - 1)
+            sliderView.positionsCount = item.values.count
+            var value: Int32 = 0
+            for i in 0 ..< item.values.count {
+                if item.values[i] >= item.value {
+                    value = Int32(i)
+                    break
+                }
+            }
+            
+            sliderView.value = CGFloat(value)
+            
+            sliderView.isUserInteractionEnabled = true
+            sliderView.alpha = 1.0
+            sliderView.layer.allowsGroupOpacity = false
+        }
     }
     
     override func didLoad() {
@@ -142,26 +131,14 @@ private final class SubscriptionsCountItemNode: ListViewItemNode {
         sliderView.useLinesForPositions = true
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         if let item = self.item, let params = self.layoutParams {
-            var mappedValue: Int32 = 0
-            switch Int(item.value) {
-            case 1:
-                mappedValue = 0
-            case 3:
-                mappedValue = 1
-            case 5:
-                mappedValue = 2
-            case 7:
-                mappedValue = 3
-            case 10:
-                mappedValue = 4
-            case 25:
-                mappedValue = 5
-            case 50:
-                mappedValue = 6
-            default:
-                mappedValue = 0
+            var value: Int32 = 0
+            for i in 0 ..< item.values.count {
+                if item.values[i] >= item.value {
+                    value = Int32(i)
+                    break
+                }
             }
-            sliderView.value = CGFloat(mappedValue)
+            sliderView.value = CGFloat(value)
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
             sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
             sliderView.startColor = item.theme.list.itemSwitchColors.frameColor
@@ -178,13 +155,7 @@ private final class SubscriptionsCountItemNode: ListViewItemNode {
     
     func asyncLayout() -> (_ item: SubscriptionsCountItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
-        let makeLabel1TextLayout = TextNode.asyncLayout(self.label1TextNode)
-        let makeLabel3TextLayout = TextNode.asyncLayout(self.label3TextNode)
-        let makeLabel5TextLayout = TextNode.asyncLayout(self.label5TextNode)
-        let makeLabel7TextLayout = TextNode.asyncLayout(self.label7TextNode)
-        let makeLabel10TextLayout = TextNode.asyncLayout(self.label10TextNode)
-        let makeLabel25TextLayout = TextNode.asyncLayout(self.label25TextNode)
-        let makeLabel50TextLayout = TextNode.asyncLayout(self.label50TextNode)
+        let makeTextLayouts = self.textNodes.map(TextNode.asyncLayout)
         
         return { item, params, neighbors in
             var themeUpdated = false
@@ -196,20 +167,16 @@ private final class SubscriptionsCountItemNode: ListViewItemNode {
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
-            let (label1TextLayout, label1TextApply) = makeLabel1TextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "1", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+            var textLayoutAndApply: [(TextNodeLayout, () -> TextNode)] = []
             
-            let (label3TextLayout, label3TextApply) = makeLabel3TextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "3", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
-            
-            let (label5TextLayout, label5TextApply) = makeLabel5TextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "5", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
-            
-            let (label7TextLayout, label7TextApply) = makeLabel7TextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "7", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
-            
-            let (label10TextLayout, label10TextApply) = makeLabel10TextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "10", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
-            
-            let (label25TextLayout, label25TextApply) = makeLabel25TextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "25", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
-            
-            let (label50TextLayout, label50TextApply) = makeLabel50TextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "50", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
-            
+            for i in 0 ..< item.values.count {
+                let value = item.values[i]
+                
+                let valueString: String = "\(value)"
+                let (textLayout, textApply) = makeTextLayouts[i](TextNodeLayoutArguments(attributedString: NSAttributedString(string: valueString, font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+                textLayoutAndApply.append((textLayout, textApply))
+            }
+          
             contentSize = CGSize(width: params.width, height: 88.0)
             insets = itemListNeighborsGroupedInsets(neighbors, params)
             
@@ -269,30 +236,31 @@ private final class SubscriptionsCountItemNode: ListViewItemNode {
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
-                    let _ = label1TextApply()
-                    let _ = label3TextApply()
-                    let _ = label5TextApply()
-                    let _ = label7TextApply()
-                    let _ = label10TextApply()
-                    let _ = label25TextApply()
-                    let _ = label50TextApply()
+                    for (_, apply) in textLayoutAndApply {
+                        let _ = apply()
+                    }
                     
-                    let textNodes: [(TextNode, CGSize)] = [
-                        (strongSelf.label1TextNode, label1TextLayout.size),
-                        (strongSelf.label3TextNode, label3TextLayout.size),
-                        (strongSelf.label5TextNode, label5TextLayout.size),
-                        (strongSelf.label7TextNode, label7TextLayout.size),
-                        (strongSelf.label10TextNode, label10TextLayout.size),
-                        (strongSelf.label25TextNode, label25TextLayout.size),
-                        (strongSelf.label50TextNode, label50TextLayout.size)
-                    ]
+                    let textNodes: [(TextNode, CGSize)] = textLayoutAndApply.map { layout, apply -> (TextNode, CGSize) in
+                        let node = apply()
+                        return (node, layout.size)
+                    }
                     
-                    let delta = (params.width - params.leftInset - params.rightInset - 20.0 * 2.0) / CGFloat(textNodes.count - 1)
-                    for i in 0 ..< textNodes.count {
+                    let delta = (params.width - params.leftInset - params.rightInset - 18.0 * 2.0) / CGFloat(max(item.values.count - 1, 1))
+                    for i in 0 ..< strongSelf.textNodes.count {
+                        guard i < item.values.count else {
+                            strongSelf.textNodes[i].isHidden = true
+                            continue
+                        }
                         let (textNode, textSize) = textNodes[i]
+                        textNode.isHidden = false
+                        var position = params.leftInset + 18.0 + delta * CGFloat(i)
+                        if i == textNodes.count - 1 {
+                            position -= textSize.width / 2.0 + 2.0
+                        } else if i > 0 {
+                            position -= textSize.width / 2.0
+                        }
                         
-                        let position = params.leftInset + 20.0 + delta * CGFloat(i)
-                        textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(position - textSize.width / 2.0), y: 15.0), size: textSize)
+                        textNode.frame = CGRect(origin: CGPoint(x: position, y: 15.0), size: textSize)
                     }
                     
                     if let sliderView = strongSelf.sliderView {
@@ -306,28 +274,7 @@ private final class SubscriptionsCountItemNode: ListViewItemNode {
                         sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: 37.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 15.0 * 2.0, height: 44.0))
                         sliderView.hitTestEdgeInsets = UIEdgeInsets(top: -sliderView.frame.minX, left: 0.0, bottom: 0.0, right: -sliderView.frame.minX)
                         
-                        var mappedValue: Int32 = 0
-                        switch Int(item.value) {
-                        case 1:
-                            mappedValue = 0
-                        case 3:
-                            mappedValue = 1
-                        case 5:
-                            mappedValue = 2
-                        case 7:
-                            mappedValue = 3
-                        case 10:
-                            mappedValue = 4
-                        case 25:
-                            mappedValue = 5
-                        case 50:
-                            mappedValue = 6
-                        default:
-                            mappedValue = 0
-                        }
-                        if Int32(sliderView.value) != mappedValue {
-                            sliderView.value = CGFloat(mappedValue)
-                        }
+                        strongSelf.updateSliderView()
                     }
                 }
             })
@@ -343,30 +290,12 @@ private final class SubscriptionsCountItemNode: ListViewItemNode {
     }
     
     @objc func sliderValueChanged() {
-        guard let sliderView = self.sliderView else {
+        guard let sliderView = self.sliderView, let item = self.item else {
             return
         }
-        
-        var mappedValue: Int32 = 1
-        switch Int(sliderView.value) {
-        case 0:
-            mappedValue = 1
-        case 1:
-            mappedValue = 3
-        case 2:
-            mappedValue = 5
-        case 3:
-            mappedValue = 7
-        case 4:
-            mappedValue = 10
-        case 5:
-            mappedValue = 25
-        case 6:
-            mappedValue = 50
-        default:
-            mappedValue = 1
+        let value = Int(sliderView.value)
+        if value >= 0 && value < item.values.count {
+            self.item?.updated(item.values[value])
         }
-        
-        self.item?.updated(Int32(mappedValue))
     }
 }

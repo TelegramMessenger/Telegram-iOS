@@ -511,7 +511,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                             case .creator:
                                 canPromote = false
                                 canRestrict = false
-                            case let .member(_, _, adminRights, bannedRights, _):
+                            case let .member(_, _, adminRights, bannedRights, _, _):
                                 if channel.hasPermission(.addAdmins) {
                                     canPromote = true
                                 } else {
@@ -740,7 +740,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                 case .creator:
                                     canPromote = false
                                     canRestrict = false
-                                case let .member(_, _, adminRights, bannedRights, _):
+                                case let .member(_, _, adminRights, bannedRights, _, _):
                                     if channel.hasPermission(.addAdmins) {
                                         canPromote = true
                                     } else {
@@ -778,7 +778,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                 switch participant.participant {
                                     case .creator:
                                         label = presentationData.strings.Channel_Management_LabelOwner
-                                    case let .member(_, _, adminInfo, _, _):
+                                    case let .member(_, _, adminInfo, _, _, _):
                                         if adminInfo != nil {
                                             label = presentationData.strings.Channel_Management_LabelEditor
                                         }
@@ -809,7 +809,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                     switch participant.participant {
                                         case .creator:
                                             label = presentationData.strings.Channel_Management_LabelOwner
-                                        case let .member(_, _, adminInfo, _, _):
+                                        case let .member(_, _, adminInfo, _, _, _):
                                             if let adminInfo = adminInfo {
                                                 if let peer = participant.peers[adminInfo.promotedBy] {
                                                     if peer.id == participant.peer.id {
@@ -822,7 +822,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                     }
                                 case .searchBanned:
                                     switch participant.participant {
-                                        case let .member(_, _, _, banInfo, _):
+                                        case let .member(_, _, _, banInfo, _, _):
                                             if let banInfo = banInfo {
                                                 var exceptionsString = ""
                                                 let sendMediaRights = banSendMediaSubList().map { $0.0 }
@@ -844,7 +844,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                     }
                                 case .searchKicked:
                                     switch participant.participant {
-                                        case let .member(_, _, _, banInfo, _):
+                                        case let .member(_, _, _, banInfo, _, _):
                                             if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
                                                 label = presentationData.strings.Channel_Management_RemovedBy(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                             }
@@ -972,11 +972,11 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                             peers[creator.id] = creator
                                         }
                                         peers[peer.id] = EnginePeer(peer)
-                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: TelegramChatAdminRightsFlags.peerSpecific(peer: .legacyGroup(group))), promotedBy: creatorPeer?.id ?? context.account.peerId, canBeEditedByAccountPeer: creatorPeer?.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers.mapValues({ $0._asPeer() }))
+                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: TelegramChatAdminRightsFlags.peerSpecific(peer: .legacyGroup(group))), promotedBy: creatorPeer?.id ?? context.account.peerId, canBeEditedByAccountPeer: creatorPeer?.id == context.account.peerId), banInfo: nil, rank: nil, subscriptionUntilDate: nil), peer: peer, peers: peers.mapValues({ $0._asPeer() }))
                                     case .member:
                                         var peers: [EnginePeer.Id: EnginePeer] = [:]
                                         peers[peer.id] = EnginePeer(peer)
-                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil), peer: peer, peers: peers.mapValues({ $0._asPeer() }))
+                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil, subscriptionUntilDate: nil), peer: peer, peers: peers.mapValues({ $0._asPeer() }))
                                 }
                                 matchingMembers.append(renderedParticipant)
                             }
@@ -1057,7 +1057,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                 switch participant.participant {
                                     case .creator:
                                         label = presentationData.strings.Channel_Management_LabelOwner
-                                    case let .member(_, _, adminInfo, _, _):
+                                    case let .member(_, _, adminInfo, _, _, _):
                                         if adminInfo != nil {
                                             label = presentationData.strings.Channel_Management_LabelEditor
                                         }
@@ -1073,7 +1073,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                     switch participant.participant {
                                     case .creator:
                                         label = presentationData.strings.Channel_Management_LabelOwner
-                                    case let .member(_, _, adminInfo, _, _):
+                                    case let .member(_, _, adminInfo, _, _, _):
                                         if let adminInfo = adminInfo {
                                             if let peer = participant.peers[adminInfo.promotedBy] {
                                                 if peer.id == participant.peer.id {
@@ -1086,7 +1086,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                     }
                                 case .searchBanned:
                                     switch participant.participant {
-                                        case let .member(_, _, _, banInfo, _):
+                                        case let .member(_, _, _, banInfo, _, _):
                                             if let banInfo = banInfo {
                                                 var exceptionsString = ""
                                                 let sendMediaRights = banSendMediaSubList().map { $0.0 }
@@ -1108,7 +1108,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                     }
                                 case .searchKicked:
                                     switch participant.participant {
-                                    case let .member(_, _, _, banInfo, _):
+                                    case let .member(_, _, _, banInfo, _, _):
                                         if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
                                             label = presentationData.strings.Channel_Management_RemovedBy(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                         }

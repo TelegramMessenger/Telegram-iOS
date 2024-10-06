@@ -910,6 +910,7 @@ private extension MediaEditorValues {
             audioTrackOffset: nil,
             audioTrackVolume: nil,
             audioTrackSamples: nil,
+            coverImageTimestamp: nil,
             qualityPreset: qualityPreset
         )
     }
@@ -1053,6 +1054,7 @@ private extension MediaEditorValues {
             audioTrackOffset: nil,
             audioTrackVolume: nil,
             audioTrackSamples: nil,
+            coverImageTimestamp: nil,
             qualityPreset: qualityPreset
         )
     }

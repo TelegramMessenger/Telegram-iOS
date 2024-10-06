@@ -17,9 +17,12 @@ func peerMessageSelectedReactions(context: AccountContext, message: Message) -> 
                 if !reaction.isSelected {
                     continue
                 }
+                if case .stars = reaction.value {
+                    continue
+                }
                 reactions.insert(reaction.value)
                 switch reaction.value {
-                case .builtin:
+                case .builtin, .stars:
                     if let availableReaction = availableReactions?.reactions.first(where: { $0.value == reaction.value }) {
                         result.insert(availableReaction.selectAnimation.fileId)
                     }

@@ -361,13 +361,25 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
     [_data appendBytes:&command length:sizeof(command)];
 }
 
+- (void)setFillColor:(uint32_t)color opacity:(CGFloat)opacity {
+    uint8_t command = 11;
+    [_data appendBytes:&command length:sizeof(command)];
+    
+    color = ((uint32_t)(opacity * 255.0) << 24) | color;
+    [_data appendBytes:&color length:sizeof(color)];
+}
+
 @end
+
+UIColor *colorWithBGRA(uint32_t bgra)
+{
+    return [[UIColor alloc] initWithRed:(((bgra) & 0xff) / 255.0f) green:(((bgra >> 8) & 0xff) / 255.0f) blue:(((bgra >> 16) & 0xff) / 255.0f) alpha:(((bgra >> 24) & 0xff) / 255.0f)];
+}
 
 UIImage * _Nullable renderPreparedImage(NSData * _Nonnull data, CGSize size, UIColor *backgroundColor, CGFloat scale, bool fit) {
     NSDate *startTime = [NSDate date];
     
     UIColor *foregroundColor = [UIColor whiteColor];
-    
     
     int32_t ptr = 0;
     int32_t width;
@@ -544,7 +556,15 @@ UIImage * _Nullable renderPreparedImage(NSData * _Nonnull data, CGSize size, UIC
                 CGContextStrokePath(context);
             }
                 break;
+            case 11:
+            {
+                uint32_t bgra;
+                [data getBytes:&bgra range:NSMakeRange(ptr, sizeof(bgra))];
+                ptr += sizeof(bgra);
                 
+                CGContextSetFillColorWithColor(context, colorWithBGRA(bgra).CGColor);
+                CGContextStrokePath(context);
+            }
             default:
                 break;
         }
@@ -559,7 +579,7 @@ UIImage * _Nullable renderPreparedImage(NSData * _Nonnull data, CGSize size, UIC
     return resultImage;
 }
 
-NSData * _Nullable prepareSvgImage(NSData * _Nonnull data) {
+NSData * _Nullable prepareSvgImage(NSData * _Nonnull data, bool template) {
     NSDate *startTime = [NSDate date];
     
     NSXMLParser *parser = [[NSXMLParser alloc] initWithData:data];
@@ -600,8 +620,12 @@ NSData * _Nullable prepareSvgImage(NSData * _Nonnull data) {
         }
         
         if (shape->fill.type != NSVG_PAINT_NONE) {
-            [context setFillColorWithOpacity:shape->opacity];
-
+            if (template) {
+                [context setFillColorWithOpacity:shape->opacity];
+            } else {
+                [context setFillColor:shape->fill.color opacity:shape->opacity];
+            }
+            
             bool isFirst = true;
             bool hasStartPoint = false;
             CGPoint startPoint;

@@ -742,8 +742,8 @@ public final class OngoingCallContext {
     public final class AudioDevice {
         let impl: SharedCallAudioDevice
         
-        public static func create() -> AudioDevice? {
-            return AudioDevice(impl: SharedCallAudioDevice(disableRecording: false))
+        public static func create(enableSystemMute: Bool) -> AudioDevice? {
+            return AudioDevice(impl: SharedCallAudioDevice(disableRecording: false, enableSystemMute: enableSystemMute))
         }
         
         private init(impl: SharedCallAudioDevice) {

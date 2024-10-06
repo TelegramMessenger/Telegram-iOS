@@ -36,7 +36,7 @@ public final class WebEmbedVideoContent: UniversalVideoContent {
         self.openUrl = openUrl
     }
     
-    public func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
+    public func makeContentNode(accountId: AccountRecordId, postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
         return WebEmbedVideoContentNode(postbox: postbox, audioSessionManager: audioSession, userLocation: self.userLocation, webPage: self.webPage, webpageContent: self.webpageContent, forcedTimestamp: self.forcedTimestamp, openUrl: self.openUrl)
     }
 }
@@ -181,6 +181,13 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     
     func setBaseRate(_ baseRate: Double) {
         self.playerNode.setBaseRate(baseRate)
+    }
+    
+    func setVideoQuality(_ videoQuality: UniversalVideoContentVideoQuality) {
+    }
+    
+    func videoQualityState() -> (current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])? {
+        return nil
     }
     
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int {

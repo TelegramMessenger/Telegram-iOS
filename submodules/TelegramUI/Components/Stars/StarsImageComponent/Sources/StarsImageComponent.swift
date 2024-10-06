@@ -11,6 +11,8 @@ import PhotoResources
 import AvatarNode
 import AccountContext
 import InvisibleInkDustNode
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
 final class StarsParticlesView: UIView {
     private struct Particle {
@@ -248,9 +250,10 @@ public final class StarsImageComponent: Component {
     public enum Subject: Equatable {
         case none
         case photo(TelegramMediaWebFile)
-        case media([Media])
+        case media([AnyMediaReference])
         case extendedMedia([TelegramExtendedMedia])
         case transactionPeer(StarsContext.State.Transaction.Peer)
+        case gift(Int64)
         
         public static func == (lhs: StarsImageComponent.Subject, rhs: StarsImageComponent.Subject) -> Bool {
             switch lhs {
@@ -267,7 +270,7 @@ public final class StarsImageComponent: Component {
                     return false
                 }
             case let .media(lhsMedia):
-                if case let .media(rhsMedia) = rhs, areMediaArraysEqual(lhsMedia, rhsMedia) {
+                if case let .media(rhsMedia) = rhs, areMediaArraysEqual(lhsMedia.map { $0.media }, rhsMedia.map { $0.media }) {
                     return true
                 } else {
                     return false
@@ -284,8 +287,18 @@ public final class StarsImageComponent: Component {
                 } else {
                     return false
                 }
+            case let .gift(lhsCount):
+                if case let .gift(rhsCount) = rhs, lhsCount == rhsCount {
+                    return true
+                } else {
+                    return false
+                }
             }
         }
+    }
+    
+    public enum Icon {
+        case star
     }
     
     public let context: AccountContext
@@ -293,6 +306,7 @@ public final class StarsImageComponent: Component {
     public let theme: PresentationTheme
     public let diameter: CGFloat
     public let backgroundColor: UIColor
+    public let icon: Icon?
     public let action: ((@escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)?
     
     public init(
@@ -301,6 +315,7 @@ public final class StarsImageComponent: Component {
         theme: PresentationTheme,
         diameter: CGFloat,
         backgroundColor: UIColor,
+        icon: Icon? = nil,
         action: ((@escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)? = nil
     ) {
         self.context = context
@@ -308,6 +323,7 @@ public final class StarsImageComponent: Component {
         self.theme = theme
         self.diameter = diameter
         self.backgroundColor = backgroundColor
+        self.icon = icon
         self.action = action
     }
     
@@ -327,6 +343,9 @@ public final class StarsImageComponent: Component {
         if lhs.backgroundColor != rhs.backgroundColor {
             return false
         }
+        if lhs.icon != rhs.icon {
+            return false
+        }
         return true
     }
     
@@ -344,8 +363,12 @@ public final class StarsImageComponent: Component {
         private var avatarNode: ImageNode?
         private var iconBackgroundView: UIImageView?
         private var iconView: UIImageView?
+        private var smallIconOutlineView: UIImageView?
+        private var smallIconView: UIImageView?
         private var dustNode: MediaDustNode?
         private var button: UIControl?
+        
+        private var animationNode: AnimatedStickerNode?
         
         private var lockView: UIImageView?
         private var countView = ComponentView<Empty>()
@@ -388,7 +411,7 @@ public final class StarsImageComponent: Component {
             guard let component = self.component, let containerNode = self.containerNode else {
                 return nil
             }
-            if case let .media(media) = component.subject, media.first?.id == transitionMedia.id {
+            if case let .media(media) = component.subject, media.first?.media.id == transitionMedia.id {
                 return (containerNode, containerNode.bounds, { [weak containerNode] in
                     return (containerNode?.view.snapshotContentTree(unhide: true), nil)
                 })
@@ -477,25 +500,25 @@ public final class StarsImageComponent: Component {
                     containerNode.view.addSubview(imageNode.view)
                     self.imageNode = imageNode
                 }
-                if let image = media.first as? TelegramMediaImage {
-                    if let imageDimensions = largestImageRepresentation(image.representations)?.dimensions {
+                if let imageReference = media.first?.concrete(TelegramMediaImage.self) {
+                    if let imageDimensions = largestImageRepresentation(imageReference.media.representations)?.dimensions {
                         dimensions = imageDimensions.cgSize.aspectFilled(imageSize)
                     }
                     if isFirstTime {
-                        imageNode.setSignal(chatMessagePhotoThumbnail(account: component.context.account, userLocation: .other, photoReference: .standalone(media: image), onlyFullSize: false, blurred: false))
+                        imageNode.setSignal(chatMessagePhotoThumbnail(account: component.context.account, userLocation: .other, photoReference: imageReference, onlyFullSize: false, blurred: false))
                     }
-                } else if let file = media.first as? TelegramMediaFile {
-                    if let videoDimensions = file.dimensions {
+                } else if let fileReference = media.first?.concrete(TelegramMediaFile.self) {
+                    if let videoDimensions = fileReference.media.dimensions {
                         dimensions = videoDimensions.cgSize.aspectFilled(imageSize)
                     }
                     if isFirstTime {
-                        imageNode.setSignal(mediaGridMessageVideo(postbox: component.context.account.postbox, userLocation: .other, videoReference: .standalone(media: file), useLargeThumbnail: true, autoFetchFullSizeThumbnail: true))
+                        imageNode.setSignal(mediaGridMessageVideo(postbox: component.context.account.postbox, userLocation: .other, videoReference: fileReference, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true))
                     }
                 }
                 imageNode.frame = imageFrame
                 imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 16.0), imageSize: dimensions, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
                 
-                if let firstMedia = media.first, self.hiddenMedia.contains(where: { $0.id == firstMedia.id }) {
+                if let firstMedia = media.first?.media, self.hiddenMedia.contains(where: { $0.id == firstMedia.id }) {
                     containerNode.isHidden = true
                 } else {
                     containerNode.isHidden = false
@@ -520,19 +543,19 @@ public final class StarsImageComponent: Component {
                         self.imageFrameNode = imageFrameNode
                     }
                     
-                    if let image = media[1] as? TelegramMediaImage {
-                        if let imageDimensions = largestImageRepresentation(image.representations)?.dimensions {
+                    if let imageReference = media[1].concrete(TelegramMediaImage.self) {
+                        if let imageDimensions = largestImageRepresentation(imageReference.media.representations)?.dimensions {
                             secondDimensions = imageDimensions.cgSize.aspectFilled(imageSize)
                         }
                         if isFirstTime {
-                            secondImageNode.setSignal(chatMessagePhotoThumbnail(account: component.context.account, userLocation: .other, photoReference: .standalone(media: image), onlyFullSize: false, blurred: false))
+                            secondImageNode.setSignal(chatMessagePhotoThumbnail(account: component.context.account, userLocation: .other, photoReference: imageReference, onlyFullSize: false, blurred: false))
                         }
-                    } else if let file = media[1] as? TelegramMediaFile {
-                        if let videoDimensions = file.dimensions {
+                    } else if let fileReference = media[1].concrete(TelegramMediaFile.self) {
+                        if let videoDimensions = fileReference.media.dimensions {
                             secondDimensions = videoDimensions.cgSize.aspectFilled(imageSize)
                         }
                         if isFirstTime {
-                            secondImageNode.setSignal(mediaGridMessageVideo(postbox: component.context.account.postbox, userLocation: .other, videoReference: .standalone(media: file), useLargeThumbnail: true, autoFetchFullSizeThumbnail: true))
+                            secondImageNode.setSignal(mediaGridMessageVideo(postbox: component.context.account.postbox, userLocation: .other, videoReference: fileReference, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true))
                         }
                     }
                     
@@ -684,7 +707,11 @@ public final class StarsImageComponent: Component {
                     } else {
                         avatarNode = ImageNode()
                         avatarNode.displaysAsynchronously = false
-                        containerNode.view.addSubview(avatarNode.view)
+                        if let smallIconOutlineView = self.smallIconOutlineView {
+                            containerNode.view.insertSubview(avatarNode.view, belowSubview: smallIconOutlineView)
+                        } else {
+                            containerNode.view.addSubview(avatarNode.view)
+                        }
                         self.avatarNode = avatarNode
                         
                         avatarNode.setSignal(peerAvatarCompleteImage(account: component.context.account, peer: peer, size: imageSize, font: avatarPlaceholderFont(size: 43.0), fullSize: true))
@@ -776,6 +803,64 @@ public final class StarsImageComponent: Component {
                     iconBackgroundView.frame = imageFrame
                     iconView.frame = imageFrame.insetBy(dx: iconInset, dy: iconInset).offsetBy(dx: 0.0, dy: iconOffset)
                 }
+            case let .gift(count):
+                let animationNode: AnimatedStickerNode
+                if let current = self.animationNode {
+                    animationNode = current
+                } else {
+                    let stickerName: String
+                    if count <= 1000 {
+                        stickerName = "Gift3"
+                    } else if count < 2500 {
+                        stickerName = "Gift6"
+                    } else {
+                        stickerName = "Gift12"
+                    }
+                    animationNode = DefaultAnimatedStickerNodeImpl()
+                    animationNode.autoplay = true
+                    animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: stickerName), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
+                    animationNode.visibility = true
+                    containerNode.view.addSubview(animationNode.view)
+                    self.animationNode = animationNode
+                    
+                    animationNode.playOnce()
+                }
+                let animationFrame = imageFrame.insetBy(dx: -imageFrame.width * 0.19, dy: -imageFrame.height * 0.19).offsetBy(dx: 0.0, dy: -14.0)
+                animationNode.frame = animationFrame
+                animationNode.updateLayout(size: animationFrame.size)
+            }
+            
+            if let _ = component.icon {
+                let smallIconView: UIImageView
+                let smallIconOutlineView: UIImageView
+                if let current = self.smallIconView, let currentOutline = self.smallIconOutlineView {
+                    smallIconView = current
+                    smallIconOutlineView = currentOutline
+                } else {
+                    smallIconOutlineView = UIImageView()
+                    containerNode.view.addSubview(smallIconOutlineView)
+                    self.smallIconOutlineView = smallIconOutlineView
+                    
+                    smallIconView = UIImageView()
+                    containerNode.view.addSubview(smallIconView)
+                    self.smallIconView = smallIconView
+                    
+                    smallIconOutlineView.image = UIImage(bundleImageName: "Premium/Stars/TransactionStarOutline")?.withRenderingMode(.alwaysTemplate)
+                    smallIconView.image = UIImage(bundleImageName: "Premium/Stars/TransactionStar")
+                }
+                
+                smallIconOutlineView.tintColor = component.backgroundColor
+                
+                if let icon = smallIconView.image {
+                    let smallIconFrame = CGRect(origin: CGPoint(x: imageFrame.maxX - icon.size.width, y: imageFrame.maxY - icon.size.height), size: icon.size)
+                    smallIconView.frame = smallIconFrame
+                    smallIconOutlineView.frame = smallIconFrame
+                }
+            } else if let smallIconView = self.smallIconView, let smallIconOutlineView = self.smallIconOutlineView {
+                self.smallIconView = nil
+                smallIconView.removeFromSuperview()
+                self.smallIconOutlineView = nil
+                smallIconOutlineView.removeFromSuperview()
             }
             
             if let _ = component.action {
