@@ -626,7 +626,7 @@ final class GiftSetupScreenComponent: Component {
                         badgePosition: position,
                         badgeGraphPosition: position,
                         invertProgress: true,
-                        leftString: environment.strings.Gift_Send_Left(remains),
+                        leftString: environment.strings.Gift_Send_Remains(remains).replacingOccurrences(of: remainsString, with: "").trimmingCharacters(in: .whitespacesAndNewlines),
                         groupingSeparator: environment.dateTimeFormat.groupingSeparator
                     )),
                     environment: {},

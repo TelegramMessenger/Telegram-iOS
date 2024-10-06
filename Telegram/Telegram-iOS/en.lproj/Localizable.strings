@@ -13041,8 +13041,8 @@ Sorry for the inconvenience.";
 "Gift.Send.HideMyName.Info" = "Hide my name and message from visitors to %1$@'s profile. %2$@ will still see your name and message.";
 "Gift.Send.Send" = "Send a Gift for";
 "Gift.Send.Limited" = "Limited";
-"Gift.Send.Left_1" = "left";
-"Gift.Send.Left_any" = "left";
+"Gift.Send.Remains_1" = "%@ left";
+"Gift.Send.Remains_any" = "%@ left";
 
 "Gift.Send.ErrorUnknown" = "An error occurred. Please try again.";
 "Gift.Send.ErrorOutOfStock" = "Sorry, this gift is sold out. Please choose another gift.";
