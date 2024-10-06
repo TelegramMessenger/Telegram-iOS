@@ -201,7 +201,7 @@ final class QuickReplySetupScreenComponent: Component {
                     },
                     openPremiumIntro: {
                     },
-                    openPremiumGift: { _ in
+                    openPremiumGift: { _, _ in
                     },
                     openPremiumManagement: {
                     },
