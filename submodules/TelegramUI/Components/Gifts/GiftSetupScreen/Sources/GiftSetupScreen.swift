@@ -196,6 +196,11 @@ final class GiftSetupScreenComponent: Component {
             if let navigationTitleView = self.navigationTitle.view {
                 transition.setAlpha(view: navigationTitleView, alpha: 1.0)
             }
+            
+            let bottomContentOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.contentOffset.y - self.scrollView.frame.height)
+            let bottomPanelAlpha = min(16.0, bottomContentOffset) / 16.0
+            self.buttonBackground.view?.alpha = bottomPanelAlpha
+            self.buttonSeparator.opacity = Float(bottomPanelAlpha)
         }
         
         func proceed() {
@@ -856,7 +861,6 @@ final class GiftSetupScreenComponent: Component {
             let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
             let bottomPanelHeight = bottomPanelPadding + buttonHeight + bottomInset
 
-            let bottomPanelAlpha: CGFloat = 1.0
             let bottomPanelSize = self.buttonBackground.update(
                 transition: transition,
                 component: AnyComponent(BlurredBackgroundComponent(
@@ -866,14 +870,12 @@ final class GiftSetupScreenComponent: Component {
                 containerSize: CGSize(width: availableSize.width, height: bottomPanelHeight)
             )
             self.buttonSeparator.backgroundColor = environment.theme.rootController.tabBar.separatorColor.cgColor
-            self.buttonSeparator.opacity = Float(bottomPanelAlpha)
             
             if let view = self.buttonBackground.view {
                 if view.superview == nil {
                     self.addSubview(view)
                     self.layer.addSublayer(self.buttonSeparator)
                 }
-                view.alpha = bottomPanelAlpha
                 view.frame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelSize.height), size: bottomPanelSize)
                 self.buttonSeparator.frame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelSize.height), size: CGSize(width: availableSize.width, height: UIScreenPixel))
             }

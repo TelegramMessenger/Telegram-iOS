@@ -159,7 +159,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.addSubnode(self.buttonNode)
         self.buttonNode.addSubnode(self.buttonStarsNode)
-        self.addSubnode(self.buttonTitleNode)
+        self.buttonNode.addSubnode(self.buttonTitleNode)
         
         self.addSubnode(self.ribbonBackgroundNode)
         self.addSubnode(self.ribbonTextNode)
@@ -169,13 +169,9 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 if highlighted {
                     strongSelf.buttonNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.buttonNode.alpha = 0.4
-                    strongSelf.buttonTitleNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.buttonTitleNode.alpha = 0.4
                 } else {
                     strongSelf.buttonNode.alpha = 1.0
                     strongSelf.buttonNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    strongSelf.buttonTitleNode.alpha = 1.0
-                    strongSelf.buttonTitleNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }
@@ -544,7 +540,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                     backgroundMaskImage = nil
                 }
             
-                var backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: giftSize.height)
+                var backgroundSize = giftSize
                 if hasServiceMessage {
                     backgroundSize.height += labelLayout.size.height + 18.0
                 } else {
@@ -556,13 +552,14 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                         if let strongSelf = self {
                             let isFirstTime = strongSelf.item == nil
                             
-                            var isExpandedUpdated = false
                             if strongSelf.appliedIsExpanded != currentIsExpanded {
                                 strongSelf.appliedIsExpanded = currentIsExpanded
                                 info?.setInvertOffsetDirection()
-                                isExpandedUpdated = true
+                                
+                                if let maskOverlayView = strongSelf.maskOverlayView {
+                                    animation.transition.updateAlpha(layer: maskOverlayView.layer, alpha: currentIsExpanded ? 1.0 : 0.0)
+                                }
                             }
-                            let _ = isExpandedUpdated
                             
                             let overlayColor = item.presentationData.theme.theme.overallDarkAppearance ? UIColor(rgb: 0xffffff, alpha: 0.12) : UIColor(rgb: 0x000000, alpha: 0.12)
                             
@@ -637,7 +634,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             let _ = ribbonTextApply()
                             let _ = moreApply()
                             
-                            let labelFrame = CGRect(origin: CGPoint(x: 8.0, y: 2.0), size: labelLayout.size)
+                            let labelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - labelLayout.size.width) / 2.0), y: 2.0), size: labelLayout.size)
                             strongSelf.labelNode.frame = labelFrame
                             
                             let titleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - titleLayout.size.width) / 2.0) , y: mediaBackgroundFrame.minY + 151.0), size: titleLayout.size)
@@ -678,11 +675,10 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.dustNode = nil
                             }
                             
-                            let buttonTitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - buttonTitleLayout.size.width) / 2.0), y: clippingTextFrame.maxY + 18.0), size: buttonTitleLayout.size)
-                            strongSelf.buttonTitleNode.frame = buttonTitleFrame
-                            
                             let buttonSize = CGSize(width: buttonTitleLayout.size.width + 38.0, height: 34.0)
-                            strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - buttonSize.width) / 2.0), y: clippingTextFrame.maxY + 10.0), size: buttonSize)
+                            strongSelf.buttonTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((buttonSize.width - buttonTitleLayout.size.width) / 2.0), y: 8.0), size: buttonTitleLayout.size)
+                            
+                            animation.animator.updateFrame(layer: strongSelf.buttonNode.layer, frame: CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - buttonSize.width) / 2.0), y: clippingTextFrame.maxY + 10.0), size: buttonSize), completion: nil)
                             strongSelf.buttonStarsNode.frame = CGRect(origin: .zero, size: buttonSize)
                             
                             if ribbonTextLayout.size.width > 0.0 {
@@ -712,6 +708,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 if ribbonTextLayout.size.width > 0.0 {
                                     let backgroundMaskFrame = mediaBackgroundFrame.insetBy(dx: -2.0, dy: -2.0)
                                     backgroundContent.frame = backgroundMaskFrame
+                                    animation.animator.updateFrame(layer: backgroundContent.layer, frame: backgroundMaskFrame, completion: nil)
                                     backgroundContent.cornerRadius = 0.0
                                     
                                     if strongSelf.mediaBackgroundMaskNode.image?.size != mediaBackgroundFrame.size {
@@ -731,7 +728,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                     backgroundContent.view.mask = strongSelf.mediaBackgroundMaskNode.view
                                     strongSelf.mediaBackgroundMaskNode.frame = CGRect(origin: .zero, size: backgroundMaskFrame.size)
                                 } else {
-                                    backgroundContent.frame = mediaBackgroundFrame
+                                    animation.animator.updateFrame(layer: backgroundContent.layer, frame: mediaBackgroundFrame, completion: nil)
                                     backgroundContent.clipsToBounds = true
                                     backgroundContent.cornerRadius = 24.0
                                     backgroundContent.view.mask = nil
@@ -906,8 +903,9 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         if self.buttonNode.frame.contains(point) {
             return ChatMessageBubbleContentTapAction(content: .ignore)
         } else if self.textClippingNode.frame.contains(point) && !self.isExpanded && !self.moreTextNode.alpha.isZero {
-            self.expandPressed()
-            return ChatMessageBubbleContentTapAction(content: .ignore)
+            return ChatMessageBubbleContentTapAction(content: .custom({ [weak self] in
+                self?.expandPressed()
+            }))
         } else if let backgroundNode = self.backgroundNode, backgroundNode.frame.contains(point) {
             return ChatMessageBubbleContentTapAction(content: .openMessage)
         } else if self.mediaBackgroundContent?.frame.contains(point) == true {

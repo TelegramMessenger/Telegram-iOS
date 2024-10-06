@@ -330,6 +330,7 @@ final class GiftOptionsScreenComponent: Component {
                                                         action: { _ in return true }
                                                     )
                                                     mainController.present(resultController, in: .window(.root))
+                                                    HapticFeedback().error()
                                                 } else {
                                                     let giftController = GiftSetupScreen(
                                                         context: component.context,
@@ -800,9 +801,7 @@ final class GiftOptionsScreenComponent: Component {
                         guard let self, let component = self.component, let environment = self.environment else {
                             return
                         }
-                        let introController = component.context.sharedContext.makeStarsIntroScreen(context: component.context)
-                        introController.navigationPresentation = .modal
-                        
+                        let introController = component.context.sharedContext.makeStarsIntroScreen(context: component.context)                        
                         if let controller = environment.controller() as? GiftOptionsScreen {
                             let mainController: ViewController
                             if let parentController = controller.parentController() {

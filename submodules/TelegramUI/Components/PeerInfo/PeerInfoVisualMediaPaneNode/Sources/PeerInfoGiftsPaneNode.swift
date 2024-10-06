@@ -354,8 +354,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             }
         }
         
-        let bottomOffset = max(0.0, self.scrollNode.view.contentSize.height - self.scrollNode.view.contentOffset.y - self.scrollNode.view.frame.height)
-        if bottomOffset < 100.0 {
+        let bottomContentOffset = max(0.0, self.scrollNode.view.contentSize.height - self.scrollNode.view.contentOffset.y - self.scrollNode.view.frame.height)
+        if bottomContentOffset < 100.0 {
             self.profileGifts.loadMore()
         }
     }

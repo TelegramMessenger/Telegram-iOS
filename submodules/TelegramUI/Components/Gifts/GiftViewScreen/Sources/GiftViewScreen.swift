@@ -916,7 +916,6 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 return
             }
             let introController = context.sharedContext.makeStarsIntroScreen(context: context)
-            introController.navigationPresentation = .modal
             self.push(introController)
         }
     }
