@@ -2,16 +2,48 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>IntentPhrases</key>
-	<array>
-		<dict>
-			<key>IntentName</key>
-			<string>INSendMessageIntent</string>
-			<key>IntentExamples</key>
-			<array>
-				<string>앨리스에게 나 15분 안에 도착한다고 Telegram 메시지 보내줘</string>
-			</array>
-		</dict>
-	</array>
+    <key>IntentPhrases</key>
+    <array>
+        <dict>
+            <key>IntentName</key>
+            <string>INStartAudioCallIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>Telegram에서 Alex와 음성 통화 시작</string>
+            </array>
+        </dict>
+        <dict>
+            <key>IntentName</key>
+            <string>INSetMessageAttributeIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>Telegram에 메시지 고정</string>
+            </array>
+        </dict>
+        <dict>
+            <key>IntentName</key>
+            <string>INSearchCallHistoryIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>Telegram에서 Alex와 통화 기록 검색</string>
+            </array>
+        </dict>
+        <dict>
+            <key>IntentName</key>
+            <string>INSearchForMessagesIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>Telegram에서 Alex가 포함된 메시지 검색</string>
+            </array>
+        </dict>
+        <dict>
+            <key>IntentName</key>
+            <string>INSendMessageIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>앨리스에게 나 15분 안에 도착한다고 Telegram 메시지 보내줘</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>
