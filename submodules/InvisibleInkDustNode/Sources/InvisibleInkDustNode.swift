@@ -360,7 +360,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     private var animColor: CGColor?
     private let enableAnimations: Bool
     
-    private weak var textNode: ASDisplayNode?
+    public weak var textNode: ASDisplayNode?
     private let textMaskNode: ASDisplayNode
     private let textSpotNode: ASImageNode
     

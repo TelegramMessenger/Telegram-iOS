@@ -299,7 +299,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
     public var arguments: TextNodeWithEntities.Arguments?
     
     private var inlineStickerItemLayers: [InlineStickerItemLayer.Key: InlineStickerItemLayer] = [:]
-    private var dustNode: InvisibleInkDustNode?
+    public private(set) var dustNode: InvisibleInkDustNode?
     
     public var visibility: Bool = false {
         didSet {

@@ -374,7 +374,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                             animationRenderer: component.context.animationRenderer,
                             placeholderColor: theme.list.mediaPlaceholderColor,
                             text: .plain(attributedText),
-                            maximumNumberOfLines: 0
+                            maximumNumberOfLines: 0,
+                            handleSpoilers: true
                         )
                     )
                 ))

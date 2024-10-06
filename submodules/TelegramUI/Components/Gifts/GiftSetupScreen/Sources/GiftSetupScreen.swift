@@ -607,9 +607,10 @@ final class GiftSetupScreenComponent: Component {
             
             if case let .starGift(starGift) = component.subject, let availability = starGift.availability {
                 let remains: Int32 = availability.remains
-                let position = CGFloat(remains) / CGFloat(availability.total)
-                let remainsString = "\(remains)"
-                let totalString = presentationStringsFormattedNumber(availability.total, environment.dateTimeFormat.groupingSeparator)
+                let total: Int32 = availability.total
+                let position = CGFloat(remains) / CGFloat(total)
+                let remainsString = presentationStringsFormattedNumber(remains, environment.dateTimeFormat.groupingSeparator)
+                let totalString = presentationStringsFormattedNumber(total, environment.dateTimeFormat.groupingSeparator)
                 let remainingCountSize = self.remainingCount.update(
                     transition: transition,
                     component: AnyComponent(RemainingCountComponent(
@@ -624,7 +625,9 @@ final class GiftSetupScreenComponent: Component {
                         badgeText: "\(remainsString)",
                         badgePosition: position,
                         badgeGraphPosition: position,
-                        invertProgress: true
+                        invertProgress: true,
+                        leftString: environment.strings.Gift_Send_Left,
+                        groupingSeparator: environment.dateTimeFormat.groupingSeparator
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)

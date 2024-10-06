@@ -37,6 +37,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?
     private let titleNode: TextNode
     private let subtitleNode: TextNodeWithEntities
+    private var spoilerSubtitleNode: TextNodeWithEntities?
     private let textClippingNode: ASDisplayNode
     private var dustNode: InvisibleInkDustNode?
     private let placeholderNode: StickerShimmerEffectNode
@@ -286,6 +287,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeSubtitleLayout = TextNodeWithEntities.asyncLayout(self.subtitleNode)
+        let makeSpoilerSubtitleLayout = TextNodeWithEntities.asyncLayout(self.spoilerSubtitleNode)
         let makeButtonTitleLayout = TextNode.asyncLayout(self.buttonTitleNode)
         let makeRibbonTextLayout = TextNode.asyncLayout(self.ribbonTextNode)
         let makeMeasureTextLayout = TextNode.asyncLayout(nil)
@@ -487,6 +489,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 let textConstrainedSize = CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude)
                 let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
+                let (_, spoilerSubtitleApply) = makeSpoilerSubtitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .center, cutout: nil, insets: UIEdgeInsets(), displaySpoilers: true))
+                
                 var canExpand = false
                 var clippedTextHeight: CGFloat = subtitleLayout.size.height
                 if subtitleLayout.numberOfLines > 4 {
@@ -633,7 +637,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             let _ = buttonTitleApply()
                             let _ = ribbonTextApply()
                             let _ = moreApply()
-                            
+                                                        
                             let labelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - labelLayout.size.width) / 2.0), y: 2.0), size: labelLayout.size)
                             strongSelf.labelNode.frame = labelFrame
                             
@@ -642,8 +646,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             let clippingTextFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - subtitleLayout.size.width) / 2.0) , y: titleFrame.maxY + textSpacing), size: CGSize(width: subtitleLayout.size.width, height: clippedTextHeight))
                             
-                            let subtitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - subtitleLayout.size.width) / 2.0) , y: titleFrame.maxY + textSpacing), size: subtitleLayout.size)
-                            strongSelf.subtitleNode.textNode.frame = CGRect(origin: .zero, size: subtitleLayout.size)
+                            let subtitleFrame = CGRect(origin: .zero, size: subtitleLayout.size)
+                            strongSelf.subtitleNode.textNode.frame = subtitleFrame
                             
                             if isFirstTime {
                                 strongSelf.textClippingNode.frame = clippingTextFrame
@@ -657,16 +661,31 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             animation.animator.updateFrame(layer: strongSelf.moreTextNode.layer, frame: CGRect(origin: CGPoint(x: clippingTextFrame.maxX - moreLayout.size.width, y: clippingTextFrame.maxY - moreLayout.size.height), size: moreLayout.size), completion: nil)
                             
                             if !subtitleLayout.spoilers.isEmpty {
+                                let spoilerSubtitleNode = spoilerSubtitleApply(TextNodeWithEntities.Arguments(
+                                    context: item.context,
+                                    cache: item.controllerInteraction.presentationContext.animationCache,
+                                    renderer: item.controllerInteraction.presentationContext.animationRenderer,
+                                    placeholderColor: item.presentationData.theme.theme.chat.message.freeform.withWallpaper.reactionInactiveBackground,
+                                    attemptSynchronous: synchronousLoads
+                                ))
+                                if strongSelf.spoilerSubtitleNode == nil {
+                                    spoilerSubtitleNode.textNode.alpha = 0.0
+                                    spoilerSubtitleNode.textNode.isUserInteractionEnabled = false
+                                    strongSelf.spoilerSubtitleNode = spoilerSubtitleNode
+                                    
+                                    strongSelf.textClippingNode.addSubnode(spoilerSubtitleNode.textNode)
+                                }
+                                spoilerSubtitleNode.textNode.frame = subtitleFrame
+                                
                                 let dustColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
                                 
                                 let dustNode: InvisibleInkDustNode
                                 if let current = strongSelf.dustNode {
                                     dustNode = current
                                 } else {
-                                    dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: item.context.sharedContext.energyUsageSettings.fullTranslucency)
-                                    dustNode.isUserInteractionEnabled = false
+                                    dustNode = InvisibleInkDustNode(textNode: spoilerSubtitleNode.textNode, enableAnimations: item.context.sharedContext.energyUsageSettings.fullTranslucency)
                                     strongSelf.dustNode = dustNode
-                                    strongSelf.insertSubnode(dustNode, aboveSubnode: strongSelf.subtitleNode.textNode)
+                                    strongSelf.textClippingNode.insertSubnode(dustNode, aboveSubnode: strongSelf.subtitleNode.textNode)
                                 }
                                 dustNode.frame = subtitleFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 1.0)
                                 dustNode.update(size: dustNode.frame.size, color: dustColor, textColor: dustColor, rects: subtitleLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: subtitleLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
@@ -881,8 +900,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     }
 
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
-        let textNodeFrame = self.labelNode.frame
-        if let (index, attributes) = self.labelNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY - 10.0)), gesture == .tap {
+        if let (index, attributes) = self.labelNode.attributesAtPoint(CGPoint(x: point.x - self.labelNode.frame.minX, y: point.y - self.labelNode.frame.minY - 10.0)), gesture == .tap {
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
                 if let (attributeText, fullText) = self.labelNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
@@ -897,6 +915,12 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 return ChatMessageBubbleContentTapAction(content: .botCommand(botCommand))
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return ChatMessageBubbleContentTapAction(content: .hashtag(hashtag.peerName, hashtag.hashtag))
+            }
+        }
+        
+        if let (_, attributes) = self.subtitleNode.textNode.attributesAtPoint(CGPoint(x: point.x - self.textClippingNode.frame.minX, y: point.y - self.textClippingNode.frame.minY)), gesture == .tap {
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], let dustNode = self.dustNode, !dustNode.isRevealed {
+                return ChatMessageBubbleContentTapAction(content: .none)
             }
         }
         
