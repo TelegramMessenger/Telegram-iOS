@@ -8,7 +8,7 @@ public enum BotPaymentInvoiceSource {
     case message(MessageId)
     case slug(String)
     case premiumGiveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64, option: PremiumGiftCodeOption)
-    case giftCode(users: [PeerId], currency: String, amount: Int64, option: PremiumGiftCodeOption)
+    case giftCode(users: [PeerId], currency: String, amount: Int64, option: PremiumGiftCodeOption, text: String?, entities: [MessageTextEntity]?)
     case stars(option: StarsTopUpOption)
     case starsGift(peerId: EnginePeer.Id, count: Int64, currency: String, amount: Int64)
     case starsChatSubscription(hash: String)
@@ -283,7 +283,7 @@ func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInv
         let option: Api.PremiumGiftCodeOption = .premiumGiftCodeOption(flags: flags, users: option.users, months: option.months, storeProduct: option.storeProductId, storeQuantity: option.storeQuantity, currency: option.currency, amount: option.amount)
         
         return .inputInvoicePremiumGiftCode(purpose: inputPurpose, option: option)
-    case let .giftCode(users, currency, amount, option):
+    case let .giftCode(users, currency, amount, option, text, entities):
         var inputUsers: [Api.InputUser] = []
         if !users.isEmpty {
             for peerId in users {
@@ -293,7 +293,14 @@ func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInv
             }
         }
         
-        let inputPurpose: Api.InputStorePaymentPurpose = .inputStorePaymentPremiumGiftCode(flags: 0, users: inputUsers, boostPeer: nil, currency: currency, amount: amount, message: nil)
+        var inputPurposeFlags: Int32 = 0
+        var textWithEntities: Api.TextWithEntities?
+        if let text, let entities {
+            inputPurposeFlags |= (1 << 1)
+            textWithEntities = .textWithEntities(text: text, entities: apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary()))
+        }
+        
+        let inputPurpose: Api.InputStorePaymentPurpose = .inputStorePaymentPremiumGiftCode(flags: inputPurposeFlags, users: inputUsers, boostPeer: nil, currency: currency, amount: amount, message: textWithEntities)
         
         var flags: Int32 = 0
         if let _ = option.storeProductId {
