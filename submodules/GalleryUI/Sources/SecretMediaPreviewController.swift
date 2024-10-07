@@ -300,7 +300,7 @@ public final class SecretMediaPreviewController: ViewController {
             }
         }
         
-        self.controllerNode.completeCustomDismiss = { [weak self] in
+        self.controllerNode.completeCustomDismiss = { [weak self] _ in
             self?._hiddenMedia.set(.single(nil))
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }

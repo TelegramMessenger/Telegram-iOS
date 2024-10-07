@@ -732,7 +732,7 @@ private final class StarsTransferSheetComponent: CombinedComponent {
                             })
                         }
                     )),
-                    backgroundColor: .blur(.light),
+                    backgroundColor: .color(environment.theme.list.modalBlocksBackgroundColor),
                     followContentSizeChanges: true,
                     clipsContent: true,
                     animateOut: animateOut

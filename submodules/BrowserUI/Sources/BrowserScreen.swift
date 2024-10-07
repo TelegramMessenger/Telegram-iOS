@@ -500,6 +500,7 @@ public class BrowserScreen: ViewController, MinimizableController {
         case closeAddressBar
         case navigateTo(String, Bool)
         case expand
+        case saveToFiles
     }
 
     final class Node: ViewControllerTracingNode {
@@ -792,6 +793,10 @@ public class BrowserScreen: ViewController, MinimizableController {
                 case .expand:
                     if let content = self.content.last {
                         content.resetScrolling()
+                    }
+                case .saveToFiles:
+                    if let content = self.content.last as? BrowserWebContent {
+                        content.requestSaveToFiles()
                     }
                 }
             }
@@ -1213,6 +1218,14 @@ public class BrowserScreen: ViewController, MinimizableController {
                         performAction.invoke(.addBookmark)
                         action(.default)
                     })))
+                    
+                    if contentState.contentType == .webPage {
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_SaveToFiles, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                            performAction.invoke(.saveToFiles)
+                            action(.default)
+                        })))
+                    }
+                    
                     if !layout.metrics.isTablet && canOpenIn {
                         items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_OpenInBrowser(openInTitle).string, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Browser"), color: theme.contextMenu.primaryColor) }, action: { [weak self] (controller, action) in
                             if let self {

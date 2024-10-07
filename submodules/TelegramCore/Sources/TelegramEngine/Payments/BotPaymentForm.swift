@@ -595,6 +595,7 @@ public enum SendBotPaymentFormError {
     case precheckoutFailed
     case paymentFailed
     case alreadyPaid
+    case starGiftOutOfStock
 }
 
 public enum SendBotPaymentResult {

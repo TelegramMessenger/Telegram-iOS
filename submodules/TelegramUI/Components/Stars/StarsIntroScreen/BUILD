@@ -31,11 +31,9 @@ swift_library(
         "//submodules/TextFormat",
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/TelegramUI/Components/ListActionItemComponent",
-        "//submodules/TelegramUI/Components/ScrollComponent",
         "//submodules/TelegramUI/Components/Premium/PremiumStarComponent",
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/Components/BundleIconComponent",
-        "//submodules/Components/SolidRoundedButtonComponent",
         "//submodules/Components/BlurredBackgroundComponent",
     ],
     visibility = [

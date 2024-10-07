@@ -6203,17 +6203,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             return
         }
         
+        let effectiveMediaVisibility = self.visibility
+        
         var isPlaying = true
-        if case let .visible(_, subRect) = self.visibility {
-            if subRect.minY > 32.0 {
-                isPlaying = false
-            }
-        } else {
-            isPlaying = false
-        }
         if !item.controllerInteraction.canReadHistory {
             isPlaying = false
         }
+        
         if self.forceStopAnimations {
             isPlaying = false
         }
@@ -6228,7 +6224,19 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         for contentNode in self.contentNodes {
-            contentNode.visibility = mapVisibility(effectiveVisibility, boundsSize: self.bounds.size, insets: self.insets, to: contentNode)
+            if contentNode is ChatMessageMediaBubbleContentNode || contentNode is ChatMessageGiftBubbleContentNode {
+                contentNode.visibility = mapVisibility(effectiveMediaVisibility, boundsSize: self.bounds.size, insets: self.insets, to: contentNode)
+            } else {
+                contentNode.visibility = mapVisibility(effectiveVisibility, boundsSize: self.bounds.size, insets: self.insets, to: contentNode)
+            }
+        }
+        
+        if case let .visible(_, subRect) = self.visibility {
+            if subRect.minY > 32.0 {
+                isPlaying = false
+            }
+        } else {
+            isPlaying = false
         }
         
         if let threadInfoNode = self.threadInfoNode {

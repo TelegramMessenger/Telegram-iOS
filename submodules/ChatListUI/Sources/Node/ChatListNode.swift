@@ -101,7 +101,7 @@ public final class ChatListNodeInteraction {
     let openStorageManagement: () -> Void
     let openPasswordSetup: () -> Void
     let openPremiumIntro: () -> Void
-    let openPremiumGift: ([EnginePeer.Id: TelegramBirthday]?) -> Void
+    let openPremiumGift: ([EnginePeer], [EnginePeer.Id: TelegramBirthday]?) -> Void
     let openPremiumManagement: () -> Void
     let openActiveSessions: () -> Void
     let openBirthdaySetup: () -> Void
@@ -157,7 +157,7 @@ public final class ChatListNodeInteraction {
         openStorageManagement: @escaping () -> Void,
         openPasswordSetup: @escaping () -> Void,
         openPremiumIntro: @escaping () -> Void,
-        openPremiumGift: @escaping ([EnginePeer.Id: TelegramBirthday]?) -> Void,
+        openPremiumGift: @escaping ([EnginePeer], [EnginePeer.Id: TelegramBirthday]?) -> Void,
         openPremiumManagement: @escaping () -> Void,
         openActiveSessions: @escaping () -> Void,
         openBirthdaySetup: @escaping () -> Void,
@@ -741,13 +741,13 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
                         case .xmasPremiumGift:
-                            nodeInteraction?.openPremiumGift(nil)
+                            nodeInteraction?.openPremiumGift([], nil)
                         case .premiumGrace:
                             nodeInteraction?.openPremiumManagement()
                         case .setupBirthday:
                             nodeInteraction?.openBirthdaySetup()
-                        case let .birthdayPremiumGift(_, birthdays):
-                            nodeInteraction?.openPremiumGift(birthdays)
+                        case let .birthdayPremiumGift(peers, birthdays):
+                            nodeInteraction?.openPremiumGift(peers, birthdays)
                         case .reviewLogin:
                             break
                         case let .starsSubscriptionLowBalance(amount, _):
@@ -1081,13 +1081,13 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
                         case .xmasPremiumGift:
-                            nodeInteraction?.openPremiumGift(nil)
+                            nodeInteraction?.openPremiumGift([], nil)
                         case .premiumGrace:
                             nodeInteraction?.openPremiumManagement()
                         case .setupBirthday:
                             nodeInteraction?.openBirthdaySetup()
-                        case let .birthdayPremiumGift(_, birthdays):
-                            nodeInteraction?.openPremiumGift(birthdays)
+                        case let .birthdayPremiumGift(peers, birthdays):
+                            nodeInteraction?.openPremiumGift(peers, birthdays)
                         case .reviewLogin:
                             break
                         case let .starsSubscriptionLowBalance(amount, _):
@@ -1710,13 +1710,24 @@ public final class ChatListNode: ListView {
             }
             let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads, forceDark: false, dismissed: nil)
             self.push?(controller)
-        }, openPremiumGift: { [weak self] birthdays in
+        }, openPremiumGift: { [weak self] peers, birthdays in
             guard let self else {
                 return
             }
-            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList(birthdays), completion: nil)
-            controller.navigationPresentation = .modal
-            self.push?(controller)
+            if peers.count == 1, let peerId = peers.first?.id {
+                let _ = (self.context.engine.payments.premiumGiftCodeOptions(peerId: nil, onlyCached: true)
+                |> filter { !$0.isEmpty }
+                |> deliverOnMainQueue).start(next: { giftOptions in
+                    let premiumOptions = giftOptions.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
+                    let controller = self.context.sharedContext.makeGiftOptionsController(context: self.context, peerId: peerId, premiumOptions: premiumOptions)
+                    controller.navigationPresentation = .modal
+                    self.push?(controller)
+                })
+            } else {
+                let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList(birthdays), completion: nil)
+                controller.navigationPresentation = .modal
+                self.push?(controller)
+            }
         }, openPremiumManagement: { [weak self] in
             guard let self else {
                 return

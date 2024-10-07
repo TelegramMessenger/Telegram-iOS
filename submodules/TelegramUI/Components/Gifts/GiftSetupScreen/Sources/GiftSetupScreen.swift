@@ -29,6 +29,7 @@ import ChatPresentationInterfaceState
 import AudioToolbox
 import TextFormat
 import InAppPurchaseManager
+import BlurredBackgroundComponent
 
 final class GiftSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -78,6 +79,9 @@ final class GiftSetupScreenComponent: Component {
         private let introContent = ComponentView<Empty>()
         private let introSection = ComponentView<Empty>()
         private let hideSection = ComponentView<Empty>()
+    
+        private let buttonBackground = ComponentView<Empty>()
+        private let buttonSeparator = SimpleLayer()
         private let button = ComponentView<Empty>()
         
         private var ignoreScrolling: Bool = false
@@ -143,6 +147,8 @@ final class GiftSetupScreenComponent: Component {
             self.addSubview(self.scrollView)
             
             self.scrollView.layer.addSublayer(self.topOverscrollLayer)
+                
+            self.disablesInteractiveKeyboardGestureRecognizer = true
         }
         
         required init?(coder: NSCoder) {
@@ -190,6 +196,11 @@ final class GiftSetupScreenComponent: Component {
             if let navigationTitleView = self.navigationTitle.view {
                 transition.setAlpha(view: navigationTitleView, alpha: 1.0)
             }
+            
+            let bottomContentOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.contentOffset.y - self.scrollView.frame.height)
+            let bottomPanelAlpha = min(16.0, bottomContentOffset) / 16.0
+            self.buttonBackground.view?.alpha = bottomPanelAlpha
+            self.buttonSeparator.opacity = Float(bottomPanelAlpha)
         }
         
         func proceed() {
@@ -352,6 +363,29 @@ final class GiftSetupScreenComponent: Component {
                             }
                             navigationController.setViewControllers(controllers, animated: true)
                         }
+                        
+                        starsContext.load(force: true)
+                    }, error: { [weak self] error in
+                        guard let self, let controller = self.environment?.controller() else {
+                            return
+                        }
+                        
+                        self.inProgress = false
+                        self.state?.updated()
+                        
+                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                        var errorText: String?
+                        switch error {
+                        case .starGiftOutOfStock:
+                            errorText = presentationData.strings.Gift_Send_ErrorOutOfStock
+                        default:
+                            errorText = presentationData.strings.Gift_Send_ErrorUnknown
+                        }
+                        
+                        if let errorText = errorText {
+                            let alertController = textAlertController(context: component.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                            controller.present(alertController, in: .window(.root))
+                        }
                     })
                 })
             }
@@ -459,9 +493,7 @@ final class GiftSetupScreenComponent: Component {
                             return
                         }
                         if let textInputView = self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View {
-                            if self.textInputState.isEditing {
-                                textInputView.insertText(text: text)
-                            }
+                            textInputView.insertText(text: text)
                         }
                     },
                     backwardsDeleteText: { [weak self] in
@@ -510,6 +542,16 @@ final class GiftSetupScreenComponent: Component {
                         }
                     }
                 )
+                
+                if case .starGift = component.subject {
+                    self.optionsDisposable = (component.context.engine.payments.starsTopUpOptions()
+                    |> deliverOnMainQueue).start(next: { [weak self] options in
+                        guard let self else {
+                            return
+                        }
+                        self.options = options
+                    })
+                }
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -564,17 +606,17 @@ final class GiftSetupScreenComponent: Component {
             contentHeight += 26.0
             
             if case let .starGift(starGift) = component.subject, let availability = starGift.availability {
-                //TODO:localize
-                let remains: Int32 = Int32(CGFloat(availability.remains) * 0.66)
-                let position = CGFloat(remains) / CGFloat(availability.total)
-                let remainsString = "\(remains)" //presentationStringsFormattedNumber(remains, environment.dateTimeFormat.groupingSeparator)
-                let totalString = presentationStringsFormattedNumber(availability.total, environment.dateTimeFormat.groupingSeparator)
+                let remains: Int32 = availability.remains
+                let total: Int32 = availability.total
+                let position = CGFloat(remains) / CGFloat(total)
+                let remainsString = presentationStringsFormattedNumber(remains, environment.dateTimeFormat.groupingSeparator)
+                let totalString = presentationStringsFormattedNumber(total, environment.dateTimeFormat.groupingSeparator)
                 let remainingCountSize = self.remainingCount.update(
                     transition: transition,
                     component: AnyComponent(RemainingCountComponent(
                         inactiveColor: environment.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.3),
                         activeColors: [UIColor(rgb: 0x5bc2ff), UIColor(rgb: 0x2d9eff)],
-                        inactiveTitle: "Limited",
+                        inactiveTitle: environment.strings.Gift_Send_Limited,
                         inactiveValue: "",
                         inactiveTitleColor: environment.theme.list.itemSecondaryTextColor,
                         activeTitle: "",
@@ -583,7 +625,9 @@ final class GiftSetupScreenComponent: Component {
                         badgeText: "\(remainsString)",
                         badgePosition: position,
                         badgeGraphPosition: position,
-                        invertProgress: true
+                        invertProgress: true,
+                        leftString: environment.strings.Gift_Send_Remains(remains).replacingOccurrences(of: remainsString, with: "").trimmingCharacters(in: .whitespacesAndNewlines),
+                        groupingSeparator: environment.dateTimeFormat.groupingSeparator
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
@@ -815,6 +859,31 @@ final class GiftSetupScreenComponent: Component {
                 self.starImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: environment.theme.list.itemCheckColors.foregroundColor)!, environment.theme)
             }
 
+            let buttonHeight: CGFloat = 50.0
+            let bottomPanelPadding: CGFloat = 12.0
+            let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
+            let bottomPanelHeight = bottomPanelPadding + buttonHeight + bottomInset
+
+            let bottomPanelSize = self.buttonBackground.update(
+                transition: transition,
+                component: AnyComponent(BlurredBackgroundComponent(
+                    color: environment.theme.rootController.tabBar.backgroundColor
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: bottomPanelHeight)
+            )
+            self.buttonSeparator.backgroundColor = environment.theme.rootController.tabBar.separatorColor.cgColor
+            
+            if let view = self.buttonBackground.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                    self.layer.addSublayer(self.buttonSeparator)
+                }
+                view.frame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelSize.height), size: bottomPanelSize)
+                self.buttonSeparator.frame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelSize.height), size: CGSize(width: availableSize.width, height: UIScreenPixel))
+            }
+            
+            var buttonIsEnabled = true
             let buttonString: String
             switch component.subject {
             case let .premium(product):
@@ -823,6 +892,9 @@ final class GiftSetupScreenComponent: Component {
             case let .starGift(starGift):
                 let amountString = presentationStringsFormattedNumber(Int32(starGift.price), presentationData.dateTimeFormat.groupingSeparator)
                 buttonString = "\(environment.strings.Gift_Send_Send)  #  \(amountString)"
+                if let availability = starGift.availability, availability.remains == 0 {
+                    buttonIsEnabled = false
+                }
             }
             
             let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
@@ -845,20 +917,20 @@ final class GiftSetupScreenComponent: Component {
                         id: AnyHashable(0),
                         component: AnyComponent(MultilineTextComponent(text: .plain(buttonAttributedString)))
                     ),
-                    isEnabled: true,
+                    isEnabled: buttonIsEnabled,
                     displaysProgress: self.inProgress,
                     action: { [weak self] in
                         self?.proceed()
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50)
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: buttonHeight)
             )
             if let buttonView = self.button.view {
                 if buttonView.superview == nil {
                     self.addSubview(buttonView)
                 }
-                buttonView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - buttonSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - buttonSize.height), size: buttonSize)
+                buttonView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - buttonSize.width) / 2.0), y: availableSize.height - bottomPanelHeight + bottomPanelPadding), size: buttonSize)
             }
             
             if self.textInputState.isEditing, let emojiSuggestion = self.textInputState.currentEmojiSuggestion, emojiSuggestion.disposable == nil {
@@ -1002,7 +1074,7 @@ final class GiftSetupScreenComponent: Component {
                     }
                 }
             }
-            if self.recenterOnTag == nil && self.previousHadInputHeight != (environment.inputHeight > 0.0) {
+            if self.recenterOnTag == nil && self.previousHadInputHeight != (environment.inputHeight > 0.0), case .keyboard = self.currentInputMode {
                 if self.textInputState.isEditing {
                     self.recenterOnTag = self.textInputTag
                 }
@@ -1250,9 +1322,6 @@ public final class GiftSetupScreen: ViewControllerComponentContainer {
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    deinit {
     }
     
     @objc private func cancelPressed() {

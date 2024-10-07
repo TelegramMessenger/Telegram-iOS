@@ -181,10 +181,12 @@ private final class GiftViewSheetContent: CombinedComponent {
             let text: String?
             let entities: [MessageTextEntity]?
             let limitTotal: Int32?
+            var outgoing = false
             var incoming = false
             var savedToProfile = false
             var converted = false
             var giftId: Int64 = 0
+            var date: Int32 = 0
             if let arguments = component.subject.arguments {
                 animationFile = arguments.gift.file
                 stars = arguments.gift.price
@@ -192,10 +194,16 @@ private final class GiftViewSheetContent: CombinedComponent {
                 entities = arguments.entities
                 limitTotal = arguments.gift.availability?.total
                 convertStars = arguments.convertStars
+                if case .message = component.subject {
+                    outgoing = !arguments.incoming
+                } else {
+                    outgoing = false
+                }
                 incoming = arguments.incoming || arguments.peerId == component.context.account.peerId
                 savedToProfile = arguments.savedToProfile
                 converted = arguments.converted
                 giftId = arguments.gift.id
+                date = arguments.date
             } else {
                 animationFile = nil
                 stars = 0
@@ -236,12 +244,12 @@ private final class GiftViewSheetContent: CombinedComponent {
             }
             
             var formattedAmount = presentationStringsFormattedNumber(abs(Int32(stars)), dateTimeFormat.groupingSeparator)
-            if !incoming && stars > 0 {
+            if outgoing {
                 formattedAmount = "- \(formattedAmount)"
             }
             let countFont: UIFont = Font.semibold(17.0)
             let amountText = formattedAmount
-            let countColor = incoming ? theme.list.itemDisclosureActions.constructive.fillColor : theme.list.itemDestructiveColor
+            let countColor = outgoing ? theme.list.itemDestructiveColor : theme.list.itemDisclosureActions.constructive.fillColor
             
             let title = title.update(
                 component: MultilineTextComponent(
@@ -333,7 +341,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 id: "date",
                 title: strings.Gift_View_Date,
                 component: AnyComponent(
-                    MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: Int32(Date().timeIntervalSince1970), strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
+                    MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
                 )
             ))
             
@@ -342,11 +350,13 @@ private final class GiftViewSheetContent: CombinedComponent {
                 if let gift = state.starGiftsMap[giftId], let availability = gift.availability {
                     remains = availability.remains
                 }
+                let remainsString = presentationStringsFormattedNumber(remains, environment.dateTimeFormat.groupingSeparator)
+                let totalString = presentationStringsFormattedNumber(limitTotal, environment.dateTimeFormat.groupingSeparator)
                 tableItems.append(.init(
                     id: "availability",
                     title: strings.Gift_View_Availability,
                     component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_View_Availability_Of("\(remains)", "\(limitTotal)").string, font: tableFont, textColor: tableTextColor)))
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_View_Availability_Of("\(remainsString)", "\(totalString)").string, font: tableFont, textColor: tableTextColor)))
                     )
                 ))
             }
@@ -363,7 +373,9 @@ private final class GiftViewSheetContent: CombinedComponent {
                             animationCache: component.context.animationCache,
                             animationRenderer: component.context.animationRenderer,
                             placeholderColor: theme.list.mediaPlaceholderColor,
-                            text: .plain(attributedText)
+                            text: .plain(attributedText),
+                            maximumNumberOfLines: 0,
+                            handleSpoilers: true
                         )
                     )
                 ))
@@ -719,14 +731,14 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         case message(EngineMessage)
         case profileGift(EnginePeer.Id, ProfileGiftsContext.State.StarGift)
         
-        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, convertStars: Int64, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool)? {
+        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool)? {
             switch self {
             case let .message(message):
                 if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted) = action.action {
-                    return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, convertStars, text, entities, nameHidden, savedToProfile, converted)
+                    return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted)
                 }
             case let .profileGift(peerId, gift):
-                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.convertStars ?? 0, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false)
+                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.date, gift.convertStars ?? 0, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false)
             }
             return nil
         }
@@ -905,7 +917,6 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 return
             }
             let introController = context.sharedContext.makeStarsIntroScreen(context: context)
-            introController.navigationPresentation = .modal
             self.push(introController)
         }
     }
@@ -1067,17 +1078,26 @@ private final class TableComponent: CombinedComponent {
                 } else {
                     insets = UIEdgeInsets(top: 0.0, left: horizontalPadding, bottom: 0.0, right: horizontalPadding)
                 }
-                let valueChild = valueChildren[item.id].update(
-                    component: item.component,
-                    availableSize: CGSize(width: rightColumnWidth - insets.left - insets.right, height: context.availableSize.height),
-                    transition: context.transition
-                )
-                updatedValueChildren.append((valueChild, insets))
                 
                 var titleHeight: CGFloat = 0.0
                 if let titleChild = updatedTitleChildren[i] {
                     titleHeight = titleChild.size.height
                 }
+                
+                let availableValueWidth: CGFloat
+                if titleHeight > 0.0 {
+                    availableValueWidth = rightColumnWidth
+                } else {
+                    availableValueWidth = context.availableSize.width
+                }
+                
+                let valueChild = valueChildren[item.id].update(
+                    component: item.component,
+                    availableSize: CGSize(width: availableValueWidth - insets.left - insets.right, height: context.availableSize.height),
+                    transition: context.transition
+                )
+                updatedValueChildren.append((valueChild, insets))
+               
                 let rowHeight = max(40.0, max(titleHeight, valueChild.size.height) + verticalPadding * 2.0)
                 rowHeights[i] = rowHeight
                 totalHeight += rowHeight

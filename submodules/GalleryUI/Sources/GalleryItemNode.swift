@@ -25,7 +25,7 @@ open class GalleryItemNode: ASDisplayNode {
     public var updateOrientation: (UIInterfaceOrientation) -> Void = { _ in }
     public var dismiss: () -> Void = { }
     public var beginCustomDismiss: (Bool) -> Void = { _ in }
-    public var completeCustomDismiss: () -> Void = { }
+    public var completeCustomDismiss: (Bool) -> Void = { _ in }
     public var baseNavigationController: () -> NavigationController? = { return nil }
     public var galleryController: () -> ViewController? = { return nil }
     public var alternativeDismiss: () -> Bool = { return false }

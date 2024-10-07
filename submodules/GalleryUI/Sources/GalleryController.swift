@@ -1405,8 +1405,15 @@ public class GalleryController: ViewController, StandalonePresentableController,
             }
         }
         
-        self.galleryNode.completeCustomDismiss = { [weak self] in
-            self?._hiddenMedia.set(.single(nil))
+        self.galleryNode.completeCustomDismiss = { [weak self] isPictureInPicture in
+            if isPictureInPicture {
+                if let chatController = self?.baseNavigationController?.topViewController as? ChatController {
+                    chatController.updatePushedTransition(0.0, transition: .animated(duration: 0.45, curve: .customSpring(damping: 180.0, initialVelocity: 0.0)))
+                }
+            } else {
+                self?._hiddenMedia.set(.single(nil))
+            }
+            
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         

@@ -109,6 +109,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     public override func didLoad() {
         super.didLoad()
         
+        self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         self.scrollNode.view.delegate = self
     }
     
@@ -136,28 +137,32 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             
             let visibleBounds = self.scrollNode.bounds.insetBy(dx: 0.0, dy: -10.0)
             
+            let topInset: CGFloat = 60.0
+            
             var validIds: [AnyHashable] = []
-            var itemFrame = CGRect(origin: CGPoint(x: sideInset, y: 60.0), size: starsOptionSize)
+            var itemFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: starsOptionSize)
+            
+            var index: Int32 = 0
             for product in starsProducts {
-                let itemId = AnyHashable(product.date)
-                validIds.append(itemId)
-                
-                var itemTransition = transition
-                let visibleItem: ComponentView<Empty>
-                if let current = self.starsItems[itemId] {
-                    visibleItem = current
-                } else {
-                    visibleItem = ComponentView()
-                    self.starsItems[itemId] = visibleItem
-                    itemTransition = .immediate
-                }
-                
                 var isVisible = false
                 if visibleBounds.intersects(itemFrame) {
                     isVisible = true
                 }
                 
                 if isVisible {
+                    let itemId = AnyHashable(index)
+                    validIds.append(itemId)
+                    
+                    var itemTransition = transition
+                    let visibleItem: ComponentView<Empty>
+                    if let current = self.starsItems[itemId] {
+                        visibleItem = current
+                    } else {
+                        visibleItem = ComponentView()
+                        self.starsItems[itemId] = visibleItem
+                        itemTransition = .immediate
+                    }
+                    
                     let ribbonText: String?
                     if let availability = product.gift.availability {
                         ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(availability.total))).string
@@ -221,6 +226,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     itemFrame.origin.x = sideInset
                     itemFrame.origin.y += starsOptionSize.height + optionSpacing
                 }
+                index += 1
             }
             
             var removeIds: [AnyHashable] = []
@@ -243,8 +249,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 self.starsItems.removeValue(forKey: id)
             }
             
-            var contentHeight = ceil(CGFloat(starsProducts.count) / 3.0) * starsOptionSize.height + 60.0 + 16.0
-            
+            var bottomScrollInset: CGFloat = 0.0
+            var contentHeight = ceil(CGFloat(starsProducts.count) / 3.0) * (starsOptionSize.height + optionSpacing) - optionSpacing + topInset + 16.0
             if self.peerId == self.context.account.peerId {
                 let transition = ComponentTransition.immediate
                 
@@ -318,7 +324,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 transition.setFrame(view: unlockButton.view, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - buttonSize.height - scrollOffset), size: buttonSize))
                 let _ = unlockButton.updateLayout(width: buttonSize.width, transition: .immediate)
                 
-                transition.setFrame(view: unlockBackground.view, frame: CGRect(x: 0.0, y: size.height - bottomInset - buttonSize.height - 8.0 - scrollOffset, width: size.width, height: bottomInset + buttonSize.height + 8.0))
+                let bottomPanelHeight = bottomInset + buttonSize.height + 8.0
+                transition.setFrame(view: unlockBackground.view, frame: CGRect(x: 0.0, y: size.height - bottomInset - buttonSize.height - 8.0 - scrollOffset, width: size.width, height: bottomPanelHeight))
                 transition.setFrame(view: unlockSeparator.view, frame: CGRect(x: 0.0, y: size.height - bottomInset - buttonSize.height - 8.0 - scrollOffset, width: size.width, height: UIScreenPixel))
                 
                 let unlockSize = unlockText.update(
@@ -342,8 +349,13 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: floor((size.width - unlockSize.width) / 2.0), y: contentHeight), size: unlockSize))
                 }
                 contentHeight += unlockSize.height
+                contentHeight += bottomPanelHeight
+                
+                bottomScrollInset = bottomPanelHeight - 40.0
             }
             contentHeight += params.bottomInset
+            
+            self.scrollNode.view.scrollIndicatorInsets = UIEdgeInsets(top: 50.0, left: 0.0, bottom: bottomScrollInset, right: 0.0)
             
             let contentSize = CGSize(width: params.size.width, height: contentHeight)
             if self.scrollNode.view.contentSize != contentSize {
@@ -351,8 +363,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             }
         }
         
-        let bottomOffset = max(0.0, self.scrollNode.view.contentSize.height - self.scrollNode.view.contentOffset.y - self.scrollNode.view.frame.height)
-        if bottomOffset < 100.0 {
+        let bottomContentOffset = max(0.0, self.scrollNode.view.contentSize.height - self.scrollNode.view.contentOffset.y - self.scrollNode.view.frame.height)
+        if bottomContentOffset < 200.0 {
             self.profileGifts.loadMore()
         }
     }

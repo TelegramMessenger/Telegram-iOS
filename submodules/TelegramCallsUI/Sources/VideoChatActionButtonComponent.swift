@@ -160,11 +160,11 @@ final class VideoChatActionButtonComponent: Component {
                 case .unmuted:
                     backgroundColor = !isActive ? UIColor(rgb: 0x124B21) : UIColor(rgb: 0x34C659)
                 case .raiseHand, .scheduled:
-                    backgroundColor = UIColor(rgb: 0x3252EF)
+                    backgroundColor = !isActive ? UIColor(rgb: 0x23306B) : UIColor(rgb: 0x3252EF)
                 }
                 iconDiameter = 60.0
             case let .video(isActive):
-                titleText = "video"
+                titleText = component.strings.VoiceChat_Video
                 switch component.microphoneState {
                 case .connecting:
                     backgroundColor = UIColor(white: 0.1, alpha: 1.0)
@@ -177,7 +177,7 @@ final class VideoChatActionButtonComponent: Component {
                 }
                 iconDiameter = 60.0
             case .leave:
-                titleText = "leave"
+                titleText = component.strings.VoiceChat_Leave
                 backgroundColor = UIColor(rgb: 0x47191E)
                 iconDiameter = 22.0
             }
@@ -282,6 +282,7 @@ final class VideoChatActionButtonComponent: Component {
             }
             
             self.isEnabled = isEnabled
+            self.isUserInteractionEnabled = isEnabled
             
             return size
         }

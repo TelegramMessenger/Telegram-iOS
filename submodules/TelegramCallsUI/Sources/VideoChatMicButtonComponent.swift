@@ -189,6 +189,7 @@ final class VideoChatMicButtonComponent: Component {
     }
     
     let call: PresentationGroupCall
+    let strings: PresentationStrings
     let content: Content
     let isCollapsed: Bool
     let updateUnmutedStateIsPushToTalk: (Bool?) -> Void
@@ -197,6 +198,7 @@ final class VideoChatMicButtonComponent: Component {
 
     init(
         call: PresentationGroupCall,
+        strings: PresentationStrings,
         content: Content,
         isCollapsed: Bool,
         updateUnmutedStateIsPushToTalk: @escaping (Bool?) -> Void,
@@ -204,6 +206,7 @@ final class VideoChatMicButtonComponent: Component {
         scheduleAction: @escaping () -> Void
     ) {
         self.call = call
+        self.strings = strings
         self.content = content
         self.isCollapsed = isCollapsed
         self.updateUnmutedStateIsPushToTalk = updateUnmutedStateIsPushToTalk
@@ -327,29 +330,29 @@ final class VideoChatMicButtonComponent: Component {
             var isEnabled = true
             switch component.content {
             case .connecting:
-                titleText = "Connecting..."
+                titleText = component.strings.VoiceChat_Connecting
                 isEnabled = false
             case .muted:
-                titleText = "Unmute"
+                titleText = component.strings.VoiceChat_Unmute
             case let .unmuted(isPushToTalk):
-                titleText = isPushToTalk ? "You are Live" : "Tap to Mute"
+                titleText = isPushToTalk ? component.strings.VoiceChat_Live : component.strings.VoiceChat_Mute
             case let .raiseHand(isRaised):
                 if isRaised {
-                    titleText = "You asked to speak"
-                    subtitleText = "We let the speakers know"
+                    titleText = component.strings.VoiceChat_AskedToSpeak
+                    subtitleText = component.strings.VoiceChat_AskedToSpeakHelp
                 } else {
-                    titleText = "Muted by Admin"
-                    subtitleText = "Tap if you want to speak"
+                    titleText = component.strings.VoiceChat_MutedByAdmin
+                    subtitleText = component.strings.VoiceChat_MutedByAdminHelp
                 }
             case let .scheduled(state):
                 switch state {
                 case .start:
-                    titleText = "Start Now"
+                    titleText = component.strings.VoiceChat_StartNow
                 case let .toggleSubscription(isSubscribed):
                     if isSubscribed {
-                        titleText = "Clear Reminder"
+                        titleText = component.strings.VoiceChat_CancelReminder
                     } else {
-                        titleText = "Set Reminder"
+                        titleText = component.strings.VoiceChat_SetReminder
                     }
                 }
             }

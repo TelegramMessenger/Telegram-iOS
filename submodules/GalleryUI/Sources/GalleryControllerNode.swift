@@ -25,7 +25,7 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
     public var pager: GalleryPagerNode
     
     public var beginCustomDismiss: (Bool) -> Void = { _ in }
-    public var completeCustomDismiss: () -> Void = { }
+    public var completeCustomDismiss: (Bool) -> Void = { _ in }
     public var baseNavigationController: () -> NavigationController? = { return nil }
     public var galleryController: () -> ViewController? = { return nil }
     
@@ -123,9 +123,9 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
             }
         }
         
-        self.pager.completeCustomDismiss = { [weak self] in
+        self.pager.completeCustomDismiss = { [weak self] isPictureInPicture in
             if let strongSelf = self {
-                strongSelf.completeCustomDismiss()
+                strongSelf.completeCustomDismiss(isPictureInPicture)
             }
         }
         

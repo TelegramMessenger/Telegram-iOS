@@ -108,11 +108,9 @@ private final class ArchiveInfoSheetContentComponent: Component {
             }
             contentHeight += buttonSize.height
             
-            if environment.safeInsets.bottom.isZero {
-                contentHeight += 16.0
-            } else {
-                contentHeight += environment.safeInsets.bottom + 14.0
-            }
+            let bottomPanelPadding: CGFloat = 12.0
+            let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
+            contentHeight += bottomInset
             
             return CGSize(width: availableSize.width, height: contentHeight)
         }
@@ -226,7 +224,7 @@ private final class ArchiveInfoScreenComponent: Component {
                             })
                         }
                     )),
-                    backgroundColor: .color(environment.theme.list.plainBackgroundColor),
+                    backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     animateOut: self.sheetAnimateOut
                 )),
                 environment: {

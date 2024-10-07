@@ -13008,6 +13008,8 @@ Sorry for the inconvenience.";
 "Gift.Options.Gift.Filter.AllGifts" = "All Gifts";
 "Gift.Options.Gift.Filter.Limited" = "Limited";
 "Gift.Options.Gift.Limited" = "Limited";
+"Gift.Options.Gift.SoldOut" = "Sold Out";
+"Gift.Options.SoldOut.Text" = "Sorry, this gift is sold out.";
 
 "PeerInfo.PaneGifts" = "Gifts";
 
@@ -13038,6 +13040,12 @@ Sorry for the inconvenience.";
 "Gift.Send.HideMyName" = "Hide My Name";
 "Gift.Send.HideMyName.Info" = "Hide my name and message from visitors to %1$@'s profile. %2$@ will still see your name and message.";
 "Gift.Send.Send" = "Send a Gift for";
+"Gift.Send.Limited" = "Limited";
+"Gift.Send.Remains_1" = "%@ left";
+"Gift.Send.Remains_any" = "%@ left";
+
+"Gift.Send.ErrorUnknown" = "An error occurred. Please try again.";
+"Gift.Send.ErrorOutOfStock" = "Sorry, this gift is sold out. Please choose another gift.";
 
 "Profile.SendGift" = "Send a Gift";
 "Settings.SendGift" = "Send a Gift";
@@ -13049,6 +13057,7 @@ Sorry for the inconvenience.";
 "Report.Title.User" = "Report User";
 "Report.Title.Group" = "Report Group";
 "Report.Title.Channel" = "Report Channel";
+"Report.Title.Bot" = "Report Bot";
 "Report.Comment.Placeholder" = "Add Comment";
 "Report.Comment.Placeholder.Optional" = "Add Comment (Optional)";
 "Report.Comment.Info" = "Please help us by telling what is wrong with the message you have selected.";
@@ -13059,8 +13068,12 @@ Sorry for the inconvenience.";
 
 "Notification.PremiumGift.YearsTitle_1" = "%@ Year Premium";
 "Notification.PremiumGift.YearsTitle_any" = "%@ Years Premium";
+"Notification.PremiumGift.More" = "more";
 
 "Notification.PremiumGift.SubscriptionDescription" = "Subscription for exclusive Telegram features.";
 
 "Notification.StarsGift.Stars_1" = "%@ Star";
 "Notification.StarsGift.Stars_any" = "%@ Stars";
+
+"WebBrowser.AuthChallenge.Title" = "Sign in to %@";
+"WebBrowser.AuthChallenge.Text" = "Your login information will be sent securely.";

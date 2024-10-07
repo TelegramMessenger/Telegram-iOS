@@ -1022,7 +1022,7 @@ final class VideoChatScreenComponent: Component {
                         if case let .channel(channel) = self.peer, case .broadcast = channel.info {
                             displayEvent = false
                         }
-                        if members.totalCount < 250 {
+                        if members.totalCount < 40 {
                             displayEvent = true
                         } else if event.peer.isVerified {
                             displayEvent = true
@@ -1270,9 +1270,9 @@ final class VideoChatScreenComponent: Component {
                 if callState.networkState == .connected, let members = self.members {
                     idleTitleStatusText = environment.strings.VoiceChat_Panel_Members(Int32(max(1, members.totalCount)))
                 } else if callState.scheduleTimestamp != nil {
-                    idleTitleStatusText = "scheduled"
+                    idleTitleStatusText = environment.strings.VoiceChat_Scheduled
                 } else {
-                    idleTitleStatusText = "connecting..."
+                    idleTitleStatusText = environment.strings.VoiceChat_Connecting
                 }
             } else {
                 idleTitleStatusText = " "
@@ -1686,6 +1686,7 @@ final class VideoChatScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(VideoChatMicButtonComponent(
                     call: component.call,
+                    strings: environment.strings,
                     content: micButtonContent,
                     isCollapsed: areButtonsCollapsed,
                     updateUnmutedStateIsPushToTalk: { [weak self] unmutedStateIsPushToTalk in
