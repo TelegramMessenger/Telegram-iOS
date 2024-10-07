@@ -337,7 +337,6 @@ public class Window1 {
     public init(hostView: WindowHostView, statusBarHost: StatusBarHost?) {
         self.hostView = hostView
         self.badgeView = UIImageView()
-        self.badgeView.image = UIImage(bundleImageName: "Components/AppBadge")
         self.badgeView.isHidden = true
         
         self.systemUserInterfaceStyle = hostView.systemUserInterfaceStyle
@@ -725,19 +724,7 @@ public class Window1 {
         }
     }
     
-    private func updateBadgeVisibility() {
-        let badgeIsHidden = !self.deviceMetrics.showAppBadge || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
-        if badgeIsHidden != self.badgeView.isHidden && !badgeIsHidden {
-            Queue.mainQueue().after(0.4) {
-                let badgeShouldBeHidden = !self.deviceMetrics.showAppBadge || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
-                if badgeShouldBeHidden == badgeIsHidden {
-                    self.badgeView.isHidden = badgeIsHidden
-                }
-            }
-        } else {
-            self.badgeView.isHidden = badgeIsHidden
-        }
-    }
+    private func updateBadgeVisibility() {}
     
     public func setForceInCallStatusBar(_ forceInCallStatusBarText: String?, transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)) {
         if self.forceInCallStatusBarText != forceInCallStatusBarText {
