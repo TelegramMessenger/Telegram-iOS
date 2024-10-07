@@ -772,7 +772,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.context,
                         params.width,
                         item.presentationData,
-                        formatTonAmountText(stats.balances.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
+                        formatTonAmountText(stats.balances.availableBalance, dateTimeFormat: item.presentationData.dateTimeFormat),
                         item.presentationData.strings.Monetization_StarsProceeds_Available,
                         (stats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.availableBalance, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .ton
@@ -782,7 +782,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.context,
                         params.width,
                         item.presentationData,
-                        formatTonAmountText(stats.balances.currentBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
+                        formatTonAmountText(stats.balances.currentBalance, dateTimeFormat: item.presentationData.dateTimeFormat),
                         item.presentationData.strings.Monetization_StarsProceeds_Current,
                         (stats.balances.currentBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.currentBalance, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .ton
@@ -792,7 +792,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.context,
                         params.width,
                         item.presentationData,
-                        formatTonAmountText(stats.balances.overallRevenue, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
+                        formatTonAmountText(stats.balances.overallRevenue, dateTimeFormat: item.presentationData.dateTimeFormat),
                         item.presentationData.strings.Monetization_StarsProceeds_Total,
                         (stats.balances.overallRevenue == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.overallRevenue, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .ton
@@ -836,7 +836,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.context,
                         params.width,
                         item.presentationData,
-                        formatTonAmountText(stats.balances.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
+                        formatTonAmountText(stats.balances.availableBalance, dateTimeFormat: item.presentationData.dateTimeFormat),
                         item.presentationData.strings.Monetization_Overview_Available,
                         (stats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.availableBalance, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .ton
@@ -846,7 +846,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.context,
                         params.width,
                         item.presentationData,
-                        formatTonAmountText(stats.balances.currentBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
+                        formatTonAmountText(stats.balances.currentBalance, dateTimeFormat: item.presentationData.dateTimeFormat),
                         item.presentationData.strings.Monetization_Overview_Current,
                         (stats.balances.currentBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.currentBalance, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .ton
@@ -856,7 +856,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.context,
                         params.width,
                         item.presentationData,
-                        formatTonAmountText(stats.balances.overallRevenue, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
+                        formatTonAmountText(stats.balances.overallRevenue, dateTimeFormat: item.presentationData.dateTimeFormat),
                         item.presentationData.strings.Monetization_Overview_Total,
                         (stats.balances.overallRevenue == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.overallRevenue, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .ton

@@ -342,13 +342,16 @@ class GeneralChartComponentController: ChartThemeContainer {
                                                visible: chartVisibility[index])
         }
         
-        if let currency, let firstValue = values.first, let color = GColor(hexString: "#dda747") {
+        if let currency, let firstValue = values.first, let starColor = GColor(hexString: "#dda747") {
             let updatedTitle: String
+            let color: GColor
             switch currency {
             case .ton:
                 updatedTitle = self.strings.revenueInTon
+                color = firstValue.color
             case .xtr:
                 updatedTitle = self.strings.revenueInStars
+                color = starColor
             }
             values[0] = ChartDetailsViewModel.Value(
                 prefix: nil,

@@ -1167,7 +1167,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     detailText = stringForMediumCompactDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
                 }
             
-                let label = tonAmountAttributedString(formatTonAmountText(transaction.amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, showPlus: true), integralFont: font, fractionalFont: smallLabelFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
+                let label = tonAmountAttributedString(formatTonAmountText(transaction.amount, dateTimeFormat: presentationData.dateTimeFormat, showPlus: true), integralFont: font, fractionalFont: smallLabelFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
             
                 label.insert(NSAttributedString(string: " $ ", font: font, textColor: labelColor), at: 1)
                 if let range = label.string.range(of: "$"), let icon = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonMedium"), color: labelColor) {

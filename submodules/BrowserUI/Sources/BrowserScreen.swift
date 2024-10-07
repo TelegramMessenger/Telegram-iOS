@@ -569,10 +569,10 @@ public class BrowserScreen: ViewController, MinimizableController {
                     var isDocument = false
                     if let content = self.content.last {
                         if let documentContent = content as? BrowserDocumentContent {
-                            subject = .media(.standalone(media: documentContent.file))
+                            subject = .media(documentContent.file.abstract)
                             isDocument = true
                         } else if let documentContent = content as? BrowserPdfContent {
-                            subject = .media(.standalone(media: documentContent.file))
+                            subject = .media(documentContent.file.abstract)
                             isDocument = true
                         } else {
                             subject = .url(url)
@@ -650,7 +650,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                         switch controller.subject {
                         case let .document(file, canShare), let .pdfDocument(file, canShare):
                             processed = true
-                            controller.openDocument(file, canShare)
+                            controller.openDocument(file.media, canShare)
                         default:
                             break
                         }
@@ -1486,13 +1486,13 @@ public class BrowserScreen: ViewController, MinimizableController {
     public enum Subject {
         case webPage(url: String)
         case instantPage(webPage: TelegramMediaWebpage, anchor: String?, sourceLocation: InstantPageSourceLocation, preloadedResources: [Any]?)
-        case document(file: TelegramMediaFile, canShare: Bool)
-        case pdfDocument(file: TelegramMediaFile, canShare: Bool)
+        case document(file: FileMediaReference, canShare: Bool)
+        case pdfDocument(file: FileMediaReference, canShare: Bool)
         
         public var fileId: MediaId? {
             switch self {
             case let .document(file, _), let .pdfDocument(file, _):
-                return file.fileId
+                return file.media.fileId
             default:
                 return nil
             }

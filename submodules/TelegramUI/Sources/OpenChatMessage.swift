@@ -250,9 +250,9 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                             
                             let subject: BrowserScreen.Subject
                             if file.mimeType == "application/pdf" {
-                                subject = .pdfDocument(file: file, canShare: canShare)
+                                subject = .pdfDocument(file: .message(message: MessageReference(params.message), media: file), canShare: canShare)
                             } else {
-                                subject = .document(file: file, canShare: canShare)
+                                subject = .document(file: .message(message: MessageReference(params.message), media: file), canShare: canShare)
                             }
                             let controller = BrowserScreen(context: params.context, subject: subject)
                             controller.openDocument = { file, canShare in

@@ -139,7 +139,7 @@ private final class SheetContent: CombinedComponent {
             switch component.transaction {
             case let .proceeds(amount, fromDate, toDate):
                 labelColor = theme.list.itemDisclosureActions.constructive.fillColor
-                amountString = tonAmountAttributedString(formatTonAmountText(amount, decimalSeparator: dateTimeFormat.decimalSeparator, showPlus: true), integralFont: integralFont, fractionalFont: fractionalFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
+                amountString = tonAmountAttributedString(formatTonAmountText(amount, dateTimeFormat: dateTimeFormat, showPlus: true), integralFont: integralFont, fractionalFont: fractionalFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
                 dateString = "\(stringForMediumCompactDate(timestamp: fromDate, strings: strings, dateTimeFormat: dateTimeFormat)) – \(stringForMediumCompactDate(timestamp: toDate, strings: strings, dateTimeFormat: dateTimeFormat))"
                 titleString = strings.Monetization_TransactionInfo_Proceeds
                 buttonTitle = strings.Common_OK
@@ -147,7 +147,7 @@ private final class SheetContent: CombinedComponent {
                 showPeer = true
             case let .withdrawal(status, amount, date, provider, _, transactionUrl):
                 labelColor = theme.list.itemDestructiveColor
-                amountString = tonAmountAttributedString(formatTonAmountText(amount, decimalSeparator: dateTimeFormat.groupingSeparator), integralFont: integralFont, fractionalFont: fractionalFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
+                amountString = tonAmountAttributedString(formatTonAmountText(amount, dateTimeFormat: dateTimeFormat), integralFont: integralFont, fractionalFont: fractionalFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
                 dateString = stringForFullDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat)
                 
                 switch status {
@@ -166,7 +166,7 @@ private final class SheetContent: CombinedComponent {
             case let .refund(amount, date, _):
                 labelColor = theme.list.itemDisclosureActions.constructive.fillColor
                 titleString = strings.Monetization_TransactionInfo_Refund
-                amountString = tonAmountAttributedString(formatTonAmountText(amount, decimalSeparator: dateTimeFormat.decimalSeparator, showPlus: true), integralFont: integralFont, fractionalFont: fractionalFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
+                amountString = tonAmountAttributedString(formatTonAmountText(amount, dateTimeFormat: dateTimeFormat, showPlus: true), integralFont: integralFont, fractionalFont: fractionalFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
                 dateString = stringForFullDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat)
                 buttonTitle = strings.Common_OK
                 explorerUrl = nil
