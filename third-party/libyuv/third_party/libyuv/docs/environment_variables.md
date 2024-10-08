@@ -4,7 +4,7 @@ For test purposes, environment variables can be set to control libyuv behavior. 
 
 # CPU
 
-By default the cpu is detected and the most advanced form of SIMD is used.  But you can disable instruction sets selectively, or completely, falling back on C code.  Set the variable to 1 to disable the specified instruction set.
+By default the CPU is detected and the most advanced form of SIMD is used.  But you can disable instruction sets selectively, or completely, falling back on C code.  Set the variable to 1 to disable the specified instruction set.
 
 ## All CPUs
     LIBYUV_DISABLE_ASM
@@ -47,7 +47,7 @@ By default the cpu is detected and the most advanced form of SIMD is used.  But 
 
 # Test Width/Height/Repeat
 
-The unittests default to a small image (128x72) to run fast.  This can be set by environment variable to test a specific resolutions.
+The unittests default to a small image (128 x 72) to run fast.  This can be set by environment variable to test a specific resolution.
 You can also repeat the test a specified number of iterations, allowing benchmarking and profiling.
 
     set LIBYUV_WIDTH=1280
