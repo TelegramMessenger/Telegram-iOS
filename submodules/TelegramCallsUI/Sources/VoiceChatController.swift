@@ -7098,10 +7098,7 @@ final class VoiceChatContextReferenceContentSource: ContextReferenceContentSourc
 }
 
 public func shouldUseV2VideoChatImpl(context: AccountContext) -> Bool {
-    var useV2 = false
-    if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_enable_videochatui_v2"] {
-        useV2 = true
-    }
+    var useV2 = true
     if context.sharedContext.immediateExperimentalUISettings.disableCallV2 {
         useV2 = false
     }
