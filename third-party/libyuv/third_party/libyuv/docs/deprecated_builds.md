@@ -2,9 +2,9 @@
 
 Older documentation on build configs which are no longer supported.
 
-## Pre-requisites
+## Prerequisites
 
-You'll need to have depot tools installed: https://www.chromium.org/developers/how-tos/install-depot-tools
+You will need to have depot tools installed: https://www.chromium.org/developers/how-tos/install-depot-tools
 Refer to chromium instructions for each platform for other prerequisites.
 
 ## Getting the Code
@@ -15,7 +15,7 @@ Create a working directory, enter it, and run:
     gclient sync
 
 
-Then you'll get a .gclient file like:
+Then you will get a .gclient file as follows:
 
     solutions = [
       { "name"        : "libyuv",
@@ -54,7 +54,7 @@ Then run:
     export GYP_DEFINES="OS=android"
     gclient sync
 
-Caveat: Theres an error with Google Play services updates.  If you get the error "Your version of the Google Play services library is not up to date", run the following:
+Caveat: There is an error with Google Play services updates.  If you get the error "Your version of the Google Play services library is not up to date", run the following:
 
     cd chromium/src
     ./build/android/play_services/update.py download
@@ -175,11 +175,11 @@ Running tests:
 
     build/android/test_runner.py gtest -s libyuv_unittest -t 7200 --verbose --release --gtest_filter=*
 
-Running test as benchmark:
+Running tests as benchmark:
 
     build/android/test_runner.py gtest -s libyuv_unittest -t 7200 --verbose --release --gtest_filter=* -a "--libyuv_width=1280 --libyuv_height=720 --libyuv_repeat=999 --libyuv_flags=-1"
 
-Running test with C code:
+Running tests with C code:
 
     build/android/test_runner.py gtest -s libyuv_unittest -t 7200 --verbose --release --gtest_filter=* -a "--libyuv_width=1280 --libyuv_height=720 --libyuv_repeat=999 --libyuv_flags=1 --libyuv_cpu_info=1"
 
@@ -190,7 +190,7 @@ Running test with C code:
     ninja -C out/Release
     ninja -C out/Debug
 
-### Building Offical with GN
+### Building Official with GN
 
     gn gen out/Official "--args=is_debug=false is_official_build=true is_chrome_branded=true"
     ninja -C out/Official
@@ -222,7 +222,7 @@ On CentOS 32 bit the following work around allows a sync:
     export GYP_DEFINES="host_arch=ia32"
     gclient sync
 
-### Windows Shared Library
+### Windows shared library
 
 Modify libyuv.gyp from 'static_library' to 'shared_library', and add 'LIBYUV_BUILDING_SHARED_LIBRARY' to 'defines'.
 
@@ -244,7 +244,7 @@ If you get a compile error for atlthunk.lib on Windows, read http://www.chromium
     ninja -C out/Debug cpuid
 
 
-## Building the Library with make
+## Building the Library With make
 
 ### Linux
 
@@ -252,7 +252,7 @@ If you get a compile error for atlthunk.lib on Windows, read http://www.chromium
     make -j7 V=1 -f linux.mk clean
     make -j7 V=1 -f linux.mk CXX=clang++
 
-## Building the Library with cmake
+## Building the Library With cmake
 
 Install cmake: http://www.cmake.org/
 
@@ -271,9 +271,9 @@ Release build/install
     cmake --build . --config Release
     sudo cmake --build . --target install --config Release
 
-### Windows 8 Phone
+### Windows 8 phone
 
-Pre-requisite:
+Prerequisite:
 
 * Install Visual Studio 2012 and Arm to your environment.<br>
 
@@ -287,7 +287,7 @@ or with Visual Studio 2013:
     nmake /f winarm.mk clean
     nmake /f winarm.mk
 
-### Windows Shared Library
+### Windows shared library
 
 Modify libyuv.gyp from 'static_library' to 'shared_library', and add 'LIBYUV_BUILDING_SHARED_LIBRARY' to 'defines'. Then run this.
 
@@ -331,22 +331,22 @@ Replace --gtest_filter="*" with specific unittest to run.  May include wildcards
 
     out/Release/libyuv_unittest --gtest_filter=libyuvTest.I420ToARGB_Opt
 
-## CPU Emulator tools
+## CPU Emulator Tools
 
 ### Intel SDE (Software Development Emulator)
 
-Pre-requisite: Install IntelSDE for Windows: http://software.intel.com/en-us/articles/intel-software-development-emulator
+Prerequisite: Install IntelSDE for Windows: http://software.intel.com/en-us/articles/intel-software-development-emulator
 
 Then run:
 
     c:\intelsde\sde -hsw -- out\release\libyuv_unittest.exe --gtest_filter=*
 
 
-## Memory tools
+## Memory Tools
 
 ### Running Dr Memory memcheck for Windows
 
-Pre-requisite: Install Dr Memory for Windows and add it to your path: http://www.drmemory.org/docs/page_install_windows.html
+Prerequisite: Install Dr Memory for Windows and add it to your path: http://www.drmemory.org/docs/page_install_windows.html
 
     set GYP_DEFINES=build_for_tool=drmemory target_arch=ia32
     call python gyp_libyuv -fninja -G msvs_version=2013
@@ -389,7 +389,7 @@ Then run:
 
 For more information, see http://www.chromium.org/developers/how-tos/using-valgrind
 
-### Running Thread Sanitizer (TSan)
+### Running ThreadSanitizer (TSan)
 
     GYP_DEFINES="clang=0 target_arch=x64 build_for_tool=tsan" python gyp_libyuv
     ninja -C out/Debug
@@ -397,7 +397,7 @@ For more information, see http://www.chromium.org/developers/how-tos/using-valgr
 
 For more info, see http://www.chromium.org/developers/how-tos/using-valgrind/threadsanitizer
 
-### Running Address Sanitizer (ASan)
+### Running AddressSanitizer (ASan)
 
     GYP_DEFINES="clang=0 target_arch=x64 build_for_tool=asan" python gyp_libyuv
     ninja -C out/Debug
@@ -426,7 +426,7 @@ The unittests can be used to benchmark.
 
 Indicates 0.547 ms/frame for 1280 x 720.
 
-## Making a change
+## Making a Change
 
     gclient sync
     git checkout -b mycl -t origin/master
