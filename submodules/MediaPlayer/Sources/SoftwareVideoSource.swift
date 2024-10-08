@@ -38,15 +38,17 @@ private final class SoftwareVideoStream {
     let index: Int
     let fps: CMTime
     let timebase: CMTime
+    let startTime: CMTime
     let duration: CMTime
     let decoder: FFMpegMediaVideoFrameDecoder
     let rotationAngle: Double
     let aspect: Double
     
-    init(index: Int, fps: CMTime, timebase: CMTime, duration: CMTime, decoder: FFMpegMediaVideoFrameDecoder, rotationAngle: Double, aspect: Double) {
+    init(index: Int, fps: CMTime, timebase: CMTime, startTime: CMTime, duration: CMTime, decoder: FFMpegMediaVideoFrameDecoder, rotationAngle: Double, aspect: Double) {
         self.index = index
         self.fps = fps
         self.timebase = timebase
+        self.startTime = startTime
         self.duration = duration
         self.decoder = decoder
         self.rotationAngle = rotationAngle
@@ -126,6 +128,13 @@ public final class SoftwareVideoSource {
             let fpsAndTimebase = avFormatContext.fpsAndTimebase(forStreamIndex: streamIndex, defaultTimeBase: CMTimeMake(value: 1, timescale: 40000))
             let (fps, timebase) = (fpsAndTimebase.fps, fpsAndTimebase.timebase)
             
+            let startTime: CMTime
+            let rawStartTime = avFormatContext.startTime(atStreamIndex: streamIndex)
+            if rawStartTime == Int64(bitPattern: 0x8000000000000000 as UInt64) {
+                startTime = CMTime(value: 0, timescale: timebase.timescale)
+            } else {
+                startTime = CMTimeMake(value: rawStartTime, timescale: timebase.timescale)
+            }
             let duration = CMTimeMake(value: avFormatContext.duration(atStreamIndex: streamIndex), timescale: timebase.timescale)
             
             let metrics = avFormatContext.metricsForStream(at: streamIndex)
@@ -137,7 +146,7 @@ public final class SoftwareVideoSource {
                 let codecContext = FFMpegAVCodecContext(codec: codec)
                 if avFormatContext.codecParams(atStreamIndex: streamIndex, to: codecContext) {
                     if codecContext.open() {
-                        videoStream = SoftwareVideoStream(index: Int(streamIndex), fps: fps, timebase: timebase, duration: duration, decoder: FFMpegMediaVideoFrameDecoder(codecContext: codecContext), rotationAngle: rotationAngle, aspect: aspect)
+                        videoStream = SoftwareVideoStream(index: Int(streamIndex), fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegMediaVideoFrameDecoder(codecContext: codecContext), rotationAngle: rotationAngle, aspect: aspect)
                         break
                     }
                 }
@@ -220,6 +229,13 @@ public final class SoftwareVideoSource {
         } else {
             return 0
         }
+    }
+    
+    public func readTrackInfo() -> (offset: CMTime, duration: CMTime)? {
+        guard let videoStream = self.videoStream else {
+            return nil
+        }
+        return (videoStream.startTime, CMTimeMaximum(CMTime(value: 0, timescale: videoStream.duration.timescale), CMTimeSubtract(videoStream.duration, videoStream.startTime)))
     }
     
     public func readFrame(maxPts: CMTime?) -> (MediaTrackFrame?, CGFloat, CGFloat, Bool) {

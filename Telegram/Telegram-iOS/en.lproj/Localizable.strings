@@ -13095,5 +13095,10 @@ Sorry for the inconvenience.";
 "WebBrowser.AuthChallenge.Title" = "Sign in to %@";
 "WebBrowser.AuthChallenge.Text" = "Your login information will be sent securely.";
 
+
 "ChatList.Search.FilterPublicPosts" = "Public Posts";
 "DialogList.SearchSectionPublicPosts" = "Public Posts";
+
+"Chat.PrivateMessageEditTimestamp.Date" = "edited %@";
+"Chat.PrivateMessageEditTimestamp.TodayAt" = "edited today at %@";
+"Chat.PrivateMessageEditTimestamp.YesterdayAt" = "edited yesterday at %@";
