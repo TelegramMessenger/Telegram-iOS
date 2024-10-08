@@ -648,7 +648,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         },
                         openPremiumIntro: {
                         },
-                        openPremiumGift: { _ in
+                        openPremiumGift: { _, _ in
                         },
                         openPremiumManagement: {
                         }, 

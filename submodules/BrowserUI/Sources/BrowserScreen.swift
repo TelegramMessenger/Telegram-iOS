@@ -500,6 +500,7 @@ public class BrowserScreen: ViewController, MinimizableController {
         case closeAddressBar
         case navigateTo(String, Bool)
         case expand
+        case saveToFiles
     }
 
     final class Node: ViewControllerTracingNode {
@@ -568,10 +569,10 @@ public class BrowserScreen: ViewController, MinimizableController {
                     var isDocument = false
                     if let content = self.content.last {
                         if let documentContent = content as? BrowserDocumentContent {
-                            subject = .media(.standalone(media: documentContent.file))
+                            subject = .media(documentContent.file.abstract)
                             isDocument = true
                         } else if let documentContent = content as? BrowserPdfContent {
-                            subject = .media(.standalone(media: documentContent.file))
+                            subject = .media(documentContent.file.abstract)
                             isDocument = true
                         } else {
                             subject = .url(url)
@@ -649,7 +650,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                         switch controller.subject {
                         case let .document(file, canShare), let .pdfDocument(file, canShare):
                             processed = true
-                            controller.openDocument(file, canShare)
+                            controller.openDocument(file.media, canShare)
                         default:
                             break
                         }
@@ -792,6 +793,10 @@ public class BrowserScreen: ViewController, MinimizableController {
                 case .expand:
                     if let content = self.content.last {
                         content.resetScrolling()
+                    }
+                case .saveToFiles:
+                    if let content = self.content.last as? BrowserWebContent {
+                        content.requestSaveToFiles()
                     }
                 }
             }
@@ -1213,6 +1218,14 @@ public class BrowserScreen: ViewController, MinimizableController {
                         performAction.invoke(.addBookmark)
                         action(.default)
                     })))
+                    
+                    if contentState.contentType == .webPage {
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_SaveToFiles, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.contextMenu.primaryColor) }, action: { (controller, action) in
+                            performAction.invoke(.saveToFiles)
+                            action(.default)
+                        })))
+                    }
+                    
                     if !layout.metrics.isTablet && canOpenIn {
                         items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.InstantPage_OpenInBrowser(openInTitle).string, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Browser"), color: theme.contextMenu.primaryColor) }, action: { [weak self] (controller, action) in
                             if let self {
@@ -1473,13 +1486,13 @@ public class BrowserScreen: ViewController, MinimizableController {
     public enum Subject {
         case webPage(url: String)
         case instantPage(webPage: TelegramMediaWebpage, anchor: String?, sourceLocation: InstantPageSourceLocation, preloadedResources: [Any]?)
-        case document(file: TelegramMediaFile, canShare: Bool)
-        case pdfDocument(file: TelegramMediaFile, canShare: Bool)
+        case document(file: FileMediaReference, canShare: Bool)
+        case pdfDocument(file: FileMediaReference, canShare: Bool)
         
         public var fileId: MediaId? {
             switch self {
             case let .document(file, _), let .pdfDocument(file, _):
-                return file.fileId
+                return file.media.fileId
             default:
                 return nil
             }

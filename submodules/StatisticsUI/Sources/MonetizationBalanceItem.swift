@@ -176,7 +176,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
             
             var isStars = false
             if let stats = item.stats as? RevenueStats {
-                let cryptoValue = formatTonAmountText(stats.balances.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
+                let cryptoValue = formatTonAmountText(stats.balances.availableBalance, dateTimeFormat: item.presentationData.dateTimeFormat)
                 amountString = tonAmountAttributedString(cryptoValue, integralFont: integralFont, fractionalFont: fractionalFont, color: item.presentationData.theme.list.itemPrimaryTextColor)
                 value = stats.balances.availableBalance == 0 ? "" : "≈\(formatTonUsdValue(stats.balances.availableBalance, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))"
             } else if let stats = item.stats as? StarsRevenueStats {

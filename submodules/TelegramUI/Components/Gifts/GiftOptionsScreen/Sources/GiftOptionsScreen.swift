@@ -25,6 +25,7 @@ import GiftItemComponent
 import InAppPurchaseManager
 import TabSelectorComponent
 import GiftSetupScreen
+import UndoUI
 
 final class GiftOptionsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -173,6 +174,20 @@ final class GiftOptionsScreenComponent: Component {
             self.updateScrolling(transition: .immediate)
         }
         
+        private func dismissAllTooltips(controller: ViewController) {
+            controller.forEachController({ controller in
+                if let controller = controller as? UndoOverlayController {
+                    controller.dismissWithCommitAction()
+                }
+                return true
+            })
+            controller.window?.forEachController({ controller in
+                if let controller = controller as? UndoOverlayController {
+                    controller.dismissWithCommitAction()
+                }
+            })
+        }
+        
         private func updateScrolling(transition: ComponentTransition) {
             guard let environment = self.environment, let component = self.component else {
                 return
@@ -274,6 +289,7 @@ final class GiftOptionsScreenComponent: Component {
                             self.starsItems[itemId] = visibleItem
                         }
                         
+                        let isSoldOut = gift.availability?.remains == 0
                         let _ = visibleItem.update(
                             transition: itemTransition,
                             component: AnyComponent(
@@ -284,13 +300,14 @@ final class GiftOptionsScreenComponent: Component {
                                             theme: environment.theme,
                                             peer: nil,
                                             subject: .starGift(gift.id, gift.file),
-                                            price: "⭐️ \(gift.price)",
+                                            price: isSoldOut ? environment.strings.Gift_Options_Gift_SoldOut : "⭐️ \(gift.price)",
                                             ribbon: gift.availability != nil ?
                                             GiftItemComponent.Ribbon(
                                                 text: environment.strings.Gift_Options_Gift_Limited,
                                                 color: .blue
                                             )
-                                            : nil
+                                            : nil,
+                                            isSoldOut: isSoldOut
                                         )
                                     ),
                                     effectAlignment: .center,
@@ -303,13 +320,26 @@ final class GiftOptionsScreenComponent: Component {
                                                 } else {
                                                     mainController = controller
                                                 }
-                                                let giftController = GiftSetupScreen(
-                                                    context: component.context,
-                                                    peerId: component.peerId,
-                                                    subject: .starGift(gift),
-                                                    completion: component.completion
-                                                )
-                                                mainController.push(giftController)
+                                                if gift.availability?.remains == 0 {
+                                                    self.dismissAllTooltips(controller: mainController)
+                                                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                                    let resultController = UndoOverlayController(
+                                                        presentationData: presentationData,
+                                                        content: .sticker(context: component.context, file: gift.file, loop: false, title: nil, text: presentationData.strings.Gift_Options_SoldOut_Text, undoText: nil, customAction: nil),
+                                                        elevatedLayout: false,
+                                                        action: { _ in return true }
+                                                    )
+                                                    mainController.present(resultController, in: .window(.root))
+                                                    HapticFeedback().error()
+                                                } else {
+                                                    let giftController = GiftSetupScreen(
+                                                        context: component.context,
+                                                        peerId: component.peerId,
+                                                        subject: .starGift(gift),
+                                                        completion: component.completion
+                                                    )
+                                                    mainController.push(giftController)
+                                                }
                                             }
                                         }
                                     },
@@ -771,9 +801,7 @@ final class GiftOptionsScreenComponent: Component {
                         guard let self, let component = self.component, let environment = self.environment else {
                             return
                         }
-                        let introController = component.context.sharedContext.makeStarsIntroScreen(context: component.context)
-                        introController.navigationPresentation = .modal
-                        
+                        let introController = component.context.sharedContext.makeStarsIntroScreen(context: component.context)                        
                         if let controller = environment.controller() as? GiftOptionsScreen {
                             let mainController: ViewController
                             if let parentController = controller.parentController() {

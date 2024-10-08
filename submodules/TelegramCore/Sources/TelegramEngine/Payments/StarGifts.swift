@@ -45,7 +45,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         public let remains: Int32
         public let total: Int32
         
-        init(remains: Int32, total: Int32) {
+        public init(remains: Int32, total: Int32) {
             self.remains = remains
             self.total = total
         }

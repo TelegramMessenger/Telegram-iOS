@@ -108,7 +108,7 @@ private final class PeerBadgeComponent: Component {
             
             let _ = self.background.update(
                 transition: transition,
-                component: AnyComponent(RoundedRectangle(color: component.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.1), cornerRadius: nil)),
+                component: AnyComponent(RoundedRectangle(color: component.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.3), cornerRadius: nil)),
                 environment: {},
                 containerSize: size
             )
@@ -246,25 +246,10 @@ private final class CollectibleItemInfoScreenContentComponent: Component {
                 
                 let dateText = stringForDate(timestamp: username.info.purchaseDate, strings: environment.strings)
                 
-                let (rawCryptoCurrencyText, cryptoCurrencySign, _) = formatCurrencyAmountCustom(username.info.cryptoCurrencyAmount, currency: username.info.cryptoCurrency, customFormat: CurrencyFormatterEntry(
-                    symbol: "~",
-                    thousandsSeparator: ",",
-                    decimalSeparator: ".",
-                    symbolOnLeft: true,
-                    spaceBetweenAmountAndSymbol: false,
-                    decimalDigits: 9
-                ))
-                var cryptoCurrencyText = rawCryptoCurrencyText
-                while cryptoCurrencyText.hasSuffix("0") {
-                    cryptoCurrencyText = String(cryptoCurrencyText[cryptoCurrencyText.startIndex ..< cryptoCurrencyText.index(before: cryptoCurrencyText.endIndex)])
-                }
-                if cryptoCurrencyText.hasSuffix(".") {
-                    cryptoCurrencyText = String(cryptoCurrencyText[cryptoCurrencyText.startIndex ..< cryptoCurrencyText.index(before: cryptoCurrencyText.endIndex)])
-                }
+                let cryptoCurrencyText = formatTonAmountText(username.info.cryptoCurrencyAmount, dateTimeFormat: environment.dateTimeFormat)
+                let currencyText = formatTonUsdValue(username.info.currencyAmount, divide: false, rate: 0.01, dateTimeFormat: environment.dateTimeFormat)
                 
-                let (currencyText, currencySign, _) = formatCurrencyAmountCustom(username.info.currencyAmount, currency: username.info.currency)
-                
-                let rawTextString = environment.strings.CollectibleItemInfo_UsernameText("@\(username.username)", environment.strings.CollectibleItemInfo_StoreName, dateText, "\(cryptoCurrencySign)\(cryptoCurrencyText)", "\(currencySign)\(currencyText)")
+                let rawTextString = environment.strings.CollectibleItemInfo_UsernameText("@\(username.username)", environment.strings.CollectibleItemInfo_StoreName, dateText, "~\(cryptoCurrencyText)", currencyText)
                 textText.append(NSAttributedString(string: rawTextString.string, font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor))
                 for range in rawTextString.ranges {
                     switch range.index {
@@ -292,25 +277,10 @@ private final class CollectibleItemInfoScreenContentComponent: Component {
                 
                 let dateText = stringForDate(timestamp: phoneNumber.info.purchaseDate, strings: environment.strings)
                 
-                let (rawCryptoCurrencyText, cryptoCurrencySign, _) = formatCurrencyAmountCustom(phoneNumber.info.cryptoCurrencyAmount, currency: phoneNumber.info.cryptoCurrency, customFormat: CurrencyFormatterEntry(
-                    symbol: "~",
-                    thousandsSeparator: ",",
-                    decimalSeparator: ".",
-                    symbolOnLeft: true,
-                    spaceBetweenAmountAndSymbol: false,
-                    decimalDigits: 9
-                ))
-                var cryptoCurrencyText = rawCryptoCurrencyText
-                while cryptoCurrencyText.hasSuffix("0") {
-                    cryptoCurrencyText = String(cryptoCurrencyText[cryptoCurrencyText.startIndex ..< cryptoCurrencyText.index(before: cryptoCurrencyText.endIndex)])
-                }
-                if cryptoCurrencyText.hasSuffix(".") {
-                    cryptoCurrencyText = String(cryptoCurrencyText[cryptoCurrencyText.startIndex ..< cryptoCurrencyText.index(before: cryptoCurrencyText.endIndex)])
-                }
+                let cryptoCurrencyText = formatTonAmountText(phoneNumber.info.cryptoCurrencyAmount, dateTimeFormat: environment.dateTimeFormat)
+                let currencyText = formatTonUsdValue(phoneNumber.info.currencyAmount, divide: false, rate: 0.01, dateTimeFormat: environment.dateTimeFormat)
                 
-                let (currencyText, currencySign, _) = formatCurrencyAmountCustom(phoneNumber.info.currencyAmount, currency: phoneNumber.info.currency)
-                
-                let rawTextString = environment.strings.CollectibleItemInfo_PhoneText("\(formattedPhoneNumber)", environment.strings.CollectibleItemInfo_StoreName, dateText, "\(cryptoCurrencySign)\(cryptoCurrencyText)", "\(currencySign)\(currencyText)")
+                let rawTextString = environment.strings.CollectibleItemInfo_PhoneText("\(formattedPhoneNumber)", environment.strings.CollectibleItemInfo_StoreName, dateText, "~\(cryptoCurrencyText)", currencyText)
                 textText.append(NSAttributedString(string: rawTextString.string, font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor))
                 for range in rawTextString.ranges {
                     switch range.index {

@@ -80,7 +80,7 @@ public final class ButtonBadgeComponent: Component {
                 if contentView.superview == nil {
                     self.addSubview(contentView)
                 }
-                transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(x: floor((backgroundFrame.width - contentSize.width) * 0.5), y: floor((backgroundFrame.height - contentSize.height) * 0.5)), size: contentSize))
+                transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundFrame.width - contentSize.width) * 0.5), y: floorToScreenPixels((backgroundFrame.height - contentSize.height) * 0.5)), size: contentSize))
             }
             
             if themeUpdated || backgroundFrame.height != self.backgroundView.image?.size.height {
@@ -264,7 +264,7 @@ public final class ButtonTextContentComponent: Component {
                 size.height = max(size.height, badgeSize.height)
             }
             
-            let contentFrame = CGRect(origin: CGPoint(x: floor((size.width - measurementSize.width) * 0.5), y: floor((size.height - measurementSize.height) * 0.5)), size: measurementSize)
+            let contentFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - measurementSize.width) * 0.5), y: floorToScreenPixels((size.height - measurementSize.height) * 0.5)), size: measurementSize)
             
             if let contentView = self.content.view {
                 if contentView.superview == nil {
@@ -274,7 +274,7 @@ public final class ButtonTextContentComponent: Component {
             }
             
             if let badgeSize, let badge = self.badge {
-                let badgeFrame = CGRect(origin: CGPoint(x: contentFrame.minX + contentSize.width + badgeSpacing, y: floor((size.height - badgeSize.height) * 0.5) + 1.0), size: badgeSize)
+                let badgeFrame = CGRect(origin: CGPoint(x: contentFrame.minX + contentSize.width + badgeSpacing, y: floorToScreenPixels((size.height - badgeSize.height) * 0.5) + 1.0), size: badgeSize)
                 
                 if let badgeView = badge.view {
                     var animateIn = false
@@ -490,7 +490,7 @@ public final class ButtonComponent: Component {
                     contentView.isUserInteractionEnabled = false
                     self.addSubview(contentView)
                 }
-                let contentFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - contentSize.width) * 0.5), y: floor((availableSize.height - contentSize.height) * 0.5)), size: contentSize)
+                let contentFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - contentSize.width) * 0.5), y: floorToScreenPixels((availableSize.height - contentSize.height) * 0.5)), size: contentSize)
                 
                 contentTransition.setFrame(view: contentView, frame: contentFrame)
                 contentTransition.setAlpha(view: contentView, alpha: contentAlpha)
@@ -528,7 +528,7 @@ public final class ButtonComponent: Component {
                 }
                 let indicatorSize = CGSize(width: 22.0, height: 22.0)
                 transition.setAlpha(view: activityIndicator.view, alpha: 1.0)
-                activityIndicatorTransition.setFrame(view: activityIndicator.view, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - indicatorSize.width) / 2.0), y: floor((availableSize.height - indicatorSize.height) / 2.0)), size: indicatorSize))
+                activityIndicatorTransition.setFrame(view: activityIndicator.view, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - indicatorSize.width) / 2.0), y: floorToScreenPixels((availableSize.height - indicatorSize.height) / 2.0)), size: indicatorSize))
             } else {
                 if let activityIndicator = self.activityIndicator {
                     self.activityIndicator = nil

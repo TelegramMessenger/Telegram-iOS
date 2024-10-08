@@ -30,6 +30,7 @@ public final class MultilineTextWithEntitiesComponent: Component {
     public let textShadowColor: UIColor?
     public let textStroke: (UIColor, CGFloat)?
     public let highlightColor: UIColor?
+    public let handleSpoilers: Bool
     public let highlightAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)?
     public let tapAction: (([NSAttributedString.Key: Any], Int) -> Void)?
     public let longTapAction: (([NSAttributedString.Key: Any], Int) -> Void)?
@@ -50,6 +51,7 @@ public final class MultilineTextWithEntitiesComponent: Component {
         textShadowColor: UIColor? = nil,
         textStroke: (UIColor, CGFloat)? = nil,
         highlightColor: UIColor? = nil,
+        handleSpoilers: Bool = false,
         highlightAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)? = nil,
         tapAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil,
         longTapAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil
@@ -70,6 +72,7 @@ public final class MultilineTextWithEntitiesComponent: Component {
         self.textStroke = textStroke
         self.highlightColor = highlightColor
         self.highlightAction = highlightAction
+        self.handleSpoilers = handleSpoilers
         self.tapAction = tapAction
         self.longTapAction = longTapAction
     }
@@ -99,7 +102,9 @@ public final class MultilineTextWithEntitiesComponent: Component {
         if lhs.insets != rhs.insets {
             return false
         }
-        
+        if lhs.handleSpoilers != rhs.handleSpoilers {
+            return false
+        }
         if let lhsTextShadowColor = lhs.textShadowColor, let rhsTextShadowColor = rhs.textShadowColor {
             if !lhsTextShadowColor.isEqual(rhsTextShadowColor) {
                 return false
@@ -131,6 +136,7 @@ public final class MultilineTextWithEntitiesComponent: Component {
     }
     
     public final class View: UIView {
+        var spoilerTextNode: ImmediateTextNodeWithEntities?
         let textNode: ImmediateTextNodeWithEntities
         
         public override init(frame: CGRect) {
@@ -196,6 +202,45 @@ public final class MultilineTextWithEntitiesComponent: Component {
             
             let size = self.textNode.updateLayout(availableSize)
             self.textNode.frame = CGRect(origin: .zero, size: size)
+            
+            if component.handleSpoilers {
+                let spoilerTextNode: ImmediateTextNodeWithEntities
+                if let current = self.spoilerTextNode {
+                    spoilerTextNode = current
+                } else {
+                    spoilerTextNode = ImmediateTextNodeWithEntities()
+                    spoilerTextNode.alpha = 0.0
+                    self.spoilerTextNode = spoilerTextNode
+                    
+                    self.textNode.dustNode?.textNode = spoilerTextNode
+                }
+                
+                spoilerTextNode.displaySpoilers = true
+                spoilerTextNode.displaySpoilerEffect = false
+                spoilerTextNode.attributedText = attributedString
+                spoilerTextNode.maximumNumberOfLines = component.maximumNumberOfLines
+                spoilerTextNode.truncationType = component.truncationType
+                spoilerTextNode.textAlignment = component.horizontalAlignment
+                spoilerTextNode.verticalAlignment = component.verticalAlignment
+                spoilerTextNode.lineSpacing = component.lineSpacing
+                spoilerTextNode.cutout = component.cutout
+                spoilerTextNode.insets = component.insets
+                spoilerTextNode.textShadowColor = component.textShadowColor
+                spoilerTextNode.textStroke = component.textStroke
+                spoilerTextNode.isUserInteractionEnabled = false
+                
+                let size = spoilerTextNode.updateLayout(availableSize)
+                spoilerTextNode.frame = CGRect(origin: .zero, size: size)
+                
+                if spoilerTextNode.view.superview == nil {
+                    self.addSubview(spoilerTextNode.view)
+                }
+            } else if let spoilerTextNode = self.spoilerTextNode {
+                self.spoilerTextNode = nil
+                spoilerTextNode.view.removeFromSuperview()
+                
+                self.textNode.dustNode?.textNode = nil
+            }
             
             return size
         }
