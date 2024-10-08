@@ -192,7 +192,7 @@ extension ChatControllerImpl {
                 if canViewMessageReactionList(message: message) {
                     items = ContextController.Items(content: .custom(ReactionListContextMenuContent(
                         context: self.context,
-                        displayReadTimestamps: false,
+                        displayReadTimestamps: true,
                         availableReactions: availableReactions,
                         animationCache: self.controllerInteraction!.presentationContext.animationCache,
                         animationRenderer: self.controllerInteraction!.presentationContext.animationRenderer,

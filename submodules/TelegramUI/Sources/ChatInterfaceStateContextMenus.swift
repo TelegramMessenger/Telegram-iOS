@@ -1857,6 +1857,13 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 reactionCount = 0
             }
         }
+        
+        let isEdited = message.attributes.contains(where: { attribute in
+            if let attribute = attribute as? EditedMessageAttribute, !attribute.isHidden, attribute.date != 0 {
+                return true
+            }
+            return false
+        })
 
         if let peer = message.peers[message.id.peerId], (canViewStats || reactionCount != 0) {
             var hasReadReports = false
@@ -1880,18 +1887,18 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             } else {
                 reactionCount = 0
             }
-            
-            /*var readStats = readStats
-            if !canViewStats {
-                readStats = MessageReadStats(reactionCount: 0, peers: [])
-            }*/
 
             if hasReadReports || reactionCount != 0 {
                 if !actions.isEmpty {
                     actions.insert(.separator, at: 0)
                 }
+                
+                var readStats = readStats
+                if !(hasReadReports || reactionCount != 0) {
+                    readStats = MessageReadStats(reactionCount: 0, peers: [], readTimestamps: [:])
+                }
 
-                actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: hasReadReports, stats: readStats, action: { c, f, stats, customReactionEmojiPacks, firstCustomEmojiReaction in
+                actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: hasReadReports, isEdit: false, stats: readStats, action: { c, f, stats, customReactionEmojiPacks, firstCustomEmojiReaction in
                     if message.id.peerId.namespace == Namespaces.Peer.CloudUser {
                         if let stats, stats.peers.isEmpty {
                             c.dismiss(completion: {
@@ -1970,6 +1977,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     }
                 }), false), at: 0)
             }
+        }
+        if isEdited {
+            actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: false, isEdit: true, stats: MessageReadStats(reactionCount: 0, peers: [], readTimestamps: [:]), action: nil), false), at: 0)
         }
         
         if !actions.isEmpty, case .separator = actions[0] {
@@ -2634,13 +2644,15 @@ final class ChatReadReportContextItem: ContextMenuCustomItem {
     fileprivate let context: AccountContext
     fileprivate let message: Message
     fileprivate let hasReadReports: Bool
+    fileprivate let isEdit: Bool
     fileprivate let stats: MessageReadStats?
-    fileprivate let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void
+    fileprivate let action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void)?
 
-    init(context: AccountContext, message: Message, hasReadReports: Bool, stats: MessageReadStats?, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void) {
+    init(context: AccountContext, message: Message, hasReadReports: Bool, isEdit: Bool, stats: MessageReadStats?, action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void)?) {
         self.context = context
         self.message = message
         self.hasReadReports = hasReadReports
+        self.isEdit = isEdit
         self.stats = stats
         self.action = action
     }
@@ -2719,7 +2731,9 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         self.buttonNode.accessibilityLabel = presentationData.strings.VoiceChat_StopRecording
 
         self.iconNode = ASImageNode()
-        if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+        if self.item.isEdit {
+            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuEditIcon"), color: presentationData.theme.actionSheet.primaryTextColor)
+        } else if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
             self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: presentationData.theme.actionSheet.primaryTextColor)
         } else if let reactionsAttribute = item.message.reactionsAttribute, !reactionsAttribute.reactions.isEmpty {
             self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: presentationData.theme.actionSheet.primaryTextColor)
@@ -2818,12 +2832,12 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
         if let currentStats = self.currentStats {
             if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
-                self.buttonNode.isUserInteractionEnabled = currentStats.peers.isEmpty
+                self.buttonNode.isUserInteractionEnabled = item.action != nil && currentStats.peers.isEmpty
             } else {
-                self.buttonNode.isUserInteractionEnabled = !currentStats.peers.isEmpty || reactionCount != 0
+                self.buttonNode.isUserInteractionEnabled = item.action != nil && (!currentStats.peers.isEmpty || reactionCount != 0)
             }
         } else {
-            self.buttonNode.isUserInteractionEnabled = reactionCount != 0
+            self.buttonNode.isUserInteractionEnabled = item.action != nil && reactionCount != 0
 
             self.disposable = (item.context.engine.messages.messageReadStats(id: item.message.id)
             |> deliverOnMainQueue).startStrict(next: { [weak self] value in
@@ -2862,9 +2876,9 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
     func updateStats(stats: MessageReadStats, transition: ContainedViewLayoutTransition) {
         if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
-            self.buttonNode.isUserInteractionEnabled = stats.peers.isEmpty
+            self.buttonNode.isUserInteractionEnabled = self.item.action != nil && stats.peers.isEmpty
         } else {
-            self.buttonNode.isUserInteractionEnabled = !stats.peers.isEmpty || stats.reactionCount != 0
+            self.buttonNode.isUserInteractionEnabled = self.item.action != nil && (!stats.peers.isEmpty || stats.reactionCount != 0)
         }
 
         guard let (calculatedWidth, size) = self.validLayout else {
@@ -2908,7 +2922,24 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             reactionCount = currentStats.reactionCount
             
             if currentStats.peers.isEmpty {
-                if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+                if self.item.isEdit, let attribute = self.item.message.attributes.first(where: { $0 is EditedMessageAttribute }) as? EditedMessageAttribute, !attribute.isHidden, attribute.date != 0 {
+                    let dateText = humanReadableStringForTimestamp(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, timestamp: attribute.date, alwaysShowTime: true, allowYesterday: true, format: HumanReadableStringFormat(
+                        dateFormatString: { value in
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageEditTimestamp_Date(value).string, ranges: [])
+                        },
+                        tomorrowFormatString: { value in
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageEditTimestamp_TodayAt(value).string, ranges: [])
+                        },
+                        todayFormatString: { value in
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageEditTimestamp_TodayAt(value).string, ranges: [])
+                        },
+                        yesterdayFormatString: { value in
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageEditTimestamp_YesterdayAt(value).string, ranges: [])
+                        }
+                    )).string
+                    
+                    self.textNode.attributedText = NSAttributedString(string: dateText, font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
+                } else if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
                     let text = NSAttributedString(string: self.presentationData.strings.Chat_ContextMenuReadDate_ReadAvailablePrefix, font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
                     if self.textNode.attributedText != text {
                         animatePositions = false
@@ -3155,12 +3186,15 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         guard let controller = self.getController() else {
             return
         }
-        self.item.action(controller, { [weak self] result in
+        self.item.action?(controller, { [weak self] result in
             self?.actionSelected(result)
         }, self.currentStats, self.customEmojiPacks, self.firstCustomEmojiReaction)
     }
 
     var isActionEnabled: Bool {
+        if self.item.action == nil {
+            return false
+        }
         var reactionCount = 0
         for reaction in mergedMessageReactionsAndPeers(accountPeerId: self.item.context.account.peerId, accountPeer: nil, message: self.item.message).reactions {
             reactionCount += Int(reaction.count)
