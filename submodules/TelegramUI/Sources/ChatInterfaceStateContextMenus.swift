@@ -1864,6 +1864,13 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
             return false
         })
+        
+        if isEdited {
+            if !actions.isEmpty {
+                actions.insert(.separator, at: 0)
+            }
+            actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: false, isEdit: true, stats: MessageReadStats(reactionCount: 0, peers: [], readTimestamps: [:]), action: nil), false), at: 0)
+        }
 
         if let peer = message.peers[message.id.peerId], (canViewStats || reactionCount != 0) {
             var hasReadReports = false
@@ -1977,9 +1984,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     }
                 }), false), at: 0)
             }
-        }
-        if isEdited {
-            actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: false, isEdit: true, stats: MessageReadStats(reactionCount: 0, peers: [], readTimestamps: [:]), action: nil), false), at: 0)
         }
         
         if !actions.isEmpty, case .separator = actions[0] {
@@ -3057,7 +3061,12 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             let positionTransition: ContainedViewLayoutTransition = animatePositions ? transition : .immediate
             
             let verticalOrigin = floor((size.height - combinedTextHeight) / 2.0)
-            let textFrame = CGRect(origin: CGPoint(x: sideInset + iconSize.width + 4.0, y: verticalOrigin), size: textSize)
+            var textFrame = CGRect(origin: CGPoint(x: sideInset + iconSize.width + 4.0, y: verticalOrigin), size: textSize)
+            
+            if self.item.isEdit {
+                textFrame.origin.x -= 2.0
+            }
+            
             positionTransition.updateFrameAdditive(node: self.textNode, frame: textFrame)
             transition.updateAlpha(node: self.textNode, alpha: self.currentStats == nil ? 0.0 : 1.0)
             
@@ -3101,7 +3110,11 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             transition.updateAlpha(node: self.shimmerNode, alpha: self.currentStats == nil ? 1.0 : 0.0)
 
             if !iconSize.width.isZero {
-                transition.updateFrameAdditive(node: self.iconNode, frame: CGRect(origin: CGPoint(x: sideInset + 1.0, y: floor((size.height - iconSize.height) / 2.0)), size: iconSize))
+                var iconFrame = CGRect(origin: CGPoint(x: sideInset + 1.0, y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+                if self.item.isEdit {
+                    iconFrame.origin.x -= 2.0
+                }
+                transition.updateFrameAdditive(node: self.iconNode, frame: iconFrame)
             }
 
             let avatarsContent: AnimatedAvatarSetContext.Content
