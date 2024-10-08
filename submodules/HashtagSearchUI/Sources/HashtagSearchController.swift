@@ -12,12 +12,18 @@ import AnimationCache
 import MultiAnimationRenderer
 
 public final class HashtagSearchController: TelegramBaseController {
+    public enum Mode: Equatable {
+        case generic
+        case noChat
+        case chatOnly
+    }
+    
     private let queue = Queue()
     
     private let context: AccountContext
     private let peer: EnginePeer?
     private let query: String
-    let all: Bool
+    let mode: Mode
     let publicPosts: Bool
     
     private var transitionDisposable: Disposable?
@@ -33,11 +39,11 @@ public final class HashtagSearchController: TelegramBaseController {
         return self.displayNode as! HashtagSearchControllerNode
     }
     
-    public init(context: AccountContext, peer: EnginePeer?, query: String, all: Bool = false, publicPosts: Bool = false) {
+    public init(context: AccountContext, peer: EnginePeer?, query: String, mode: Mode = .generic, publicPosts: Bool = false) {
         self.context = context
         self.peer = peer
         self.query = query
-        self.all = all
+        self.mode = mode
         self.publicPosts = publicPosts
         
         self.animationCache = context.animationCache

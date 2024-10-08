@@ -189,6 +189,7 @@ public final class BirthdayPickerContentComponent: Component {
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2,
                     highlightColor: component.theme.list.itemAccentColor.withMultipliedAlpha(0.1),
+                    highlightInset: mainText.string.contains(">") ? UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0) : .zero,
                     highlightAction: { attributes in
                         if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
                             return NSAttributedString.Key(rawValue: "URL")

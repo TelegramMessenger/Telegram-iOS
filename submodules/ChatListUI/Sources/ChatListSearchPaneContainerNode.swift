@@ -50,6 +50,7 @@ final class ChatListSearchPaneWrapper {
 public enum ChatListSearchPaneKey {
     case chats
     case topics
+    case publicPosts
     case channels
     case apps
     case media
@@ -67,6 +68,8 @@ extension ChatListSearchPaneKey {
             return .chats
         case .topics:
             return .topics
+        case .publicPosts:
+            return .publicPosts
         case .channels:
             return .channels
         case .apps:
@@ -87,12 +90,15 @@ extension ChatListSearchPaneKey {
     }
 }
 
-func defaultAvailableSearchPanes(isForum: Bool, hasDownloads: Bool) -> [ChatListSearchPaneKey] {
+func defaultAvailableSearchPanes(isForum: Bool, hasDownloads: Bool, hasPublicPosts: Bool) -> [ChatListSearchPaneKey] {
     var result: [ChatListSearchPaneKey] = []
     if isForum {
         result.append(.topics)
     } else {
         result.append(.chats)
+    }
+    if hasPublicPosts {
+        result.append(.publicPosts)
     }
     result.append(.channels)
     result.append(.apps)

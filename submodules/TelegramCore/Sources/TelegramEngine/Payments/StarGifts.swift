@@ -34,6 +34,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         case price
         case convertStars
         case availability
+        case soldOut
     }
     
     public struct Availability: Equatable, Codable, PostboxCoding {
@@ -61,6 +62,31 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         }
     }
     
+    public struct SoldOut: Equatable, Codable, PostboxCoding {
+        enum CodingKeys: String, CodingKey {
+            case firstSale
+            case lastSale
+        }
+
+        public let firstSale: Int32
+        public let lastSale: Int32
+        
+        public init(firstSale: Int32, lastSale: Int32) {
+            self.firstSale = firstSale
+            self.lastSale = lastSale
+        }
+        
+        public init(decoder: PostboxDecoder) {
+            self.firstSale = decoder.decodeInt32ForKey(CodingKeys.firstSale.rawValue, orElse: 0)
+            self.lastSale = decoder.decodeInt32ForKey(CodingKeys.lastSale.rawValue, orElse: 0)
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            encoder.encodeInt32(self.firstSale, forKey: CodingKeys.firstSale.rawValue)
+            encoder.encodeInt32(self.lastSale, forKey: CodingKeys.lastSale.rawValue)
+        }
+    }
+    
     public enum DecodingError: Error {
         case generic
     }
@@ -70,13 +96,15 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
     public let price: Int64
     public let convertStars: Int64
     public let availability: Availability?
+    public let soldOut: SoldOut?
     
-    public init(id: Int64, file: TelegramMediaFile, price: Int64, convertStars: Int64, availability: Availability?) {
+    public init(id: Int64, file: TelegramMediaFile, price: Int64, convertStars: Int64, availability: Availability?, soldOut: SoldOut?) {
         self.id = id
         self.file = file
         self.price = price
         self.convertStars = convertStars
         self.availability = availability
+        self.soldOut = soldOut
     }
     
     public init(from decoder: Decoder) throws {
@@ -92,6 +120,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         self.price = try container.decode(Int64.self, forKey: .price)
         self.convertStars = try container.decodeIfPresent(Int64.self, forKey: .convertStars) ?? 0
         self.availability = try container.decodeIfPresent(Availability.self, forKey: .availability)
+        self.soldOut = try container.decodeIfPresent(SoldOut.self, forKey: .soldOut)
     }
     
     public init(decoder: PostboxDecoder) {
@@ -100,6 +129,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         self.price = decoder.decodeInt64ForKey(CodingKeys.price.rawValue, orElse: 0)
         self.convertStars = decoder.decodeInt64ForKey(CodingKeys.convertStars.rawValue, orElse: 0)
         self.availability = decoder.decodeObjectForKey(CodingKeys.availability.rawValue, decoder: { StarGift.Availability(decoder: $0) }) as? StarGift.Availability
+        self.soldOut = decoder.decodeObjectForKey(CodingKeys.soldOut.rawValue, decoder: { StarGift.SoldOut(decoder: $0) }) as? StarGift.SoldOut
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -114,6 +144,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         try container.encode(self.price, forKey: .price)
         try container.encode(self.convertStars, forKey: .convertStars)
         try container.encodeIfPresent(self.availability, forKey: .availability)
+        try container.encodeIfPresent(self.soldOut, forKey: .soldOut)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -126,21 +157,30 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         } else {
             encoder.encodeNil(forKey: CodingKeys.availability.rawValue)
         }
+        if let soldOut = self.soldOut {
+            encoder.encodeObject(soldOut, forKey: CodingKeys.soldOut.rawValue)
+        } else {
+            encoder.encodeNil(forKey: CodingKeys.soldOut.rawValue)
+        }
     }
 }
 
 extension StarGift {
     init?(apiStarGift: Api.StarGift) {
         switch apiStarGift {
-        case let .starGift(_, id, sticker, stars, availabilityRemains, availabilityTotal, convertStars):
+        case let .starGift(_, id, sticker, stars, availabilityRemains, availabilityTotal, convertStars, firstSale, lastSale):
             var availability: Availability?
             if let availabilityRemains, let availabilityTotal {
                 availability = Availability(remains: availabilityRemains, total: availabilityTotal)
             }
+            var soldOut: SoldOut?
+            if let firstSale, let lastSale {
+                soldOut = SoldOut(firstSale: firstSale, lastSale: lastSale)
+            }
             guard let file = telegramMediaFileFromApiDocument(sticker, altDocuments: nil) else {
                 return nil
             }
-            self.init(id: id, file: file, price: stars, convertStars: convertStars, availability: availability)
+            self.init(id: id, file: file, price: stars, convertStars: convertStars, availability: availability, soldOut: soldOut)
         }
     }
 }
@@ -260,6 +300,7 @@ private final class ProfileGiftsContextImpl {
     private var count: Int32?
     private var dataState: ProfileGiftsContext.State.DataState = .ready(canLoadMore: true, nextOffset: nil)
     
+    var _state: ProfileGiftsContext.State?
     private let stateValue = Promise<ProfileGiftsContext.State>()
     var state: Signal<ProfileGiftsContext.State, NoError> {
         return self.stateValue.get()
@@ -355,6 +396,7 @@ private final class ProfileGiftsContextImpl {
     }
     
     private func pushState() {
+        self._state = ProfileGiftsContext.State(gifts: self.gifts, count: self.count, dataState: self.dataState)
         self.stateValue.set(.single(ProfileGiftsContext.State(gifts: self.gifts, count: self.count, dataState: self.dataState)))
     }
 }
@@ -437,6 +479,14 @@ public final class ProfileGiftsContext {
         self.impl.with { impl in
             impl.convertStarGift(messageId: messageId)
         }
+    }
+    
+    public var currentState: ProfileGiftsContext.State? {
+        var state: ProfileGiftsContext.State?
+        self.impl.syncWith { impl in
+            state = impl._state
+        }
+        return state
     }
 }
 

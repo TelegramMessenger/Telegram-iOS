@@ -8458,7 +8458,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let attributedText = chatInputStateStringWithAppliedEntities(text, entities: entities)
                 
                 var state = state
-                if let editMessageState = state.editMessageState, case let .media(options) = editMessageState.content, !options.isEmpty {
+                if let editMessageState = state.editMessageState {
                     state = state.updatedEditMessageState(ChatEditInterfaceMessageState(content: editMessageState.content, mediaReference: mediaReference))
                 }
                 if !text.isEmpty {

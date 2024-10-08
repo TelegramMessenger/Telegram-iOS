@@ -13,6 +13,8 @@ import PeerInfoVisualMediaPaneNode
 import PeerInfoPaneNode
 import PeerInfoChatListPaneNode
 import PeerInfoChatPaneNode
+import TextFormat
+import EmojiTextAttachmentView
 
 final class PeerInfoPaneWrapper {
     let key: PeerInfoPaneKey
@@ -41,6 +43,7 @@ final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
     
     private let titleNode: ImmediateTextNode
     private let buttonNode: HighlightTrackingButtonNode
+    private var iconLayers: [InlineStickerItemLayer] = []
     
     private var isSelected: Bool = false
     
@@ -64,9 +67,45 @@ final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
         self.pressed()
     }
     
-    func updateText(_ title: String, isSelected: Bool, presentationData: PresentationData) {
+    func updateText(context: AccountContext, title: String, icons: [TelegramMediaFile] = [], isSelected: Bool, presentationData: PresentationData) {
         self.isSelected = isSelected
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: isSelected ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemSecondaryTextColor)
+        
+        if !icons.isEmpty {
+            if self.iconLayers.isEmpty {
+                for icon in icons {
+                    let iconSize = CGSize(width: 24.0, height: 24.0)
+                    
+                    let emoji = ChatTextInputTextCustomEmojiAttribute(
+                        interactivelySelectedFromPackId: nil,
+                        fileId: icon.fileId.id,
+                        file: icon
+                    )
+                    
+                    let animationLayer = InlineStickerItemLayer(
+                        context: .account(context),
+                        userLocation: .other,
+                        attemptSynchronousLoad: false,
+                        emoji: emoji,
+                        file: icon,
+                        cache: context.animationCache,
+                        renderer: context.animationRenderer,
+                        unique: true,
+                        placeholderColor: presentationData.theme.list.mediaPlaceholderColor,
+                        pointSize: iconSize,
+                        loopCount: 1
+                    )
+                    animationLayer.isVisibleForAnimations = true
+                    self.iconLayers.append(animationLayer)
+                    self.layer.addSublayer(animationLayer)
+                }
+            }
+        } else {
+            for layer in self.iconLayers {
+                layer.removeFromSuperlayer()
+            }
+            self.iconLayers.removeAll()
+        }
         
         self.buttonNode.accessibilityLabel = title
         self.buttonNode.accessibilityTraits = [.button]
@@ -76,9 +115,22 @@ final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
     }
     
     func updateLayout(height: CGFloat) -> CGFloat {
+        var totalWidth: CGFloat = 0.0
         let titleSize = self.titleNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
         self.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
-        return titleSize.width
+        totalWidth = titleSize.width
+        
+        if !self.iconLayers.isEmpty {
+            totalWidth += 1.0
+            let iconSize = CGSize(width: 24.0, height: 24.0)
+            let spacing: CGFloat = 1.0
+            for iconlayer in self.iconLayers {
+                iconlayer.frame = CGRect(origin: CGPoint(x: totalWidth, y: 12.0), size: iconSize)
+                totalWidth += iconSize.width + spacing
+            }
+            totalWidth -= spacing
+        }
+        return totalWidth
     }
     
     func updateArea(size: CGSize, sideInset: CGFloat) {
@@ -89,6 +141,7 @@ final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
 struct PeerInfoPaneSpecifier: Equatable {
     var key: PeerInfoPaneKey
     var title: String
+    var icons: [TelegramMediaFile]
 }
 
 private func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGFloat) -> CGRect {
@@ -96,6 +149,7 @@ private func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGF
 }
 
 final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
+    private let context: AccountContext
     private let scrollNode: ASScrollNode
     private var paneNodes: [PeerInfoPaneKey: PeerInfoPaneTabsContainerPaneNode] = [:]
     private let selectedLineNode: ASImageNode
@@ -104,7 +158,8 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
     
     var requestSelectPane: ((PeerInfoPaneKey) -> Void)?
     
-    override init() {
+    init(context: AccountContext) {
+        self.context = context
         self.scrollNode = ASScrollNode()
         
         self.selectedLineNode = ASImageNode()
@@ -153,7 +208,7 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
                     })
                     self.paneNodes[specifier.key] = paneNode
                 }
-                paneNode.updateText(specifier.title, isSelected: selectedPane == specifier.key, presentationData: presentationData)
+                paneNode.updateText(context: self.context, title: specifier.title, icons: specifier.icons, isSelected: selectedPane == specifier.key, presentationData: presentationData)
             }
             var removeKeys: [PeerInfoPaneKey] = []
             for (key, _) in self.paneNodes {
@@ -598,7 +653,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         self.coveringBackgroundNode = NavigationBackgroundNode(color: .clear)
         self.coveringBackgroundNode.isUserInteractionEnabled = false
         
-        self.tabsContainerNode = PeerInfoPaneTabsContainerNode()
+        self.tabsContainerNode = PeerInfoPaneTabsContainerNode(context: context)
         
         self.tabsSeparatorNode = ASDisplayNode()
         self.tabsSeparatorNode.isLayerBacked = true
@@ -1122,6 +1177,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
 
         self.tabsContainerNode.update(size: CGSize(width: size.width, height: tabsHeight), presentationData: presentationData, paneList: availablePanes.map { key in
             let title: String
+            var icons: [TelegramMediaFile] = []
             switch key {
             case .stories:
                 title = presentationData.strings.PeerInfo_PaneStories
@@ -1153,8 +1209,9 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                 title = presentationData.strings.PeerInfo_SavedMessagesTabTitle
             case .gifts:
                 title = presentationData.strings.PeerInfo_PaneGifts
+                icons = data?.profileGiftsContext?.currentState?.gifts.prefix(3).map { $0.gift.file } ?? []
             }
-            return PeerInfoPaneSpecifier(key: key, title: title)
+            return PeerInfoPaneSpecifier(key: key, title: title, icons: icons)
         }, selectedPane: self.currentPaneKey, disableSwitching: disableTabSwitching, transitionFraction: self.transitionFraction, transition: transition)
         
         for (_, pane) in self.pendingPanes {

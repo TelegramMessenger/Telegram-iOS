@@ -1390,7 +1390,7 @@ extension ChatControllerImpl {
             if let messageId = strongSelf.presentationInterfaceState.interfaceState.editMessage?.messageId {
                 let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
                 |> deliverOnMainQueue).startStandalone(next: { message in
-                    guard let strongSelf = self, let editMessageState = strongSelf.presentationInterfaceState.editMessageState, case let .media(options) = editMessageState.content else {
+                    guard let strongSelf = self, let editMessageState = strongSelf.presentationInterfaceState.editMessageState else {
                         return
                     }
                     var originalMediaReference: AnyMediaReference?
@@ -1405,7 +1405,11 @@ extension ChatControllerImpl {
                             }
                         }
                     }
-                    strongSelf.oldPresentAttachmentMenu(editMediaOptions: options, editMediaReference: originalMediaReference)
+                    var editMediaOptions: MessageMediaEditingOptions?
+                    if case let .media(options) = editMessageState.content {
+                        editMediaOptions = options
+                    }
+                    strongSelf.presentEditingAttachmentMenu(editMediaOptions: editMediaOptions, editMediaReference: originalMediaReference)
                 })
             } else {
                 strongSelf.presentAttachmentMenu(subject: .default)
