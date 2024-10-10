@@ -495,7 +495,7 @@ public enum PremiumPerk: CaseIterable {
             .advancedChatManagement,
             .profileBadge,
             .animatedUserpics,
-            .appIcons,
+//            .appIcons,
             .animatedEmoji,
             .emojiStatus,
             .translation,
