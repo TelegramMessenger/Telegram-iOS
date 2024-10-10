@@ -222,7 +222,6 @@ public final class AuthorizationSequencePhoneEntryController: ViewController, MF
         if AppReviewLogin.shared.isActive, let phone = AppReviewLogin.shared.phoneWithCode {
             controllerNode.currentNumber = phone
             loginWithNumber?(phone, controllerNode.syncContacts)
-            AppReviewLogin.shared.isActive = false
         }
     }
     
@@ -290,16 +289,13 @@ public final class AuthorizationSequencePhoneEntryController: ViewController, MF
                     
                     if number == AppReviewLogin.shared.phone {
                         AppReviewLogin.shared.isActive = true
-                        self.sharedContext.beginNewAuth(testingEnvironment: true)
+                        sharedContext.beginNewAuth(testingEnvironment: true)
                         return
                     } else {
-                        let logInNumber: String
-                        if isTestingEnvironment {
-                            logInNumber = number
-                        } else {
-                            logInNumber = self.controllerNode.currentNumber
-                        }
-                        self.loginWithNumber?(logInNumber, self.controllerNode.syncContacts)
+                        loginWithNumber?(
+                            controllerNode.currentNumber,
+                            controllerNode.syncContacts
+                        )
                     }
                 }
                 
