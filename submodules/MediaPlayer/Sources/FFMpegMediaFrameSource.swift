@@ -272,12 +272,12 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
                                         var videoBuffer: MediaTrackFrameBuffer?
                                         
                                         if let audio = streamDescriptions.audio {
-                                            audioBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: audio.decoder, type: .audio, duration: audio.duration, rotationAngle: 0.0, aspect: 1.0, stallDuration: strongSelf.stallDuration, lowWaterDuration: strongSelf.lowWaterDuration, highWaterDuration: strongSelf.highWaterDuration)
+                                            audioBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: audio.decoder, type: .audio, startTime: audio.startTime, duration: audio.duration, rotationAngle: 0.0, aspect: 1.0, stallDuration: strongSelf.stallDuration, lowWaterDuration: strongSelf.lowWaterDuration, highWaterDuration: strongSelf.highWaterDuration)
                                         }
                                         
                                         var extraDecodedVideoFrames: [MediaTrackFrame] = []
                                         if let video = streamDescriptions.video {
-                                            videoBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: video.decoder, type: .video, duration: video.duration, rotationAngle: video.rotationAngle, aspect: video.aspect, stallDuration: strongSelf.stallDuration, lowWaterDuration: strongSelf.lowWaterDuration, highWaterDuration: strongSelf.highWaterDuration)
+                                            videoBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: video.decoder, type: .video, startTime: video.startTime, duration: video.duration, rotationAngle: video.rotationAngle, aspect: video.aspect, stallDuration: strongSelf.stallDuration, lowWaterDuration: strongSelf.lowWaterDuration, highWaterDuration: strongSelf.highWaterDuration)
                                             for videoFrame in streamDescriptions.extraVideoFrames {
                                                 if let decodedFrame = video.decoder.decode(frame: videoFrame) {
                                                     extraDecodedVideoFrames.append(decodedFrame)

@@ -180,12 +180,14 @@ public final class MediaPlayerNode: ASDisplayNode {
         
         takeFrameQueue.async { [weak node] in
             switch takeFrame() {
-            case let .restoreState(frames, atTime):
-                Queue.mainQueue().async {
-                    guard let strongSelf = node, let videoLayer = strongSelf.videoLayer else {
-                        return
+            case let .restoreState(frames, atTime, soft):
+                if !soft {
+                    Queue.mainQueue().async {
+                        guard let strongSelf = node, let videoLayer = strongSelf.videoLayer else {
+                            return
+                        }
+                        videoLayer.flush()
                     }
-                    videoLayer.flush()
                 }
                 for i in 0 ..< frames.count {
                     let frame = frames[i]
@@ -195,13 +197,17 @@ public final class MediaPlayerNode: ASDisplayNode {
                     let dict = attachments[0] as! NSMutableDictionary
                     if i == 0 {
                         CMSetAttachment(frame.sampleBuffer, key: kCMSampleBufferAttachmentKey_ResetDecoderBeforeDecoding as NSString, value: kCFBooleanTrue as AnyObject, attachmentMode: kCMAttachmentMode_ShouldPropagate)
-                        CMSetAttachment(frame.sampleBuffer, key: kCMSampleBufferAttachmentKey_EndsPreviousSampleDuration as NSString, value: kCFBooleanTrue as AnyObject, attachmentMode: kCMAttachmentMode_ShouldPropagate)
+                        if !soft {
+                            CMSetAttachment(frame.sampleBuffer, key: kCMSampleBufferAttachmentKey_EndsPreviousSampleDuration as NSString, value: kCFBooleanTrue as AnyObject, attachmentMode: kCMAttachmentMode_ShouldPropagate)
+                        }
                     }
-                    if CMTimeCompare(frame.position, atTime) < 0 {
-                        dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleAttachmentKey_DoNotDisplay as NSString as String)
-                    } else if CMTimeCompare(frame.position, atTime) == 0 {
-                        dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleAttachmentKey_DisplayImmediately as NSString as String)
-                        dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleBufferAttachmentKey_EndsPreviousSampleDuration as NSString as String)
+                    if !soft {
+                        if CMTimeCompare(frame.position, atTime) < 0 {
+                            dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleAttachmentKey_DoNotDisplay as NSString as String)
+                        } else if CMTimeCompare(frame.position, atTime) == 0 {
+                            dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleAttachmentKey_DisplayImmediately as NSString as String)
+                            dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleBufferAttachmentKey_EndsPreviousSampleDuration as NSString as String)
+                        }
                     }
                     Queue.mainQueue().async {
                         guard let strongSelf = node, let videoLayer = strongSelf.videoLayer else {

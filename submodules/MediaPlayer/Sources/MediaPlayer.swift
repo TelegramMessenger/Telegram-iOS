@@ -232,7 +232,7 @@ private final class MediaPlayerContext {
                 if let loadedState = maybeLoadedState, let videoBuffer = loadedState.mediaBuffers.videoBuffer {
                     if let (extraVideoFrames, atTime) = loadedState.extraVideoFrames {
                         loadedState.extraVideoFrames = nil
-                        return .restoreState(extraVideoFrames, atTime)
+                        return .restoreState(frames: extraVideoFrames, atTimestamp: atTime, soft: false)
                     } else {
                         return videoBuffer.takeFrame()
                     }

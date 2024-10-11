@@ -96,7 +96,12 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
                         if !didSetRate {
                             context.state = .playing(rate: rate, didSetRate: true)
                             let masterClock = CMTimebaseCopySource(context.timebase)
-                            CMTimebaseSetRateAndAnchorTime(context.timebase, rate: rate, anchorTime: CMTimeMake(value: sampleIndex, timescale: 44100), immediateSourceTime: CMSyncGetTime(masterClock))
+                            let anchorTime = CMTimeMake(value: sampleIndex, timescale: 44100)
+                            let immediateSourceTime = CMSyncGetTime(masterClock)
+                            if anchorTime.seconds < CMTimebaseGetTime(context.timebase).seconds - 0.5 {
+                                assert(true)
+                            }
+                            CMTimebaseSetRateAndAnchorTime(context.timebase, rate: rate, anchorTime: anchorTime, immediateSourceTime: immediateSourceTime)
                             updatedRate = context.updatedRate
                         } else {
                             context.renderTimestampTick += 1
@@ -165,6 +170,10 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
                                 break
                             }
                         }
+                    } else {
+                        #if DEBUG
+                        print("No audio data")
+                        #endif
                     }
                 
                     if !context.notifiedLowWater {
