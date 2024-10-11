@@ -195,11 +195,9 @@ public final class MediaPlayerNode: ASDisplayNode {
                     state.maxTakenTime = frameTime
                     let attachments = CMSampleBufferGetSampleAttachmentsArray(frame.sampleBuffer, createIfNecessary: true)! as NSArray
                     let dict = attachments[0] as! NSMutableDictionary
-                    if i == 0 {
+                    if i == 0 && !soft {
                         CMSetAttachment(frame.sampleBuffer, key: kCMSampleBufferAttachmentKey_ResetDecoderBeforeDecoding as NSString, value: kCFBooleanTrue as AnyObject, attachmentMode: kCMAttachmentMode_ShouldPropagate)
-                        if !soft {
-                            CMSetAttachment(frame.sampleBuffer, key: kCMSampleBufferAttachmentKey_EndsPreviousSampleDuration as NSString, value: kCFBooleanTrue as AnyObject, attachmentMode: kCMAttachmentMode_ShouldPropagate)
-                        }
+                        CMSetAttachment(frame.sampleBuffer, key: kCMSampleBufferAttachmentKey_EndsPreviousSampleDuration as NSString, value: kCFBooleanTrue as AnyObject, attachmentMode: kCMAttachmentMode_ShouldPropagate)
                     }
                     if !soft {
                         if CMTimeCompare(frame.position, atTime) < 0 {
