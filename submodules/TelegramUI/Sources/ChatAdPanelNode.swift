@@ -332,13 +332,13 @@ final class ChatAdPanelNode: ASDisplayNode {
         let textConstrainedSize = CGSize(width: width - contentLeftInset - contentRightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude)
                 
         //TODO:localize
-        let (adLayout, adApply) = makeAdLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Ad", font: Font.semibold(14.0), textColor: theme.chat.inputPanel.panelControlAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
+        let (adLayout, adApply) = makeAdLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Ad", font: Font.semibold(14.0), textColor: theme.chat.inputPanel.panelControlAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: .zero))
         
         var titleText: String = ""
         if let author = message.author {
             titleText = EnginePeer(author).compactDisplayTitle
         }
-        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleText, font: Font.semibold(14.0), textColor: theme.chat.inputPanel.primaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
+        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleText, font: Font.semibold(14.0), textColor: theme.chat.inputPanel.primaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: .zero))
         
         let (textString, _, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId)
         
@@ -376,13 +376,23 @@ final class ChatAdPanelNode: ASDisplayNode {
             messageText = NSAttributedString(string: foldLineBreaks(textString.string), font: textFont, textColor: message.media.isEmpty || message.media.first is TelegramMediaWebpage ? theme.chat.inputPanel.primaryTextColor : theme.chat.inputPanel.secondaryTextColor)
         }
         
-        let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
+        let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: .zero))
         
         var panelHeight: CGFloat = 0.0
         if let _ = imageDimensions {
             panelHeight = 9.0 + imageBoundingSize.height + 9.0
         }
-        panelHeight = max(panelHeight, 9.0 + titleLayout.size.height + textLayout.size.height + 9.0)
+        
+        var textHeight: CGFloat
+        var titleOnSeparateLine = false
+        if textLayout.numberOfLines == 1 || contentLeftInset + adLayout.size.width + 2.0 + titleLayout.size.width > width - contentRightInset - textRightInset {
+            textHeight = adLayout.size.height + titleLayout.size.height + textLayout.size.height + 15.0
+            titleOnSeparateLine = true
+        } else {
+            textHeight = titleLayout.size.height + textLayout.size.height + 15.0
+        }
+        
+        panelHeight = max(panelHeight, textHeight)
         
         Queue.mainQueue().async {
             let _ = adApply()
@@ -407,18 +417,18 @@ final class ChatAdPanelNode: ASDisplayNode {
             
             let removeTextSize = self.removeTextNode.updateLayout(CGSize(width: width, height: .greatestFiniteMagnitude))
             
-            if textLayout.numberOfLines == 1 {
-                self.adNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 7.0), size: adLayout.size)
-                self.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 24.0), size: titleLayout.size)
-                self.textNode.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 41.0), size: textLayout.size)
+            if titleOnSeparateLine {
+                self.adNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 9.0), size: adLayout.size)
+                self.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 26.0), size: titleLayout.size)
+                self.textNode.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 43.0), size: textLayout.size)
                 
                 self.removeTextNode.frame = CGRect(origin: CGPoint(x: contentLeftInset + adLayout.size.width + 8.0, y: 11.0 - UIScreenPixel), size: removeTextSize)
                 self.removeBackgroundNode.frame = self.removeTextNode.frame.insetBy(dx: -5.0, dy: -1.0)
                 self.removeButtonNode.frame = self.removeBackgroundNode.frame
             } else {
-                self.adNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 7.0), size: adLayout.size)
-                self.titleNode.frame = CGRect(origin: CGPoint(x: adLayout.size.width + 2.0, y: 7.0), size: titleLayout.size)
-                self.textNode.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 24.0), size: textLayout.size)
+                self.adNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 9.0), size: adLayout.size)
+                self.titleNode.frame = CGRect(origin: CGPoint(x: adLayout.size.width + 2.0, y: 9.0), size: titleLayout.size)
+                self.textNode.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 26.0), size: textLayout.size)
                 
                 self.removeTextNode.frame = CGRect(origin: CGPoint(x: contentLeftInset + adLayout.size.width + 2.0 + titleLayout.size.width + 8.0, y: 11.0 - UIScreenPixel), size: removeTextSize)
                 self.removeBackgroundNode.frame = self.removeTextNode.frame.insetBy(dx: -5.0, dy: -1.0)

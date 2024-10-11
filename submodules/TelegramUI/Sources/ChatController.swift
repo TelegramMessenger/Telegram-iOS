@@ -5810,6 +5810,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             boostsToUnrestrict = cachedChannelData.boostsToUnrestrict
                         }
                         
+                        var adMessage = adMessage
+                        if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil {
+                        } else {
+                            adMessage = nil
+                        }
+                        
                         strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                             return $0.updatedPeer { _ in
                                 return renderedPeer
