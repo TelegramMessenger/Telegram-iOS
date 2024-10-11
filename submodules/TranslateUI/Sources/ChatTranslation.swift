@@ -246,20 +246,10 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                                     languageRecognizer.processString(text)
                                     let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 4)
                                     languageRecognizer.reset()
-                                    
-                                    func normalize(_ code: String) -> String {
-                                        if code.contains("-") {
-                                            return code.components(separatedBy: "-").first ?? code
-                                        } else if code == "nb" {
-                                            return "no"
-                                        } else {
-                                            return code
-                                        }
-                                    }
-                                    
-                                    let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains(normalize($0.key.rawValue)) }.sorted(by: { $0.value > $1.value })
+                                                                        
+                                    let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains(normalizeTranslationLanguage($0.key.rawValue)) }.sorted(by: { $0.value > $1.value })
                                     if let language = filteredLanguages.first {
-                                        let fromLang = normalize(language.key.rawValue)
+                                        let fromLang = normalizeTranslationLanguage(language.key.rawValue)
                                         if loggingEnabled && !["en", "ru"].contains(fromLang) && !dontTranslateLanguages.contains(fromLang) {
                                             Logger.shared.log("ChatTranslation", "\(text)")
                                             Logger.shared.log("ChatTranslation", "Recognized as: \(fromLang), other hypotheses: \(hypotheses.map { $0.key.rawValue }.joined(separator: ",")) ")

@@ -777,9 +777,19 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         }
         var adMessages: Signal<(interPostInterval: Int32?, messages: [Message]), NoError>
         if case .bubbles = mode, let peerId = displayAdPeer {
-            let adMessagesContext = context.engine.messages.adMessages(peerId: peerId)
+            var effectivePeerId = peerId
+#if DEBUG
+            if peerId.namespace == Namespaces.Peer.CloudUser && peerId.id._internalGetInt64Value() == 784496 {
+                effectivePeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(8000911878))
+            }
+#endif
+            let adMessagesContext = context.engine.messages.adMessages(peerId: effectivePeerId)
             self.adMessagesContext = adMessagesContext
-            adMessages = adMessagesContext.state
+            if peerId.namespace == Namespaces.Peer.CloudUser {
+                adMessages = .single((nil, []))
+            } else {
+                adMessages = adMessagesContext.state
+            }
         } else {
             self.adMessagesContext = nil
             adMessages = .single((nil, []))
@@ -1861,12 +1871,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     if languageCode.hasSuffix(rawSuffix) {
                         languageCode = String(languageCode.dropLast(rawSuffix.count))
                     }
-                    if languageCode == "nb" {
-                        languageCode = "no"
-                    } else if languageCode == "pt-br" {
-                        languageCode = "pt"
-                    }
-                    translateToLanguage = languageCode
+                    translateToLanguage = normalizeTranslationLanguage(languageCode)
                 }
                 
                 let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, preferredStoryHighQuality: preferredStoryHighQuality, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageIdAndType?.0, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, availableMessageEffects: availableMessageEffects, savedMessageTags: savedMessageTags, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId, hasBots: chatHasBots, translateToLanguage: translateToLanguage, maxReadStoryId: maxReadStoryId, recommendedChannels: recommendedChannels, audioTranscriptionTrial: audioTranscriptionTrial, chatThemes: chatThemes, deviceContactsNumbers: deviceContactsNumbers, isInline: !rotated, showSensitiveContent: contentSettings.ignoreContentRestrictionReasons.contains("sensitive"), starGifts: starGifts)

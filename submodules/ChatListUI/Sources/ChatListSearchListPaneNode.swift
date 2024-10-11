@@ -271,6 +271,17 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     })
                 }
             
+                var buttonAction: ContactsPeerItemButtonAction?
+                if case .chats = key, case let .user(user) = primaryPeer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp) {
+                    //TODO:localize
+                    buttonAction = ContactsPeerItemButtonAction(
+                        title: "OPEN",
+                        action: { peer, _, _ in
+                            peerSelected(primaryPeer, nil, true)
+                        }
+                    )
+                }
+            
                 return ContactsPeerItem(
                     presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat),
                     sortOrder: nameSortOrder,
@@ -284,6 +295,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     enabled: enabled,
                     selection: .none,
                     editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
+                    buttonAction: buttonAction,
                     index: nil,
                     header: header,
                     action: { _ in
@@ -3758,7 +3770,23 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             }
                         }
                     } else {
-                        interaction.openPeer(peer, nil, threadId, true)
+                        if isRecommended, case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp), let parentController = self.parentController {
+                            self.context.sharedContext.openWebApp(
+                                context: self.context,
+                                parentController: parentController,
+                                updatedPresentationData: nil,
+                                peer: peer,
+                                threadId: nil,
+                                buttonText: "",
+                                url: "",
+                                simple: true,
+                                source: .generic,
+                                skipTermsOfService: true,
+                                payload: nil
+                            )
+                        } else {
+                            interaction.openPeer(peer, nil, threadId, true)
+                        }
                         if threadId == nil {
                             switch location {
                             case .chatList, .forum:

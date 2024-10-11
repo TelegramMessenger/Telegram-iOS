@@ -55,7 +55,12 @@ public final class HashtagSearchController: TelegramBaseController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        self.title = query
+        var title = query
+        if case .chatOnly = mode, let addressName = peer?.addressName {
+            title = "\(query)@\(addressName)"
+        }
+        
+        self.title = title
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
                         
         self.presentationDataDisposable = (self.context.sharedContext.presentationData

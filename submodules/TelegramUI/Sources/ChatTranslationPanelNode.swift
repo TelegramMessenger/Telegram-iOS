@@ -245,12 +245,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
                 var addedLanguages = Set<String>()
                 
                 var topLanguages: [String] = []
-                var langCode = languageCode
-                if langCode == "nb" {
-                    langCode = "no"
-                } else if langCode == "pt-br" {
-                    langCode = "pt"
-                }
+                let langCode = normalizeTranslationLanguage(languageCode)
                 
                 var selectedLanguages: Set<String>
                 if let ignoredLanguages = settings.ignoredLanguages {

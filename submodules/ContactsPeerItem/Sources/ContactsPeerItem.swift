@@ -103,6 +103,16 @@ public struct ContactsPeerItemAction {
     }
 }
 
+public struct ContactsPeerItemButtonAction {
+    public let title: String
+    public let action: ((ContactsPeerItemPeer, ASDisplayNode, ContextGesture?) -> Void)?
+    
+    public init(title: String, action: @escaping (ContactsPeerItemPeer, ASDisplayNode, ContextGesture?) -> Void) {
+        self.title = title
+        self.action = action
+    }
+}
+
 public enum ContactsPeerItemPeer: Equatable {
     case thread(peer: EnginePeer, title: String, icon: Int64?, color: Int32)
     case peer(peer: EnginePeer?, chatPeer: EnginePeer?)
@@ -175,6 +185,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let options: [ItemListPeerItemRevealOption]
     let additionalActions: [ContactsPeerItemAction]
     let actionIcon: ContactsPeerItemActionIcon
+    let buttonAction: ContactsPeerItemButtonAction?
     let searchQuery: String?
     let action: ((ContactsPeerItemPeer) -> Void)?
     let disabledAction: ((ContactsPeerItemPeer) -> Void)?
@@ -214,6 +225,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         options: [ItemListPeerItemRevealOption] = [],
         additionalActions: [ContactsPeerItemAction] = [],
         actionIcon: ContactsPeerItemActionIcon = .none,
+        buttonAction: ContactsPeerItemButtonAction? = nil,
         index: SortIndex?,
         header: ListViewItemHeader?,
         searchQuery: String? = nil,
@@ -247,6 +259,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.options = options
         self.additionalActions = additionalActions
         self.actionIcon = actionIcon
+        self.buttonAction = buttonAction
         self.searchQuery = searchQuery
         self.action = action
         self.disabledAction = disabledAction
@@ -429,6 +442,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var moreButtonNode: MoreButtonNode?
     private var arrowButtonNode: HighlightableButtonNode?
     private var rightLabelTextNode: TextNode?
+    
+    private var actionButtonNode: HighlightTrackingButtonNode?
+    private var actionButtonTitleNode: TextNode?
+    private var actionButtonBackgroundNode: ASImageNode?
     
     private var avatarTapRecognizer: UITapGestureRecognizer?
     
@@ -692,6 +709,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         
         let makeBadgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
         let makeRightLabelTextLayout = TextNode.asyncLayout(self.rightLabelTextNode)
+        
+        let makeActionButtonTitleLayuout = TextNode.asyncLayout(self.actionButtonTitleNode)
         
         let currentItem = self.layoutParams?.0
         
@@ -1025,6 +1044,11 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 statusHeightComponent = 0.0
             } else {
                 statusHeightComponent = -1.0 + statusLayout.size.height
+            }
+            
+            var actionButtonTitleLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if let buttonAction = item.buttonAction {
+                actionButtonTitleLayoutAndApply = makeActionButtonTitleLayuout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: buttonAction.title, font: Font.semibold(15.0), textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             }
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + statusHeightComponent), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
@@ -1411,6 +1435,70 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 verifiedIconView.removeFromSuperview()
                             }
                             
+                            if let (titleLayout, titleApply) = actionButtonTitleLayoutAndApply {
+                                let actionButtonTitleNode = titleApply()
+                                let actionButtonBackgroundNode: ASImageNode
+                                let actionButtonNode: HighlightTrackingButtonNode
+                                if let currentBackgroundNode = strongSelf.actionButtonBackgroundNode, let currentButtonNode = strongSelf.actionButtonNode {
+                                    actionButtonBackgroundNode = currentBackgroundNode
+                                    actionButtonNode = currentButtonNode
+                                } else {
+                                    actionButtonBackgroundNode = ASImageNode()
+                                    actionButtonBackgroundNode.displaysAsynchronously = false
+                                    strongSelf.offsetContainerNode.addSubnode(actionButtonBackgroundNode)
+                                    strongSelf.actionButtonBackgroundNode = actionButtonBackgroundNode
+                                    
+                                    actionButtonNode = HighlightTrackingButtonNode()
+                                    actionButtonNode.highligthedChanged = { [weak self] highlighted in
+                                        if let strongSelf = self {
+                                            if highlighted {
+                                                strongSelf.actionButtonTitleNode?.layer.removeAnimation(forKey: "opacity")
+                                                strongSelf.actionButtonTitleNode?.alpha = 0.4
+                                                strongSelf.actionButtonBackgroundNode?.layer.removeAnimation(forKey: "opacity")
+                                                strongSelf.actionButtonBackgroundNode?.alpha = 0.4
+                                            } else {
+                                                strongSelf.actionButtonTitleNode?.alpha = 1.0
+                                                strongSelf.actionButtonTitleNode?.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                                                strongSelf.actionButtonBackgroundNode?.alpha = 1.0
+                                                strongSelf.actionButtonBackgroundNode?.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                                            }
+                                        }
+                                    }
+                                    actionButtonNode.addTarget(strongSelf, action: #selector(strongSelf.actionButtonPressed(_:)), forControlEvents: .touchUpInside)
+                                    
+                                    strongSelf.offsetContainerNode.addSubnode(actionButtonNode)
+                                    strongSelf.actionButtonNode = actionButtonNode
+                                }
+                                if strongSelf.actionButtonTitleNode == nil {
+                                    strongSelf.actionButtonTitleNode = actionButtonTitleNode
+                                    strongSelf.offsetContainerNode.insertSubnode(actionButtonTitleNode, aboveSubnode: actionButtonBackgroundNode)
+                                }
+                                if updatedTheme != nil || actionButtonBackgroundNode.image == nil {
+                                    actionButtonBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: item.presentationData.theme.list.itemAccentColor)
+                                }
+                                
+                                let actionButtonSize = CGSize(width: titleLayout.size.width + 13.0 * 2.0, height: 28.0)
+                                let actionButtonFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 12.0 - actionButtonSize.width, y: floorToScreenPixels((nodeLayout.contentSize.height - actionButtonSize.height) / 2.0)), size: actionButtonSize)
+                                actionButtonBackgroundNode.frame = actionButtonFrame
+                                actionButtonNode.frame = actionButtonFrame
+                                
+                                let actionTitleFrame = CGRect(origin: CGPoint(x: actionButtonFrame.minX + 13.0, y: actionButtonFrame.minY + floorToScreenPixels((actionButtonFrame.height - titleLayout.size.height) / 2.0) + 1.0), size: titleLayout.size)
+                                actionButtonTitleNode.frame = actionTitleFrame
+                            } else {
+                                if let actionButtonTitleNode = strongSelf.actionButtonTitleNode {
+                                    strongSelf.actionButtonTitleNode = nil
+                                    actionButtonTitleNode.removeFromSupernode()
+                                }
+                                if let actionButtonBackgroundNode = strongSelf.actionButtonBackgroundNode {
+                                    strongSelf.actionButtonBackgroundNode = nil
+                                    actionButtonBackgroundNode.removeFromSupernode()
+                                }
+                                if let actionButtonNode = strongSelf.actionButtonNode {
+                                    strongSelf.actionButtonNode = nil
+                                    actionButtonNode.removeFromSupernode()
+                                }
+                            }
+                            
                             if let actionButtons, actionButtons.count == 1, let actionButton = actionButtons.first, case .more = actionButton.type {
                                 let moreButtonNode: MoreButtonNode
                                 if let current = strongSelf.moreButtonNode {
@@ -1426,7 +1514,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     actionButton.action?(item.peer, sourceNode, gesture)
                                 }
                                 let moreButtonSize = moreButtonNode.measure(CGSize(width: 100.0, height: nodeLayout.contentSize.height))
-                                moreButtonNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - params.rightInset - 21.0 - moreButtonSize.width, y:floor((nodeLayout.contentSize.height - moreButtonSize.height) / 2.0)), size: moreButtonSize)
+                                moreButtonNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - params.rightInset - 21.0 - moreButtonSize.width, y: floor((nodeLayout.contentSize.height - moreButtonSize.height) / 2.0)), size: moreButtonSize)
                             } else if let actionButtons = actionButtons {
                                 if strongSelf.actionButtonNodes == nil {
                                     var actionButtonNodes: [HighlightableButtonNode] = []
@@ -1615,7 +1703,14 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     }
     
     @objc private func actionButtonPressed(_ sender: HighlightableButtonNode) {
-        guard let actionButtonNodes = self.actionButtonNodes, let index = actionButtonNodes.firstIndex(of: sender), let item = self.item, index < item.additionalActions.count else {
+        guard let item = self.item else {
+            return
+        }
+        if let action = item.buttonAction {
+            action.action?(item.peer, sender, nil)
+            return
+        }
+        guard let actionButtonNodes = self.actionButtonNodes, let index = actionButtonNodes.firstIndex(of: sender), index < item.additionalActions.count else {
             return
         }
         item.additionalActions[index].action?(item.peer, sender, nil)

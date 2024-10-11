@@ -157,6 +157,17 @@ public func effectiveIgnoredTranslationLanguages(context: AccountContext, ignore
     return dontTranslateLanguages
 }
 
+public func normalizeTranslationLanguage(_ code: String) -> String {
+    var code = code
+    if code.contains("-") {
+        code = code.components(separatedBy: "-").first ?? code
+    }
+    if code == "nb" {
+        code = "no"
+    }
+    return code
+}
+
 public func canTranslateText(context: AccountContext, text: String, showTranslate: Bool, showTranslateIfTopical: Bool = false, ignoredLanguages: [String]?) -> (canTranslate: Bool, language: String?) {
     guard showTranslate || showTranslateIfTopical, text.count > 0 else {
         return (false, nil)
@@ -178,20 +189,10 @@ public func canTranslateText(context: AccountContext, text: String, showTranslat
         if !showTranslate && showTranslateIfTopical {
             supportedTranslationLanguages = ["uk", "ru"]
         }
-        
-        func normalize(_ code: String) -> String {
-            if code.contains("-") {
-                return code.components(separatedBy: "-").first ?? code
-            } else if code == "nb" {
-                return "no"
-            } else {
-                return code
-            }
-        }
-        
-        let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains(normalize($0.key.rawValue)) }.sorted(by: { $0.value > $1.value })
+                
+        let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains(normalizeTranslationLanguage($0.key.rawValue)) }.sorted(by: { $0.value > $1.value })
         if let language = filteredLanguages.first {
-            let languageCode = normalize(language.key.rawValue)
+            let languageCode = normalizeTranslationLanguage(language.key.rawValue)
             return (!dontTranslateLanguages.contains(languageCode), languageCode)
         } else {
             return (false, nil)
