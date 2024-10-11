@@ -332,7 +332,7 @@ private final class ChunkMediaPlayerContext {
         audioRendererContext.start()
         self.tick()
         
-        let tickTimer = SwiftSignalKit.Timer(timeout: 1.0 / 60.0, repeat: true, completion: { [weak self] in
+        let tickTimer = SwiftSignalKit.Timer(timeout: 1.0 / 25.0, repeat: true, completion: { [weak self] in
             self?.tick()
         }, queue: self.queue)
         self.tickTimer = tickTimer
@@ -608,15 +608,31 @@ private final class ChunkMediaPlayerContext {
             }
         }
         
-        /*if validParts.isEmpty, let initialSeekTimestamp = self.initialSeekTimestamp {
+        if validParts.isEmpty, let initialSeekTimestamp = self.initialSeekTimestamp {
             for part in self.partsState.parts {
                 if initialSeekTimestamp >= part.startTime - 0.2 && initialSeekTimestamp < part.endTime {
                     self.initialSeekTimestamp = nil
-                    self.seek(timestamp: part.startTime + 0.05)
+                    
+                    self.videoRenderer.flush()
+                    
+                    if let audioRenderer = self.audioRenderer {
+                        self.isSeeking = true
+                        let queue = self.queue
+                        audioRenderer.renderer.flushBuffers(at: CMTime(seconds: part.startTime + 0.1, preferredTimescale: 44100), completion: { [weak self] in
+                            queue.async {
+                                guard let self else {
+                                    return
+                                }
+                                self.isSeeking = false
+                                self.tick()
+                            }
+                        })
+                    }
+                    
                     return
                 }
             }
-        }*/
+        }
         
         self.loadedState.partStates.removeAll(where: { partState in
             if !validParts.contains(where: { $0.id == partState.part.id }) {
