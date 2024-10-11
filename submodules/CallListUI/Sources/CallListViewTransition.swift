@@ -45,6 +45,7 @@ struct CallListNodeViewTransition {
 }
 
 enum CallListNodeViewScrollPosition {
+    case top(animated: Bool)
     case index(index: EngineMessage.Index, position: ListViewScrollPosition, directionHint: ListViewScrollToItemDirectionHint, animated: Bool)
 }
 
@@ -135,6 +136,8 @@ func preparedCallListNodeViewTransition(from fromView: CallListNodeView?, to toV
         
         if let scrollPosition = scrollPosition {
             switch scrollPosition {
+            case let .top(animated):
+                scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: animated, curve: .Default(duration: nil), directionHint: .Up)
             case let .index(scrollIndex, position, directionHint, animated):
                 var index = toView.filteredEntries.count - 1
                 for entry in toView.filteredEntries {

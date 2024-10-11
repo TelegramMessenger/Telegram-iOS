@@ -35,8 +35,10 @@ final class TabBarControllerNode: ASDisplayNode {
             }
         }
         
-        return { [weak previousNode] in
-            previousNode?.removeFromSupernode()
+        return { [weak self, weak previousNode] in
+            if previousNode !== self?.currentControllerNode {
+                previousNode?.removeFromSupernode()
+            }
         }
     }
     

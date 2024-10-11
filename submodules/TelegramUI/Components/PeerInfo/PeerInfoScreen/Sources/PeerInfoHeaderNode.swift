@@ -2106,7 +2106,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         navigationTransition.updateAlpha(node: self.buttonsContainerNode, alpha: backgroundBannerAlpha)
         
-        let bannerFrame = CGRect(origin: CGPoint(x: 0.0, y: -2000.0 + apparentBackgroundHeight), size: CGSize(width: width, height: 2000.0))
+        let bannerInset: CGFloat = 3.0
+        let bannerFrame = CGRect(origin: CGPoint(x: -bannerInset, y: -2000.0 + apparentBackgroundHeight), size: CGSize(width: width + bannerInset * 2.0, height: 2000.0))
         
         if additive {
             transition.updateFrameAdditive(view: self.backgroundBannerView, frame: bannerFrame)
@@ -2128,16 +2129,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 patternTransitionFraction: buttonsTransitionFraction * backgroundTransitionFraction
             )),
             environment: {},
-            containerSize: CGSize(width: width, height: apparentBackgroundHeight)
+            containerSize: CGSize(width: width + bannerInset * 2.0, height: apparentBackgroundHeight + bannerInset)
         )
         if let backgroundCoverView = self.backgroundCover.view {
             if backgroundCoverView.superview == nil {
                 self.backgroundBannerView.addSubview(backgroundCoverView)
             }
             if additive {
-                transition.updateFrameAdditive(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - backgroundCoverSize.height), size: backgroundCoverSize))
+                transition.updateFrameAdditive(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: -3.0, y: bannerFrame.height - backgroundCoverSize.height - bannerInset), size: backgroundCoverSize))
             } else {
-                transition.updateFrame(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - backgroundCoverSize.height), size: backgroundCoverSize))
+                transition.updateFrame(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - backgroundCoverSize.height - bannerInset), size: backgroundCoverSize))
             }
         }
         

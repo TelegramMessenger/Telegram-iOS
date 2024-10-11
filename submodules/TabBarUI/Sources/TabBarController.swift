@@ -373,8 +373,10 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             //self.tabBarControllerNode.currentControllerNode = nil
             
             if animated {
-                currentController.view.layer.animateScale(from: 1.0, to: transitionSale, duration: 0.15, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
-                    currentController.view.layer.removeAllAnimations()
+                currentController.view.layer.animateScale(from: 1.0, to: transitionSale, duration: 0.15, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { completed in
+                    if completed {
+                        currentController.view.layer.removeAllAnimations()
+                    }
                 })
             }
             currentController.removeFromParent()
@@ -395,8 +397,10 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             if animated {
                 currentController.view.layer.animateScale(from: transitionSale, to: 1.0, duration: 0.15, delay: 0.15, timingFunction: kCAMediaTimingFunctionSpring)
                 currentController.view.layer.allowsGroupOpacity = true
-                currentController.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, completion: { _ in
-                    currentController.view.layer.allowsGroupOpacity = false
+                currentController.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, completion: { completed in
+                    if completed {
+                        currentController.view.layer.allowsGroupOpacity = false
+                    }
                     commit()
                 })
             } else {

@@ -443,6 +443,7 @@ final class CallListControllerNode: ASDisplayNode {
         }
         
         let previousView = Atomic<CallListNodeView?>(value: nil)
+        let previousType = Atomic<EngineCallList.Scope?>(value: nil)
         
         let showSettings: Bool
         switch mode {
@@ -505,7 +506,8 @@ final class CallListControllerNode: ASDisplayNode {
             
             let processedView = CallListNodeView(originalView: update.view, filteredEntries: callListNodeEntriesForView(view: update.view, groupCalls: groupCalls, state: state, showSettings: showSettings, showCallsTab: showCallsTab, isRecentCalls: type == .all, currentGroupCallPeerId: currentGroupCallPeerId), presentationData: state.presentationData)
             let previous = previousView.swap(processedView)
-            
+            let previousType = previousType.swap(type)
+                        
             let reason: CallListNodeViewTransitionReason
             var prepareOnMainQueue = false
             
@@ -565,8 +567,12 @@ final class CallListControllerNode: ASDisplayNode {
                     }
                 }
             }
+            var scrollPosition = update.scrollPosition
+            if previousType != type {
+                scrollPosition = .top(animated: false)
+            }
             
-            return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: disableAnimations, context: context, scrollPosition: update.scrollPosition)
+            return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: disableAnimations, context: context, scrollPosition: scrollPosition)
             |> map({ mappedCallListNodeViewListTransition(context: context, presentationData: state.presentationData, showSettings: showSettings, nodeInteraction: nodeInteraction, transition: $0) })
             |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
         }
