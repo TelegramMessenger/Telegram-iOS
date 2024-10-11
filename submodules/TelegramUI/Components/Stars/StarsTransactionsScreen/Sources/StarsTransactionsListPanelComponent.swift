@@ -16,6 +16,7 @@ import AvatarNode
 import BundleIconComponent
 import PhotoResources
 import StarsAvatarComponent
+import LottieComponent
 
 private extension StarsContext.State.Transaction {
     var extendedId: String {
@@ -207,11 +208,13 @@ final class StarsTransactionsListPanelComponent: Component {
                     let itemSubtitle: String?
                     var itemDate: String
                     var itemPeer = item.peer
+                    var itemFile: TelegramMediaFile?
                     switch item.peer {
                     case let .peer(peer):
-                        if let _ = item.starGift {
+                        if let starGift = item.starGift {
                             itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                             itemSubtitle = item.count > 0 ? environment.strings.Stars_Intro_Transaction_ConvertedGift : environment.strings.Stars_Intro_Transaction_Gift
+                            itemFile = starGift.file
                         } else if let _ = item.giveawayMessageId {
                             itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                             itemSubtitle = environment.strings.Stars_Intro_Transaction_GiveawayPrize
@@ -298,15 +301,44 @@ final class StarsTransactionsListPanelComponent: Component {
                         )))
                     )
                     if let itemSubtitle {
-                        titleComponents.append(
-                            AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
+                        let subtitleComponent: AnyComponent<Empty>
+                        if let itemFile {
+                            subtitleComponent = AnyComponent(
+                                HStack([
+                                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(LottieComponent(
+                                        content: LottieComponent.ResourceContent(
+                                            context: component.context,
+                                            file: itemFile,
+                                            attemptSynchronously: false,
+                                            providesPlaceholder: true
+                                        ),
+                                        color: nil,
+                                        placeholderColor: environment.theme.list.mediaPlaceholderColor,
+                                        size: CGSize(width: 20.0, height: 20.0),
+                                        loop: false
+                                    ))),
+                                    AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
+                                        text: .plain(NSAttributedString(
+                                            string: itemSubtitle,
+                                            font: Font.regular(fontBaseDisplaySize * 16.0 / 17.0),
+                                            textColor: environment.theme.list.itemPrimaryTextColor
+                                        ))
+                                    )))
+                                ], spacing: 2.0)
+                            )
+                        } else {
+                            subtitleComponent = AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
                                     string: itemSubtitle,
                                     font: Font.regular(fontBaseDisplaySize * 16.0 / 17.0),
                                     textColor: environment.theme.list.itemPrimaryTextColor
                                 )),
                                 maximumNumberOfLines: 1
-                            )))
+                            ))
+                        }
+                        
+                        titleComponents.append(
+                            AnyComponentWithIdentity(id: AnyHashable(1), component: subtitleComponent)
                         )
                     }
                     titleComponents.append(
