@@ -114,7 +114,7 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             if _selectedIndex != index {
                 _selectedIndex = index
                 
-                self.updateSelectedIndex()
+                self.updateSelectedIndex(animated: true)
             }
         }
     }
@@ -344,7 +344,7 @@ open class TabBarControllerImpl: ViewController, TabBarController {
         transition.updateAlpha(node: self.tabBarControllerNode.tabBarNode.separatorNode, alpha: alpha, delay: 0.15)
     }
     
-    private func updateSelectedIndex() {
+    private func updateSelectedIndex(animated: Bool = false) {
         if !self.isNodeLoaded {
             return
         }
@@ -359,9 +359,19 @@ open class TabBarControllerImpl: ViewController, TabBarController {
         }
         self.tabBarControllerNode.tabBarNode.selectedIndex = tabBarSelectedIndex
         
+        var transitionSale: CGFloat = 0.995
+        if let currentView = self.currentController?.view {
+            transitionSale = (currentView.frame.height - 3.0) / currentView.frame.height
+        }
         if let currentController = self.currentController {
             currentController.willMove(toParent: nil)
-            self.tabBarControllerNode.currentControllerNode = nil
+            //self.tabBarControllerNode.currentControllerNode = nil
+            
+            if animated {
+                currentController.view.layer.animateScale(from: 1.0, to: transitionSale, duration: 0.15, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+                    currentController.view.layer.removeAllAnimations()
+                })
+            }
             currentController.removeFromParent()
             currentController.didMove(toParent: nil)
             
@@ -374,13 +384,21 @@ open class TabBarControllerImpl: ViewController, TabBarController {
 
         if let currentController = self.currentController {
             currentController.willMove(toParent: self)
-            self.tabBarControllerNode.currentControllerNode = currentController.displayNode
             self.addChild(currentController)
+            
+            let commit = self.tabBarControllerNode.setCurrentControllerNode(currentController.displayNode)
+            if animated {
+                currentController.view.layer.animateScale(from: transitionSale, to: 1.0, duration: 0.15, delay: 0.15, timingFunction: kCAMediaTimingFunctionSpring)
+                currentController.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, completion: { _ in
+                    commit()
+                })
+            } else {
+                commit()
+            }
             currentController.didMove(toParent: self)
 
             currentController.displayNode.recursivelyEnsureDisplaySynchronously(true)
             self.statusBar.statusBarStyle = currentController.statusBar.statusBarStyle
-        } else {
         }
         
         if let layout = self.validLayout {

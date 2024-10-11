@@ -3916,7 +3916,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             self.openWebApp(buttonText: buttonText, url: url, simple: simple, source: source)
         }, activateAdAction: { [weak self] messageId, progress, media, fullscreen in
-            guard let self, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId), let adAttribute = message.adAttribute else {
+            guard let self else {
+                return
+            }
+            
+            var message: Message?
+            if let historyMessage = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                message = historyMessage
+            } else if let panelMessage = self.chatDisplayNode.adPanelNode?.message, panelMessage.id == messageId {
+                message = panelMessage
+            }
+                
+            guard let message, let adAttribute = message.adAttribute else {
                 return
             }
             
@@ -5491,6 +5502,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     isPremiumRequiredForMessaging = .single(false)
                 }
                 
+                let adMessage: Signal<Message?, NoError>
+                if let adMessagesContext = self.chatDisplayNode.historyNode.adMessagesContext {
+                    adMessage = adMessagesContext.state |> map { $0.messages.first }
+                } else {
+                    adMessage = .single(nil)
+                }
+
                 self.peerDisposable.set(combineLatest(
                     queue: Queue.mainQueue(),
                     peerView.get(),
@@ -5503,8 +5521,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     hasSearchTags,
                     hasSavedChats,
                     isPremiumRequiredForMessaging,
-                    managingBot
-                ).startStrict(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot in
+                    managingBot,
+                    adMessage
+                ).startStrict(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot, adMessage in
                     if let strongSelf = self {
                         if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages && strongSelf.threadInfo == threadInfo && strongSelf.presentationInterfaceState.hasSearchTags == hasSearchTags && strongSelf.presentationInterfaceState.hasSavedChats == hasSavedChats && strongSelf.presentationInterfaceState.isPremiumRequiredForMessaging == isPremiumRequiredForMessaging && managingBot == strongSelf.presentationInterfaceState.contactStatus?.managingBot {
                             return
@@ -5794,48 +5813,59 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                             return $0.updatedPeer { _ in
                                 return renderedPeer
-                            }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedHasBotCommands(hasBotCommands).updatedBotMenuButton(botMenuButton).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedPeerGeoLocation(peerGeoLocation).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages).updatedHasScheduledMessages(hasScheduledMessages)
-                                .updatedAutoremoveTimeout(autoremoveTimeout)
-                                .updatedCurrentSendAsPeerId(currentSendAsPeerId)
-                                .updatedCopyProtectionEnabled(copyProtectionEnabled)
-                                .updatedHasSearchTags(hasSearchTags)
-                                .updatedIsPremiumRequiredForMessaging(isPremiumRequiredForMessaging)
-                                .updatedHasSavedChats(hasSavedChats)
-                                .updatedAppliedBoosts(appliedBoosts)
-                                .updatedBoostsToUnrestrict(boostsToUnrestrict)
-                                .updatedHasBirthdayToday(hasBirthdayToday)
-                                .updatedBusinessIntro(businessIntro)
-                                .updatedInterfaceState { interfaceState in
-                                    var interfaceState = interfaceState
-                                    
-                                    if let channel = renderedPeer?.peer as? TelegramChannel {
-                                        if channel.hasBannedPermission(.banSendVoice) != nil && channel.hasBannedPermission(.banSendInstantVideos) != nil {
-                                            interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
-                                        } else if channel.hasBannedPermission(.banSendVoice) != nil {
-                                            if channel.hasBannedPermission(.banSendInstantVideos) == nil {
-                                                interfaceState = interfaceState.withUpdatedMediaRecordingMode(.video)
-                                            }
-                                        } else if channel.hasBannedPermission(.banSendInstantVideos) != nil {
-                                            if channel.hasBannedPermission(.banSendVoice) == nil {
-                                                interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
-                                            }
-                                        }
-                                    } else if let group = renderedPeer?.peer as? TelegramGroup {
-                                        if group.hasBannedPermission(.banSendVoice) && group.hasBannedPermission(.banSendInstantVideos) {
-                                            interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
-                                        } else if group.hasBannedPermission(.banSendVoice) {
-                                            if !group.hasBannedPermission(.banSendInstantVideos) {
-                                                interfaceState = interfaceState.withUpdatedMediaRecordingMode(.video)
-                                            }
-                                        } else if group.hasBannedPermission(.banSendInstantVideos) {
-                                            if !group.hasBannedPermission(.banSendVoice) {
-                                                interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
-                                            }
-                                        }
-                                    }
-                                    
-                                    return interfaceState
-                                }
+                            }.updatedIsNotAccessible(isNotAccessible)
+                             .updatedContactStatus(contactStatus)
+                             .updatedHasBots(hasBots)
+                             .updatedHasBotCommands(hasBotCommands)
+                             .updatedBotMenuButton(botMenuButton)
+                             .updatedIsArchived(isArchived)
+                             .updatedPeerIsMuted(peerIsMuted)
+                             .updatedPeerDiscussionId(peerDiscussionId)
+                             .updatedPeerGeoLocation(peerGeoLocation)
+                             .updatedExplicitelyCanPinMessages(explicitelyCanPinMessages)
+                             .updatedHasScheduledMessages(hasScheduledMessages)
+                             .updatedAutoremoveTimeout(autoremoveTimeout)
+                             .updatedCurrentSendAsPeerId(currentSendAsPeerId)
+                             .updatedCopyProtectionEnabled(copyProtectionEnabled)
+                             .updatedHasSearchTags(hasSearchTags)
+                             .updatedIsPremiumRequiredForMessaging(isPremiumRequiredForMessaging)
+                             .updatedHasSavedChats(hasSavedChats)
+                             .updatedAppliedBoosts(appliedBoosts)
+                             .updatedBoostsToUnrestrict(boostsToUnrestrict)
+                             .updatedHasBirthdayToday(hasBirthdayToday)
+                             .updatedBusinessIntro(businessIntro)
+                             .updatedAdMessage(adMessage)
+                             .updatedInterfaceState { interfaceState in
+                                 var interfaceState = interfaceState
+                                 
+                                 if let channel = renderedPeer?.peer as? TelegramChannel {
+                                     if channel.hasBannedPermission(.banSendVoice) != nil && channel.hasBannedPermission(.banSendInstantVideos) != nil {
+                                         interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
+                                     } else if channel.hasBannedPermission(.banSendVoice) != nil {
+                                         if channel.hasBannedPermission(.banSendInstantVideos) == nil {
+                                             interfaceState = interfaceState.withUpdatedMediaRecordingMode(.video)
+                                         }
+                                     } else if channel.hasBannedPermission(.banSendInstantVideos) != nil {
+                                         if channel.hasBannedPermission(.banSendVoice) == nil {
+                                             interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
+                                         }
+                                     }
+                                 } else if let group = renderedPeer?.peer as? TelegramGroup {
+                                     if group.hasBannedPermission(.banSendVoice) && group.hasBannedPermission(.banSendInstantVideos) {
+                                         interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
+                                     } else if group.hasBannedPermission(.banSendVoice) {
+                                         if !group.hasBannedPermission(.banSendInstantVideos) {
+                                             interfaceState = interfaceState.withUpdatedMediaRecordingMode(.video)
+                                         }
+                                     } else if group.hasBannedPermission(.banSendInstantVideos) {
+                                         if !group.hasBannedPermission(.banSendVoice) {
+                                             interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
+                                         }
+                                     }
+                                 }
+                                 
+                                 return interfaceState
+                             }
                         })
 
                         if case .standard(.default) = mode, let channel = renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = channel.info {
@@ -9536,7 +9566,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else if case let .customChatContents(contents) = self.subject, case let .hashTagSearch(publicPostsValue) = contents.kind {
                         publicPosts = publicPostsValue
                     }
-                    let searchController = HashtagSearchController(context: self.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, publicPosts: publicPosts)
+                    let searchController = HashtagSearchController(context: self.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, mode: .chatOnly, publicPosts: publicPosts)
                     self.effectiveNavigationController?.pushViewController(searchController)
                 }
             }))

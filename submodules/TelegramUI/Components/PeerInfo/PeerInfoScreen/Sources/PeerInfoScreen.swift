@@ -1205,6 +1205,7 @@ private enum InfoSection: Int, CaseIterable {
     case calls
     case personalChannel
     case peerInfo
+    case balances
     case peerInfoTrailing
     case peerMembers
 }
@@ -1516,7 +1517,9 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
                     }
                     
-                    items[currentPeerInfoSection]!.append(PeerInfoScreenDisclosureItem(id: 9, label: .attributedText(attributedString), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.balance, action: {
+                    //TODO:localize
+                    items[.balances]!.append(PeerInfoScreenHeaderItem(id: 20, text: "BALANCE"))
+                    items[.balances]!.append(PeerInfoScreenDisclosureItem(id: 21, label: .attributedText(attributedString), text: "Stars", icon: PresentationResourcesSettings.stars, action: {
                         interaction.editingOpenStars()
                     }))
                 }

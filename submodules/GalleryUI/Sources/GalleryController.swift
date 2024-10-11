@@ -697,13 +697,8 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 translateToLanguage = chatTranslationState(context: context, peerId: messageId.peerId)
                 |> map { translationState in
                     if let translationState, translationState.isEnabled {
-                        var translateToLanguage = translationState.toLang ?? baseLanguageCode
-                        if translateToLanguage == "nb" {
-                            translateToLanguage = "no"
-                        } else if translateToLanguage == "pt-br" {
-                            translateToLanguage = "pt"
-                        }
-                        return translateToLanguage
+                        let translateToLanguage = translationState.toLang ?? baseLanguageCode
+                        return normalizeTranslationLanguage(translateToLanguage)
                     } else {
                         return nil
                     }
