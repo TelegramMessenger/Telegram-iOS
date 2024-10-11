@@ -111,8 +111,8 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             }
         } set(value) {
             let index = max(0, min(self.controllers.count - 1, value))
-            if _selectedIndex != index {
-                _selectedIndex = index
+            if self._selectedIndex != index {
+                self._selectedIndex = index
                 
                 self.updateSelectedIndex(animated: true)
             }
@@ -349,6 +349,11 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             return
         }
         
+        var animated = animated
+        if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+            animated = false
+        }
+        
         var tabBarSelectedIndex = self.selectedIndex
         if let (cameraItem, _) = self.cameraItemAndAction {
             if let cameraItemIndex = self.tabBarControllerNode.tabBarNode.tabBarItems.firstIndex(where: { $0.item === cameraItem }) {
@@ -389,7 +394,9 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             let commit = self.tabBarControllerNode.setCurrentControllerNode(currentController.displayNode)
             if animated {
                 currentController.view.layer.animateScale(from: transitionSale, to: 1.0, duration: 0.15, delay: 0.15, timingFunction: kCAMediaTimingFunctionSpring)
+                currentController.view.layer.allowsGroupOpacity = true
                 currentController.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, completion: { _ in
+                    currentController.view.layer.allowsGroupOpacity = false
                     commit()
                 })
             } else {
