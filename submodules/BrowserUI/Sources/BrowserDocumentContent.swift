@@ -73,8 +73,13 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
                 url = updatedPath
             }
 
-            let request = URLRequest(url: URL(fileURLWithPath: updatedPath))
-            self.webView.load(request)
+            let updatedUrl = URL(fileURLWithPath: updatedPath)
+            let request = URLRequest(url: updatedUrl)
+            if updatedPath.lowercased().hasSuffix(".txt"), let data = try? Data(contentsOf: updatedUrl) {
+                self.webView.load(data, mimeType: "text/plain", characterEncodingName: "UTF-8", baseURL: URL(string: "http://localhost")!)
+            } else {
+                self.webView.load(request)
+            }
         }
          
         self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.0, readingProgress: 0.0, contentType: .document)

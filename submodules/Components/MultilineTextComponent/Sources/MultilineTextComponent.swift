@@ -22,6 +22,7 @@ public final class MultilineTextComponent: Component {
     public let textShadowBlur: CGFloat?
     public let textStroke: (UIColor, CGFloat)?
     public let highlightColor: UIColor?
+    public let highlightInset: UIEdgeInsets
     public let highlightAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)?
     public let tapAction: (([NSAttributedString.Key: Any], Int) -> Void)?
     public let longTapAction: (([NSAttributedString.Key: Any], Int) -> Void)?
@@ -39,6 +40,7 @@ public final class MultilineTextComponent: Component {
         textShadowBlur: CGFloat? = nil,
         textStroke: (UIColor, CGFloat)? = nil,
         highlightColor: UIColor? = nil,
+        highlightInset: UIEdgeInsets = .zero,
         highlightAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)? = nil,
         tapAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil,
         longTapAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil
@@ -55,6 +57,7 @@ public final class MultilineTextComponent: Component {
         self.textShadowBlur = textShadowBlur
         self.textStroke = textStroke
         self.highlightColor = highlightColor
+        self.highlightInset = highlightInset
         self.highlightAction = highlightAction
         self.tapAction = tapAction
         self.longTapAction = longTapAction
@@ -116,6 +119,10 @@ public final class MultilineTextComponent: Component {
             return false
         }
         
+        if lhs.highlightInset != rhs.highlightInset {
+            return false
+        }
+        
         return true
     }
     
@@ -143,6 +150,7 @@ public final class MultilineTextComponent: Component {
             self.textShadowBlur = component.textShadowBlur
             self.textStroke = component.textStroke
             self.linkHighlightColor = component.highlightColor
+            self.linkHighlightInset = component.highlightInset
             self.highlightAttributeAction = component.highlightAction
             self.tapAttributeAction = component.tapAction
             self.longTapAttributeAction = component.longTapAction

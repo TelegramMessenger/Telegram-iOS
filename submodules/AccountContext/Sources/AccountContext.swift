@@ -641,6 +641,7 @@ public enum ChatListSearchFilter: Equatable {
     case voice
     case peer(PeerId, Bool, String, String)
     case date(Int32?, Int32, String)
+    case publicPosts
     
     public var id: Int64 {
         switch self {
@@ -664,6 +665,8 @@ public enum ChatListSearchFilter: Equatable {
             return 8
         case .voice:
             return 9
+        case .publicPosts:
+            return 10
         case let .peer(peerId, _, _, _):
             return peerId.id._internalGetInt64Value()
         case let .date(_, date, _):

@@ -209,11 +209,21 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                     }
                 }
                 if !skipEntity {
+                    var hashtagValue = hashtag
+                    var peerNameValue: String?
+                    if hashtagValue.contains("@") {
+                        let components = hashtagValue.components(separatedBy: "@")
+                        if components.count == 2, let firstComponent = components.first, let lastComponent = components.last, !firstComponent.isEmpty && !lastComponent.isEmpty {
+                            hashtagValue = firstComponent
+                            peerNameValue = lastComponent
+                        }
+                    }
+                    
                     string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)
                     if underlineLinks && underlineAllLinks {
                         string.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
                     }
-                    string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag), value: TelegramHashtag(peerName: nil, hashtag: hashtag), range: range)
+                    string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag), value: TelegramHashtag(peerName: peerNameValue, hashtag: hashtagValue), range: range)
                 }
             case .BotCommand:
                 string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)

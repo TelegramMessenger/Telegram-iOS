@@ -63,7 +63,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         
         self.containerNode = ASDisplayNode()
         
-        self.searchContentNode = HashtagSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, initialQuery: query, hasCurrentChat: peer != nil, cancel: { [weak controller] in
+        self.searchContentNode = HashtagSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, initialQuery: query, hasCurrentChat: peer != nil && controller.mode != .chatOnly, cancel: { [weak controller] in
             controller?.dismiss()
         })
         
@@ -75,7 +75,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         self.recentListNode.alpha = 0.0
         
         let navigationController = controller.navigationController as? NavigationController
-        if let peer, !controller.all {
+        if let peer, controller.mode != .noChat {
             self.currentController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .inline(navigationController), params: nil)
             self.currentController?.alwaysShowSearchResultsAsList = true
             self.currentController?.showListEmptyResults = true
@@ -117,7 +117,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         self.addSubnode(self.clippingNode)
         self.clippingNode.addSubnode(self.containerNode)
                 
-        if controller.all {
+        if controller.mode == .noChat {
             self.isSearching.set(self.myChatContents?.searching ?? .single(false))
         } else {
             if let _ = peer {

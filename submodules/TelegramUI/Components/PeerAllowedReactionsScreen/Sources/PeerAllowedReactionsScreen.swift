@@ -936,7 +936,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             footer: AnyComponent(MultilineTextComponent(
                                 text: .plain(paidReactionsFooterText),
                                 maximumNumberOfLines: 0,
-                                highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.2),
+                                highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.1),
+                                highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
                                 highlightAction: { attributes in
                                     if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
                                         return NSAttributedString.Key(rawValue: "URL")

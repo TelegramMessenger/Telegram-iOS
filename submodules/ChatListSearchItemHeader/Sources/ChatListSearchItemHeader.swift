@@ -31,6 +31,7 @@ public enum ChatListSearchItemHeaderType {
     case downloading
     case recentDownloads
     case topics
+    case publicPosts
     case text(String, AnyHashable)
     
     fileprivate func title(strings: PresentationStrings) -> String {
@@ -91,6 +92,8 @@ public enum ChatListSearchItemHeaderType {
                 return strings.DownloadList_DownloadedHeader
             case .topics:
                 return strings.DialogList_SearchSectionTopics
+            case .publicPosts:
+                return strings.DialogList_SearchSectionPublicPosts
             case let .text(text, _):
                 return text
         }
@@ -154,6 +157,8 @@ public enum ChatListSearchItemHeaderType {
                 return .recentDownloads
             case .topics:
                 return .topics
+            case .publicPosts:
+                return .publicPosts
             case let .text(_, id):
                 return .text(id)
         }
@@ -192,6 +197,7 @@ private enum ChatListSearchItemHeaderId: Hashable {
     case downloading
     case recentDownloads
     case topics
+    case publicPosts
     case text(AnyHashable)
 }
 

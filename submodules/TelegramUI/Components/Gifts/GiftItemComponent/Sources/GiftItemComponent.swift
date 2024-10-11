@@ -292,11 +292,9 @@ public final class GiftItemComponent: Component {
             
             let buttonColor: UIColor
             var isStars = false
-            if component.isSoldOut {
-                buttonColor = component.theme.list.itemDestructiveColor
-            } else if component.price.containsEmoji {
-                buttonColor = UIColor(rgb: 0xd3720a)
-                isStars = true
+            if component.price.containsEmoji {
+                buttonColor = component.theme.overallDarkAppearance ? UIColor(rgb: 0xffc337) : UIColor(rgb: 0xd3720a)
+                isStars = !component.isSoldOut
             } else {
                 buttonColor = component.theme.list.itemAccentColor
             }
@@ -593,7 +591,7 @@ private final class StarsButtonEffectLayer: SimpleLayer {
         let emitter = CAEmitterCell()
         emitter.name = "emitter"
         emitter.contents = UIImage(bundleImageName: "Premium/Stars/Particle")?.cgImage
-        emitter.birthRate = 25.0
+        emitter.birthRate = 14.0
         emitter.lifetime = 2.0
         emitter.velocity = 12.0
         emitter.velocityRange = 3

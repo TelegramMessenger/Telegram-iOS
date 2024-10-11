@@ -131,8 +131,13 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             }
         }
         
+        var messageMedia = message.media
+        if let updatingMedia = itemAttributes.updatingMedia, messageMedia.isEmpty, case let .update(media) = updatingMedia.media {
+            messageMedia.append(media.media)
+        }
+        
         var isFile = false
-        inner: for media in message.media {
+        inner: for media in messageMedia {
             if let media = media as? TelegramMediaPaidContent {
                 var index = 0
                 for _ in media.extendedMedia {
