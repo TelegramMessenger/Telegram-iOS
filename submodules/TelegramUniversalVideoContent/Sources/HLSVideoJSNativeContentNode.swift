@@ -15,6 +15,7 @@ import RangeSet
 import AppBundle
 import ManagedFile
 import FFMpegBinding
+import RangeSet
 
 final class HLSJSServerSource: SharedHLSServer.Source {
     let id: String
@@ -328,9 +329,8 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     private let imageNode: TransformImageNode
     private let webView: WKWebView
     
-    private var testPlayer: AVPlayer?
-    private var controlledPlayer: ControlledPlayer?
-    private let playerNode: ASDisplayNode
+    private let player: ChunkMediaPlayer
+    private let playerNode: MediaPlayerNode
     
     private let fetchDisposable = MetaDisposable()
     
@@ -349,7 +349,6 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     private var playerRate: Double = 0.0
     private var playerDefaultRate: Double = 1.0
     private var playerTime: Double = 0.0
-    private var playerTimeGenerationTimestamp: Double = 0.0
     private var playerAvailableLevels: [Int: Level] = [:]
     private var playerCurrentLevelIndex: Int?
     
@@ -359,10 +358,17 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     private var requestedBaseRate: Double = 1.0
     private var requestedLevelIndex: Int?
     
+    private var videoElements: [Int: VideoElement] = [:]
+    private var mediaSources: [Int: MediaSource] = [:]
     private var sourceBuffers: [Int: SourceBuffer] = [:]
     
     private var didBecomeActiveObserver: NSObjectProtocol?
     private var willResignActiveObserver: NSObjectProtocol?
+    
+    private let chunkPlayerPartsState = Promise<ChunkMediaPlayerPartsState>(ChunkMediaPlayerPartsState(duration: nil, parts: []))
+    private var sourceBufferStateDisposable: Disposable?
+    
+    private var playerStatusDisposable: Disposable?
     
     init(accountId: AccountRecordId, postbox: Postbox, audioSessionManager: ManagedAudioSession, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool) {
         self.postbox = postbox
@@ -436,31 +442,24 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             #endif
         }
         
-        if "".isEmpty {
-            let controlledPlayer = ControlledPlayer()
-            self.controlledPlayer = controlledPlayer
-        } else {
-            let testPlayer = AVPlayer(playerItem: nil)
-            if #available(iOS 16.0, *) {
-                testPlayer.defaultRate = Float(baseRate)
-            }
-            if !enableSound {
-                testPlayer.volume = 0.0
-            }
-            self.testPlayer = testPlayer
-        }
         
-        let targetPlayer = self.controlledPlayer?.player ?? self.testPlayer
-        self.playerNode = ASDisplayNode()
-        self.playerNode.setLayerBlock({
-            return AVPlayerLayer(player: targetPlayer)
-        })
+        self.player = ChunkMediaPlayer(
+            postbox: postbox,
+            audioSessionManager: audioSessionManager,
+            partsState: self.chunkPlayerPartsState.get(),
+            video: true,
+            enableSound: true,
+            baseRate: baseRate
+        )
+        
+        self.playerNode = MediaPlayerNode()
+        self.player.attachPlayerNode(self.playerNode)
         
         super.init()
         
         self.playerNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicDimensions)
 
-        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, userLocation: self.userLocation, videoReference: fileReference) |> map { [weak self] getSize, getData in
+        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, userLocation: self.userLocation, videoReference: fileReference, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true) |> map { [weak self] getSize, getData in
             Queue.mainQueue().async {
                 if let strongSelf = self, strongSelf.dimensions == nil {
                     if let dimensions = getSize() {
@@ -651,7 +650,6 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
                     }
                     
                     self.playerTime = value
-                    self.playerTimeGenerationTimestamp = CACurrentMediaTime()
                     
                     var bandwidthEstimate = eventData["bandwidthEstimate"] as? Double
                     if let bandwidthEstimateValue = bandwidthEstimate, bandwidthEstimateValue.isNaN || bandwidthEstimateValue.isInfinite {
@@ -662,7 +660,8 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
                     
                     self.updateStatus()
                     
-                    self.controlledPlayer?.currentReferenceTime = value
+                    //TODO
+                    //self.controlledPlayer?.currentReferenceTime = value
                 default:
                     break
                 }
@@ -683,16 +682,25 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         }
         
         self.didBecomeActiveObserver = NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil, using: { [weak self] _ in
-            guard let strongSelf = self, let layer = strongSelf.playerNode.layer as? AVPlayerLayer else {
-                return
-            }
-            layer.player = strongSelf.controlledPlayer?.player ?? strongSelf.testPlayer
+            let _ = self
         })
         self.willResignActiveObserver = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil, using: { [weak self] _ in
-            guard let strongSelf = self, let layer = strongSelf.playerNode.layer as? AVPlayerLayer else {
+            let _ = self
+        })
+        
+        self.playerStatusDisposable = (self.player.status
+        |> deliverOnMainQueue).startStrict(next: { [weak self] status in
+            guard let self else {
                 return
             }
-            layer.player = nil
+            self.updatePlayerStatus(status: status)
+        })
+        
+        self.statusTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0 / 25.0, repeats: true, block: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.updateStatus()
         })
     }
     
@@ -708,6 +716,9 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         self.audioSessionDisposable.dispose()
         
         self.statusTimer?.invalidate()
+        
+        self.sourceBufferStateDisposable?.dispose()
+        self.playerStatusDisposable?.dispose()
     }
     
     private func bridgeInvoke(
@@ -717,7 +728,49 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         params: [String: Any],
         completion: @escaping ([String: Any]) -> Void
     ) {
-        if (className == "SourceBuffer") {
+        if (className == "VideoElement") {
+            if (methodName == "constructor") {
+                let videoElement = VideoElement()
+                self.videoElements[bridgeId] = videoElement
+                completion([:])
+            } else if (methodName == "setCurrentTime") {
+                guard let currentTime = params["currentTime"] as? Double else {
+                    assertionFailure()
+                    return
+                }
+                self.player.seek(timestamp: currentTime)
+                completion([:])
+            } else if (methodName == "play") {
+                self.player.play()
+                completion([:])
+            } else if (methodName == "pause") {
+                self.player.pause()
+                completion([:])
+            }
+        } else if (className == "MediaSource") {
+            if (methodName == "constructor") {
+                let mediaSource = MediaSource()
+                self.mediaSources[bridgeId] = mediaSource
+                completion([:])
+            } else if (methodName == "setDuration") {
+                guard let duration = params["duration"] as? Double else {
+                    assertionFailure()
+                    return
+                }
+                guard let mediaSource = self.mediaSources[bridgeId] else {
+                    assertionFailure()
+                    return
+                }
+                if mediaSource.duration != duration {
+                    mediaSource.duration = duration
+                    
+                    if let sourceBuffer = self.sourceBuffers.first?.value {
+                        self.chunkPlayerPartsState.set(.single(ChunkMediaPlayerPartsState(duration: self.mediaSources.first?.value.duration, parts: sourceBuffer.items)))
+                    }
+                }
+                completion([:])
+            }
+        } else if (className == "SourceBuffer") {
             if (methodName == "constructor") {
                 guard let mimeType = params["mimeType"] as? String else {
                     assertionFailure()
@@ -725,7 +778,19 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
                 }
                 let sourceBuffer = SourceBuffer(mimeType: mimeType)
                 self.sourceBuffers[bridgeId] = sourceBuffer
-                self.controlledPlayer?.setSourceBuffer(sourceBuffer: sourceBuffer)
+
+                self.chunkPlayerPartsState.set(.single(ChunkMediaPlayerPartsState(duration: self.mediaSources.first?.value.duration, parts: sourceBuffer.items)))
+                if self.sourceBufferStateDisposable == nil {
+                    self.sourceBufferStateDisposable = (sourceBuffer.updated.signal()
+                    |> deliverOnMainQueue).startStrict(next: { [weak self, weak sourceBuffer] _ in
+                        guard let self, let sourceBuffer else {
+                            return
+                        }
+                        self.chunkPlayerPartsState.set(.single(ChunkMediaPlayerPartsState(duration: self.mediaSources.first?.value.duration, parts: sourceBuffer.items)))
+                        
+                        self.updateBuffered()
+                    })
+                }
                 completion([:])
             } else if (methodName == "appendBuffer") {
                 guard let base64Data = params["data"] as? String else {
@@ -740,36 +805,8 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
                     assertionFailure()
                     return
                 }
-                sourceBuffer.appendBuffer(data: data, completion: { result in
-                    if let result {
-                        completion([
-                            "rangeStart": result.0,
-                            "rangeEnd": result.1
-                        ])
-                        
-                        if let sourceBuffer = self.sourceBuffers[bridgeId], let testPlayer = self.testPlayer {
-                            var rangeEnd: Double = 0.0
-                            for item in sourceBuffer.items {
-                                rangeEnd += item.endTime - item.startTime
-                            }
-                            if rangeEnd >= 30.0 && testPlayer.currentItem == nil {
-                                let tempFile = TempBox.shared.tempFile(fileName: "data.mp4")
-                                if let initializationData = sourceBuffer.initializationData, let outputFile = ManagedFile(queue: nil, path: tempFile.path, mode: .readwrite) {
-                                    let _ = outputFile.write(initializationData)
-                                    for item in sourceBuffer.items.sorted(by: { $0.startTime < $1.startTime }) {
-                                        let _ = outputFile.write(item.rawData)
-                                    }
-                                    outputFile._unsafeClose()
-                                    
-                                    let playerItem = AVPlayerItem(url: URL(fileURLWithPath: tempFile.path))
-                                    testPlayer.replaceCurrentItem(with: playerItem)
-                                    testPlayer.play()
-                                }
-                            }
-                        }
-                    } else {
-                        completion([:])
-                    }
+                sourceBuffer.appendBuffer(data: data, completion: { bufferedRanges in
+                    completion(["ranges": serializeRanges(bufferedRanges)])
                 })
             } else if methodName == "remove" {
                 guard let start = params["start"] as? Double, let end = params["end"] as? Double else {
@@ -780,41 +817,69 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
                     assertionFailure()
                     return
                 }
-                sourceBuffer.remove(start: start, end: end)
+                sourceBuffer.remove(start: start, end: end, completion: { bufferedRanges in
+                    completion(["ranges": serializeRanges(bufferedRanges)])
+                })
+            } else if methodName == "abort" {
+                guard let sourceBuffer = self.sourceBuffers[bridgeId] else {
+                    assertionFailure()
+                    return
+                }
+                sourceBuffer.abortOperation()
                 completion([:])
             }
         }
     }
     
-    private func updateStatus() {
-        let isPlaying = self.requestedPlaying && self.playerRate != 0.0
-        let status: MediaPlayerPlaybackStatus
-        if self.requestedPlaying && !isPlaying {
-            status = .buffering(initial: false, whilePlaying: self.requestedPlaying, progress: 0.0, display: true)
-        } else {
-            status = self.requestedPlaying ? .playing : .paused
-        }
-        var timestamp = self.playerTime
-        if timestamp.isFinite && !timestamp.isNaN {
-        } else {
-            timestamp = 0.0
-        }
-        self.statusValue = MediaPlayerStatus(generationTimestamp: self.playerTimeGenerationTimestamp, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: timestamp, baseRate: self.requestedBaseRate, seekId: self.seekId, status: status, soundEnabled: true)
-        self._status.set(self.statusValue)
+    private func updatePlayerStatus(status: MediaPlayerStatus) {
+        self._status.set(status)
         
-        if case .playing = status {
-            if self.statusTimer == nil {
-                self.statusTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true, block: { [weak self] _ in
-                    guard let self else {
-                        return
-                    }
-                    self.updateStatus()
-                })
+        if let (bridgeId, _) = self.videoElements.first {
+            var isPlaying: Bool = false
+            var isBuffering = false
+            switch status.status {
+            case .playing:
+                isPlaying = true
+            case .paused:
+                break
+            case let .buffering(_, whilePlaying, _, _):
+                isPlaying = whilePlaying
+                isBuffering = true
             }
-        } else if let statusTimer = self.statusTimer {
-            self.statusTimer = nil
-            statusTimer.invalidate()
+            
+            let result: [String: Any] = [
+                "isPlaying": isPlaying,
+                "isWaiting": isBuffering,
+                "currentTime": status.timestamp
+            ]
+            
+            let jsonResult = try! JSONSerialization.data(withJSONObject: result)
+            let jsonResultString = String(data: jsonResult, encoding: .utf8)!
+            self.webView.evaluateJavaScript("window.bridgeObjectMap[\(bridgeId)].bridgeUpdateStatus(\(jsonResultString));", completionHandler: nil)
         }
+    }
+    
+    private func updateBuffered() {
+        let bufferedRanges = self.sourceBuffers.first?.value.ranges ?? RangeSet()
+        
+        if let (bridgeId, _) = self.videoElements.first {
+            let result = serializeRanges(bufferedRanges)
+            
+            let jsonResult = try! JSONSerialization.data(withJSONObject: result)
+            let jsonResultString = String(data: jsonResult, encoding: .utf8)!
+            self.webView.evaluateJavaScript("window.bridgeObjectMap[\(bridgeId)].bridgeUpdateBuffered(\(jsonResultString));", completionHandler: nil)
+        }
+        
+        if let duration = self.mediaSources.first?.value.duration {
+            var mappedRanges = RangeSet<Int64>()
+            for range in bufferedRanges.ranges {
+                mappedRanges.formUnion(RangeSet<Int64>(Int64(range.lowerBound * 1000.0) ..< Int64(range.upperBound * 1000.0)))
+            }
+            self._bufferingStatus.set(.single((mappedRanges, Int64(duration * 1000.0))))
+        }
+    }
+    
+    private func updateStatus() {
     }
     
     private func performActionAtEnd() {
@@ -1023,6 +1088,27 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     }
 }
 
+private func serializeRanges(_ ranges: RangeSet<Double>) -> [Double] {
+    var result: [Double] = []
+    for range in ranges.ranges {
+        result.append(range.lowerBound)
+        result.append(range.upperBound)
+    }
+    return result
+}
+
+private final class VideoElement {
+    init() {
+    }
+}
+
+private final class MediaSource {
+    var duration: Double?
+    
+    init() {
+    }
+}
+
 private final class SourceBuffer {
     private static let sharedQueue = Queue(name: "SourceBuffer")
     
@@ -1033,27 +1119,47 @@ private final class SourceBuffer {
         let endTime: Double
         let rawData: Data
         
+        var clippedStartTime: Double
+        var clippedEndTime: Double
+        
         init(tempFile: TempBoxFile, asset: AVURLAsset, startTime: Double, endTime: Double, rawData: Data) {
             self.tempFile = tempFile
             self.asset = asset
             self.startTime = startTime
             self.endTime = endTime
             self.rawData = rawData
+            
+            self.clippedStartTime = startTime
+            self.clippedEndTime = endTime
+        }
+        
+        func removeRange(start: Double, end: Double) {
+            //TODO
         }
     }
     
     let mimeType: String
     var initializationData: Data?
-    var items: [Item] = []
+    var items: [ChunkMediaPlayerPart] = []
+    var ranges = RangeSet<Double>()
     
     let updated = ValuePipe<Void>()
+    
+    private var currentUpdateId: Int = 0
     
     init(mimeType: String) {
         self.mimeType = mimeType
     }
     
-    func appendBuffer(data: Data, completion: @escaping ((Double, Double)?) -> Void) {
+    func abortOperation() {
+        self.currentUpdateId += 1
+    }
+    
+    func appendBuffer(data: Data, completion: @escaping (RangeSet<Double>) -> Void) {
         let initializationData = self.initializationData
+        self.currentUpdateId += 1
+        let updateId = self.currentUpdateId
+        
         SourceBuffer.sharedQueue.async { [weak self] in
             let tempFile = TempBox.shared.tempFile(fileName: "data.mp4")
             
@@ -1064,32 +1170,45 @@ private final class SourceBuffer {
             combinedData.append(data)
             guard let _ = try? combinedData.write(to: URL(fileURLWithPath: tempFile.path), options: .atomic) else {
                 Queue.mainQueue().async {
-                    completion(nil)
+                    guard let self else {
+                        completion(RangeSet())
+                        return
+                    }
+                    
+                    if self.currentUpdateId != updateId {
+                        return
+                    }
+                    
+                    completion(self.ranges)
                 }
                 return
             }
             
-            if let fragmentInfo = parseFragment(filePath: tempFile.path) {
+            if let fragmentInfo = extractFFMpegMediaInfo(path: tempFile.path) {
                 Queue.mainQueue().async {
                     guard let self else {
-                        completion(nil)
+                        completion(RangeSet())
                         return
                     }
+                    
+                    if self.currentUpdateId != updateId {
+                        return
+                    }
+                    
                     if fragmentInfo.duration.value == 0 {
                         self.initializationData = data
                         
-                        completion((0.0, 0.0))
+                        completion(self.ranges)
                     } else {
-                        let item = Item(
-                            tempFile: tempFile,
-                            asset: AVURLAsset(url: URL(fileURLWithPath: tempFile.path)),
-                            startTime: round(fragmentInfo.offset.seconds * 1000.0) / 1000.0,
-                            endTime: round((fragmentInfo.offset.seconds + fragmentInfo.duration.seconds) * 1000.0) / 1000.0,
-                            rawData: data
+                        let item = ChunkMediaPlayerPart(
+                            startTime: fragmentInfo.startTime.seconds,
+                            endTime: fragmentInfo.startTime.seconds + fragmentInfo.duration.seconds,
+                            file: tempFile
                         )
                         self.items.append(item)
+                        self.updateRanges()
                         
-                        completion((item.startTime, item.endTime))
+                        completion(self.ranges)
                         
                         self.updated.putNext(Void())
                     }
@@ -1097,14 +1216,23 @@ private final class SourceBuffer {
             } else {
                 assertionFailure()
                 Queue.mainQueue().async {
-                    completion(nil)
+                    guard let self else {
+                        completion(RangeSet())
+                        return
+                    }
+                    
+                    if self.currentUpdateId != updateId {
+                        return
+                    }
+                    
+                    completion(self.ranges)
                 }
                 return
             }
         }
     }
     
-    func remove(start: Double, end: Double) {
+    func remove(start: Double, end: Double, completion: @escaping (RangeSet<Double>) -> Void) {
         self.items.removeAll(where: { item in
             if item.startTime >= start && item.endTime <= end {
                 return true
@@ -1112,101 +1240,23 @@ private final class SourceBuffer {
                 return false
             }
         })
+        self.updateRanges()
+        completion(self.ranges)
         
         self.updated.putNext(Void())
+    }
+    
+    private func updateRanges() {
+        self.ranges = RangeSet()
+        for item in self.items {
+            let itemStartTime = round(item.startTime * 1000.0) / 1000.0
+            let itemEndTime = round(item.endTime * 1000.0) / 1000.0
+            self.ranges.formUnion(RangeSet<Double>(itemStartTime ..< itemEndTime))
+        }
     }
 }
 
 private func parseFragment(filePath: String) -> (offset: CMTime, duration: CMTime)? {
     let source = SoftwareVideoSource(path: filePath, hintVP9: false, unpremultiplyAlpha: false)
     return source.readTrackInfo()
-}
-
-private final class ControlledPlayer {
-    let player: AVPlayer
-    
-    private var sourceBuffer: SourceBuffer?
-    private var sourceBufferUpdatedDisposable: Disposable?
-    
-    var currentReferenceTime: Double?
-    private var currentItem: SourceBuffer.Item?
-    
-    private var updateLink: SharedDisplayLinkDriver.Link?
-    
-    init() {
-        self.player = AVPlayer(playerItem: nil)
-        
-        self.updateLink = SharedDisplayLinkDriver.shared.add { [weak self] _ in
-            guard let self else {
-                return
-            }
-            self.update()
-        }
-    }
-    
-    deinit {
-        self.sourceBufferUpdatedDisposable?.dispose()
-    }
-    
-    func setSourceBuffer(sourceBuffer: SourceBuffer) {
-        if self.sourceBuffer === sourceBuffer {
-            return
-        }
-        self.sourceBufferUpdatedDisposable?.dispose()
-        self.sourceBuffer = sourceBuffer
-        
-        self.sourceBufferUpdatedDisposable = (sourceBuffer.updated.signal()
-        |> deliverOnMainQueue).start(next: { [weak self] _ in
-            guard let self else {
-                return
-            }
-            self.update()
-        })
-    }
-    
-    private func update() {
-        guard let sourceBuffer = self.sourceBuffer else {
-            return
-        }
-        guard let currentReferenceTime = self.currentReferenceTime else {
-            return
-        }
-        var replaceItem = false
-        if let currentItem = self.currentItem {
-            if currentReferenceTime < currentItem.startTime || currentReferenceTime > currentItem.endTime {
-                replaceItem = true
-            }
-        } else {
-            replaceItem = true
-        }
-        if replaceItem {
-            let item = sourceBuffer.items.last(where: { item in
-                if currentReferenceTime >= item.startTime && currentReferenceTime <= item.endTime {
-                    return true
-                } else {
-                    return false
-                }
-            })
-            if let item {
-                self.currentItem = item
-                let playerItem = AVPlayerItem(asset: item.asset)
-                self.player.replaceCurrentItem(with: playerItem)
-                self.player.seek(to: CMTime(seconds: currentReferenceTime - item.startTime, preferredTimescale: 240), toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero, completionHandler: { _ in })
-                self.player.play()
-            } else if self.player.currentItem != nil {
-                self.player.replaceCurrentItem(with: nil)
-            }
-        }
-    }
-    
-    func play() {
-        self.player.play()
-    }
-    
-    func pause() {
-        self.player.pause()
-    }
-    
-    func seek(timestamp: Double) {
-    }
 }

@@ -2596,12 +2596,25 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             return
         }
         
-        if !(item.content is NativeVideoContent) {
+        if videoNode.getVideoLayer() == nil {
             return
         }
         
         var useNative = true
-        if let data = self.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_native_pip"] {
+        if let data = self.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_native_pip_v2"] {
+            useNative = false
+        }
+        var isAd = false
+        if let contentInfo = item.contentInfo {
+            switch contentInfo {
+            case let .message(message, _):
+                isAd = message.adAttribute != nil
+                self.footerContentNode.setMessage(message, displayInfo: !item.displayInfoOnTop, peerIsCopyProtected: item.peerIsCopyProtected)
+            case let .webPage(webPage, media, _):
+                self.footerContentNode.setWebPage(webPage, media: media)
+            }
+        }
+        if isAd {
             useNative = false
         }
         if !useNative {

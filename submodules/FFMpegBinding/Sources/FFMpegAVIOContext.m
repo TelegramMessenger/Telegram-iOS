@@ -12,7 +12,7 @@ int FFMPEG_CONSTANT_AVERROR_EOF = AVERROR_EOF;
 
 @implementation FFMpegAVIOContext
 
-- (instancetype _Nullable)initWithBufferSize:(int32_t)bufferSize opaqueContext:(void * const)opaqueContext readPacket:(int (* _Nullable)(void * _Nullable opaque, uint8_t * _Nullable buf, int buf_size))readPacket writePacket:(int (* _Nullable)(void * _Nullable opaque, uint8_t * _Nullable buf, int buf_size))writePacket seek:(int64_t (*)(void * _Nullable opaque, int64_t offset, int whence))seek isSeekable:(bool)isSeekable {
+- (instancetype _Nullable)initWithBufferSize:(int32_t)bufferSize opaqueContext:(void * const _Nullable)opaqueContext readPacket:(int (* _Nullable)(void * _Nullable opaque, uint8_t * _Nullable buf, int buf_size))readPacket writePacket:(int (* _Nullable)(void * _Nullable opaque, uint8_t * _Nullable buf, int buf_size))writePacket seek:(int64_t (*)(void * _Nullable opaque, int64_t offset, int whence))seek isSeekable:(bool)isSeekable {
     self = [super init];
     if (self != nil) {
         void *avIoBuffer = av_malloc(bufferSize);

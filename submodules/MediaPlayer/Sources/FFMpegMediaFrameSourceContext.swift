@@ -10,6 +10,7 @@ private struct StreamContext {
     let codecContext: FFMpegAVCodecContext?
     let fps: CMTime
     let timebase: CMTime
+    let startTime: CMTime
     let duration: CMTime
     let decoder: MediaTrackFrameDecoder
     let rotationAngle: Double
@@ -17,6 +18,7 @@ private struct StreamContext {
 }
 
 struct FFMpegMediaFrameSourceDescription {
+    let startTime: CMTime
     let duration: CMTime
     let decoder: MediaTrackFrameDecoder
     let rotationAngle: Double
@@ -429,6 +431,14 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                 duration = CMTimeMake(value: Int64.min, timescale: duration.timescale)
             }
             
+            let startTime: CMTime
+            let rawStartTime = avFormatContext.startTime(atStreamIndex: streamIndex)
+            if rawStartTime == Int64(bitPattern: 0x8000000000000000 as UInt64) {
+                startTime = CMTime(value: 0, timescale: timebase.timescale)
+            } else {
+                startTime = CMTimeMake(value: rawStartTime, timescale: timebase.timescale)
+            }
+            
             let metrics = avFormatContext.metricsForStream(at: streamIndex)
             
             let rotationAngle: Double = metrics.rotationAngle
@@ -439,24 +449,24 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                     let codecContext = FFMpegAVCodecContext(codec: codec)
                     if avFormatContext.codecParams(atStreamIndex: streamIndex, to: codecContext) {
                         if codecContext.open() {
-                            videoStream = StreamContext(index: Int(streamIndex), codecContext: codecContext, fps: fps, timebase: timebase, duration: duration, decoder: FFMpegMediaVideoFrameDecoder(codecContext: codecContext), rotationAngle: rotationAngle, aspect: aspect)
+                            videoStream = StreamContext(index: Int(streamIndex), codecContext: codecContext, fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegMediaVideoFrameDecoder(codecContext: codecContext), rotationAngle: rotationAngle, aspect: aspect)
                             break
                         }
                     }
                 }
             } else if codecId == FFMpegCodecIdMPEG4 {
                 if let videoFormat = FFMpegMediaFrameSourceContextHelpers.createFormatDescriptionFromMpeg4CodecData(UInt32(kCMVideoCodecType_MPEG4Video), metrics.width, metrics.height, metrics.extradata, metrics.extradataSize) {
-                    videoStream = StreamContext(index: Int(streamIndex), codecContext: nil, fps: fps, timebase: timebase, duration: duration, decoder: FFMpegMediaPassthroughVideoFrameDecoder(videoFormat: videoFormat, rotationAngle: rotationAngle), rotationAngle: rotationAngle, aspect: aspect)
+                    videoStream = StreamContext(index: Int(streamIndex), codecContext: nil, fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegMediaPassthroughVideoFrameDecoder(videoFormat: videoFormat, rotationAngle: rotationAngle), rotationAngle: rotationAngle, aspect: aspect)
                     break
                 }
             } else if codecId == FFMpegCodecIdH264 {
                 if let videoFormat = FFMpegMediaFrameSourceContextHelpers.createFormatDescriptionFromAVCCodecData(UInt32(kCMVideoCodecType_H264), metrics.width, metrics.height, metrics.extradata, metrics.extradataSize) {
-                    videoStream = StreamContext(index: Int(streamIndex), codecContext: nil, fps: fps, timebase: timebase, duration: duration, decoder: FFMpegMediaPassthroughVideoFrameDecoder(videoFormat: videoFormat, rotationAngle: rotationAngle), rotationAngle: rotationAngle, aspect: aspect)
+                    videoStream = StreamContext(index: Int(streamIndex), codecContext: nil, fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegMediaPassthroughVideoFrameDecoder(videoFormat: videoFormat, rotationAngle: rotationAngle), rotationAngle: rotationAngle, aspect: aspect)
                     break
                 }
             } else if codecId == FFMpegCodecIdHEVC {
                 if let videoFormat = FFMpegMediaFrameSourceContextHelpers.createFormatDescriptionFromHEVCCodecData(UInt32(kCMVideoCodecType_HEVC), metrics.width, metrics.height, metrics.extradata, metrics.extradataSize) {
-                    videoStream = StreamContext(index: Int(streamIndex), codecContext: nil, fps: fps, timebase: timebase, duration: duration, decoder: FFMpegMediaPassthroughVideoFrameDecoder(videoFormat: videoFormat, rotationAngle: rotationAngle), rotationAngle: rotationAngle, aspect: aspect)
+                    videoStream = StreamContext(index: Int(streamIndex), codecContext: nil, fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegMediaPassthroughVideoFrameDecoder(videoFormat: videoFormat, rotationAngle: rotationAngle), rotationAngle: rotationAngle, aspect: aspect)
                     break
                 }
             }
@@ -484,7 +494,15 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                             duration = CMTimeMake(value: Int64.min, timescale: duration.timescale)
                         }
                         
-                        audioStream = StreamContext(index: Int(streamIndex), codecContext: codecContext, fps: fps, timebase: timebase, duration: duration, decoder: FFMpegAudioFrameDecoder(codecContext: codecContext), rotationAngle: 0.0, aspect: 1.0)
+                        let startTime: CMTime
+                        let rawStartTime = avFormatContext.startTime(atStreamIndex: streamIndex)
+                        if rawStartTime == Int64(bitPattern: 0x8000000000000000 as UInt64) {
+                            startTime = CMTime(value: 0, timescale: timebase.timescale)
+                        } else {
+                            startTime = CMTimeMake(value: rawStartTime, timescale: timebase.timescale)
+                        }
+                        
+                        audioStream = StreamContext(index: Int(streamIndex), codecContext: codecContext, fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegAudioFrameDecoder(codecContext: codecContext), rotationAngle: 0.0, aspect: 1.0)
                         break
                     }
                 }
@@ -620,11 +638,11 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             var videoDescription: FFMpegMediaFrameSourceDescription?
             
             if let audioStream = initializedState.audioStream {
-                audioDescription = FFMpegMediaFrameSourceDescription(duration: audioStream.duration, decoder: audioStream.decoder, rotationAngle: 0.0, aspect: 1.0)
+                audioDescription = FFMpegMediaFrameSourceDescription(startTime: audioStream.startTime, duration: audioStream.duration, decoder: audioStream.decoder, rotationAngle: 0.0, aspect: 1.0)
             }
             
             if let videoStream = initializedState.videoStream {
-                videoDescription = FFMpegMediaFrameSourceDescription(duration: videoStream.duration, decoder: videoStream.decoder, rotationAngle: videoStream.rotationAngle, aspect: videoStream.aspect)
+                videoDescription = FFMpegMediaFrameSourceDescription(startTime: videoStream.startTime, duration: videoStream.duration, decoder: videoStream.decoder, rotationAngle: videoStream.rotationAngle, aspect: videoStream.aspect)
             }
             
             var actualPts: CMTime = CMTimeMake(value: 0, timescale: 1)

@@ -506,3 +506,113 @@ public final class SoftwareAudioSource {
         }
     }
 }
+
+public final class FFMpegMediaInfo {
+    public let startTime: CMTime
+    public let duration: CMTime
+    
+    public init(startTime: CMTime, duration: CMTime) {
+        self.startTime = startTime
+        self.duration = duration
+    }
+}
+
+private final class FFMpegMediaInfoExtractContext {
+    let fd: Int32
+    let size: Int
+    
+    init(fd: Int32, size: Int) {
+        self.fd = fd
+        self.size = size
+    }
+}
+
+private func FFMpegMediaInfoExtractContextReadPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
+    let context = Unmanaged<FFMpegMediaInfoExtractContext>.fromOpaque(userData!).takeUnretainedValue()
+    let result = read(context.fd, buffer, Int(bufferSize))
+    if result == 0 {
+        return FFMPEG_CONSTANT_AVERROR_EOF
+    }
+    return Int32(result)
+}
+
+private func FFMpegMediaInfoExtractContextSeekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
+    let context = Unmanaged<FFMpegMediaInfoExtractContext>.fromOpaque(userData!).takeUnretainedValue()
+    if (whence & FFMPEG_AVSEEK_SIZE) != 0 {
+        return Int64(context.size)
+    } else {
+        lseek(context.fd, off_t(offset), SEEK_SET)
+        return offset
+    }
+}
+
+public func extractFFMpegMediaInfo(path: String) -> FFMpegMediaInfo? {
+    let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
+    
+    var s = stat()
+    stat(path, &s)
+    let size = Int32(s.st_size)
+    
+    let fd = open(path, O_RDONLY, S_IRUSR)
+    if fd < 0 {
+        return nil
+    }
+    defer {
+        close(fd)
+    }
+    
+    let avFormatContext = FFMpegAVFormatContext()
+    let ioBufferSize = 64 * 1024
+    
+    let context = FFMpegMediaInfoExtractContext(fd: fd, size: Int(size))
+    
+    guard let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(context).toOpaque(), readPacket: FFMpegMediaInfoExtractContextReadPacketCallback, writePacket: nil, seek: FFMpegMediaInfoExtractContextSeekCallback, isSeekable: true) else {
+        return nil
+    }
+    
+    avFormatContext.setIO(avIoContext)
+    
+    if !avFormatContext.openInput() {
+        return nil
+    }
+    
+    if !avFormatContext.findStreamInfo() {
+        return nil
+    }
+    
+    var streamInfos: [(isVideo: Bool, info: FFMpegMediaInfo)] = []
+    
+    for typeIndex in 0 ..< 1 {
+        let isVideo = typeIndex == 0
+        
+        for streamIndexNumber in avFormatContext.streamIndices(for: isVideo ? FFMpegAVFormatStreamTypeVideo : FFMpegAVFormatStreamTypeAudio) {
+            let streamIndex = streamIndexNumber.int32Value
+            if avFormatContext.isAttachedPic(atStreamIndex: streamIndex) {
+                continue
+            }
+            
+            let fpsAndTimebase = avFormatContext.fpsAndTimebase(forStreamIndex: streamIndex, defaultTimeBase: CMTimeMake(value: 1, timescale: 40000))
+            let (_, timebase) = (fpsAndTimebase.fps, fpsAndTimebase.timebase)
+            
+            let startTime: CMTime
+            let rawStartTime = avFormatContext.startTime(atStreamIndex: streamIndex)
+            if rawStartTime == Int64(bitPattern: 0x8000000000000000 as UInt64) {
+                startTime = CMTime(value: 0, timescale: timebase.timescale)
+            } else {
+                startTime = CMTimeMake(value: rawStartTime, timescale: timebase.timescale)
+            }
+            var duration = CMTimeMake(value: avFormatContext.duration(atStreamIndex: streamIndex), timescale: timebase.timescale)
+            duration = CMTimeMaximum(CMTime(value: 0, timescale: duration.timescale), CMTimeSubtract(duration, startTime))
+            
+            streamInfos.append((isVideo: isVideo, info: FFMpegMediaInfo(startTime: startTime, duration: duration)))
+        }
+    }
+    
+    if let video = streamInfos.first(where: \.isVideo) {
+        return video.info
+    } else if let stream = streamInfos.first {
+        return stream.info
+    } else {
+        return nil
+    }
+}
