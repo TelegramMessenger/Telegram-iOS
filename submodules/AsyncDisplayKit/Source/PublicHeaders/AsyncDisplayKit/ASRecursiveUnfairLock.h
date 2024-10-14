@@ -11,7 +11,7 @@
 #import <AsyncDisplayKit/ASBaseDefines.h>
 #import <pthread/pthread.h>
 
-#if defined(__aarch64__)
+#if defined(__aarch64__) || __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0
     #define AS_USE_OS_LOCK true
 #else
     #define AS_USE_OS_LOCK false
