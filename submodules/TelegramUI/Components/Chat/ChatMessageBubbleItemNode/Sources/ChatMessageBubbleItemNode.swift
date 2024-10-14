@@ -1283,24 +1283,22 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         }
         recognizer.highlight = { [weak self] point in
-            if let strongSelf = self {
-                if strongSelf.selectionNode == nil {
-                    if let replyInfoNode = strongSelf.replyInfoNode {
-                        var translatedPoint: CGPoint?
-                        let convertedNodeFrame = replyInfoNode.view.convert(replyInfoNode.bounds, to: strongSelf.view)
-                        if let point = point, convertedNodeFrame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
-                            translatedPoint = strongSelf.view.convert(point, to: replyInfoNode.view)
-                        }
-                        replyInfoNode.updateTouchesAtPoint(translatedPoint)
+            if let strongSelf = self, strongSelf.selectionNode == nil {
+                if let replyInfoNode = strongSelf.replyInfoNode {
+                    var translatedPoint: CGPoint?
+                    let convertedNodeFrame = replyInfoNode.view.convert(replyInfoNode.bounds, to: strongSelf.view)
+                    if let point = point, convertedNodeFrame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
+                        translatedPoint = strongSelf.view.convert(point, to: replyInfoNode.view)
                     }
-                    if let forwardInfoNode = strongSelf.forwardInfoNode {
-                        var translatedPoint: CGPoint?
-                        let convertedNodeFrame = forwardInfoNode.view.convert(forwardInfoNode.bounds, to: strongSelf.view)
-                        if let point = point, convertedNodeFrame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
-                            translatedPoint = strongSelf.view.convert(point, to: forwardInfoNode.view)
-                        }
-                        forwardInfoNode.updateTouchesAtPoint(translatedPoint)
+                    replyInfoNode.updateTouchesAtPoint(translatedPoint)
+                }
+                if let forwardInfoNode = strongSelf.forwardInfoNode {
+                    var translatedPoint: CGPoint?
+                    let convertedNodeFrame = forwardInfoNode.view.convert(forwardInfoNode.bounds, to: strongSelf.view)
+                    if let point = point, convertedNodeFrame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
+                        translatedPoint = strongSelf.view.convert(point, to: forwardInfoNode.view)
                     }
+                    forwardInfoNode.updateTouchesAtPoint(translatedPoint)
                 }
                 for contentNode in strongSelf.contentNodes {
                     var translatedPoint: CGPoint?
@@ -5254,10 +5252,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         if let selectionNode = self.selectionNode {
-//            if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(point) {
-//                return replyInfoNode.view.hitTest(self.view.convert(point, to: replyInfoNode.view), with: event)
-//            }
-            
             if let result = self.traceSelectionNodes(parent: self, point: point.offsetBy(dx: -42.0, dy: 0.0)) {
                 return result.view
             }
