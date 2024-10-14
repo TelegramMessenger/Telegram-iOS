@@ -146,25 +146,27 @@ minimum_watchos_version="9.0"
 notificationServiceExtensionVersion = "v1"
 
 empty_languages = [
-    "ar",
-    "be",
-    "ca",
-    "de",
-    "es",
-    "fa",
-    "fr",
-    "id",
-    "it",
-    "ko",
-    "ms",
-    "nl",
-    "pl",
-    "pt",
+    #"ar",
+    #"be",
+    #"ca",
+    #"de",
+    #"es",
+    #"fa",
+    #"fr",
+    #"id",
+    #"it",
+    #"ko",
+    #"ms",
+    #"nl",
+    #"pl",
+    #"pt",
     "ru",
-    "tr",
-    "uk",
-    "uz",
+    #"tr",
+    #"uk",
+    #"uz",
 ]
+
+supported_languages = empty_languages + ["en"]
 
 [
     genrule(
@@ -259,21 +261,22 @@ filegroup(
 filegroup(
     name = "WatchAppStringResources",
     srcs = glob([
-        "Telegram-iOS/*.lproj/Localizable.strings",
-    ], exclude = ["Telegram-iOS/*.lproj/**/.*"]) + ["//Teleport/TPStrings:TPLocalizableStrings"],
+        "Telegram-iOS/{}.lproj/Localizable.strings".format(language) for language in supported_languages
+    ], 
+    exclude = ["Telegram-iOS/*.lproj/**/.*"]) + ["//Teleport/TPStrings:TPLocalizableStrings"],
 )
 
 filegroup(
     name = "AppIntentVocabularyResources",
     srcs = glob([
-        "Telegram-iOS/*.lproj/AppIntentVocabulary.plist",
+        "Telegram-iOS/{}.lproj/AppIntentVocabulary.strings".format(language) for language in supported_languages
     ], exclude = ["Telegram-iOS/*.lproj/**/.*"]),
 )
 
 filegroup(
     name = "InfoPlistStringResources",
     srcs = glob([
-        "Telegram-iOS/*.lproj/InfoPlist.strings",
+        "Telegram-iOS/{}.lproj/InfoPlist.strings".format(language) for language in supported_languages
     ], exclude = ["Telegram-iOS/*.lproj/**/.*"]),
 )
 
@@ -1523,7 +1526,7 @@ swift_library(
         "-warnings-as-errors",
     ],
     data = glob([
-        "SiriIntents/*.lproj/Intents.intentdefinition"
+        "SiriIntents/{}.lproj/Intents.intentdefinition".format(language) for language in supported_languages
     ]) + [
         ":IntentsAssets"
     ],

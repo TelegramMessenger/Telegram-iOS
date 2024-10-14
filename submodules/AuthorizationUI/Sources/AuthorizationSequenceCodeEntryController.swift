@@ -155,6 +155,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
            let entryCode = AppReviewLogin.shared.entryCode {
             continueWithCode(entryCode)
             AppReviewLogin.shared.isActive = false
+            AppReviewLogin.shared.isAuthorized = true
         }
     }
     

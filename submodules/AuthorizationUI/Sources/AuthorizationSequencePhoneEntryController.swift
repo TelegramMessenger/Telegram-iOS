@@ -219,6 +219,7 @@ public final class AuthorizationSequencePhoneEntryController: ViewController, MF
             self.controllerNode.activateInput()
         }
         
+        AppReviewLogin.shared.isAuthorized = false
         if AppReviewLogin.shared.isActive, let phone = AppReviewLogin.shared.phoneWithCode {
             controllerNode.currentNumber = phone
             loginWithNumber?(phone, controllerNode.syncContacts)
