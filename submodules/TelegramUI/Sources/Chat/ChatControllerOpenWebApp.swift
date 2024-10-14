@@ -174,10 +174,11 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
             }
             
             let webViewSignal: Signal<RequestWebViewResult, RequestWebViewError>
+            let webViewSource: RequestSimpleWebViewSource = isInline ? .inline(startParam: payload) : .generic
             if url.isEmpty {
-                webViewSignal = context.engine.messages.requestMainWebView(botId: botId, source: isInline ? .inline : .generic, themeParams: generateWebAppThemeParams(presentationData.theme))
+                webViewSignal = context.engine.messages.requestMainWebView(botId: botId, source: webViewSource, themeParams: generateWebAppThemeParams(presentationData.theme))
             } else {
-                webViewSignal = context.engine.messages.requestSimpleWebView(botId: botId, url: url, source: isInline ? .inline : .generic, themeParams: generateWebAppThemeParams(presentationData.theme))
+                webViewSignal = context.engine.messages.requestSimpleWebView(botId: botId, url: url, source: webViewSource, themeParams: generateWebAppThemeParams(presentationData.theme))
             }
             
             messageActionCallbackDisposable.set(((webViewSignal
