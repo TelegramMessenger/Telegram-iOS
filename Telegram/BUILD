@@ -323,13 +323,13 @@ filegroup(
 )
 
 alternate_icon_folders = [
-    "BlackIcon",
-    "BlackFilledIcon",
+    # "BlackIcon",
+    # "BlackFilledIcon",
     "BlueIcon",
-    "BlueFilledIcon",
-    "WhiteFilledIcon",
-    "New1",
-    "New2",
+    # "BlueFilledIcon",
+    # "WhiteFilledIcon",
+    # "New1",
+    # "New2",
 ]
 
 [

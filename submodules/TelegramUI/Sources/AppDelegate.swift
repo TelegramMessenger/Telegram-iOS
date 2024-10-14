@@ -810,19 +810,19 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             self.window?.rootViewController?.dismiss(animated: true, completion: nil)
         }, getAvailableAlternateIcons: {
             if #available(iOS 10.3, *) {
-                var icons = [
-                    PresentationAppIcon(name: "BlueIcon", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
-                    PresentationAppIcon(name: "New2", imageName: "New2"),
-                    PresentationAppIcon(name: "New1", imageName: "New1"),
-                    PresentationAppIcon(name: "BlackIcon", imageName: "BlackIcon"),
-                    PresentationAppIcon(name: "BlueFilledIcon", imageName: "BlueFilledIcon"),
-                    PresentationAppIcon(name: "BlackFilledIcon", imageName: "BlackFilledIcon")
-                ]
-                if buildConfig.isInternalBuild {
-                    icons.append(PresentationAppIcon(name: "WhiteFilledIcon", imageName: "WhiteFilledIcon"))
-                }
+//                var icons = [
+                    // PresentationAppIcon(name: "BlueIcon", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
+                    // PresentationAppIcon(name: "New2", imageName: "New2"),
+                    // PresentationAppIcon(name: "New1", imageName: "New1"),
+                    // PresentationAppIcon(name: "BlackIcon", imageName: "BlackIcon"),
+                    // PresentationAppIcon(name: "BlueFilledIcon", imageName: "BlueFilledIcon"),
+                    // PresentationAppIcon(name: "BlackFilledIcon", imageName: "BlackFilledIcon")
+//                ]
+                // if buildConfig.isInternalBuild {
+                //     icons.append(PresentationAppIcon(name: "WhiteFilledIcon", imageName: "WhiteFilledIcon"))
+                // }
                 
-                return icons
+                return []
             } else {
                 return []
             }
