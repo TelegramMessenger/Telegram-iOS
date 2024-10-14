@@ -10,9 +10,9 @@ private let botWebViewPlatform = "macos"
 private let botWebViewPlatform = "ios"
 #endif
 
-public enum RequestSimpleWebViewSource {
+public enum RequestSimpleWebViewSource : Equatable {
     case generic
-    case inline
+    case inline(startParam: String?)
     case settings
 }
 
@@ -30,8 +30,12 @@ func _internal_requestSimpleWebView(postbox: Postbox, network: Network, botId: P
         if let _ = serializedThemeParams {
             flags |= (1 << 0)
         }
+        
+        var startParam: String? = nil
+        
         switch source {
-        case .inline:
+        case let .inline(_startParam):
+            startParam = _startParam
             flags |= (1 << 1)
         case .settings:
             flags |= (1 << 2)
@@ -41,7 +45,7 @@ func _internal_requestSimpleWebView(postbox: Postbox, network: Network, botId: P
         if let _ = url {
             flags |= (1 << 3)
         }
-        return network.request(Api.functions.messages.requestSimpleWebView(flags: flags, bot: inputUser, url: url, startParam: nil, themeParams: serializedThemeParams, platform: botWebViewPlatform))
+        return network.request(Api.functions.messages.requestSimpleWebView(flags: flags, bot: inputUser, url: url, startParam: startParam, themeParams: serializedThemeParams, platform: botWebViewPlatform))
         |> mapError { _ -> RequestWebViewError in
             return .generic
         }
@@ -77,15 +81,18 @@ func _internal_requestMainWebView(postbox: Postbox, network: Network, botId: Pee
         if let _ = serializedThemeParams {
             flags |= (1 << 0)
         }
+        var startParam: String? = nil
+        
         switch source {
-        case .inline:
+        case let .inline(_startParam):
+            startParam = _startParam
             flags |= (1 << 1)
         case .settings:
             flags |= (1 << 2)
         default:
             break
         }
-        return network.request(Api.functions.messages.requestMainWebView(flags: flags, peer: inputPeer, bot: inputUser, startParam: nil, themeParams: serializedThemeParams, platform: botWebViewPlatform))
+        return network.request(Api.functions.messages.requestMainWebView(flags: flags, peer: inputPeer, bot: inputUser, startParam: startParam, themeParams: serializedThemeParams, platform: botWebViewPlatform))
         |> mapError { _ -> RequestWebViewError in
             return .generic
         }
