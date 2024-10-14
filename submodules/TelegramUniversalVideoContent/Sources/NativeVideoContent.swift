@@ -68,11 +68,11 @@ public final class NativeVideoContent: UniversalVideoContent {
             return true
         }
         
-        if videoCodec == "av1" {
+        /*if videoCodec == "av1" {
             if isAv1Supported {
                 return true
             }
-        }
+        }*/
         
         return false
     }

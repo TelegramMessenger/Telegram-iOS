@@ -12981,7 +12981,7 @@ Sorry for the inconvenience.";
 "Gift.View.FirstSale" = "First Sale";
 "Gift.View.LastSale" = "Last Sale";
 "Gift.View.Value" = "Value";
-"Gift.View.Sale" = "sale for %@";
+"Gift.View.Sale" = "sell for %@";
 "Gift.View.Sale.Stars_1" = "%@ Star";
 "Gift.View.Sale.Stars_any" = "%@ Stars";
 "Gift.View.Availability" = "Availability";

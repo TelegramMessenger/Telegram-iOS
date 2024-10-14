@@ -4182,12 +4182,7 @@ extension ChatControllerImpl {
             guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId else {
                 return
             }
-            var langCode = langCode
-            if langCode == "nb" {
-                langCode = "no"
-            } else if langCode == "pt-br" {
-                langCode = "pt"
-            }
+            let langCode = normalizeTranslationLanguage(langCode)
             let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: peerId, { current in
                 return current?.withToLang(langCode).withIsEnabled(true)
             }).startStandalone()

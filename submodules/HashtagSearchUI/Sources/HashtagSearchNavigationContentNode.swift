@@ -16,6 +16,7 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
     private var theme: PresentationTheme
     private let strings: PresentationStrings
     private let hasCurrentChat: Bool
+    private let hasTabs: Bool
     
     private let cancel: () -> Void
     
@@ -60,10 +61,11 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
         }
     }
         
-    init(theme: PresentationTheme, strings: PresentationStrings, initialQuery: String, hasCurrentChat: Bool, cancel: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, initialQuery: String, hasCurrentChat: Bool, hasTabs: Bool, cancel: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         self.hasCurrentChat = hasCurrentChat
+        self.hasTabs = hasTabs
         
         self.cancel = cancel
 
@@ -135,50 +137,47 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
         self.searchBar.frame = searchBarFrame
         self.searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: leftInset + sideInset, rightInset: rightInset + sideInset, transition: transition)
         
-        var items: [TabSelectorComponent.Item] = []
-        if self.hasCurrentChat {
-            items.append(TabSelectorComponent.Item(id: AnyHashable(0), title: self.strings.HashtagSearch_ThisChat))
-        }
-        items.append(TabSelectorComponent.Item(id: AnyHashable(1), title: self.strings.HashtagSearch_MyMessages))
-        items.append(TabSelectorComponent.Item(id: AnyHashable(2), title: self.strings.HashtagSearch_PublicPosts))
-        
-        let tabSelectorSize = self.tabSelector.update(
-            transition: ComponentTransition(transition),
-            component: AnyComponent(TabSelectorComponent(
-                colors: TabSelectorComponent.Colors(
-                    foreground: self.theme.list.itemSecondaryTextColor,
-                    selection: self.theme.list.itemAccentColor
-                ),
-                customLayout: TabSelectorComponent.CustomLayout(
-                    font: Font.medium(14.0),
-                    spacing: self.hasCurrentChat ? 24.0 : 8.0,
-                    lineSelection: true
-                ),
-                items: items,
-                selectedId: AnyHashable(self.selectedIndex),
-                setSelectedId: { [weak self] id in
-                    guard let self, let index = id.base as? Int else {
-                        return
-                    }
-                    self.indexUpdated?(index)
-                },
-                transitionFraction: self.transitionFraction
-            )),
-            environment: {},
-            containerSize: CGSize(width: size.width, height: 44.0)
-        )
-        let tabSelectorFrameOriginX: CGFloat
-        if self.hasCurrentChat || "".isEmpty {
-            tabSelectorFrameOriginX = floorToScreenPixels((size.width - tabSelectorSize.width) / 2.0)
-        } else {
-            tabSelectorFrameOriginX = 4.0
-        }
-        let tabSelectorFrame = CGRect(origin: CGPoint(x: tabSelectorFrameOriginX, y: size.height - tabSelectorSize.height - 9.0), size: tabSelectorSize)
-        if let tabSelectorView = self.tabSelector.view {
-            if tabSelectorView.superview == nil {
-                self.view.addSubview(tabSelectorView)
+        if self.hasTabs {
+            var items: [TabSelectorComponent.Item] = []
+            if self.hasCurrentChat {
+                items.append(TabSelectorComponent.Item(id: AnyHashable(0), title: self.strings.HashtagSearch_ThisChat))
             }
-            transition.updateFrame(view: tabSelectorView, frame: tabSelectorFrame)
+            items.append(TabSelectorComponent.Item(id: AnyHashable(1), title: self.strings.HashtagSearch_MyMessages))
+            items.append(TabSelectorComponent.Item(id: AnyHashable(2), title: self.strings.HashtagSearch_PublicPosts))
+            
+            let tabSelectorSize = self.tabSelector.update(
+                transition: ComponentTransition(transition),
+                component: AnyComponent(TabSelectorComponent(
+                    colors: TabSelectorComponent.Colors(
+                        foreground: self.theme.list.itemSecondaryTextColor,
+                        selection: self.theme.list.itemAccentColor
+                    ),
+                    customLayout: TabSelectorComponent.CustomLayout(
+                        font: Font.medium(14.0),
+                        spacing: self.hasCurrentChat ? 24.0 : 8.0,
+                        lineSelection: true
+                    ),
+                    items: items,
+                    selectedId: AnyHashable(self.selectedIndex),
+                    setSelectedId: { [weak self] id in
+                        guard let self, let index = id.base as? Int else {
+                            return
+                        }
+                        self.indexUpdated?(index)
+                    },
+                    transitionFraction: self.transitionFraction
+                )),
+                environment: {},
+                containerSize: CGSize(width: size.width, height: 44.0)
+            )
+            let tabSelectorFrameOriginX = floorToScreenPixels((size.width - tabSelectorSize.width) / 2.0)
+            let tabSelectorFrame = CGRect(origin: CGPoint(x: tabSelectorFrameOriginX, y: size.height - tabSelectorSize.height - 9.0), size: tabSelectorSize)
+            if let tabSelectorView = self.tabSelector.view {
+                if tabSelectorView.superview == nil {
+                    self.view.addSubview(tabSelectorView)
+                }
+                transition.updateFrame(view: tabSelectorView, frame: tabSelectorFrame)
+            }
         }
     }
     

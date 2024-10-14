@@ -1413,20 +1413,22 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         }
         
         let js = """
-            var favicons = [];
-            var nodeList = document.getElementsByTagName('link');
-            for (var i = 0; i < nodeList.length; i++)
-            {
-                if((nodeList[i].getAttribute('rel') == 'icon')||(nodeList[i].getAttribute('rel') == 'shortcut icon')||(nodeList[i].getAttribute('rel').startsWith('apple-touch-icon')))
+            (function() {
+                var favicons = [];
+                var nodeList = document.getElementsByTagName('link');
+                for (var i = 0; i < nodeList.length; i++)
                 {
-                    const node = nodeList[i];
-                    favicons.push({
-                        url: node.getAttribute('href'),
-                        sizes: node.getAttribute('sizes')
-                    });
+                    if((nodeList[i].getAttribute('rel') == 'icon')||(nodeList[i].getAttribute('rel') == 'shortcut icon')||(nodeList[i].getAttribute('rel').startsWith('apple-touch-icon')))
+                    {
+                        const node = nodeList[i];
+                        favicons.push({
+                            url: node.getAttribute('href'),
+                            sizes: node.getAttribute('sizes')
+                        });
+                    }
                 }
-            }
-            favicons;
+                return favicons;
+            })();
         """
         self.webView.evaluateJavaScript(js, completionHandler: { [weak self] jsResult, _ in
             guard let self, let favicons = jsResult as? [Any] else {
