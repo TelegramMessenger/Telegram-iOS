@@ -132,7 +132,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
 extension StarGift {
     init?(apiStarGift: Api.StarGift) {
         switch apiStarGift {
-        case let .starGift(_, id, sticker, stars, availabilityRemains, availabilityTotal, convertStars):
+        case let .starGift(_, id, sticker, stars, availabilityRemains, availabilityTotal, convertStars, _, _):
             var availability: Availability?
             if let availabilityRemains, let availabilityTotal {
                 availability = Availability(remains: availabilityRemains, total: availabilityTotal)
