@@ -2360,7 +2360,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 
                                 if let botPeer = botPeer {
                                     let _ = (ApplicationSpecificNotice.getBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: botPeer.id)
-                                    |> deliverOnMainQueue).startStandalone(next: { value in
+                                    |> deliverOnMainQueue).startStandalone(next: { [weak self] value in
                                         guard let strongSelf = self else {
                                             return
                                         }
@@ -2368,12 +2368,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         if value {
                                             openBot()
                                         } else {
-                                            strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Conversation_BotInteractiveUrlAlert(EnginePeer(botPeer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                                            let controller = webAppLaunchConfirmationController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: EnginePeer(botPeer), completion: { [weak self] _ in
                                                 if let strongSelf = self {
                                                     let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: botPeer.id).startStandalone()
-                                                    openBot()
                                                 }
-                                            })]), in: .window(.root), with: nil)
+                                                openBot()
+                                            }, showMore: nil, openTerms: { [weak self] in
+                                                if let self, let navigationController = self.effectiveNavigationController {
+                                                    context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.WebApp_LaunchTermsConfirmation_URL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                                                }
+                                            })
+                                            strongSelf.present(controller, in: .window(.root))
                                         }
                                     })
                                 }

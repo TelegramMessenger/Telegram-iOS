@@ -13024,8 +13024,8 @@ Sorry for the inconvenience.";
 "Gift.Options.Gift.Text" = "Give **%@** gifts that can be kept on the profile or converted to Stars. [What are Stars >]()";
 "Gift.Options.Gift.Filter.AllGifts" = "All Gifts";
 "Gift.Options.Gift.Filter.Limited" = "Limited";
-"Gift.Options.Gift.Limited" = "Limited";
-"Gift.Options.Gift.SoldOut" = "Sold Out";
+"Gift.Options.Gift.Limited" = "limited";
+"Gift.Options.Gift.SoldOut" = "sold out";
 "Gift.Options.SoldOut.Text" = "Sorry, this gift is sold out.";
 
 "PeerInfo.PaneGifts" = "Gifts";
@@ -13102,3 +13102,5 @@ Sorry for the inconvenience.";
 "Chat.PrivateMessageEditTimestamp.Date" = "edited %@";
 "Chat.PrivateMessageEditTimestamp.TodayAt" = "edited today at %@";
 "Chat.PrivateMessageEditTimestamp.YesterdayAt" = "edited yesterday at %@";
+
+"Stars.Transaction.Gift.Title" = "Gift";

@@ -104,6 +104,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         self.preloadedResouces = preloadedResouces
         self.originalContent = originalContent
         self.url = url
+        self.initialAnchor = anchor
         
         self.uuid = UUID()
         
@@ -268,10 +269,11 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     private func updateWebPage(_ webPage: TelegramMediaWebpage?, anchor: String?, state: InstantPageStoredState? = nil) {
         if self.webPage != webPage {
             if self.webPage != nil && self.currentLayout != nil {
-                if let snaphotView = self.scrollNode.view.snapshotView(afterScreenUpdates: false) {
-                    self.scrollNode.view.superview?.insertSubview(snaphotView, aboveSubview: self.scrollNode.view)
-                    snaphotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snaphotView] _ in
-                        snaphotView?.removeFromSuperview()
+                if let snapshotView = self.scrollNode.view.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.frame = self.scrollNode.frame
+                    self.scrollNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.scrollNode.view)
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
                     })
                 }
             }
@@ -403,7 +405,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         
         var scrollInsets = insets
         scrollInsets.top = 0.0
-        if self.scrollNode.view.contentInset != insets {
+        if self.scrollNode.view.contentInset != scrollInsets {
             self.scrollNode.view.contentInset = scrollInsets
             self.scrollNode.view.scrollIndicatorInsets = scrollInsets
         }

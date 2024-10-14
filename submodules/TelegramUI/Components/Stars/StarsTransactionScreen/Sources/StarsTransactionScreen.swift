@@ -326,7 +326,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 }
             case let .transaction(transaction, parentPeer):
                 if let starGift = transaction.starGift {
-                    titleText = "Gift"
+                    titleText = strings.Stars_Transaction_Gift_Title
                     descriptionText = ""
                     count = transaction.count
                     transactionId = transaction.id
