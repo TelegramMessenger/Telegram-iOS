@@ -1,6 +1,10 @@
 import Foundation
 import BuildConfig
 
+private enum Constants {
+    static var isAuthorizedKey: String { "is_authorized" }
+}
+
 public final class AppReviewLogin {
     
     // Public static properties
@@ -32,11 +36,21 @@ public final class AppReviewLogin {
         return String(repeating: codeChar, count: 5)
     }
     
+    public var isAuthorized: Bool {
+        get {
+            userDefaults.bool(forKey: Constants.isAuthorizedKey)
+        }
+        set {
+            userDefaults.set(newValue, forKey: Constants.isAuthorizedKey)
+        }
+    }
+    
     public var isActive = false
     
     // Private properties
     
     private let buildConfig: BuildConfig
+    private lazy var userDefaults = UserDefaults(suiteName: "user_defaults.tp_auth") ?? .standard
     
     // MARK: - Initialization
     

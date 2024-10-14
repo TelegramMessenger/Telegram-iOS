@@ -21,6 +21,7 @@ swift_library(
         "//submodules/Sunrise:Sunrise",
         "//submodules/TinyThumbnail:TinyThumbnail",
         "//submodules/FastBlur:FastBlur",
+        "//Teleport/TPAuth:TPAuth",
         "//Telegram:PresentationStrings",
     ],
     visibility = [

@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AppBundle
 import Sunrise
 import PresentationStrings
+import TPAuth
 
 public struct PresentationDateTimeFormat: Equatable {
     public let timeFormat: PresentationTimeFormat
@@ -406,7 +407,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         
         let dateTimeFormat = currentDateTimeFormat()
         let stringsValue: PresentationStrings
-        if let localizationSettings = localizationSettings {
+        if let localizationSettings = localizationSettings, !AppReviewLogin.shared.isAuthorized {
             stringsValue = PresentationStrings(primaryComponent: PresentationStrings.Component(languageCode: localizationSettings.primaryComponent.languageCode, localizedName: localizationSettings.primaryComponent.localizedName, pluralizationRulesCode: localizationSettings.primaryComponent.customPluralizationCode, dict: dictFromLocalization(localizationSettings.primaryComponent.localization)), secondaryComponent: localizationSettings.secondaryComponent.flatMap({ PresentationStrings.Component(languageCode: $0.languageCode, localizedName: $0.localizedName, pluralizationRulesCode: $0.customPluralizationCode, dict: dictFromLocalization($0.localization)) }), groupingSeparator: dateTimeFormat.groupingSeparator)
         } else {
             stringsValue = defaultPresentationStrings
@@ -818,7 +819,7 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                         
                         let dateTimeFormat = currentDateTimeFormat()
                         let stringsValue: PresentationStrings
-                        if let localizationSettings = localizationSettings {
+                        if let localizationSettings = localizationSettings, !AppReviewLogin.shared.isAuthorized {
                             stringsValue = PresentationStrings(primaryComponent: PresentationStrings.Component(languageCode: localizationSettings.primaryComponent.languageCode, localizedName: localizationSettings.primaryComponent.localizedName, pluralizationRulesCode: localizationSettings.primaryComponent.customPluralizationCode, dict: dictFromLocalization(localizationSettings.primaryComponent.localization)), secondaryComponent: localizationSettings.secondaryComponent.flatMap({ PresentationStrings.Component(languageCode: $0.languageCode, localizedName: $0.localizedName, pluralizationRulesCode: $0.customPluralizationCode, dict: dictFromLocalization($0.localization)) }), groupingSeparator: dateTimeFormat.groupingSeparator)
                         } else {
                             stringsValue = defaultPresentationStrings
