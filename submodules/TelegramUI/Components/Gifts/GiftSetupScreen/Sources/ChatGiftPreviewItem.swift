@@ -258,7 +258,7 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                         apply().1(ListViewItemApply(isOnScreen: true))
                     })
                     itemNode!.isUserInteractionEnabled = false
-                    itemNode?.visibility = .visible(1.0, .infinite)
+                    itemNode!.visibility = .visible(1.0, .infinite)
                     messageNodes.append(itemNode!)
                     
                     self.initialBubbleHeight = itemNode?.frame.height

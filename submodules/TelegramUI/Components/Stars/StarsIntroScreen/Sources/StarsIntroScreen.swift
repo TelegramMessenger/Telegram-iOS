@@ -8,18 +8,17 @@ import Markdown
 import TextFormat
 import TelegramPresentationData
 import ViewControllerComponent
-import ScrollComponent
 import BundleIconComponent
 import BalancedTextComponent
 import MultilineTextComponent
-import SolidRoundedButtonComponent
+import ButtonComponent
 import AccountContext
-import ScrollComponent
+import SheetComponent
 import BlurredBackgroundComponent
 import PremiumStarComponent
 
-private final class ScrollContent: CombinedComponent {
-    typealias EnvironmentType = (ViewControllerComponentContainer.Environment, ScrollChildEnvironment)
+private final class SheetContent: CombinedComponent {
+    typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
     let openExamples: () -> Void
@@ -35,7 +34,7 @@ private final class ScrollContent: CombinedComponent {
         self.dismiss = dismiss
     }
     
-    static func ==(lhs: ScrollContent, rhs: ScrollContent) -> Bool {
+    static func ==(lhs: SheetContent, rhs: SheetContent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
@@ -44,10 +43,10 @@ private final class ScrollContent: CombinedComponent {
         
     static var body: Body {
         let star = Child(PremiumStarComponent.self)
-        
         let title = Child(BalancedTextComponent.self)
         let text = Child(BalancedTextComponent.self)
         let list = Child(List<Empty>.self)
+        let actionButton = Child(ButtonComponent.self)
                                 
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
@@ -82,13 +81,13 @@ private final class ScrollContent: CombinedComponent {
                         UIColor(rgb: 0xfdd219)
                     ],
                     particleColor: UIColor(rgb: 0xf9b004),
-                    backgroundColor: environment.theme.list.plainBackgroundColor
+                    backgroundColor: environment.theme.actionSheet.opaqueItemBackgroundColor
                 ),
                 availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                 transition: context.transition
             )
             context.add(star
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: environment.navigationHeight + 24.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: 79.0))
             )
             
             let title = title.update(
@@ -193,15 +192,40 @@ private final class ScrollContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + list.size.height / 2.0))
             )
             contentSize.height += list.size.height
-            contentSize.height += spacing - 9.0
+            contentSize.height += spacing
             
-            contentSize.height += 12.0 + 50.0
-            if environment.safeInsets.bottom > 0 {
-                contentSize.height += environment.safeInsets.bottom + 5.0
-            } else {
-                contentSize.height += 12.0
-            }
-                        
+            let buttonHeight: CGFloat = 50.0
+            let bottomPanelPadding: CGFloat = 12.0
+            let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
+            
+            contentSize.height += bottomPanelPadding
+            
+            let controller = environment.controller() as? StarsIntroScreen
+            let actionButton = actionButton.update(
+                component: ButtonComponent(
+                    background: ButtonComponent.Background(
+                        color: environment.theme.list.itemCheckColors.fillColor,
+                        foreground: environment.theme.list.itemCheckColors.foregroundColor,
+                        pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
+                    ),
+                    content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
+                        Text(text: strings.Stars_Info_Done, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
+                    )),
+                    isEnabled: true,
+                    displaysProgress: false,
+                    action: {
+                        controller?.dismissAnimated()
+                    }
+                ),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: buttonHeight),
+                transition: context.transition
+            )
+            context.add(actionButton
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + actionButton.size.height / 2.0))
+                .cornerRadius(10.0)
+            )
+            contentSize.height += actionButton.size.height + bottomInset
+      
             return contentSize
         }
     }
@@ -238,129 +262,58 @@ private final class ContainerComponent: CombinedComponent {
     }
     
     static var body: Body {
-        let background = Child(Rectangle.self)
-        let scroll = Child(ScrollComponent<ViewControllerComponentContainer.Environment>.self)
-        let bottomPanel = Child(BlurredBackgroundComponent.self)
-        let bottomSeparator = Child(Rectangle.self)
-        let actionButton = Child(SolidRoundedButtonComponent.self)
-        let scrollExternalState = ScrollComponent<EnvironmentType>.ExternalState()
-        
+        let sheet = Child(SheetComponent<(EnvironmentType)>.self)
+        let animateOut = StoredActionSlot(Action<Void>.self)
+                
         return { context in
             let environment = context.environment[EnvironmentType.self]
-            let theme = environment.theme
-            let strings = environment.strings
-            let state = context.state
             
             let controller = environment.controller
             
-            let background = background.update(
-                component: Rectangle(color: environment.theme.list.plainBackgroundColor),
-                environment: {},
-                availableSize: context.availableSize,
-                transition: context.transition
-            )
-            context.add(background
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
-            )
-            
-            let scroll = scroll.update(
-                component: ScrollComponent<EnvironmentType>(
-                    content: AnyComponent(ScrollContent(
+            let sheet = sheet.update(
+                component: SheetComponent<EnvironmentType>(
+                    content: AnyComponent(SheetContent(
                         context: context.component.context,
                         openExamples: context.component.openExamples,
                         dismiss: {
                             controller()?.dismiss()
                         }
                     )),
-                    externalState: scrollExternalState,
-                    contentInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 1.0, right: 0.0),
-                    contentOffsetUpdated: { [weak state] topContentOffset, bottomContentOffset in
-                        state?.topContentOffset = topContentOffset
-                        state?.bottomContentOffset = bottomContentOffset
-                        Queue.mainQueue().justDispatch {
-                            state?.updated(transition: .immediate)
-                        }
-                    },
-                    contentOffsetWillCommit: { targetContentOffset in
-                    }
+                    backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
+                    followContentSizeChanges: true,
+                    clipsContent: true,
+                    animateOut: animateOut
                 ),
-                environment: { environment },
+                environment: {
+                    environment
+                    SheetComponentEnvironment(
+                        isDisplaying: environment.value.isVisible,
+                        isCentered: environment.metrics.widthClass == .regular,
+                        hasInputHeight: !environment.inputHeight.isZero,
+                        regularMetricsSize: CGSize(width: 430.0, height: 900.0),
+                        dismiss: { animated in
+                            if animated {
+                                animateOut.invoke(Action { _ in
+                                    if let controller = controller() {
+                                        controller.dismiss(completion: nil)
+                                    }
+                                })
+                            } else {
+                                if let controller = controller() {
+                                    controller.dismiss(completion: nil)
+                                }
+                            }
+                        }
+                    )
+                },
                 availableSize: context.availableSize,
                 transition: context.transition
             )
             
-            context.add(scroll
+            context.add(sheet
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
             )
             
-            let buttonHeight: CGFloat = 50.0
-            let bottomPanelPadding: CGFloat = 12.0
-            let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
-            let bottomPanelHeight = bottomPanelPadding + buttonHeight + bottomInset
-            
-            let bottomPanelAlpha: CGFloat
-            if scrollExternalState.contentHeight > context.availableSize.height {
-                if let bottomContentOffset = state.bottomContentOffset {
-                    bottomPanelAlpha = min(16.0, bottomContentOffset) / 16.0
-                } else {
-                    bottomPanelAlpha = 1.0
-                }
-            } else {
-                bottomPanelAlpha = 0.0
-            }
-            
-            let bottomPanel = bottomPanel.update(
-                component: BlurredBackgroundComponent(
-                    color: theme.rootController.tabBar.backgroundColor
-                ),
-                availableSize: CGSize(width: context.availableSize.width, height: bottomPanelHeight),
-                transition: context.transition
-            )
-            let bottomSeparator = bottomSeparator.update(
-                component: Rectangle(
-                    color: theme.rootController.tabBar.separatorColor
-                ),
-                availableSize: CGSize(width: context.availableSize.width, height: UIScreenPixel),
-                transition: context.transition
-            )
-            
-            context.add(bottomPanel
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height / 2.0))
-                .opacity(bottomPanelAlpha)
-            )
-            context.add(bottomSeparator
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height))
-                .opacity(bottomPanelAlpha)
-            )
-            
-            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            let actionButton = actionButton.update(
-                component: SolidRoundedButtonComponent(
-                    title: strings.Stars_Info_Done,
-                    theme: SolidRoundedButtonComponent.Theme(
-                        backgroundColor: theme.list.itemCheckColors.fillColor,
-                        backgroundColors: [],
-                        foregroundColor: theme.list.itemCheckColors.foregroundColor
-                    ),
-                    font: .bold,
-                    fontSize: 17.0,
-                    height: buttonHeight,
-                    cornerRadius: 10.0,
-                    gloss: false,
-                    iconName: nil,
-                    animationName: nil,
-                    iconPosition: .left,
-                    action: {
-                        controller()?.dismiss()
-                    }
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
-                transition: context.transition
-            )
-            context.add(actionButton
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanelHeight + bottomPanelPadding + actionButton.size.height / 2.0))
-            )
-             
             return context.availableSize
         }
     }
@@ -389,7 +342,7 @@ public final class StarsIntroScreen: ViewControllerComponentContainer {
             theme: forceDark ? .dark : .default
         )
         
-        self.navigationPresentation = .modal
+        self.navigationPresentation = .flatModal
         
         openExamplesImpl = { [weak self] in
             guard let self else {
@@ -407,6 +360,12 @@ public final class StarsIntroScreen: ViewControllerComponentContainer {
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    public func dismissAnimated() {
+        if let view = self.node.hostView.findTaggedView(tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
+            view.dismissAnimated()
+        }
     }
 }
 

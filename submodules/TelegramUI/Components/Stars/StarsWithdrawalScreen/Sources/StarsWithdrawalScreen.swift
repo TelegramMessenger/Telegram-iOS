@@ -52,7 +52,6 @@ private final class SheetContent: CombinedComponent {
     }
     
     static var body: Body {
-        let background = Child(RoundedRectangle.self)
         let closeButton = Child(Button.self)
         let title = Child(Text.self)
         let amountSection = Child(ListSectionComponent.self)
@@ -74,15 +73,6 @@ private final class SheetContent: CombinedComponent {
             
             let sideInset: CGFloat = 16.0
             var contentSize = CGSize(width: context.availableSize.width, height: 18.0)
-                        
-            let background = background.update(
-                component: RoundedRectangle(color: theme.list.blocksBackgroundColor, cornerRadius: 8.0),
-                availableSize: CGSize(width: context.availableSize.width, height: 1000.0),
-                transition: .immediate
-            )
-            context.add(background
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: background.size.height / 2.0))
-            )
             
             let constrainedTitleWidth = context.availableSize.width - 16.0 * 2.0
             
@@ -466,7 +456,7 @@ private final class StarsWithdrawSheetComponent: CombinedComponent {
                             })
                         }
                     )),
-                    backgroundColor: .blur(.light),
+                    backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     followContentSizeChanges: false,
                     clipsContent: true,
                     isScrollEnabled: false,

@@ -366,6 +366,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
                     self.scrollView.addSubview(contentView)
                 }
                 contentView.clipsToBounds = component.clipsContent
+                contentView.layer.cornerRadius = self.backgroundView.layer.cornerRadius
                 if sheetEnvironment.isCentered {
                     let y: CGFloat = floorToScreenPixels((availableSize.height - contentSize.height) / 2.0)
                     transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - contentSize.width) / 2.0), y: -y), size: contentSize), completion: nil)

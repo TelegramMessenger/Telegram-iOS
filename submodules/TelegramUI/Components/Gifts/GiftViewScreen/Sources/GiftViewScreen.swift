@@ -374,7 +374,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                             animationRenderer: component.context.animationRenderer,
                             placeholderColor: theme.list.mediaPlaceholderColor,
                             text: .plain(attributedText),
-                            maximumNumberOfLines: 0
+                            maximumNumberOfLines: 0,
+                            handleSpoilers: true
                         )
                     )
                 ))
@@ -916,7 +917,6 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 return
             }
             let introController = context.sharedContext.makeStarsIntroScreen(context: context)
-            introController.navigationPresentation = .modal
             self.push(introController)
         }
     }
