@@ -355,24 +355,24 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                             let selected = icon.name == item.currentIconName
 
                             var name = "Icon"
-                            var bordered = true
+                            let bordered = true
                             switch icon.name {
                                 case "BlueIcon":
                                     name = item.strings.Appearance_AppIconDefault
-                                case "BlackIcon":
-                                    name = item.strings.Appearance_AppIconDefaultX
-                                case "BlueFilledIcon":
-                                    name = item.strings.Appearance_AppIconFilled
-                                    bordered = false
-                                case "BlackFilledIcon":
-                                    name = item.strings.Appearance_AppIconFilledX
-                                    bordered = false
-                                case "WhiteFilled":
-                                    name = "⍺ White"
-                                case "New1":
-                                    name = item.strings.Appearance_AppIconNew1
-                                case "New2":
-                                    name = item.strings.Appearance_AppIconNew2
+                                // case "BlackIcon":
+                                //     name = item.strings.Appearance_AppIconDefaultX
+                                // case "BlueFilledIcon":
+                                //     name = item.strings.Appearance_AppIconFilled
+                                //     bordered = false
+                                // case "BlackFilledIcon":
+                                //     name = item.strings.Appearance_AppIconFilledX
+                                //     bordered = false
+                                // case "WhiteFilled":
+                                //     name = "⍺ White"
+                                // case "New1":
+                                //     name = item.strings.Appearance_AppIconNew1
+                                // case "New2":
+                                //     name = item.strings.Appearance_AppIconNew2
                                 default:
                                     name = icon.name
                             }

@@ -1,5 +1,5 @@
 <dict>
-    <key>Black</key>
+    <!-- <key>Black</key>
     <dict>
         <key>CFBundleIconFiles</key>
         <array>
@@ -19,7 +19,7 @@
         </array>
         <key>UIPrerenderedIcon</key>
         <true/>
-    </dict>
+    </dict> -->
     <key>Blue</key>
     <dict>
         <key>CFBundleIconFiles</key>
@@ -31,7 +31,7 @@
         <key>UIPrerenderedIcon</key>
         <true/>
     </dict>
-    <key>BlueFilled</key>
+    <!-- <key>BlueFilled</key>
     <dict>
         <key>CFBundleIconFiles</key>
         <array>
@@ -89,5 +89,5 @@
         </array>
         <key>UIPrerenderedIcon</key>
         <true/>
-    </dict>
+    </dict> -->
 </dict>
