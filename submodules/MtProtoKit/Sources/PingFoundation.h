@@ -8,8 +8,6 @@
 
 #include <AssertMacros.h>
 
-#import <sys/types.h>
-
 #pragma mark * PingFoundation
 
 @protocol PingFoundationDelegate;
