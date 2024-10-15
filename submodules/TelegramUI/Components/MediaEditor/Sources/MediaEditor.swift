@@ -628,10 +628,20 @@ public final class MediaEditor {
         case let .asset(asset):
             textureSource = Signal { subscriber in
                 let isVideo = asset.mediaType == .video
-                
+                                
                 let targetSize = isVideo ? CGSize(width: 128.0, height: 128.0) : CGSize(width: 1920.0, height: 1920.0)
                 let options = PHImageRequestOptions()
-                options.deliveryMode = isVideo ? .fastFormat : .highQualityFormat
+                let deliveryMode: PHImageRequestOptionsDeliveryMode
+                if isVideo {
+                    if #available(iOS 14.0, *), PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited {
+                        deliveryMode = .highQualityFormat
+                    } else {
+                        deliveryMode = .fastFormat
+                    }
+                } else {
+                    deliveryMode = .highQualityFormat
+                }
+                options.deliveryMode = deliveryMode
                 options.isNetworkAccessAllowed = true
              
                 let requestId = PHImageManager.default().requestImage(

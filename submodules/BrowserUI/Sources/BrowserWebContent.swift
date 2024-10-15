@@ -1708,11 +1708,10 @@ let setupFontFunctions = """
 """
 
 private let videoSource = """
+document.addEventListener('DOMContentLoaded', () => {
 function tgBrowserDisableWebkitEnterFullscreen(videoElement) {
   if (videoElement && videoElement.webkitEnterFullscreen) {
-    Object.defineProperty(videoElement, 'webkitEnterFullscreen', {
-      value: undefined
-    });
+    videoElement.setAttribute('playsinline', '');
   }
 }
 
@@ -1747,6 +1746,7 @@ _tgbrowser_observer.observe(document.body, {
 function tgBrowserDisconnectObserver() {
   _tgbrowser_observer.disconnect();
 }
+});
 """
 
 let setupTouchObservers =

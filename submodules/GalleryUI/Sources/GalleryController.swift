@@ -309,13 +309,16 @@ public func galleryItemForEntry(
         } else {
             if let fileName = file.fileName, (fileName as NSString).pathExtension.lowercased() == "json" {
                 return ChatAnimationGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
-            }
-            else if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
+            } else if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
                 var pixelsCount: Int = 0
                 if let dimensions = file.dimensions {
                     pixelsCount = Int(dimensions.width) * Int(dimensions.height)
                 }
-                if pixelsCount < 10000 * 10000 {
+                var fileSize: Int64 = 0
+                if let size = file.size {
+                    fileSize = size
+                }
+                if pixelsCount < 10000 * 10000 && fileSize < 16 * 1024 * 1024 {
                     return ChatImageGalleryItem(
                         context: context,
                         presentationData: presentationData,

@@ -569,7 +569,7 @@ final class StarsStatisticsScreenComponent: Component {
                         theme: environment.theme,
                         strings: strings,
                         dateTimeFormat: environment.dateTimeFormat,
-                        containerInsets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: 0.0, right: environment.safeInsets.right),
+                        containerInsets: .zero,
                         isScrollable: false,
                         isCurrent: true,
                         externalScrollBounds: self.lastScrollBounds ?? .zero,
