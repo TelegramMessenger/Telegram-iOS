@@ -57,6 +57,7 @@ export class SourceBufferStub extends EventTarget {
         window.bridgeObjectMap[this.bridgeId] = this;
 
         window.bridgeInvokeAsync(this.bridgeId, "SourceBuffer", "constructor", {
+            "mediaSourceId": this.mediaSource.bridgeId,
             "mimeType": mimeType
         });
     }
@@ -146,6 +147,7 @@ export class MediaSourceStub extends EventTarget {
         this._duration = NaN;
 
         window.bridgeInvokeAsync(this.bridgeId, "MediaSource", "constructor", {
+            "id": this.internalId
         });
 
         // Simulate asynchronous opening of MediaSource
@@ -167,14 +169,25 @@ export class MediaSourceStub extends EventTarget {
         const sourceBuffer = new SourceBufferStub(this, mimeType);
         this.sourceBuffers._add(sourceBuffer);
         this.activeSourceBuffers._add(sourceBuffer);
+
+        window.bridgeInvokeAsync(this.bridgeId, "MediaSource", "updateSourceBuffers", {
+            "ids": this.sourceBuffers._buffers.map((sb) => sb.bridgeId)
+        }).then((result) => {
+        })
+
         return sourceBuffer;
     }
 
     removeSourceBuffer(sourceBuffer) {
         if (!this.sourceBuffers._remove(sourceBuffer)) {
-        throw new DOMException('SourceBuffer not found', 'NotFoundError');
+            throw new DOMException('SourceBuffer not found', 'NotFoundError');
         }
         this.activeSourceBuffers._remove(sourceBuffer);
+
+        window.bridgeInvokeAsync(this.bridgeId, "MediaSource", "updateSourceBuffers", {
+            "ids": this.sourceBuffers._buffers.map((sb) => sb.bridgeId)
+        }).then((result) => {
+        })
     }
 
     endOfStream(error) {
