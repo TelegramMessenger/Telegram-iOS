@@ -1722,6 +1722,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     private func runCacheReindexTasks(lowImpact: Bool, completion: @escaping () -> Void) -> Disposable {
+        if "".isEmpty {
+            return EmptyDisposable
+        }
+        
         let disposable = MetaDisposable()
         
         let _ = (self.sharedContextPromise.get()
