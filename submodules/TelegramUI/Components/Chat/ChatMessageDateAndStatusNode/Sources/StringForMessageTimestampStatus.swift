@@ -70,7 +70,7 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
             return strings.Message_RecommendedLabel
         }
     }
-
+    
     var timestamp: Int32
     if let scheduleTime = message.scheduleTime {
         timestamp = scheduleTime
@@ -93,6 +93,20 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
     var dateText = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat)
     if timestamp == scheduleWhenOnlineTimestamp {
         dateText = "         "
+    }
+    
+    //TODO:release
+    //TODO:localize
+    if "".isEmpty, let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+        for media in message.media {
+            if let file = media as? TelegramMediaFile, file.isVideo, !file.isInstantVideo, !file.isAnimated {
+                if message.id.namespace == Namespaces.Message.ScheduledCloud {
+                    return "appx. \(dateText)"
+                } else if message.id.namespace == Namespaces.Message.ScheduledLocal {
+                    return "processing"
+                }
+            }
+        }
     }
     
     if displayFullDate {

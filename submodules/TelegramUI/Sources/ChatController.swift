@@ -641,6 +641,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    var layoutActionOnViewTransitionAction: (() -> Void)?
+    
     public init(
         context: AccountContext,
         chatLocation: ChatLocation,
@@ -9114,6 +9116,55 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    func shouldDivertMessagesToScheduled(targetPeer: EnginePeer? = nil, messages: [EnqueueMessage]) -> Signal<Bool, NoError> {
+        guard let peer = targetPeer?._asPeer() ?? self.presentationInterfaceState.renderedPeer?.peer else {
+            return .single(false)
+        }
+        
+        if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+        } else {
+            return .single(false)
+        }
+        
+        //TODO:release
+        if !"".isEmpty {
+            return .single(false)
+        }
+        
+        var forwardMessageIds: [EngineMessage.Id] = []
+        
+        for message in messages {
+            if case let .message(_, _, _, mediaReference, _, _, _, _, _, _) = message, let media = mediaReference?.media {
+                if let file = media as? TelegramMediaFile, file.isVideo && !file.isInstantVideo && !file.isAnimated {
+                    return .single(true)
+                }
+            } else if case let .forward(sourceId, _, _, _, _) = message {
+                forwardMessageIds.append(sourceId)
+            }
+        }
+        
+        if forwardMessageIds.isEmpty {
+            return .single(false)
+        } else {
+            return self.context.engine.data.get(
+                EngineDataList(forwardMessageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init(id:)))
+            )
+            |> map { messages -> Bool in
+                for message in messages {
+                    guard let message else {
+                        continue
+                    }
+                    for media in message.media {
+                        if let file = media as? TelegramMediaFile, file.isVideo && !file.isInstantVideo && !file.isAnimated {
+                            return true
+                        }
+                    }
+                }
+                return false
+            }
+        }
+    }
+    
     func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, commit: Bool = false) {
         if case let .customChatContents(customChatContents) = self.subject {
             customChatContents.enqueueMessages(messages: messages)
@@ -9124,37 +9175,101 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
-        var isScheduledMessages = false
-        if case .scheduledMessages = self.presentationInterfaceState.subject {
-            isScheduledMessages = true
-        }
-        
-        if commit || !isScheduledMessages {
-            self.commitPurposefulAction()
+        let _ = (self.shouldDivertMessagesToScheduled(messages: messages)
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] shouldDivert in
+            guard let self else {
+                return
+            }
             
-            let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: self.transformEnqueueMessages(messages))
-            |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
-                if let strongSelf = self, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
-                    strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+            var messages = messages
+            var shouldOpenScheduledMessages = false
+            
+            if shouldDivert {
+                messages = messages.map { message -> EnqueueMessage in
+                    return message.withUpdatedAttributes { attributes in
+                        var attributes = attributes
+                        attributes.removeAll(where: { $0 is OutgoingScheduleInfoMessageAttribute })
+                        attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: Int32(Date().timeIntervalSince1970) + 10 * 24 * 60 * 60))
+                        return attributes
+                    }
                 }
-            })
+                shouldOpenScheduledMessages = true
+            }
             
-            donateSendMessageIntent(account: self.context.account, sharedContext: self.context.sharedContext, intentContext: .chat, peerIds: [peerId])
+            var isScheduledMessages = false
+            if case .scheduledMessages = self.presentationInterfaceState.subject {
+                isScheduledMessages = true
+            }
             
-            self.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false) })
-        } else {
-            self.presentScheduleTimePicker(style: media ? .media : .default, dismissByTapOutside: false, completion: { [weak self] time in
-                if let strongSelf = self {
-                    strongSelf.sendMessages(strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: time), commit: true)
+            if commit || !isScheduledMessages {
+                self.commitPurposefulAction()
+                
+                let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: self.transformEnqueueMessages(messages))
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
+                    if let strongSelf = self, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
+                        strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                    }
+                })
+                
+                donateSendMessageIntent(account: self.context.account, sharedContext: self.context.sharedContext, intentContext: .chat, peerIds: [peerId])
+                
+                self.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false) })
+                
+                if !isScheduledMessages && shouldOpenScheduledMessages {
+                    if let layoutActionOnViewTransitionAction = self.layoutActionOnViewTransitionAction {
+                        self.layoutActionOnViewTransitionAction = nil
+                        layoutActionOnViewTransitionAction()
+                    }
+                    
+                    self.openScheduledMessages(force: true, completion: { [weak self] c in
+                        guard let self else {
+                            return
+                        }
+                        c.dismissAllUndoControllers()
+                        
+                        //TODO:localize
+                        c.present(
+                            UndoOverlayController(
+                                presentationData: self.presentationData,
+                                content: .info(
+                                    title: "Improving video...",
+                                    text: "The video will be published after it's optimized for the bese viewing experience.",
+                                    timeout: 8.0,
+                                    customUndoText: nil
+                                ),
+                                elevatedLayout: false,
+                                position: .top,
+                                action: { _ in
+                                    return true
+                                }
+                            ),
+                            in: .current
+                        )
+                    })
                 }
-            })
-        }
+            } else {
+                self.presentScheduleTimePicker(style: media ? .media : .default, dismissByTapOutside: false, completion: { [weak self] time in
+                    if let strongSelf = self {
+                        strongSelf.sendMessages(strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: time), commit: true)
+                    }
+                })
+            }
+        })
     }
     
     func enqueueMediaMessages(signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, parameters: ChatSendMessageActionSheetController.SendParameters? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
         self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(context: self.context, account: self.context.account, signals: signals!)
         |> deliverOnMainQueue).startStrict(next: { [weak self] items in
-            if let strongSelf = self {
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let _ = (strongSelf.shouldDivertMessagesToScheduled(messages: items.map(\.message))
+            |> deliverOnMainQueue).startStandalone(next: { shouldDivert in
+                guard let strongSelf = self else {
+                    return
+                }
+            
                 var completionImpl: (() -> Void)? = completion
 
                 var usedCorrelationId: Int64?
@@ -9165,6 +9280,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var groupedCorrelationIds: [Int64: Int64] = [:]
                 
                 var skipAddingTransitions = false
+                
+                if shouldDivert {
+                    skipAddingTransitions = true
+                }
                 
                 for item in items {
                     var message = item.message
@@ -9289,7 +9408,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let _ = scheduleTime {
                     completion()
                 }
-            }
+            })
         }))
     }
 
@@ -10384,8 +10503,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    func openScheduledMessages() {
-        guard let navigationController = self.effectiveNavigationController, navigationController.topViewController == self else {
+    func openScheduledMessages(force: Bool = false, completion: @escaping (ChatControllerImpl) -> Void = { _ in }) {
+        guard let navigationController = self.effectiveNavigationController else {
+            return
+        }
+        if navigationController.topViewController == self || force {
+        } else {
             return
         }
         
@@ -10396,7 +10519,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let controller = ChatControllerImpl(context: self.context, chatLocation: mappedChatLocation, subject: .scheduledMessages)
         controller.navigationPresentation = .modal
-        navigationController.pushViewController(controller)
+        navigationController.pushViewController(controller, completion: { [weak controller] in
+            if let controller {
+                completion(controller)
+            }
+        })
     }
     
     func openPinnedMessages(at messageId: MessageId?) {
