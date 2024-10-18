@@ -18,6 +18,8 @@ private func md5Hash(_ data: Data) -> HashId {
     return HashId(data: hashData)
 }
 
+public var storageBoxDebugFunc: ((Int64) -> Void)?
+
 public final class StorageBox {
     public final class Stats {
         public final class ContentTypeStats {
@@ -264,10 +266,14 @@ public final class StorageBox {
                 self.valueBox.scan(self.contentTypeStatsTable, values: { key, value in
                     var size: Int64 = 0
                     value.read(&size, offset: 0, length: 8)
+                    self.logger.log("StorageBox: total size for key \(key.getUInt8(0)): \(size)")
+                    storageBoxDebugFunc?(Int64(key.getUInt8(0)))
+                    storageBoxDebugFunc?(size)
                     totalSize += size
                     
                     return true
                 })
+                self.logger.log("StorageBox: total size: \(totalSize)")
                 
                 self.valueBox.commit()
                 
@@ -313,6 +319,7 @@ public final class StorageBox {
                 value.read(&currentSize, offset: 0, length: 8)
             }
             
+            let previousSize = currentSize
             currentSize += delta
             
             if currentSize < 0 {
@@ -321,6 +328,18 @@ public final class StorageBox {
             }
             
             self.valueBox.set(self.contentTypeStatsTable, key: key, value: MemoryBuffer(memory: &currentSize, capacity: 8, length: 8, freeWhenDone: false))
+            
+            storageBoxDebugFunc?(Int64(key.getUInt8(0)))
+            storageBoxDebugFunc?(previousSize)
+            storageBoxDebugFunc?(currentSize)
+            self.logger.log("StorageBox: internalAddSize: \(key.getUInt8(0)): \(previousSize) -> \(currentSize)")
+            
+            if let value = self.valueBox.get(self.contentTypeStatsTable, key: key) {
+                var readBackSize: Int64 = 0
+                value.read(&readBackSize, offset: 0, length: 8)
+                self.logger.log("StorageBox: internalAddSize: readBack: \(previousSize) -> \(readBackSize)")
+                storageBoxDebugFunc?(readBackSize)
+            }
             
             self.totalSize += delta
         }
