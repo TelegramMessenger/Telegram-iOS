@@ -11,6 +11,5 @@ module.exports = merge(common, {
         compress: true,
       },
     })],
-    runtimeChunk: 'single',
   },
 });
