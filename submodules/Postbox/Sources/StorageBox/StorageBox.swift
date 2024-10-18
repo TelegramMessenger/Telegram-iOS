@@ -266,14 +266,10 @@ public final class StorageBox {
                 self.valueBox.scan(self.contentTypeStatsTable, values: { key, value in
                     var size: Int64 = 0
                     value.read(&size, offset: 0, length: 8)
-                    self.logger.log("StorageBox: total size for key \(key.getUInt8(0)): \(size)")
-                    storageBoxDebugFunc?(Int64(key.getUInt8(0)))
-                    storageBoxDebugFunc?(size)
                     totalSize += size
                     
                     return true
                 })
-                self.logger.log("StorageBox: total size: \(totalSize)")
                 
                 self.valueBox.commit()
                 
@@ -327,19 +323,11 @@ public final class StorageBox {
                 currentSize = 0
             }
             
-            self.valueBox.set(self.contentTypeStatsTable, key: key, value: MemoryBuffer(memory: &currentSize, capacity: 8, length: 8, freeWhenDone: false))
-            
-            storageBoxDebugFunc?(Int64(key.getUInt8(0)))
-            storageBoxDebugFunc?(previousSize)
-            storageBoxDebugFunc?(currentSize)
-            self.logger.log("StorageBox: internalAddSize: \(key.getUInt8(0)): \(previousSize) -> \(currentSize)")
-            
-            if let value = self.valueBox.get(self.contentTypeStatsTable, key: key) {
-                var readBackSize: Int64 = 0
-                value.read(&readBackSize, offset: 0, length: 8)
-                self.logger.log("StorageBox: internalAddSize: readBack: \(previousSize) -> \(readBackSize)")
-                storageBoxDebugFunc?(readBackSize)
-            }
+            withExtendedLifetime(key, {
+                withUnsafeMutablePointer(to: &currentSize, { pointer in
+                    self.valueBox.set(self.contentTypeStatsTable, key: key, value: MemoryBuffer(memory: UnsafeMutableRawPointer(pointer), capacity: 8, length: 8, freeWhenDone: false))
+                })
+            })
             
             self.totalSize += delta
         }
@@ -361,7 +349,9 @@ public final class StorageBox {
                 currentSize = 0
             }
             
-            self.valueBox.set(self.peerContentTypeStatsTable, key: key, value: MemoryBuffer(memory: &currentSize, capacity: 8, length: 8, freeWhenDone: false))
+            withUnsafeMutablePointer(to: &currentSize, { pointer in
+                self.valueBox.set(self.peerContentTypeStatsTable, key: key, value: MemoryBuffer(memory: UnsafeMutableRawPointer(pointer), capacity: 8, length: 8, freeWhenDone: false))
+            })
         }
         
         func internalAdd(reference: Reference, to id: Data, contentType: UInt8, size: Int64?) {
